@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Photo library permission for picking avatar images -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>允许访问相册以选择头像图片 / Allow access to your photos to pick an avatar.</string>
+	<!-- Optional: if saving back to library in future -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>允许保存图片到相册 / Allow saving images to your photo library.</string>
+	<!-- Camera permission for taking photos (image_picker) -->
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机以拍摄照片 / We need camera access to take photos.</string>
+	<!-- Microphone is required only when capturing video; safe to include -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>需要使用麦克风以录制视频音频 / We need microphone access to record audio in videos.</string>
 </dict>
 </plist>

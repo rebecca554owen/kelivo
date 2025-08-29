@@ -1,4 +1,4 @@
-name: kelivo
+name: Kelivo
 description: "An LLM chat client."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -31,6 +31,42 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localizations for Chinese/English UI strings
+  flutter_localizations:
+    sdk: flutter
+  provider: ^6.0.5
+  dynamic_color: ^1.6.9
+  lucide_icons_flutter: ^3.0.9
+  shared_preferences: ^2.2.3
+  image_picker: 1.1.2
+  flutter_svg: ^2.0.10+1
+  http: ^1.2.1
+  jose: ^0.3.4
+  reorderable_grid_view: ^2.2.8
+  flutter_slidable: ^3.0.1
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  url_launcher: ^6.3.2
+  package_info_plus: ^8.3.1
+  gpt_markdown: ^1.1.2
+  uuid: ^4.5.0
+  intl: ^0.20.2
+  path_provider: ^2.1.4
+  file_picker: ^8.0.3
+  archive: ^3.6.1
+  xml: ^6.5.0
+  read_pdf_text: ^0.3.1
+  open_filex: ^4.5.0
+  easy_image_viewer: ^1.4.6
+  share_plus: ^7.2.1
+  pretty_qr_code: ^3.5.0
+  mobile_scanner: ^7.0.1
+  mcp_client: ^1.0.1
+  flutter_highlight: ^0.7.0
+  syncfusion_flutter_sliders: ^30.2.6
+  flutter_tts: ^4.2.3
+  html: ^0.15.6
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -38,6 +74,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  build_runner: ^2.4.0
+  hive_generator: ^2.0.0
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -45,6 +84,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+dependency_overrides:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -58,8 +99,9 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/icons/
+    - assets/app_icon_foreground.svg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -87,3 +129,11 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/app_icon_foreground.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/app_icon_foreground.png
+  remove_alpha_ios: true

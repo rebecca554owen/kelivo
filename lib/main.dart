@@ -1,122 +1,144 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'features/home/pages/home_page.dart';
+import 'package:flutter/services.dart';
+// Theme is now managed in SettingsProvider
+import 'theme/theme_factory.dart';
+import 'theme/palettes.dart';
+import 'package:provider/provider.dart';
+import 'package:dynamic_color/dynamic_color.dart';
+import 'core/providers/chat_provider.dart';
+import 'core/providers/user_provider.dart';
+import 'core/providers/settings_provider.dart';
+import 'core/providers/mcp_provider.dart';
+import 'core/providers/tts_provider.dart';
+import 'core/providers/assistant_provider.dart';
+import 'core/providers/update_provider.dart';
+import 'core/services/chat/chat_service.dart';
+import 'core/services/mcp/mcp_tool_service.dart';
+import 'utils/sandbox_path_resolver.dart';
 
-void main() {
+final RouteObserver<ModalRoute<dynamic>> routeObserver = RouteObserver<ModalRoute<dynamic>>();
+bool _didCheckUpdates = false; // one-time update check flag
+
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Cache current Documents directory to fix sandboxed absolute paths on iOS
+  await SandboxPathResolver.init();
+  // Enable edge-to-edge to allow content under system bars (Android)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => ChatService()),
+        ChangeNotifierProvider(create: (_) => McpToolService()),
+        ChangeNotifierProvider(create: (_) => McpProvider()),
+        ChangeNotifierProvider(create: (_) => AssistantProvider()),
+        ChangeNotifierProvider(create: (_) => TtsProvider()),
+        ChangeNotifierProvider(create: (_) => UpdateProvider()),
+      ],
+      child: Builder(
+        builder: (context) {
+          final settings = context.watch<SettingsProvider>();
+          // One-time app update check after first build
+          if (settings.showAppUpdates && !_didCheckUpdates) {
+            _didCheckUpdates = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              try { context.read<UpdateProvider>().checkForUpdates(); } catch (_) {}
+            });
+          }
+          return DynamicColorBuilder(
+            builder: (lightDynamic, darkDynamic) {
+              // if (lightDynamic != null) {
+              //   debugPrint('[DynamicColor] Light dynamic detected. primary=${lightDynamic.primary.value.toRadixString(16)} surface=${lightDynamic.surface.value.toRadixString(16)}');
+              // } else {
+              //   debugPrint('[DynamicColor] Light dynamic not available');
+              // }
+              // if (darkDynamic != null) {
+              //   debugPrint('[DynamicColor] Dark dynamic detected. primary=${darkDynamic.primary.value.toRadixString(16)} surface=${darkDynamic.surface.value.toRadixString(16)}');
+              // } else {
+              //   debugPrint('[DynamicColor] Dark dynamic not available');
+              // }
+              final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+              // Update dynamic color capability for settings UI
+              settings.setDynamicColorSupported(isAndroid && (lightDynamic != null || darkDynamic != null));
+
+              final useDyn = isAndroid && settings.useDynamicColor;
+              final palette = ThemePalettes.byId(settings.themePaletteId);
+
+              final light = buildLightThemeForScheme(
+                palette.light,
+                dynamicScheme: useDyn ? lightDynamic : null,
+              );
+              final dark = buildDarkThemeForScheme(
+                palette.dark,
+                dynamicScheme: useDyn ? darkDynamic : null,
+              );
+              // Log top-level colors likely used by widgets (card/bg/shadow approximations)
+              // debugPrint('[Theme/App] Light scaffoldBg=${light.colorScheme.surface.value.toRadixString(16)} card≈${light.colorScheme.surface.value.toRadixString(16)} shadow=${light.colorScheme.shadow.value.toRadixString(16)}');
+              // debugPrint('[Theme/App] Dark scaffoldBg=${dark.colorScheme.surface.value.toRadixString(16)} card≈${dark.colorScheme.surface.value.toRadixString(16)} shadow=${dark.colorScheme.shadow.value.toRadixString(16)}');
+              return MaterialApp(
+                debugShowCheckedModeBanner: false,
+                title: 'Kelivo',
+                // Default to Chinese; English supported.
+                locale: const Locale('zh', 'CN'),
+                supportedLocales: const [
+                  Locale('zh', 'CN'),
+                  Locale('en', 'US'),
+                ],
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                theme: light,
+                darkTheme: dark,
+                themeMode: settings.themeMode,
+                navigatorObservers: <NavigatorObserver>[routeObserver],
+                home: const HomePage(),
+                builder: (ctx, child) {
+                  final bright = Theme.of(ctx).brightness;
+                  final overlay = bright == Brightness.dark
+                      ? const SystemUiOverlayStyle(
+                          statusBarColor: Colors.transparent,
+                          statusBarIconBrightness: Brightness.light,
+                          statusBarBrightness: Brightness.dark,
+                          systemNavigationBarColor: Colors.transparent,
+                          systemNavigationBarIconBrightness: Brightness.light,
+                          systemNavigationBarDividerColor: Colors.transparent,
+                          systemNavigationBarContrastEnforced: false,
+                        )
+                      : const SystemUiOverlayStyle(
+                          statusBarColor: Colors.transparent,
+                          statusBarIconBrightness: Brightness.dark,
+                          statusBarBrightness: Brightness.light,
+                          systemNavigationBarColor: Colors.transparent,
+                          systemNavigationBarIconBrightness: Brightness.dark,
+                          systemNavigationBarDividerColor: Colors.transparent,
+                          systemNavigationBarContrastEnforced: false,
+                        );
+                  return AnnotatedRegion<SystemUiOverlayStyle>(
+                    value: overlay,
+                    child: child ?? const SizedBox.shrink(),
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-  }
-}
+ 
