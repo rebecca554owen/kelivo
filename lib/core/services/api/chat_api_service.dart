@@ -383,9 +383,9 @@ class ChatApiService {
         : (config.chatPath ?? '/chat/completions');
     final url = Uri.parse('$base$path');
 
-    final isReasoning = _effectiveModelInfo(config, modelId)
-        .abilities
-        .contains(ModelAbility.reasoning);
+    final effectiveInfo = _effectiveModelInfo(config, modelId);
+    final isReasoning = effectiveInfo.abilities.contains(ModelAbility.reasoning);
+    final wantsImageOutput = effectiveInfo.output.contains(Modality.image);
 
     final effort = _effortForBudget(thinkingBudget);
     final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase() ?? '';
@@ -816,6 +816,51 @@ class ChatApiService {
                         contentAccum += txt; // Accumulate content
                         yield ChatStreamChunk(content: txt, isDone: false, totalTokens: 0, usage: usage);
                       }
+                      // Handle image outputs from OpenRouter-style deltas
+                      // Possible shapes:
+                      // - delta['images']: [ { type: 'image_url', image_url: { url: 'data:...' }, index: 0 }, ... ]
+                      // - delta['content']: [ { type: 'image_url', image_url: { url: '...' } }, { type: 'text', text: '...' } ]
+                      // - delta['image_url'] directly (less common)
+                      if (wantsImageOutput) {
+                        final List<dynamic> imageItems = <dynamic>[];
+                        final imgs = delta?['images'];
+                        if (imgs is List) imageItems.addAll(imgs);
+                        final contentArr = (txt is List) ? txt : (delta?['content'] as List?);
+                        if (contentArr is List) {
+                          for (final it in contentArr) {
+                            if (it is Map && (it['type'] == 'image_url' || it['type'] == 'image')) {
+                              imageItems.add(it);
+                            }
+                          }
+                        }
+                        final singleImage = delta?['image_url'];
+                        if (singleImage is Map || singleImage is String) {
+                          imageItems.add({'type': 'image_url', 'image_url': singleImage});
+                        }
+                        if (imageItems.isNotEmpty) {
+                          final buf = StringBuffer();
+                          for (final it in imageItems) {
+                            if (it is! Map) continue;
+                            dynamic iu = it['image_url'];
+                            String? url;
+                            if (iu is String) {
+                              url = iu;
+                            } else if (iu is Map) {
+                              final u2 = iu['url'];
+                              if (u2 is String) url = u2;
+                            }
+                            if (url != null && url.isNotEmpty) {
+                              final md = '\n\n![image](' + url + ')';
+                              buf.write(md);
+                              contentAccum += md;
+                            }
+                          }
+                          final out = buf.toString();
+                          if (out.isNotEmpty) {
+                            yield ChatStreamChunk(content: out, isDone: false, totalTokens: 0, usage: usage);
+                          }
+                        }
+                      }
                       final tcs = delta?['tool_calls'] as List?;
                       if (tcs != null) {
                         for (final t in tcs) {
@@ -998,12 +1043,60 @@ class ChatApiService {
               finishReason = c0['finish_reason'] as String?;
               final delta = c0['delta'];
               if (delta != null) {
-                content = (delta['content'] ?? '') as String;
+                // content may be string or list of parts
+                final dc = delta['content'];
+                if (dc is String) {
+                  content = dc;
+                } else if (dc is List) {
+                  // collect text pieces
+                  final sb = StringBuffer();
+                  for (final it in dc) {
+                    if (it is Map) {
+                      final t = (it['text'] ?? it['delta'] ?? '') as String? ?? '';
+                      if (t.isNotEmpty && (it['type'] == null || it['type'] == 'text')) sb.write(t);
+                    }
+                  }
+                  content = sb.toString();
+                } else {
+                  content = (dc ?? '') as String;
+                }
                 if (content.isNotEmpty) {
                   approxCompletionChars += content.length;
                 }
                 final rc = (delta['reasoning_content'] ?? delta['reasoning']) as String?;
                 if (rc != null && rc.isNotEmpty) reasoning = rc;
+
+                // Parse possible image outputs in delta, gated by model output capability
+                if (wantsImageOutput) {
+                  final List<dynamic> imageItems = <dynamic>[];
+                  final imgs = delta['images'];
+                  if (imgs is List) imageItems.addAll(imgs);
+                  if (dc is List) {
+                    for (final it in dc) {
+                      if (it is Map && (it['type'] == 'image_url' || it['type'] == 'image')) imageItems.add(it);
+                    }
+                  }
+                  final singleImage = delta['image_url'];
+                  if (singleImage is Map || singleImage is String) {
+                    imageItems.add({'type': 'image_url', 'image_url': singleImage});
+                  }
+                  if (imageItems.isNotEmpty) {
+                    final buf = StringBuffer();
+                    for (final it in imageItems) {
+                      if (it is! Map) continue;
+                      dynamic iu = it['image_url'];
+                      String? url;
+                      if (iu is String) {
+                        url = iu;
+                      } else if (iu is Map) {
+                        final u2 = iu['url'];
+                        if (u2 is String) url = u2;
+                      }
+                      if (url != null && url.isNotEmpty) buf.write('\n\n![image](' + url + ')');
+                    }
+                    if (buf.isNotEmpty) content = content + buf.toString();
+                  }
+                }
 
                 // Accumulate tool_calls deltas if present
                 final tcs = delta['tool_calls'] as List?;
@@ -1041,6 +1134,22 @@ class ChatApiService {
               totalTokens: totalTokens > 0 ? totalTokens : approxTotal,
               usage: usage,
             );
+          }
+
+          // Some providers (e.g., OpenRouter) may omit the [DONE] sentinel
+          // and only send finish_reason on the last delta. If we see a
+          // definitive finish that's not tool_calls, end the stream now so
+          // the UI can persist the message.
+          if (config.useResponseApi != true && finishReason != null && finishReason != 'tool_calls') {
+            final approxTotal = approxPromptTokens + _approxTokensFromChars(approxCompletionChars);
+            yield ChatStreamChunk(
+              content: '',
+              reasoning: null,
+              isDone: true,
+              totalTokens: usage?.totalTokens ?? approxTotal,
+              usage: usage,
+            );
+            return;
           }
 
           // If model finished with tool_calls, execute them and follow-up

@@ -1102,7 +1102,7 @@ extension on _SideDrawerState {
         bool valid(String s) => RegExp(r'^[0-9]{5,12}$').hasMatch(s.trim());
         String randomQQ() {
           final lengths = <int>[5, 6, 7, 8, 9, 10, 11];
-          final weights = <int>[1, 20, 80, 100, 240, 3000, 80];
+          final weights = <int>[1, 20, 80, 100, 500, 5000, 80];
           final total = weights.fold<int>(0, (a, b) => a + b);
           final rnd = math.Random();
           int roll = rnd.nextInt(total) + 1;
@@ -1122,7 +1122,7 @@ extension on _SideDrawerState {
             [5, 6, 7, 8],
             [9],
           ];
-          final firstWeights = <int>[8, 4, 2, 1]; // ratio only; ensures 1-2 > 3-4 > 5-8 > 9
+          final firstWeights = <int>[128, 4, 2, 1]; // ratio only; ensures 1-2 > 3-4 > 5-8 > 9
           final firstTotal = firstWeights.fold<int>(0, (a, b) => a + b);
           int r2 = rnd.nextInt(firstTotal) + 1;
           int idx = 0;

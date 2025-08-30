@@ -1225,7 +1225,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
         bool valid(String s) => RegExp(r'^[0-9]{5,12}$').hasMatch(s.trim());
         String randomQQ() {
           final lengths = <int>[5, 6, 7, 8, 9, 10, 11];
-          final weights = <int>[1, 20, 80, 100, 240, 3000, 80];
+          final weights = <int>[1, 20, 80, 100, 500, 5000, 80];
           final total = weights.fold<int>(0, (a, b) => a + b);
           final rnd = math.Random();
           int roll = rnd.nextInt(total) + 1;
@@ -1242,7 +1242,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
             [5, 6, 7, 8],
             [9],
           ];
-          final firstWeights = <int>[8, 4, 2, 1];
+          final firstWeights = <int>[128, 4, 2, 1];
           final firstTotal = firstWeights.fold<int>(0, (a, b) => a + b);
           int r2 = rnd.nextInt(firstTotal) + 1;
           int idx = 0;
@@ -1293,7 +1293,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                   bool applied = false;
                   for (int i = 0; i < maxTries; i++) {
                     final qq = randomQQ();
-                    final url = 'http://q2.qlogo.cn/headimg_dl?dst_uin=' + qq + '&spec=100';
+                    final url = 'https://q2.qlogo.cn/headimg_dl?dst_uin=' + qq + '&spec=100';
                     try {
                       final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
                       if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
@@ -1311,7 +1311,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                     );
                   }
                 },
-                child: Text(zh ? '随机一个' : 'Random One'),
+                child: Text(zh ? '随机QQ' : 'Random One'),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
