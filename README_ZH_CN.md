@@ -69,16 +69,6 @@
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
 
-## 🙏 感谢
-
-感谢所有为这个项目做出贡献的开发者！
-
-## ⭐ Star History
-
-如果您喜欢这个项目，请给它一个 star ⭐
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Chevey339/kelivo&type=Date)](https://star-history.com/#Chevey339/kelivo&Date)
-
 ## 📞 联系我们
 
 - Issue: [GitHub Issues](https://github.com/Chevey339/kelivo/issues)

@@ -4,7 +4,7 @@
 
 A Flutter LLM Chat Client
 
-English | [简体中文](README_zh.md)
+English | [简体中文](README_ZH_CN.md)
 </div>
 
 <div align="center">
@@ -67,17 +67,7 @@ Special thanks to the [RikkaHub](https://github.com/re-ovo/rikkahub) project for
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Thanks
-
-Thank you to all the developers who have contributed to this project!
-
-## ⭐ Star History
-
-If you like this project, please give it a star ⭐
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Chevey339/kelivo&type=Date)](https://star-history.com/#Chevey339/kelivo&Date)
+This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## 📞 Contact Us
 
