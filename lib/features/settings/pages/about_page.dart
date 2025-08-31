@@ -183,7 +183,7 @@ class _AboutPageState extends State<AboutPage> {
                       _SvgChipButton(
                         assetPath: 'assets/icons/discord.svg',
                         label: 'Discord',
-                        onTap: () => _openUrl('https://discord.gg/UjBxY78T'),
+                        onTap: () => _openUrl('https://discord.gg/Tb8DyvvV5T'),
                       ),
                     ],
                   ),
