@@ -5,7 +5,7 @@ import 'package:gpt_markdown/custom_widgets/markdown_config.dart' show GptMarkdo
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
 import 'package:flutter_highlight/themes/atom-one-dark-reasonable.dart';
-import '../../../icons/lucide_adapter.dart';
+import '../../icons/lucide_adapter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'dart:convert';
