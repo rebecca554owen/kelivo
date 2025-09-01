@@ -32,7 +32,7 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     final normalized = _preprocessFences(text);
     // Base text style: increase line-height and slightly adjust letter-spacing for readability
     final baseTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontSize: 15.5, // ~112% of previous 14.0 for better readability
+          fontSize: 15.5,
           height: 1.55,
           letterSpacing: _isZh(context) ? 0.0 : 0.05,
           color: null, // let components decide foreground where needed
