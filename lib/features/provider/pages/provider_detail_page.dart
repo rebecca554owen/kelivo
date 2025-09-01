@@ -474,7 +474,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           child: Center(
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : const Color(0xFFF2F3F5),
+                // Solid color: dark theme uses an opaque lightened surface; light uses input-like gray
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Color.alphaBlend(Colors.white.withOpacity(0.12), cs.surface)
+                    : const Color(0xFFF2F3F5),
                 borderRadius: BorderRadius.circular(999),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
