@@ -71,8 +71,13 @@ class MyApp extends StatelessWidget {
               //   debugPrint('[DynamicColor] Dark dynamic not available');
               // }
               final isAndroid = Theme.of(context).platform == TargetPlatform.android;
-              // Update dynamic color capability for settings UI
-              settings.setDynamicColorSupported(isAndroid && (lightDynamic != null || darkDynamic != null));
+              // Update dynamic color capability for settings UI (avoid notify during build)
+              final dynSupported = isAndroid && (lightDynamic != null || darkDynamic != null);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                try {
+                  settings.setDynamicColorSupported(dynSupported);
+                } catch (_) {}
+              });
 
               final useDyn = isAndroid && settings.useDynamicColor;
               final palette = ThemePalettes.byId(settings.themePaletteId);

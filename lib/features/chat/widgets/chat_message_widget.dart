@@ -275,7 +275,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                   Text(
                     parsed.text,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 15.5, // ~112% larger default for user text
+                      height: 1.4,
                       color: cs.onSurface,
                     ),
                   ),
@@ -644,11 +645,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               ],
             )
                 : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                MarkdownWithCodeHighlight(
-                  text: widget.message.content,
-                  onCitationTap: (id) => _handleCitationTap(id),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                DefaultTextStyle.merge(
+                  style: const TextStyle(fontSize: 15.7, height: 1.5),
+                  child: MarkdownWithCodeHighlight(
+                    text: widget.message.content,
+                    onCitationTap: (id) => _handleCitationTap(id),
+                  ),
                 ),
                 // Inline sources removed; show a summary card at bottom instead
                 if (widget.message.isStreaming)
@@ -717,23 +721,19 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   children: [
                                     _LoadingIndicator(),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      '翻译中...',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: cs.onSurface.withOpacity(0.5),
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
+                                    Text('翻译中...', style: TextStyle(fontSize: 15.5, color: cs.onSurface.withOpacity(0.5), fontStyle: FontStyle.italic)),
                                   ],
                                 ),
                               )
                             else
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
-                                child: MarkdownWithCodeHighlight(
-                                  text: widget.message.translation!,
-                                  onCitationTap: (id) => _handleCitationTap(id),
+                                child: DefaultTextStyle.merge(
+                                  style: const TextStyle(fontSize: 15.5, height: 1.4),
+                                  child: MarkdownWithCodeHighlight(
+                                    text: widget.message.translation!,
+                                    onCitationTap: (id) => _handleCitationTap(id),
+                                  ),
                                 ),
                               ),
                           ],

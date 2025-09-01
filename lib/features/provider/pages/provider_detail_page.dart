@@ -501,14 +501,14 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.10),
+                        color: cs.primary.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Lucide.Plus, size: 18, color: cs.onSurface.withValues(alpha: 0.7)),
+                          Icon(Lucide.Plus, size: 18, color: cs.primary),
                           const SizedBox(width: 6),
                           Text(zh ? '添加新模型' : 'Add Model', style: TextStyle(color: cs.primary, fontSize: 13)),
                         ],
@@ -941,10 +941,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               return zhLocal ? '嵌入' : 'Embeddings';
             }
             // OpenAI families
-            if (RegExp(r'gpt-4o|gpt-4\.1|gpt-4').hasMatch(id)) return 'GPT-4';
-            if (id.contains('gpt-3.5')) return 'GPT-3.5';
-            if (RegExp(r'(^|[^a-z])o[134]').hasMatch(id)) return zhLocal ? 'o 系列' : 'o Series';
-            if (id.contains('gpt-5')) return 'GPT-5';
+            // if (RegExp(r'gpt-4o|gpt-4\.1|gpt-4|gpt4').hasMatch(id)) return 'GPT-4';
+            if (id.contains('gpt') || RegExp(r'(^|[^a-z])o[134]').hasMatch(id)) return 'GPT';
+            // if (RegExp(r'(^|[^a-z])o[134]').hasMatch(id)) return zhLocal ? 'o 系列' : 'o Series';
+            // if (id.contains('gpt-5')) return 'GPT-5';
             // Google Gemini
             if (id.contains('gemini-2.0')) return 'Gemini 2.0';
             if (id.contains('gemini-2.5')) return 'Gemini 2.5';

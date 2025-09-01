@@ -30,10 +30,15 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     final imageUrls = _extractImageUrls(text);
 
     final normalized = _preprocessFences(text);
-    // Use default text style but avoid forcing color, so HR can use its own color
-    final baseTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(color: null);
+    // Base text style: increase line-height and slightly adjust letter-spacing for readability
+    final baseTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontSize: 15.5, // ~112% of previous 14.0 for better readability
+          height: 1.55,
+          letterSpacing: _isZh(context) ? 0.0 : 0.05,
+          color: null, // let components decide foreground where needed
+        );
 
-    // Replace default HrLine with a softer, shorter one
+    // Replace default components and add our own where needed
     final components = List<MarkdownComponent>.from(MarkdownComponent.globalComponents);
     final hrIdx = components.indexWhere((c) => c is HrLine);
     if (hrIdx != -1) components[hrIdx] = SoftHrLine();
@@ -43,6 +48,9 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     if (cbIdx != -1) components[cbIdx] = ModernCheckBoxMd();
     final rbIdx = components.indexWhere((c) => c is RadioButtonMd);
     if (rbIdx != -1) components[rbIdx] = ModernRadioMd();
+    // Prepend our custom renderers so they take precedence
+    components.insert(0, AtxHeadingMd());
+    components.insert(0, LabelValueLineMd());
     return GptMarkdown(
       normalized,
       style: baseTextStyle,
@@ -260,7 +268,7 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'monospace',
               fontSize: 13,
-              height: 1.3,
+              height: 1.4,
             ).copyWith(color: Theme.of(context).colorScheme.onSurface),
             softWrap: true,
             overflow: TextOverflow.visible,
@@ -331,7 +339,7 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
                   textStyle: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 13,
-                    height: 1.45,
+                    height: 1.5,
                   ),
                 ),
               ),
@@ -437,6 +445,17 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     final inlineClosing = RegExp(r"([^\r\n`])```(?=\s*(?:\r?\n|$))");
     out = out.replaceAllMapped(inlineClosing, (m) => "${m[1]}\n```");
 
+    // 5) Disambiguate Setext vs HR after label-value lines:
+    // If a line of only dashes follows a bold label line (e.g., "**作者:** 张三"),
+    // insert a blank line so it's treated as an HR, not a Setext heading underline.
+    final labelThenDash = RegExp(r"^(\*\*[^\n*]+\*\*.*)\n(\s*-{3,}\s*$)", multiLine: true);
+    out = out.replaceAllMapped(labelThenDash, (m) => "${m[1]}\n\n${m[2]}");
+
+    // 6) Allow ATX headings starting with enumerations like "## 1.引言" or "## 1. 引言"
+    // Insert a zero-width non-joiner after the dot to prevent list parsing without changing visual text.
+    final atxEnum = RegExp(r"^(\s{0,3}#{1,6}\s+\d+)\.(\s*)(\S)", multiLine: true);
+    out = out.replaceAllMapped(atxEnum, (m) => "${m[1]}.\u200C${m[2]}${m[3]}");
+
     return out;
   }
 
@@ -526,6 +545,156 @@ class SoftHrLine extends BlockMd {
             color: color,
             borderRadius: BorderRadius.circular(1),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Balanced ATX-style headings (#, ##, ###, …) with consistent spacing and typography
+class AtxHeadingMd extends BlockMd {
+  @override
+  String get expString => (r"^\s{0,3}(#{1,6})\s+(.+?)(?:\s+#+\s*)?$");
+
+  @override
+  Widget build(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text.trim());
+    if (m == null) return const SizedBox.shrink();
+    final hashes = m.group(1) ?? '#';
+    final raw = (m.group(2) ?? '').trim();
+    final lvl = hashes.length;
+    final level = lvl < 1 ? 1 : (lvl > 6 ? 6 : lvl);
+
+    final innerCfg = config.copyWith(style: const TextStyle());
+    final inner = TextSpan(children: MarkdownComponent.generate(context, raw, innerCfg, true));
+    final style = _headingTextStyle(context, config, level);
+    // Slightly tighter spacing between headings and body
+    final top = switch (level) { 1 => 2.0, 2 => 2.0, _ => 2.0 };
+    final bottom = switch (level) { 1 => 2.0, 2 => 2.0, 3 => 2.0, _ => 2.0 };
+
+    return Padding(
+      padding: EdgeInsets.only(top: top, bottom: bottom),
+      child: RichText(
+        text: TextSpan(style: style, children: [inner]),
+        textScaler: MediaQuery.of(context).textScaler,
+        textAlign: TextAlign.start,
+      ),
+    );
+  }
+
+  TextStyle _headingTextStyle(BuildContext ctx, GptMarkdownConfig cfg, int level) {
+    final t = Theme.of(ctx).textTheme;
+    final cs = Theme.of(ctx).colorScheme;
+    final isZh = MarkdownWithCodeHighlight._isZh(ctx);
+    // Start from Material styles but tighten sizes for balance with body text
+    TextStyle base;
+    // Explicit sizes ensure visible contrast over the body (16.0)
+    switch (level) {
+      case 1:
+        base = const TextStyle(fontSize: 24);
+        break;
+      case 2:
+        base = const TextStyle(fontSize: 20);
+        break;
+      case 3:
+        base = const TextStyle(fontSize: 18);
+        break;
+      case 4:
+        base = const TextStyle(fontSize: 16);
+        break;
+      case 5:
+        base = const TextStyle(fontSize: 15);
+        break;
+      default:
+        base = const TextStyle(fontSize: 14);
+    }
+    final weight = switch (level) { 1 => FontWeight.w700, 2 => FontWeight.w600, 3 => FontWeight.w600, _ => FontWeight.w500 };
+    final ls = switch (level) { 1 => isZh ? 0.0 : 0.1, 2 => isZh ? 0.0 : 0.08, _ => isZh ? 0.0 : 0.05 };
+    final h = switch (level) { 1 => 1.25, 2 => 1.3, _ => 1.35 };
+    return base.copyWith(
+      fontWeight: weight,
+      height: h,
+      letterSpacing: ls,
+      color: cs.onSurface,
+    );
+  }
+}
+
+// Setext-style headings (underlines with === or ---)
+class SetextHeadingMd extends BlockMd {
+  @override
+  String get expString => (r"^(.+?)\n(=+|-+)\s*$");
+
+  @override
+  Widget build(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text.trimRight());
+    if (m == null) return const SizedBox.shrink();
+    final title = (m.group(1) ?? '').trim();
+    final underline = (m.group(2) ?? '').trim();
+    final level = underline.startsWith('=') ? 1 : 2;
+
+    final innerCfg = config.copyWith(style: const TextStyle());
+    final inner = TextSpan(children: MarkdownComponent.generate(context, title, innerCfg, true));
+    final style = AtxHeadingMd()._headingTextStyle(context, config, level);
+    // Match the tighter spacing used in ATX headings
+    final top = level == 1 ? 10.0 : 9.0;
+    final bottom = 6.0;
+
+    return Padding(
+      padding: EdgeInsets.only(top: top, bottom: bottom),
+      child: RichText(
+        text: TextSpan(style: style, children: [inner]),
+        textScaler: MediaQuery.of(context).textScaler,
+        textAlign: TextAlign.start,
+      ),
+    );
+  }
+}
+
+// Label-value strong lines like "**作者:** 张三" should not render as heading-sized text
+class LabelValueLineMd extends InlineMd {
+  @override
+  bool get inline => false;
+
+  @override
+  // Match either "**标签:** 值" (冒号在加粗内) 或 "**标签**: 值"（冒号在加粗外），支持全角/半角冒号
+  RegExp get exp => RegExp(r"(?:(?:^|\n)\*\*([^*]+?)\*\*\s*:\s*.+$)", multiLine: true);
+
+  @override
+  InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {
+    final match = exp.firstMatch(text);
+    if (match == null) return TextSpan(text: text, style: config.style);
+    final label = (match.group(1) ?? '').trim();
+    final rest = text.substring(match.end - (text.endsWith('\n') ? 1 : 0)).trim();
+
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
+    final labelStyle = (t.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
+      fontWeight: FontWeight.w700,
+      color: cs.onSurface,
+    );
+    final valueStyle = (t.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
+      fontWeight: FontWeight.w500,
+      color: cs.onSurface.withOpacity(0.92),
+    );
+       // Split into label/value while preserving the rest of the line
+    final colonIndex = text.indexOf(':');
+    final prefix = text.substring(0, colonIndex + 1);
+    final value = text.substring(colonIndex + 1).trim();
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: RichText(
+          text: TextSpan(children: [
+            TextSpan(text: prefix.replaceAll('**', ''), style: labelStyle),
+            const TextSpan(text: ' '),
+            TextSpan(text: value, style: valueStyle),
+          ]),
+          textScaler: MediaQuery.of(context).textScaler,
         ),
       ),
     );
