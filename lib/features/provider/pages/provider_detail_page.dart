@@ -332,7 +332,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 const SizedBox(height: 6),
                 Text(
                   zh ? '点击下方按钮添加模型' : 'Tap the buttons below to add models',
-                  style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.7)),
+                  style: TextStyle(fontSize: 13, color: cs.primary),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -508,7 +508,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Lucide.Plus, size: 18, color: cs.primary),
+                          Icon(Lucide.Plus, size: 18, color: cs.onSurface.withValues(alpha: 0.7)),
                           const SizedBox(width: 6),
                           Text(zh ? '添加新模型' : 'Add Model', style: TextStyle(color: cs.primary, fontSize: 13)),
                         ],
@@ -893,6 +893,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     List<dynamic> items = const [];
     bool loading = true;
     String error = '';
+    // Collapsed state per group in the selector dialog
+    final Map<String, bool> collapsed = <String, bool>{};
 
     await showModalBottomSheet(
       context: context,
@@ -927,10 +929,49 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
 
           final selected = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName).models.toSet();
           final query = controller.text.trim().toLowerCase();
-          final filtered = [
+          final filtered = <ModelInfo>[
             for (final m in items)
-              if (m is ModelInfo && (query.isEmpty || m.id.toLowerCase().contains(query))) m
+              if (m is ModelInfo && (query.isEmpty || m.id.toLowerCase().contains(query) || m.displayName.toLowerCase().contains(query))) m
           ];
+
+          String _groupFor(ModelInfo m) {
+            final id = m.id.toLowerCase();
+            // Embeddings first
+            if (m.type == ModelType.embedding || id.contains('embedding') || id.contains('embed')) {
+              return zhLocal ? '嵌入' : 'Embeddings';
+            }
+            // OpenAI families
+            if (RegExp(r'gpt-4o|gpt-4\.1|gpt-4').hasMatch(id)) return 'GPT-4';
+            if (id.contains('gpt-3.5')) return 'GPT-3.5';
+            if (RegExp(r'(^|[^a-z])o[134]').hasMatch(id)) return zhLocal ? 'o 系列' : 'o Series';
+            if (id.contains('gpt-5')) return 'GPT-5';
+            // Google Gemini
+            if (id.contains('gemini-2.0')) return 'Gemini 2.0';
+            if (id.contains('gemini-2.5')) return 'Gemini 2.5';
+            if (id.contains('gemini-1.5')) return 'Gemini 1.5';
+            if (id.contains('gemini')) return 'Gemini';
+            // Anthropic Claude
+            if (id.contains('claude-3.5')) return 'Claude 3.5';
+            if (id.contains('claude-3')) return 'Claude 3';
+            if (id.contains('claude-4')) return 'Claude 4';
+            if (id.contains('claude-sonnet')) return 'Claude Sonnet';
+            if (id.contains('claude-opus')) return 'Claude Opus';
+            // Others by vendor keyword
+            if (id.contains('deepseek')) return 'DeepSeek';
+            if (RegExp(r'qwen|qwq|qvq|dashscope').hasMatch(id)) return 'Qwen';
+            if (RegExp(r'doubao|ark|volc').hasMatch(id)) return 'Doubao';
+            if (id.contains('glm') || id.contains('zhipu')) return 'GLM';
+            if (id.contains('mistral')) return 'Mistral';
+            if (id.contains('grok') || id.contains('xai')) return 'Grok';
+            return zhLocal ? '其他模型' : 'Other';
+          }
+
+          final Map<String, List<ModelInfo>> grouped = {};
+          for (final m in filtered) {
+            final g = _groupFor(m);
+            (grouped[g] ??= []).add(m);
+          }
+          final groupKeys = grouped.keys.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
           return SafeArea(
             top: false,
@@ -954,32 +995,135 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             ? const Center(child: CircularProgressIndicator())
                           : error.isNotEmpty
                               ? Center(child: Text(error, style: TextStyle(color: cs.error)))
-                              : ListView.builder(
+                              : ListView(
                                   controller: scrollController,
-                                  itemCount: filtered.length,
-                                  itemBuilder: (c, i) {
-                                    final m = filtered[i] as ModelInfo;
-                                    final added = selected.contains(m.id);
-                                    return ListTile(
-                                      leading: _BrandAvatar(name: m.id, size: 28),
-                                      title: Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      subtitle: _modelTagWrap(context, m),
-                                      trailing: IconButton(
-                                        onPressed: () async {
-                                          final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
-                                          final list = old.models.toList();
-                                          if (added) {
-                                            list.removeWhere((e) => e == m.id);
-                                          } else {
-                                            list.add(m.id);
-                                          }
-                                          await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
-                                          setLocal(() {});
-                                        },
-                                        icon: Icon(added ? Lucide.Minus : Lucide.Plus, color: added ? cs.onSurface : cs.primary),
+                                  children: [
+                                    for (final g in groupKeys) ...[
+                                      // Group header with actions
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                                        child: Material(
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white10
+                                              : const Color(0xFFF2F3F5),
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(12),
+                                            onTap: () => setLocal(() {
+                                              collapsed[g] = !(collapsed[g] == true);
+                                            }),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                              child: Row(
+                                                children: [
+                                                  SizedBox(
+                                                    width: 28,
+                                                    child: Center(
+                                                      child: Icon(
+                                                        (collapsed[g] == true) ? Lucide.ChevronRight : Lucide.ChevronDown,
+                                                        size: 20,
+                                                        color: cs.onSurface.withOpacity(0.7),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 16),
+                                                  Expanded(
+                                                    child: Text(
+                                                      g,
+                                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Builder(builder: (ctx2) {
+                                                    final allAdded = grouped[g]!.every((m) => selected.contains(m.id));
+                                                    return IconButton(
+                                                      padding: EdgeInsets.zero,
+                                                      constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
+                                                      tooltip: allAdded ? (zhLocal ? '移除本组' : 'Remove group') : (zhLocal ? '添加本组' : 'Add group'),
+                                                      icon: Icon(allAdded ? Lucide.Minus : Lucide.Plus, size: 24, color: allAdded ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
+                                                      onPressed: () async {
+                                                        final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+                                                        if (allAdded) {
+                                                          final toRemove = grouped[g]!.map((m) => m.id).toSet();
+                                                          final list = old.models.where((id) => !toRemove.contains(id)).toList();
+                                                          await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
+                                                        } else {
+                                                          final toAdd = grouped[g]!.where((m) => !selected.contains(m.id)).map((m) => m.id).toList();
+                                                          if (toAdd.isEmpty) return;
+                                                          final set = old.models.toSet()..addAll(toAdd);
+                                                          await settings.setProviderConfig(widget.keyName, old.copyWith(models: set.toList()));
+                                                        }
+                                                        setLocal(() {});
+                                                      },
+                                                    );
+                                                  }),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    );
-                                  },
+                                      if (!(collapsed[g] == true))
+                                        for (final m in grouped[g]!)
+                                          Builder(builder: (c2) {
+                                            final added = selected.contains(m.id);
+                                            return Padding(
+                                              padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                                              child: Material(
+                                                // color: Theme.of(context).brightness == Brightness.dark
+                                                //     ? Colors.white10
+                                                //     : const Color(0xFFF2F3F5),
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: InkWell(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  onTap: () {},
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                                    child: Row(
+                                                      children: [
+                    SizedBox(
+                      width: 28,
+                      child: Center(child: _BrandAvatar(name: m.id, size: 28)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(m.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 4),
+                          _modelTagWrap(context, m),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
+                      onPressed: () async {
+                        final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+                        final list = old.models.toList();
+                        if (added) {
+                          list.removeWhere((e) => e == m.id);
+                        } else {
+                          list.add(m.id);
+                        }
+                        await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
+                        setLocal(() {});
+                      },
+                      icon: Icon(added ? Lucide.Minus : Lucide.Plus, size: 24, color: added ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
+                    ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                    ],
+                                  ],
                                 ),
                     ),
                       Padding(
