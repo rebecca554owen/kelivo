@@ -218,6 +218,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
+        // Provider type selector cards
+        _buildProviderTypeSelector(context, cs, zh),
+        const SizedBox(height: 12),
         _switchRow(
           icon: Icons.check_circle_outline,
           title: zh ? '是否启用' : 'Enabled',
@@ -636,6 +639,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       name: _nameCtrl.text.trim().isEmpty ? widget.displayName : _nameCtrl.text.trim(),
       apiKey: _keyCtrl.text.trim(),
       baseUrl: _baseCtrl.text.trim(),
+      providerType: _kind,  // Save the selected provider type
       chatPath: _kind == ProviderKind.openai ? _pathCtrl.text.trim() : old.chatPath,
       useResponseApi: _kind == ProviderKind.openai ? _useResp : old.useResponseApi,
       vertexAI: _kind == ProviderKind.google ? _vertexAI : old.vertexAI,
@@ -753,6 +757,129 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     if (!mounted) return;
     final zh = Localizations.localeOf(context).languageCode == 'zh';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '已保存' : 'Saved')));
+  }
+
+  Widget _buildProviderTypeSelector(BuildContext context, ColorScheme cs, bool zh) {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _kind = ProviderKind.openai;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                color: _kind == ProviderKind.openai 
+                    ? cs.primary.withOpacity(0.15) 
+                    : Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white10 
+                        : const Color(0xFFF7F7F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _kind == ProviderKind.openai 
+                      ? cs.primary.withOpacity(0.5) 
+                      : cs.outlineVariant.withOpacity(0.2),
+                  width: _kind == ProviderKind.openai ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'OpenAI',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: _kind == ProviderKind.openai ? FontWeight.w600 : FontWeight.w500,
+                      color: _kind == ProviderKind.openai ? cs.primary : cs.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _kind = ProviderKind.google;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                color: _kind == ProviderKind.google 
+                    ? cs.primary.withOpacity(0.15) 
+                    : Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white10 
+                        : const Color(0xFFF7F7F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _kind == ProviderKind.google 
+                      ? cs.primary.withOpacity(0.5) 
+                      : cs.outlineVariant.withOpacity(0.2),
+                  width: _kind == ProviderKind.google ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Gemini',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: _kind == ProviderKind.google ? FontWeight.w600 : FontWeight.w500,
+                      color: _kind == ProviderKind.google ? cs.primary : cs.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _kind = ProviderKind.claude;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                color: _kind == ProviderKind.claude 
+                    ? cs.primary.withOpacity(0.15) 
+                    : Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white10 
+                        : const Color(0xFFF7F7F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _kind == ProviderKind.claude 
+                      ? cs.primary.withOpacity(0.5) 
+                      : cs.outlineVariant.withOpacity(0.2),
+                  width: _kind == ProviderKind.claude ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Claude',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: _kind == ProviderKind.claude ? FontWeight.w600 : FontWeight.w500,
+                      color: _kind == ProviderKind.claude ? cs.primary : cs.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _showModelPicker(BuildContext context) async {
