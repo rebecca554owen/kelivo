@@ -302,15 +302,12 @@ class ProviderManager {
                 'input': [
                   {'role': 'user', 'content': 'hello'}
                 ],
-                'max_output_tokens': 8,
               }
             : {
                 'model': modelId,
                 'messages': [
                   {'role': 'user', 'content': 'hello'}
                 ],
-                'max_tokens': 8,
-                'stream': false,
               };
         // Merge custom body overrides
         final extra = _customBody(cfg, modelId);
