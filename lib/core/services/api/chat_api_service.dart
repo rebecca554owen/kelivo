@@ -141,7 +141,7 @@ class ChatApiService {
     Map<String, String>? extraHeaders,
     Map<String, dynamic>? extraBody,
   }) async* {
-    final kind = ProviderConfig.classify(config.id);
+    final kind = ProviderConfig.classify(config.id, explicitType: config.providerType);
     final client = _clientFor(config);
 
     try {
@@ -207,7 +207,7 @@ class ChatApiService {
     Map<String, String>? extraHeaders,
     Map<String, dynamic>? extraBody,
   }) async {
-    final kind = ProviderConfig.classify(config.id);
+    final kind = ProviderConfig.classify(config.id, explicitType: config.providerType);
     final client = _clientFor(config);
     try {
       if (kind == ProviderKind.openai) {

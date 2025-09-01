@@ -9,7 +9,7 @@ import 'package:pretty_qr_code/pretty_qr_code.dart';
 
 String encodeProviderConfig(ProviderConfig cfg) {
   String type;
-  final kind = ProviderConfig.classify(cfg.id);
+  final kind = ProviderConfig.classify(cfg.id, explicitType: cfg.providerType);
   switch (kind) {
     case ProviderKind.google:
       type = 'google';

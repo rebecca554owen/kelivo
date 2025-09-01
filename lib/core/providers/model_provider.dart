@@ -272,7 +272,7 @@ class ProviderManager {
     return out;
   }
   static BaseProvider forConfig(ProviderConfig cfg) {
-    final kind = ProviderConfig.classify(cfg.id);
+    final kind = ProviderConfig.classify(cfg.id, explicitType: cfg.providerType);
     switch (kind) {
       case ProviderKind.google:
         return GoogleProvider();
@@ -289,7 +289,7 @@ class ProviderManager {
   }
 
   static Future<void> testConnection(ProviderConfig cfg, String modelId) async {
-    final kind = ProviderConfig.classify(cfg.id);
+    final kind = ProviderConfig.classify(cfg.id, explicitType: cfg.providerType);
     final client = _Http.clientFor(cfg);
     try {
       if (kind == ProviderKind.openai) {

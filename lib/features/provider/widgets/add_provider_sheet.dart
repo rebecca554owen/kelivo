@@ -208,6 +208,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         name: display,
         apiKey: _openaiKey.text.trim(),
         baseUrl: _openaiBase.text.trim().isEmpty ? 'https://api.openai.com/v1' : _openaiBase.text.trim(),
+        providerType: ProviderKind.openai,  // Explicitly set as OpenAI type
         chatPath: _openaiUseResponse ? null : (_openaiPath.text.trim().isEmpty ? '/chat/completions' : _openaiPath.text.trim()),
         useResponseApi: _openaiUseResponse,
         models: const [],
@@ -230,6 +231,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         name: display,
         apiKey: _googleVertex ? '' : _googleKey.text.trim(),
         baseUrl: _googleVertex ? 'https://aiplatform.googleapis.com' : (_googleBase.text.trim().isEmpty ? 'https://generativelanguage.googleapis.com/v1beta' : _googleBase.text.trim()),
+        providerType: ProviderKind.google,  // Explicitly set as Google type
         vertexAI: _googleVertex,
         location: _googleVertex ? (_googleLocation.text.trim().isEmpty ? 'us-central1' : _googleLocation.text.trim()) : '',
         projectId: _googleVertex ? _googleProject.text.trim() : '',
@@ -254,6 +256,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         name: display,
         apiKey: _claudeKey.text.trim(),
         baseUrl: _claudeBase.text.trim().isEmpty ? 'https://api.anthropic.com/v1' : _claudeBase.text.trim(),
+        providerType: ProviderKind.claude,  // Explicitly set as Claude type
         models: const [],
         modelOverrides: const {},
         proxyEnabled: false,

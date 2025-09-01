@@ -684,6 +684,7 @@ class ProviderConfig {
   final String name;
   final String apiKey;
   final String baseUrl;
+  final ProviderKind? providerType; // Explicit provider type to avoid misclassification
   final String? chatPath; // openai only
   final bool? useResponseApi; // openai only
   final bool? vertexAI; // google only
@@ -708,6 +709,7 @@ class ProviderConfig {
     required this.name,
     required this.apiKey,
     required this.baseUrl,
+    this.providerType,
     this.chatPath,
     this.useResponseApi,
     this.vertexAI,
@@ -729,6 +731,7 @@ class ProviderConfig {
     String? name,
     String? apiKey,
     String? baseUrl,
+    ProviderKind? providerType,
     String? chatPath,
     bool? useResponseApi,
     bool? vertexAI,
@@ -748,6 +751,7 @@ class ProviderConfig {
         name: name ?? this.name,
         apiKey: apiKey ?? this.apiKey,
         baseUrl: baseUrl ?? this.baseUrl,
+        providerType: providerType ?? this.providerType,
         chatPath: chatPath ?? this.chatPath,
         useResponseApi: useResponseApi ?? this.useResponseApi,
         vertexAI: vertexAI ?? this.vertexAI,
@@ -769,6 +773,7 @@ class ProviderConfig {
         'name': name,
         'apiKey': apiKey,
         'baseUrl': baseUrl,
+        'providerType': providerType?.name,
         'chatPath': chatPath,
         'useResponseApi': useResponseApi,
         'vertexAI': vertexAI,
@@ -790,6 +795,12 @@ class ProviderConfig {
         name: json['name'] as String? ?? '',
         apiKey: json['apiKey'] as String? ?? '',
         baseUrl: json['baseUrl'] as String? ?? '',
+        providerType: json['providerType'] != null 
+            ? ProviderKind.values.firstWhere(
+                (e) => e.name == json['providerType'],
+                orElse: () => classify(json['id'] as String? ?? ''),
+              )
+            : null,
         chatPath: json['chatPath'] as String?,
         useResponseApi: json['useResponseApi'] as bool?,
         vertexAI: json['vertexAI'] as bool?,
@@ -805,7 +816,11 @@ class ProviderConfig {
         proxyPassword: json['proxyPassword'] as String?,
       );
 
-  static ProviderKind classify(String key) {
+  static ProviderKind classify(String key, {ProviderKind? explicitType}) {
+    // If an explicit type is provided, use it
+    if (explicitType != null) return explicitType;
+    
+    // Otherwise, infer from the key
     final k = key.toLowerCase();
     if (k.contains('gemini') || k.contains('google')) return ProviderKind.google;
     if (k.contains('claude') || k.contains('anthropic')) return ProviderKind.claude;
@@ -844,6 +859,7 @@ class ProviderConfig {
           name: displayName ?? key,
           apiKey: '',
           baseUrl: _defaultBase(key),
+          providerType: ProviderKind.google,
           vertexAI: false,
           location: '',
           projectId: '',
@@ -863,6 +879,7 @@ class ProviderConfig {
           name: displayName ?? key,
           apiKey: '',
           baseUrl: _defaultBase(key),
+          providerType: ProviderKind.claude,
           models: const [],
           modelOverrides: const {},
           proxyEnabled: false,
@@ -879,6 +896,7 @@ class ProviderConfig {
           name: displayName ?? key,
           apiKey: '',
           baseUrl: _defaultBase(key),
+          providerType: ProviderKind.openai,
           chatPath: '/chat/completions',
           useResponseApi: false,
           models: const [],

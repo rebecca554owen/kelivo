@@ -50,7 +50,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     super.initState();
     final settings = context.read<SettingsProvider>();
     _cfg = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
-    _kind = ProviderConfig.classify(widget.keyName);
+    _kind = ProviderConfig.classify(widget.keyName, explicitType: _cfg.providerType);
     _enabled = _cfg.enabled;
     _nameCtrl.text = _cfg.name;
     _keyCtrl.text = _cfg.apiKey;
