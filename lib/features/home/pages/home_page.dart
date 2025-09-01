@@ -44,6 +44,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
+import '../../../core/services/learning_mode_store.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -55,7 +56,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin, RouteAware {
   bool _toolsOpen = false;
-  static const double _sheetHeight = 160; // height of tools area
+  static const double _sheetHeight = 256; // height of tools area
   // Animation tuning
   static const Duration _scrollAnimateDuration = Duration(milliseconds: 300);
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
@@ -752,6 +753,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         apiMessages.insert(0, {'role': 'system', 'content': prompt});
       }
     }
+    // Inject learning mode prompt when enabled (global)
+    try {
+      final lmEnabled = await LearningModeStore.isEnabled();
+      if (lmEnabled) {
+        final lp = await LearningModeStore.getPrompt();
+        if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
+          apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + lp;
+        } else {
+          apiMessages.insert(0, {'role': 'system', 'content': lp});
+        }
+      }
+    } catch (_) {}
 
     // Limit context length according to assistant settings
     if ((assistant?.contextMessageSize ?? 0) > 0) {
@@ -1496,6 +1509,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         apiMessages.insert(0, {'role': 'system', 'content': prompt});
       }
     }
+    // Inject learning mode prompt when enabled (global)
+    try {
+      final lmEnabled = await LearningModeStore.isEnabled();
+      if (lmEnabled) {
+        final lp = await LearningModeStore.getPrompt();
+        if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
+          apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + lp;
+        } else {
+          apiMessages.insert(0, {'role': 'system', 'content': lp});
+        }
+      }
+    } catch (_) {}
 
     // Limit context length
     if ((assistant?.contextMessageSize ?? 0) > 0) {
