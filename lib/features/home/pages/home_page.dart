@@ -2613,7 +2613,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     if (pk == null || mid == null) return false;
                     return _isToolModel(pk, mid) && context.watch<McpProvider>().servers.isNotEmpty;
                   })(),
-                  mcpActive: context.select<AssistantProvider, bool>((ap) => (ap.currentAssistant?.mcpServerIds.isNotEmpty ?? false)),
+                  mcpActive: (() {
+                    final a = context.watch<AssistantProvider>().currentAssistant;
+                    final connected = context.watch<McpProvider>().connectedServers;
+                    final selected = a?.mcpServerIds ?? const <String>[];
+                    if (selected.isEmpty || connected.isEmpty) return false;
+                    return connected.any((s) => selected.contains(s.id));
+                  })(),
                 );
                     }),
                   ),

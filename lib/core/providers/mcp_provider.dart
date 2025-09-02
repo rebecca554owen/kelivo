@@ -432,6 +432,9 @@ class McpProvider extends ChangeNotifier {
   }
 
   Future<void> ensureConnected(String id) async {
+    // Do not attempt to connect if the server is disabled
+    final cfg = getById(id);
+    if (cfg == null || !cfg.enabled) return;
     if (isConnected(id)) return;
     // Try a few times with short backoff in case server blips
     await _reconnectWithBackoff(id, maxAttempts: 3);
@@ -468,8 +471,11 @@ class McpProvider extends ChangeNotifier {
   }
 
   List<McpToolConfig> getEnabledToolsForServers(Set<String> serverIds) {
+    // Only expose tools for servers that are both selected AND currently connected
     final tools = <McpToolConfig>[];
     for (final s in _servers.where((s) => serverIds.contains(s.id))) {
+      if (statusFor(s.id) != McpStatus.connected) continue;
+      if (!s.enabled) continue;
       tools.addAll(s.tools.where((t) => t.enabled));
     }
     return tools;
