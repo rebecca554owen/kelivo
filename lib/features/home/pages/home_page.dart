@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 
 import '../widgets/chat_input_bar.dart';
 import '../../../core/models/chat_input_data.dart';
@@ -61,6 +62,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   static const Duration _scrollAnimateDuration = Duration(milliseconds: 300);
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final ZoomDrawerController _drawerController = ZoomDrawerController();
   final FocusNode _inputFocus = FocusNode();
   final TextEditingController _inputController = TextEditingController();
   final ChatInputBarController _mediaController = ChatInputBarController();
@@ -2011,10 +2013,58 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     // Chats are seeded via ChatProvider in main.dart
 
-    return Scaffold(
-      key: _scaffoldKey,
-      resizeToAvoidBottomInset: true,
-      extendBodyBehindAppBar: true,
+    return ZoomDrawer(
+      controller: _drawerController,
+      style: DrawerStyle.defaultStyle,
+      borderRadius: 0.0,
+      showShadow: false,
+      angle: 0.0,
+      mainScreenScale: 0.0,
+      menuScreenWidth: MediaQuery.sizeOf(context).width * 0.8,
+      menuBackgroundColor: Theme.of(context).colorScheme.surface,
+      drawerShadowsBackgroundColor: Colors.grey[300] ?? Colors.grey,
+       mainScreenOverlayColor: cs.onSurface.withValues(alpha: 0.1),
+      // mainScreenOverlayColor: Colors.transparent,
+      // drawerShadowsBackgroundColor: Colors.grey[300] ?? Colors.grey,
+      slideWidth: MediaQuery.of(context).size.width * 0.8,
+      menuScreen: SideDrawer(
+        userName: context.watch<UserProvider>().name,
+        assistantName: (() {
+          final zh = Localizations.localeOf(context).languageCode == 'zh';
+          final a = context.watch<AssistantProvider>().currentAssistant;
+          final n = a?.name.trim();
+          return (n == null || n.isEmpty) ? (zh ? '默认助手' : 'Default Assistant') : n;
+        })(),
+        onSelectConversation: (id) {
+          // Update current selection for highlight in drawer
+          _chatService.setCurrentConversation(id);
+          final convo = _chatService.getConversation(id);
+          if (convo != null) {
+            final msgs = _chatService.getMessages(id);
+            setState(() {
+              _currentConversation = convo;
+              _messages = List.of(msgs);
+              _loadVersionSelections();
+              _reasoning.clear();
+              _translations.clear();
+              _toolParts.clear();
+            });
+            _scrollToBottom();
+          }
+          _drawerController.close?.call();
+        },
+        onNewConversation: () async {
+          await _createNewConversation();
+          if (mounted) {
+            _scrollToBottom();
+          }
+          _drawerController.close?.call();
+        },
+      ),
+      mainScreen: Scaffold(
+        key: _scaffoldKey,
+        resizeToAvoidBottomInset: true,
+        extendBodyBehindAppBar: true,
       appBar: AppBar(
         systemOverlayStyle: (Theme.of(context).brightness == Brightness.dark)
             ? const SystemUiOverlayStyle(
@@ -2032,7 +2082,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          onPressed: () => _drawerController.toggle?.call(),
           icon: const Icon(Lucide.ListTree, size: 22),
         ),
         titleSpacing: 0,
@@ -2092,83 +2142,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             icon: const Icon(Lucide.MessageCirclePlus, size: 22),
           ),
         ],
-      ),
-      drawer: SideDrawer(
-        userName: context.watch<UserProvider>().name,
-        assistantName: (() {
-          final zh = Localizations.localeOf(context).languageCode == 'zh';
-          final a = context.watch<AssistantProvider>().currentAssistant;
-          final n = a?.name.trim();
-          return (n == null || n.isEmpty) ? (zh ? '默认助手' : 'Default Assistant') : n;
-        })(),
-        onSelectConversation: (id) {
-          // Update current selection for highlight in drawer
-          _chatService.setCurrentConversation(id);
-          final convo = _chatService.getConversation(id);
-          if (convo != null) {
-            final msgs = _chatService.getMessages(id);
-            setState(() {
-              _currentConversation = convo;
-              _messages = List.of(msgs);
-              _loadVersionSelections();
-              _reasoning.clear();
-              _translations.clear();
-              _toolParts.clear();
-              _reasoningSegments.clear();
-              for (final m in _messages) {
-                // Restore reasoning state
-                if (m.role == 'assistant') {
-                  final txt = m.reasoningText ?? '';
-                  if (txt.isNotEmpty || m.reasoningStartAt != null || m.reasoningFinishedAt != null) {
-                    final rd = _ReasoningData();
-                    rd.text = txt;
-                    rd.startAt = m.reasoningStartAt;
-                    rd.finishedAt = m.reasoningFinishedAt;
-                    rd.expanded = false;
-                    _reasoning[m.id] = rd;
-                  }
-                  // Restore tool events for this message
-        final events = _dedupeToolEvents(_chatService.getToolEvents(m.id));
-        if (events.isNotEmpty) {
-          _toolParts[m.id] = events
-              .map((e) => ToolUIPart(
-            id: (e['id'] ?? '').toString(),
-            toolName: (e['name'] ?? '').toString(),
-            arguments: (e['arguments'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{},
-            content: (e['content']?.toString().isNotEmpty == true) ? e['content'].toString() : null,
-            loading: !(e['content']?.toString().isNotEmpty == true),
-          ))
-              .toList();
-        }
-                  // Restore reasoning segments
-                  final segments = _deserializeReasoningSegments(m.reasoningSegmentsJson);
-                  if (segments.isNotEmpty) {
-                    _reasoningSegments[m.id] = segments;
-                  }
-                }
-                // Restore translation state
-                if (m.translation != null && m.translation!.isNotEmpty) {
-                  final td = _TranslationData();
-                  td.expanded = false; // default to collapsed when loading
-                  _translations[m.id] = td;
-                }
-              }
-            });
-            // MCP selection is now per-assistant; no per-conversation defaults here
-            _triggerConversationFade();
-            _scrollToBottomSoon();
-          }
-          // Close the drawer when a conversation is picked
-          Navigator.of(context).maybePop();
-        },
-        onNewConversation: () async {
-          await _createNewConversation();
-          if (mounted) {
-            _triggerConversationFade();
-            _scrollToBottom();
-            Navigator.of(context).maybePop();
-          }
-        },
       ),
       body: Stack(
         children: [
@@ -2775,6 +2748,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             );
           }),
         ],
+      ),
       ),
     );
   }

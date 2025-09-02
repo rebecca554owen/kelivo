@@ -415,6 +415,9 @@ class _SideDrawerState extends State<SideDrawer> {
 
     return Drawer(
       backgroundColor: cs.surface,
+      width: MediaQuery.of(context).size.width,
+      // shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      // elevation: 0, // 可选：去阴影更像全屏层
       child: SafeArea(
         child: Column(
           children: [
@@ -711,7 +714,6 @@ class _SideDrawerState extends State<SideDrawer> {
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
                             onTap: () async {
-                              Navigator.of(context).pop();
                               final selectedId = await Navigator.of(context).push<String>(
                                 MaterialPageRoute(builder: (_) => ChatHistoryPage(assistantId: currentAssistantId)),
                               );
@@ -744,7 +746,6 @@ class _SideDrawerState extends State<SideDrawer> {
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
                             onTap: () {
-                              Navigator.of(context).pop();
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const SettingsPage()),
                               );
