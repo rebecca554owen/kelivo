@@ -2016,6 +2016,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return ZoomDrawer(
       controller: _drawerController,
       style: DrawerStyle.defaultStyle,
+      mainScreenTapClose: true,
       borderRadius: 0.0,
       showShadow: false,
       angle: 0.0,
