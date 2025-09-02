@@ -479,7 +479,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final Color bodyBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
-    final Color headerBg = isDark ? Colors.white24 : const Color(0xFFE9ECF1);
+    final Color headerBg = isDark ? Colors.white12 : const Color(0xFFE9ECF1);
 
     return Container(
       width: double.infinity,
