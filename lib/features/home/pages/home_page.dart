@@ -1870,6 +1870,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _scrollToBottom();
   }
 
+  // Force scroll after rebuilds when switching topics/conversations
+  void _forceScrollToBottomSoon() {
+    _isUserScrolling = false;
+    _userScrollTimer?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    Future.delayed(_postSwitchScrollDelay, _scrollToBottom);
+  }
+
   void _measureInputBar() {
     try {
       final ctx = _inputBarKey.currentContext;
@@ -2050,14 +2058,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _translations.clear();
               _toolParts.clear();
             });
-            _scrollToBottom();
+            _forceScrollToBottomSoon();
           }
           _drawerController.close?.call();
         },
         onNewConversation: () async {
           await _createNewConversation();
           if (mounted) {
-            _scrollToBottom();
+            _forceScrollToBottomSoon();
           }
           _drawerController.close?.call();
         },
@@ -2137,7 +2145,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               await _createNewConversation();
               if (mounted) {
                 // Close drawer if open and scroll to bottom (fresh convo)
-                _scrollToBottom();
+                _forceScrollToBottomSoon();
               }
             },
             icon: const Icon(Lucide.MessageCirclePlus, size: 22),
