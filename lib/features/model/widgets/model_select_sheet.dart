@@ -78,6 +78,8 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     // Build data map: providerKey -> (displayName, models)
     final Map<String, _ProviderGroup> groups = {};
     providers.forEach((key, cfg) {
+      // Skip disabled providers entirely so they can't be selected
+      if (!(cfg.enabled)) return;
       if (cfg.models.isEmpty) return;
       final list = <_ModelItem>[
         for (final id in cfg.models)
