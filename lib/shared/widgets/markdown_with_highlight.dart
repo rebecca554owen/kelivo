@@ -275,76 +275,12 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
           ),
         );
       },
-      // Fenced code block styling via codeBuilder
+      // Fenced code block styling via codeBuilder (with collapse/expand)
       codeBuilder: (ctx, name, code, closed) {
         final lang = name.trim();
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    _displayLanguage(context, lang),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: cs.secondary,
-                      height: 1.0,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: code));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(_isZh(context) ? '已复制代码' : 'Code copied'),
-                          ),
-                        );
-                      }
-                    },
-                    icon: Icon(
-                      Lucide.Copy,
-                      size: 16,
-                      color: cs.onSurface.withOpacity(0.7),
-                    ),
-                    tooltip: _isZh(context) ? '复制' : 'Copy',
-                    visualDensity: VisualDensity.compact,
-                    iconSize: 16,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: HighlightView(
-                  code,
-                  language: _normalizeLanguage(lang) ?? 'plaintext',
-                  theme: _transparentBgTheme(
-                    isDark ? atomOneDarkReasonableTheme : githubTheme,
-                  ),
-                  padding: EdgeInsets.zero,
-                  textStyle: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        return _CollapsibleCodeBlock(
+          language: lang,
+          code: code,
         );
       },
     );
@@ -521,6 +457,126 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     }
     final fixed = SandboxPathResolver.fix(src);
     return FileImage(File(fixed));
+  }
+}
+
+class _CollapsibleCodeBlock extends StatefulWidget {
+  final String language;
+  final String code;
+
+  const _CollapsibleCodeBlock({required this.language, required this.code});
+
+  @override
+  State<_CollapsibleCodeBlock> createState() => _CollapsibleCodeBlockState();
+}
+
+class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bodyBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final Color headerBg = isDark ? Colors.white24 : const Color(0xFFE9ECF1);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header layout: language + copy + expand/collapse icon
+          Material(
+            color: headerBg,
+            child: InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.25), width: 0.8),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      MarkdownWithCodeHighlight._displayLanguage(context, widget.language),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: cs.secondary,
+                        height: 1.0,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Copy button stays functional; tapping it won't toggle parent
+                    IconButton(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: widget.code));
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(MarkdownWithCodeHighlight._isZh(context) ? '已复制代码' : 'Code copied'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(
+                        Lucide.Copy,
+                        size: 16,
+                        color: cs.onSurface.withOpacity(0.7),
+                      ),
+                      tooltip: MarkdownWithCodeHighlight._isZh(context) ? '复制' : 'Copy',
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 16,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      padding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
+                      size: 16,
+                      color: cs.onSurface.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_expanded)
+            Container(
+              width: double.infinity,
+              color: bodyBg,
+              padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: HighlightView(
+                  widget.code,
+                  language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
+                  theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                    isDark ? atomOneDarkReasonableTheme : githubTheme,
+                  ),
+                  padding: EdgeInsets.zero,
+                  textStyle: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
