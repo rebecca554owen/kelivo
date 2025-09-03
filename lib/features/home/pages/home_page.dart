@@ -460,7 +460,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         // Skip duplicate when we already vibrated on programmatic open
         _suppressNextOpenHaptic = false;
       } else {
-        try { HapticFeedback.mediumImpact(); } catch (_) {}
+        try {
+          if (context.read<SettingsProvider>().hapticsOnDrawer) {
+            HapticFeedback.mediumImpact();
+          }
+        } catch (_) {}
       }
     }
     _lastDrawerState = s;
@@ -2126,7 +2130,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             _forceScrollToBottomSoon();
           }
           // Haptic feedback when closing the sidebar
-          try { HapticFeedback.mediumImpact(); } catch (_) {}
+          try {
+            if (context.read<SettingsProvider>().hapticsOnDrawer) {
+              HapticFeedback.mediumImpact();
+            }
+          } catch (_) {}
           _drawerController.close?.call();
         },
         onNewConversation: () async {
@@ -2135,7 +2143,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             _forceScrollToBottomSoon();
           }
           // Haptic feedback when closing the sidebar
-          try { HapticFeedback.mediumImpact(); } catch (_) {}
+          try {
+            if (context.read<SettingsProvider>().hapticsOnDrawer) {
+              HapticFeedback.mediumImpact();
+            }
+          } catch (_) {}
           _drawerController.close?.call();
         },
       ),
@@ -2162,7 +2174,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         leading: IconButton(
           onPressed: () {
             // Haptic feedback on opening/closing the sidebar
-            try { HapticFeedback.mediumImpact(); } catch (_) {}
+            try {
+              if (context.read<SettingsProvider>().hapticsOnDrawer) {
+                HapticFeedback.mediumImpact();
+              }
+            } catch (_) {}
             // If the drawer is currently closed, toggling will open -> suppress listener haptic
             final isOpen = _drawerController.isOpen?.call() == true;
             if (!isOpen) _suppressNextOpenHaptic = true;

@@ -107,6 +107,15 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
           ),
           _SwitchTile(
             icon: Lucide.Vibrate,
+            title: zh ? '侧边栏触觉反馈' : 'Haptics on Sidebar',
+            subtitle: zh
+                ? '打开/关闭侧边栏时启用触觉反馈'
+                : 'Enable haptic feedback when opening/closing sidebar',
+            value: context.watch<SettingsProvider>().hapticsOnDrawer,
+            onChanged: (v) => context.read<SettingsProvider>().setHapticsOnDrawer(v),
+          ),
+          _SwitchTile(
+            icon: Lucide.Vibrate,
             title: zh ? '消息生成触觉反馈' : 'Haptics on Generate',
             subtitle: zh
                 ? '生成消息时启用触觉反馈'

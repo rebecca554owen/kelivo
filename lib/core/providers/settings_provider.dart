@@ -23,6 +23,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayAutoCollapseThinkingKey = 'display_auto_collapse_thinking_v1';
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
   static const String _displayHapticsOnGenerateKey = 'display_haptics_on_generate_v1';
+  static const String _displayHapticsOnDrawerKey = 'display_haptics_on_drawer_v1';
   static const String _displayShowAppUpdatesKey = 'display_show_app_updates_v1';
   static const String _displayNewChatOnLaunchKey = 'display_new_chat_on_launch_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
@@ -152,6 +153,7 @@ class SettingsProvider extends ChangeNotifier {
     _autoCollapseThinking = prefs.getBool(_displayAutoCollapseThinkingKey) ?? true;
     _showMessageNavButtons = prefs.getBool(_displayShowMessageNavKey) ?? true;
     _hapticsOnGenerate = prefs.getBool(_displayHapticsOnGenerateKey) ?? false;
+    _hapticsOnDrawer = prefs.getBool(_displayHapticsOnDrawerKey) ?? true;
     _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
@@ -578,6 +580,17 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayHapticsOnGenerateKey, v);
   }
 
+  // Display: haptics on drawer open/close
+  bool _hapticsOnDrawer = true;
+  bool get hapticsOnDrawer => _hapticsOnDrawer;
+  Future<void> setHapticsOnDrawer(bool v) async {
+    if (_hapticsOnDrawer == v) return;
+    _hapticsOnDrawer = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayHapticsOnDrawerKey, v);
+  }
+
   // Display: show app updates notification
   bool _showAppUpdates = true;
   bool get showAppUpdates => _showAppUpdates;
@@ -669,6 +682,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._autoCollapseThinking = _autoCollapseThinking;
     copy._showMessageNavButtons = _showMessageNavButtons;
     copy._hapticsOnGenerate = _hapticsOnGenerate;
+    copy._hapticsOnDrawer = _hapticsOnDrawer;
     copy._showAppUpdates = _showAppUpdates;
     copy._newChatOnLaunch = _newChatOnLaunch;
     copy._chatFontScale = _chatFontScale;
