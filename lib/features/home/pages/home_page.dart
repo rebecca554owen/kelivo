@@ -2056,13 +2056,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       showShadow: false,
       angle: 0.0,
       mainScreenScale: 0.0,
-      menuScreenWidth: MediaQuery.sizeOf(context).width * 0.8,
+      menuScreenWidth: MediaQuery.sizeOf(context).width * 0.75,
       menuBackgroundColor: Theme.of(context).colorScheme.surface,
       drawerShadowsBackgroundColor: Colors.grey[300] ?? Colors.grey,
        mainScreenOverlayColor: cs.onSurface.withValues(alpha: 0.1),
       // mainScreenOverlayColor: Colors.transparent,
       // drawerShadowsBackgroundColor: Colors.grey[300] ?? Colors.grey,
-      slideWidth: MediaQuery.of(context).size.width * 0.8,
+      slideWidth: MediaQuery.of(context).size.width * 0.75,
       menuScreen: SideDrawer(
         userName: context.watch<UserProvider>().name,
         assistantName: (() {
@@ -2085,6 +2085,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             });
             _forceScrollToBottomSoon();
           }
+          // Haptic feedback when closing the sidebar
+          try { HapticFeedback.selectionClick(); } catch (_) {}
           _drawerController.close?.call();
         },
         onNewConversation: () async {
@@ -2092,6 +2094,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (mounted) {
             _forceScrollToBottomSoon();
           }
+          // Haptic feedback when closing the sidebar
+          try { HapticFeedback.selectionClick(); } catch (_) {}
           _drawerController.close?.call();
         },
       ),
@@ -2116,7 +2120,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          onPressed: () => _drawerController.toggle?.call(),
+          onPressed: () {
+            // Haptic feedback on opening/closing the sidebar
+            try { HapticFeedback.selectionClick(); } catch (_) {}
+            _drawerController.toggle?.call();
+          },
           icon: const Icon(Lucide.ListTree, size: 22),
         ),
         titleSpacing: 0,
