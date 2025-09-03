@@ -10,6 +10,20 @@ import '../../../utils/sandbox_path_resolver.dart';
 import 'google_service_account_auth.dart';
 
 class ChatApiService {
+  // Read built-in tools configured per model (e.g., ['search', 'url_context']).
+  // Stored under ProviderConfig.modelOverrides[modelId].builtInTools.
+  static Set<String> _builtInTools(ProviderConfig cfg, String modelId) {
+    try {
+      final ov = cfg.modelOverrides[modelId];
+      if (ov is Map<String, dynamic>) {
+        final raw = ov['builtInTools'];
+        if (raw is List) {
+          return raw.map((e) => e.toString().trim().toLowerCase()).where((e) => e.isNotEmpty).toSet();
+        }
+      }
+    } catch (_) {}
+    return const <String>{};
+  }
   // Helpers to read per-model overrides (headers/body) from ProviderConfig
   static Map<String, dynamic> _modelOverride(ProviderConfig cfg, String modelId) {
     final ov = cfg.modelOverrides[modelId];
@@ -321,6 +335,22 @@ class ChatApiService {
           ],
           'generationConfig': {'temperature': 0.3},
         };
+
+        // Inject Gemini built-in tools (only for official Gemini API; Vertex may not support these)
+        final builtIns = _builtInTools(config, modelId);
+        final isOfficialGemini = config.vertexAI != true; // heuristic per requirement
+        if (isOfficialGemini && builtIns.isNotEmpty) {
+          final toolsArr = <Map<String, dynamic>>[];
+          if (builtIns.contains('search')) {
+            toolsArr.add({'google_search': {}});
+          }
+          if (builtIns.contains('url_context')) {
+            toolsArr.add({'url_context': {}});
+          }
+          if (toolsArr.isNotEmpty) {
+            (body as Map<String, dynamic>)['tools'] = toolsArr;
+          }
+        }
     final headers = <String, String>{'Content-Type': 'application/json'};
     // Add Bearer for Vertex via service account JSON
     if (config.vertexAI == true) {
@@ -1549,9 +1579,22 @@ class ChatApiService {
     bool _expectImage = wantsImageOutput;
     bool _receivedImage = false;
     final off = _isOff(thinkingBudget);
-    // Map OpenAI tools to Gemini functionDeclarations
+    // Built-in Gemini tools (only for official Gemini API)
+    final builtIns = _builtInTools(config, modelId);
+    final isOfficialGemini = config.vertexAI != true; // requirement: only Gemini official API
+    final builtInToolEntries = <Map<String, dynamic>>[];
+    if (isOfficialGemini && builtIns.isNotEmpty) {
+      if (builtIns.contains('search')) {
+        builtInToolEntries.add({'google_search': {}});
+      }
+      if (builtIns.contains('url_context')) {
+        builtInToolEntries.add({'url_context': {}});
+      }
+    }
+
+    // Map OpenAI-style tools to Gemini functionDeclarations (skip if built-in tools are enabled, as they are not compatible)
     List<Map<String, dynamic>>? geminiTools;
-    if (tools != null && tools.isNotEmpty) {
+    if (builtInToolEntries.isEmpty && tools != null && tools.isNotEmpty) {
       final decls = <Map<String, dynamic>>[];
       for (final t in tools) {
         final fn = (t['function'] as Map<String, dynamic>?);
@@ -1572,6 +1615,32 @@ class ChatApiService {
     TokenUsage? usage;
     int totalTokens = 0;
 
+    // Accumulate built-in search citations across stream rounds
+    final List<Map<String, dynamic>> _builtinCitations = <Map<String, dynamic>>[];
+
+    List<Map<String, dynamic>> _parseCitations(dynamic gm) {
+      final out = <Map<String, dynamic>>[];
+      if (gm is! Map) return out;
+      final chunks = gm['groundingChunks'] as List? ?? const <dynamic>[];
+      int idx = 1;
+      final seen = <String>{};
+      for (final ch in chunks) {
+        if (ch is! Map) continue;
+        final web = ch['web'] as Map? ?? ch['webSite'] as Map? ?? ch['webPage'] as Map?;
+        if (web is! Map) continue;
+        final uri = (web['uri'] ?? web['url'] ?? '').toString();
+        if (uri.isEmpty) continue;
+        // Deduplicate by uri
+        if (seen.contains(uri)) continue;
+        seen.add(uri);
+        final title = (web['title'] ?? web['name'] ?? uri).toString();
+        final id = 'c${idx.toString().padLeft(2, '0')}';
+        out.add({'id': id, 'index': idx, 'title': title, 'url': uri});
+        idx++;
+      }
+      return out;
+    }
+
     while (true) {
       final gen = <String, dynamic>{
         if (temperature != null) 'temperature': temperature,
@@ -1589,7 +1658,9 @@ class ChatApiService {
       final body = <String, dynamic>{
         'contents': convo,
         if (gen.isNotEmpty) 'generationConfig': gen,
-        if (geminiTools != null && geminiTools.isNotEmpty) 'tools': geminiTools,
+        // Prefer built-in tools when configured; otherwise map function tools
+        if (builtInToolEntries.isNotEmpty) 'tools': builtInToolEntries,
+        if (builtInToolEntries.isEmpty && geminiTools != null && geminiTools.isNotEmpty) 'tools': geminiTools,
       };
 
       final request = http.Request('POST', uri);
@@ -1735,6 +1806,29 @@ class ChatApiService {
                 // Capture explicit finish reason if present
                 final fr = cand['finishReason'];
                 if (fr is String && fr.isNotEmpty) finishReason = fr;
+
+                // Parse grounding metadata for citations if present
+                final gm = cand['groundingMetadata'] ?? obj['groundingMetadata'];
+                final cite = _parseCitations(gm);
+                if (cite.isNotEmpty) {
+                  // merge unique by url
+                  final existingUrls = _builtinCitations.map((e) => e['url']?.toString() ?? '').toSet();
+                  for (final it in cite) {
+                    final u = it['url']?.toString() ?? '';
+                    if (u.isEmpty || existingUrls.contains(u)) continue;
+                    _builtinCitations.add(it);
+                    existingUrls.add(u);
+                  }
+                  // emit a tool result chunk so UI can render citations card
+                  final payload = jsonEncode({'items': _builtinCitations});
+                  yield ChatStreamChunk(
+                    content: '',
+                    isDone: false,
+                    totalTokens: totalTokens,
+                    usage: usage,
+                    toolResults: [ToolResultInfo(id: 'builtin_search', name: 'builtin_search', arguments: const <String, dynamic>{}, content: payload)],
+                  );
+                }
               }
 
               if (reasoningDelta.isNotEmpty) {
@@ -1749,6 +1843,11 @@ class ChatApiService {
                 if (_imageOpen) {
                   yield ChatStreamChunk(content: ')', isDone: false, totalTokens: totalTokens, usage: usage);
                   _imageOpen = false;
+                }
+                // Emit final citations if any not emitted
+                if (_builtinCitations.isNotEmpty) {
+                  final payload = jsonEncode({'items': _builtinCitations});
+                  yield ChatStreamChunk(content: '', isDone: false, totalTokens: totalTokens, usage: usage, toolResults: [ToolResultInfo(id: 'builtin_search', name: 'builtin_search', arguments: const <String, dynamic>{}, content: payload)]);
                 }
                 yield ChatStreamChunk(content: '', isDone: true, totalTokens: totalTokens, usage: usage);
                 return;

@@ -758,8 +758,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       apiMessages.insert(0, {'role': 'system', 'content': sys});
     }
 
-    // Optionally inject search tool usage guide (when search is enabled)
-    if (settings.searchEnabled) {
+    // Determine tool support and built-in Gemini search status
+    final supportsTools = _isToolModel(providerKey, modelId);
+    bool _hasBuiltInGeminiSearch() {
+      try {
+        final cfg = settings.getProviderConfig(providerKey);
+        // Only official Gemini API supports built-in search
+        if (cfg.providerType != ProviderKind.google || (cfg.vertexAI == true)) return false;
+        final ov = cfg.modelOverrides[modelId] as Map?;
+        final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
+        return list.map((e) => e.toString().toLowerCase()).contains('search');
+      } catch (_) {
+        return false;
+      }
+    }
+    final hasBuiltInSearch = _hasBuiltInGeminiSearch();
+
+    // Optionally inject search tool usage guide (when search is enabled and not using Gemini built-in search)
+    if (settings.searchEnabled && !hasBuiltInSearch) {
       final prompt = SearchToolService.getSystemPrompt();
       if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
         apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + prompt;
@@ -814,8 +830,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final List<Map<String, dynamic>> toolDefs = <Map<String, dynamic>>[];
       Future<String> Function(String, Map<String, dynamic>)? onToolCall;
 
-      // Search tool
-      if (settings.searchEnabled) {
+      // Search tool (skip when Gemini built-in search is active)
+      if (settings.searchEnabled && !hasBuiltInSearch && supportsTools) {
         toolDefs.add(SearchToolService.getToolDefinition());
       }
 
@@ -823,7 +839,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final mcp = context.read<McpProvider>();
       final toolSvc = context.read<McpToolService>();
       final tools = toolSvc.listAvailableToolsForAssistant(mcp, context.read<AssistantProvider>(), assistant?.id);
-      final supportsTools = _isToolModel(providerKey, modelId);
       if (supportsTools && tools.isNotEmpty) {
         toolDefs.addAll(tools.map((t) {
           final props = <String, dynamic>{
@@ -2545,11 +2560,26 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         }
                       }
                     }
+                    // Compute whether built-in Gemini search is active to highlight the search button
+                    final cfg = (settings.currentModelProvider != null)
+                        ? settings.getProviderConfig(settings.currentModelProvider!)
+                        : null;
+                    bool builtinSearchActive = false;
+                    if (cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true)) {
+                      final mid = settings.currentModelId;
+                      if ((mid ?? '').isNotEmpty) {
+                        final ov = cfg.modelOverrides[mid] as Map?;
+                        final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
+                        builtinSearchActive = list.map((e) => e.toString().toLowerCase()).contains('search');
+                      }
+                    }
+
                     return ChatInputBar(
                   key: _inputBarKey,
                   onMore: _toggleTools,
                   moreOpen: _toolsOpen,
-                  searchEnabled: context.watch<SettingsProvider>().searchEnabled,
+                  // Highlight when app-level search enabled OR model built-in search enabled
+                  searchEnabled: context.watch<SettingsProvider>().searchEnabled || builtinSearchActive,
                   onToggleSearch: (enabled) {
                     context.read<SettingsProvider>().setSearchEnabled(enabled);
                   },

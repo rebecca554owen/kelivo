@@ -587,6 +587,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 final int clampedEnd = end.clamp(start, tools.length);
 
                 for (int k = start; k < clampedEnd; k++) {
+                  // Hide builtin_search tool cards; citations still appear via bottom summary card 隐藏内置搜索工具卡片
+                  if (tools[k].toolName == 'builtin_search') continue;
                   mixedContent.add(
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -612,11 +614,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               ),
               const SizedBox(height: 8),
             ],
-            // Tool call placeholders before content
-            if ((widget.toolParts ?? const <ToolUIPart>[]).isNotEmpty) ...[
+            // Tool call placeholders before content 隐藏内置搜索工具卡片
+            if ((widget.toolParts ?? const <ToolUIPart>[]).where((p) => p.toolName != 'builtin_search').isNotEmpty) ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: widget.toolParts!
+                    .where((p) => p.toolName != 'builtin_search') // 隐藏内置搜索工具卡片
                     .map((p) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _ToolCallItem(part: p),
@@ -846,12 +849,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     }
   }
 
-  // Extract items from the last search_web tool result for this assistant message
+  // Extract items from the last search_web or builtin_search tool result for this assistant message
   List<Map<String, dynamic>> _latestSearchItems() {
     final parts = widget.toolParts ?? const <ToolUIPart>[];
     for (int i = parts.length - 1; i >= 0; i--) {
       final p = parts[i];
-      if (p.toolName == 'search_web' && (p.content?.isNotEmpty ?? false)) {
+      if ((p.toolName == 'search_web' || p.toolName == 'builtin_search') && (p.content?.isNotEmpty ?? false)) {
         try {
           final obj = jsonDecode(p.content!) as Map<String, dynamic>;
           final arr = obj['items'] as List? ?? const <dynamic>[];
@@ -1139,6 +1142,8 @@ class _ToolCallItem extends StatelessWidget {
         return Lucide.Trash2;
       case 'search_web':
         return Lucide.Earth;
+      case 'builtin_search':
+        return Lucide.Search;
       default:
         return Lucide.Wrench;
     }
@@ -1157,6 +1162,8 @@ class _ToolCallItem extends StatelessWidget {
       case 'search_web':
         final q = (args['query'] ?? '').toString();
         return zh ? (isResult ? '联网检索: $q' : '联网检索: $q') : (isResult ? 'Web Search: $q' : 'Web Search: $q');
+      case 'builtin_search':
+        return zh ? (isResult ? '模型内置搜索' : '模型内置搜索') : (isResult ? 'Built-in Search' : 'Built-in Search');
       default:
         return zh ? (isResult ? '调用工具: $name' : '调用工具: $name') : (isResult ? 'Tool Result: $name' : 'Tool Call: $name');
     }

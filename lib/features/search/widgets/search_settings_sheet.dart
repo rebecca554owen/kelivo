@@ -61,6 +61,20 @@ class _SearchSettingsSheet extends StatelessWidget {
     final selected = settings.searchServiceSelected.clamp(0, services.isNotEmpty ? services.length - 1 : 0);
     final enabled = settings.searchEnabled;
 
+    // Determine if current selected model supports Gemini built-in search (official API only)
+    final providerKey = settings.currentModelProvider;
+    final modelId = settings.currentModelId;
+    final cfg = (providerKey != null) ? settings.getProviderConfig(providerKey) : null;
+    final isOfficialGemini = cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
+    // Read current built-in search toggle from modelOverrides
+    bool hasBuiltInSearch = false;
+    if (isOfficialGemini && providerKey != null && (modelId ?? '').isNotEmpty) {
+      final mid = modelId!;
+      final ov = cfg!.modelOverrides[mid] as Map?;
+      final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
+      hasBuiltInSearch = list.map((e) => e.toString().toLowerCase()).contains('search');
+    }
+
     return SafeArea(
       top: false,
       child: DraggableScrollableSheet(
@@ -94,7 +108,71 @@ class _SearchSettingsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Built-in search toggle (Gemini official only)
+                if (isOfficialGemini && (providerKey != null) && (modelId ?? '').isNotEmpty) ...[
+                  Material(
+                    color: hasBuiltInSearch ? cs.primary.withOpacity(0.08) : theme.cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: cs.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Lucide.Search, color: cs.primary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(zh ? '模型内置搜索' : 'Built-in Search', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  zh ? '是否启用模型内置的搜索功能' : "Enable model's built-in search",
+                                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Switch(
+                            value: hasBuiltInSearch,
+                            onChanged: (v) async {
+                              if (providerKey == null || (modelId ?? '').isEmpty) return;
+                              // Update modelOverrides for built-in tools
+                              final mid = modelId!;
+                              final overrides = Map<String, dynamic>.from(cfg!.modelOverrides);
+                              final mo = Map<String, dynamic>.from((overrides[mid] as Map?)?.map((k, val) => MapEntry(k.toString(), val)) ?? const <String, dynamic>{});
+                              final list = List<String>.from(((mo['builtInTools'] as List?) ?? const <dynamic>[]).map((e) => e.toString()));
+                              if (v) {
+                                if (!list.map((e) => e.toLowerCase()).contains('search')) list.add('search');
+                              } else {
+                                list.removeWhere((e) => e.toLowerCase() == 'search');
+                              }
+                              mo['builtInTools'] = list;
+                              overrides[mid] = mo;
+                              await context.read<SettingsProvider>().setProviderConfig(providerKey, cfg.copyWith(modelOverrides: overrides));
+                              if (v) {
+                                // Disallow app-level web search when built-in is enabled
+                                await context.read<SettingsProvider>().setSearchEnabled(false);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
                 // Toggle card
+                if (!hasBuiltInSearch) ...[
                 Material(
                   color: enabled ? cs.primary.withOpacity(0.08) : theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
@@ -126,6 +204,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                           ),
                         ),
                         // Settings button -> full search services page
+                        // builtin has no settings icon; keep settings icon only for web search
                         IconButton(
                           tooltip: zh ? '打开搜索服务设置' : 'Open search services',
                           icon: Icon(Lucide.Settings, size: 20),
@@ -145,8 +224,9 @@ class _SearchSettingsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
+                ],
                 // Services grid (2 per row, larger tiles)
-                if (services.isNotEmpty) ...[
+                if (!hasBuiltInSearch && services.isNotEmpty) ...[
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -187,7 +267,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                       );
                     },
                   ),
-                ] else ...[
+                ] else if (!hasBuiltInSearch) ...[
                   Text(
                     zh ? '暂无可用服务，请先在“搜索服务”中添加' : 'No services. Add from Search Services.',
                     style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
