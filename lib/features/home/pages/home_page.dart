@@ -87,6 +87,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   bool _isUserScrolling = false;
   Timer? _userScrollTimer;
 
+  // Drawer haptics for swipe-open
+  DrawerState? _lastDrawerState;
+  bool _suppressNextOpenHaptic = false; // set when we already vibrated on programmatic open
+  ValueNotifier<DrawerState>? _drawerStateNotifier;
+
   // Deduplicate tool UI parts by id or by name+args when id is empty
   List<ToolUIPart> _dedupeToolPartsList(List<ToolUIPart> parts) {
     final seen = <String>{};
@@ -424,6 +429,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         });
       }
     });
+
+    // Attach ZoomDrawer state listener after first frame to catch swipe-open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _attachDrawerStateListener();
+    });
+  }
+
+  void _attachDrawerStateListener() {
+    // Avoid duplicate listeners
+    final notifier = _drawerController.stateNotifier;
+    if (notifier == null) return;
+    if (!identical(_drawerStateNotifier, notifier)) {
+      // Remove old
+      _drawerStateNotifier?.removeListener(_onDrawerStateChanged);
+      _drawerStateNotifier = notifier;
+      _drawerStateNotifier!.addListener(_onDrawerStateChanged);
+    }
+  }
+
+  void _onDrawerStateChanged() {
+    final s = _drawerController.stateNotifier?.value;
+    if (s == null) return;
+    // Fire once when transitioning from closed/closing to opening (covers swipe-open)
+    final wasClosedLike = _lastDrawerState == null ||
+        _lastDrawerState == DrawerState.closed ||
+        _lastDrawerState == DrawerState.closing;
+    if (wasClosedLike && s == DrawerState.opening) {
+      if (_suppressNextOpenHaptic) {
+        // Skip duplicate when we already vibrated on programmatic open
+        _suppressNextOpenHaptic = false;
+      } else {
+        try { HapticFeedback.mediumImpact(); } catch (_) {}
+      }
+    }
+    _lastDrawerState = s;
   }
 
   void _onScrollControllerChanged() {
@@ -2086,7 +2126,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             _forceScrollToBottomSoon();
           }
           // Haptic feedback when closing the sidebar
-          try { HapticFeedback.selectionClick(); } catch (_) {}
+          try { HapticFeedback.mediumImpact(); } catch (_) {}
           _drawerController.close?.call();
         },
         onNewConversation: () async {
@@ -2095,7 +2135,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             _forceScrollToBottomSoon();
           }
           // Haptic feedback when closing the sidebar
-          try { HapticFeedback.selectionClick(); } catch (_) {}
+          try { HapticFeedback.mediumImpact(); } catch (_) {}
           _drawerController.close?.call();
         },
       ),
@@ -2122,7 +2162,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         leading: IconButton(
           onPressed: () {
             // Haptic feedback on opening/closing the sidebar
-            try { HapticFeedback.selectionClick(); } catch (_) {}
+            try { HapticFeedback.mediumImpact(); } catch (_) {}
+            // If the drawer is currently closed, toggling will open -> suppress listener haptic
+            final isOpen = _drawerController.isOpen?.call() == true;
+            if (!isOpen) _suppressNextOpenHaptic = true;
             _drawerController.toggle?.call();
           },
           icon: const Icon(Lucide.ListTree, size: 22),
@@ -2820,6 +2863,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void dispose() {
     _convoFadeController.dispose();
     _mcpProvider?.removeListener(_onMcpChanged);
+    _drawerStateNotifier?.removeListener(_onDrawerStateChanged);
     _inputFocus.dispose();
     _inputController.dispose();
     _scrollController.removeListener(_onScrollControllerChanged);
