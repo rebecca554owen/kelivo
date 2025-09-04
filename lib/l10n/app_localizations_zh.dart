@@ -854,4 +854,146 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get messageExportSheetDateTimeWithSecondsPattern =>
       'yyyy年M月d日 HH:mm:ss';
+
+  @override
+  String get sideDrawerMenuRename => '重命名';
+
+  @override
+  String get sideDrawerMenuPin => '置顶';
+
+  @override
+  String get sideDrawerMenuUnpin => '取消置顶';
+
+  @override
+  String get sideDrawerMenuRegenerateTitle => '重新生成标题';
+
+  @override
+  String get sideDrawerMenuDelete => '删除';
+
+  @override
+  String sideDrawerDeleteSnackbar(String title) {
+    return '已删除“$title”';
+  }
+
+  @override
+  String get sideDrawerRenameHint => '输入新名称';
+
+  @override
+  String get sideDrawerCancel => '取消';
+
+  @override
+  String get sideDrawerOK => '确定';
+
+  @override
+  String get sideDrawerSave => '保存';
+
+  @override
+  String get sideDrawerGreetingMorning => '早上好 👋';
+
+  @override
+  String get sideDrawerGreetingNoon => '中午好 👋';
+
+  @override
+  String get sideDrawerGreetingAfternoon => '下午好 👋';
+
+  @override
+  String get sideDrawerGreetingEvening => '晚上好 👋';
+
+  @override
+  String get sideDrawerDateToday => '今天';
+
+  @override
+  String get sideDrawerDateYesterday => '昨天';
+
+  @override
+  String get sideDrawerDateShortPattern => 'M月d日';
+
+  @override
+  String get sideDrawerDateFullPattern => 'yyyy年M月d日';
+
+  @override
+  String get sideDrawerSearchHint => '搜索聊天记录';
+
+  @override
+  String sideDrawerUpdateTitle(String version) {
+    return '发现新版本：$version';
+  }
+
+  @override
+  String sideDrawerUpdateTitleWithBuild(String version, int build) {
+    return '发现新版本：$version ($build)';
+  }
+
+  @override
+  String get sideDrawerLinkCopied => '已复制下载链接';
+
+  @override
+  String get sideDrawerPinnedLabel => '置顶';
+
+  @override
+  String get sideDrawerHistory => '聊天历史';
+
+  @override
+  String get sideDrawerSettings => '设置';
+
+  @override
+  String get sideDrawerChooseAssistantTitle => '选择助手';
+
+  @override
+  String get sideDrawerChooseImage => '选择图片';
+
+  @override
+  String get sideDrawerChooseEmoji => '选择表情';
+
+  @override
+  String get sideDrawerEnterLink => '输入链接';
+
+  @override
+  String get sideDrawerImportFromQQ => 'QQ头像';
+
+  @override
+  String get sideDrawerReset => '重置';
+
+  @override
+  String get sideDrawerEmojiDialogTitle => '选择表情';
+
+  @override
+  String get sideDrawerEmojiDialogHint => '输入或粘贴任意表情';
+
+  @override
+  String get sideDrawerImageUrlDialogTitle => '输入图片链接';
+
+  @override
+  String get sideDrawerImageUrlDialogHint =>
+      '例如: https://example.com/avatar.png';
+
+  @override
+  String get sideDrawerQQAvatarDialogTitle => '使用QQ头像';
+
+  @override
+  String get sideDrawerQQAvatarInputHint => '输入QQ号码（5-12位）';
+
+  @override
+  String get sideDrawerQQAvatarFetchFailed => '获取随机QQ头像失败，请重试';
+
+  @override
+  String get sideDrawerRandomQQ => '随机QQ';
+
+  @override
+  String get sideDrawerGalleryOpenError => '无法打开相册，试试输入图片链接';
+
+  @override
+  String get sideDrawerGeneralImageError => '发生错误，试试输入图片链接';
+
+  @override
+  String get sideDrawerSetNicknameTitle => '设置昵称';
+
+  @override
+  String get sideDrawerNicknameLabel => '昵称';
+
+  @override
+  String get sideDrawerNicknameHint => '输入新的昵称';
+
+  @override
+  String get sideDrawerRename => '重命名';
 }

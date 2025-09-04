@@ -1723,6 +1723,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'yyyy-MM-dd HH:mm:ss'**
   String get messageExportSheetDateTimeWithSecondsPattern;
+
+  /// No description provided for @sideDrawerMenuRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get sideDrawerMenuRename;
+
+  /// No description provided for @sideDrawerMenuPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get sideDrawerMenuPin;
+
+  /// No description provided for @sideDrawerMenuUnpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get sideDrawerMenuUnpin;
+
+  /// No description provided for @sideDrawerMenuRegenerateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate Title'**
+  String get sideDrawerMenuRegenerateTitle;
+
+  /// No description provided for @sideDrawerMenuDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get sideDrawerMenuDelete;
+
+  /// No description provided for @sideDrawerDeleteSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted \"{title}\"'**
+  String sideDrawerDeleteSnackbar(String title);
+
+  /// No description provided for @sideDrawerRenameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new name'**
+  String get sideDrawerRenameHint;
+
+  /// No description provided for @sideDrawerCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get sideDrawerCancel;
+
+  /// No description provided for @sideDrawerOK.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get sideDrawerOK;
+
+  /// No description provided for @sideDrawerSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get sideDrawerSave;
+
+  /// No description provided for @sideDrawerGreetingMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning 👋'**
+  String get sideDrawerGreetingMorning;
+
+  /// No description provided for @sideDrawerGreetingNoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon 👋'**
+  String get sideDrawerGreetingNoon;
+
+  /// No description provided for @sideDrawerGreetingAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon 👋'**
+  String get sideDrawerGreetingAfternoon;
+
+  /// No description provided for @sideDrawerGreetingEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening 👋'**
+  String get sideDrawerGreetingEvening;
+
+  /// No description provided for @sideDrawerDateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get sideDrawerDateToday;
+
+  /// No description provided for @sideDrawerDateYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get sideDrawerDateYesterday;
+
+  /// No description provided for @sideDrawerDateShortPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'MMM d'**
+  String get sideDrawerDateShortPattern;
+
+  /// No description provided for @sideDrawerDateFullPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'MMM d, yyyy'**
+  String get sideDrawerDateFullPattern;
+
+  /// No description provided for @sideDrawerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search chat history'**
+  String get sideDrawerSearchHint;
+
+  /// No description provided for @sideDrawerUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New version: {version}'**
+  String sideDrawerUpdateTitle(String version);
+
+  /// No description provided for @sideDrawerUpdateTitleWithBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'New version: {version} ({build})'**
+  String sideDrawerUpdateTitleWithBuild(String version, int build);
+
+  /// No description provided for @sideDrawerLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get sideDrawerLinkCopied;
+
+  /// No description provided for @sideDrawerPinnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get sideDrawerPinnedLabel;
+
+  /// No description provided for @sideDrawerHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get sideDrawerHistory;
+
+  /// No description provided for @sideDrawerSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get sideDrawerSettings;
+
+  /// No description provided for @sideDrawerChooseAssistantTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Assistant'**
+  String get sideDrawerChooseAssistantTitle;
+
+  /// No description provided for @sideDrawerChooseImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Image'**
+  String get sideDrawerChooseImage;
+
+  /// No description provided for @sideDrawerChooseEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Emoji'**
+  String get sideDrawerChooseEmoji;
+
+  /// No description provided for @sideDrawerEnterLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Link'**
+  String get sideDrawerEnterLink;
+
+  /// No description provided for @sideDrawerImportFromQQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from QQ'**
+  String get sideDrawerImportFromQQ;
+
+  /// No description provided for @sideDrawerReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get sideDrawerReset;
+
+  /// No description provided for @sideDrawerEmojiDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Emoji'**
+  String get sideDrawerEmojiDialogTitle;
+
+  /// No description provided for @sideDrawerEmojiDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type or paste any emoji'**
+  String get sideDrawerEmojiDialogHint;
+
+  /// No description provided for @sideDrawerImageUrlDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Image URL'**
+  String get sideDrawerImageUrlDialogTitle;
+
+  /// No description provided for @sideDrawerImageUrlDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. https://example.com/avatar.png'**
+  String get sideDrawerImageUrlDialogHint;
+
+  /// No description provided for @sideDrawerQQAvatarDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from QQ'**
+  String get sideDrawerQQAvatarDialogTitle;
+
+  /// No description provided for @sideDrawerQQAvatarInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter QQ number (5-12 digits)'**
+  String get sideDrawerQQAvatarInputHint;
+
+  /// No description provided for @sideDrawerQQAvatarFetchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to fetch random QQ avatar. Please try again.'**
+  String get sideDrawerQQAvatarFetchFailed;
+
+  /// No description provided for @sideDrawerRandomQQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Random QQ'**
+  String get sideDrawerRandomQQ;
+
+  /// No description provided for @sideDrawerGalleryOpenError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open gallery. Try entering an image URL.'**
+  String get sideDrawerGalleryOpenError;
+
+  /// No description provided for @sideDrawerGeneralImageError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try entering an image URL.'**
+  String get sideDrawerGeneralImageError;
+
+  /// No description provided for @sideDrawerSetNicknameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Nickname'**
+  String get sideDrawerSetNicknameTitle;
+
+  /// No description provided for @sideDrawerNicknameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get sideDrawerNicknameLabel;
+
+  /// No description provided for @sideDrawerNicknameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new nickname'**
+  String get sideDrawerNicknameHint;
+
+  /// No description provided for @sideDrawerRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get sideDrawerRename;
 }
 
 class _AppLocalizationsDelegate

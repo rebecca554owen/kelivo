@@ -880,4 +880,149 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get messageExportSheetDateTimeWithSecondsPattern =>
       'yyyy-MM-dd HH:mm:ss';
+
+  @override
+  String get sideDrawerMenuRename => 'Rename';
+
+  @override
+  String get sideDrawerMenuPin => 'Pin';
+
+  @override
+  String get sideDrawerMenuUnpin => 'Unpin';
+
+  @override
+  String get sideDrawerMenuRegenerateTitle => 'Regenerate Title';
+
+  @override
+  String get sideDrawerMenuDelete => 'Delete';
+
+  @override
+  String sideDrawerDeleteSnackbar(String title) {
+    return 'Deleted \"$title\"';
+  }
+
+  @override
+  String get sideDrawerRenameHint => 'Enter new name';
+
+  @override
+  String get sideDrawerCancel => 'Cancel';
+
+  @override
+  String get sideDrawerOK => 'OK';
+
+  @override
+  String get sideDrawerSave => 'Save';
+
+  @override
+  String get sideDrawerGreetingMorning => 'Good morning 👋';
+
+  @override
+  String get sideDrawerGreetingNoon => 'Good afternoon 👋';
+
+  @override
+  String get sideDrawerGreetingAfternoon => 'Good afternoon 👋';
+
+  @override
+  String get sideDrawerGreetingEvening => 'Good evening 👋';
+
+  @override
+  String get sideDrawerDateToday => 'Today';
+
+  @override
+  String get sideDrawerDateYesterday => 'Yesterday';
+
+  @override
+  String get sideDrawerDateShortPattern => 'MMM d';
+
+  @override
+  String get sideDrawerDateFullPattern => 'MMM d, yyyy';
+
+  @override
+  String get sideDrawerSearchHint => 'Search chat history';
+
+  @override
+  String sideDrawerUpdateTitle(String version) {
+    return 'New version: $version';
+  }
+
+  @override
+  String sideDrawerUpdateTitleWithBuild(String version, int build) {
+    return 'New version: $version ($build)';
+  }
+
+  @override
+  String get sideDrawerLinkCopied => 'Link copied';
+
+  @override
+  String get sideDrawerPinnedLabel => 'Pinned';
+
+  @override
+  String get sideDrawerHistory => 'History';
+
+  @override
+  String get sideDrawerSettings => 'Settings';
+
+  @override
+  String get sideDrawerChooseAssistantTitle => 'Choose Assistant';
+
+  @override
+  String get sideDrawerChooseImage => 'Choose Image';
+
+  @override
+  String get sideDrawerChooseEmoji => 'Choose Emoji';
+
+  @override
+  String get sideDrawerEnterLink => 'Enter Link';
+
+  @override
+  String get sideDrawerImportFromQQ => 'Import from QQ';
+
+  @override
+  String get sideDrawerReset => 'Reset';
+
+  @override
+  String get sideDrawerEmojiDialogTitle => 'Choose Emoji';
+
+  @override
+  String get sideDrawerEmojiDialogHint => 'Type or paste any emoji';
+
+  @override
+  String get sideDrawerImageUrlDialogTitle => 'Enter Image URL';
+
+  @override
+  String get sideDrawerImageUrlDialogHint =>
+      'e.g. https://example.com/avatar.png';
+
+  @override
+  String get sideDrawerQQAvatarDialogTitle => 'Import from QQ';
+
+  @override
+  String get sideDrawerQQAvatarInputHint => 'Enter QQ number (5-12 digits)';
+
+  @override
+  String get sideDrawerQQAvatarFetchFailed =>
+      'Failed to fetch random QQ avatar. Please try again.';
+
+  @override
+  String get sideDrawerRandomQQ => 'Random QQ';
+
+  @override
+  String get sideDrawerGalleryOpenError =>
+      'Unable to open gallery. Try entering an image URL.';
+
+  @override
+  String get sideDrawerGeneralImageError =>
+      'Something went wrong. Try entering an image URL.';
+
+  @override
+  String get sideDrawerSetNicknameTitle => 'Set Nickname';
+
+  @override
+  String get sideDrawerNicknameLabel => 'Nickname';
+
+  @override
+  String get sideDrawerNicknameHint => 'Enter new nickname';
+
+  @override
+  String get sideDrawerRename => 'Rename';
 }

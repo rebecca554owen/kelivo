@@ -20,6 +20,8 @@ import 'dart:io' show File;
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -121,7 +123,7 @@ class _SideDrawerState extends State<SideDrawer> {
   }
 
   void _showChatMenu(BuildContext context, ChatItem chat) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final chatService = context.read<ChatService>();
     final isPinned = chatService.getConversation(chat.id)?.isPinned ?? false;
     await showModalBottomSheet(
@@ -137,7 +139,7 @@ class _SideDrawerState extends State<SideDrawer> {
             children: [
               ListTile(
                 leading: Icon(Lucide.Edit, size: 20),
-                title: Text(zh ? '重命名' : 'Rename'),
+                title: Text(l10n.sideDrawerMenuRename),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _renameChat(context, chat);
@@ -145,7 +147,7 @@ class _SideDrawerState extends State<SideDrawer> {
               ),
               ListTile(
                 leading: Icon(Lucide.Pin, size: 20),
-                title: Text(isPinned ? (zh ? '取消置顶' : 'Unpin') : (zh ? '置顶' : 'Pin')),
+                title: Text(isPinned ? l10n.sideDrawerMenuUnpin : l10n.sideDrawerMenuPin),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await chatService.togglePinConversation(chat.id);
@@ -153,7 +155,7 @@ class _SideDrawerState extends State<SideDrawer> {
               ),
               ListTile(
                 leading: Icon(Lucide.RefreshCw, size: 20),
-                title: Text(zh ? '重新生成标题' : 'Regenerate Title'),
+                title: Text(l10n.sideDrawerMenuRegenerateTitle),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _regenerateTitle(context, chat.id);
@@ -161,16 +163,15 @@ class _SideDrawerState extends State<SideDrawer> {
               ),
               ListTile(
                 leading: Icon(Lucide.Trash, size: 20, color: Colors.redAccent),
-                title: Text(zh ? '删除' : 'Delete', style: const TextStyle(color: Colors.redAccent)),
+                title: Text(l10n.sideDrawerMenuDelete, style: const TextStyle(color: Colors.redAccent)),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   final deletingCurrent = chatService.currentConversationId == chat.id;
                   await chatService.deleteConversation(chat.id);
                   // Show simple snackbar (no undo)
-                  final zh2 = Localizations.localeOf(context).languageCode == 'zh';
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(zh2 ? '已删除“${chat.title}”' : 'Deleted "${chat.title}"'),
+                      content: Text(l10n.sideDrawerDeleteSnackbar(chat.title)),
                       duration: const Duration(seconds: 3),
                     ),
                   );
@@ -191,28 +192,28 @@ class _SideDrawerState extends State<SideDrawer> {
 
   Future<void> _renameChat(BuildContext context, ChatItem chat) async {
     final controller = TextEditingController(text: chat.title);
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(zh ? '重命名' : 'Rename'),
+          title: Text(l10n.sideDrawerMenuRename),
           content: TextField(
             controller: controller,
             autofocus: true,
             decoration: InputDecoration(
-              hintText: zh ? '输入新名称' : 'Enter new name',
+              hintText: l10n.sideDrawerRenameHint,
             ),
             onSubmitted: (_) => Navigator.of(ctx).pop(true),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(zh ? '取消' : 'Cancel'),
+              child: Text(l10n.sideDrawerCancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(zh ? '确定' : 'OK'),
+              child: Text(l10n.sideDrawerOK),
             ),
           ],
         );
@@ -256,19 +257,11 @@ class _SideDrawerState extends State<SideDrawer> {
 
   String _greeting(BuildContext context) {
     final hour = DateTime.now().hour;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    String base;
-    if (zh) {
-      if (hour < 11) base = '早上好';
-      else if (hour < 13) base = '中午好';
-      else if (hour < 18) base = '下午好';
-      else base = '晚上好';
-      return '$base 👋';
-    }
-    if (hour < 12) base = 'Good morning';
-    else if (hour < 17) base = 'Good afternoon';
-    else base = 'Good evening';
-    return '$base 👋';
+    final l10n = AppLocalizations.of(context)!;
+    if (hour < 11) return l10n.sideDrawerGreetingMorning;
+    if (hour < 13) return l10n.sideDrawerGreetingNoon;
+    if (hour < 18) return l10n.sideDrawerGreetingAfternoon;
+    return l10n.sideDrawerGreetingEvening;
   }
 
   String _dateLabel(BuildContext context, DateTime date) {
@@ -276,22 +269,13 @@ class _SideDrawerState extends State<SideDrawer> {
     final today = DateTime(now.year, now.month, now.day);
     final aDay = DateTime(date.year, date.month, date.day);
     final diff = today.difference(aDay).inDays;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    if (diff == 0) return zh ? '今天' : 'Today';
-    if (diff == 1) return zh ? '昨天' : 'Yesterday';
+    final l10n = AppLocalizations.of(context)!;
+    if (diff == 0) return l10n.sideDrawerDateToday;
+    if (diff == 1) return l10n.sideDrawerDateYesterday;
     final sameYear = now.year == date.year;
-    if (zh) {
-      return sameYear
-          ? '${date.month}月${date.day}日'
-          : '${date.year}年${date.month}月${date.day}日';
-    }
-    // Simple English format like Aug 10, 2025
-    const months = [
-      'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
-    ];
-    return sameYear
-        ? '${months[date.month - 1]} ${date.day}'
-        : '${months[date.month - 1]} ${date.day}, ${date.year}';
+    final pattern = sameYear ? l10n.sideDrawerDateShortPattern : l10n.sideDrawerDateFullPattern;
+    final fmt = DateFormat(pattern);
+    return fmt.format(date);
   }
 
   List<_ChatGroup> _groupByDate(BuildContext context, List<ChatItem> source) {
@@ -319,6 +303,7 @@ class _SideDrawerState extends State<SideDrawer> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final textBase = isDark ? Colors.white : Colors.black; // 纯黑（白天），夜间自动适配
     final chatService = context.watch<ChatService>();
     final ap = context.watch<AssistantProvider>();
@@ -469,9 +454,7 @@ class _SideDrawerState extends State<SideDrawer> {
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: Localizations.localeOf(context).languageCode == 'zh'
-                          ? '搜索聊天记录'
-                          : 'Search chat history',
+                      hintText: AppLocalizations.of(context)!.sideDrawerSearchHint,
                       filled: true,
                       fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5), // 非常浅的淡灰色（白天），夜间自适配
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -515,9 +498,10 @@ class _SideDrawerState extends State<SideDrawer> {
                     if (url == null || url.isEmpty) return const SizedBox.shrink();
                     final ver = info.version;
                     final build = info.build;
-                    final title = Localizations.localeOf(context).languageCode == 'zh'
-                        ? (build != null ? '发现新版本：$ver ($build)' : '发现新版本：$ver')
-                        : (build != null ? 'New version: $ver ($build)' : 'New version: $ver');
+                    final l10n = AppLocalizations.of(context)!;
+                    final title = build != null
+                        ? l10n.sideDrawerUpdateTitleWithBuild(ver, build)
+                        : l10n.sideDrawerUpdateTitle(ver);
                     final cs2 = Theme.of(context).colorScheme;
                     final isDark2 = Theme.of(context).brightness == Brightness.dark;
                     return Padding(
@@ -537,7 +521,7 @@ class _SideDrawerState extends State<SideDrawer> {
                               // Fallback: copy to clipboard
                               Clipboard.setData(ClipboardData(text: url));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(Localizations.localeOf(context).languageCode == 'zh' ? '已复制下载链接' : 'Link copied')),
+                                SnackBar(content: Text(l10n.sideDrawerLinkCopied)),
                               );
                             }
                           },
@@ -593,7 +577,7 @@ class _SideDrawerState extends State<SideDrawer> {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(8, 6, 0, 6),
                             child: Text(
-                              Localizations.localeOf(context).languageCode == 'zh' ? '置顶' : 'Pinned',
+                              AppLocalizations.of(context)!.sideDrawerPinnedLabel,
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary),
                             ),
                           ),
@@ -728,10 +712,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                 children: [
                                   Icon(Lucide.History, size: 18, color: cs.primary),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    Localizations.localeOf(context).languageCode == 'zh' ? '聊天历史' : 'History',
-                                    style: TextStyle(color: textBase),
-                                  ),
+                                  Text(AppLocalizations.of(context)!.sideDrawerHistory, style: TextStyle(color: textBase)),
                                 ],
                               ),
                             ),
@@ -757,10 +738,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                 children: [
                                   Icon(Lucide.Settings, size: 18, color: cs.primary),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    Localizations.localeOf(context).languageCode == 'zh' ? '设置' : 'Settings',
-                                    style: TextStyle(color: textBase),
-                                  ),
+                                  Text(AppLocalizations.of(context)!.sideDrawerSettings, style: TextStyle(color: textBase)),
                                 ],
                               ),
                             ),
@@ -780,7 +758,7 @@ class _SideDrawerState extends State<SideDrawer> {
 
   Future<void> _showAssistantPicker(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final ap = context.read<AssistantProvider>();
     final list = ap.assistants;
     final currentId = ap.currentAssistantId;
@@ -801,7 +779,7 @@ class _SideDrawerState extends State<SideDrawer> {
                   children: [
                     Icon(Lucide.Bot, size: 18, color: cs.primary),
                     const SizedBox(width: 8),
-                    Text(zh ? '选择助手' : 'Choose Assistant', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(l10n.sideDrawerChooseAssistantTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -843,7 +821,7 @@ class _SideDrawerState extends State<SideDrawer> {
 
 extension on _SideDrawerState {
   Future<void> _editAvatar(BuildContext context) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -856,14 +834,14 @@ extension on _SideDrawerState {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: Text(zh ? '选择图片' : 'Choose Image'),
+                title: Text(l10n.sideDrawerChooseImage),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _pickLocalImage(context);
                 },
               ),
               ListTile(
-                title: Text(zh ? '选择表情' : 'Choose Emoji'),
+                title: Text(l10n.sideDrawerChooseEmoji),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   final emoji = await _pickEmoji(context);
@@ -873,21 +851,21 @@ extension on _SideDrawerState {
                 },
               ),
               ListTile(
-                title: Text(zh ? '输入链接' : 'Enter Link'),
+                title: Text(l10n.sideDrawerEnterLink),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _inputAvatarUrl(context);
                 },
               ),
               ListTile(
-                title: Text(zh ? 'QQ头像' : 'Import from QQ'),
+                title: Text(l10n.sideDrawerImportFromQQ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _inputQQAvatar(context);
                 },
               ),
               ListTile(
-                title: Text(zh ? '重置' : 'Reset'),
+                title: Text(l10n.sideDrawerReset),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await context.read<UserProvider>().resetAvatar();
@@ -902,7 +880,7 @@ extension on _SideDrawerState {
   }
 
   Future<String?> _pickEmoji(BuildContext context) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     // Provide input to allow any emoji via system emoji keyboard,
     // plus a large set of quick picks for convenience.
     final controller = TextEditingController();
@@ -928,7 +906,7 @@ extension on _SideDrawerState {
             scrollable: true,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: cs.surface,
-            title: Text(zh ? '选择表情' : 'Choose Emoji'),
+            title: Text(l10n.sideDrawerEmojiDialogTitle),
             content: SizedBox(
               width: 360,
               child: Column(
@@ -954,7 +932,7 @@ extension on _SideDrawerState {
                       if (validGrapheme(value)) Navigator.of(ctx).pop(value.characters.take(1).toString());
                     },
                     decoration: InputDecoration(
-                      hintText: zh ? '输入或粘贴任意表情' : 'Type or paste any emoji',
+                      hintText: l10n.sideDrawerEmojiDialogHint,
                       filled: true,
                       fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                       border: OutlineInputBorder(
@@ -1006,12 +984,12 @@ extension on _SideDrawerState {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(zh ? '取消' : 'Cancel'),
+                child: Text(l10n.sideDrawerCancel),
               ),
               TextButton(
                 onPressed: validGrapheme(value) ? () => Navigator.of(ctx).pop(value.characters.take(1).toString()) : null,
                 child: Text(
-                  zh ? '保存' : 'Save',
+                  l10n.sideDrawerSave,
                   style: TextStyle(
                     color: validGrapheme(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                     fontWeight: FontWeight.w600,
@@ -1026,7 +1004,7 @@ extension on _SideDrawerState {
   }
 
   Future<void> _inputAvatarUrl(BuildContext context) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -1038,12 +1016,12 @@ extension on _SideDrawerState {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: cs.surface,
-            title: Text(zh ? '输入图片链接' : 'Enter Image URL'),
+            title: Text(l10n.sideDrawerImageUrlDialogTitle),
             content: TextField(
               controller: controller,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: zh ? '例如: https://example.com/avatar.png' : 'e.g. https://example.com/avatar.png',
+                hintText: l10n.sideDrawerImageUrlDialogHint,
                 filled: true,
                 fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                 border: OutlineInputBorder(
@@ -1067,12 +1045,12 @@ extension on _SideDrawerState {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(zh ? '取消' : 'Cancel'),
+                child: Text(l10n.sideDrawerCancel),
               ),
               TextButton(
                 onPressed: valid(value) ? () => Navigator.of(ctx).pop(true) : null,
                 child: Text(
-                  zh ? '保存' : 'Save',
+                  l10n.sideDrawerSave,
                   style: TextStyle(
                     color: valid(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                     fontWeight: FontWeight.w600,
@@ -1093,7 +1071,7 @@ extension on _SideDrawerState {
   }
 
   Future<void> _inputQQAvatar(BuildContext context) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -1143,13 +1121,13 @@ extension on _SideDrawerState {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: cs.surface,
-            title: Text(zh ? '使用QQ头像' : 'Import from QQ'),
+            title: Text(l10n.sideDrawerQQAvatarDialogTitle),
             content: TextField(
               controller: controller,
               autofocus: true,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                hintText: zh ? '输入QQ号码（5-12位）' : 'Enter QQ number (5-12 digits)',
+                hintText: l10n.sideDrawerQQAvatarInputHint,
                 filled: true,
                 fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                 border: OutlineInputBorder(
@@ -1194,23 +1172,23 @@ extension on _SideDrawerState {
                     if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop(false);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(zh ? '获取随机QQ头像失败，请重试' : 'Failed to fetch random QQ avatar. Please try again.')),
+                      SnackBar(content: Text(l10n.sideDrawerQQAvatarFetchFailed)),
                     );
                   }
                 },
-                child: Text(zh ? '随机QQ' : 'Random QQ'),
+                child: Text(l10n.sideDrawerRandomQQ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(false),
-                    child: Text(zh ? '取消' : 'Cancel'),
+                    child: Text(l10n.sideDrawerCancel),
                   ),
                   TextButton(
                     onPressed: valid(value) ? () => Navigator.of(ctx).pop(true) : null,
                     child: Text(
-                      zh ? '保存' : 'Save',
+                      l10n.sideDrawerSave,
                       style: TextStyle(
                         color: valid(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                         fontWeight: FontWeight.w600,
@@ -1253,24 +1231,24 @@ extension on _SideDrawerState {
     } on PlatformException catch (e) {
       // Gracefully degrade when plugin channel isn't available or permission denied.
       if (!mounted) return;
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(zh ? '无法打开相册，试试输入图片链接' : 'Unable to open gallery. Try entering an image URL.')),
+        SnackBar(content: Text(l10n.sideDrawerGalleryOpenError)),
       );
       await _inputAvatarUrl(context);
       return;
     } catch (_) {
       if (!mounted) return;
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(zh ? '发生错误，试试输入图片链接' : 'Something went wrong. Try entering an image URL.')),
+        SnackBar(content: Text(l10n.sideDrawerGeneralImageError)),
       );
       await _inputAvatarUrl(context);
       return;
     }
   }
   Future<void> _editUserName(BuildContext context) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final initial = widget.userName;
     final controller = TextEditingController(text: initial);
     const maxLen = 24;
@@ -1286,7 +1264,7 @@ extension on _SideDrawerState {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               backgroundColor: cs.surface,
-              title: Text(zh ? '设置昵称' : 'Set Nickname'),
+              title: Text(l10n.sideDrawerSetNicknameTitle),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1302,8 +1280,8 @@ extension on _SideDrawerState {
                       if (valid(value)) Navigator.of(ctx).pop(true);
                     },
                     decoration: InputDecoration(
-                      labelText: zh ? '昵称' : 'Nickname',
-                      hintText: zh ? '输入新的昵称' : 'Enter new nickname',
+                      labelText: l10n.sideDrawerNicknameLabel,
+                      hintText: l10n.sideDrawerNicknameHint,
                       filled: true,
                       fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
                       counterText: '',
@@ -1334,12 +1312,12 @@ extension on _SideDrawerState {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(zh ? '取消' : 'Cancel'),
+                  child: Text(l10n.sideDrawerCancel),
                 ),
                 TextButton(
                   onPressed: valid(value) ? () => Navigator.of(ctx).pop(true) : null,
                   child: Text(
-                    zh ? '保存' : 'Save',
+                    l10n.sideDrawerSave,
                     style: TextStyle(
                       color: valid(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                       fontWeight: FontWeight.w600,

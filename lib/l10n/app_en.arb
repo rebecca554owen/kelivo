@@ -383,5 +383,66 @@
   "messageExportSheetExportImage": "Export as Image",
   "messageExportSheetSingleExportImageSubtitle": "Render this message to a PNG image",
   "messageExportSheetBatchExportImageSubtitle": "Render selected messages to a PNG image",
-  "messageExportSheetDateTimeWithSecondsPattern": "yyyy-MM-dd HH:mm:ss"
+  "messageExportSheetDateTimeWithSecondsPattern": "yyyy-MM-dd HH:mm:ss",
+  "sideDrawerMenuRename": "Rename",
+  "sideDrawerMenuPin": "Pin",
+  "sideDrawerMenuUnpin": "Unpin",
+  "sideDrawerMenuRegenerateTitle": "Regenerate Title",
+  "sideDrawerMenuDelete": "Delete",
+  "sideDrawerDeleteSnackbar": "Deleted \"{title}\"",
+  "@sideDrawerDeleteSnackbar": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "sideDrawerRenameHint": "Enter new name",
+  "sideDrawerCancel": "Cancel",
+  "sideDrawerOK": "OK",
+  "sideDrawerSave": "Save",
+  "sideDrawerGreetingMorning": "Good morning 👋",
+  "sideDrawerGreetingNoon": "Good afternoon 👋",
+  "sideDrawerGreetingAfternoon": "Good afternoon 👋",
+  "sideDrawerGreetingEvening": "Good evening 👋",
+  "sideDrawerDateToday": "Today",
+  "sideDrawerDateYesterday": "Yesterday",
+  "sideDrawerDateShortPattern": "MMM d",
+  "sideDrawerDateFullPattern": "MMM d, yyyy",
+  "sideDrawerSearchHint": "Search chat history",
+  "sideDrawerUpdateTitle": "New version: {version}",
+  "@sideDrawerUpdateTitle": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "sideDrawerUpdateTitleWithBuild": "New version: {version} ({build})",
+  "@sideDrawerUpdateTitleWithBuild": {
+    "placeholders": {
+      "version": { "type": "String" },
+      "build": { "type": "int" }
+    }
+  },
+  "sideDrawerLinkCopied": "Link copied",
+  "sideDrawerPinnedLabel": "Pinned",
+  "sideDrawerHistory": "History",
+  "sideDrawerSettings": "Settings",
+  "sideDrawerChooseAssistantTitle": "Choose Assistant",
+  "sideDrawerChooseImage": "Choose Image",
+  "sideDrawerChooseEmoji": "Choose Emoji",
+  "sideDrawerEnterLink": "Enter Link",
+  "sideDrawerImportFromQQ": "Import from QQ",
+  "sideDrawerReset": "Reset",
+  "sideDrawerEmojiDialogTitle": "Choose Emoji",
+  "sideDrawerEmojiDialogHint": "Type or paste any emoji",
+  "sideDrawerImageUrlDialogTitle": "Enter Image URL",
+  "sideDrawerImageUrlDialogHint": "e.g. https://example.com/avatar.png",
+  "sideDrawerQQAvatarDialogTitle": "Import from QQ",
+  "sideDrawerQQAvatarInputHint": "Enter QQ number (5-12 digits)",
+  "sideDrawerQQAvatarFetchFailed": "Failed to fetch random QQ avatar. Please try again.",
+  "sideDrawerRandomQQ": "Random QQ",
+  "sideDrawerGalleryOpenError": "Unable to open gallery. Try entering an image URL.",
+  "sideDrawerGeneralImageError": "Something went wrong. Try entering an image URL.",
+  "sideDrawerSetNicknameTitle": "Set Nickname",
+  "sideDrawerNicknameLabel": "Nickname",
+  "sideDrawerNicknameHint": "Enter new nickname",
+  "sideDrawerRename": "Rename"
 }
