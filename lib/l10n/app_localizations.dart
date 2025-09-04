@@ -1333,6 +1333,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get bottomToolsSheetSave;
+
+  /// No description provided for @messageMoreSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'More Actions'**
+  String get messageMoreSheetTitle;
+
+  /// No description provided for @messageMoreSheetSelectCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Select & Copy'**
+  String get messageMoreSheetSelectCopy;
+
+  /// No description provided for @messageMoreSheetRenderWebView.
+  ///
+  /// In en, this message translates to:
+  /// **'Render Web View'**
+  String get messageMoreSheetRenderWebView;
+
+  /// No description provided for @messageMoreSheetNotImplemented.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet implemented'**
+  String get messageMoreSheetNotImplemented;
+
+  /// No description provided for @messageMoreSheetEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get messageMoreSheetEdit;
+
+  /// No description provided for @messageMoreSheetShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get messageMoreSheetShare;
+
+  /// No description provided for @messageMoreSheetCreateBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Branch'**
+  String get messageMoreSheetCreateBranch;
+
+  /// No description provided for @messageMoreSheetDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get messageMoreSheetDelete;
 }
 
 class _AppLocalizationsDelegate

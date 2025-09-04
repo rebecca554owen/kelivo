@@ -649,4 +649,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bottomToolsSheetSave => 'Save';
+
+  @override
+  String get messageMoreSheetTitle => 'More Actions';
+
+  @override
+  String get messageMoreSheetSelectCopy => 'Select & Copy';
+
+  @override
+  String get messageMoreSheetRenderWebView => 'Render Web View';
+
+  @override
+  String get messageMoreSheetNotImplemented => 'Not yet implemented';
+
+  @override
+  String get messageMoreSheetEdit => 'Edit';
+
+  @override
+  String get messageMoreSheetShare => 'Share';
+
+  @override
+  String get messageMoreSheetCreateBranch => 'Create Branch';
+
+  @override
+  String get messageMoreSheetDelete => 'Delete';
 }

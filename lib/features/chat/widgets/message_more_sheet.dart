@@ -5,6 +5,7 @@ import '../../../core/models/chat_message.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../pages/select_copy_page.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum MessageMoreAction { edit, fork, delete, share }
 
@@ -41,8 +42,8 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
   }
 
   String _formatTime(BuildContext context, DateTime time) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final fmt = zh ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
+    final locale = Localizations.localeOf(context);
+    final fmt = locale.languageCode == 'zh' ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
     return fmt.format(time);
   }
 
@@ -113,8 +114,8 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
 
     final timeStr = _formatTime(context, widget.message.timestamp);
     final modelName = _modelDisplayName(context);
@@ -146,7 +147,7 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: Text(
-                  zh ? '更多操作' : 'More Actions',
+                  l10n.messageMoreSheetTitle,
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -157,7 +158,7 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                   children: [
                     _actionItem(
                       icon: Lucide.TextSelect,
-                      label: zh ? '选择复制' : 'Select & Copy',
+                      label: l10n.messageMoreSheetSelectCopy,
                       onTap: () async {
                         Navigator.of(context).pop();
                         // Push the select copy page
@@ -170,12 +171,12 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                     ),
                     _actionItem(
                       icon: Lucide.BookOpenText,
-                      label: zh ? '网页视图渲染' : 'Render Web View',
+                      label: l10n.messageMoreSheetRenderWebView,
                       onTap: () {
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(zh ? '暂未实现' : 'Not yet implemented'),
+                            content: Text(l10n.messageMoreSheetNotImplemented),
                             duration: const Duration(seconds: 3),
                           ),
                         );
@@ -183,28 +184,28 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                     ),
                     _actionItem(
                       icon: Lucide.Pencil,
-                      label: zh ? '编辑' : 'Edit',
+                      label: l10n.messageMoreSheetEdit,
                       onTap: () {
                         Navigator.of(context).pop(MessageMoreAction.edit);
                       },
                     ),
                     _actionItem(
                       icon: Lucide.Share,
-                      label: zh ? '分享' : 'Share',
+                      label: l10n.messageMoreSheetShare,
                       onTap: () {
                         Navigator.of(context).pop(MessageMoreAction.share);
                       },
                     ),
                     _actionItem(
                       icon: Lucide.GitFork,
-                      label: zh ? '创建分支' : 'Create Branch',
+                      label: l10n.messageMoreSheetCreateBranch,
                       onTap: () {
                         Navigator.of(context).pop(MessageMoreAction.fork);
                       },
                     ),
                     _actionItem(
                       icon: Lucide.Trash2,
-                      label: zh ? '删除' : 'Delete',
+                      label: l10n.messageMoreSheetDelete,
                       danger: true,
                       onTap: () {
                         Navigator.of(context).pop(MessageMoreAction.delete);

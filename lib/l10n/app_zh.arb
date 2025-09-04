@@ -204,5 +204,13 @@
   "bottomToolsSheetPrompt": "提示词",
   "bottomToolsSheetPromptHint": "输入用于学习模式的提示词",
   "bottomToolsSheetResetDefault": "重置为默认",
-  "bottomToolsSheetSave": "保存"
+  "bottomToolsSheetSave": "保存",
+  "messageMoreSheetTitle": "更多操作",
+  "messageMoreSheetSelectCopy": "选择复制",
+  "messageMoreSheetRenderWebView": "网页视图渲染",
+  "messageMoreSheetNotImplemented": "暂未实现",
+  "messageMoreSheetEdit": "编辑",
+  "messageMoreSheetShare": "分享",
+  "messageMoreSheetCreateBranch": "创建分支",
+  "messageMoreSheetDelete": "删除"
 }

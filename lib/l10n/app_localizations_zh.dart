@@ -634,4 +634,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bottomToolsSheetSave => '保存';
+
+  @override
+  String get messageMoreSheetTitle => '更多操作';
+
+  @override
+  String get messageMoreSheetSelectCopy => '选择复制';
+
+  @override
+  String get messageMoreSheetRenderWebView => '网页视图渲染';
+
+  @override
+  String get messageMoreSheetNotImplemented => '暂未实现';
+
+  @override
+  String get messageMoreSheetEdit => '编辑';
+
+  @override
+  String get messageMoreSheetShare => '分享';
+
+  @override
+  String get messageMoreSheetCreateBranch => '创建分支';
+
+  @override
+  String get messageMoreSheetDelete => '删除';
 }

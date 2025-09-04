@@ -234,5 +234,13 @@
   "bottomToolsSheetPrompt": "Prompt",
   "bottomToolsSheetPromptHint": "Enter prompt for learning mode",
   "bottomToolsSheetResetDefault": "Reset to default",
-  "bottomToolsSheetSave": "Save"
+  "bottomToolsSheetSave": "Save",
+  "messageMoreSheetTitle": "More Actions",
+  "messageMoreSheetSelectCopy": "Select & Copy",
+  "messageMoreSheetRenderWebView": "Render Web View",
+  "messageMoreSheetNotImplemented": "Not yet implemented",
+  "messageMoreSheetEdit": "Edit",
+  "messageMoreSheetShare": "Share",
+  "messageMoreSheetCreateBranch": "Create Branch",
+  "messageMoreSheetDelete": "Delete"
 }
