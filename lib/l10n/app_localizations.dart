@@ -1153,6 +1153,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get backupPageDeleteTooltip;
+
+  /// No description provided for @chatHistoryPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat History'**
+  String get chatHistoryPageTitle;
+
+  /// No description provided for @chatHistoryPageSearchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get chatHistoryPageSearchTooltip;
+
+  /// No description provided for @chatHistoryPageDeleteAllTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete All'**
+  String get chatHistoryPageDeleteAllTooltip;
+
+  /// No description provided for @chatHistoryPageDeleteAllDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete All Conversations'**
+  String get chatHistoryPageDeleteAllDialogTitle;
+
+  /// No description provided for @chatHistoryPageDeleteAllDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete all conversations? This cannot be undone.'**
+  String get chatHistoryPageDeleteAllDialogContent;
+
+  /// No description provided for @chatHistoryPageCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get chatHistoryPageCancel;
+
+  /// No description provided for @chatHistoryPageDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get chatHistoryPageDelete;
+
+  /// No description provided for @chatHistoryPageDeletedAllSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'All conversations deleted'**
+  String get chatHistoryPageDeletedAllSnackbar;
+
+  /// No description provided for @chatHistoryPageSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search conversations'**
+  String get chatHistoryPageSearchHint;
+
+  /// No description provided for @chatHistoryPageNoConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations'**
+  String get chatHistoryPageNoConversations;
+
+  /// No description provided for @chatHistoryPagePinnedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get chatHistoryPagePinnedSection;
+
+  /// No description provided for @chatHistoryPagePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get chatHistoryPagePin;
+
+  /// No description provided for @chatHistoryPagePinned.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get chatHistoryPagePinned;
 }
 
 class _AppLocalizationsDelegate

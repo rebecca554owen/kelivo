@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/models/conversation.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ChatHistoryPage extends StatefulWidget {
   const ChatHistoryPage({super.key, this.assistantId});
@@ -24,17 +25,11 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
     super.dispose();
   }
 
-  String _formatTime(BuildContext context, DateTime dt) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final fmt = zh ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
-    return fmt.format(dt);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final chatService = context.watch<ChatService>();
     final List<Conversation> all = chatService
         .getAllConversations()
@@ -52,10 +47,10 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
           icon: const Icon(Lucide.ArrowLeft),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: Text(zh ? '聊天历史' : 'Chat History'),
+        title: Text(l10n.chatHistoryPageTitle),
         actions: [
           IconButton(
-            tooltip: zh ? '搜索' : 'Search',
+            tooltip: l10n.chatHistoryPageSearchTooltip,
             icon: Icon(_searching ? Lucide.X : Lucide.Search),
             onPressed: () {
               setState(() {
@@ -65,19 +60,19 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
             },
           ),
           IconButton(
-            tooltip: zh ? '删除全部' : 'Delete All',
+            tooltip: l10n.chatHistoryPageDeleteAllTooltip,
             icon: const Icon(Lucide.Trash2),
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: Text(zh ? '删除全部对话' : 'Delete All Conversations'),
-                  content: Text(zh ? '确定要删除全部对话吗？此操作不可撤销。' : 'Are you sure you want to delete all conversations? This cannot be undone.'),
+                  title: Text(l10n.chatHistoryPageDeleteAllDialogTitle),
+                  content: Text(l10n.chatHistoryPageDeleteAllDialogContent),
                   actions: [
-                    TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(zh ? '取消' : 'Cancel')),
+                    TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.chatHistoryPageCancel)),
                     TextButton(
                       onPressed: () => Navigator.of(ctx).pop(true),
-                      child: Text(zh ? '删除' : 'Delete', style: const TextStyle(color: Colors.red)),
+                      child: Text(l10n.chatHistoryPageDelete, style: const TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -86,7 +81,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                 await context.read<ChatService>().clearAllData();
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(zh ? '已删除全部对话' : 'All conversations deleted')),
+                  SnackBar(content: Text(l10n.chatHistoryPageDeletedAllSnackbar)),
                 );
               }
             },
@@ -106,7 +101,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                   autofocus: true,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: zh ? '搜索对话' : 'Search conversations',
+                    hintText: l10n.chatHistoryPageSearchHint,
                     filled: true,
                     fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -141,7 +136,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
               child: filtered.isEmpty
                   ? Center(
                       child: Text(
-                        zh ? '暂无对话' : 'No conversations',
+                        l10n.chatHistoryPageNoConversations,
                         style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
                       ),
                     )
@@ -151,7 +146,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
                             child: Text(
-                              zh ? '置顶' : 'Pinned',
+                              l10n.chatHistoryPagePinnedSection,
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.primary),
                             ),
                           ),
@@ -256,8 +251,8 @@ class _ConversationCard extends StatelessWidget {
   }
 
   String _format(BuildContext context, DateTime dt) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final fmt = zh ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
+    final locale = Localizations.localeOf(context);
+    final fmt = locale.languageCode == 'zh' ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
     return fmt.format(dt);
   }
 }
@@ -268,6 +263,7 @@ class _PinButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final pinned = conversation.isPinned;
     return InkResponse(
@@ -288,7 +284,7 @@ class _PinButton extends StatelessWidget {
             Icon(pinned ? Lucide.PinOff : Lucide.Pin, size: 16, color: pinned ? cs.primary : cs.onSurface.withOpacity(0.7)),
             const SizedBox(width: 6),
             Text(
-              pinned ? (Localizations.localeOf(context).languageCode == 'zh' ? '已置顶' : 'Pinned') : (Localizations.localeOf(context).languageCode == 'zh' ? '置顶' : 'Pin'),
+              pinned ? l10n.chatHistoryPagePinned : l10n.chatHistoryPagePin,
               style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: pinned ? cs.primary : cs.onSurface.withOpacity(0.8)),
             ),
           ],

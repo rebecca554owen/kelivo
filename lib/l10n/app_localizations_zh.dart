@@ -544,4 +544,43 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backupPageDeleteTooltip => '删除';
+
+  @override
+  String get chatHistoryPageTitle => '聊天历史';
+
+  @override
+  String get chatHistoryPageSearchTooltip => '搜索';
+
+  @override
+  String get chatHistoryPageDeleteAllTooltip => '删除全部';
+
+  @override
+  String get chatHistoryPageDeleteAllDialogTitle => '删除全部对话';
+
+  @override
+  String get chatHistoryPageDeleteAllDialogContent => '确定要删除全部对话吗？此操作不可撤销。';
+
+  @override
+  String get chatHistoryPageCancel => '取消';
+
+  @override
+  String get chatHistoryPageDelete => '删除';
+
+  @override
+  String get chatHistoryPageDeletedAllSnackbar => '已删除全部对话';
+
+  @override
+  String get chatHistoryPageSearchHint => '搜索对话';
+
+  @override
+  String get chatHistoryPageNoConversations => '暂无对话';
+
+  @override
+  String get chatHistoryPagePinnedSection => '置顶';
+
+  @override
+  String get chatHistoryPagePin => '置顶';
+
+  @override
+  String get chatHistoryPagePinned => '已置顶';
 }

@@ -174,5 +174,18 @@
   "homePageCancel": "取消",
   "homePageDelete": "删除",
   "homePageSelectMessagesToShare": "请选择要分享的消息",
-  "homePageDone": "完成"
+  "homePageDone": "完成",
+  "chatHistoryPageTitle": "聊天历史",
+  "chatHistoryPageSearchTooltip": "搜索",
+  "chatHistoryPageDeleteAllTooltip": "删除全部",
+  "chatHistoryPageDeleteAllDialogTitle": "删除全部对话",
+  "chatHistoryPageDeleteAllDialogContent": "确定要删除全部对话吗？此操作不可撤销。",
+  "chatHistoryPageCancel": "取消",
+  "chatHistoryPageDelete": "删除",
+  "chatHistoryPageDeletedAllSnackbar": "已删除全部对话",
+  "chatHistoryPageSearchHint": "搜索对话",
+  "chatHistoryPageNoConversations": "暂无对话",
+  "chatHistoryPagePinnedSection": "置顶",
+  "chatHistoryPagePin": "置顶",
+  "chatHistoryPagePinned": "已置顶"
 }

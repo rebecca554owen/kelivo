@@ -557,4 +557,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageDeleteTooltip => 'Delete';
+
+  @override
+  String get chatHistoryPageTitle => 'Chat History';
+
+  @override
+  String get chatHistoryPageSearchTooltip => 'Search';
+
+  @override
+  String get chatHistoryPageDeleteAllTooltip => 'Delete All';
+
+  @override
+  String get chatHistoryPageDeleteAllDialogTitle => 'Delete All Conversations';
+
+  @override
+  String get chatHistoryPageDeleteAllDialogContent =>
+      'Are you sure you want to delete all conversations? This cannot be undone.';
+
+  @override
+  String get chatHistoryPageCancel => 'Cancel';
+
+  @override
+  String get chatHistoryPageDelete => 'Delete';
+
+  @override
+  String get chatHistoryPageDeletedAllSnackbar => 'All conversations deleted';
+
+  @override
+  String get chatHistoryPageSearchHint => 'Search conversations';
+
+  @override
+  String get chatHistoryPageNoConversations => 'No conversations';
+
+  @override
+  String get chatHistoryPagePinnedSection => 'Pinned';
+
+  @override
+  String get chatHistoryPagePin => 'Pin';
+
+  @override
+  String get chatHistoryPagePinned => 'Pinned';
 }
