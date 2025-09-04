@@ -356,5 +356,32 @@
         "type": "int"
       }
     }
-  }
+  },
+  "messageExportSheetAssistant": "Assistant",
+  "messageExportSheetDefaultTitle": "New Chat",
+  "messageExportSheetExporting": "Exporting…",
+  "messageExportSheetExportFailed": "Export failed: {error}",
+  "@messageExportSheetExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "messageExportSheetExportedAs": "Exported as {filename}",
+  "@messageExportSheetExportedAs": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "messageExportSheetFormatTitle": "Export Format",
+  "messageExportSheetMarkdown": "Markdown",
+  "messageExportSheetSingleMarkdownSubtitle": "Export this message as a Markdown file",
+  "messageExportSheetBatchMarkdownSubtitle": "Export selected messages as a Markdown file",
+  "messageExportSheetExportImage": "Export as Image",
+  "messageExportSheetSingleExportImageSubtitle": "Render this message to a PNG image",
+  "messageExportSheetBatchExportImageSubtitle": "Render selected messages to a PNG image",
+  "messageExportSheetDateTimeWithSecondsPattern": "yyyy-MM-dd HH:mm:ss"
 }

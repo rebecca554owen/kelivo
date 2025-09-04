@@ -810,4 +810,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String chatMessageWidgetCitationsCount(int count) {
     return '共$count条引用';
   }
+
+  @override
+  String get messageExportSheetAssistant => '助手';
+
+  @override
+  String get messageExportSheetDefaultTitle => '新对话';
+
+  @override
+  String get messageExportSheetExporting => '正在导出…';
+
+  @override
+  String messageExportSheetExportFailed(String error) {
+    return '导出失败: $error';
+  }
+
+  @override
+  String messageExportSheetExportedAs(String filename) {
+    return '已导出为 $filename';
+  }
+
+  @override
+  String get messageExportSheetFormatTitle => '导出格式';
+
+  @override
+  String get messageExportSheetMarkdown => 'Markdown';
+
+  @override
+  String get messageExportSheetSingleMarkdownSubtitle => '将该消息导出为 Markdown 文件';
+
+  @override
+  String get messageExportSheetBatchMarkdownSubtitle => '将选中的消息导出为 Markdown 文件';
+
+  @override
+  String get messageExportSheetExportImage => '导出为图片';
+
+  @override
+  String get messageExportSheetSingleExportImageSubtitle => '将该消息渲染为 PNG 图片';
+
+  @override
+  String get messageExportSheetBatchExportImageSubtitle => '将选中的消息渲染为 PNG 图片';
+
+  @override
+  String get messageExportSheetDateTimeWithSecondsPattern =>
+      'yyyy年M月d日 HH:mm:ss';
 }

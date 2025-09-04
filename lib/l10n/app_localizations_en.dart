@@ -832,4 +832,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String chatMessageWidgetCitationsCount(int count) {
     return 'Citations ($count)';
   }
+
+  @override
+  String get messageExportSheetAssistant => 'Assistant';
+
+  @override
+  String get messageExportSheetDefaultTitle => 'New Chat';
+
+  @override
+  String get messageExportSheetExporting => 'Exporting…';
+
+  @override
+  String messageExportSheetExportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String messageExportSheetExportedAs(String filename) {
+    return 'Exported as $filename';
+  }
+
+  @override
+  String get messageExportSheetFormatTitle => 'Export Format';
+
+  @override
+  String get messageExportSheetMarkdown => 'Markdown';
+
+  @override
+  String get messageExportSheetSingleMarkdownSubtitle =>
+      'Export this message as a Markdown file';
+
+  @override
+  String get messageExportSheetBatchMarkdownSubtitle =>
+      'Export selected messages as a Markdown file';
+
+  @override
+  String get messageExportSheetExportImage => 'Export as Image';
+
+  @override
+  String get messageExportSheetSingleExportImageSubtitle =>
+      'Render this message to a PNG image';
+
+  @override
+  String get messageExportSheetBatchExportImageSubtitle =>
+      'Render selected messages to a PNG image';
+
+  @override
+  String get messageExportSheetDateTimeWithSecondsPattern =>
+      'yyyy-MM-dd HH:mm:ss';
 }

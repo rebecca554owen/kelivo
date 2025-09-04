@@ -21,6 +21,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
+import '../../../l10n/app_localizations.dart';
 
 // Shared helpers
 String _guessImageMime(String path) {
@@ -49,7 +50,7 @@ String? _modelDisplayName(BuildContext context, ChatMessage msg) {
 }
 
 String _getRoleName(BuildContext context, ChatMessage msg) {
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   if (msg.role == 'user') {
     final userProvider = context.read<UserProvider>();
     return userProvider.name;
@@ -64,7 +65,7 @@ String _getRoleName(BuildContext context, ChatMessage msg) {
     if (modelName != null && modelName.isNotEmpty) {
       return modelName;
     }
-    return zh ? '助手' : 'Assistant';
+    return l10n.messageExportSheetAssistant;
   }
   return msg.role;
 }
@@ -131,10 +132,10 @@ String _softBreakMd(String input) {
 Future<File?> _renderAndSaveMessageImage(BuildContext context, ChatMessage message) async {
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   final content = _ExportedMessageCard(
     message: message,
-    title: context.read<ChatService>().getConversation(message.conversationId)?.title ?? (zh ? '新对话' : 'New Chat'),
+    title: context.read<ChatService>().getConversation(message.conversationId)?.title ?? l10n.messageExportSheetDefaultTitle,
     cs: cs,
     chatFontScale: settings.chatFontScale,
   );
@@ -144,9 +145,9 @@ Future<File?> _renderAndSaveMessageImage(BuildContext context, ChatMessage messa
 Future<File?> _renderAndSaveChatImage(BuildContext context, Conversation conversation, List<ChatMessage> messages) async {
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   final content = _ExportedChatImage(
-    conversationTitle: (conversation.title.trim().isNotEmpty) ? conversation.title : (zh ? '新对话' : 'New Chat'),
+    conversationTitle: (conversation.title.trim().isNotEmpty) ? conversation.title : l10n.messageExportSheetDefaultTitle,
     cs: cs,
     chatFontScale: settings.chatFontScale,
     messages: messages,
@@ -383,7 +384,6 @@ Future<File?> _renderAndSavePagedOld(
 
 Future<void> showMessageExportSheet(BuildContext context, ChatMessage message) async {
   final cs = Theme.of(context).colorScheme;
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -450,8 +450,8 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
   }
 
   String _formatTime(BuildContext context, DateTime time) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final fmt = zh ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = DateFormat(l10n.messageExportSheetDateTimeWithSecondsPattern);
     return fmt.format(time);
   }
 
@@ -464,14 +464,15 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     setState(() => _exporting = true);
     try {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '正在导出…' : 'Exporting…')),
+          SnackBar(content: Text(l10n.messageExportSheetExporting)),
         );
       }
       final ctx = context;
       final conv = widget.conversation;
-      final title = (conv.title.trim().isNotEmpty) ? conv.title : (Localizations.localeOf(ctx).languageCode == 'zh' ? '新对话' : 'New Chat');
+      final l10n = AppLocalizations.of(ctx)!;
+      final title = (conv.title.trim().isNotEmpty) ? conv.title : l10n.messageExportSheetDefaultTitle;
       final buf = StringBuffer();
       buf.writeln('# $title');
       buf.writeln('');
@@ -514,9 +515,9 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
       await Share.shareXFiles([XFile(file.path, mimeType: 'text/markdown', name: filename)], text: title);
     } catch (e) {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '导出失败: $e' : 'Export failed: $e')),
+          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
         );
       }
     } finally {
@@ -533,9 +534,9 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     setState(() => _exporting = true);
     try {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '正在导出…' : 'Exporting…')),
+          SnackBar(content: Text(l10n.messageExportSheetExporting)),
         );
       }
       final file = await _renderAndSaveChatImage(context, widget.conversation, widget.messages);
@@ -544,9 +545,9 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
       await Share.shareXFiles([XFile(file.path, mimeType: 'image/png', name: filename)]);
     } catch (e) {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '导出失败: $e' : 'Export failed: $e')),
+          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
         );
       }
     } finally {
@@ -557,7 +558,7 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
       controller: _ctrl,
       expand: false,
@@ -573,7 +574,7 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
               child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
             ),
             const SizedBox(height: 10),
-            Text(zh ? '导出格式' : 'Export Format', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(l10n.messageExportSheetFormatTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             Expanded(
               child: ListView(
@@ -581,16 +582,16 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
                 children: [
                   _ExportOptionTile(
                     icon: Lucide.BookOpenText,
-                    title: zh ? 'Markdown' : 'Markdown',
-                    subtitle: zh ? '将选中的消息导出为 Markdown 文件' : 'Export selected messages as a Markdown file',
+                    title: l10n.messageExportSheetMarkdown,
+                    subtitle: l10n.messageExportSheetBatchMarkdownSubtitle,
                     onTap: _exporting ? null : () {
                       _onExportMarkdown();
                     },
                   ),
                   _ExportOptionTile(
                     icon: Lucide.Image,
-                    title: zh ? '导出为图片' : 'Export as Image',
-                    subtitle: zh ? '将选中的消息渲染为 PNG 图片' : 'Render selected messages to a PNG image',
+                    title: l10n.messageExportSheetExportImage,
+                    subtitle: l10n.messageExportSheetBatchExportImageSubtitle,
                     onTap: _exporting ? null : () {
                       _onExportImage();
                     },
@@ -616,8 +617,8 @@ class _ExportSheetState extends State<_ExportSheet> {
   }
 
   String _formatTime(BuildContext context, DateTime time) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final fmt = zh ? DateFormat('yyyy年M月d日 HH:mm:ss') : DateFormat('yyyy-MM-dd HH:mm:ss');
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = DateFormat(l10n.messageExportSheetDateTimeWithSecondsPattern);
     return fmt.format(time);
   }
 
@@ -629,7 +630,8 @@ class _ExportSheetState extends State<_ExportSheet> {
       final msg = widget.message;
       final service = ctx.read<ChatService>();
       final convo = service.getConversation(msg.conversationId);
-      final title = (convo?.title ?? 'Chat');
+      final l10n = AppLocalizations.of(ctx)!;
+      final title = ((convo?.title ?? '').trim().isNotEmpty) ? (convo?.title ?? '') : l10n.messageExportSheetDefaultTitle;
       final time = _formatTime(ctx, msg.timestamp);
 
       final parsed = _parseContent(msg.content);
@@ -674,16 +676,16 @@ class _ExportSheetState extends State<_ExportSheet> {
       await Share.shareXFiles([XFile(file.path, mimeType: 'text/markdown', name: filename)], text: title);
 
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '已导出为 $filename' : 'Exported as $filename')),
+          SnackBar(content: Text(l10n.messageExportSheetExportedAs(filename))),
         );
       }
     } catch (e) {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '导出失败: $e' : 'Export failed: $e')),
+          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
         );
       }
     } finally {
@@ -700,9 +702,9 @@ class _ExportSheetState extends State<_ExportSheet> {
     setState(() => _exporting = true);
     try {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '正在导出…' : 'Exporting…')),
+          SnackBar(content: Text(l10n.messageExportSheetExporting)),
         );
       }
       final file = await _renderAndSaveMessageImage(context, widget.message);
@@ -711,9 +713,9 @@ class _ExportSheetState extends State<_ExportSheet> {
       await Share.shareXFiles([XFile(file.path, mimeType: 'image/png', name: filename)]);
     } catch (e) {
       if (mounted) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(zh ? '导出失败: $e' : 'Export failed: $e')),
+          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
         );
       }
     } finally {
@@ -724,7 +726,7 @@ class _ExportSheetState extends State<_ExportSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
       controller: _ctrl,
       expand: false,
@@ -740,7 +742,7 @@ class _ExportSheetState extends State<_ExportSheet> {
               child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
             ),
             const SizedBox(height: 10),
-            Text(zh ? '导出格式' : 'Export Format', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(l10n.messageExportSheetFormatTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             Expanded(
               child: ListView(
@@ -748,16 +750,16 @@ class _ExportSheetState extends State<_ExportSheet> {
                 children: [
                   _ExportOptionTile(
                     icon: Lucide.BookOpenText,
-                    title: zh ? 'Markdown' : 'Markdown',
-                    subtitle: zh ? '将该消息导出为 Markdown 文件' : 'Export this message as a Markdown file',
+                    title: l10n.messageExportSheetMarkdown,
+                    subtitle: l10n.messageExportSheetSingleMarkdownSubtitle,
                     onTap: _exporting ? null : () {
                       _onExportMarkdown();
                     },
                   ),
                   _ExportOptionTile(
                     icon: Lucide.Image,
-                    title: zh ? '导出为图片' : 'Export as Image',
-                    subtitle: zh ? '将该消息渲染为 PNG 图片' : 'Render this message to a PNG image',
+                    title: l10n.messageExportSheetExportImage,
+                    subtitle: l10n.messageExportSheetSingleExportImageSubtitle,
                     onTap: _exporting ? null : () {
                       _onExportImage();
                     },

@@ -1645,6 +1645,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Citations ({count})'**
   String chatMessageWidgetCitationsCount(int count);
+
+  /// No description provided for @messageExportSheetAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get messageExportSheetAssistant;
+
+  /// No description provided for @messageExportSheetDefaultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Chat'**
+  String get messageExportSheetDefaultTitle;
+
+  /// No description provided for @messageExportSheetExporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting…'**
+  String get messageExportSheetExporting;
+
+  /// No description provided for @messageExportSheetExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String messageExportSheetExportFailed(String error);
+
+  /// No description provided for @messageExportSheetExportedAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported as {filename}'**
+  String messageExportSheetExportedAs(String filename);
+
+  /// No description provided for @messageExportSheetFormatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Format'**
+  String get messageExportSheetFormatTitle;
+
+  /// No description provided for @messageExportSheetMarkdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Markdown'**
+  String get messageExportSheetMarkdown;
+
+  /// No description provided for @messageExportSheetSingleMarkdownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export this message as a Markdown file'**
+  String get messageExportSheetSingleMarkdownSubtitle;
+
+  /// No description provided for @messageExportSheetBatchMarkdownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export selected messages as a Markdown file'**
+  String get messageExportSheetBatchMarkdownSubtitle;
+
+  /// No description provided for @messageExportSheetExportImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Export as Image'**
+  String get messageExportSheetExportImage;
+
+  /// No description provided for @messageExportSheetSingleExportImageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Render this message to a PNG image'**
+  String get messageExportSheetSingleExportImageSubtitle;
+
+  /// No description provided for @messageExportSheetBatchExportImageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Render selected messages to a PNG image'**
+  String get messageExportSheetBatchExportImageSubtitle;
+
+  /// No description provided for @messageExportSheetDateTimeWithSecondsPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'yyyy-MM-dd HH:mm:ss'**
+  String get messageExportSheetDateTimeWithSecondsPattern;
 }
 
 class _AppLocalizationsDelegate
