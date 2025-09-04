@@ -1025,4 +1025,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sideDrawerRename => 'Rename';
+
+  @override
+  String get chatInputBarHint => 'Type a message for AI';
+
+  @override
+  String get chatInputBarSelectModelTooltip => 'Select Model';
+
+  @override
+  String get chatInputBarOnlineSearchTooltip => 'Online Search';
+
+  @override
+  String get chatInputBarReasoningStrengthTooltip => 'Reasoning Strength';
+
+  @override
+  String get chatInputBarMcpServersTooltip => 'MCP Servers';
+
+  @override
+  String get chatInputBarMoreTooltip => 'Add';
 }

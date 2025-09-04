@@ -314,5 +314,11 @@
   "sideDrawerSetNicknameTitle": "设置昵称",
   "sideDrawerNicknameLabel": "昵称",
   "sideDrawerNicknameHint": "输入新的昵称",
-  "sideDrawerRename": "重命名"
+  "sideDrawerRename": "重命名",
+  "chatInputBarHint": "输入消息与AI聊天",
+  "chatInputBarSelectModelTooltip": "选择模型",
+  "chatInputBarOnlineSearchTooltip": "联网搜索",
+  "chatInputBarReasoningStrengthTooltip": "思维链强度",
+  "chatInputBarMcpServersTooltip": "MCP服务器",
+  "chatInputBarMoreTooltip": "更多"
 }

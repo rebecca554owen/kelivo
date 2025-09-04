@@ -1993,6 +1993,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rename'**
   String get sideDrawerRename;
+
+  /// No description provided for @chatInputBarHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message for AI'**
+  String get chatInputBarHint;
+
+  /// No description provided for @chatInputBarSelectModelTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Model'**
+  String get chatInputBarSelectModelTooltip;
+
+  /// No description provided for @chatInputBarOnlineSearchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Online Search'**
+  String get chatInputBarOnlineSearchTooltip;
+
+  /// No description provided for @chatInputBarReasoningStrengthTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning Strength'**
+  String get chatInputBarReasoningStrengthTooltip;
+
+  /// No description provided for @chatInputBarMcpServersTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Servers'**
+  String get chatInputBarMcpServersTooltip;
+
+  /// No description provided for @chatInputBarMoreTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get chatInputBarMoreTooltip;
 }
 
 class _AppLocalizationsDelegate

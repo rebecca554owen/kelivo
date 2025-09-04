@@ -996,4 +996,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sideDrawerRename => '重命名';
+
+  @override
+  String get chatInputBarHint => '输入消息与AI聊天';
+
+  @override
+  String get chatInputBarSelectModelTooltip => '选择模型';
+
+  @override
+  String get chatInputBarOnlineSearchTooltip => '联网搜索';
+
+  @override
+  String get chatInputBarReasoningStrengthTooltip => '思维链强度';
+
+  @override
+  String get chatInputBarMcpServersTooltip => 'MCP服务器';
+
+  @override
+  String get chatInputBarMoreTooltip => '更多';
 }

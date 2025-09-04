@@ -445,4 +445,11 @@
   "sideDrawerNicknameLabel": "Nickname",
   "sideDrawerNicknameHint": "Enter new nickname",
   "sideDrawerRename": "Rename"
+  ,
+  "chatInputBarHint": "Type a message for AI",
+  "chatInputBarSelectModelTooltip": "Select Model",
+  "chatInputBarOnlineSearchTooltip": "Online Search",
+  "chatInputBarReasoningStrengthTooltip": "Reasoning Strength",
+  "chatInputBarMcpServersTooltip": "MCP Servers",
+  "chatInputBarMoreTooltip": "Add"
 }

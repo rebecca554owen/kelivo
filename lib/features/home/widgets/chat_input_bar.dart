@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../l10n/app_localizations.dart';
 
 import 'dart:io';
 import '../../../core/models/chat_input_data.dart';
@@ -122,8 +123,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   String _hint(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    return lang == 'zh' ? '输入消息与AI聊天' : 'Type a message for AI';
+    final l10n = AppLocalizations.of(context)!;
+    return l10n.chatInputBarHint;
   }
 
   void _handleSend() {
@@ -295,9 +296,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 Row(
                   children: [
                     _CircleIconButton(
-                      tooltip: Localizations.localeOf(context).languageCode == 'zh'
-                          ? '选择模型'
-                          : 'Select Model',
+                      tooltip: AppLocalizations.of(context)!.chatInputBarSelectModelTooltip,
                       icon: Lucide.Boxes,
                       child: widget.modelIcon,
                       padding: widget.modelIcon != null ? 1 : 10,
@@ -305,9 +304,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     _CircleIconButton(
-                      tooltip: Localizations.localeOf(context).languageCode == 'zh'
-                          ? '联网搜索'
-                          : 'Online Search',
+                      tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
                       icon: Lucide.Globe,
                       active: _searchEnabled,
                       onTap: widget.onOpenSearch,
@@ -315,9 +312,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     if (widget.supportsReasoning) ...[
                       const SizedBox(width: AppSpacing.xs),
                       _CircleIconButton(
-                        tooltip: Localizations.localeOf(context).languageCode == 'zh'
-                            ? '思维链强度'
-                            : 'Reasoning Strength',
+                        tooltip: AppLocalizations.of(context)!.chatInputBarReasoningStrengthTooltip,
                         icon: Lucide.Brain,
                         active: widget.reasoningActive,
                         onTap: widget.onConfigureReasoning,
@@ -337,7 +332,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     if (widget.showMcpButton) ...[
                       const SizedBox(width: AppSpacing.xs),
                       _CircleIconButton(
-                        tooltip: Localizations.localeOf(context).languageCode == 'zh' ? 'MCP服务器' : 'MCP Servers',
+                        tooltip: AppLocalizations.of(context)!.chatInputBarMcpServersTooltip,
                         icon: Lucide.Terminal,
                         active: widget.mcpActive,
                         onTap: widget.onOpenMcp,
@@ -348,9 +343,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 Row(
                   children: [
                     _CircleIconButton(
-                      tooltip: Localizations.localeOf(context).languageCode == 'zh'
-                          ? '更多'
-                          : 'Add',
+                      tooltip: AppLocalizations.of(context)!.chatInputBarMoreTooltip,
                       icon: Lucide.Plus,
                       active: widget.moreOpen,
                       onTap: widget.onMore,
