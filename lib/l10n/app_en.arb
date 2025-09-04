@@ -172,5 +172,9 @@
   "assistantSettingsDeleteDialogTitle": "Delete Assistant",
   "assistantSettingsDeleteDialogContent": "Are you sure you want to delete this assistant? This action cannot be undone.",
   "assistantSettingsDeleteDialogCancel": "Cancel",
-  "assistantSettingsDeleteDialogConfirm": "Delete"
+  "assistantSettingsDeleteDialogConfirm": "Delete",
+  "mcpAssistantSheetTitle": "MCP Servers",
+  "mcpAssistantSheetSubtitle": "Servers enabled for this assistant",
+  "mcpAssistantSheetSelectAll": "Select All",
+  "mcpAssistantSheetClearAll": "Clear"
 }

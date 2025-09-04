@@ -961,6 +961,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get assistantSettingsDeleteDialogConfirm;
+
+  /// No description provided for @mcpAssistantSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Servers'**
+  String get mcpAssistantSheetTitle;
+
+  /// No description provided for @mcpAssistantSheetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers enabled for this assistant'**
+  String get mcpAssistantSheetSubtitle;
+
+  /// No description provided for @mcpAssistantSheetSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get mcpAssistantSheetSelectAll;
+
+  /// No description provided for @mcpAssistantSheetClearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get mcpAssistantSheetClearAll;
 }
 
 class _AppLocalizationsDelegate

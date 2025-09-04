@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
@@ -24,8 +25,8 @@ class _AssistantMcpSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final mcp = context.watch<McpProvider>();
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(assistantId)!;
@@ -71,12 +72,12 @@ class _AssistantMcpSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          zh ? 'MCP服务器' : 'MCP Servers',
+                          l10n.mcpAssistantSheetTitle,
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          zh ? '为该助手启用的服务' : 'Servers enabled for this assistant',
+                          l10n.mcpAssistantSheetSubtitle,
                           style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
                         ),
                       ],
@@ -90,7 +91,7 @@ class _AssistantMcpSheet extends StatelessWidget {
                         await context.read<AssistantProvider>().updateAssistant(next);
                       },
                       icon: Icon(Lucide.Check, size: 16, color: cs.primary),
-                      label: Text(zh ? '全选' : 'Select All'),
+                      label: Text(l10n.mcpAssistantSheetSelectAll),
                     ),
                     const SizedBox(width: 4),
                     TextButton.icon(
@@ -99,7 +100,7 @@ class _AssistantMcpSheet extends StatelessWidget {
                         await context.read<AssistantProvider>().updateAssistant(next);
                       },
                       icon: Icon(Lucide.X, size: 16, color: cs.primary),
-                      label: Text(zh ? '全不选' : 'Clear'),
+                      label: Text(l10n.mcpAssistantSheetClearAll),
                     ),
                   ],
                 ],
@@ -112,7 +113,7 @@ class _AssistantMcpSheet extends StatelessWidget {
                 child: servers.isEmpty
                     ? Center(
                         child: Text(
-                          zh ? '暂无已启动的 MCP 服务器' : 'No running MCP servers',
+                          l10n.assistantEditMcpNoServersMessage,
                           style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
                         ),
                       )
@@ -183,8 +184,8 @@ class _AssistantMcpSheet extends StatelessWidget {
                                               spacing: 6,
                                               runSpacing: 6,
                                               children: [
-                                                tag(zh ? '已连接' : 'Connected'),
-                                                tag(zh ? '工具: $enabledTools/${tools.length}' : 'Tools: $enabledTools/${tools.length}'),
+                                                tag(l10n.assistantEditMcpConnectedTag),
+                                                tag(l10n.assistantEditMcpToolsCountTag(enabledTools.toString(), tools.length.toString())),
                                                 tag(s.transport == McpTransportType.sse ? 'SSE' : 'HTTP'),
                                               ],
                                             ),

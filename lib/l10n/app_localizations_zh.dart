@@ -448,4 +448,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantSettingsDeleteDialogConfirm => '删除';
+
+  @override
+  String get mcpAssistantSheetTitle => 'MCP服务器';
+
+  @override
+  String get mcpAssistantSheetSubtitle => '为该助手启用的服务';
+
+  @override
+  String get mcpAssistantSheetSelectAll => '全选';
+
+  @override
+  String get mcpAssistantSheetClearAll => '全不选';
 }
