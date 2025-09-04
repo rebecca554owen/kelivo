@@ -597,4 +597,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatHistoryPagePinned => 'Pinned';
+
+  @override
+  String get messageEditPageTitle => 'Edit Message';
+
+  @override
+  String get messageEditPageSave => 'Save';
+
+  @override
+  String get messageEditPageHint => 'Enter message…';
+
+  @override
+  String get selectCopyPageTitle => 'Select & Copy';
+
+  @override
+  String get selectCopyPageCopyAll => 'Copy All';
+
+  @override
+  String get selectCopyPageCopiedAll => 'Copied all';
 }

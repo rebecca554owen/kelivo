@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MessageEditPage extends StatefulWidget {
   const MessageEditPage({super.key, required this.message});
@@ -27,11 +28,11 @@ class _MessageEditPageState extends State<MessageEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     return Scaffold(
       appBar: AppBar(
-        title: Text(zh ? '编辑消息' : 'Edit Message'),
+        title: Text(l10n.messageEditPageTitle),
         actions: [
           TextButton(
             onPressed: () {
@@ -39,7 +40,7 @@ class _MessageEditPageState extends State<MessageEditPage> {
               Navigator.of(context).pop<String>(text);
             },
             child: Text(
-              zh ? '保存' : 'Save',
+              l10n.messageEditPageSave,
               style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
             ),
           ),
@@ -55,7 +56,7 @@ class _MessageEditPageState extends State<MessageEditPage> {
             minLines: 8,
             maxLines: null,
             decoration: InputDecoration(
-              hintText: zh ? '输入消息内容…' : 'Enter message…',
+              hintText: l10n.messageEditPageHint,
               filled: true,
               fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
               border: OutlineInputBorder(

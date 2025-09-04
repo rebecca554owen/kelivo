@@ -217,5 +217,11 @@
   "chatHistoryPageNoConversations": "No conversations",
   "chatHistoryPagePinnedSection": "Pinned",
   "chatHistoryPagePin": "Pin",
-  "chatHistoryPagePinned": "Pinned"
+  "chatHistoryPagePinned": "Pinned",
+  "messageEditPageTitle": "Edit Message",
+  "messageEditPageSave": "Save",
+  "messageEditPageHint": "Enter message…",
+  "selectCopyPageTitle": "Select & Copy",
+  "selectCopyPageCopyAll": "Copy All",
+  "selectCopyPageCopiedAll": "Copied all"
 }

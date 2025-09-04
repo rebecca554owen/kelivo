@@ -1231,6 +1231,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pinned'**
   String get chatHistoryPagePinned;
+
+  /// No description provided for @messageEditPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Message'**
+  String get messageEditPageTitle;
+
+  /// No description provided for @messageEditPageSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get messageEditPageSave;
+
+  /// No description provided for @messageEditPageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter message…'**
+  String get messageEditPageHint;
+
+  /// No description provided for @selectCopyPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select & Copy'**
+  String get selectCopyPageTitle;
+
+  /// No description provided for @selectCopyPageCopyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy All'**
+  String get selectCopyPageCopyAll;
+
+  /// No description provided for @selectCopyPageCopiedAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied all'**
+  String get selectCopyPageCopiedAll;
 }
 
 class _AppLocalizationsDelegate

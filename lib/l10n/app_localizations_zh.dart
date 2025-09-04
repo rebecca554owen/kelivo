@@ -583,4 +583,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatHistoryPagePinned => '已置顶';
+
+  @override
+  String get messageEditPageTitle => '编辑消息';
+
+  @override
+  String get messageEditPageSave => '保存';
+
+  @override
+  String get messageEditPageHint => '输入消息内容…';
+
+  @override
+  String get selectCopyPageTitle => '选择复制';
+
+  @override
+  String get selectCopyPageCopyAll => '复制全部';
+
+  @override
+  String get selectCopyPageCopiedAll => '已复制全部';
 }
