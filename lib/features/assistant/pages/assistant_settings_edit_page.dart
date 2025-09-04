@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'dart:ui';
@@ -53,8 +54,8 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage> w
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final provider = context.watch<AssistantProvider>();
     final assistant = provider.getById(widget.assistantId);
 
@@ -62,16 +63,16 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage> w
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(icon: Icon(Lucide.ArrowLeft, size: 22), onPressed: () => Navigator.of(context).maybePop()),
-          title: Text(zh ? '助手' : 'Assistant'),
+          title: Text(l10n.assistantEditPageTitle),
         ),
-        body: Center(child: Text(zh ? '助手不存在' : 'Assistant not found')),
+        body: Center(child: Text(l10n.assistantEditPageNotFound)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: Icon(Lucide.ArrowLeft, size: 22), onPressed: () => Navigator.of(context).maybePop()),
-        title: Text(assistant.name.isNotEmpty ? assistant.name : (zh ? '助手' : 'Assistant')),
+        title: Text(assistant.name.isNotEmpty ? assistant.name : l10n.assistantEditPageTitle),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
           child: Padding(
@@ -81,7 +82,7 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage> w
                 Expanded(
                   child: _SegTabBar(
                     controller: _tabController,
-                    tabs: [zh ? '基础设置' : 'Basic', zh ? '提示词' : 'Prompts', 'MCP', zh ? '自定义请求' : 'Custom'],
+                    tabs: [l10n.assistantEditPageBasicTab, l10n.assistantEditPagePromptsTab, l10n.assistantEditPageMcpTab, l10n.assistantEditPageCustomTab],
                   ),
                 ),
               ],
@@ -108,9 +109,9 @@ class _CustomRequestTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(assistantId)!;
 
@@ -188,13 +189,13 @@ class _CustomRequestTab extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(zh ? '自定义 Header' : 'Custom Headers',
+                    child: Text(l10n.assistantEditCustomHeadersTitle,
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                   ),
                   TextButton.icon(
                     onPressed: addHeader,
                     icon: Icon(Lucide.Plus, size: 16, color: cs.primary),
-                    label: Text(zh ? '添加 Header' : 'Add Header', style: TextStyle(color: cs.primary)),
+                    label: Text(l10n.assistantEditCustomHeadersAdd, style: TextStyle(color: cs.primary)),
                   ),
                 ],
               ),
@@ -211,7 +212,7 @@ class _CustomRequestTab extends StatelessWidget {
               ],
               if (a.customHeaders.isEmpty)
                 Text(
-                  zh ? '未添加 Header' : 'No headers added',
+                  l10n.assistantEditCustomHeadersEmpty,
                   style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12),
                 ),
             ],
@@ -226,13 +227,13 @@ class _CustomRequestTab extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(zh ? '自定义 Body' : 'Custom Body',
+                    child: Text(l10n.assistantEditCustomBodyTitle,
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                   ),
                   TextButton.icon(
                     onPressed: addBody,
                     icon: Icon(Lucide.Plus, size: 16, color: cs.primary),
-                    label: Text(zh ? '添加 Body' : 'Add Body', style: TextStyle(color: cs.primary)),
+                    label: Text(l10n.assistantEditCustomBodyAdd, style: TextStyle(color: cs.primary)),
                   ),
                 ],
               ),
@@ -249,7 +250,7 @@ class _CustomRequestTab extends StatelessWidget {
               ],
               if (a.customBody.isEmpty)
                 Text(
-                  zh ? '未添加 Body 项' : 'No body items added',
+                  l10n.assistantEditCustomBodyEmpty,
                   style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12),
                 ),
             ],
@@ -312,8 +313,8 @@ class _HeaderRowState extends State<_HeaderRow> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -322,7 +323,7 @@ class _HeaderRowState extends State<_HeaderRow> {
             Expanded(
               child: TextField(
                 controller: _nameCtrl,
-                decoration: _dec(context, zh ? 'Header 名称' : 'Header Name'),
+                decoration: _dec(context, l10n.assistantEditHeaderNameLabel),
                 onChanged: (v) => widget.onChanged(v, _valCtrl.text),
               ),
             ),
@@ -330,14 +331,14 @@ class _HeaderRowState extends State<_HeaderRow> {
             IconButton(
               onPressed: widget.onDelete,
               icon: Icon(Lucide.Trash2, size: 18, color: cs.error),
-              tooltip: zh ? '删除' : 'Delete',
+              tooltip: l10n.assistantEditDeleteTooltip,
             ),
           ],
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _valCtrl,
-          decoration: _dec(context, zh ? 'Header 值' : 'Header Value'),
+          decoration: _dec(context, l10n.assistantEditHeaderValueLabel),
           onChanged: (v) => widget.onChanged(_nameCtrl.text, v),
         ),
       ],
@@ -398,8 +399,8 @@ class _BodyRowState extends State<_BodyRow> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -408,7 +409,7 @@ class _BodyRowState extends State<_BodyRow> {
             Expanded(
               child: TextField(
                 controller: _keyCtrl,
-                decoration: _dec(context, zh ? 'Body Key' : 'Body Key'),
+                decoration: _dec(context, l10n.assistantEditBodyKeyLabel),
                 onChanged: (v) => widget.onChanged(v, _valCtrl.text),
               ),
             ),
@@ -416,7 +417,7 @@ class _BodyRowState extends State<_BodyRow> {
             IconButton(
               onPressed: widget.onDelete,
               icon: Icon(Lucide.Trash2, size: 18, color: cs.error),
-              tooltip: zh ? '删除' : 'Delete',
+              tooltip: l10n.assistantEditDeleteTooltip,
             ),
           ],
         ),
@@ -425,7 +426,7 @@ class _BodyRowState extends State<_BodyRow> {
           controller: _valCtrl,
           minLines: 3,
           maxLines: 6,
-          decoration: _dec(context, zh ? 'Body 值 (JSON)' : 'Body Value (JSON)'),
+          decoration: _dec(context, l10n.assistantEditBodyValueLabel),
           onChanged: (v) => widget.onChanged(_keyCtrl.text, v),
         ),
       ],
@@ -482,9 +483,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(widget.assistantId)!;
 
@@ -563,7 +564,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: _InputRow(
-                      label: zh ? '助手名称' : 'Assistant Name',
+                      label: l10n.assistantEditAssistantNameLabel,
                       controller: _nameCtrl,
                       onChanged: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(name: v)),
                     ),
@@ -578,7 +579,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         card(
           child: Row(
             children: [
-              Expanded(child: titleDesc(zh ? '使用助手头像' : 'Use Assistant Avatar', zh ? '在聊天中使用助手头像和名字而不是模型头像和名字' : 'Use assistant avatar/name instead of model')),
+              Expanded(child: titleDesc(l10n.assistantEditUseAssistantAvatarTitle, l10n.assistantEditUseAssistantAvatarSubtitle)),
               Switch(
                 value: a.useAssistantAvatar,
                 onChanged: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(useAssistantAvatar: v)),
@@ -590,8 +591,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Chat model card (styled like DefaultModelPage)
         card(
           child: _AssistantModelCard(
-            title: zh ? '聊天模型' : 'Chat Model',
-            subtitle: zh ? '为该助手设置默认聊天模型（未设置时使用全局默认）' : 'Default chat model for this assistant (fallback to global)',
+            title: l10n.assistantEditChatModelTitle,
+            subtitle: l10n.assistantEditChatModelSubtitle,
             providerKey: a.chatModelProvider,
             modelId: a.chatModelId,
             onPick: () async {
@@ -610,7 +611,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(
               children: [
-                Expanded(child: titleDesc('Temperature', zh ? '控制输出的随机性，范围 0–2' : 'Controls randomness, range 0–2')),
+                Expanded(child: titleDesc('Temperature', l10n.assistantEditTemperatureDescription)),
                 Switch(
                   value: a.temperature != null,
                   onChanged: (v) async {
@@ -636,7 +637,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
                 child: Text(
-                  zh ? '已关闭（使用服务商默认）' : 'Disabled (uses provider default)',
+                  l10n.assistantEditParameterDisabled,
                   style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
                 ),
               ),
@@ -649,7 +650,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(
               children: [
-                Expanded(child: titleDesc('Top P', zh ? '请不要修改此值，除非你知道自己在做什么' : 'Do not change unless you know what you are doing')),
+                Expanded(child: titleDesc('Top P', l10n.assistantEditTopPDescription)),
                 Switch(
                   value: a.topP != null,
                   onChanged: (v) async {
@@ -675,7 +676,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
                 child: Text(
-                  zh ? '已关闭（使用服务商默认）' : 'Disabled (uses provider default)',
+                  l10n.assistantEditParameterDisabled,
                   style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
                 ),
               ),
@@ -686,7 +687,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Context messages
         card(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            titleDesc(zh ? '上下文消息数量' : 'Context Messages', zh ? '多少历史消息会被当作上下文发送给模型，超过数量会忽略，只保留最近 N 条' : 'How many recent messages to keep in context'),
+            titleDesc(l10n.assistantEditContextMessagesTitle, l10n.assistantEditContextMessagesDescription),
             _SliderTileNew(
               value: a.contextMessageSize.toDouble().clamp(0, 256),
               min: 0,
@@ -701,7 +702,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Stream output
         card(
           child: Row(children: [
-            Expanded(child: titleDesc(zh ? '流式输出' : 'Stream Output', zh ? '是否启用消息的流式输出' : 'Enable streaming responses')),
+            Expanded(child: titleDesc(l10n.assistantEditStreamOutputTitle, l10n.assistantEditStreamOutputDescription)),
             Switch(value: a.streamOutput, onChanged: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(streamOutput: v))),
           ]),
         ),
@@ -720,7 +721,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                 ),
               ),
             ),
-            Expanded(child: Text(zh ? '思考预算' : 'Thinking Budget', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+            Expanded(child: Text(l10n.assistantEditThinkingBudgetTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
             TextButton(
               onPressed: () async {
                 final currentBudget = a.thinkingBudget;
@@ -731,7 +732,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                 final chosen = context.read<SettingsProvider>().thinkingBudget;
                 await context.read<AssistantProvider>().updateAssistant(a.copyWith(thinkingBudget: chosen));
               },
-              child: Text(zh ? '配置' : 'Configure'),
+              child: Text(l10n.assistantEditConfigureButton),
             ),
           ]),
         ),
@@ -739,13 +740,13 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Max tokens
         card(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            titleDesc(zh ? '最大 Token 数' : 'Max Tokens', zh ? '留空表示无限制' : 'Leave empty for unlimited'),
+            titleDesc(l10n.assistantEditMaxTokensTitle, l10n.assistantEditMaxTokensDescription),
             const SizedBox(height: 10),
             _InputRow(
-              label: zh ? '最大 Token 数' : 'Max Tokens',
+              label: l10n.assistantEditMaxTokensTitle,
               hideLabel: true,
               controller: _maxTokensCtrl,
-              hint: zh ? '无限制' : 'Unlimited',
+              hint: l10n.assistantEditMaxTokensHint,
               keyboardType: TextInputType.number,
               onChanged: (v) {
                 final val = int.tryParse(v.trim());
@@ -758,14 +759,14 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Chat background
         card(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            titleDesc(zh ? '聊天背景' : 'Chat Background', zh ? '设置助手聊天页面的背景图片' : 'Set a background image for this assistant'),
+            titleDesc(l10n.assistantEditChatBackgroundTitle, l10n.assistantEditChatBackgroundDescription),
             const SizedBox(height: 10),
             Row(children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _pickBackground(context, a),
                   icon: Icon(Lucide.Image, size: 18, color: cs.primary),
-                  label: Text(zh ? '选择背景图片' : 'Choose Image', style: TextStyle(color: cs.primary)),
+                  label: Text(l10n.assistantEditChooseImageButton, style: TextStyle(color: cs.primary)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                     side: BorderSide(color: cs.primary.withOpacity(0.45)),
@@ -780,7 +781,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   child: OutlinedButton.icon(
                     onPressed: () => context.read<AssistantProvider>().updateAssistant(a.copyWith(clearBackground: true)),
                     icon: Icon(Lucide.X, size: 16, color: cs.primary),
-                    label: Text(zh ? '清除' : 'Clear', style: TextStyle(color: cs.primary)),
+                    label: Text(l10n.assistantEditClearButton, style: TextStyle(color: cs.primary)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                       side: BorderSide(color: cs.primary.withOpacity(0.45)),
@@ -810,7 +811,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
   }
 
   Future<void> _showAvatarPicker(BuildContext context, Assistant a) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -823,14 +824,14 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: Text(zh ? '选择图片' : 'Choose Image'),
+                title: Text(l10n.assistantEditAvatarChooseImage),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _pickLocalImage(context, a);
                 },
               ),
               ListTile(
-                title: Text(zh ? '选择表情' : 'Choose Emoji'),
+                title: Text(l10n.assistantEditAvatarChooseEmoji),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   final emoji = await _pickEmoji(context);
@@ -840,21 +841,21 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                 },
               ),
               ListTile(
-                title: Text(zh ? '输入链接' : 'Enter Link'),
+                title: Text(l10n.assistantEditAvatarEnterLink),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _inputAvatarUrl(context, a);
                 },
               ),
               ListTile(
-                title: Text(zh ? 'QQ头像' : 'Import from QQ'),
+                title: Text(l10n.assistantEditAvatarImportQQ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await _inputQQAvatar(context, a);
                 },
               ),
               ListTile(
-                title: Text(zh ? '重置' : 'Reset'),
+                title: Text(l10n.assistantEditAvatarReset),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await context.read<AssistantProvider>().updateAssistant(a.copyWith(clearAvatar: true));
@@ -1028,7 +1029,7 @@ class _ValuePill extends StatelessWidget {
 
 extension _AssistantAvatarActions on _BasicSettingsTabState {
   Future<String?> _pickEmoji(BuildContext context) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     String value = '';
     bool validGrapheme(String s) {
@@ -1050,7 +1051,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
             scrollable: true,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: cs.surface,
-            title: Text(zh ? '选择表情' : 'Choose Emoji'),
+            title: Text(l10n.assistantEditEmojiDialogTitle),
             content: SizedBox(
               width: 360,
               child: Column(
@@ -1076,7 +1077,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                       if (validGrapheme(value)) Navigator.of(ctx).pop(value.characters.take(1).toString());
                     },
                     decoration: InputDecoration(
-                      hintText: zh ? '输入或粘贴任意表情' : 'Type or paste any emoji',
+                      hintText: l10n.assistantEditEmojiDialogHint,
                       filled: true,
                       fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                       border: OutlineInputBorder(
@@ -1128,12 +1129,12 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(zh ? '取消' : 'Cancel'),
+                child: Text(l10n.assistantEditEmojiDialogCancel),
               ),
               TextButton(
                 onPressed: validGrapheme(value) ? () => Navigator.of(ctx).pop(value.characters.take(1).toString()) : null,
                 child: Text(
-                  zh ? '保存' : 'Save',
+                  l10n.assistantEditEmojiDialogSave,
                   style: TextStyle(
                     color: validGrapheme(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                     fontWeight: FontWeight.w600,
@@ -1148,7 +1149,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
   }
 
   Future<void> _inputAvatarUrl(BuildContext context, Assistant a) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -1160,12 +1161,12 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: cs.surface,
-            title: Text(zh ? '输入图片链接' : 'Enter Image URL'),
+            title: Text(l10n.assistantEditImageUrlDialogTitle),
             content: TextField(
               controller: controller,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: zh ? '例如: https://example.com/avatar.png' : 'e.g. https://example.com/avatar.png',
+                hintText: l10n.assistantEditImageUrlDialogHint,
                 filled: true,
                 fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                 border: OutlineInputBorder(
@@ -1189,12 +1190,12 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(zh ? '取消' : 'Cancel'),
+                child: Text(l10n.assistantEditImageUrlDialogCancel),
               ),
               TextButton(
                 onPressed: valid(value) ? () => Navigator.of(ctx).pop(true) : null,
                 child: Text(
-                  zh ? '保存' : 'Save',
+                  l10n.assistantEditImageUrlDialogSave,
                   style: TextStyle(
                     color: valid(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                     fontWeight: FontWeight.w600,
@@ -1215,7 +1216,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
   }
 
   Future<void> _inputQQAvatar(BuildContext context, Assistant a) async {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -1260,13 +1261,13 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: cs.surface,
-            title: Text(zh ? '使用QQ头像' : 'Import from QQ'),
+            title: Text(l10n.assistantEditQQAvatarDialogTitle),
             content: TextField(
               controller: controller,
               autofocus: true,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                hintText: zh ? '输入QQ号码（5-12位）' : 'Enter QQ number (5-12 digits)',
+                hintText: l10n.assistantEditQQAvatarDialogHint,
                 filled: true,
                 fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                 border: OutlineInputBorder(
@@ -1307,23 +1308,23 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                     if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop(false);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(zh ? '获取随机QQ头像失败，请重试' : 'Failed to fetch random QQ avatar. Please try again.')),
+                      SnackBar(content: Text(l10n.assistantEditQQAvatarFailedMessage)),
                     );
                   }
                 },
-                child: Text(zh ? '随机QQ' : 'Random One'),
+                child: Text(l10n.assistantEditQQAvatarRandomButton),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(false),
-                    child: Text(zh ? '取消' : 'Cancel'),
+                    child: Text(l10n.assistantEditQQAvatarDialogCancel),
                   ),
                   TextButton(
                     onPressed: valid(value) ? () => Navigator.of(ctx).pop(true) : null,
                     child: Text(
-                      zh ? '保存' : 'Save',
+                      l10n.assistantEditQQAvatarDialogSave,
                       style: TextStyle(
                         color: valid(value) ? cs.primary : cs.onSurface.withOpacity(0.38),
                         fontWeight: FontWeight.w600,
@@ -1365,17 +1366,17 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
       }
     } on PlatformException catch (e) {
       if (!mounted) return;
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(zh ? '无法打开相册，试试输入图片链接' : 'Unable to open gallery. Try entering an image URL.')),
+        SnackBar(content: Text(l10n.assistantEditGalleryErrorMessage)),
       );
       await _inputAvatarUrl(context, a);
       return;
     } catch (_) {
       if (!mounted) return;
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(zh ? '发生错误，试试输入图片链接' : 'Something went wrong. Try entering an image URL.')),
+        SnackBar(content: Text(l10n.assistantEditGeneralErrorMessage)),
       );
       await _inputAvatarUrl(context, a);
       return;
@@ -1443,8 +1444,8 @@ class _PromptTabState extends State<_PromptTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(widget.assistantId)!;
 
@@ -1495,18 +1496,23 @@ class _PromptTabState extends State<_PromptTab> {
 
     // Sample preview for message template
     final now = DateTime.now();
-    final ts = zh
-        ? DateFormat('yyyy年M月d日 a h:mm:ss', 'zh').format(now)
-        : DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
-    final sampleUser = zh ? '用户' : 'User';
-    final sampleMsg = zh ? '你好啊' : 'Hello there';
-    final sampleReply = zh ? '你好，有什么我可以帮你的吗？' : 'Hello, how can I help you?';
+    // final ts = zh
+    //     ? DateFormat('yyyy年M月d日 a h:mm:ss', 'zh').format(now)
+    //     : DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+    final sampleUser = l10n.assistantEditSampleUser;
+    final sampleMsg = l10n.assistantEditSampleMessage;
+    final sampleReply = l10n.assistantEditSampleReply;
 
     String processed(String tpl) {
       final t = (tpl.trim().isEmpty ? '{{ message }}' : tpl);
       // Simple replacements consistent with PromptTransformer
-      final dateStr = zh ? DateFormat('yyyy年M月d日', 'zh').format(now) : DateFormat('yyyy-MM-dd').format(now);
-      final timeStr = zh ? DateFormat('a h:mm:ss', 'zh').format(now) : DateFormat('HH:mm:ss').format(now);
+      final locale = Localizations.localeOf(context);
+      final dateStr = locale.languageCode == 'zh' 
+          ? DateFormat('yyyy年M月d日', 'zh').format(now) 
+          : DateFormat('yyyy-MM-dd').format(now);
+      final timeStr = locale.languageCode == 'zh' 
+          ? DateFormat('a h:mm:ss', 'zh').format(now) 
+          : DateFormat('HH:mm:ss').format(now);
       return t
           .replaceAll('{{ role }}', 'user')
           .replaceAll('{{ message }}', sampleMsg)
@@ -1526,7 +1532,7 @@ class _PromptTabState extends State<_PromptTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(zh ? '系统提示词' : 'System Prompt', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(l10n.assistantEditSystemPromptTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             TextField(
               controller: _sysCtrl,
@@ -1534,7 +1540,7 @@ class _PromptTabState extends State<_PromptTab> {
               onChanged: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(systemPrompt: v)),
               maxLines: 8,
               decoration: InputDecoration(
-                hintText: zh ? '输入系统提示词…' : 'Enter system prompt…',
+                hintText: l10n.assistantEditSystemPromptHint,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.35))),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.5))),
@@ -1542,21 +1548,21 @@ class _PromptTabState extends State<_PromptTab> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(zh ? '可用变量：' : 'Available variables:', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(l10n.assistantEditAvailableVariables, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             _VarExplainList(
               items: [
-                (zh ? '日期' : 'Date', '{cur_date}'),
-                (zh ? '时间' : 'Time', '{cur_time}'),
-                (zh ? '日期和时间' : 'Datetime', '{cur_datetime}'),
-                (zh ? '模型ID' : 'Model ID', '{model_id}'),
-                (zh ? '模型名称' : 'Model Name', '{model_name}'),
-                (zh ? '语言环境' : 'Locale', '{locale}'),
-                (zh ? '时区' : 'Timezone', '{timezone}'),
-                (zh ? '系统版本' : 'System Version', '{system_version}'),
-                (zh ? '设备信息' : 'Device Info', '{device_info}'),
-                (zh ? '电池电量' : 'Battery Level', '{battery_level}'),
-                (zh ? '用户昵称' : 'Nickname', '{nickname}'),
+                (l10n.assistantEditVariableDate, '{cur_date}'),
+                (l10n.assistantEditVariableTime, '{cur_time}'),
+                (l10n.assistantEditVariableDatetime, '{cur_datetime}'),
+                (l10n.assistantEditVariableModelId, '{model_id}'),
+                (l10n.assistantEditVariableModelName, '{model_name}'),
+                (l10n.assistantEditVariableLocale, '{locale}'),
+                (l10n.assistantEditVariableTimezone, '{timezone}'),
+                (l10n.assistantEditVariableSystemVersion, '{system_version}'),
+                (l10n.assistantEditVariableDeviceInfo, '{device_info}'),
+                (l10n.assistantEditVariableBatteryLevel, '{battery_level}'),
+                (l10n.assistantEditVariableNickname, '{nickname}'),
               ],
               onTapVar: (v) {
                 _insertAtCursor(_sysCtrl, v);
@@ -1582,7 +1588,7 @@ class _PromptTabState extends State<_PromptTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(zh ? '聊天内容模板' : 'Message Template', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(l10n.assistantEditMessageTemplateTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             TextField(
               controller: _tmplCtrl,
@@ -1597,14 +1603,14 @@ class _PromptTabState extends State<_PromptTab> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(zh ? '可用变量：' : 'Available variables:', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(l10n.assistantEditAvailableVariables, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             _VarExplainList(
               items: [
-                (zh ? '角色' : 'Role', '{{ role }}'),
-                (zh ? '内容' : 'Message', '{{ message }}'),
-                (zh ? '时间' : 'Time', '{{ time }}'),
-                (zh ? '日期' : 'Date', '{{ date }}'),
+                (l10n.assistantEditVariableRole, '{{ role }}'),
+                (l10n.assistantEditVariableMessage, '{{ message }}'),
+                (l10n.assistantEditVariableTime, '{{ time }}'),
+                (l10n.assistantEditVariableDate, '{{ date }}'),
               ],
               onTapVar: (v) {
                 _insertAtCursor(_tmplCtrl, v);
@@ -1615,7 +1621,7 @@ class _PromptTabState extends State<_PromptTab> {
             ),
 
             const SizedBox(height: 12),
-            Text(zh ? '预览' : 'Preview', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
+            Text(l10n.assistantEditPreviewTitle, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
             const SizedBox(height: 6),
             // Use real chat message widgets for preview (consistent styling)
             const SizedBox(height: 6),
@@ -1691,8 +1697,8 @@ class _McpTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(assistantId)!;
     final mcp = context.watch<McpProvider>();
@@ -1703,7 +1709,7 @@ class _McpTab extends StatelessWidget {
     if (servers.isEmpty) {
       return Center(
         child: Text(
-          zh ? '暂无已启动的 MCP 服务器' : 'No running MCP servers',
+          l10n.assistantEditMcpNoServersMessage,
           style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
         ),
       );
@@ -1787,8 +1793,8 @@ class _McpTab extends StatelessWidget {
                             spacing: 6,
                             runSpacing: 6,
                             children: [
-                              tag(zh ? '已连接' : 'Connected'),
-                              tag(zh ? '工具: $enabledTools/${tools.length}' : 'Tools: $enabledTools/${tools.length}'),
+                              tag(l10n.assistantEditMcpConnectedTag),
+                              tag(l10n.assistantEditMcpToolsCountTag(enabledTools.toString(), tools.length.toString())),
                               tag(s.transport == McpTransportType.sse ? 'SSE' : 'HTTP'),
                             ],
                           ),
@@ -1976,10 +1982,10 @@ class _AssistantModelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    String display = zh ? '使用全局默认' : 'Use global default';
+    String display = l10n.assistantEditModelUseGlobalDefault;
     String brandName = display;
     if (providerKey != null && modelId != null) {
       try {

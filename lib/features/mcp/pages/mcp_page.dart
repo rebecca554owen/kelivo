@@ -127,7 +127,7 @@ class McpPage extends StatelessWidget {
         title: const Text('MCP'),
         actions: [
           IconButton(
-            icon: Icon(Lucide.Plus, color: cs.primary),
+            icon: Icon(Lucide.Plus, color: cs.onSurface),
             tooltip: zh ? '添加 MCP' : 'Add MCP',
             onPressed: () async {
               await showMcpServerEditSheet(context);

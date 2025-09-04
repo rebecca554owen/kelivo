@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../theme/design_tokens.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +15,8 @@ class AssistantSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
 
     final assistants = context.watch<AssistantProvider>().assistants;
 
@@ -25,7 +26,7 @@ class AssistantSettingsPage extends StatelessWidget {
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: Text(zh ? '助手设置' : 'Assistant Settings'),
+        title: Text(l10n.assistantSettingsPageTitle),
         actions: [
           IconButton(
             icon: Icon(Lucide.Plus, size: 22, color: cs.onSurface),
@@ -60,9 +61,9 @@ class _AssistantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
 
     return Material(
       color: Colors.transparent,
@@ -106,7 +107,7 @@ class _AssistantCard extends StatelessWidget {
                                 ),
                               ),
                               if (!item.deletable)
-                                _TagPill(text: zh ? '默认' : 'Default', color: cs.primary),
+                                _TagPill(text: l10n.assistantSettingsDefaultTag, color: cs.primary),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -128,7 +129,7 @@ class _AssistantCard extends StatelessWidget {
                     TextButton.icon(
                       onPressed: item.deletable
                           ? () async {
-                              final ok = await _confirmDelete(context, zh);
+                              final ok = await _confirmDelete(context, l10n);
                               if (ok == true) {
                                 await context.read<AssistantProvider>().deleteAssistant(item.id);
                               }
@@ -136,7 +137,7 @@ class _AssistantCard extends StatelessWidget {
                           : null,
                       style: TextButton.styleFrom(foregroundColor: cs.error),
                       icon: Icon(Lucide.Trash2, size: 16),
-                      label: Text(zh ? '删除' : 'Delete'),
+                      label: Text(l10n.assistantSettingsDeleteButton),
                     ),
                     const SizedBox(width: 6),
                     ElevatedButton.icon(
@@ -153,7 +154,7 @@ class _AssistantCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Lucide.Pencil, size: 16),
-                      label: Text(zh ? '编辑' : 'Edit'),
+                      label: Text(l10n.assistantSettingsEditButton),
                     ),
                   ],
                 ),
@@ -174,7 +175,7 @@ class _AssistantCard extends StatelessWidget {
 }
 
 Future<String?> _showAddAssistantSheet(BuildContext context) async {
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   final controller = TextEditingController();
   String? result;
   await showModalBottomSheet(
@@ -197,13 +198,13 @@ Future<String?> _showAddAssistantSheet(BuildContext context) async {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(zh ? '助手名称' : 'Assistant Name', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                Text(l10n.assistantSettingsAddSheetTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 TextField(
                   controller: controller,
                   autofocus: true,
                   decoration: InputDecoration(
-                    hintText: zh ? '输入助手名称' : 'Enter a name',
+                    hintText: l10n.assistantSettingsAddSheetHint,
                     filled: true,
                     fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                     border: OutlineInputBorder(
@@ -226,7 +227,7 @@ Future<String?> _showAddAssistantSheet(BuildContext context) async {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(ctx).pop(),
-                      child: Text(zh ? '取消' : 'Cancel'),
+                      child: Text(l10n.assistantSettingsAddSheetCancel),
                     ),
                     const Spacer(),
                     ElevatedButton(
@@ -237,7 +238,7 @@ Future<String?> _showAddAssistantSheet(BuildContext context) async {
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: Text(zh ? '保存' : 'Save'),
+                      child: Text(l10n.assistantSettingsAddSheetSave),
                     ),
                   ],
                 ),
@@ -253,19 +254,19 @@ Future<String?> _showAddAssistantSheet(BuildContext context) async {
   return trimmed;
 }
 
-Future<bool?> _confirmDelete(BuildContext context, bool zh) async {
+Future<bool?> _confirmDelete(BuildContext context, AppLocalizations l10n) async {
   return showDialog<bool>(
     context: context,
     builder: (ctx) {
       final cs = Theme.of(ctx).colorScheme;
       return AlertDialog(
-        title: Text(zh ? '删除助手' : 'Delete Assistant'),
-        content: Text(zh ? '确定要删除该助手吗？此操作不可撤销。' : 'Are you sure you want to delete this assistant? This action cannot be undone.'),
+        title: Text(l10n.assistantSettingsDeleteDialogTitle),
+        content: Text(l10n.assistantSettingsDeleteDialogContent),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(zh ? '取消' : 'Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.assistantSettingsDeleteDialogCancel)),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(zh ? '删除' : 'Delete', style: TextStyle(color: cs.error)),
+            child: Text(l10n.assistantSettingsDeleteDialogConfirm, style: TextStyle(color: cs.error)),
           ),
         ],
       );

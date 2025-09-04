@@ -385,6 +385,582 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get homePageDone;
+
+  /// No description provided for @assistantEditPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get assistantEditPageTitle;
+
+  /// No description provided for @assistantEditPageNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant not found'**
+  String get assistantEditPageNotFound;
+
+  /// No description provided for @assistantEditPageBasicTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get assistantEditPageBasicTab;
+
+  /// No description provided for @assistantEditPagePromptsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompts'**
+  String get assistantEditPagePromptsTab;
+
+  /// No description provided for @assistantEditPageMcpTab.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP'**
+  String get assistantEditPageMcpTab;
+
+  /// No description provided for @assistantEditPageCustomTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get assistantEditPageCustomTab;
+
+  /// No description provided for @assistantEditCustomHeadersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Headers'**
+  String get assistantEditCustomHeadersTitle;
+
+  /// No description provided for @assistantEditCustomHeadersAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Header'**
+  String get assistantEditCustomHeadersAdd;
+
+  /// No description provided for @assistantEditCustomHeadersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No headers added'**
+  String get assistantEditCustomHeadersEmpty;
+
+  /// No description provided for @assistantEditCustomBodyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Body'**
+  String get assistantEditCustomBodyTitle;
+
+  /// No description provided for @assistantEditCustomBodyAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Body'**
+  String get assistantEditCustomBodyAdd;
+
+  /// No description provided for @assistantEditCustomBodyEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No body items added'**
+  String get assistantEditCustomBodyEmpty;
+
+  /// No description provided for @assistantEditHeaderNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Name'**
+  String get assistantEditHeaderNameLabel;
+
+  /// No description provided for @assistantEditHeaderValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Value'**
+  String get assistantEditHeaderValueLabel;
+
+  /// No description provided for @assistantEditBodyKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Body Key'**
+  String get assistantEditBodyKeyLabel;
+
+  /// No description provided for @assistantEditBodyValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Body Value (JSON)'**
+  String get assistantEditBodyValueLabel;
+
+  /// No description provided for @assistantEditDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get assistantEditDeleteTooltip;
+
+  /// No description provided for @assistantEditAssistantNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant Name'**
+  String get assistantEditAssistantNameLabel;
+
+  /// No description provided for @assistantEditUseAssistantAvatarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Assistant Avatar'**
+  String get assistantEditUseAssistantAvatarTitle;
+
+  /// No description provided for @assistantEditUseAssistantAvatarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use assistant avatar/name instead of model'**
+  String get assistantEditUseAssistantAvatarSubtitle;
+
+  /// No description provided for @assistantEditChatModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Model'**
+  String get assistantEditChatModelTitle;
+
+  /// No description provided for @assistantEditChatModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Default chat model for this assistant (fallback to global)'**
+  String get assistantEditChatModelSubtitle;
+
+  /// No description provided for @assistantEditTemperatureDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls randomness, range 0–2'**
+  String get assistantEditTemperatureDescription;
+
+  /// No description provided for @assistantEditTopPDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not change unless you know what you are doing'**
+  String get assistantEditTopPDescription;
+
+  /// No description provided for @assistantEditParameterDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled (uses provider default)'**
+  String get assistantEditParameterDisabled;
+
+  /// No description provided for @assistantEditContextMessagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Context Messages'**
+  String get assistantEditContextMessagesTitle;
+
+  /// No description provided for @assistantEditContextMessagesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'How many recent messages to keep in context'**
+  String get assistantEditContextMessagesDescription;
+
+  /// No description provided for @assistantEditStreamOutputTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream Output'**
+  String get assistantEditStreamOutputTitle;
+
+  /// No description provided for @assistantEditStreamOutputDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable streaming responses'**
+  String get assistantEditStreamOutputDescription;
+
+  /// No description provided for @assistantEditThinkingBudgetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking Budget'**
+  String get assistantEditThinkingBudgetTitle;
+
+  /// No description provided for @assistantEditConfigureButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure'**
+  String get assistantEditConfigureButton;
+
+  /// No description provided for @assistantEditMaxTokensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Tokens'**
+  String get assistantEditMaxTokensTitle;
+
+  /// No description provided for @assistantEditMaxTokensDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty for unlimited'**
+  String get assistantEditMaxTokensDescription;
+
+  /// No description provided for @assistantEditMaxTokensHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get assistantEditMaxTokensHint;
+
+  /// No description provided for @assistantEditChatBackgroundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Background'**
+  String get assistantEditChatBackgroundTitle;
+
+  /// No description provided for @assistantEditChatBackgroundDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a background image for this assistant'**
+  String get assistantEditChatBackgroundDescription;
+
+  /// No description provided for @assistantEditChooseImageButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Image'**
+  String get assistantEditChooseImageButton;
+
+  /// No description provided for @assistantEditClearButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get assistantEditClearButton;
+
+  /// No description provided for @assistantEditAvatarChooseImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Image'**
+  String get assistantEditAvatarChooseImage;
+
+  /// No description provided for @assistantEditAvatarChooseEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Emoji'**
+  String get assistantEditAvatarChooseEmoji;
+
+  /// No description provided for @assistantEditAvatarEnterLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Link'**
+  String get assistantEditAvatarEnterLink;
+
+  /// No description provided for @assistantEditAvatarImportQQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from QQ'**
+  String get assistantEditAvatarImportQQ;
+
+  /// No description provided for @assistantEditAvatarReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get assistantEditAvatarReset;
+
+  /// No description provided for @assistantEditEmojiDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Emoji'**
+  String get assistantEditEmojiDialogTitle;
+
+  /// No description provided for @assistantEditEmojiDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type or paste any emoji'**
+  String get assistantEditEmojiDialogHint;
+
+  /// No description provided for @assistantEditEmojiDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get assistantEditEmojiDialogCancel;
+
+  /// No description provided for @assistantEditEmojiDialogSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get assistantEditEmojiDialogSave;
+
+  /// No description provided for @assistantEditImageUrlDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Image URL'**
+  String get assistantEditImageUrlDialogTitle;
+
+  /// No description provided for @assistantEditImageUrlDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. https://example.com/avatar.png'**
+  String get assistantEditImageUrlDialogHint;
+
+  /// No description provided for @assistantEditImageUrlDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get assistantEditImageUrlDialogCancel;
+
+  /// No description provided for @assistantEditImageUrlDialogSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get assistantEditImageUrlDialogSave;
+
+  /// No description provided for @assistantEditQQAvatarDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from QQ'**
+  String get assistantEditQQAvatarDialogTitle;
+
+  /// No description provided for @assistantEditQQAvatarDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter QQ number (5-12 digits)'**
+  String get assistantEditQQAvatarDialogHint;
+
+  /// No description provided for @assistantEditQQAvatarRandomButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Random One'**
+  String get assistantEditQQAvatarRandomButton;
+
+  /// No description provided for @assistantEditQQAvatarFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to fetch random QQ avatar. Please try again.'**
+  String get assistantEditQQAvatarFailedMessage;
+
+  /// No description provided for @assistantEditQQAvatarDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get assistantEditQQAvatarDialogCancel;
+
+  /// No description provided for @assistantEditQQAvatarDialogSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get assistantEditQQAvatarDialogSave;
+
+  /// No description provided for @assistantEditGalleryErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open gallery. Try entering an image URL.'**
+  String get assistantEditGalleryErrorMessage;
+
+  /// No description provided for @assistantEditGeneralErrorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try entering an image URL.'**
+  String get assistantEditGeneralErrorMessage;
+
+  /// No description provided for @assistantEditSystemPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System Prompt'**
+  String get assistantEditSystemPromptTitle;
+
+  /// No description provided for @assistantEditSystemPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter system prompt…'**
+  String get assistantEditSystemPromptHint;
+
+  /// No description provided for @assistantEditAvailableVariables.
+  ///
+  /// In en, this message translates to:
+  /// **'Available variables:'**
+  String get assistantEditAvailableVariables;
+
+  /// No description provided for @assistantEditVariableDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get assistantEditVariableDate;
+
+  /// No description provided for @assistantEditVariableTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get assistantEditVariableTime;
+
+  /// No description provided for @assistantEditVariableDatetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Datetime'**
+  String get assistantEditVariableDatetime;
+
+  /// No description provided for @assistantEditVariableModelId.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID'**
+  String get assistantEditVariableModelId;
+
+  /// No description provided for @assistantEditVariableModelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Name'**
+  String get assistantEditVariableModelName;
+
+  /// No description provided for @assistantEditVariableLocale.
+  ///
+  /// In en, this message translates to:
+  /// **'Locale'**
+  String get assistantEditVariableLocale;
+
+  /// No description provided for @assistantEditVariableTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Timezone'**
+  String get assistantEditVariableTimezone;
+
+  /// No description provided for @assistantEditVariableSystemVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'System Version'**
+  String get assistantEditVariableSystemVersion;
+
+  /// No description provided for @assistantEditVariableDeviceInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Device Info'**
+  String get assistantEditVariableDeviceInfo;
+
+  /// No description provided for @assistantEditVariableBatteryLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery Level'**
+  String get assistantEditVariableBatteryLevel;
+
+  /// No description provided for @assistantEditVariableNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get assistantEditVariableNickname;
+
+  /// No description provided for @assistantEditMessageTemplateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Message Template'**
+  String get assistantEditMessageTemplateTitle;
+
+  /// No description provided for @assistantEditVariableRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get assistantEditVariableRole;
+
+  /// No description provided for @assistantEditVariableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get assistantEditVariableMessage;
+
+  /// No description provided for @assistantEditPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get assistantEditPreviewTitle;
+
+  /// No description provided for @assistantEditSampleUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get assistantEditSampleUser;
+
+  /// No description provided for @assistantEditSampleMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello there'**
+  String get assistantEditSampleMessage;
+
+  /// No description provided for @assistantEditSampleReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, how can I help you?'**
+  String get assistantEditSampleReply;
+
+  /// No description provided for @assistantEditMcpNoServersMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No running MCP servers'**
+  String get assistantEditMcpNoServersMessage;
+
+  /// No description provided for @assistantEditMcpConnectedTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get assistantEditMcpConnectedTag;
+
+  /// No description provided for @assistantEditMcpToolsCountTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools: {enabled}/{total}'**
+  String assistantEditMcpToolsCountTag(String enabled, String total);
+
+  /// No description provided for @assistantEditModelUseGlobalDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use global default'**
+  String get assistantEditModelUseGlobalDefault;
+
+  /// No description provided for @assistantSettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant Settings'**
+  String get assistantSettingsPageTitle;
+
+  /// No description provided for @assistantSettingsDefaultTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get assistantSettingsDefaultTag;
+
+  /// No description provided for @assistantSettingsDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get assistantSettingsDeleteButton;
+
+  /// No description provided for @assistantSettingsEditButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get assistantSettingsEditButton;
+
+  /// No description provided for @assistantSettingsAddSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant Name'**
+  String get assistantSettingsAddSheetTitle;
+
+  /// No description provided for @assistantSettingsAddSheetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get assistantSettingsAddSheetHint;
+
+  /// No description provided for @assistantSettingsAddSheetCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get assistantSettingsAddSheetCancel;
+
+  /// No description provided for @assistantSettingsAddSheetSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get assistantSettingsAddSheetSave;
+
+  /// No description provided for @assistantSettingsDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Assistant'**
+  String get assistantSettingsDeleteDialogTitle;
+
+  /// No description provided for @assistantSettingsDeleteDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this assistant? This action cannot be undone.'**
+  String get assistantSettingsDeleteDialogContent;
+
+  /// No description provided for @assistantSettingsDeleteDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get assistantSettingsDeleteDialogCancel;
+
+  /// No description provided for @assistantSettingsDeleteDialogConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get assistantSettingsDeleteDialogConfirm;
 }
 
 class _AppLocalizationsDelegate
