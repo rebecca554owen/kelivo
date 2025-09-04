@@ -512,4 +512,32 @@
   "mcpServerEditSheetCancel": "Cancel",
   "mcpServerEditSheetSave": "Save",
   "mcpServerEditSheetUrlRequired": "Please enter server URL"
+  ,
+  "defaultModelPageBackTooltip": "Back",
+  "defaultModelPageTitle": "Default Model",
+  "defaultModelPageChatModelTitle": "Chat Model",
+  "defaultModelPageChatModelSubtitle": "Global default chat model",
+  "defaultModelPageTitleModelTitle": "Title Summary Model",
+  "defaultModelPageTitleModelSubtitle": "Used for summarizing conversation titles; prefer fast & cheap models",
+  "defaultModelPageTranslateModelTitle": "Translation Model",
+  "defaultModelPageTranslateModelSubtitle": "Used for translating message content; prefer fast & accurate models",
+  "defaultModelPagePromptLabel": "Prompt",
+  "defaultModelPageTitlePromptHint": "Enter prompt template for title summarization",
+  "defaultModelPageTranslatePromptHint": "Enter prompt template for translation",
+  "defaultModelPageResetDefault": "Reset to default",
+  "defaultModelPageSave": "Save",
+  "defaultModelPageTitleVars": "Vars: content: {contentVar}, locale: {localeVar}",
+  "@defaultModelPageTitleVars": {
+    "placeholders": {
+      "contentVar": { "type": "String" },
+      "localeVar": { "type": "String" }
+    }
+  },
+  "defaultModelPageTranslateVars": "Variables: source text: {sourceVar}, target language: {targetVar}",
+  "@defaultModelPageTranslateVars": {
+    "placeholders": {
+      "sourceVar": { "type": "String" },
+      "targetVar": { "type": "String" }
+    }
+  }
 }

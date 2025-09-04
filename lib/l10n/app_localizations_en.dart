@@ -1193,4 +1193,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mcpServerEditSheetUrlRequired => 'Please enter server URL';
+
+  @override
+  String get defaultModelPageBackTooltip => 'Back';
+
+  @override
+  String get defaultModelPageTitle => 'Default Model';
+
+  @override
+  String get defaultModelPageChatModelTitle => 'Chat Model';
+
+  @override
+  String get defaultModelPageChatModelSubtitle => 'Global default chat model';
+
+  @override
+  String get defaultModelPageTitleModelTitle => 'Title Summary Model';
+
+  @override
+  String get defaultModelPageTitleModelSubtitle =>
+      'Used for summarizing conversation titles; prefer fast & cheap models';
+
+  @override
+  String get defaultModelPageTranslateModelTitle => 'Translation Model';
+
+  @override
+  String get defaultModelPageTranslateModelSubtitle =>
+      'Used for translating message content; prefer fast & accurate models';
+
+  @override
+  String get defaultModelPagePromptLabel => 'Prompt';
+
+  @override
+  String get defaultModelPageTitlePromptHint =>
+      'Enter prompt template for title summarization';
+
+  @override
+  String get defaultModelPageTranslatePromptHint =>
+      'Enter prompt template for translation';
+
+  @override
+  String get defaultModelPageResetDefault => 'Reset to default';
+
+  @override
+  String get defaultModelPageSave => 'Save';
+
+  @override
+  String defaultModelPageTitleVars(String contentVar, String localeVar) {
+    return 'Vars: content: $contentVar, locale: $localeVar';
+  }
+
+  @override
+  String defaultModelPageTranslateVars(String sourceVar, String targetVar) {
+    return 'Variables: source text: $sourceVar, target language: $targetVar';
+  }
 }

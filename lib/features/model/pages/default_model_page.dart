@@ -5,6 +5,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../widgets/model_select_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:characters/characters.dart';
+import '../../../l10n/app_localizations.dart';
 
 class DefaultModelPage extends StatelessWidget {
   const DefaultModelPage({super.key});
@@ -13,7 +14,7 @@ class DefaultModelPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -21,9 +22,9 @@ class DefaultModelPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.defaultModelPageBackTooltip,
         ),
-        title: Text(zh ? '默认模型' : 'Default Model'),
+        title: Text(l10n.defaultModelPageTitle),
         actions: const [SizedBox(width: 12)],
       ),
       body: ListView(
@@ -31,8 +32,8 @@ class DefaultModelPage extends StatelessWidget {
         children: [
           _ModelCard(
             icon: Lucide.MessageCircle,
-            title: zh ? '聊天模型' : 'Chat Model',
-            subtitle: zh ? '全局默认的聊天模型' : 'Global default chat model',
+            title: l10n.defaultModelPageChatModelTitle,
+            subtitle: l10n.defaultModelPageChatModelSubtitle,
             modelProvider: settings.currentModelProvider,
             modelId: settings.currentModelId,
             onPick: () async {
@@ -45,8 +46,8 @@ class DefaultModelPage extends StatelessWidget {
           const SizedBox(height: 16),
           _ModelCard(
             icon: Lucide.NotebookTabs,
-            title: zh ? '标题总结模型' : 'Title Summary Model',
-            subtitle: zh ? '用于总结对话标题的模型，推荐使用快速且便宜的模型' : 'Used for summarizing conversation titles; prefer fast & cheap models',
+            title: l10n.defaultModelPageTitleModelTitle,
+            subtitle: l10n.defaultModelPageTitleModelSubtitle,
             modelProvider: settings.titleModelProvider ?? settings.currentModelProvider,
             modelId: settings.titleModelId ?? settings.currentModelId,
             onPick: () async {
@@ -60,8 +61,8 @@ class DefaultModelPage extends StatelessWidget {
           const SizedBox(height: 16),
           _ModelCard(
             icon: Lucide.Languages,
-            title: zh ? '翻译模型' : 'Translation Model',
-            subtitle: zh ? '用于翻译消息内容的模型，推荐使用快速且准确的模型' : 'Used for translating message content; prefer fast & accurate models',
+            title: l10n.defaultModelPageTranslateModelTitle,
+            subtitle: l10n.defaultModelPageTranslateModelSubtitle,
             modelProvider: settings.translateModelProvider ?? settings.currentModelProvider,
             modelId: settings.translateModelId ?? settings.currentModelId,
             onPick: () async {
@@ -79,7 +80,7 @@ class DefaultModelPage extends StatelessWidget {
 
   Future<void> _showTitlePromptSheet(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final settings = context.read<SettingsProvider>();
     final controller = TextEditingController(text: settings.titlePrompt);
     await showModalBottomSheet(
@@ -109,13 +110,13 @@ class DefaultModelPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(zh ? '提示词' : 'Prompt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(l10n.defaultModelPagePromptLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: controller,
                   maxLines: 8,
                   decoration: InputDecoration(
-                    hintText: zh ? '输入用于标题总结的提示词模板' : 'Enter prompt template for title summarization',
+                    hintText: l10n.defaultModelPageTitlePromptHint,
                     filled: true,
                     fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
@@ -131,7 +132,7 @@ class DefaultModelPage extends StatelessWidget {
                         await settings.resetTitlePrompt();
                         controller.text = settings.titlePrompt;
                       },
-                      child: Text(zh ? '重置为默认' : 'Reset to default'),
+                      child: Text(l10n.defaultModelPageResetDefault),
                     ),
                     const Spacer(),
                     FilledButton(
@@ -139,15 +140,12 @@ class DefaultModelPage extends StatelessWidget {
                         await settings.setTitlePrompt(controller.text.trim());
                         if (ctx.mounted) Navigator.of(ctx).pop();
                       },
-                      child: Text(zh ? '保存' : 'Save'),
+                      child: Text(l10n.defaultModelPageSave),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  zh ? '变量: 对话内容: {content}, 语言: {locale}' : 'Vars: content: {content}, locale: {locale}',
-                  style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12),
-                ),
+                Text(l10n.defaultModelPageTitleVars('{content}', '{locale}'), style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12)),
               ],
             ),
           ),
@@ -158,7 +156,7 @@ class DefaultModelPage extends StatelessWidget {
 
   Future<void> _showTranslatePromptSheet(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final settings = context.read<SettingsProvider>();
     final controller = TextEditingController(text: settings.translatePrompt);
     await showModalBottomSheet(
@@ -188,13 +186,13 @@ class DefaultModelPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(zh ? '提示词' : 'Prompt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(l10n.defaultModelPagePromptLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: controller,
                   maxLines: 8,
                   decoration: InputDecoration(
-                    hintText: zh ? '输入用于翻译的提示词模板' : 'Enter prompt template for translation',
+                    hintText: l10n.defaultModelPageTranslatePromptHint,
                     filled: true,
                     fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
@@ -210,7 +208,7 @@ class DefaultModelPage extends StatelessWidget {
                         await settings.resetTranslatePrompt();
                         controller.text = settings.translatePrompt;
                       },
-                      child: Text(zh ? '重置为默认' : 'Reset to default'),
+                      child: Text(l10n.defaultModelPageResetDefault),
                     ),
                     const Spacer(),
                     FilledButton(
@@ -218,15 +216,12 @@ class DefaultModelPage extends StatelessWidget {
                         await settings.setTranslatePrompt(controller.text.trim());
                         if (ctx.mounted) Navigator.of(ctx).pop();
                       },
-                      child: Text(zh ? '保存' : 'Save'),
+                      child: Text(l10n.defaultModelPageSave),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  zh ? '变量：原始文本：{source_text}，目标语言：{target_lang}' : 'Variables: source text: {source_text}, target language: {target_lang}',
-                  style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12),
-                ),
+                Text(l10n.defaultModelPageTranslateVars('{source_text}', '{target_lang}'), style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12)),
               ],
             ),
           ),

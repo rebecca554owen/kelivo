@@ -2317,6 +2317,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter server URL'**
   String get mcpServerEditSheetUrlRequired;
+
+  /// No description provided for @defaultModelPageBackTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get defaultModelPageBackTooltip;
+
+  /// No description provided for @defaultModelPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Model'**
+  String get defaultModelPageTitle;
+
+  /// No description provided for @defaultModelPageChatModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Model'**
+  String get defaultModelPageChatModelTitle;
+
+  /// No description provided for @defaultModelPageChatModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Global default chat model'**
+  String get defaultModelPageChatModelSubtitle;
+
+  /// No description provided for @defaultModelPageTitleModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title Summary Model'**
+  String get defaultModelPageTitleModelTitle;
+
+  /// No description provided for @defaultModelPageTitleModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Used for summarizing conversation titles; prefer fast & cheap models'**
+  String get defaultModelPageTitleModelSubtitle;
+
+  /// No description provided for @defaultModelPageTranslateModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation Model'**
+  String get defaultModelPageTranslateModelTitle;
+
+  /// No description provided for @defaultModelPageTranslateModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Used for translating message content; prefer fast & accurate models'**
+  String get defaultModelPageTranslateModelSubtitle;
+
+  /// No description provided for @defaultModelPagePromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt'**
+  String get defaultModelPagePromptLabel;
+
+  /// No description provided for @defaultModelPageTitlePromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter prompt template for title summarization'**
+  String get defaultModelPageTitlePromptHint;
+
+  /// No description provided for @defaultModelPageTranslatePromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter prompt template for translation'**
+  String get defaultModelPageTranslatePromptHint;
+
+  /// No description provided for @defaultModelPageResetDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get defaultModelPageResetDefault;
+
+  /// No description provided for @defaultModelPageSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get defaultModelPageSave;
+
+  /// No description provided for @defaultModelPageTitleVars.
+  ///
+  /// In en, this message translates to:
+  /// **'Vars: content: {contentVar}, locale: {localeVar}'**
+  String defaultModelPageTitleVars(String contentVar, String localeVar);
+
+  /// No description provided for @defaultModelPageTranslateVars.
+  ///
+  /// In en, this message translates to:
+  /// **'Variables: source text: {sourceVar}, target language: {targetVar}'**
+  String defaultModelPageTranslateVars(String sourceVar, String targetVar);
 }
 
 class _AppLocalizationsDelegate

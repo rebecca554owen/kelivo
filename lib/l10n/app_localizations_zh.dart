@@ -1162,4 +1162,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mcpServerEditSheetUrlRequired => '请输入服务器地址';
+
+  @override
+  String get defaultModelPageBackTooltip => '返回';
+
+  @override
+  String get defaultModelPageTitle => '默认模型';
+
+  @override
+  String get defaultModelPageChatModelTitle => '聊天模型';
+
+  @override
+  String get defaultModelPageChatModelSubtitle => '全局默认的聊天模型';
+
+  @override
+  String get defaultModelPageTitleModelTitle => '标题总结模型';
+
+  @override
+  String get defaultModelPageTitleModelSubtitle => '用于总结对话标题的模型，推荐使用快速且便宜的模型';
+
+  @override
+  String get defaultModelPageTranslateModelTitle => '翻译模型';
+
+  @override
+  String get defaultModelPageTranslateModelSubtitle =>
+      '用于翻译消息内容的模型，推荐使用快速且准确的模型';
+
+  @override
+  String get defaultModelPagePromptLabel => '提示词';
+
+  @override
+  String get defaultModelPageTitlePromptHint => '输入用于标题总结的提示词模板';
+
+  @override
+  String get defaultModelPageTranslatePromptHint => '输入用于翻译的提示词模板';
+
+  @override
+  String get defaultModelPageResetDefault => '重置为默认';
+
+  @override
+  String get defaultModelPageSave => '保存';
+
+  @override
+  String defaultModelPageTitleVars(String contentVar, String localeVar) {
+    return '变量: 对话内容: $contentVar, 语言: $localeVar';
+  }
+
+  @override
+  String defaultModelPageTranslateVars(String sourceVar, String targetVar) {
+    return '变量：原始文本：$sourceVar，目标语言：$targetVar';
+  }
 }
