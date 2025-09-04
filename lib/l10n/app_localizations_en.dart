@@ -472,4 +472,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mcpAssistantSheetClearAll => 'Clear';
+
+  @override
+  String get backupPageTitle => 'Backup & Restore';
+
+  @override
+  String get backupPageWebDavTab => 'WebDAV';
+
+  @override
+  String get backupPageImportExportTab => 'Import/Export';
+
+  @override
+  String get backupPageWebDavServerUrl => 'WebDAV Server URL';
+
+  @override
+  String get backupPageUsername => 'Username';
+
+  @override
+  String get backupPagePassword => 'Password';
+
+  @override
+  String get backupPagePath => 'Path';
+
+  @override
+  String get backupPageChatsLabel => 'Chats';
+
+  @override
+  String get backupPageFilesLabel => 'Files';
+
+  @override
+  String get backupPageTestDone => 'Test done';
+
+  @override
+  String get backupPageTestConnection => 'Test';
+
+  @override
+  String get backupPageRestartRequired => 'Restart Required';
+
+  @override
+  String get backupPageRestartContent =>
+      'Restore completed. Please restart the app.';
+
+  @override
+  String get backupPageOK => 'OK';
+
+  @override
+  String get backupPageRestore => 'Restore';
+
+  @override
+  String get backupPageBackupUploaded => 'Backup uploaded';
+
+  @override
+  String get backupPageBackup => 'Backup';
+
+  @override
+  String get backupPageExportToFile => 'Export to File';
+
+  @override
+  String get backupPageExportToFileSubtitle => 'Export app data to a file';
+
+  @override
+  String get backupPageImportBackupFile => 'Import Backup File';
+
+  @override
+  String get backupPageImportBackupFileSubtitle => 'Import a local backup file';
+
+  @override
+  String get backupPageImportFromOtherApps => 'Import from Other Apps';
+
+  @override
+  String get backupPageImportFromRikkaHub => 'Import from RikkaHub';
+
+  @override
+  String get backupPageNotSupportedYet => 'Not supported yet';
+
+  @override
+  String get backupPageRemoteBackups => 'Remote Backups';
+
+  @override
+  String get backupPageNoBackups => 'No backups';
+
+  @override
+  String get backupPageRestoreTooltip => 'Restore';
+
+  @override
+  String get backupPageDeleteTooltip => 'Delete';
 }

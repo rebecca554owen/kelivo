@@ -460,4 +460,88 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mcpAssistantSheetClearAll => '全不选';
+
+  @override
+  String get backupPageTitle => '备份与恢复';
+
+  @override
+  String get backupPageWebDavTab => 'WebDAV 备份';
+
+  @override
+  String get backupPageImportExportTab => '导入和导出';
+
+  @override
+  String get backupPageWebDavServerUrl => 'WebDAV 服务器地址';
+
+  @override
+  String get backupPageUsername => '用户名';
+
+  @override
+  String get backupPagePassword => '密码';
+
+  @override
+  String get backupPagePath => '路径';
+
+  @override
+  String get backupPageChatsLabel => '聊天记录';
+
+  @override
+  String get backupPageFilesLabel => '文件';
+
+  @override
+  String get backupPageTestDone => '测试完成';
+
+  @override
+  String get backupPageTestConnection => '测试连接';
+
+  @override
+  String get backupPageRestartRequired => '需要重启应用';
+
+  @override
+  String get backupPageRestartContent => '恢复完成，需要重启以完全生效。';
+
+  @override
+  String get backupPageOK => '好的';
+
+  @override
+  String get backupPageRestore => '恢复';
+
+  @override
+  String get backupPageBackupUploaded => '已上传备份';
+
+  @override
+  String get backupPageBackup => '立即备份';
+
+  @override
+  String get backupPageExportToFile => '导出为文件';
+
+  @override
+  String get backupPageExportToFileSubtitle => '导出APP数据为文件';
+
+  @override
+  String get backupPageImportBackupFile => '备份文件导入';
+
+  @override
+  String get backupPageImportBackupFileSubtitle => '导入本地备份文件';
+
+  @override
+  String get backupPageImportFromOtherApps => '从其他APP导入';
+
+  @override
+  String get backupPageImportFromRikkaHub => '从 RikkaHub 导入';
+
+  @override
+  String get backupPageNotSupportedYet => '暂不支持';
+
+  @override
+  String get backupPageRemoteBackups => '远端备份';
+
+  @override
+  String get backupPageNoBackups => '暂无备份';
+
+  @override
+  String get backupPageRestoreTooltip => '恢复';
+
+  @override
+  String get backupPageDeleteTooltip => '删除';
 }

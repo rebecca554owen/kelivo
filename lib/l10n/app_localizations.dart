@@ -985,6 +985,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear'**
   String get mcpAssistantSheetClearAll;
+
+  /// No description provided for @backupPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupPageTitle;
+
+  /// No description provided for @backupPageWebDavTab.
+  ///
+  /// In en, this message translates to:
+  /// **'WebDAV'**
+  String get backupPageWebDavTab;
+
+  /// No description provided for @backupPageImportExportTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Import/Export'**
+  String get backupPageImportExportTab;
+
+  /// No description provided for @backupPageWebDavServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'WebDAV Server URL'**
+  String get backupPageWebDavServerUrl;
+
+  /// No description provided for @backupPageUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get backupPageUsername;
+
+  /// No description provided for @backupPagePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get backupPagePassword;
+
+  /// No description provided for @backupPagePath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get backupPagePath;
+
+  /// No description provided for @backupPageChatsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get backupPageChatsLabel;
+
+  /// No description provided for @backupPageFilesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get backupPageFilesLabel;
+
+  /// No description provided for @backupPageTestDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Test done'**
+  String get backupPageTestDone;
+
+  /// No description provided for @backupPageTestConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get backupPageTestConnection;
+
+  /// No description provided for @backupPageRestartRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart Required'**
+  String get backupPageRestartRequired;
+
+  /// No description provided for @backupPageRestartContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore completed. Please restart the app.'**
+  String get backupPageRestartContent;
+
+  /// No description provided for @backupPageOK.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get backupPageOK;
+
+  /// No description provided for @backupPageRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get backupPageRestore;
+
+  /// No description provided for @backupPageBackupUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup uploaded'**
+  String get backupPageBackupUploaded;
+
+  /// No description provided for @backupPageBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup'**
+  String get backupPageBackup;
+
+  /// No description provided for @backupPageExportToFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to File'**
+  String get backupPageExportToFile;
+
+  /// No description provided for @backupPageExportToFileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export app data to a file'**
+  String get backupPageExportToFileSubtitle;
+
+  /// No description provided for @backupPageImportBackupFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Backup File'**
+  String get backupPageImportBackupFile;
+
+  /// No description provided for @backupPageImportBackupFileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a local backup file'**
+  String get backupPageImportBackupFileSubtitle;
+
+  /// No description provided for @backupPageImportFromOtherApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from Other Apps'**
+  String get backupPageImportFromOtherApps;
+
+  /// No description provided for @backupPageImportFromRikkaHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from RikkaHub'**
+  String get backupPageImportFromRikkaHub;
+
+  /// No description provided for @backupPageNotSupportedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not supported yet'**
+  String get backupPageNotSupportedYet;
+
+  /// No description provided for @backupPageRemoteBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote Backups'**
+  String get backupPageRemoteBackups;
+
+  /// No description provided for @backupPageNoBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'No backups'**
+  String get backupPageNoBackups;
+
+  /// No description provided for @backupPageRestoreTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get backupPageRestoreTooltip;
+
+  /// No description provided for @backupPageDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get backupPageDeleteTooltip;
 }
 
 class _AppLocalizationsDelegate
