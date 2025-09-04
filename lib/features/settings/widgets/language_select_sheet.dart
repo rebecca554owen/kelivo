@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
 
 class LanguageOption {
   final String code;
@@ -66,8 +67,8 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
@@ -101,7 +102,7 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: Text(
-                    zh ? '选择翻译语言' : 'Select Translation Language',
+                    l10n.languageSelectSheetTitle,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -138,7 +139,7 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
-                                    zh ? '清空翻译' : 'Clear Translation',
+                                    l10n.languageSelectSheetClearButton,
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
@@ -164,9 +165,8 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
   }
 
   Widget _languageOption(BuildContext context, LanguageOption lang) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -196,7 +196,7 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
                 // Language name
                 Expanded(
                   child: Text(
-                    zh ? lang.displayNameZh : lang.displayName,
+                    _getLanguageDisplayName(l10n, lang.code),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -209,5 +209,28 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
         ),
       ),
     );
+  }
+
+  String _getLanguageDisplayName(AppLocalizations l10n, String languageCode) {
+    switch (languageCode) {
+      case 'zh-CN':
+        return l10n.languageDisplaySimplifiedChinese;
+      case 'en':
+        return l10n.languageDisplayEnglish;
+      case 'zh-TW':
+        return l10n.languageDisplayTraditionalChinese;
+      case 'ja':
+        return l10n.languageDisplayJapanese;
+      case 'ko':
+        return l10n.languageDisplayKorean;
+      case 'fr':
+        return l10n.languageDisplayFrench;
+      case 'de':
+        return l10n.languageDisplayGerman;
+      case 'it':
+        return l10n.languageDisplayItalian;
+      default:
+        return languageCode;
+    }
   }
 }

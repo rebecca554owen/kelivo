@@ -221,8 +221,8 @@ class _AboutPageState extends State<AboutPage> {
               _AboutItem(
                 icon: Lucide.FileText,
                 title: zh ? '许可证' : 'License',
-                subtitle: 'https://github.com/Chevey339/kelivo/blob/main/LICENSE',
-                onTap: () => _openUrl('https://github.com/Chevey339/kelivo/blob/main/LICENSE'),
+                subtitle: 'https://github.com/Chevey339/kelivo/blob/master/LICENSE',
+                onTap: () => _openUrl('https://github.com/Chevey339/kelivo/blob/master/LICENSE'),
               ),
               const SizedBox(height: 24),
             ],

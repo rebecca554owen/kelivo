@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -20,24 +21,23 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
 
     String modeLabel(ThemeMode m) {
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
       switch (m) {
         case ThemeMode.dark:
-          return zh ? '深色' : 'Dark';
+          return l10n.settingsPageDarkMode;
         case ThemeMode.light:
-          return zh ? '浅色' : 'Light';
+          return l10n.settingsPageLightMode;
         case ThemeMode.system:
         default:
-          return zh ? '跟随系统' : 'System';
+          return l10n.settingsPageSystemMode;
       }
     }
 
     Future<void> pickThemeMode() async {
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
       final selected = await showModalBottomSheet<ThemeMode>(
         context: context,
         backgroundColor: cs.surface,
@@ -89,9 +89,9 @@ class SettingsPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: Localizations.localeOf(context).languageCode == 'zh' ? '返回' : 'Back',
+          tooltip: l10n.settingsPageBackButton,
         ),
-        title: Text(Localizations.localeOf(context).languageCode == 'zh' ? '设置' : 'Settings'),
+        title: Text(l10n.settingsPageTitle),
       ),
       body: ListView(
         children: [
@@ -109,9 +109,7 @@ class SettingsPage extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          Localizations.localeOf(context).languageCode == 'zh'
-                              ? '部分服务未配置，某些功能可能不可用'
-                              : 'Some services are not configured; features may be limited.',
+                          l10n.settingsPageWarningMessage,
                           style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.8)),
                         ),
                       ),
@@ -121,10 +119,10 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
 
-          header(Localizations.localeOf(context).languageCode == 'zh' ? '通用设置' : 'General'),
+          header(l10n.settingsPageGeneralSection),
           SettingRow(
             icon: Lucide.SunMoon,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '颜色模式' : 'Color Mode',
+            title: l10n.settingsPageColorMode,
             trailing: _ModePill(
               label: modeLabel(settings.themeMode),
               onTap: pickThemeMode,
@@ -132,8 +130,8 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.Monitor,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '显示设置' : 'Display',
-            subtitle: Localizations.localeOf(context).languageCode == 'zh' ? '界面主题与字号等外观设置' : 'Appearance and text size',
+            title: l10n.settingsPageDisplay,
+            subtitle: l10n.settingsPageDisplaySubtitle,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DisplaySettingsPage()),
@@ -142,8 +140,8 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.Bot,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '助手' : 'Assistant',
-            subtitle: Localizations.localeOf(context).languageCode == 'zh' ? '默认助手与对话风格' : 'Default assistant and style',
+            title: l10n.settingsPageAssistant,
+            subtitle: l10n.settingsPageAssistantSubtitle,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const AssistantSettingsPage()),
@@ -151,10 +149,10 @@ class SettingsPage extends StatelessWidget {
             },
           ),
 
-          header(Localizations.localeOf(context).languageCode == 'zh' ? '模型与服务' : 'Models & Services'),
+          header(l10n.settingsPageModelsServicesSection),
           SettingRow(
             icon: Lucide.Heart,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '默认模型' : 'Default Model',
+            title: l10n.settingsPageDefaultModel,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DefaultModelPage()),
@@ -163,14 +161,14 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.Boxes,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '供应商' : 'Providers',
+            title: l10n.settingsPageProviders,
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProvidersPage()));
             },
           ),
           SettingRow(
             icon: Lucide.Earth,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '搜索服务' : 'Search',
+            title: l10n.settingsPageSearch,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SearchServicesPage()),
@@ -179,7 +177,7 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.Volume2,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '语音服务' : 'TTS',
+            title: l10n.settingsPageTts,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const TtsServicesPage()),
@@ -188,16 +186,16 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.Terminal,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? 'MCP' : 'MCP',
+            title: l10n.settingsPageMcp,
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const McpPage()));
             },
           ),
 
-          header(Localizations.localeOf(context).languageCode == 'zh' ? '数据设置' : 'Data'),
+          header(l10n.settingsPageDataSection),
           SettingRow(
             icon: Lucide.Database,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '数据备份' : 'Backup',
+            title: l10n.settingsPageBackup,
             // subtitle: Localizations.localeOf(context).languageCode == 'zh' ? 'WebDAV · 导入导出' : 'WebDAV · Import/Export',
             onTap: () {
               Navigator.of(context).push(
@@ -207,7 +205,7 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.HardDrive,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '聊天记录存储' : 'Chat Storage',
+            title: l10n.settingsPageChatStorage,
             subtitleWidget: Builder(
               builder: (ctx) {
                 String fmtBytes(int bytes) {
@@ -219,18 +217,18 @@ class SettingsPage extends StatelessWidget {
                   if (bytes >= kb) return (bytes / kb).toStringAsFixed(1) + ' KB';
                   return '$bytes B';
                 }
-                final zh = Localizations.localeOf(ctx).languageCode == 'zh';
+                final l10n = AppLocalizations.of(ctx)!;
                 final svc = ctx.read<ChatService>();
                 return FutureBuilder<UploadStats>(
                   future: svc.getUploadStats(),
                   builder: (context, snapshot) {
                     final data = snapshot.data;
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return Text(zh ? '统计中…' : 'Calculating…');
+                      return Text(l10n.settingsPageCalculating);
                     }
                     final count = data?.fileCount ?? 0;
                     final size = fmtBytes(data?.totalBytes ?? 0);
-                    return Text(zh ? '共 $count 个文件 · $size' : '$count files · $size');
+                    return Text(l10n.settingsPageFilesCount(count, size));
                   },
                 );
               },
@@ -238,17 +236,17 @@ class SettingsPage extends StatelessWidget {
             onTap: () {},
           ),
 
-          header(Localizations.localeOf(context).languageCode == 'zh' ? '关于' : 'About'),
+          header(l10n.settingsPageAboutSection),
           SettingRow(
             icon: Lucide.BadgeInfo,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '关于' : 'About',
+            title: l10n.settingsPageAbout,
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutPage()));
             },
           ),
           SettingRow(
             icon: Lucide.Library,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '使用文档' : 'Docs',
+            title: l10n.settingsPageDocs,
             onTap: () async {
               final uri = Uri.parse('https://kelivo.vercel.app/');
               if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -258,17 +256,17 @@ class SettingsPage extends StatelessWidget {
           ),
           SettingRow(
             icon: Lucide.Heart,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '赞助' : 'Sponsor',
+            title: l10n.settingsPageSponsor,
             onTap: () async {
               final uri = Uri.parse('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg');
-              if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                await launchUrl(uri, mode: LaunchMode.platformDefault);
+              if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },
           ),
           SettingRow(
             icon: Lucide.Share2,
-            title: Localizations.localeOf(context).languageCode == 'zh' ? '分享' : 'Share',
+            title: l10n.settingsPageShare,
             onTap: () async {
               await Share.share('Kelivo - 开源移动端AI助手');
             },

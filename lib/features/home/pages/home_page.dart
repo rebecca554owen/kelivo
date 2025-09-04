@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
@@ -338,7 +339,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   String _clearContextLabel() {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final assistant = context.read<AssistantProvider>().currentAssistant;
     final configured = assistant?.contextMessageSize ?? 0;
     final t = _currentConversation?.truncateIndex ?? -1;
@@ -350,9 +351,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
     if (configured > 0) {
       final actual = remaining > configured ? configured : remaining;
-      return zh ? '清空上下文 ($actual/$configured)' : 'Clear Context ($actual/$configured)';
+      return l10n.homePageClearContextWithCount(actual.toString(), configured.toString());
     }
-    return zh ? '清空上下文' : 'Clear Context';
+    return l10n.homePageClearContext;
   }
 
   Future<void> _onClearContext() async {
@@ -2110,10 +2111,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       menuScreen: SideDrawer(
         userName: context.watch<UserProvider>().name,
         assistantName: (() {
-          final zh = Localizations.localeOf(context).languageCode == 'zh';
+          final l10n = AppLocalizations.of(context)!;
           final a = context.watch<AssistantProvider>().currentAssistant;
           final n = a?.name.trim();
-          return (n == null || n.isEmpty) ? (zh ? '默认助手' : 'Default Assistant') : n;
+          return (n == null || n.isEmpty) ? l10n.homePageDefaultAssistant : n;
         })(),
         onSelectConversation: (id) {
           // Update current selection for highlight in drawer
@@ -2328,10 +2329,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           final assistant = context.watch<AssistantProvider>().currentAssistant;
                           final useAssist = assistant?.useAssistantAvatar == true;
                           final trunc = _currentConversation?.truncateIndex ?? -1;
-                          final zh = Localizations.localeOf(context).languageCode == 'zh';
+                          final l10n = AppLocalizations.of(context)!;
                           final showDivider = trunc > 0 && index == trunc - 1;
                           final cs = Theme.of(context).colorScheme;
-                          final label = zh ? '清空上下文' : 'Clear Context';
+                          final label = l10n.homePageClearContext;
                           final divider = Row(
                             children: [
                               Expanded(child: Divider(color: cs.outlineVariant.withOpacity(0.6), height: 1, thickness: 1)),
@@ -2443,20 +2444,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                 final action = await showMessageMoreSheet(context, message);
                                 if (!mounted) return;
                                 if (action == MessageMoreAction.delete) {
-                                  final zh = Localizations.localeOf(context).languageCode == 'zh';
+                                  final l10n = AppLocalizations.of(context)!;
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (ctx) => AlertDialog(
-                                      title: Text(zh ? '删除消息' : 'Delete Message'),
-                                      content: Text(zh ? '确定要删除这条消息吗？此操作不可撤销。' : 'Are you sure you want to delete this message? This cannot be undone.'),
+                                      title: Text(l10n.homePageDeleteMessage),
+                                      content: Text(l10n.homePageDeleteMessageConfirm),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.of(ctx).pop(false),
-                                          child: Text(zh ? '取消' : 'Cancel'),
+                                          child: Text(l10n.homePageCancel),
                                         ),
                                         TextButton(
                                           onPressed: () => Navigator.of(ctx).pop(true),
-                                          child: Text(zh ? '删除' : 'Delete', style: const TextStyle(color: Colors.red)),
+                                          child: Text(l10n.homePageDelete, style: const TextStyle(color: Colors.red)),
                                         ),
                                       ],
                                     ),
@@ -2788,9 +2789,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         if (_selectedItems.contains(m.id)) selected.add(m);
                       }
                       if (selected.isEmpty) {
-                        final zh = Localizations.localeOf(context).languageCode == 'zh';
+                        final l10n = AppLocalizations.of(context)!;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(zh ? '请选择要分享的消息' : 'Please select messages to share')),
+                          SnackBar(content: Text(l10n.homePageSelectMessagesToShare)),
                         );
                         return;
                       }
@@ -3027,8 +3028,8 @@ class _SelectionToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -3045,7 +3046,7 @@ class _SelectionToolbar extends StatelessWidget {
           OutlinedButton.icon(
             icon: const Icon(Lucide.X, size: 16),
             onPressed: onCancel,
-            label: Text(zh ? '取消' : 'Cancel'),
+            label: Text(l10n.homePageCancel),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -3055,7 +3056,7 @@ class _SelectionToolbar extends StatelessWidget {
           ElevatedButton.icon(
             icon: const Icon(Lucide.Check, size: 16),
             onPressed: onConfirm,
-            label: Text(zh ? '完成' : 'Done'),
+            label: Text(l10n.homePageDone),
             style: ElevatedButton.styleFrom(
               backgroundColor: cs.primary,
               foregroundColor: cs.onPrimary,

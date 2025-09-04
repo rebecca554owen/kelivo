@@ -1,0 +1,70 @@
+{
+  "helloWorld": "Hello World!",
+  "settingsPageBackButton": "Back",
+  "settingsPageTitle": "Settings",
+  "settingsPageDarkMode": "Dark",
+  "settingsPageLightMode": "Light",
+  "settingsPageSystemMode": "System",
+  "settingsPageWarningMessage": "Some services are not configured; features may be limited.",
+  "settingsPageGeneralSection": "General",
+  "settingsPageColorMode": "Color Mode",
+  "settingsPageDisplay": "Display",
+  "settingsPageDisplaySubtitle": "Appearance and text size",
+  "settingsPageAssistant": "Assistant",
+  "settingsPageAssistantSubtitle": "Default assistant and style",
+  "settingsPageModelsServicesSection": "Models & Services",
+  "settingsPageDefaultModel": "Default Model",
+  "settingsPageProviders": "Providers",
+  "settingsPageSearch": "Search",
+  "settingsPageTts": "TTS",
+  "settingsPageMcp": "MCP",
+  "settingsPageDataSection": "Data",
+  "settingsPageBackup": "Backup",
+  "settingsPageChatStorage": "Chat Storage",
+  "settingsPageCalculating": "Calculating…",
+  "settingsPageFilesCount": "{count} files · {size}",
+  "@settingsPageFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPageAboutSection": "About",
+  "settingsPageAbout": "About",
+  "settingsPageDocs": "Docs",
+  "settingsPageSponsor": "Sponsor",
+  "settingsPageShare": "Share",
+  "languageDisplaySimplifiedChinese": "Simplified Chinese",
+  "languageDisplayEnglish": "English",
+  "languageDisplayTraditionalChinese": "Traditional Chinese",
+  "languageDisplayJapanese": "Japanese",
+  "languageDisplayKorean": "Korean",
+  "languageDisplayFrench": "French",
+  "languageDisplayGerman": "German",
+  "languageDisplayItalian": "Italian",
+  "languageSelectSheetTitle": "Select Translation Language",
+  "languageSelectSheetClearButton": "Clear Translation",
+  "homePageClearContext": "Clear Context",
+  "homePageClearContextWithCount": "Clear Context ({actual}/{configured})",
+  "@homePageClearContextWithCount": {
+    "placeholders": {
+      "actual": {
+        "type": "String"
+      },
+      "configured": {
+        "type": "String"
+      }
+    }
+  },
+  "homePageDefaultAssistant": "Default Assistant",
+  "homePageDeleteMessage": "Delete Message",
+  "homePageDeleteMessageConfirm": "Are you sure you want to delete this message? This cannot be undone.",
+  "homePageCancel": "Cancel",
+  "homePageDelete": "Delete",
+  "homePageSelectMessagesToShare": "Please select messages to share",
+  "homePageDone": "Done"
+}
