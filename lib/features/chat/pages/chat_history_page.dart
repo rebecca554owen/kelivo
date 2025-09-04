@@ -78,7 +78,15 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                 ),
               );
               if (confirm == true) {
-                await context.read<ChatService>().clearAllData();
+                final svc = context.read<ChatService>();
+                final idsToDelete = svc
+                    .getAllConversations()
+                    .where((c) => c.assistantId == widget.assistantId)
+                    .map((c) => c.id)
+                    .toList();
+                for (final id in idsToDelete) {
+                  await svc.deleteConversation(id);
+                }
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(l10n.chatHistoryPageDeletedAllSnackbar)),
