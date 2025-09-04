@@ -19,6 +19,7 @@ import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ChatMessageWidget extends StatefulWidget {
   final ChatMessage message;
@@ -216,6 +217,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final userProvider = context.watch<UserProvider>();
+    final l10n = AppLocalizations.of(context)!;
     final parsed = _parseUserContent(widget.message.content);
 
     return Padding(
@@ -362,19 +364,19 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               final f = File(fixed);
                               if (!(await f.exists())) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('文件不存在: ${d.fileName}')),
+                                  SnackBar(content: Text(l10n.chatMessageWidgetFileNotFound(d.fileName))),
                                 );
                                 return;
                               }
                               final res = await OpenFilex.open(fixed, type: d.mime);
                               if (res.type != ResultType.done) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('无法打开文件: ${res.message ?? res.type.toString()}')),
+                                  SnackBar(content: Text(l10n.chatMessageWidgetCannotOpenFile(res.message ?? res.type.toString()))),
                                 );
                               }
                             } catch (e) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('打开文件失败: $e')),
+                                SnackBar(content: Text(l10n.chatMessageWidgetOpenFileError(e.toString()))),
                               );
                             }
                           },
@@ -416,7 +418,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 onPressed: widget.onCopy ?? () {
                   Clipboard.setData(ClipboardData(text: widget.message.content));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('已复制到剪贴板')),
+                    SnackBar(content: Text(l10n.chatMessageWidgetCopiedToClipboard)),
                   );
                 },
                 visualDensity: VisualDensity.compact,
@@ -425,14 +427,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               IconButton(
                 icon: Icon(Lucide.RefreshCw, size: 16),
                 onPressed: widget.onResend,
-                tooltip: '重新发送',
+                tooltip: l10n.chatMessageWidgetResendTooltip,
                 visualDensity: VisualDensity.compact,
                 iconSize: 16,
               ),
               IconButton(
                 icon: Icon(Lucide.Ellipsis, size: 16),
                 onPressed: widget.onMore,
-                tooltip: '更多',
+                tooltip: l10n.chatMessageWidgetMoreTooltip,
                 visualDensity: VisualDensity.compact,
                 iconSize: 16,
               ),
@@ -484,6 +486,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
 
   Widget _buildAssistantMessage() {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -638,7 +641,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 _LoadingIndicator(),
                 const SizedBox(width: 8),
                 Text(
-                  '正在思考...',
+                  l10n.chatMessageWidgetThinking,
                   style: TextStyle(
                     fontSize: 14,
                     color: cs.onSurface.withOpacity(0.5),
@@ -696,7 +699,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    '翻译',
+                                    l10n.chatMessageWidgetTranslation,
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
@@ -717,14 +720,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                           ),
                           if (widget.translationExpanded) ...[
                             const SizedBox(height: 8),
-                            if (widget.message.translation == '翻译中...')
+                            if (widget.message.translation == l10n.chatMessageWidgetTranslating)
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
                                 child: Row(
                                   children: [
                                     _LoadingIndicator(),
                                     const SizedBox(width: 8),
-                                    Text('翻译中...', style: TextStyle(fontSize: 15.5, color: cs.onSurface.withOpacity(0.5), fontStyle: FontStyle.italic)),
+                                    Text(l10n.chatMessageWidgetTranslating, style: TextStyle(fontSize: 15.5, color: cs.onSurface.withOpacity(0.5), fontStyle: FontStyle.italic)),
                                   ],
                                 ),
                               )
@@ -765,7 +768,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 onPressed: widget.onCopy ?? () {
                   Clipboard.setData(ClipboardData(text: widget.message.content));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('已复制到剪贴板')),
+                    SnackBar(content: Text(l10n.chatMessageWidgetCopiedToClipboard)),
                   );
                 },
                 visualDensity: VisualDensity.compact,
@@ -774,7 +777,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               IconButton(
                 icon: Icon(Lucide.RefreshCw, size: 16),
                 onPressed: widget.onRegenerate,
-                tooltip: '重新生成',
+                tooltip: l10n.chatMessageWidgetRegenerateTooltip,
                 visualDensity: VisualDensity.compact,
                 iconSize: 16,
               ),
@@ -782,7 +785,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 builder: (context, tts, _) => IconButton(
                   icon: Icon(tts.isSpeaking ? Lucide.CircleStop : Lucide.Volume2, size: 16),
                   onPressed: widget.onSpeak,
-                  tooltip: tts.isSpeaking ? '停止' : '朗读',
+                  tooltip: tts.isSpeaking ? l10n.chatMessageWidgetStopTooltip : l10n.chatMessageWidgetSpeakTooltip,
                   visualDensity: VisualDensity.compact,
                   iconSize: 16,
                 ),
@@ -790,14 +793,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               IconButton(
                 icon: Icon(Lucide.Languages, size: 16),
                 onPressed: widget.onTranslate,
-                tooltip: '翻译',
+                tooltip: l10n.chatMessageWidgetTranslateTooltip,
                 visualDensity: VisualDensity.compact,
                 iconSize: 16,
               ),
               IconButton(
                 icon: Icon(Lucide.Ellipsis, size: 16),
                 onPressed: widget.onMore,
-                tooltip: '更多',
+                tooltip: l10n.chatMessageWidgetMoreTooltip,
                 visualDensity: VisualDensity.compact,
                 iconSize: 16,
               ),
@@ -819,6 +822,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
 
   // Try resolve citation id -> url from the latest search_web tool results of this assistant message
   void _handleCitationTap(String id) async {
+    final l10n = AppLocalizations.of(context)!;
     final items = _latestSearchItems();
     final match = items.cast<Map<String, dynamic>?>().firstWhere(
       (e) => (e?['id']?.toString() ?? '') == id,
@@ -828,7 +832,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     if (url == null || url.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('未找到引用来源')),
+          SnackBar(content: Text(l10n.chatMessageWidgetCitationNotFound)),
         );
       }
       return;
@@ -837,13 +841,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       if (!ok && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法打开链接: $url')),
+          SnackBar(content: Text(l10n.chatMessageWidgetCannotOpenUrl(url))),
         );
       }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('打开链接失败')),
+          SnackBar(content: Text(l10n.chatMessageWidgetOpenLinkError)),
         );
       }
     }
@@ -873,7 +877,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
 
   void _showCitationsSheet(List<Map<String, dynamic>> items) {
     final cs = Theme.of(context).colorScheme;
-    final isZh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -897,7 +901,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          isZh ? '引用（共${items.length}条）' : 'Citations (${items.length})',
+                          l10n.chatMessageWidgetCitationsTitle(items.length),
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -1151,21 +1155,21 @@ class _ToolCallItem extends StatelessWidget {
 
 
   String _titleFor(BuildContext context, String name, Map<String, dynamic> args, {required bool isResult}) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     switch (name) {
       case 'create_memory':
-        return zh ? (isResult ? '调用工具 · 创建记忆' : '调用工具 · 创建记忆') : (isResult ? 'Tool Result · Create Memory' : 'Tool Call · Create Memory');
+        return l10n.chatMessageWidgetCreateMemory;
       case 'edit_memory':
-        return zh ? (isResult ? '调用工具 · 编辑记忆' : '调用工具 · 编辑记忆') : (isResult ? 'Tool Result · Edit Memory' : 'Tool Call · Edit Memory');
+        return l10n.chatMessageWidgetEditMemory;
       case 'delete_memory':
-        return zh ? (isResult ? '调用工具 · 删除记忆' : '调用工具 · 删除记忆') : (isResult ? 'Tool Result · Delete Memory' : 'Tool Call · Delete Memory');
+        return l10n.chatMessageWidgetDeleteMemory;
       case 'search_web':
         final q = (args['query'] ?? '').toString();
-        return zh ? (isResult ? '联网检索: $q' : '联网检索: $q') : (isResult ? 'Web Search: $q' : 'Web Search: $q');
+        return l10n.chatMessageWidgetWebSearch(q);
       case 'builtin_search':
-        return zh ? (isResult ? '模型内置搜索' : '模型内置搜索') : (isResult ? 'Built-in Search' : 'Built-in Search');
+        return l10n.chatMessageWidgetBuiltinSearch;
       default:
-        return zh ? (isResult ? '调用工具: $name' : '调用工具: $name') : (isResult ? 'Tool Result: $name' : 'Tool Call: $name');
+        return isResult ? l10n.chatMessageWidgetToolResult(name) : l10n.chatMessageWidgetToolCall(name);
     }
   }
 
@@ -1225,9 +1229,9 @@ class _ToolCallItem extends StatelessWidget {
 
   void _showDetail(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final argsPretty = const JsonEncoder.withIndent('  ').convert(part.arguments);
-    final resultText = (part.content ?? '').isNotEmpty ? part.content! : (zh ? '（暂无结果）' : '(No result yet)');
+    final resultText = (part.content ?? '').isNotEmpty ? part.content! : l10n.chatMessageWidgetNoResultYet;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1259,7 +1263,7 @@ class _ToolCallItem extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Text(zh ? '参数' : 'Arguments', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
+                    Text(l10n.chatMessageWidgetArguments, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
                     const SizedBox(height: 6),
                     Container(
                       width: double.infinity,
@@ -1272,7 +1276,7 @@ class _ToolCallItem extends StatelessWidget {
                       child: SelectableText(argsPretty, style: const TextStyle(fontSize: 12)),
                     ),
                     const SizedBox(height: 12),
-                    Text(zh ? '结果' : 'Result', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
+                    Text(l10n.chatMessageWidgetResult, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
                     const SizedBox(height: 6),
                     Container(
                       width: double.infinity,
@@ -1302,6 +1306,7 @@ class _SourcesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     if (items.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
@@ -1317,7 +1322,7 @@ class _SourcesList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
-              '引用 (${items.length})',
+              l10n.chatMessageWidgetCitationsTitle(items.length),
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.75)),
             ),
           ),
@@ -1384,8 +1389,8 @@ class _SourcesSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isZh = Localizations.localeOf(context).languageCode == 'zh';
-    final label = isZh ? '共$count条引用' : 'Citations ($count)';
+    final l10n = AppLocalizations.of(context)!;
+    final label = l10n.chatMessageWidgetCitationsCount(count);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1527,6 +1532,7 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final loading = widget.loading;
 
     // Android-like surface style
@@ -1552,7 +1558,7 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
             const SizedBox(width: 8),
             _Shimmer(
               enabled: loading,
-              child: Text('深度思考', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.secondary)),
+              child: Text(l10n.chatMessageWidgetDeepThinking, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.secondary)),
             ),
             const SizedBox(width: 8),
             if (widget.startAt != null)

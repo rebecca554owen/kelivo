@@ -723,4 +723,113 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reasoningBudgetSheetCustomHint => 'e.g. 2048 (-1 auto, 0 off)';
+
+  @override
+  String chatMessageWidgetFileNotFound(String fileName) {
+    return 'File not found: $fileName';
+  }
+
+  @override
+  String chatMessageWidgetCannotOpenFile(String message) {
+    return 'Cannot open file: $message';
+  }
+
+  @override
+  String chatMessageWidgetOpenFileError(String error) {
+    return 'Failed to open file: $error';
+  }
+
+  @override
+  String get chatMessageWidgetCopiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get chatMessageWidgetResendTooltip => 'Resend';
+
+  @override
+  String get chatMessageWidgetMoreTooltip => 'More';
+
+  @override
+  String get chatMessageWidgetThinking => 'Thinking...';
+
+  @override
+  String get chatMessageWidgetTranslation => 'Translation';
+
+  @override
+  String get chatMessageWidgetTranslating => 'Translating...';
+
+  @override
+  String get chatMessageWidgetCitationNotFound => 'Citation source not found';
+
+  @override
+  String chatMessageWidgetCannotOpenUrl(String url) {
+    return 'Cannot open link: $url';
+  }
+
+  @override
+  String get chatMessageWidgetOpenLinkError => 'Failed to open link';
+
+  @override
+  String chatMessageWidgetCitationsTitle(int count) {
+    return 'Citations ($count)';
+  }
+
+  @override
+  String get chatMessageWidgetRegenerateTooltip => 'Regenerate';
+
+  @override
+  String get chatMessageWidgetStopTooltip => 'Stop';
+
+  @override
+  String get chatMessageWidgetSpeakTooltip => 'Speak';
+
+  @override
+  String get chatMessageWidgetTranslateTooltip => 'Translate';
+
+  @override
+  String get chatMessageWidgetBuiltinSearchHideNote =>
+      'Hide builtin search tool cards';
+
+  @override
+  String get chatMessageWidgetDeepThinking => 'Deep Thinking';
+
+  @override
+  String get chatMessageWidgetCreateMemory => 'Create Memory';
+
+  @override
+  String get chatMessageWidgetEditMemory => 'Edit Memory';
+
+  @override
+  String get chatMessageWidgetDeleteMemory => 'Delete Memory';
+
+  @override
+  String chatMessageWidgetWebSearch(String query) {
+    return 'Web Search: $query';
+  }
+
+  @override
+  String get chatMessageWidgetBuiltinSearch => 'Built-in Search';
+
+  @override
+  String chatMessageWidgetToolCall(String name) {
+    return 'Tool Call: $name';
+  }
+
+  @override
+  String chatMessageWidgetToolResult(String name) {
+    return 'Tool Result: $name';
+  }
+
+  @override
+  String get chatMessageWidgetNoResultYet => '(No result yet)';
+
+  @override
+  String get chatMessageWidgetArguments => 'Arguments';
+
+  @override
+  String get chatMessageWidgetResult => 'Result';
+
+  @override
+  String chatMessageWidgetCitationsCount(int count) {
+    return 'Citations ($count)';
+  }
 }

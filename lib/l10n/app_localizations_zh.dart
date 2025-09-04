@@ -702,4 +702,112 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reasoningBudgetSheetCustomHint => '例如：2048 (-1 自动，0 关闭)';
+
+  @override
+  String chatMessageWidgetFileNotFound(String fileName) {
+    return '文件不存在: $fileName';
+  }
+
+  @override
+  String chatMessageWidgetCannotOpenFile(String message) {
+    return '无法打开文件: $message';
+  }
+
+  @override
+  String chatMessageWidgetOpenFileError(String error) {
+    return '打开文件失败: $error';
+  }
+
+  @override
+  String get chatMessageWidgetCopiedToClipboard => '已复制到剪贴板';
+
+  @override
+  String get chatMessageWidgetResendTooltip => '重新发送';
+
+  @override
+  String get chatMessageWidgetMoreTooltip => '更多';
+
+  @override
+  String get chatMessageWidgetThinking => '正在思考...';
+
+  @override
+  String get chatMessageWidgetTranslation => '翻译';
+
+  @override
+  String get chatMessageWidgetTranslating => '翻译中...';
+
+  @override
+  String get chatMessageWidgetCitationNotFound => '未找到引用来源';
+
+  @override
+  String chatMessageWidgetCannotOpenUrl(String url) {
+    return '无法打开链接: $url';
+  }
+
+  @override
+  String get chatMessageWidgetOpenLinkError => '打开链接失败';
+
+  @override
+  String chatMessageWidgetCitationsTitle(int count) {
+    return '引用（共$count条）';
+  }
+
+  @override
+  String get chatMessageWidgetRegenerateTooltip => '重新生成';
+
+  @override
+  String get chatMessageWidgetStopTooltip => '停止';
+
+  @override
+  String get chatMessageWidgetSpeakTooltip => '朗读';
+
+  @override
+  String get chatMessageWidgetTranslateTooltip => '翻译';
+
+  @override
+  String get chatMessageWidgetBuiltinSearchHideNote => '隐藏内置搜索工具卡片';
+
+  @override
+  String get chatMessageWidgetDeepThinking => '深度思考';
+
+  @override
+  String get chatMessageWidgetCreateMemory => '创建记忆';
+
+  @override
+  String get chatMessageWidgetEditMemory => '编辑记忆';
+
+  @override
+  String get chatMessageWidgetDeleteMemory => '删除记忆';
+
+  @override
+  String chatMessageWidgetWebSearch(String query) {
+    return '联网检索: $query';
+  }
+
+  @override
+  String get chatMessageWidgetBuiltinSearch => '模型内置搜索';
+
+  @override
+  String chatMessageWidgetToolCall(String name) {
+    return '调用工具: $name';
+  }
+
+  @override
+  String chatMessageWidgetToolResult(String name) {
+    return '调用工具: $name';
+  }
+
+  @override
+  String get chatMessageWidgetNoResultYet => '（暂无结果）';
+
+  @override
+  String get chatMessageWidgetArguments => '参数';
+
+  @override
+  String get chatMessageWidgetResult => '结果';
+
+  @override
+  String chatMessageWidgetCitationsCount(int count) {
+    return '共$count条引用';
+  }
 }

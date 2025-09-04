@@ -263,5 +263,98 @@
   "reasoningBudgetSheetMediumSubtitle": "Use moderate reasoning to answer questions",
   "reasoningBudgetSheetHeavySubtitle": "Use heavy reasoning for complex questions",
   "reasoningBudgetSheetCustomLabel": "Custom Reasoning Budget (tokens)",
-  "reasoningBudgetSheetCustomHint": "e.g. 2048 (-1 auto, 0 off)"
+  "reasoningBudgetSheetCustomHint": "e.g. 2048 (-1 auto, 0 off)",
+  "chatMessageWidgetFileNotFound": "File not found: {fileName}",
+  "@chatMessageWidgetFileNotFound": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetCannotOpenFile": "Cannot open file: {message}",
+  "@chatMessageWidgetCannotOpenFile": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetOpenFileError": "Failed to open file: {error}",
+  "@chatMessageWidgetOpenFileError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetCopiedToClipboard": "Copied to clipboard",
+  "chatMessageWidgetResendTooltip": "Resend",
+  "chatMessageWidgetMoreTooltip": "More",
+  "chatMessageWidgetThinking": "Thinking...",
+  "chatMessageWidgetTranslation": "Translation",
+  "chatMessageWidgetTranslating": "Translating...",
+  "chatMessageWidgetCitationNotFound": "Citation source not found",
+  "chatMessageWidgetCannotOpenUrl": "Cannot open link: {url}",
+  "@chatMessageWidgetCannotOpenUrl": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetOpenLinkError": "Failed to open link",
+  "chatMessageWidgetCitationsTitle": "Citations ({count})",
+  "@chatMessageWidgetCitationsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMessageWidgetRegenerateTooltip": "Regenerate",
+  "chatMessageWidgetStopTooltip": "Stop",
+  "chatMessageWidgetSpeakTooltip": "Speak",
+  "chatMessageWidgetTranslateTooltip": "Translate",
+  "chatMessageWidgetBuiltinSearchHideNote": "Hide builtin search tool cards",
+  "chatMessageWidgetDeepThinking": "Deep Thinking",
+  "chatMessageWidgetCreateMemory": "Create Memory",
+  "chatMessageWidgetEditMemory": "Edit Memory",
+  "chatMessageWidgetDeleteMemory": "Delete Memory",
+  "chatMessageWidgetWebSearch": "Web Search: {query}",
+  "@chatMessageWidgetWebSearch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetBuiltinSearch": "Built-in Search",
+  "chatMessageWidgetToolCall": "Tool Call: {name}",
+  "@chatMessageWidgetToolCall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetToolResult": "Tool Result: {name}",
+  "@chatMessageWidgetToolResult": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageWidgetNoResultYet": "(No result yet)",
+  "chatMessageWidgetArguments": "Arguments",
+  "chatMessageWidgetResult": "Result",
+  "chatMessageWidgetCitationsCount": "Citations ({count})",
+  "@chatMessageWidgetCitationsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

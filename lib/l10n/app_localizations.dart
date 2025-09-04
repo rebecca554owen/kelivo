@@ -1465,6 +1465,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. 2048 (-1 auto, 0 off)'**
   String get reasoningBudgetSheetCustomHint;
+
+  /// No description provided for @chatMessageWidgetFileNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'File not found: {fileName}'**
+  String chatMessageWidgetFileNotFound(String fileName);
+
+  /// No description provided for @chatMessageWidgetCannotOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open file: {message}'**
+  String chatMessageWidgetCannotOpenFile(String message);
+
+  /// No description provided for @chatMessageWidgetOpenFileError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open file: {error}'**
+  String chatMessageWidgetOpenFileError(String error);
+
+  /// No description provided for @chatMessageWidgetCopiedToClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get chatMessageWidgetCopiedToClipboard;
+
+  /// No description provided for @chatMessageWidgetResendTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get chatMessageWidgetResendTooltip;
+
+  /// No description provided for @chatMessageWidgetMoreTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get chatMessageWidgetMoreTooltip;
+
+  /// No description provided for @chatMessageWidgetThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking...'**
+  String get chatMessageWidgetThinking;
+
+  /// No description provided for @chatMessageWidgetTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get chatMessageWidgetTranslation;
+
+  /// No description provided for @chatMessageWidgetTranslating.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating...'**
+  String get chatMessageWidgetTranslating;
+
+  /// No description provided for @chatMessageWidgetCitationNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Citation source not found'**
+  String get chatMessageWidgetCitationNotFound;
+
+  /// No description provided for @chatMessageWidgetCannotOpenUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open link: {url}'**
+  String chatMessageWidgetCannotOpenUrl(String url);
+
+  /// No description provided for @chatMessageWidgetOpenLinkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open link'**
+  String get chatMessageWidgetOpenLinkError;
+
+  /// No description provided for @chatMessageWidgetCitationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Citations ({count})'**
+  String chatMessageWidgetCitationsTitle(int count);
+
+  /// No description provided for @chatMessageWidgetRegenerateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get chatMessageWidgetRegenerateTooltip;
+
+  /// No description provided for @chatMessageWidgetStopTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get chatMessageWidgetStopTooltip;
+
+  /// No description provided for @chatMessageWidgetSpeakTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Speak'**
+  String get chatMessageWidgetSpeakTooltip;
+
+  /// No description provided for @chatMessageWidgetTranslateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get chatMessageWidgetTranslateTooltip;
+
+  /// No description provided for @chatMessageWidgetBuiltinSearchHideNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide builtin search tool cards'**
+  String get chatMessageWidgetBuiltinSearchHideNote;
+
+  /// No description provided for @chatMessageWidgetDeepThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Thinking'**
+  String get chatMessageWidgetDeepThinking;
+
+  /// No description provided for @chatMessageWidgetCreateMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Memory'**
+  String get chatMessageWidgetCreateMemory;
+
+  /// No description provided for @chatMessageWidgetEditMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Memory'**
+  String get chatMessageWidgetEditMemory;
+
+  /// No description provided for @chatMessageWidgetDeleteMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Memory'**
+  String get chatMessageWidgetDeleteMemory;
+
+  /// No description provided for @chatMessageWidgetWebSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Web Search: {query}'**
+  String chatMessageWidgetWebSearch(String query);
+
+  /// No description provided for @chatMessageWidgetBuiltinSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in Search'**
+  String get chatMessageWidgetBuiltinSearch;
+
+  /// No description provided for @chatMessageWidgetToolCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool Call: {name}'**
+  String chatMessageWidgetToolCall(String name);
+
+  /// No description provided for @chatMessageWidgetToolResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool Result: {name}'**
+  String chatMessageWidgetToolResult(String name);
+
+  /// No description provided for @chatMessageWidgetNoResultYet.
+  ///
+  /// In en, this message translates to:
+  /// **'(No result yet)'**
+  String get chatMessageWidgetNoResultYet;
+
+  /// No description provided for @chatMessageWidgetArguments.
+  ///
+  /// In en, this message translates to:
+  /// **'Arguments'**
+  String get chatMessageWidgetArguments;
+
+  /// No description provided for @chatMessageWidgetResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get chatMessageWidgetResult;
+
+  /// No description provided for @chatMessageWidgetCitationsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Citations ({count})'**
+  String chatMessageWidgetCitationsCount(int count);
 }
 
 class _AppLocalizationsDelegate
