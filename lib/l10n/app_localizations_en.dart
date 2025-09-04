@@ -673,4 +673,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messageMoreSheetDelete => 'Delete';
+
+  @override
+  String get reasoningBudgetSheetOff => 'Off';
+
+  @override
+  String get reasoningBudgetSheetAuto => 'Auto';
+
+  @override
+  String get reasoningBudgetSheetLight => 'Light Reasoning';
+
+  @override
+  String get reasoningBudgetSheetMedium => 'Medium Reasoning';
+
+  @override
+  String get reasoningBudgetSheetHeavy => 'Heavy Reasoning';
+
+  @override
+  String get reasoningBudgetSheetTitle => 'Reasoning Chain Strength';
+
+  @override
+  String reasoningBudgetSheetCurrentLevel(String level) {
+    return 'Current Level: $level';
+  }
+
+  @override
+  String get reasoningBudgetSheetOffSubtitle =>
+      'Turn off reasoning, answer directly';
+
+  @override
+  String get reasoningBudgetSheetAutoSubtitle =>
+      'Let the model decide reasoning level automatically';
+
+  @override
+  String get reasoningBudgetSheetLightSubtitle =>
+      'Use light reasoning to answer questions';
+
+  @override
+  String get reasoningBudgetSheetMediumSubtitle =>
+      'Use moderate reasoning to answer questions';
+
+  @override
+  String get reasoningBudgetSheetHeavySubtitle =>
+      'Use heavy reasoning for complex questions';
+
+  @override
+  String get reasoningBudgetSheetCustomLabel =>
+      'Custom Reasoning Budget (tokens)';
+
+  @override
+  String get reasoningBudgetSheetCustomHint => 'e.g. 2048 (-1 auto, 0 off)';
 }

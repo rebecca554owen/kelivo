@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../theme/design_tokens.dart';
+import '../../../l10n/app_localizations.dart';
 
 Future<void> showReasoningBudgetSheet(BuildContext context) async {
   await showModalBottomSheet(
@@ -58,19 +59,20 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
     return 32000;
   }
 
-  String _bucketName(int? n) {
+  String _bucketName(BuildContext context, int? n) {
+    final l10n = AppLocalizations.of(context)!;
     final b = _bucket(n);
     switch (b) {
       case 0:
-        return '关闭';
+        return l10n.reasoningBudgetSheetOff;
       case -1:
-        return '自动';
+        return l10n.reasoningBudgetSheetAuto;
       case 1024:
-        return '轻度推理';
+        return l10n.reasoningBudgetSheetLight;
       case 16000:
-        return '中度推理';
+        return l10n.reasoningBudgetSheetMedium;
       default:
-        return '重度推理';
+        return l10n.reasoningBudgetSheetHeavy;
     }
   }
 
@@ -126,6 +128,7 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
       top: false,
@@ -153,7 +156,7 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                         child: Text(
-                          '思维链强度',
+                          l10n.reasoningBudgetSheetTitle,
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -163,7 +166,7 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
                           final cur = int.tryParse(_controller.text.trim());
                           final eff = cur ?? _selected ?? -1;
                           return Text(
-                            '当前档位：${_bucketName(eff)}',
+                            l10n.reasoningBudgetSheetCurrentLevel(_bucketName(context, eff)),
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -172,18 +175,18 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
                           );
                         }),
                       ),
-                      _tile(Lucide.X, '关闭', 0, subtitle: '关闭推理功能，直接回答'),
-                      _tile(Lucide.Settings2, '自动', -1, subtitle: '由模型自动决定推理级别'),
-                      _tile(Lucide.Brain, '轻度推理', 1024, subtitle: '使用少量推理来回答问题', deepthink: true),
-                      _tile(Lucide.Brain, '中度推理', 16000, subtitle: '使用较多推理来回答问题', deepthink: true),
-                      _tile(Lucide.Brain, '重度推理', 32000, subtitle: '使用大量推理来回答问题，适合复杂问题', deepthink: true),
+                      _tile(Lucide.X, l10n.reasoningBudgetSheetOff, 0, subtitle: l10n.reasoningBudgetSheetOffSubtitle),
+                      _tile(Lucide.Settings2, l10n.reasoningBudgetSheetAuto, -1, subtitle: l10n.reasoningBudgetSheetAutoSubtitle),
+                      _tile(Lucide.Brain, l10n.reasoningBudgetSheetLight, 1024, subtitle: l10n.reasoningBudgetSheetLightSubtitle, deepthink: true),
+                      _tile(Lucide.Brain, l10n.reasoningBudgetSheetMedium, 16000, subtitle: l10n.reasoningBudgetSheetMediumSubtitle, deepthink: true),
+                      _tile(Lucide.Brain, l10n.reasoningBudgetSheetHeavy, 32000, subtitle: l10n.reasoningBudgetSheetHeavySubtitle, deepthink: true),
                       const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('自定义推理预算 (tokens)', style: Theme.of(context).textTheme.labelMedium),
+                            Text(l10n.reasoningBudgetSheetCustomLabel, style: Theme.of(context).textTheme.labelMedium),
                             const SizedBox(height: 8),
                             Builder(builder: (context) {
                               final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -192,7 +195,7 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
                                 controller: _controller,
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
-                                  hintText: '例如：2048 (-1 自动，0 关闭)',
+                                  hintText: l10n.reasoningBudgetSheetCustomHint,
                                   filled: true,
                                   fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
                                   border: OutlineInputBorder(
@@ -211,10 +214,10 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
                                 onChanged: (v) {
                                   final n = int.tryParse(v.trim());
                                   if (n != null) {
-                                    // 实时保存并更新高亮
+                                    // Real-time save and update highlighting
                                     _select(n);
                                   } else {
-                                    setState(() {}); // 仅刷新“当前档位”
+                                    setState(() {}); // Only refresh "Current Level"
                                   }
                                 },
                                 onSubmitted: (v) {

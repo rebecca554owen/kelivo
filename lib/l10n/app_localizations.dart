@@ -1381,6 +1381,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get messageMoreSheetDelete;
+
+  /// No description provided for @reasoningBudgetSheetOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get reasoningBudgetSheetOff;
+
+  /// No description provided for @reasoningBudgetSheetAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get reasoningBudgetSheetAuto;
+
+  /// No description provided for @reasoningBudgetSheetLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light Reasoning'**
+  String get reasoningBudgetSheetLight;
+
+  /// No description provided for @reasoningBudgetSheetMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium Reasoning'**
+  String get reasoningBudgetSheetMedium;
+
+  /// No description provided for @reasoningBudgetSheetHeavy.
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy Reasoning'**
+  String get reasoningBudgetSheetHeavy;
+
+  /// No description provided for @reasoningBudgetSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning Chain Strength'**
+  String get reasoningBudgetSheetTitle;
+
+  /// No description provided for @reasoningBudgetSheetCurrentLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Level: {level}'**
+  String reasoningBudgetSheetCurrentLevel(String level);
+
+  /// No description provided for @reasoningBudgetSheetOffSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off reasoning, answer directly'**
+  String get reasoningBudgetSheetOffSubtitle;
+
+  /// No description provided for @reasoningBudgetSheetAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the model decide reasoning level automatically'**
+  String get reasoningBudgetSheetAutoSubtitle;
+
+  /// No description provided for @reasoningBudgetSheetLightSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use light reasoning to answer questions'**
+  String get reasoningBudgetSheetLightSubtitle;
+
+  /// No description provided for @reasoningBudgetSheetMediumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use moderate reasoning to answer questions'**
+  String get reasoningBudgetSheetMediumSubtitle;
+
+  /// No description provided for @reasoningBudgetSheetHeavySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use heavy reasoning for complex questions'**
+  String get reasoningBudgetSheetHeavySubtitle;
+
+  /// No description provided for @reasoningBudgetSheetCustomLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Reasoning Budget (tokens)'**
+  String get reasoningBudgetSheetCustomLabel;
+
+  /// No description provided for @reasoningBudgetSheetCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 2048 (-1 auto, 0 off)'**
+  String get reasoningBudgetSheetCustomHint;
 }
 
 class _AppLocalizationsDelegate

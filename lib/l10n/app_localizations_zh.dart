@@ -658,4 +658,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get messageMoreSheetDelete => '删除';
+
+  @override
+  String get reasoningBudgetSheetOff => '关闭';
+
+  @override
+  String get reasoningBudgetSheetAuto => '自动';
+
+  @override
+  String get reasoningBudgetSheetLight => '轻度推理';
+
+  @override
+  String get reasoningBudgetSheetMedium => '中度推理';
+
+  @override
+  String get reasoningBudgetSheetHeavy => '重度推理';
+
+  @override
+  String get reasoningBudgetSheetTitle => '思维链强度';
+
+  @override
+  String reasoningBudgetSheetCurrentLevel(String level) {
+    return '当前档位：$level';
+  }
+
+  @override
+  String get reasoningBudgetSheetOffSubtitle => '关闭推理功能，直接回答';
+
+  @override
+  String get reasoningBudgetSheetAutoSubtitle => '由模型自动决定推理级别';
+
+  @override
+  String get reasoningBudgetSheetLightSubtitle => '使用少量推理来回答问题';
+
+  @override
+  String get reasoningBudgetSheetMediumSubtitle => '使用较多推理来回答问题';
+
+  @override
+  String get reasoningBudgetSheetHeavySubtitle => '使用大量推理来回答问题，适合复杂问题';
+
+  @override
+  String get reasoningBudgetSheetCustomLabel => '自定义推理预算 (tokens)';
+
+  @override
+  String get reasoningBudgetSheetCustomHint => '例如：2048 (-1 自动，0 关闭)';
 }
