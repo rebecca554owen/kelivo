@@ -1014,4 +1014,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatInputBarMoreTooltip => '更多';
+
+  @override
+  String get mcpPageBackTooltip => '返回';
+
+  @override
+  String get mcpPageAddMcpTooltip => '添加 MCP';
+
+  @override
+  String get mcpPageNoServers => '暂无 MCP 服务器';
+
+  @override
+  String get mcpPageErrorDialogTitle => '连接错误';
+
+  @override
+  String get mcpPageErrorNoDetails => '未提供错误详情';
+
+  @override
+  String get mcpPageClose => '关闭';
+
+  @override
+  String get mcpPageReconnect => '重新连接';
+
+  @override
+  String get mcpPageStatusConnected => '已连接';
+
+  @override
+  String get mcpPageStatusConnecting => '连接中…';
+
+  @override
+  String get mcpPageStatusDisconnected => '未连接';
+
+  @override
+  String get mcpPageStatusDisabled => '已禁用';
+
+  @override
+  String mcpPageToolsCount(int enabled, int total) {
+    return '工具: $enabled/$total';
+  }
+
+  @override
+  String get mcpPageConnectionFailed => '连接失败';
+
+  @override
+  String get mcpPageDetails => '详情';
+
+  @override
+  String get mcpPageDelete => '删除';
+
+  @override
+  String get mcpPageConfirmDeleteTitle => '确认删除';
+
+  @override
+  String get mcpPageConfirmDeleteContent => '删除后可通过撤销恢复。是否删除？';
+
+  @override
+  String get mcpPageServerDeleted => '已删除服务器';
+
+  @override
+  String get mcpPageUndo => '撤销';
+
+  @override
+  String get mcpPageCancel => '取消';
 }

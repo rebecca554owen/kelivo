@@ -2029,6 +2029,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get chatInputBarMoreTooltip;
+
+  /// No description provided for @mcpPageBackTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get mcpPageBackTooltip;
+
+  /// No description provided for @mcpPageAddMcpTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add MCP'**
+  String get mcpPageAddMcpTooltip;
+
+  /// No description provided for @mcpPageNoServers.
+  ///
+  /// In en, this message translates to:
+  /// **'No MCP servers'**
+  String get mcpPageNoServers;
+
+  /// No description provided for @mcpPageErrorDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection Error'**
+  String get mcpPageErrorDialogTitle;
+
+  /// No description provided for @mcpPageErrorNoDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'No details'**
+  String get mcpPageErrorNoDetails;
+
+  /// No description provided for @mcpPageClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get mcpPageClose;
+
+  /// No description provided for @mcpPageReconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect'**
+  String get mcpPageReconnect;
+
+  /// No description provided for @mcpPageStatusConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get mcpPageStatusConnected;
+
+  /// No description provided for @mcpPageStatusConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get mcpPageStatusConnecting;
+
+  /// No description provided for @mcpPageStatusDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected'**
+  String get mcpPageStatusDisconnected;
+
+  /// No description provided for @mcpPageStatusDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get mcpPageStatusDisabled;
+
+  /// No description provided for @mcpPageToolsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools: {enabled}/{total}'**
+  String mcpPageToolsCount(int enabled, int total);
+
+  /// No description provided for @mcpPageConnectionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed'**
+  String get mcpPageConnectionFailed;
+
+  /// No description provided for @mcpPageDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get mcpPageDetails;
+
+  /// No description provided for @mcpPageDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get mcpPageDelete;
+
+  /// No description provided for @mcpPageConfirmDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Delete'**
+  String get mcpPageConfirmDeleteTitle;
+
+  /// No description provided for @mcpPageConfirmDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This can be undone via Undo. Delete?'**
+  String get mcpPageConfirmDeleteContent;
+
+  /// No description provided for @mcpPageServerDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Server deleted'**
+  String get mcpPageServerDeleted;
+
+  /// No description provided for @mcpPageUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get mcpPageUndo;
+
+  /// No description provided for @mcpPageCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mcpPageCancel;
 }
 
 class _AppLocalizationsDelegate

@@ -444,12 +444,37 @@
   "sideDrawerSetNicknameTitle": "Set Nickname",
   "sideDrawerNicknameLabel": "Nickname",
   "sideDrawerNicknameHint": "Enter new nickname",
-  "sideDrawerRename": "Rename"
-  ,
+  "sideDrawerRename": "Rename",
   "chatInputBarHint": "Type a message for AI",
   "chatInputBarSelectModelTooltip": "Select Model",
   "chatInputBarOnlineSearchTooltip": "Online Search",
   "chatInputBarReasoningStrengthTooltip": "Reasoning Strength",
   "chatInputBarMcpServersTooltip": "MCP Servers",
-  "chatInputBarMoreTooltip": "Add"
+  "chatInputBarMoreTooltip": "Add",
+  "mcpPageBackTooltip": "Back",
+  "mcpPageAddMcpTooltip": "Add MCP",
+  "mcpPageNoServers": "No MCP servers",
+  "mcpPageErrorDialogTitle": "Connection Error",
+  "mcpPageErrorNoDetails": "No details",
+  "mcpPageClose": "Close",
+  "mcpPageReconnect": "Reconnect",
+  "mcpPageStatusConnected": "Connected",
+  "mcpPageStatusConnecting": "Connecting…",
+  "mcpPageStatusDisconnected": "Disconnected",
+  "mcpPageStatusDisabled": "Disabled",
+  "mcpPageToolsCount": "Tools: {enabled}/{total}",
+  "@mcpPageToolsCount": {
+    "placeholders": {
+      "enabled": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "mcpPageConnectionFailed": "Connection failed",
+  "mcpPageDetails": "Details",
+  "mcpPageDelete": "Delete",
+  "mcpPageConfirmDeleteTitle": "Confirm Delete",
+  "mcpPageConfirmDeleteContent": "This can be undone via Undo. Delete?",
+  "mcpPageServerDeleted": "Server deleted",
+  "mcpPageUndo": "Undo",
+  "mcpPageCancel": "Cancel"
 }

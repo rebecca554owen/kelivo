@@ -1043,4 +1043,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarMoreTooltip => 'Add';
+
+  @override
+  String get mcpPageBackTooltip => 'Back';
+
+  @override
+  String get mcpPageAddMcpTooltip => 'Add MCP';
+
+  @override
+  String get mcpPageNoServers => 'No MCP servers';
+
+  @override
+  String get mcpPageErrorDialogTitle => 'Connection Error';
+
+  @override
+  String get mcpPageErrorNoDetails => 'No details';
+
+  @override
+  String get mcpPageClose => 'Close';
+
+  @override
+  String get mcpPageReconnect => 'Reconnect';
+
+  @override
+  String get mcpPageStatusConnected => 'Connected';
+
+  @override
+  String get mcpPageStatusConnecting => 'Connecting…';
+
+  @override
+  String get mcpPageStatusDisconnected => 'Disconnected';
+
+  @override
+  String get mcpPageStatusDisabled => 'Disabled';
+
+  @override
+  String mcpPageToolsCount(int enabled, int total) {
+    return 'Tools: $enabled/$total';
+  }
+
+  @override
+  String get mcpPageConnectionFailed => 'Connection failed';
+
+  @override
+  String get mcpPageDetails => 'Details';
+
+  @override
+  String get mcpPageDelete => 'Delete';
+
+  @override
+  String get mcpPageConfirmDeleteTitle => 'Confirm Delete';
+
+  @override
+  String get mcpPageConfirmDeleteContent =>
+      'This can be undone via Undo. Delete?';
+
+  @override
+  String get mcpPageServerDeleted => 'Server deleted';
+
+  @override
+  String get mcpPageUndo => 'Undo';
+
+  @override
+  String get mcpPageCancel => 'Cancel';
 }

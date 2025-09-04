@@ -5,6 +5,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../theme/design_tokens.dart';
 import '../widgets/mcp_server_edit_sheet.dart';
+import '../../../l10n/app_localizations.dart';
 
 class McpPage extends StatelessWidget {
   const McpPage({super.key});
@@ -26,7 +27,7 @@ class McpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final mcp = context.watch<McpProvider>();
     final servers = mcp.servers.toList();
 
@@ -42,7 +43,7 @@ class McpPage extends StatelessWidget {
 
     Future<void> _showErrorDetails(String serverId, String? message, String name) async {
       final cs = Theme.of(context).colorScheme;
-      final zh = Localizations.localeOf(context).languageCode == 'zh';
+      final l10n = AppLocalizations.of(context)!;
       await showModalBottomSheet<void>(
         context: context,
         backgroundColor: cs.surface,
@@ -57,7 +58,7 @@ class McpPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(zh ? '连接错误' : 'Connection Error', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(l10n.mcpPageErrorDialogTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
                   Text(name, style: TextStyle(color: cs.onSurface.withOpacity(0.7))),
                   const SizedBox(height: 12),
@@ -69,7 +70,7 @@ class McpPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
                     ),
-                    child: Text(message?.isNotEmpty == true ? message! : (zh ? '未提供错误详情' : 'No details')),
+                    child: Text(message?.isNotEmpty == true ? message! : l10n.mcpPageErrorNoDetails),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -78,7 +79,7 @@ class McpPage extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: () => Navigator.of(ctx).maybePop(),
                           icon: Icon(Lucide.X, size: 16, color: cs.primary),
-                          label: Text(zh ? '关闭' : 'Close', style: TextStyle(color: cs.primary)),
+                          label: Text(l10n.mcpPageClose, style: TextStyle(color: cs.primary)),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(44),
                             backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -97,7 +98,7 @@ class McpPage extends StatelessWidget {
                             if (context.mounted) Navigator.of(ctx).pop();
                           },
                           icon: const Icon(Lucide.RefreshCw, size: 18),
-                          label: Text(zh ? '重新连接' : 'Reconnect'),
+                          label: Text(l10n.mcpPageReconnect),
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size.fromHeight(44),
                             backgroundColor: cs.primary,
@@ -122,13 +123,13 @@ class McpPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.mcpPageBackTooltip,
         ),
         title: const Text('MCP'),
         actions: [
           IconButton(
             icon: Icon(Lucide.Plus, color: cs.onSurface),
-            tooltip: zh ? '添加 MCP' : 'Add MCP',
+            tooltip: l10n.mcpPageAddMcpTooltip,
             onPressed: () async {
               await showMcpServerEditSheet(context);
             },
@@ -138,7 +139,7 @@ class McpPage extends StatelessWidget {
       body: servers.isEmpty
           ? Center(
               child: Text(
-                zh ? '暂无 MCP 服务器' : 'No MCP servers',
+                l10n.mcpPageNoServers,
                 style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
               ),
             )
@@ -241,14 +242,14 @@ class McpPage extends StatelessWidget {
                                     runSpacing: 6,
                                     children: [
                                       tagStyled(st == McpStatus.connected
-                                          ? (zh ? '已连接' : 'Connected')
-                                          : (st == McpStatus.connecting ? (zh ? '连接中…' : 'Connecting…') : (zh ? '未连接' : 'Disconnected')),
+                                          ? l10n.mcpPageStatusConnected
+                                          : (st == McpStatus.connecting ? l10n.mcpPageStatusConnecting : l10n.mcpPageStatusDisconnected),
                                           color: st == McpStatus.connected
                                               ? Colors.green
                                               : (st == McpStatus.connecting ? cs.primary : Colors.redAccent)),
                                       tagStyled(s.transport == McpTransportType.sse ? 'SSE' : 'HTTP'),
-                                      tagStyled(zh ? '工具: ${s.tools.where((t) => t.enabled).length}/${s.tools.length}' : 'Tools: ${s.tools.where((t) => t.enabled).length}/${s.tools.length}'),
-                                      if (!s.enabled) tagStyled(zh ? '已禁用' : 'Disabled', color: cs.onSurface.withOpacity(0.7)),
+                                      tagStyled(l10n.mcpPageToolsCount(s.tools.where((t) => t.enabled).length, s.tools.length)),
+                                      if (!s.enabled) tagStyled(l10n.mcpPageStatusDisabled, color: cs.onSurface.withOpacity(0.7)),
                                     ],
                                   ),
                                   if (st == McpStatus.error && (err?.isNotEmpty ?? false)) ...[
@@ -259,13 +260,13 @@ class McpPage extends StatelessWidget {
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            zh ? '连接失败' : 'Connection failed',
+                                            l10n.mcpPageConnectionFailed,
                                             style: const TextStyle(fontSize: 12, color: Colors.red),
                                           ),
                                         ),
                                         TextButton(
                                           onPressed: () => _showErrorDetails(s.id, err, s.name),
-                                          child: Text(zh ? '详情' : 'Details'),
+                                          child: Text(l10n.mcpPageDetails),
                                         ),
                                       ],
                                     ),
@@ -308,7 +309,7 @@ class McpPage extends StatelessWidget {
                                 children: [
                                   Icon(Lucide.Trash2, color: cs.error, size: 18),
                                   const SizedBox(width: 6),
-                                  Text(zh ? '删除' : 'Delete', style: TextStyle(color: cs.error, fontWeight: FontWeight.w700)),
+                                  Text(l10n.mcpPageDelete, style: TextStyle(color: cs.error, fontWeight: FontWeight.w700)),
                                 ],
                               ),
                             ),
@@ -318,11 +319,11 @@ class McpPage extends StatelessWidget {
                               context: context,
                               builder: (dctx) => AlertDialog(
                                 backgroundColor: cs.surface,
-                                title: Text(zh ? '确认删除' : 'Confirm Delete'),
-                                content: Text(zh ? '删除后可通过撤销恢复。是否删除？' : 'This can be undone via Undo. Delete?'),
+                                title: Text(l10n.mcpPageConfirmDeleteTitle),
+                                content: Text(l10n.mcpPageConfirmDeleteContent),
                                 actions: [
-                                  TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: Text(zh ? '取消' : 'Cancel')),
-                                  TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: Text(zh ? '删除' : 'Delete')),
+                                  TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: Text(l10n.mcpPageCancel)),
+                                  TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: Text(l10n.mcpPageDelete)),
                                 ],
                               ),
                             );
@@ -332,9 +333,9 @@ class McpPage extends StatelessWidget {
                             await prov.removeServer(s.id);
                             if (!context.mounted) return;
                             final snack = SnackBar(
-                              content: Text(zh ? '已删除服务器' : 'Server deleted'),
+                              content: Text(l10n.mcpPageServerDeleted),
                               action: SnackBarAction(
-                                label: zh ? '撤销' : 'Undo',
+                                label: l10n.mcpPageUndo,
                                 onPressed: () async {
                                   if (prev == null) return;
                                   final newId = await prov.addServer(
