@@ -1106,4 +1106,91 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mcpPageCancel => 'Cancel';
+
+  @override
+  String get mcpConversationSheetTitle => 'MCP Servers';
+
+  @override
+  String get mcpConversationSheetSubtitle =>
+      'Select servers enabled for this conversation';
+
+  @override
+  String get mcpConversationSheetSelectAll => 'Select All';
+
+  @override
+  String get mcpConversationSheetClearAll => 'Clear';
+
+  @override
+  String get mcpConversationSheetNoRunning => 'No running MCP servers';
+
+  @override
+  String get mcpConversationSheetConnected => 'Connected';
+
+  @override
+  String mcpConversationSheetToolsCount(int enabled, int total) {
+    return 'Tools: $enabled/$total';
+  }
+
+  @override
+  String get mcpServerEditSheetEnabledLabel => 'Enabled';
+
+  @override
+  String get mcpServerEditSheetNameLabel => 'Name';
+
+  @override
+  String get mcpServerEditSheetTransportLabel => 'Transport';
+
+  @override
+  String get mcpServerEditSheetSseRetryHint => 'If SSE fails, try a few times';
+
+  @override
+  String get mcpServerEditSheetUrlLabel => 'Server URL';
+
+  @override
+  String get mcpServerEditSheetCustomHeadersTitle => 'Custom Headers';
+
+  @override
+  String get mcpServerEditSheetHeaderNameLabel => 'Header Name';
+
+  @override
+  String get mcpServerEditSheetHeaderNameHint => 'e.g. Authorization';
+
+  @override
+  String get mcpServerEditSheetHeaderValueLabel => 'Header Value';
+
+  @override
+  String get mcpServerEditSheetHeaderValueHint => 'e.g. Bearer xxxxxx';
+
+  @override
+  String get mcpServerEditSheetRemoveHeaderTooltip => 'Remove';
+
+  @override
+  String get mcpServerEditSheetAddHeader => 'Add Header';
+
+  @override
+  String get mcpServerEditSheetTitleEdit => 'Edit MCP';
+
+  @override
+  String get mcpServerEditSheetTitleAdd => 'Add MCP';
+
+  @override
+  String get mcpServerEditSheetSyncToolsTooltip => 'Sync Tools';
+
+  @override
+  String get mcpServerEditSheetTabBasic => 'Basic';
+
+  @override
+  String get mcpServerEditSheetTabTools => 'Tools';
+
+  @override
+  String get mcpServerEditSheetNoToolsHint => 'No tools, tap refresh to sync';
+
+  @override
+  String get mcpServerEditSheetCancel => 'Cancel';
+
+  @override
+  String get mcpServerEditSheetSave => 'Save';
+
+  @override
+  String get mcpServerEditSheetUrlRequired => 'Please enter server URL';
 }

@@ -4,6 +4,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../theme/design_tokens.dart';
+import '../../../l10n/app_localizations.dart';
 
 Future<void> showConversationMcpSheet(BuildContext context, {required String conversationId}) async {
   final cs = Theme.of(context).colorScheme;
@@ -25,7 +26,7 @@ class _ConversationMcpSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final mcp = context.watch<McpProvider>();
     final chat = context.watch<ChatService>();
 
@@ -69,15 +70,9 @@ class _ConversationMcpSheet extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          zh ? 'MCP服务器' : 'MCP Servers',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                        ),
+                        Text(l10n.mcpConversationSheetTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 2),
-                        Text(
-                          zh ? '选择在此对话中启用的服务' : 'Select servers enabled for this conversation',
-                          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
-                        ),
+                        Text(l10n.mcpConversationSheetSubtitle, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
                       ],
                     ),
                   ),
@@ -88,7 +83,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                         await context.read<ChatService>().setConversationMcpServers(conversationId, ids);
                       },
                       icon: Icon(Lucide.Check, size: 16, color: cs.primary),
-                      label: Text(zh ? '全选' : 'Select All'),
+                      label: Text(l10n.mcpConversationSheetSelectAll),
                     ),
                     const SizedBox(width: 4),
                     TextButton.icon(
@@ -96,7 +91,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                         await context.read<ChatService>().setConversationMcpServers(conversationId, const <String>[]);
                       },
                       icon: Icon(Lucide.X, size: 16, color: cs.primary),
-                      label: Text(zh ? '全不选' : 'Clear'),
+                      label: Text(l10n.mcpConversationSheetClearAll),
                     ),
                   ],
                 ],
@@ -108,10 +103,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: servers.isEmpty
                     ? Center(
-                        child: Text(
-                          zh ? '暂无已启动的 MCP 服务器' : 'No running MCP servers',
-                          style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
-                        ),
+                        child: Text(l10n.mcpConversationSheetNoRunning, style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
                       )
                     : ListView.separated(
                         controller: controller,
@@ -178,8 +170,8 @@ class _ConversationMcpSheet extends StatelessWidget {
                                                   spacing: 6,
                                                   runSpacing: 6,
                                                   children: [
-                                                    tag(zh ? '已连接' : 'Connected'),
-                                                    tag(zh ? '工具: $enabledTools/${tools.length}' : 'Tools: $enabledTools/${tools.length}'),
+                                                    tag(l10n.mcpConversationSheetConnected),
+                                                    tag(l10n.mcpConversationSheetToolsCount(enabledTools, tools.length)),
                                                     tag(s.transport == McpTransportType.sse ? 'SSE' : 'HTTP'),
                                                   ],
                                                 ),

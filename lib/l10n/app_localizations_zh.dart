@@ -1076,4 +1076,90 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mcpPageCancel => '取消';
+
+  @override
+  String get mcpConversationSheetTitle => 'MCP服务器';
+
+  @override
+  String get mcpConversationSheetSubtitle => '选择在此助手中启用的服务';
+
+  @override
+  String get mcpConversationSheetSelectAll => '全选';
+
+  @override
+  String get mcpConversationSheetClearAll => '全不选';
+
+  @override
+  String get mcpConversationSheetNoRunning => '暂无已启动的 MCP 服务器';
+
+  @override
+  String get mcpConversationSheetConnected => '已连接';
+
+  @override
+  String mcpConversationSheetToolsCount(int enabled, int total) {
+    return '工具: $enabled/$total';
+  }
+
+  @override
+  String get mcpServerEditSheetEnabledLabel => '是否启用';
+
+  @override
+  String get mcpServerEditSheetNameLabel => '名称';
+
+  @override
+  String get mcpServerEditSheetTransportLabel => '传输类型';
+
+  @override
+  String get mcpServerEditSheetSseRetryHint => '如果SSE连接失败，请多试几次';
+
+  @override
+  String get mcpServerEditSheetUrlLabel => '服务器地址';
+
+  @override
+  String get mcpServerEditSheetCustomHeadersTitle => '自定义请求头';
+
+  @override
+  String get mcpServerEditSheetHeaderNameLabel => '请求头名称';
+
+  @override
+  String get mcpServerEditSheetHeaderNameHint => '如 Authorization';
+
+  @override
+  String get mcpServerEditSheetHeaderValueLabel => '请求头值';
+
+  @override
+  String get mcpServerEditSheetHeaderValueHint => '如 Bearer xxxxxx';
+
+  @override
+  String get mcpServerEditSheetRemoveHeaderTooltip => '删除';
+
+  @override
+  String get mcpServerEditSheetAddHeader => '添加请求头';
+
+  @override
+  String get mcpServerEditSheetTitleEdit => '编辑 MCP';
+
+  @override
+  String get mcpServerEditSheetTitleAdd => '添加 MCP';
+
+  @override
+  String get mcpServerEditSheetSyncToolsTooltip => '同步工具';
+
+  @override
+  String get mcpServerEditSheetTabBasic => '基础设置';
+
+  @override
+  String get mcpServerEditSheetTabTools => '工具';
+
+  @override
+  String get mcpServerEditSheetNoToolsHint => '暂无工具，点击上方同步';
+
+  @override
+  String get mcpServerEditSheetCancel => '取消';
+
+  @override
+  String get mcpServerEditSheetSave => '保存';
+
+  @override
+  String get mcpServerEditSheetUrlRequired => '请输入服务器地址';
 }

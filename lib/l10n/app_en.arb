@@ -476,5 +476,40 @@
   "mcpPageConfirmDeleteContent": "This can be undone via Undo. Delete?",
   "mcpPageServerDeleted": "Server deleted",
   "mcpPageUndo": "Undo",
-  "mcpPageCancel": "Cancel"
+  "mcpPageCancel": "Cancel",
+  "mcpConversationSheetTitle": "MCP Servers",
+  "mcpConversationSheetSubtitle": "Select servers enabled for this conversation",
+  "mcpConversationSheetSelectAll": "Select All",
+  "mcpConversationSheetClearAll": "Clear",
+  "mcpConversationSheetNoRunning": "No running MCP servers",
+  "mcpConversationSheetConnected": "Connected",
+  "mcpConversationSheetToolsCount": "Tools: {enabled}/{total}",
+  "@mcpConversationSheetToolsCount": {
+    "placeholders": {
+      "enabled": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
+  ,
+  "mcpServerEditSheetEnabledLabel": "Enabled",
+  "mcpServerEditSheetNameLabel": "Name",
+  "mcpServerEditSheetTransportLabel": "Transport",
+  "mcpServerEditSheetSseRetryHint": "If SSE fails, try a few times",
+  "mcpServerEditSheetUrlLabel": "Server URL",
+  "mcpServerEditSheetCustomHeadersTitle": "Custom Headers",
+  "mcpServerEditSheetHeaderNameLabel": "Header Name",
+  "mcpServerEditSheetHeaderNameHint": "e.g. Authorization",
+  "mcpServerEditSheetHeaderValueLabel": "Header Value",
+  "mcpServerEditSheetHeaderValueHint": "e.g. Bearer xxxxxx",
+  "mcpServerEditSheetRemoveHeaderTooltip": "Remove",
+  "mcpServerEditSheetAddHeader": "Add Header",
+  "mcpServerEditSheetTitleEdit": "Edit MCP",
+  "mcpServerEditSheetTitleAdd": "Add MCP",
+  "mcpServerEditSheetSyncToolsTooltip": "Sync Tools",
+  "mcpServerEditSheetTabBasic": "Basic",
+  "mcpServerEditSheetTabTools": "Tools",
+  "mcpServerEditSheetNoToolsHint": "No tools, tap refresh to sync",
+  "mcpServerEditSheetCancel": "Cancel",
+  "mcpServerEditSheetSave": "Save",
+  "mcpServerEditSheetUrlRequired": "Please enter server URL"
 }

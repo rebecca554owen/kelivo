@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
+import '../../../l10n/app_localizations.dart';
 
 class _HeaderEntry {
   final TextEditingController key;
@@ -152,31 +153,28 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
   }
 
   Widget _basicForm() {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _switchTile(label: zh ? '是否启用' : 'Enabled', value: _enabled, onChanged: (v) => setState(() => _enabled = v)),
+        _switchTile(label: l10n.mcpServerEditSheetEnabledLabel, value: _enabled, onChanged: (v) => setState(() => _enabled = v)),
         const SizedBox(height: 10),
-        _inputRow(label: zh ? '名称' : 'Name', controller: _nameCtrl, hint: 'My MCP'),
+        _inputRow(label: l10n.mcpServerEditSheetNameLabel, controller: _nameCtrl, hint: 'My MCP'),
         const SizedBox(height: 10),
-        Text(zh ? '传输类型' : 'Transport', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+        Text(l10n.mcpServerEditSheetTransportLabel, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         _transportPicker(),
         const SizedBox(height: 10),
         if (_transport == McpTransportType.sse) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              zh ? '如果SSE连接失败，请多试几次' : 'If SSE fails, try a few times',
-              style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
-            ),
+            child: Text(l10n.mcpServerEditSheetSseRetryHint, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
           ),
         ],
-        _inputRow(label: zh ? '服务器地址' : 'Server URL', controller: _urlCtrl, hint: _transport == McpTransportType.sse ? 'http://localhost:3000/sse' : 'http://localhost:3000'),
+        _inputRow(label: l10n.mcpServerEditSheetUrlLabel, controller: _urlCtrl, hint: _transport == McpTransportType.sse ? 'http://localhost:3000/sse' : 'http://localhost:3000'),
         const SizedBox(height: 16),
-        Text(zh ? '自定义请求头' : 'Custom Headers', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(l10n.mcpServerEditSheetCustomHeadersTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         _headersEditor(),
       ],
@@ -185,7 +183,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
 
   Widget _headersEditor() {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -201,13 +199,13 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _inputRow(label: zh ? '请求头名称' : 'Header Name', controller: _headers[i].key, hint: zh ? '如 Authorization' : 'e.g. Authorization'),
+                _inputRow(label: l10n.mcpServerEditSheetHeaderNameLabel, controller: _headers[i].key, hint: l10n.mcpServerEditSheetHeaderNameHint),
                 const SizedBox(height: 10),
-                _inputRow(label: zh ? '请求头值' : 'Header Value', controller: _headers[i].value, hint: zh ? '如 Bearer xxxxxx' : 'e.g. Bearer xxxxxx'),
+                _inputRow(label: l10n.mcpServerEditSheetHeaderValueLabel, controller: _headers[i].value, hint: l10n.mcpServerEditSheetHeaderValueHint),
                 Align(
                   alignment: Alignment.centerRight,
                   child: IconButton(
-                    tooltip: zh ? '删除' : 'Remove',
+                    tooltip: l10n.mcpServerEditSheetRemoveHeaderTooltip,
                     icon: Icon(Lucide.Trash, color: cs.error),
                     onPressed: () => setState(() => _headers.removeAt(i)),
                   ),
@@ -235,10 +233,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                   children: [
                     Icon(Lucide.Plus, size: 16, color: cs.primary),
                     const SizedBox(width: 6),
-                    Text(
-                      zh ? '添加请求头' : 'Add Header',
-                      style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w600),
-                    ),
+                    Text(l10n.mcpServerEditSheetAddHeader, style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -254,7 +249,8 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
     final name = _nameCtrl.text.trim().isEmpty ? 'MCP' : _nameCtrl.text.trim();
     final url = _urlCtrl.text.trim();
     if (url.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入服务器地址')));
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.mcpServerEditSheetUrlRequired)));
       return;
     }
     final headers = <String, String>{
@@ -273,7 +269,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final mcp = context.watch<McpProvider>();
     final server = isEdit ? mcp.getById(widget.serverId!) : null;
 
@@ -302,16 +298,11 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        isEdit ? (zh ? '编辑 MCP' : 'Edit MCP') : (zh ? '添加 MCP' : 'Add MCP'),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                    Expanded(child: Text(isEdit ? l10n.mcpServerEditSheetTitleEdit : l10n.mcpServerEditSheetTitleAdd, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
                     if (isEdit)
                       IconButton(
                         onPressed: () => mcp.refreshTools(widget.serverId!),
-                        tooltip: zh ? '同步工具' : 'Sync Tools',
+                        tooltip: l10n.mcpServerEditSheetSyncToolsTooltip,
                         icon: Icon(Lucide.RefreshCw, color: cs.primary),
                       ),
                   ],
@@ -335,8 +326,8 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                       dividerColor: Colors.transparent,
                       indicatorSize: TabBarIndicatorSize.tab,
                       tabs: [
-                        Tab(text: zh ? '基础设置' : 'Basic'),
-                        Tab(text: zh ? '工具' : 'Tools'),
+                        Tab(text: l10n.mcpServerEditSheetTabBasic),
+                        Tab(text: l10n.mcpServerEditSheetTabTools),
                       ],
                     ),
                   ),
@@ -364,8 +355,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 20),
                                   child: Center(
-                                    child: Text(zh ? '暂无工具，点击上方同步' : 'No tools, tap refresh to sync',
-                                        style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+                                    child: Text(l10n.mcpServerEditSheetNoToolsHint, style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
                                   ),
                                 );
                               }
@@ -448,7 +438,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                           side: BorderSide(color: cs.primary.withOpacity(0.5)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: Text(zh ? '取消' : 'Cancel', style: TextStyle(color: cs.primary)),
+                        child: Text(l10n.mcpServerEditSheetCancel, style: TextStyle(color: cs.primary)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -462,7 +452,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
-                        label: Text(zh ? '保存' : 'Save'),
+                        label: Text(l10n.mcpServerEditSheetSave),
                       ),
                     ),
                   ],

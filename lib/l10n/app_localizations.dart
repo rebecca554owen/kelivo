@@ -2149,6 +2149,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get mcpPageCancel;
+
+  /// No description provided for @mcpConversationSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Servers'**
+  String get mcpConversationSheetTitle;
+
+  /// No description provided for @mcpConversationSheetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select servers enabled for this conversation'**
+  String get mcpConversationSheetSubtitle;
+
+  /// No description provided for @mcpConversationSheetSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get mcpConversationSheetSelectAll;
+
+  /// No description provided for @mcpConversationSheetClearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get mcpConversationSheetClearAll;
+
+  /// No description provided for @mcpConversationSheetNoRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'No running MCP servers'**
+  String get mcpConversationSheetNoRunning;
+
+  /// No description provided for @mcpConversationSheetConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get mcpConversationSheetConnected;
+
+  /// No description provided for @mcpConversationSheetToolsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools: {enabled}/{total}'**
+  String mcpConversationSheetToolsCount(int enabled, int total);
+
+  /// No description provided for @mcpServerEditSheetEnabledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get mcpServerEditSheetEnabledLabel;
+
+  /// No description provided for @mcpServerEditSheetNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get mcpServerEditSheetNameLabel;
+
+  /// No description provided for @mcpServerEditSheetTransportLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transport'**
+  String get mcpServerEditSheetTransportLabel;
+
+  /// No description provided for @mcpServerEditSheetSseRetryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If SSE fails, try a few times'**
+  String get mcpServerEditSheetSseRetryHint;
+
+  /// No description provided for @mcpServerEditSheetUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL'**
+  String get mcpServerEditSheetUrlLabel;
+
+  /// No description provided for @mcpServerEditSheetCustomHeadersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Headers'**
+  String get mcpServerEditSheetCustomHeadersTitle;
+
+  /// No description provided for @mcpServerEditSheetHeaderNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Name'**
+  String get mcpServerEditSheetHeaderNameLabel;
+
+  /// No description provided for @mcpServerEditSheetHeaderNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Authorization'**
+  String get mcpServerEditSheetHeaderNameHint;
+
+  /// No description provided for @mcpServerEditSheetHeaderValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Value'**
+  String get mcpServerEditSheetHeaderValueLabel;
+
+  /// No description provided for @mcpServerEditSheetHeaderValueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Bearer xxxxxx'**
+  String get mcpServerEditSheetHeaderValueHint;
+
+  /// No description provided for @mcpServerEditSheetRemoveHeaderTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get mcpServerEditSheetRemoveHeaderTooltip;
+
+  /// No description provided for @mcpServerEditSheetAddHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Header'**
+  String get mcpServerEditSheetAddHeader;
+
+  /// No description provided for @mcpServerEditSheetTitleEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit MCP'**
+  String get mcpServerEditSheetTitleEdit;
+
+  /// No description provided for @mcpServerEditSheetTitleAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add MCP'**
+  String get mcpServerEditSheetTitleAdd;
+
+  /// No description provided for @mcpServerEditSheetSyncToolsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Tools'**
+  String get mcpServerEditSheetSyncToolsTooltip;
+
+  /// No description provided for @mcpServerEditSheetTabBasic.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get mcpServerEditSheetTabBasic;
+
+  /// No description provided for @mcpServerEditSheetTabTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools'**
+  String get mcpServerEditSheetTabTools;
+
+  /// No description provided for @mcpServerEditSheetNoToolsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No tools, tap refresh to sync'**
+  String get mcpServerEditSheetNoToolsHint;
+
+  /// No description provided for @mcpServerEditSheetCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mcpServerEditSheetCancel;
+
+  /// No description provided for @mcpServerEditSheetSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get mcpServerEditSheetSave;
+
+  /// No description provided for @mcpServerEditSheetUrlRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter server URL'**
+  String get mcpServerEditSheetUrlRequired;
 }
 
 class _AppLocalizationsDelegate
