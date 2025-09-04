@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/services/learning_mode_store.dart';
+import '../../../l10n/app_localizations.dart';
 
 class BottomToolsSheet extends StatelessWidget {
   const BottomToolsSheet({super.key, this.onCamera, this.onPhotos, this.onUpload, this.onClear, this.clearLabel});
@@ -12,12 +13,9 @@ class BottomToolsSheet extends StatelessWidget {
   final VoidCallback? onClear;
   final String? clearLabel;
 
-  String _t(BuildContext context, String zh, String en) {
-    return Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bg = Theme.of(context).colorScheme.surface;
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -81,19 +79,19 @@ class BottomToolsSheet extends StatelessWidget {
             children: [
               roundedAction(
                 icon: Lucide.Camera,
-                label: _t(context, '拍照', 'Camera'),
+                label: l10n.bottomToolsSheetCamera,
                 onTap: onCamera,
               ),
               const SizedBox(width: 12),
               roundedAction(
                 icon: Lucide.Image,
-                label: _t(context, '照片', 'Photos'),
+                label: l10n.bottomToolsSheetPhotos,
                 onTap: onPhotos,
               ),
               const SizedBox(width: 12),
               roundedAction(
                 icon: Lucide.Upload,
-                label: _t(context, '上传文件', 'Upload'),
+                label: l10n.bottomToolsSheetUpload,
                 onTap: onUpload,
               ),
             ],
@@ -118,7 +116,7 @@ class BottomToolsSheet extends StatelessWidget {
                   onClear?.call();
                 },
                 child: Center(
-                  child: Text(clearLabel ?? _t(context, '清空上下文', 'Clear Context'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  child: Text(clearLabel ?? l10n.bottomToolsSheetClearContext, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                 ),
               ),
             ),
@@ -156,9 +154,9 @@ class _LearningModeTileState extends State<_LearningModeTile> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
 
     return Container(
       width: double.infinity,
@@ -189,19 +187,19 @@ class _LearningModeTileState extends State<_LearningModeTile> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  zh ? '学习模式' : 'Learning Mode',
+                  l10n.bottomToolsSheetLearningMode,
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  zh ? '帮助你循序渐进地学习知识' : 'Help you learn step by step',
+                  l10n.bottomToolsSheetLearningModeDescription,
                   style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
                 ),
               ],
             ),
           ),
           IconButton(
-            tooltip: zh ? '设置提示词' : 'Configure prompt',
+            tooltip: l10n.bottomToolsSheetConfigurePrompt,
             onPressed: () => _showLearningPromptSheet(context),
             icon: Icon(Lucide.Settings, size: 20, color: cs.primary),
           ),
@@ -225,8 +223,8 @@ class _LearningModeTileState extends State<_LearningModeTile> {
   }
 
   Future<void> _showLearningPromptSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     final prompt = await LearningModeStore.getPrompt();
     final controller = TextEditingController(text: prompt);
     await showModalBottomSheet(
@@ -256,13 +254,13 @@ class _LearningModeTileState extends State<_LearningModeTile> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(zh ? '提示词' : 'Prompt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(l10n.bottomToolsSheetPrompt, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: controller,
                   maxLines: 10,
                   decoration: InputDecoration(
-                    hintText: zh ? '输入用于学习模式的提示词' : 'Enter prompt for learning mode',
+                    hintText: l10n.bottomToolsSheetPromptHint,
                     filled: true,
                     fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
@@ -278,7 +276,7 @@ class _LearningModeTileState extends State<_LearningModeTile> {
                         await LearningModeStore.resetPrompt();
                         controller.text = await LearningModeStore.getPrompt();
                       },
-                      child: Text(zh ? '重置为默认' : 'Reset to default'),
+                      child: Text(l10n.bottomToolsSheetResetDefault),
                     ),
                     const Spacer(),
                     FilledButton(
@@ -286,7 +284,7 @@ class _LearningModeTileState extends State<_LearningModeTile> {
                         await LearningModeStore.setPrompt(controller.text.trim());
                         if (ctx.mounted) Navigator.of(ctx).pop();
                       },
-                      child: Text(zh ? '保存' : 'Save'),
+                      child: Text(l10n.bottomToolsSheetSave),
                     ),
                   ],
                 ),

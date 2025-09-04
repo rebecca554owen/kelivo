@@ -1267,6 +1267,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copied all'**
   String get selectCopyPageCopiedAll;
+
+  /// No description provided for @bottomToolsSheetCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get bottomToolsSheetCamera;
+
+  /// No description provided for @bottomToolsSheetPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get bottomToolsSheetPhotos;
+
+  /// No description provided for @bottomToolsSheetUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get bottomToolsSheetUpload;
+
+  /// No description provided for @bottomToolsSheetClearContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Context'**
+  String get bottomToolsSheetClearContext;
+
+  /// No description provided for @bottomToolsSheetLearningMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Mode'**
+  String get bottomToolsSheetLearningMode;
+
+  /// No description provided for @bottomToolsSheetLearningModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Help you learn step by step'**
+  String get bottomToolsSheetLearningModeDescription;
+
+  /// No description provided for @bottomToolsSheetConfigurePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure prompt'**
+  String get bottomToolsSheetConfigurePrompt;
+
+  /// No description provided for @bottomToolsSheetPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt'**
+  String get bottomToolsSheetPrompt;
+
+  /// No description provided for @bottomToolsSheetPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter prompt for learning mode'**
+  String get bottomToolsSheetPromptHint;
+
+  /// No description provided for @bottomToolsSheetResetDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get bottomToolsSheetResetDefault;
+
+  /// No description provided for @bottomToolsSheetSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get bottomToolsSheetSave;
 }
 
 class _AppLocalizationsDelegate

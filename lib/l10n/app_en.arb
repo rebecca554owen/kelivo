@@ -223,5 +223,16 @@
   "messageEditPageHint": "Enter message…",
   "selectCopyPageTitle": "Select & Copy",
   "selectCopyPageCopyAll": "Copy All",
-  "selectCopyPageCopiedAll": "Copied all"
+  "selectCopyPageCopiedAll": "Copied all",
+  "bottomToolsSheetCamera": "Camera",
+  "bottomToolsSheetPhotos": "Photos",
+  "bottomToolsSheetUpload": "Upload",
+  "bottomToolsSheetClearContext": "Clear Context",
+  "bottomToolsSheetLearningMode": "Learning Mode",
+  "bottomToolsSheetLearningModeDescription": "Help you learn step by step",
+  "bottomToolsSheetConfigurePrompt": "Configure prompt",
+  "bottomToolsSheetPrompt": "Prompt",
+  "bottomToolsSheetPromptHint": "Enter prompt for learning mode",
+  "bottomToolsSheetResetDefault": "Reset to default",
+  "bottomToolsSheetSave": "Save"
 }

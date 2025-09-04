@@ -193,5 +193,16 @@
   "messageEditPageHint": "输入消息内容…",
   "selectCopyPageTitle": "选择复制",
   "selectCopyPageCopyAll": "复制全部",
-  "selectCopyPageCopiedAll": "已复制全部"
+  "selectCopyPageCopiedAll": "已复制全部",
+  "bottomToolsSheetCamera": "拍照",
+  "bottomToolsSheetPhotos": "照片",
+  "bottomToolsSheetUpload": "上传文件",
+  "bottomToolsSheetClearContext": "清空上下文",
+  "bottomToolsSheetLearningMode": "学习模式",
+  "bottomToolsSheetLearningModeDescription": "帮助你循序渐进地学习知识",
+  "bottomToolsSheetConfigurePrompt": "设置提示词",
+  "bottomToolsSheetPrompt": "提示词",
+  "bottomToolsSheetPromptHint": "输入用于学习模式的提示词",
+  "bottomToolsSheetResetDefault": "重置为默认",
+  "bottomToolsSheetSave": "保存"
 }

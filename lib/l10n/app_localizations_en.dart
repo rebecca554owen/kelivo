@@ -615,4 +615,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectCopyPageCopiedAll => 'Copied all';
+
+  @override
+  String get bottomToolsSheetCamera => 'Camera';
+
+  @override
+  String get bottomToolsSheetPhotos => 'Photos';
+
+  @override
+  String get bottomToolsSheetUpload => 'Upload';
+
+  @override
+  String get bottomToolsSheetClearContext => 'Clear Context';
+
+  @override
+  String get bottomToolsSheetLearningMode => 'Learning Mode';
+
+  @override
+  String get bottomToolsSheetLearningModeDescription =>
+      'Help you learn step by step';
+
+  @override
+  String get bottomToolsSheetConfigurePrompt => 'Configure prompt';
+
+  @override
+  String get bottomToolsSheetPrompt => 'Prompt';
+
+  @override
+  String get bottomToolsSheetPromptHint => 'Enter prompt for learning mode';
+
+  @override
+  String get bottomToolsSheetResetDefault => 'Reset to default';
+
+  @override
+  String get bottomToolsSheetSave => 'Save';
 }

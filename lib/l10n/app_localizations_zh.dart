@@ -601,4 +601,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get selectCopyPageCopiedAll => '已复制全部';
+
+  @override
+  String get bottomToolsSheetCamera => '拍照';
+
+  @override
+  String get bottomToolsSheetPhotos => '照片';
+
+  @override
+  String get bottomToolsSheetUpload => '上传文件';
+
+  @override
+  String get bottomToolsSheetClearContext => '清空上下文';
+
+  @override
+  String get bottomToolsSheetLearningMode => '学习模式';
+
+  @override
+  String get bottomToolsSheetLearningModeDescription => '帮助你循序渐进地学习知识';
+
+  @override
+  String get bottomToolsSheetConfigurePrompt => '设置提示词';
+
+  @override
+  String get bottomToolsSheetPrompt => '提示词';
+
+  @override
+  String get bottomToolsSheetPromptHint => '输入用于学习模式的提示词';
+
+  @override
+  String get bottomToolsSheetResetDefault => '重置为默认';
+
+  @override
+  String get bottomToolsSheetSave => '保存';
 }
