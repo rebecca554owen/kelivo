@@ -3445,6 +3445,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Password (optional)'**
   String get searchServicesEditDialogPasswordOptional;
+
+  /// No description provided for @searchSettingsSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Settings'**
+  String get searchSettingsSheetTitle;
+
+  /// No description provided for @searchSettingsSheetBuiltinSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in Search'**
+  String get searchSettingsSheetBuiltinSearchTitle;
+
+  /// No description provided for @searchSettingsSheetBuiltinSearchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable model\'s built-in search'**
+  String get searchSettingsSheetBuiltinSearchDescription;
+
+  /// No description provided for @searchSettingsSheetWebSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Web Search'**
+  String get searchSettingsSheetWebSearchTitle;
+
+  /// No description provided for @searchSettingsSheetWebSearchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable web search in chat'**
+  String get searchSettingsSheetWebSearchDescription;
+
+  /// No description provided for @searchSettingsSheetOpenSearchServicesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open search services'**
+  String get searchSettingsSheetOpenSearchServicesTooltip;
+
+  /// No description provided for @searchSettingsSheetNoServicesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No services. Add from Search Services.'**
+  String get searchSettingsSheetNoServicesMessage;
 }
 
 class _AppLocalizationsDelegate

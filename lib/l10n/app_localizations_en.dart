@@ -1785,4 +1785,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServicesEditDialogPasswordOptional => 'Password (optional)';
+
+  @override
+  String get searchSettingsSheetTitle => 'Search Settings';
+
+  @override
+  String get searchSettingsSheetBuiltinSearchTitle => 'Built-in Search';
+
+  @override
+  String get searchSettingsSheetBuiltinSearchDescription =>
+      'Enable model\'s built-in search';
+
+  @override
+  String get searchSettingsSheetWebSearchTitle => 'Web Search';
+
+  @override
+  String get searchSettingsSheetWebSearchDescription =>
+      'Enable web search in chat';
+
+  @override
+  String get searchSettingsSheetOpenSearchServicesTooltip =>
+      'Open search services';
+
+  @override
+  String get searchSettingsSheetNoServicesMessage =>
+      'No services. Add from Search Services.';
 }

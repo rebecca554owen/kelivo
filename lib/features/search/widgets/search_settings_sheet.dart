@@ -5,6 +5,7 @@ import '../../../core/services/search/search_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../pages/search_services_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../l10n/app_localizations.dart';
 
 Future<void> showSearchSettingsSheet(BuildContext context) async {
   await showModalBottomSheet(
@@ -39,15 +40,15 @@ class _SearchSettingsSheet extends StatelessWidget {
   }
 
   String? _statusOf(BuildContext context, SearchServiceOptions s) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     if (s is BingLocalOptions) return null;
-    if (s is TavilyOptions) return s.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (s is ExaOptions) return s.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (s is ZhipuOptions) return s.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (s is SearXNGOptions) return s.url.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 URL' : 'URL Required');
-    if (s is LinkUpOptions) return s.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (s is BraveOptions) return s.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (s is MetasoOptions) return s.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
+    if (s is TavilyOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is ExaOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is ZhipuOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is SearXNGOptions) return s.url.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageUrlRequiredStatus;
+    if (s is LinkUpOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is BraveOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is MetasoOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     return null;
   }
 
@@ -55,7 +56,7 @@ class _SearchSettingsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
     final services = settings.searchServices;
     final selected = settings.searchServiceSelected.clamp(0, services.isNotEmpty ? services.length - 1 : 0);
@@ -103,7 +104,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: Text(
-                    zh ? '搜索设置' : 'Search Settings',
+                    l10n.searchSettingsSheetTitle,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -131,10 +132,10 @@ class _SearchSettingsSheet extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(zh ? '模型内置搜索' : 'Built-in Search', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                Text(l10n.searchSettingsSheetBuiltinSearchTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                                 const SizedBox(height: 2),
                                 Text(
-                                  zh ? '是否启用模型内置的搜索功能' : "Enable model's built-in search",
+                                  l10n.searchSettingsSheetBuiltinSearchDescription,
                                   style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
                                 ),
                               ],
@@ -194,10 +195,10 @@ class _SearchSettingsSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(zh ? '网络搜索' : 'Web Search', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                              Text(l10n.searchSettingsSheetWebSearchTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                               const SizedBox(height: 2),
                               Text(
-                                zh ? '是否启用网页搜索' : 'Enable web search in chat',
+                                l10n.searchSettingsSheetWebSearchDescription,
                                 style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
                               ),
                             ],
@@ -206,7 +207,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                         // Settings button -> full search services page
                         // builtin has no settings icon; keep settings icon only for web search
                         IconButton(
-                          tooltip: zh ? '打开搜索服务设置' : 'Open search services',
+                          tooltip: l10n.searchSettingsSheetOpenSearchServicesTooltip,
                           icon: Icon(Lucide.Settings, size: 20),
                           onPressed: () {
                             Navigator.of(context).push(
@@ -246,15 +247,15 @@ class _SearchSettingsSheet extends StatelessWidget {
                       Color statusBg;
                       Color statusFg;
                       if (conn == true) {
-                        status = zh ? '已连接' : 'Connected';
+                        status = l10n.searchServicesPageConnectedStatus;
                         statusBg = Colors.green.withOpacity(0.12);
                         statusFg = Colors.green;
                       } else if (conn == false) {
-                        status = zh ? '连接失败' : 'Failed';
+                        status = l10n.searchServicesPageFailedStatus;
                         statusBg = Colors.orange.withOpacity(0.12);
                         statusFg = Colors.orange;
                       } else {
-                        status = zh ? '未测试' : 'Not tested';
+                        status = l10n.searchServicesPageNotTestedStatus;
                         statusBg = cs.onSurface.withOpacity(0.06);
                         statusFg = cs.onSurface.withOpacity(0.7);
                       }
@@ -269,7 +270,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                   ),
                 ] else if (!hasBuiltInSearch) ...[
                   Text(
-                    zh ? '暂无可用服务，请先在“搜索服务”中添加' : 'No services. Add from Search Services.',
+                    l10n.searchSettingsSheetNoServicesMessage,
                     style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
                   ),
                 ],

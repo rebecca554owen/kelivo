@@ -731,5 +731,12 @@
   "searchServicesEditDialogEnginesOptional": "Engines (optional)",
   "searchServicesEditDialogLanguageOptional": "Language (optional)",
   "searchServicesEditDialogUsernameOptional": "Username (optional)",
-  "searchServicesEditDialogPasswordOptional": "Password (optional)"
+  "searchServicesEditDialogPasswordOptional": "Password (optional)",
+  "searchSettingsSheetTitle": "Search Settings",
+  "searchSettingsSheetBuiltinSearchTitle": "Built-in Search",
+  "searchSettingsSheetBuiltinSearchDescription": "Enable model's built-in search",
+  "searchSettingsSheetWebSearchTitle": "Web Search",
+  "searchSettingsSheetWebSearchDescription": "Enable web search in chat",
+  "searchSettingsSheetOpenSearchServicesTooltip": "Open search services",
+  "searchSettingsSheetNoServicesMessage": "No services. Add from Search Services."
 }

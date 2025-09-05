@@ -1741,4 +1741,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchServicesEditDialogPasswordOptional => '密码（可选）';
+
+  @override
+  String get searchSettingsSheetTitle => '搜索设置';
+
+  @override
+  String get searchSettingsSheetBuiltinSearchTitle => '模型内置搜索';
+
+  @override
+  String get searchSettingsSheetBuiltinSearchDescription => '是否启用模型内置的搜索功能';
+
+  @override
+  String get searchSettingsSheetWebSearchTitle => '网络搜索';
+
+  @override
+  String get searchSettingsSheetWebSearchDescription => '是否启用网页搜索';
+
+  @override
+  String get searchSettingsSheetOpenSearchServicesTooltip => '打开搜索服务设置';
+
+  @override
+  String get searchSettingsSheetNoServicesMessage => '暂无可用服务，请先在\"搜索服务\"中添加';
 }
