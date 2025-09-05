@@ -100,16 +100,8 @@ class MyApp extends StatelessWidget {
                 title: 'Kelivo',
                 // App UI language from settings (defaults to device on first launch)
                 locale: settings.appLocale,
-                supportedLocales: const [
-                  Locale('zh', 'CN'),
-                  Locale('en', 'US'),
-                ],
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
                 theme: light,
                 darkTheme: dark,
                 themeMode: settings.themeMode,

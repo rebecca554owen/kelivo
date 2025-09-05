@@ -96,7 +96,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
             onChanged: (v) => context.read<SettingsProvider>().setShowMessageNavButtons(v),
           ),
           _SwitchTile(
-            icon: Lucide.Vibrate,
+            icon: Lucide.panelRight,
             title: l10n.displaySettingsPageHapticsOnSidebarTitle,
             subtitle: l10n.displaySettingsPageHapticsOnSidebarSubtitle,
             value: context.watch<SettingsProvider>().hapticsOnDrawer,
@@ -335,13 +335,13 @@ class _LanguageTile extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
 
     String labelForLocale(Locale l) {
-      switch (l.languageCode) {
-        case 'zh':
-          return l10n.displaySettingsPageLanguageChineseLabel;
-        case 'en':
-        default:
-          return l10n.displaySettingsPageLanguageEnglishLabel;
+      if (l.languageCode == 'zh') {
+        if ((l.scriptCode ?? '').toLowerCase() == 'hant') {
+          return l10n.languageDisplayTraditionalChinese;
+        }
+        return l10n.displaySettingsPageLanguageChineseLabel;
       }
+      return l10n.displaySettingsPageLanguageEnglishLabel;
     }
 
     return Padding(
@@ -422,6 +422,10 @@ class _LanguageTile extends StatelessWidget {
                 onTap: () => Navigator.of(ctx).pop('zh_CN'),
               ),
               ListTile(
+                title: Text(l10n.languageDisplayTraditionalChinese),
+                onTap: () => Navigator.of(ctx).pop('zh_Hant'),
+              ),
+              ListTile(
                 title: Text(l10n.displaySettingsPageLanguageEnglishLabel),
                 onTap: () => Navigator.of(ctx).pop('en_US'),
               ),
@@ -435,6 +439,9 @@ class _LanguageTile extends StatelessWidget {
     switch (selected) {
       case 'zh_CN':
         await context.read<SettingsProvider>().setAppLocale(const Locale('zh', 'CN'));
+        break;
+      case 'zh_Hant':
+        await context.read<SettingsProvider>().setAppLocale(const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'));
         break;
       case 'en_US':
       default:

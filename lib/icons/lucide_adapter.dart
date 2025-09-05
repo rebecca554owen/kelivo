@@ -92,5 +92,5 @@ class Lucide {
   static const IconData databaseBackup = lucide.LucideIcons.databaseBackup;
   static const IconData chevronDown = lucide.LucideIcons.chevronDown;
   static const IconData panelLeft = lucide.LucideIcons.panelLeft;
-  static const IconData alignStartHorizontal = lucide.LucideIcons.list;
+  static const IconData panelRight = lucide.LucideIcons.panelRight;
 }
