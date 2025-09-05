@@ -477,5 +477,17 @@
   "providerDetailPageSelectModelButton": "选择模型",
   "providerDetailPageChangeButton": "更换",
   "providerDetailPageTestingMessage": "正在测试…",
-  "providerDetailPageTestSuccessMessage": "测试成功"
+  "providerDetailPageTestSuccessMessage": "测试成功",
+  "providersPageTitle": "供应商",
+  "providersPageImportTooltip": "导入",
+  "providersPageAddTooltip": "新增",
+  "providersPageProviderAddedSnackbar": "已添加供应商",
+  "providersPageSiliconFlowName": "硅基流动",
+  "providersPageAliyunName": "阿里云千问",
+  "providersPageZhipuName": "智谱",
+  "providersPageByteDanceName": "火山引擎",
+  "providersPageEnabledStatus": "启用",
+  "providersPageDisabledStatus": "禁用",
+  "providersPageModelsCountSuffix": " models",
+  "providersPageModelsCountSingleSuffix": "个模型"
 }

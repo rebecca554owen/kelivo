@@ -638,5 +638,17 @@
   "providerDetailPageSelectModelButton": "Select Model",
   "providerDetailPageChangeButton": "Change",
   "providerDetailPageTestingMessage": "Testing…",
-  "providerDetailPageTestSuccessMessage": "Success"
+  "providerDetailPageTestSuccessMessage": "Success",
+  "providersPageTitle": "Providers",
+  "providersPageImportTooltip": "Import",
+  "providersPageAddTooltip": "Add",
+  "providersPageProviderAddedSnackbar": "Provider added",
+  "providersPageSiliconFlowName": "SiliconFlow",
+  "providersPageAliyunName": "Aliyun",
+  "providersPageZhipuName": "Zhipu AI",
+  "providersPageByteDanceName": "ByteDance",
+  "providersPageEnabledStatus": "Enabled",
+  "providersPageDisabledStatus": "Disabled",
+  "providersPageModelsCountSuffix": " models",
+  "providersPageModelsCountSingleSuffix": "models"
 }

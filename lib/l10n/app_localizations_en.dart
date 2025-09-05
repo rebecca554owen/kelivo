@@ -1540,4 +1540,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providerDetailPageTestSuccessMessage => 'Success';
+
+  @override
+  String get providersPageTitle => 'Providers';
+
+  @override
+  String get providersPageImportTooltip => 'Import';
+
+  @override
+  String get providersPageAddTooltip => 'Add';
+
+  @override
+  String get providersPageProviderAddedSnackbar => 'Provider added';
+
+  @override
+  String get providersPageSiliconFlowName => 'SiliconFlow';
+
+  @override
+  String get providersPageAliyunName => 'Aliyun';
+
+  @override
+  String get providersPageZhipuName => 'Zhipu AI';
+
+  @override
+  String get providersPageByteDanceName => 'ByteDance';
+
+  @override
+  String get providersPageEnabledStatus => 'Enabled';
+
+  @override
+  String get providersPageDisabledStatus => 'Disabled';
+
+  @override
+  String get providersPageModelsCountSuffix => ' models';
+
+  @override
+  String get providersPageModelsCountSingleSuffix => 'models';
 }

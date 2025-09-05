@@ -7,6 +7,7 @@ import '../widgets/add_provider_sheet.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -22,10 +23,10 @@ class _ProvidersPageState extends State<ProvidersPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
 
     // Base, fixed providers (recompute each build so dynamic additions reflect immediately)
-    final base = _providers(zh: zh);
+    final base = _providers(l10n: l10n);
 
     // Dynamic providers from settings
     final settings = context.watch<SettingsProvider>();
@@ -62,10 +63,10 @@ class _ProvidersPageState extends State<ProvidersPage> {
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: Text(zh ? '供应商' : 'Providers'),
+        title: Text(l10n.providersPageTitle),
         actions: [
           IconButton(
-            tooltip: zh ? '导入' : 'Import',
+            tooltip: l10n.providersPageImportTooltip,
             icon: Icon(Lucide.Import, color: cs.onSurface),
             onPressed: () async {
               await showImportProviderSheet(context);
@@ -74,14 +75,14 @@ class _ProvidersPageState extends State<ProvidersPage> {
             },
           ),
           IconButton(
-            tooltip: zh ? '新增' : 'Add',
+            tooltip: l10n.providersPageAddTooltip,
             icon: Icon(Lucide.Plus, color: cs.onSurface),
             onPressed: () async {
               final createdKey = await showAddProviderSheet(context);
               if (!mounted) return;
               if (createdKey != null && createdKey.isNotEmpty) {
                 setState(() {});
-                final msg = zh ? '已添加供应商' : 'Provider added';
+                final msg = l10n.providersPageProviderAddedSnackbar;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
               }
             },
@@ -137,14 +138,14 @@ class _ProvidersPageState extends State<ProvidersPage> {
     );
   }
 
-  List<_Provider> _providers({required bool zh}) => [
+  List<_Provider> _providers({required AppLocalizations l10n}) => [
         _p('OpenAI', 'OpenAI', enabled: true, models: 0),
         _p('Gemini', 'Gemini', enabled: true, models: 0),
-        _p(zh ? '硅基流动' : 'SiliconFlow', 'SiliconFlow', enabled: true, models: 0),
+        _p(l10n.providersPageSiliconFlowName, 'SiliconFlow', enabled: true, models: 0),
         _p('OpenRouter', 'OpenRouter', enabled: true, models: 0),
         _p('DeepSeek', 'DeepSeek', enabled: false, models: 0),
-        _p(zh ? '阿里云千问' : 'Aliyun', 'Aliyun', enabled: false, models: 0),
-        _p(zh ? '智谱' : 'Zhipu AI', 'Zhipu AI', enabled: false, models: 0),
+        _p(l10n.providersPageAliyunName, 'Aliyun', enabled: false, models: 0),
+        _p(l10n.providersPageZhipuName, 'Zhipu AI', enabled: false, models: 0),
         _p('Claude', 'Claude', enabled: false, models: 0),
         // _p(zh ? '腾讯混元' : 'Hunyuan', 'Hunyuan', enabled: false, models: 0),
         // _p('InternLM', 'InternLM', enabled: true, models: 0),
@@ -153,7 +154,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
         // _p('302.AI', '302.AI', enabled: false, models: 0),
         // _p(zh ? '阶跃星辰' : 'StepFun', 'StepFun', enabled: false, models: 0),
         // _p('MiniMax', 'MiniMax', enabled: true, models: 0),
-        _p(zh ? '火山引擎' : 'ByteDance', 'ByteDance', enabled: false, models: 0),
+        _p(l10n.providersPageByteDanceName, 'ByteDance', enabled: false, models: 0),
         // _p(zh ? '豆包' : 'Doubao', 'Doubao', enabled: true, models: 0),
         // _p(zh ? '阿里云' : 'Alibaba Cloud', 'Alibaba Cloud', enabled: true, models: 0),
         // _p('Meta', 'Meta', enabled: false, models: 0),
@@ -169,48 +170,6 @@ class _ProvidersPageState extends State<ProvidersPage> {
 
   _Provider _p(String name, String key, {required bool enabled, required int models}) =>
       _Provider(name: name, keyName: key, enabled: enabled, modelCount: models);
-
-  Future<void> _showImportSheet(BuildContext context) async {
-    final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Lucide.Camera, color: cs.onSurface),
-                title: Text(zh ? '扫码导入' : 'Scan to import'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(zh ? '扫描导入暂未实现' : 'Scan import not implemented')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Lucide.Image, color: cs.onSurface),
-                title: Text(zh ? '从相册选取' : 'Pick from gallery'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(zh ? '相册导入暂未实现' : 'Gallery import not implemented')),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
 class _ProviderCard extends StatelessWidget {
@@ -224,6 +183,7 @@ class _ProviderCard extends StatelessWidget {
     final cfg = settings.getProviderConfig(provider.keyName, defaultName: provider.name);
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final enabled = cfg.enabled;
     final bg = enabled
         ? (isDark ? Colors.white12 : const Color(0xFFF7F7F9))
@@ -273,18 +233,14 @@ class _ProviderCard extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: _Pill(
-                            text: (Localizations.localeOf(context).languageCode == 'zh')
-                                ? (enabled ? '启用' : '禁用')
-                                : (enabled ? 'Enabled' : 'Disabled'),
+                            text: enabled ? l10n.providersPageEnabledStatus : l10n.providersPageDisabledStatus,
                             bg: statusBg,
                             fg: statusFg,
                           ),
                         ),
                       ),
                       _Pill(
-                        text: (Localizations.localeOf(context).languageCode == 'zh')
-                            ? '${cfg.models.length}个模型'
-                            : '${cfg.models.length} models',
+                        text: '${cfg.models.length}${l10n.providersPageModelsCountSingleSuffix}',
                         bg: modelsBg,
                         fg: modelsFg,
                       ),

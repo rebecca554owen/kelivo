@@ -2971,6 +2971,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Success'**
   String get providerDetailPageTestSuccessMessage;
+
+  /// No description provided for @providersPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Providers'**
+  String get providersPageTitle;
+
+  /// No description provided for @providersPageImportTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get providersPageImportTooltip;
+
+  /// No description provided for @providersPageAddTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get providersPageAddTooltip;
+
+  /// No description provided for @providersPageProviderAddedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider added'**
+  String get providersPageProviderAddedSnackbar;
+
+  /// No description provided for @providersPageSiliconFlowName.
+  ///
+  /// In en, this message translates to:
+  /// **'SiliconFlow'**
+  String get providersPageSiliconFlowName;
+
+  /// No description provided for @providersPageAliyunName.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliyun'**
+  String get providersPageAliyunName;
+
+  /// No description provided for @providersPageZhipuName.
+  ///
+  /// In en, this message translates to:
+  /// **'Zhipu AI'**
+  String get providersPageZhipuName;
+
+  /// No description provided for @providersPageByteDanceName.
+  ///
+  /// In en, this message translates to:
+  /// **'ByteDance'**
+  String get providersPageByteDanceName;
+
+  /// No description provided for @providersPageEnabledStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get providersPageEnabledStatus;
+
+  /// No description provided for @providersPageDisabledStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get providersPageDisabledStatus;
+
+  /// No description provided for @providersPageModelsCountSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **' models'**
+  String get providersPageModelsCountSuffix;
+
+  /// No description provided for @providersPageModelsCountSingleSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'models'**
+  String get providersPageModelsCountSingleSuffix;
 }
 
 class _AppLocalizationsDelegate

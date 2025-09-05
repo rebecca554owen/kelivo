@@ -1498,4 +1498,40 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get providerDetailPageTestSuccessMessage => '测试成功';
+
+  @override
+  String get providersPageTitle => '供应商';
+
+  @override
+  String get providersPageImportTooltip => '导入';
+
+  @override
+  String get providersPageAddTooltip => '新增';
+
+  @override
+  String get providersPageProviderAddedSnackbar => '已添加供应商';
+
+  @override
+  String get providersPageSiliconFlowName => '硅基流动';
+
+  @override
+  String get providersPageAliyunName => '阿里云千问';
+
+  @override
+  String get providersPageZhipuName => '智谱';
+
+  @override
+  String get providersPageByteDanceName => '火山引擎';
+
+  @override
+  String get providersPageEnabledStatus => '启用';
+
+  @override
+  String get providersPageDisabledStatus => '禁用';
+
+  @override
+  String get providersPageModelsCountSuffix => ' models';
+
+  @override
+  String get providersPageModelsCountSingleSuffix => '个模型';
 }
