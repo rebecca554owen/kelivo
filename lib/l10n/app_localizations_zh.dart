@@ -2001,6 +2001,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsShare => 'Kelivo - 开源移动端AI助手';
 
   @override
+  String get searchProviderBingLocalDescription =>
+      '使用网络抓取工具获取必应搜索结果。无需 API 密钥，但可能不够稳定。';
+
+  @override
+  String get searchProviderBraveDescription => 'Brave 独立搜索引擎。注重隐私，无跟踪或画像。';
+
+  @override
+  String get searchProviderExaDescription => '具备语义理解的神经搜索引擎。适合研究与查找特定内容。';
+
+  @override
+  String get searchProviderLinkUpDescription =>
+      '提供来源可追溯答案的搜索 API，同时提供搜索结果与 AI 摘要。';
+
+  @override
+  String get searchProviderMetasoDescription => '秘塔中文搜索引擎。面向中文内容优化并提供 AI 能力。';
+
+  @override
+  String get searchProviderSearXNGDescription => '注重隐私的元搜索引擎。需自建实例，无跟踪。';
+
+  @override
+  String get searchProviderTavilyDescription =>
+      '为大型语言模型（LLMs）优化的 AI 搜索 API，提供高质量、相关的搜索结果。';
+
+  @override
+  String get searchProviderZhipuDescription =>
+      '智谱 AI 旗下中文 AI 搜索服务，针对中文内容与查询进行了优化。';
+
+  @override
   String get titleForLocale => '新对话';
 }
 
@@ -3998,6 +4026,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsShare => 'Kelivo - 開源行動端AI助理';
+
+  @override
+  String get searchProviderBingLocalDescription =>
+      '使用網路抓取工具取得 Bing 搜尋結果。無需 API 金鑰，但可能不夠穩定。';
+
+  @override
+  String get searchProviderBraveDescription => 'Brave 獨立搜尋引擎。注重隱私，無追蹤或建立個人檔案。';
+
+  @override
+  String get searchProviderExaDescription => '具備語義理解的神經搜尋引擎。適合研究與查找特定內容。';
+
+  @override
+  String get searchProviderLinkUpDescription =>
+      '提供來源可追溯答案的搜尋 API，同時提供搜尋結果與 AI 摘要。';
+
+  @override
+  String get searchProviderMetasoDescription => '秘塔中文搜尋引擎。針對中文內容優化並提供 AI 能力。';
+
+  @override
+  String get searchProviderSearXNGDescription => '重視隱私的元搜尋引擎。需自建實例，無追蹤。';
+
+  @override
+  String get searchProviderTavilyDescription =>
+      '為大型語言模型（LLM）優化的 AI 搜尋 API，提供高品質、相關的搜尋結果。';
+
+  @override
+  String get searchProviderZhipuDescription =>
+      '智譜 AI 旗下中文 AI 搜尋服務，針對中文內容與查詢進行優化。';
 
   @override
   String get titleForLocale => '新對話';

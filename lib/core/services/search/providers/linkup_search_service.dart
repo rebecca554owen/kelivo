@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class LinkUpSearchService extends SearchService<LinkUpOptions> {
@@ -9,11 +10,8 @@ class LinkUpSearchService extends SearchService<LinkUpOptions> {
   
   @override
   Widget description(BuildContext context) {
-    return const Text(
-      'Search API with sourced answers. '
-      'Provides both search results and AI-generated summaries.',
-      style: TextStyle(fontSize: 12),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.searchProviderLinkUpDescription, style: const TextStyle(fontSize: 12));
   }
   
   @override

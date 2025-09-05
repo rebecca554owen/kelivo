@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class MetasoSearchService extends SearchService<MetasoOptions> {
@@ -9,11 +10,8 @@ class MetasoSearchService extends SearchService<MetasoOptions> {
   
   @override
   Widget description(BuildContext context) {
-    return const Text(
-      'Chinese search engine by Metaso. '
-      'Optimized for Chinese content with AI capabilities.',
-      style: TextStyle(fontSize: 12),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.searchProviderMetasoDescription, style: const TextStyle(fontSize: 12));
   }
   
   @override

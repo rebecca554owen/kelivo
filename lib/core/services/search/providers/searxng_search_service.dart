@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class SearXNGSearchService extends SearchService<SearXNGOptions> {
@@ -9,11 +10,8 @@ class SearXNGSearchService extends SearchService<SearXNGOptions> {
   
   @override
   Widget description(BuildContext context) {
-    return const Text(
-      'Privacy-respecting metasearch engine. '
-      'Self-hosted instance required, no tracking.',
-      style: TextStyle(fontSize: 12),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.searchProviderSearXNGDescription, style: const TextStyle(fontSize: 12));
   }
   
   @override

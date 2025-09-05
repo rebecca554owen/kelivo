@@ -3934,6 +3934,54 @@ abstract class AppLocalizations {
   /// **'Kelivo - Open Source Mobile AI Assistant'**
   String get settingsShare;
 
+  /// No description provided for @searchProviderBingLocalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses web scraping to fetch Bing results. No API key required; may be unstable.'**
+  String get searchProviderBingLocalDescription;
+
+  /// No description provided for @searchProviderBraveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Independent search engine by Brave. Privacy-focused with no tracking or profiling.'**
+  String get searchProviderBraveDescription;
+
+  /// No description provided for @searchProviderExaDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Neural search with semantic understanding. Great for research and finding specific content.'**
+  String get searchProviderExaDescription;
+
+  /// No description provided for @searchProviderLinkUpDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Search API with sourced answers. Provides both results and AI-generated summaries.'**
+  String get searchProviderLinkUpDescription;
+
+  /// No description provided for @searchProviderMetasoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese search by Metaso. Optimized for Chinese content with AI capabilities.'**
+  String get searchProviderMetasoDescription;
+
+  /// No description provided for @searchProviderSearXNGDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy-respecting metasearch engine. Self-hosted instance required; no tracking.'**
+  String get searchProviderSearXNGDescription;
+
+  /// No description provided for @searchProviderTavilyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AI search API optimized for LLMs. Provides high-quality, relevant results.'**
+  String get searchProviderTavilyDescription;
+
+  /// No description provided for @searchProviderZhipuDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.'**
+  String get searchProviderZhipuDescription;
+
   /// No description provided for @titleForLocale.
   ///
   /// In en, this message translates to:

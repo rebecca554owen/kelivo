@@ -158,19 +158,11 @@ class SettingsProvider extends ChangeNotifier {
     _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
-    // Load app locale; default to device locale on first launch
+    // Load app locale; default to follow system on first launch
     _appLocaleTag = prefs.getString(_appLocaleKey);
     if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
-      try {
-        final dev = WidgetsBinding.instance.platformDispatcher.locale;
-        final tag = _mapDeviceLocaleToSupportedTag(dev);
-        _appLocaleTag = tag;
-        await prefs.setString(_appLocaleKey, tag);
-      } catch (_) {
-        // Fallback to English US
-        _appLocaleTag = 'en_US';
-        await prefs.setString(_appLocaleKey, 'en_US');
-      }
+      _appLocaleTag = 'system';
+      await prefs.setString(_appLocaleKey, 'system');
     }
     
     // load search settings
@@ -202,8 +194,10 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== App locale (UI language) =====
-  String? _appLocaleTag; // e.g., 'zh_CN', 'en_US'
+  String? _appLocaleTag; // 'system', 'zh_CN', 'zh_Hant', 'en_US'
   Locale get appLocale => _parseLocaleTag(_appLocaleTag ?? 'en_US');
+  bool get isFollowingSystemLocale => (_appLocaleTag == null) || (_appLocaleTag == 'system');
+  Locale? get appLocaleForMaterialApp => isFollowingSystemLocale ? null : appLocale;
   Future<void> setAppLocale(Locale locale) async {
     final tag = _localeToTag(locale);
     if (_appLocaleTag == tag) return;
@@ -211,6 +205,14 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_appLocaleKey, _appLocaleTag!);
+  }
+
+  Future<void> setAppLocaleFollowSystem() async {
+    if (_appLocaleTag == 'system') return;
+    _appLocaleTag = 'system';
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appLocaleKey, 'system');
   }
 
   // Supported locales mapping

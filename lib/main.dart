@@ -98,8 +98,8 @@ class MyApp extends StatelessWidget {
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'Kelivo',
-                // App UI language from settings (defaults to device on first launch)
-                locale: settings.appLocale,
+                // App UI language; null = follow system (respects iOS per-app language)
+                locale: settings.appLocaleForMaterialApp,
                 supportedLocales: AppLocalizations.supportedLocales,
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 theme: light,

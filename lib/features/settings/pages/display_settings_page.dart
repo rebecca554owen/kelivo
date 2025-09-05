@@ -389,7 +389,12 @@ class _LanguageTile extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(labelForLocale(settings.appLocale), style: TextStyle(color: cs.primary, fontSize: 13)),
+                      Text(
+                        settings.isFollowingSystemLocale
+                            ? l10n.settingsPageSystemMode
+                            : labelForLocale(settings.appLocale),
+                        style: TextStyle(color: cs.primary, fontSize: 13),
+                      ),
                       const SizedBox(width: 6),
                       Icon(Lucide.ChevronDown, size: 16, color: cs.primary),
                     ],
@@ -418,6 +423,10 @@ class _LanguageTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                title: Text(l10n.settingsPageSystemMode),
+                onTap: () => Navigator.of(ctx).pop('system'),
+              ),
+              ListTile(
                 title: Text(l10n.displaySettingsPageLanguageChineseLabel),
                 onTap: () => Navigator.of(ctx).pop('zh_CN'),
               ),
@@ -437,6 +446,9 @@ class _LanguageTile extends StatelessWidget {
     );
     if (selected == null) return;
     switch (selected) {
+      case 'system':
+        await context.read<SettingsProvider>().setAppLocaleFollowSystem();
+        break;
       case 'zh_CN':
         await context.read<SettingsProvider>().setAppLocale(const Locale('zh', 'CN'));
         break;

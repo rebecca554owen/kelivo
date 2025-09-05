@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class ExaSearchService extends SearchService<ExaOptions> {
@@ -9,11 +10,8 @@ class ExaSearchService extends SearchService<ExaOptions> {
   
   @override
   Widget description(BuildContext context) {
-    return const Text(
-      'Neural search engine with semantic understanding. '
-      'Great for research and finding specific content.',
-      style: TextStyle(fontSize: 12),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.searchProviderExaDescription, style: const TextStyle(fontSize: 12));
   }
   
   @override

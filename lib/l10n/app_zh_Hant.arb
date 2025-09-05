@@ -652,5 +652,13 @@
   "imageViewerPageShareFailed": "分享失敗: {error}",
   "imageViewerPageShareButton": "分享圖片",
   "settingsShare": "Kelivo - 開源行動端AI助理",
+  "searchProviderBingLocalDescription": "使用網路抓取工具取得 Bing 搜尋結果。無需 API 金鑰，但可能不夠穩定。",
+  "searchProviderBraveDescription": "Brave 獨立搜尋引擎。注重隱私，無追蹤或建立個人檔案。",
+  "searchProviderExaDescription": "具備語義理解的神經搜尋引擎。適合研究與查找特定內容。",
+  "searchProviderLinkUpDescription": "提供來源可追溯答案的搜尋 API，同時提供搜尋結果與 AI 摘要。",
+  "searchProviderMetasoDescription": "秘塔中文搜尋引擎。針對中文內容優化並提供 AI 能力。",
+  "searchProviderSearXNGDescription": "重視隱私的元搜尋引擎。需自建實例，無追蹤。",
+  "searchProviderTavilyDescription": "為大型語言模型（LLM）優化的 AI 搜尋 API，提供高品質、相關的搜尋結果。",
+  "searchProviderZhipuDescription": "智譜 AI 旗下中文 AI 搜尋服務，針對中文內容與查詢進行優化。",
   "titleForLocale": "新對話"
 }

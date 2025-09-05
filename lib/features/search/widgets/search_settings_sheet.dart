@@ -22,18 +22,6 @@ Future<void> showSearchSettingsSheet(BuildContext context) async {
 class _SearchSettingsSheet extends StatelessWidget {
   const _SearchSettingsSheet();
 
-  IconData _iconFor(SearchServiceOptions s) {
-    if (s is BingLocalOptions) return Lucide.Search;
-    if (s is TavilyOptions) return Lucide.Sparkles;
-    if (s is ExaOptions) return Lucide.Brain;
-    if (s is ZhipuOptions) return Lucide.Languages;
-    if (s is SearXNGOptions) return Lucide.Shield;
-    if (s is LinkUpOptions) return Lucide.Link2;
-    if (s is BraveOptions) return Lucide.Shield;
-    if (s is MetasoOptions) return Lucide.Compass;
-    return Lucide.Search;
-  }
-
   String _nameOf(BuildContext context, SearchServiceOptions s) {
     final svc = SearchService.getService(s);
     return svc.name;

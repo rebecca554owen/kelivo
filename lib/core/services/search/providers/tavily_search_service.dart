@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class TavilySearchService extends SearchService<TavilyOptions> {
@@ -9,11 +10,8 @@ class TavilySearchService extends SearchService<TavilyOptions> {
   
   @override
   Widget description(BuildContext context) {
-    return const Text(
-      '为大型语言模型（LLMs）优化的AI搜索API。'
-      '提供高质量、相关的搜索结果。',
-      style: TextStyle(fontSize: 12),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    return Text(l10n.searchProviderTavilyDescription, style: const TextStyle(fontSize: 12));
   }
   
   @override

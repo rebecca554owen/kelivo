@@ -2067,5 +2067,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsShare => 'Kelivo - Open Source Mobile AI Assistant';
 
   @override
+  String get searchProviderBingLocalDescription =>
+      'Uses web scraping to fetch Bing results. No API key required; may be unstable.';
+
+  @override
+  String get searchProviderBraveDescription =>
+      'Independent search engine by Brave. Privacy-focused with no tracking or profiling.';
+
+  @override
+  String get searchProviderExaDescription =>
+      'Neural search with semantic understanding. Great for research and finding specific content.';
+
+  @override
+  String get searchProviderLinkUpDescription =>
+      'Search API with sourced answers. Provides both results and AI-generated summaries.';
+
+  @override
+  String get searchProviderMetasoDescription =>
+      'Chinese search by Metaso. Optimized for Chinese content with AI capabilities.';
+
+  @override
+  String get searchProviderSearXNGDescription =>
+      'Privacy-respecting metasearch engine. Self-hosted instance required; no tracking.';
+
+  @override
+  String get searchProviderTavilyDescription =>
+      'AI search API optimized for LLMs. Provides high-quality, relevant results.';
+
+  @override
+  String get searchProviderZhipuDescription =>
+      'Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.';
+
+  @override
   String get titleForLocale => 'New Chat';
 }
