@@ -11,6 +11,7 @@ import '../../model/widgets/model_detail_sheet.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/share_provider_sheet.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -89,7 +90,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     bool _isUserAdded(String key) {
       const fixed = {
         'OpenAI', 'Gemini', 'SiliconFlow', 'OpenRouter',
@@ -123,7 +124,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         ),
         actions: [
           IconButton(
-            tooltip: zh ? '分享' : 'Share',
+            tooltip: l10n.providerDetailPageShareTooltip,
             icon: Icon(Lucide.Share2, color: cs.onSurface),
             onPressed: () async {
               await showShareProviderSheet(context, widget.keyName);
@@ -131,17 +132,17 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           if (_isUserAdded(widget.keyName))
             IconButton(
-              tooltip: zh ? '删除供应商' : 'Delete Provider',
+              tooltip: l10n.providerDetailPageDeleteProviderTooltip,
               icon: Icon(Lucide.Trash2, color: cs.error),
               onPressed: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: Text(zh ? '删除供应商' : 'Delete Provider'),
-                    content: Text(zh ? '确定要删除该供应商吗？此操作不可撤销。' : 'Are you sure you want to delete this provider? This cannot be undone.'),
+                    title: Text(l10n.providerDetailPageDeleteProviderTitle),
+                    content: Text(l10n.providerDetailPageDeleteProviderContent),
                     actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(zh ? '取消' : 'Cancel')),
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(zh ? '删除' : 'Delete', style: const TextStyle(color: Colors.red))),
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton, style: const TextStyle(color: Colors.red))),
                     ],
                   ),
                 );
@@ -150,7 +151,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   if (!mounted) return;
                   Navigator.of(context).maybePop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(zh ? '已删除供应商' : 'Provider deleted')),
+                    SnackBar(content: Text(l10n.providerDetailPageProviderDeletedSnackbar)),
                   );
                 }
               },
@@ -161,9 +162,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         controller: _pc,
         onPageChanged: (i) => setState(() => _index = i),
         children: [
-          _buildConfigTab(context, cs, zh),
-          _buildModelsTab(context, cs, zh),
-          _buildNetworkTab(context, cs, zh),
+          _buildConfigTab(context, cs, l10n),
+          _buildModelsTab(context, cs, l10n),
+          _buildNetworkTab(context, cs, l10n),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -193,52 +194,52 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               padding: const EdgeInsets.only(bottom: 4),
               child: Icon(Lucide.Settings2),
             ),
-            label: zh ? '配置' : 'Config',
+            label: l10n.providerDetailPageConfigTab,
           ),
           BottomNavigationBarItem(
             icon: Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Icon(Lucide.Boxes),
             ),
-            label: zh ? '模型' : 'Models',
+            label: l10n.providerDetailPageModelsTab,
           ),
           BottomNavigationBarItem(
             icon: Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Icon(Lucide.Network),
             ),
-            label: zh ? '网络代理' : 'Network',
+            label: l10n.providerDetailPageNetworkTab,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildConfigTab(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildConfigTab(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         // Provider type selector cards
-        _buildProviderTypeSelector(context, cs, zh),
+        _buildProviderTypeSelector(context, cs, l10n),
         const SizedBox(height: 12),
         _switchRow(
           icon: Icons.check_circle_outline,
-          title: zh ? '是否启用' : 'Enabled',
+          title: l10n.providerDetailPageEnabledTitle,
           value: _enabled,
           onChanged: (v) => setState(() => _enabled = v),
         ),
         const SizedBox(height: 12),
-        _inputRow(context, label: zh ? '名称' : 'Name', controller: _nameCtrl, hint: widget.displayName),
+        _inputRow(context, label: l10n.providerDetailPageNameLabel, controller: _nameCtrl, hint: widget.displayName),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
           _inputRow(
             context,
             label: 'API Key',
             controller: _keyCtrl,
-            hint: zh ? '留空则使用上层默认' : 'Leave empty to use default',
+            hint: l10n.providerDetailPageApiKeyHint,
             obscure: !_showApiKey,
             suffix: IconButton(
-              tooltip: _showApiKey ? (zh ? '隐藏' : 'Hide') : (zh ? '显示' : 'Show'),
+              tooltip: _showApiKey ? l10n.providerDetailPageHideTooltip : l10n.providerDetailPageShowTooltip,
               icon: Icon(_showApiKey ? Lucide.EyeOff : Lucide.Eye, color: cs.onSurface.withOpacity(0.7), size: 18),
               onPressed: () => setState(() => _showApiKey = !_showApiKey),
             ),
@@ -250,33 +251,33 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           const SizedBox(height: 12),
           _inputRow(
             context,
-            label: zh ? 'API 路径' : 'API Path',
+            label: l10n.providerDetailPageApiPathLabel,
             controller: _pathCtrl,
             enabled: widget.keyName.toLowerCase() != 'openai',
             hint: '/chat/completions',
           ),
           const SizedBox(height: 4),
-          _checkboxRow(context, title: zh ? 'Response API (/responses)' : 'Response API (/responses)', value: _useResp, onChanged: (v) => setState(() => _useResp = v)),
+          _checkboxRow(context, title: l10n.providerDetailPageResponseApiTitle, value: _useResp, onChanged: (v) => setState(() => _useResp = v)),
         ],
         if (_kind == ProviderKind.google) ...[
           const SizedBox(height: 12),
-          _checkboxRow(context, title: zh ? 'Vertex AI' : 'Vertex AI', value: _vertexAI, onChanged: (v) => setState(() => _vertexAI = v)),
+          _checkboxRow(context, title: l10n.providerDetailPageVertexAiTitle, value: _vertexAI, onChanged: (v) => setState(() => _vertexAI = v)),
           if (_vertexAI) ...[
             const SizedBox(height: 12),
-            _inputRow(context, label: zh ? '区域 Location' : 'Location', controller: _locationCtrl, hint: 'us-central1'),
+            _inputRow(context, label: l10n.providerDetailPageLocationLabel, controller: _locationCtrl, hint: 'us-central1'),
             const SizedBox(height: 12),
-            _inputRow(context, label: zh ? '项目 ID' : 'Project ID', controller: _projectCtrl, hint: 'my-project-id'),
+            _inputRow(context, label: l10n.providerDetailPageProjectIdLabel, controller: _projectCtrl, hint: 'my-project-id'),
             const SizedBox(height: 12),
             _multilineRow(
               context,
-              label: zh ? '服务账号 JSON（粘贴或导入）' : 'Service Account JSON (paste or import)',
+              label: l10n.providerDetailPageServiceAccountJsonLabel,
               controller: _saJsonCtrl,
               hint: '{\n  "type": "service_account", ...\n}',
               actions: [
                 TextButton.icon(
                   onPressed: _importServiceAccountJson,
                   icon: Icon(Lucide.Upload, size: 16),
-                  label: Text(zh ? '导入 JSON' : 'Import JSON'),
+                  label: Text(l10n.providerDetailPageImportJsonButton),
                 ),
               ],
             ),
@@ -288,7 +289,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               OutlinedButton.icon(
               onPressed: _openTestDialog,
               icon: Icon(Lucide.Cable, size: 18, color: cs.primary),
-              label: Text(zh ? '测试' : 'Test', style: TextStyle(color: cs.primary)),
+              label: Text(l10n.providerDetailPageTestButton, style: TextStyle(color: cs.primary)),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: cs.primary.withOpacity(0.5)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -303,7 +304,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: Text(zh ? '保存' : 'Save'),
+              child: Text(l10n.providerDetailPageSaveButton),
             ),
           ],
         ),
@@ -312,12 +313,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Widget _buildModelsTab(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildModelsTab(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     final cfg = context.watch<SettingsProvider>().providerConfigs[widget.keyName];
     if (cfg == null) {
       // Provider has been removed; avoid recreating it via getProviderConfig.
       return Center(
-        child: Text(zh ? '供应商已删除' : 'Provider removed', style: TextStyle(color: cs.onSurface.withOpacity(0.7))),
+        child: Text(l10n.providerDetailPageProviderRemovedMessage, style: TextStyle(color: cs.onSurface.withOpacity(0.7))),
       );
     }
     final models = cfg.models;
@@ -328,10 +329,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(zh ? '暂无模型' : 'No Models', style: TextStyle(fontSize: 18, color: cs.onSurface)),
+                Text(l10n.providerDetailPageNoModelsTitle, style: TextStyle(fontSize: 18, color: cs.onSurface)),
                 const SizedBox(height: 6),
                 Text(
-                  zh ? '点击下方按钮添加模型' : 'Tap the buttons below to add models',
+                  l10n.providerDetailPageNoModelsSubtitle,
                   style: TextStyle(fontSize: 13, color: cs.primary),
                   textAlign: TextAlign.center,
                 ),
@@ -375,7 +376,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             itemBuilder: (c, i) {
               final id = models[i];
               final cs = Theme.of(context).colorScheme;
-              final zh = Localizations.localeOf(context).languageCode == 'zh';
               return KeyedSubtree(
                 key: ValueKey('reorder-model-$id'),
                 child: ReorderableDelayedDragStartListener(
@@ -406,7 +406,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                 children: [
                                   Icon(Lucide.Trash2, color: cs.error, size: 18),
                                   const SizedBox(width: 6),
-                                  Text(zh ? '删除' : 'Delete', style: TextStyle(color: cs.error, fontWeight: FontWeight.w700)),
+                                  Text(l10n.providerDetailPageDeleteModelButton, style: TextStyle(color: cs.error, fontWeight: FontWeight.w700)),
                                 ],
                               ),
                             ),
@@ -416,11 +416,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                               context: context,
                               builder: (dctx) => AlertDialog(
                                 backgroundColor: cs.surface,
-                                title: Text(zh ? '确认删除' : 'Confirm Delete'),
-                                content: Text(zh ? '删除后可通过撤销恢复。是否删除？' : 'This can be undone via Undo. Delete?'),
+                                title: Text(l10n.providerDetailPageConfirmDeleteTitle),
+                                content: Text(l10n.providerDetailPageConfirmDeleteContent),
                                 actions: [
-                                  TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: Text(zh ? '取消' : 'Cancel')),
-                                  TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: Text(zh ? '删除' : 'Delete')),
+                                  TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
+                                  TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton)),
                                 ],
                               ),
                             );
@@ -435,9 +435,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             await settings.setProviderConfig(widget.keyName, old.copyWith(models: newList, modelOverrides: newOverrides));
                             if (!mounted) return;
                             final snack = SnackBar(
-                              content: Text(zh ? '已删除模型' : 'Model deleted'),
+                              content: Text(l10n.providerDetailPageModelDeletedSnackbar),
                               action: SnackBarAction(
-                                label: zh ? '撤销' : 'Undo',
+                                label: l10n.providerDetailPageUndoButton,
                                 onPressed: () async {
                                   final cfg2 = context.read<SettingsProvider>().getProviderConfig(widget.keyName, defaultName: widget.displayName);
                                   final restoredList = List<String>.from(cfg2.models);
@@ -510,7 +510,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                         children: [
                           Icon(Lucide.Plus, size: 18, color: cs.primary),
                           const SizedBox(width: 6),
-                          Text(zh ? '添加新模型' : 'Add Model', style: TextStyle(color: cs.primary, fontSize: 13)),
+                          Text(l10n.providerDetailPageAddNewModelButton, style: TextStyle(color: cs.primary, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -524,7 +524,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Widget _buildNetworkTab(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildNetworkTab(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return Column(
       children: [
         Expanded(
@@ -533,19 +533,19 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             children: [
               _switchRow(
                 icon: Icons.lan_outlined,
-                title: zh ? '是否启用代理' : 'Enable Proxy',
+                title: l10n.providerDetailPageEnableProxyTitle,
                 value: _proxyEnabled,
                 onChanged: (v) => setState(() => _proxyEnabled = v),
               ),
               if (_proxyEnabled) ...[
                 const SizedBox(height: 12),
-                _inputRow(context, label: zh ? '主机地址' : 'Host', controller: _proxyHostCtrl, hint: '127.0.0.1'),
+                _inputRow(context, label: l10n.providerDetailPageHostLabel, controller: _proxyHostCtrl, hint: '127.0.0.1'),
                 const SizedBox(height: 12),
-                _inputRow(context, label: zh ? '端口' : 'Port', controller: _proxyPortCtrl, hint: '8080'),
+                _inputRow(context, label: l10n.providerDetailPagePortLabel, controller: _proxyPortCtrl, hint: '8080'),
                 const SizedBox(height: 12),
-                _inputRow(context, label: zh ? '用户名（可选）' : 'Username (optional)', controller: _proxyUserCtrl),
+                _inputRow(context, label: l10n.providerDetailPageUsernameOptionalLabel, controller: _proxyUserCtrl),
                 const SizedBox(height: 12),
-                _inputRow(context, label: zh ? '密码（可选）' : 'Password (optional)', controller: _proxyPassCtrl, obscure: true),
+                _inputRow(context, label: l10n.providerDetailPagePasswordOptionalLabel, controller: _proxyPassCtrl, obscure: true),
               ],
               const SizedBox(height: 16),
               Align(
@@ -558,7 +558,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: Text(zh ? '保存' : 'Save'),
+                  child: Text(l10n.providerDetailPageSaveButton),
                 ),
               ),
             ],
@@ -653,8 +653,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
     await settings.setProviderConfig(widget.keyName, updated);
     if (!mounted) return;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '已保存' : 'Saved')));
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.providerDetailPageSavedSnackbar)));
     setState(() {});
   }
 
@@ -758,11 +758,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
     await settings.setProviderConfig(widget.keyName, cfg);
     if (!mounted) return;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '已保存' : 'Saved')));
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.providerDetailPageSavedSnackbar)));
   }
 
-  Widget _buildProviderTypeSelector(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildProviderTypeSelector(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
@@ -905,7 +905,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       ),
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setLocal) {
-          final zhLocal = Localizations.localeOf(ctx).languageCode == 'zh';
+          final l10n = AppLocalizations.of(ctx)!;
           Future<void> _load() async {
             try {
               final list = await ProviderManager.listModels(cfg);
@@ -938,7 +938,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             final id = m.id.toLowerCase();
             // Embeddings first
             if (m.type == ModelType.embedding || id.contains('embedding') || id.contains('embed')) {
-              return zhLocal ? '嵌入' : 'Embeddings';
+              return l10n.providerDetailPageEmbeddingsGroupTitle;
             }
             // OpenAI families
             // if (RegExp(r'gpt-4o|gpt-4\.1|gpt-4|gpt4').hasMatch(id)) return 'GPT-4';
@@ -963,7 +963,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             if (id.contains('glm') || id.contains('zhipu')) return 'GLM';
             if (id.contains('mistral')) return 'Mistral';
             if (id.contains('grok') || id.contains('xai')) return 'Grok';
-            return zhLocal ? '其他模型' : 'Other';
+            return l10n.providerDetailPageOtherModelsGroupTitle;
           }
 
           final Map<String, List<ModelInfo>> grouped = {};
@@ -1041,7 +1041,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                     return IconButton(
                                                       padding: EdgeInsets.zero,
                                                       constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
-                                                      tooltip: allAdded ? (zhLocal ? '移除本组' : 'Remove group') : (zhLocal ? '添加本组' : 'Add group'),
+                                                      tooltip: allAdded ? l10n.providerDetailPageRemoveGroupTooltip : l10n.providerDetailPageAddGroupTooltip,
                                                       icon: Icon(allAdded ? Lucide.Minus : Lucide.Plus, size: 24, color: allAdded ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
                                                       onPressed: () async {
                                                         final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
@@ -1132,7 +1132,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                           controller: controller,
                           onChanged: (_) => setLocal(() {}),
                           decoration: InputDecoration(
-                            hintText: zhLocal ? '输入模型名称筛选' : 'Type model name to filter',
+                            hintText: l10n.providerDetailPageFilterHint,
                             filled: true,
                             fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
@@ -1168,6 +1168,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
 
 Widget _buildDismissBg(BuildContext context, {required bool alignStart}) {
   final cs = Theme.of(context).colorScheme;
+  final l10n = AppLocalizations.of(context)!;
   return Container(
     decoration: BoxDecoration(
       color: cs.error.withOpacity(0.12),
@@ -1181,7 +1182,7 @@ Widget _buildDismissBg(BuildContext context, {required bool alignStart}) {
         Icon(Lucide.Trash2, color: cs.error, size: 20),
         const SizedBox(width: 6),
         Text(
-          Localizations.localeOf(context).languageCode == 'zh' ? '删除' : 'Delete',
+          l10n.providerDetailPageDeleteText,
           style: TextStyle(color: cs.error, fontWeight: FontWeight.w600),
         ),
       ],
@@ -1196,6 +1197,7 @@ class _ModelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Material(
       color: cs.surface,
@@ -1220,7 +1222,7 @@ class _ModelCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: Localizations.localeOf(context).languageCode == 'zh' ? '编辑' : 'Edit',
+                tooltip: l10n.providerDetailPageEditTooltip,
                 icon: Icon(Lucide.Settings2, size: 18, color: cs.onSurface.withOpacity(0.7)),
                 onPressed: () async {
                   await showModelDetailSheet(context, providerKey: providerKey, modelId: modelId);
@@ -1317,8 +1319,8 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
-    final title = zh ? '测试连接' : 'Test Connection';
+    final l10n = AppLocalizations.of(context)!;
+    final title = l10n.providerDetailPageTestConnectionTitle;
     final canTest = _selectedModelId != null && _state != _TestState.loading;
     return Dialog(
       backgroundColor: cs.surface,
@@ -1334,17 +1336,17 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
             children: [
               Center(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
               const SizedBox(height: 16),
-              _buildBody(context, cs, zh),
+              _buildBody(context, cs, l10n),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(zh ? '取消' : 'Cancel')),
+                  TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.providerDetailPageCancelButton)),
                   const SizedBox(width: 8),
                   TextButton(
                     onPressed: canTest ? _doTest : null,
                     style: TextButton.styleFrom(foregroundColor: canTest ? cs.primary : cs.onSurface.withOpacity(0.4)),
-                    child: Text(zh ? '测试' : 'Test'),
+                    child: Text(l10n.providerDetailPageTestButton),
                   ),
                 ],
               ),
@@ -1357,20 +1359,20 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
 
   
 
-  Widget _buildBody(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildBody(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     switch (_state) {
       case _TestState.idle:
-        return _buildIdle(context, cs, zh);
+        return _buildIdle(context, cs, l10n);
       case _TestState.loading:
-        return _buildLoading(context, cs, zh);
+        return _buildLoading(context, cs, l10n);
       case _TestState.success:
-        return _buildResult(context, cs, zh, success: true, message: zh ? '测试成功' : 'Success');
+        return _buildResult(context, cs, l10n, success: true, message: l10n.providerDetailPageTestSuccessMessage);
       case _TestState.error:
-        return _buildResult(context, cs, zh, success: false, message: _errorMessage);
+        return _buildResult(context, cs, l10n, success: false, message: _errorMessage);
     }
   }
 
-  Widget _buildIdle(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildIdle(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1378,7 +1380,7 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
         if (_selectedModelId == null)
           TextButton(
             onPressed: _pickModel,
-            child: Text(zh ? '选择模型' : 'Select Model'),
+            child: Text(l10n.providerDetailPageSelectModelButton),
           )
         else
           Row(
@@ -1395,14 +1397,14 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
                 ),
               ),
               const SizedBox(width: 10),
-              TextButton(onPressed: _pickModel, child: Text(zh ? '更换' : 'Change')),
+              TextButton(onPressed: _pickModel, child: Text(l10n.providerDetailPageChangeButton)),
             ],
           ),
       ],
     );
   }
 
-  Widget _buildLoading(BuildContext context, ColorScheme cs, bool zh) {
+  Widget _buildLoading(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1426,12 +1428,12 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
         const SizedBox(height: 16),
         const LinearProgressIndicator(minHeight: 4),
         const SizedBox(height: 12),
-        Text(zh ? '正在测试…' : 'Testing…', style: TextStyle(color: cs.onSurface.withOpacity(0.7))),
+        Text(l10n.providerDetailPageTestingMessage, style: TextStyle(color: cs.onSurface.withOpacity(0.7))),
       ],
     );
   }
 
-  Widget _buildResult(BuildContext context, ColorScheme cs, bool zh, {required bool success, required String message}) {
+  Widget _buildResult(BuildContext context, ColorScheme cs, AppLocalizations l10n, {required bool success, required String message}) {
     final color = success ? Colors.green : cs.error;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1548,7 +1550,7 @@ ModelInfo _effectiveFor(BuildContext context, String providerKey, String provide
 
 Widget _modelTagWrap(BuildContext context, ModelInfo m) {
   final cs = Theme.of(context).colorScheme;
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   final isDark = Theme.of(context).brightness == Brightness.dark;
   List<Widget> chips = [];
   // type tag
@@ -1559,7 +1561,7 @@ Widget _modelTagWrap(BuildContext context, ModelInfo m) {
       border: Border.all(color: cs.primary.withOpacity(0.2), width: 0.5),
     ),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    child: Text(m.type == ModelType.chat ? (zh ? '聊天' : 'Chat') : (zh ? '嵌入' : 'Embedding'), style: TextStyle(fontSize: 11, color: isDark ? cs.primary : cs.primary.withOpacity(0.9), fontWeight: FontWeight.w500)),
+    child: Text(m.type == ModelType.chat ? l10n.modelSelectSheetChatType : l10n.modelSelectSheetEmbeddingType, style: TextStyle(fontSize: 11, color: isDark ? cs.primary : cs.primary.withOpacity(0.9), fontWeight: FontWeight.w500)),
   ));
   // modality tag capsule
   chips.add(Container(

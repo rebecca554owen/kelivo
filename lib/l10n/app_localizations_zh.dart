@@ -1345,4 +1345,157 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get modelSelectSheetEmbeddingType => '嵌入';
+
+  @override
+  String get providerDetailPageShareTooltip => '分享';
+
+  @override
+  String get providerDetailPageDeleteProviderTooltip => '删除供应商';
+
+  @override
+  String get providerDetailPageDeleteProviderTitle => '删除供应商';
+
+  @override
+  String get providerDetailPageDeleteProviderContent => '确定要删除该供应商吗？此操作不可撤销。';
+
+  @override
+  String get providerDetailPageCancelButton => '取消';
+
+  @override
+  String get providerDetailPageDeleteButton => '删除';
+
+  @override
+  String get providerDetailPageProviderDeletedSnackbar => '已删除供应商';
+
+  @override
+  String get providerDetailPageConfigTab => '配置';
+
+  @override
+  String get providerDetailPageModelsTab => '模型';
+
+  @override
+  String get providerDetailPageNetworkTab => '网络代理';
+
+  @override
+  String get providerDetailPageEnabledTitle => '是否启用';
+
+  @override
+  String get providerDetailPageNameLabel => '名称';
+
+  @override
+  String get providerDetailPageApiKeyHint => '留空则使用上层默认';
+
+  @override
+  String get providerDetailPageHideTooltip => '隐藏';
+
+  @override
+  String get providerDetailPageShowTooltip => '显示';
+
+  @override
+  String get providerDetailPageApiPathLabel => 'API 路径';
+
+  @override
+  String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
+
+  @override
+  String get providerDetailPageVertexAiTitle => 'Vertex AI';
+
+  @override
+  String get providerDetailPageLocationLabel => '区域 Location';
+
+  @override
+  String get providerDetailPageProjectIdLabel => '项目 ID';
+
+  @override
+  String get providerDetailPageServiceAccountJsonLabel => '服务账号 JSON（粘贴或导入）';
+
+  @override
+  String get providerDetailPageImportJsonButton => '导入 JSON';
+
+  @override
+  String get providerDetailPageTestButton => '测试';
+
+  @override
+  String get providerDetailPageSaveButton => '保存';
+
+  @override
+  String get providerDetailPageProviderRemovedMessage => '供应商已删除';
+
+  @override
+  String get providerDetailPageNoModelsTitle => '暂无模型';
+
+  @override
+  String get providerDetailPageNoModelsSubtitle => '点击下方按钮添加模型';
+
+  @override
+  String get providerDetailPageDeleteModelButton => '删除';
+
+  @override
+  String get providerDetailPageConfirmDeleteTitle => '确认删除';
+
+  @override
+  String get providerDetailPageConfirmDeleteContent => '删除后可通过撤销恢复。是否删除？';
+
+  @override
+  String get providerDetailPageModelDeletedSnackbar => '已删除模型';
+
+  @override
+  String get providerDetailPageUndoButton => '撤销';
+
+  @override
+  String get providerDetailPageAddNewModelButton => '添加新模型';
+
+  @override
+  String get providerDetailPageEnableProxyTitle => '是否启用代理';
+
+  @override
+  String get providerDetailPageHostLabel => '主机地址';
+
+  @override
+  String get providerDetailPagePortLabel => '端口';
+
+  @override
+  String get providerDetailPageUsernameOptionalLabel => '用户名（可选）';
+
+  @override
+  String get providerDetailPagePasswordOptionalLabel => '密码（可选）';
+
+  @override
+  String get providerDetailPageSavedSnackbar => '已保存';
+
+  @override
+  String get providerDetailPageEmbeddingsGroupTitle => '嵌入';
+
+  @override
+  String get providerDetailPageOtherModelsGroupTitle => '其他模型';
+
+  @override
+  String get providerDetailPageRemoveGroupTooltip => '移除本组';
+
+  @override
+  String get providerDetailPageAddGroupTooltip => '添加本组';
+
+  @override
+  String get providerDetailPageFilterHint => '输入模型名称筛选';
+
+  @override
+  String get providerDetailPageDeleteText => '删除';
+
+  @override
+  String get providerDetailPageEditTooltip => '编辑';
+
+  @override
+  String get providerDetailPageTestConnectionTitle => '测试连接';
+
+  @override
+  String get providerDetailPageSelectModelButton => '选择模型';
+
+  @override
+  String get providerDetailPageChangeButton => '更换';
+
+  @override
+  String get providerDetailPageTestingMessage => '正在测试…';
+
+  @override
+  String get providerDetailPageTestSuccessMessage => '测试成功';
 }

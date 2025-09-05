@@ -2665,6 +2665,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Embedding'**
   String get modelSelectSheetEmbeddingType;
+
+  /// No description provided for @providerDetailPageShareTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get providerDetailPageShareTooltip;
+
+  /// No description provided for @providerDetailPageDeleteProviderTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Provider'**
+  String get providerDetailPageDeleteProviderTooltip;
+
+  /// No description provided for @providerDetailPageDeleteProviderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Provider'**
+  String get providerDetailPageDeleteProviderTitle;
+
+  /// No description provided for @providerDetailPageDeleteProviderContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this provider? This cannot be undone.'**
+  String get providerDetailPageDeleteProviderContent;
+
+  /// No description provided for @providerDetailPageCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get providerDetailPageCancelButton;
+
+  /// No description provided for @providerDetailPageDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get providerDetailPageDeleteButton;
+
+  /// No description provided for @providerDetailPageProviderDeletedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider deleted'**
+  String get providerDetailPageProviderDeletedSnackbar;
+
+  /// No description provided for @providerDetailPageConfigTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Config'**
+  String get providerDetailPageConfigTab;
+
+  /// No description provided for @providerDetailPageModelsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Models'**
+  String get providerDetailPageModelsTab;
+
+  /// No description provided for @providerDetailPageNetworkTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get providerDetailPageNetworkTab;
+
+  /// No description provided for @providerDetailPageEnabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get providerDetailPageEnabledTitle;
+
+  /// No description provided for @providerDetailPageNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get providerDetailPageNameLabel;
+
+  /// No description provided for @providerDetailPageApiKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty to use default'**
+  String get providerDetailPageApiKeyHint;
+
+  /// No description provided for @providerDetailPageHideTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get providerDetailPageHideTooltip;
+
+  /// No description provided for @providerDetailPageShowTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get providerDetailPageShowTooltip;
+
+  /// No description provided for @providerDetailPageApiPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Path'**
+  String get providerDetailPageApiPathLabel;
+
+  /// No description provided for @providerDetailPageResponseApiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Response API (/responses)'**
+  String get providerDetailPageResponseApiTitle;
+
+  /// No description provided for @providerDetailPageVertexAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertex AI'**
+  String get providerDetailPageVertexAiTitle;
+
+  /// No description provided for @providerDetailPageLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get providerDetailPageLocationLabel;
+
+  /// No description provided for @providerDetailPageProjectIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Project ID'**
+  String get providerDetailPageProjectIdLabel;
+
+  /// No description provided for @providerDetailPageServiceAccountJsonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Account JSON (paste or import)'**
+  String get providerDetailPageServiceAccountJsonLabel;
+
+  /// No description provided for @providerDetailPageImportJsonButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import JSON'**
+  String get providerDetailPageImportJsonButton;
+
+  /// No description provided for @providerDetailPageTestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get providerDetailPageTestButton;
+
+  /// No description provided for @providerDetailPageSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get providerDetailPageSaveButton;
+
+  /// No description provided for @providerDetailPageProviderRemovedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider removed'**
+  String get providerDetailPageProviderRemovedMessage;
+
+  /// No description provided for @providerDetailPageNoModelsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Models'**
+  String get providerDetailPageNoModelsTitle;
+
+  /// No description provided for @providerDetailPageNoModelsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the buttons below to add models'**
+  String get providerDetailPageNoModelsSubtitle;
+
+  /// No description provided for @providerDetailPageDeleteModelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get providerDetailPageDeleteModelButton;
+
+  /// No description provided for @providerDetailPageConfirmDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Delete'**
+  String get providerDetailPageConfirmDeleteTitle;
+
+  /// No description provided for @providerDetailPageConfirmDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This can be undone via Undo. Delete?'**
+  String get providerDetailPageConfirmDeleteContent;
+
+  /// No description provided for @providerDetailPageModelDeletedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Model deleted'**
+  String get providerDetailPageModelDeletedSnackbar;
+
+  /// No description provided for @providerDetailPageUndoButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get providerDetailPageUndoButton;
+
+  /// No description provided for @providerDetailPageAddNewModelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Model'**
+  String get providerDetailPageAddNewModelButton;
+
+  /// No description provided for @providerDetailPageEnableProxyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Proxy'**
+  String get providerDetailPageEnableProxyTitle;
+
+  /// No description provided for @providerDetailPageHostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get providerDetailPageHostLabel;
+
+  /// No description provided for @providerDetailPagePortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get providerDetailPagePortLabel;
+
+  /// No description provided for @providerDetailPageUsernameOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Username (optional)'**
+  String get providerDetailPageUsernameOptionalLabel;
+
+  /// No description provided for @providerDetailPagePasswordOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password (optional)'**
+  String get providerDetailPagePasswordOptionalLabel;
+
+  /// No description provided for @providerDetailPageSavedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get providerDetailPageSavedSnackbar;
+
+  /// No description provided for @providerDetailPageEmbeddingsGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Embeddings'**
+  String get providerDetailPageEmbeddingsGroupTitle;
+
+  /// No description provided for @providerDetailPageOtherModelsGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get providerDetailPageOtherModelsGroupTitle;
+
+  /// No description provided for @providerDetailPageRemoveGroupTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove group'**
+  String get providerDetailPageRemoveGroupTooltip;
+
+  /// No description provided for @providerDetailPageAddGroupTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add group'**
+  String get providerDetailPageAddGroupTooltip;
+
+  /// No description provided for @providerDetailPageFilterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type model name to filter'**
+  String get providerDetailPageFilterHint;
+
+  /// No description provided for @providerDetailPageDeleteText.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get providerDetailPageDeleteText;
+
+  /// No description provided for @providerDetailPageEditTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get providerDetailPageEditTooltip;
+
+  /// No description provided for @providerDetailPageTestConnectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Connection'**
+  String get providerDetailPageTestConnectionTitle;
+
+  /// No description provided for @providerDetailPageSelectModelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Model'**
+  String get providerDetailPageSelectModelButton;
+
+  /// No description provided for @providerDetailPageChangeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get providerDetailPageChangeButton;
+
+  /// No description provided for @providerDetailPageTestingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing…'**
+  String get providerDetailPageTestingMessage;
+
+  /// No description provided for @providerDetailPageTestSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get providerDetailPageTestSuccessMessage;
 }
 
 class _AppLocalizationsDelegate

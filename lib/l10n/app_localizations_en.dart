@@ -1383,4 +1383,161 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modelSelectSheetEmbeddingType => 'Embedding';
+
+  @override
+  String get providerDetailPageShareTooltip => 'Share';
+
+  @override
+  String get providerDetailPageDeleteProviderTooltip => 'Delete Provider';
+
+  @override
+  String get providerDetailPageDeleteProviderTitle => 'Delete Provider';
+
+  @override
+  String get providerDetailPageDeleteProviderContent =>
+      'Are you sure you want to delete this provider? This cannot be undone.';
+
+  @override
+  String get providerDetailPageCancelButton => 'Cancel';
+
+  @override
+  String get providerDetailPageDeleteButton => 'Delete';
+
+  @override
+  String get providerDetailPageProviderDeletedSnackbar => 'Provider deleted';
+
+  @override
+  String get providerDetailPageConfigTab => 'Config';
+
+  @override
+  String get providerDetailPageModelsTab => 'Models';
+
+  @override
+  String get providerDetailPageNetworkTab => 'Network';
+
+  @override
+  String get providerDetailPageEnabledTitle => 'Enabled';
+
+  @override
+  String get providerDetailPageNameLabel => 'Name';
+
+  @override
+  String get providerDetailPageApiKeyHint => 'Leave empty to use default';
+
+  @override
+  String get providerDetailPageHideTooltip => 'Hide';
+
+  @override
+  String get providerDetailPageShowTooltip => 'Show';
+
+  @override
+  String get providerDetailPageApiPathLabel => 'API Path';
+
+  @override
+  String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
+
+  @override
+  String get providerDetailPageVertexAiTitle => 'Vertex AI';
+
+  @override
+  String get providerDetailPageLocationLabel => 'Location';
+
+  @override
+  String get providerDetailPageProjectIdLabel => 'Project ID';
+
+  @override
+  String get providerDetailPageServiceAccountJsonLabel =>
+      'Service Account JSON (paste or import)';
+
+  @override
+  String get providerDetailPageImportJsonButton => 'Import JSON';
+
+  @override
+  String get providerDetailPageTestButton => 'Test';
+
+  @override
+  String get providerDetailPageSaveButton => 'Save';
+
+  @override
+  String get providerDetailPageProviderRemovedMessage => 'Provider removed';
+
+  @override
+  String get providerDetailPageNoModelsTitle => 'No Models';
+
+  @override
+  String get providerDetailPageNoModelsSubtitle =>
+      'Tap the buttons below to add models';
+
+  @override
+  String get providerDetailPageDeleteModelButton => 'Delete';
+
+  @override
+  String get providerDetailPageConfirmDeleteTitle => 'Confirm Delete';
+
+  @override
+  String get providerDetailPageConfirmDeleteContent =>
+      'This can be undone via Undo. Delete?';
+
+  @override
+  String get providerDetailPageModelDeletedSnackbar => 'Model deleted';
+
+  @override
+  String get providerDetailPageUndoButton => 'Undo';
+
+  @override
+  String get providerDetailPageAddNewModelButton => 'Add Model';
+
+  @override
+  String get providerDetailPageEnableProxyTitle => 'Enable Proxy';
+
+  @override
+  String get providerDetailPageHostLabel => 'Host';
+
+  @override
+  String get providerDetailPagePortLabel => 'Port';
+
+  @override
+  String get providerDetailPageUsernameOptionalLabel => 'Username (optional)';
+
+  @override
+  String get providerDetailPagePasswordOptionalLabel => 'Password (optional)';
+
+  @override
+  String get providerDetailPageSavedSnackbar => 'Saved';
+
+  @override
+  String get providerDetailPageEmbeddingsGroupTitle => 'Embeddings';
+
+  @override
+  String get providerDetailPageOtherModelsGroupTitle => 'Other';
+
+  @override
+  String get providerDetailPageRemoveGroupTooltip => 'Remove group';
+
+  @override
+  String get providerDetailPageAddGroupTooltip => 'Add group';
+
+  @override
+  String get providerDetailPageFilterHint => 'Type model name to filter';
+
+  @override
+  String get providerDetailPageDeleteText => 'Delete';
+
+  @override
+  String get providerDetailPageEditTooltip => 'Edit';
+
+  @override
+  String get providerDetailPageTestConnectionTitle => 'Test Connection';
+
+  @override
+  String get providerDetailPageSelectModelButton => 'Select Model';
+
+  @override
+  String get providerDetailPageChangeButton => 'Change';
+
+  @override
+  String get providerDetailPageTestingMessage => 'Testing…';
+
+  @override
+  String get providerDetailPageTestSuccessMessage => 'Success';
 }
