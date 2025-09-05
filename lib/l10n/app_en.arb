@@ -75,6 +75,10 @@
       "system_version": {"type": "String"}
     }
   },
+  "displaySettingsPageLanguageTitle": "App Language",
+  "displaySettingsPageLanguageSubtitle": "Choose interface language",
+  "displaySettingsPageLanguageChineseLabel": "Simplified Chinese",
+  "displaySettingsPageLanguageEnglishLabel": "English",
   "homePageDeleteMessage": "Delete Message",
   "homePageDeleteMessageConfirm": "Are you sure you want to delete this message? This cannot be undone.",
   "homePageCancel": "Cancel",
@@ -664,7 +668,7 @@
   "providersPageEnabledStatus": "Enabled",
   "providersPageDisabledStatus": "Disabled",
   "providersPageModelsCountSuffix": " models",
-  "providersPageModelsCountSingleSuffix": "models",
+  "providersPageModelsCountSingleSuffix": " models",
   "addProviderSheetTitle": "Add Provider",
   "addProviderSheetEnabledLabel": "Enabled",
   "addProviderSheetNameLabel": "Name",

@@ -381,6 +381,30 @@ abstract class AppLocalizations {
     String system_version,
   );
 
+  /// No description provided for @displaySettingsPageLanguageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App Language'**
+  String get displaySettingsPageLanguageTitle;
+
+  /// No description provided for @displaySettingsPageLanguageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose interface language'**
+  String get displaySettingsPageLanguageSubtitle;
+
+  /// No description provided for @displaySettingsPageLanguageChineseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Simplified Chinese'**
+  String get displaySettingsPageLanguageChineseLabel;
+
+  /// No description provided for @displaySettingsPageLanguageEnglishLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get displaySettingsPageLanguageEnglishLabel;
+
   /// No description provided for @homePageDeleteMessage.
   ///
   /// In en, this message translates to:

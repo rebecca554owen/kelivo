@@ -98,8 +98,8 @@ class MyApp extends StatelessWidget {
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'Kelivo',
-                // Default to Chinese; English supported.
-                locale: const Locale('zh', 'CN'),
+                // App UI language from settings (defaults to device on first launch)
+                locale: settings.appLocale,
                 supportedLocales: const [
                   Locale('zh', 'CN'),
                   Locale('en', 'US'),

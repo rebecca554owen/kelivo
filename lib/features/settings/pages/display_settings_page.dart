@@ -50,6 +50,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
             child: _ThemeEntryCard(),
           ),
           const SizedBox(height: 4),
+          _LanguageTile(),
           _SwitchTile(
             icon: Lucide.User,
             title: l10n.displaySettingsPageShowUserAvatarTitle,
@@ -323,5 +324,121 @@ class _ThemeEntryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _LanguageTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+
+    String labelForLocale(Locale l) {
+      switch (l.languageCode) {
+        case 'zh':
+          return l10n.displaySettingsPageLanguageChineseLabel;
+        case 'en':
+        default:
+          return l10n.displaySettingsPageLanguageEnglishLabel;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Material(
+        color: cs.surfaceVariant.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.18 : 0.5),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () async {
+            await _showLanguageSheet(context);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Icon(Lucide.Languages, size: 20, color: cs.primary),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.displaySettingsPageLanguageTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      Text(l10n.displaySettingsPageLanguageSubtitle, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(labelForLocale(settings.appLocale), style: TextStyle(color: cs.primary, fontSize: 13)),
+                      const SizedBox(width: 6),
+                      Icon(Lucide.ChevronDown, size: 16, color: cs.primary),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLanguageSheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(l10n.displaySettingsPageLanguageChineseLabel),
+                onTap: () => Navigator.of(ctx).pop('zh_CN'),
+              ),
+              ListTile(
+                title: Text(l10n.displaySettingsPageLanguageEnglishLabel),
+                onTap: () => Navigator.of(ctx).pop('en_US'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null) return;
+    switch (selected) {
+      case 'zh_CN':
+        await context.read<SettingsProvider>().setAppLocale(const Locale('zh', 'CN'));
+        break;
+      case 'en_US':
+      default:
+        await context.read<SettingsProvider>().setAppLocale(const Locale('en', 'US'));
+    }
   }
 }

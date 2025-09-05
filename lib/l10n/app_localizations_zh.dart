@@ -160,6 +160,18 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get displaySettingsPageLanguageTitle => '应用语言';
+
+  @override
+  String get displaySettingsPageLanguageSubtitle => '选择界面语言';
+
+  @override
+  String get displaySettingsPageLanguageChineseLabel => '简体中文';
+
+  @override
+  String get displaySettingsPageLanguageEnglishLabel => 'English';
+
+  @override
   String get homePageDeleteMessage => '删除消息';
 
   @override

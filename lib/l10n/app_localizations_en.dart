@@ -161,6 +161,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get displaySettingsPageLanguageTitle => 'App Language';
+
+  @override
+  String get displaySettingsPageLanguageSubtitle => 'Choose interface language';
+
+  @override
+  String get displaySettingsPageLanguageChineseLabel => 'Simplified Chinese';
+
+  @override
+  String get displaySettingsPageLanguageEnglishLabel => 'English';
+
+  @override
   String get homePageDeleteMessage => 'Delete Message';
 
   @override

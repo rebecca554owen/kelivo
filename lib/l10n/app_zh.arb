@@ -148,6 +148,10 @@
       "system_version": {"type": "String"}
     }
   },
+  "displaySettingsPageLanguageTitle": "应用语言",
+  "displaySettingsPageLanguageSubtitle": "选择界面语言",
+  "displaySettingsPageLanguageChineseLabel": "简体中文",
+  "displaySettingsPageLanguageEnglishLabel": "English",
   "mcpAssistantSheetTitle": "MCP服务器",
   "mcpAssistantSheetSubtitle": "为该助手启用的服务",
   "mcpAssistantSheetSelectAll": "全选",

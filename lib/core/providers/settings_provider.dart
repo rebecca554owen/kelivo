@@ -27,6 +27,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayShowAppUpdatesKey = 'display_show_app_updates_v1';
   static const String _displayNewChatOnLaunchKey = 'display_new_chat_on_launch_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
+  static const String _appLocaleKey = 'app_locale_v1';
   static const String _translateModelKey = 'translate_model_v1';
   static const String _translatePromptKey = 'translate_prompt_v1';
   static const String _learningModeEnabledKey = 'learning_mode_enabled_v1';
@@ -157,6 +158,20 @@ class SettingsProvider extends ChangeNotifier {
     _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
+    // Load app locale; default to device locale on first launch
+    _appLocaleTag = prefs.getString(_appLocaleKey);
+    if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
+      try {
+        final dev = WidgetsBinding.instance.platformDispatcher.locale;
+        final tag = _mapDeviceLocaleToSupportedTag(dev);
+        _appLocaleTag = tag;
+        await prefs.setString(_appLocaleKey, tag);
+      } catch (_) {
+        // Fallback to English US
+        _appLocaleTag = 'en_US';
+        await prefs.setString(_appLocaleKey, 'en_US');
+      }
+    }
     
     // load search settings
     final searchServicesStr = prefs.getString(_searchServicesKey);
@@ -184,6 +199,41 @@ class SettingsProvider extends ChangeNotifier {
     _initSearchConnectivityTests();
 
     notifyListeners();
+  }
+
+  // ===== App locale (UI language) =====
+  String? _appLocaleTag; // e.g., 'zh_CN', 'en_US'
+  Locale get appLocale => _parseLocaleTag(_appLocaleTag ?? 'en_US');
+  Future<void> setAppLocale(Locale locale) async {
+    final tag = _localeToTag(locale);
+    if (_appLocaleTag == tag) return;
+    _appLocaleTag = tag;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appLocaleKey, _appLocaleTag!);
+  }
+
+  // Supported locales mapping
+  String _mapDeviceLocaleToSupportedTag(Locale device) {
+    final lc = (device.languageCode).toLowerCase();
+    if (lc.startsWith('zh')) return 'zh_CN';
+    return 'en_US';
+  }
+
+  String _localeToTag(Locale l) {
+    final lc = l.languageCode.toLowerCase();
+    if (lc == 'zh') return 'zh_CN';
+    return 'en_US';
+  }
+
+  Locale _parseLocaleTag(String tag) {
+    switch (tag) {
+      case 'zh_CN':
+        return const Locale('zh', 'CN');
+      case 'en_US':
+      default:
+        return const Locale('en', 'US');
+    }
   }
 
   // ===== Backup & WebDAV settings =====
