@@ -660,5 +660,13 @@
   "searchProviderSearXNGDescription": "注重隐私的元搜索引擎。需自建实例，无跟踪。",
   "searchProviderTavilyDescription": "为大型语言模型（LLMs）优化的 AI 搜索 API，提供高质量、相关的搜索结果。",
   "searchProviderZhipuDescription": "智谱 AI 旗下中文 AI 搜索服务，针对中文内容与查询进行了优化。",
+  "searchServiceNameBingLocal": "Bing（Local）",
+  "searchServiceNameTavily": "Tavily",
+  "searchServiceNameExa": "Exa",
+  "searchServiceNameZhipu": "智谱",
+  "searchServiceNameSearXNG": "SearXNG",
+  "searchServiceNameLinkUp": "LinkUp",
+  "searchServiceNameBrave": "Brave",
+  "searchServiceNameMetaso": "秘塔",
   "titleForLocale": "新对话"
 }

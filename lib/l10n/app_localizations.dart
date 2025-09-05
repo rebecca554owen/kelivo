@@ -3982,6 +3982,54 @@ abstract class AppLocalizations {
   /// **'Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.'**
   String get searchProviderZhipuDescription;
 
+  /// No description provided for @searchServiceNameBingLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Bing (Local)'**
+  String get searchServiceNameBingLocal;
+
+  /// No description provided for @searchServiceNameTavily.
+  ///
+  /// In en, this message translates to:
+  /// **'Tavily'**
+  String get searchServiceNameTavily;
+
+  /// No description provided for @searchServiceNameExa.
+  ///
+  /// In en, this message translates to:
+  /// **'Exa'**
+  String get searchServiceNameExa;
+
+  /// No description provided for @searchServiceNameZhipu.
+  ///
+  /// In en, this message translates to:
+  /// **'Zhipu AI'**
+  String get searchServiceNameZhipu;
+
+  /// No description provided for @searchServiceNameSearXNG.
+  ///
+  /// In en, this message translates to:
+  /// **'SearXNG'**
+  String get searchServiceNameSearXNG;
+
+  /// No description provided for @searchServiceNameLinkUp.
+  ///
+  /// In en, this message translates to:
+  /// **'LinkUp'**
+  String get searchServiceNameLinkUp;
+
+  /// No description provided for @searchServiceNameBrave.
+  ///
+  /// In en, this message translates to:
+  /// **'Brave Search'**
+  String get searchServiceNameBrave;
+
+  /// No description provided for @searchServiceNameMetaso.
+  ///
+  /// In en, this message translates to:
+  /// **'Metaso'**
+  String get searchServiceNameMetaso;
+
   /// No description provided for @titleForLocale.
   ///
   /// In en, this message translates to:

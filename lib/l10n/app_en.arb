@@ -856,5 +856,13 @@
   "searchProviderSearXNGDescription": "Privacy-respecting metasearch engine. Self-hosted instance required; no tracking.",
   "searchProviderTavilyDescription": "AI search API optimized for LLMs. Provides high-quality, relevant results.",
   "searchProviderZhipuDescription": "Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.",
+  "searchServiceNameBingLocal": "Bing (Local)",
+  "searchServiceNameTavily": "Tavily",
+  "searchServiceNameExa": "Exa",
+  "searchServiceNameZhipu": "Zhipu AI",
+  "searchServiceNameSearXNG": "SearXNG",
+  "searchServiceNameLinkUp": "LinkUp",
+  "searchServiceNameBrave": "Brave Search",
+  "searchServiceNameMetaso": "Metaso",
   "titleForLocale": "New Chat"
 }

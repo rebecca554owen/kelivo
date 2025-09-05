@@ -2029,6 +2029,30 @@ class AppLocalizationsZh extends AppLocalizations {
       '智谱 AI 旗下中文 AI 搜索服务，针对中文内容与查询进行了优化。';
 
   @override
+  String get searchServiceNameBingLocal => 'Bing（Local）';
+
+  @override
+  String get searchServiceNameTavily => 'Tavily';
+
+  @override
+  String get searchServiceNameExa => 'Exa';
+
+  @override
+  String get searchServiceNameZhipu => '智谱';
+
+  @override
+  String get searchServiceNameSearXNG => 'SearXNG';
+
+  @override
+  String get searchServiceNameLinkUp => 'LinkUp';
+
+  @override
+  String get searchServiceNameBrave => 'Brave';
+
+  @override
+  String get searchServiceNameMetaso => '秘塔';
+
+  @override
   String get titleForLocale => '新对话';
 }
 
@@ -4054,6 +4078,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get searchProviderZhipuDescription =>
       '智譜 AI 旗下中文 AI 搜尋服務，針對中文內容與查詢進行優化。';
+
+  @override
+  String get searchServiceNameBingLocal => 'Bing（本機）';
+
+  @override
+  String get searchServiceNameTavily => 'Tavily';
+
+  @override
+  String get searchServiceNameExa => 'Exa';
+
+  @override
+  String get searchServiceNameZhipu => 'Zhipu（智譜）';
+
+  @override
+  String get searchServiceNameSearXNG => 'SearXNG';
+
+  @override
+  String get searchServiceNameLinkUp => 'LinkUp';
+
+  @override
+  String get searchServiceNameBrave => 'Brave 搜尋';
+
+  @override
+  String get searchServiceNameMetaso => 'Metaso（秘塔）';
 
   @override
   String get titleForLocale => '新對話';

@@ -2099,5 +2099,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.';
 
   @override
+  String get searchServiceNameBingLocal => 'Bing (Local)';
+
+  @override
+  String get searchServiceNameTavily => 'Tavily';
+
+  @override
+  String get searchServiceNameExa => 'Exa';
+
+  @override
+  String get searchServiceNameZhipu => 'Zhipu AI';
+
+  @override
+  String get searchServiceNameSearXNG => 'SearXNG';
+
+  @override
+  String get searchServiceNameLinkUp => 'LinkUp';
+
+  @override
+  String get searchServiceNameBrave => 'Brave Search';
+
+  @override
+  String get searchServiceNameMetaso => 'Metaso';
+
+  @override
   String get titleForLocale => 'New Chat';
 }

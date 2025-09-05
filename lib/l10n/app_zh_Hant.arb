@@ -660,5 +660,13 @@
   "searchProviderSearXNGDescription": "重視隱私的元搜尋引擎。需自建實例，無追蹤。",
   "searchProviderTavilyDescription": "為大型語言模型（LLM）優化的 AI 搜尋 API，提供高品質、相關的搜尋結果。",
   "searchProviderZhipuDescription": "智譜 AI 旗下中文 AI 搜尋服務，針對中文內容與查詢進行優化。",
+  "searchServiceNameBingLocal": "Bing（本機）",
+  "searchServiceNameTavily": "Tavily",
+  "searchServiceNameExa": "Exa",
+  "searchServiceNameZhipu": "Zhipu（智譜）",
+  "searchServiceNameSearXNG": "SearXNG",
+  "searchServiceNameLinkUp": "LinkUp",
+  "searchServiceNameBrave": "Brave 搜尋",
+  "searchServiceNameMetaso": "Metaso（秘塔）",
   "titleForLocale": "新對話"
 }

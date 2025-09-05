@@ -524,14 +524,14 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 'bing_local', child: Text('Bing (${l10n.searchServicesAddDialogBingLocal})')),
-                  const DropdownMenuItem(value: 'tavily', child: Text('Tavily')),
-                  const DropdownMenuItem(value: 'exa', child: Text('Exa')),
-                  const DropdownMenuItem(value: 'zhipu', child: Text('Zhipu (智谱)')),
-                  const DropdownMenuItem(value: 'searxng', child: Text('SearXNG')),
-                  const DropdownMenuItem(value: 'linkup', child: Text('LinkUp')),
-                  const DropdownMenuItem(value: 'brave', child: Text('Brave Search')),
-                  const DropdownMenuItem(value: 'metaso', child: Text('Metaso (秘塔)')),
+                  DropdownMenuItem(value: 'bing_local', child: Text(l10n.searchServiceNameBingLocal)),
+                  DropdownMenuItem(value: 'tavily', child: Text(l10n.searchServiceNameTavily)),
+                  DropdownMenuItem(value: 'exa', child: Text(l10n.searchServiceNameExa)),
+                  DropdownMenuItem(value: 'zhipu', child: Text(l10n.searchServiceNameZhipu)),
+                  DropdownMenuItem(value: 'searxng', child: Text(l10n.searchServiceNameSearXNG)),
+                  DropdownMenuItem(value: 'linkup', child: Text(l10n.searchServiceNameLinkUp)),
+                  DropdownMenuItem(value: 'brave', child: Text(l10n.searchServiceNameBrave)),
+                  DropdownMenuItem(value: 'metaso', child: Text(l10n.searchServiceNameMetaso)),
                 ],
                 onChanged: (value) {
                   setState(() {
