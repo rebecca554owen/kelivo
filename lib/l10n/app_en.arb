@@ -650,5 +650,15 @@
   "providersPageEnabledStatus": "Enabled",
   "providersPageDisabledStatus": "Disabled",
   "providersPageModelsCountSuffix": " models",
-  "providersPageModelsCountSingleSuffix": "models"
+  "providersPageModelsCountSingleSuffix": "models",
+  "addProviderSheetTitle": "Add Provider",
+  "addProviderSheetEnabledLabel": "Enabled",
+  "addProviderSheetNameLabel": "Name",
+  "addProviderSheetApiPathLabel": "API Path",
+  "addProviderSheetVertexAiLocationLabel": "Location",
+  "addProviderSheetVertexAiProjectIdLabel": "Project ID",
+  "addProviderSheetVertexAiServiceAccountJsonLabel": "Service Account JSON (paste or import)",
+  "addProviderSheetImportJsonButton": "Import JSON",
+  "addProviderSheetCancelButton": "Cancel",
+  "addProviderSheetAddButton": "Add"
 }

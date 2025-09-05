@@ -1534,4 +1534,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get providersPageModelsCountSingleSuffix => '个模型';
+
+  @override
+  String get addProviderSheetTitle => '添加供应商';
+
+  @override
+  String get addProviderSheetEnabledLabel => '是否启用';
+
+  @override
+  String get addProviderSheetNameLabel => '名称';
+
+  @override
+  String get addProviderSheetApiPathLabel => 'API 路径';
+
+  @override
+  String get addProviderSheetVertexAiLocationLabel => '位置';
+
+  @override
+  String get addProviderSheetVertexAiProjectIdLabel => '项目ID';
+
+  @override
+  String get addProviderSheetVertexAiServiceAccountJsonLabel =>
+      '服务账号 JSON（粘贴或导入）';
+
+  @override
+  String get addProviderSheetImportJsonButton => '导入 JSON';
+
+  @override
+  String get addProviderSheetCancelButton => '取消';
+
+  @override
+  String get addProviderSheetAddButton => '添加';
 }

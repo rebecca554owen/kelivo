@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../l10n/app_localizations.dart';
 
 Future<String?> showAddProviderSheet(BuildContext context) async {
   final cs = Theme.of(context).colorScheme;
@@ -97,21 +98,20 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     );
   }
 
-  Widget _openaiForm() {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+  Widget _openaiForm(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _switchTile(label: zh ? '是否启用' : 'Enabled', value: _openaiEnabled, onChanged: (v) => setState(() => _openaiEnabled = v)),
+        _switchTile(label: l10n.addProviderSheetEnabledLabel, value: _openaiEnabled, onChanged: (v) => setState(() => _openaiEnabled = v)),
         const SizedBox(height: 10),
-        _inputRow(label: zh ? '名称' : 'Name', controller: _openaiName),
+        _inputRow(label: l10n.addProviderSheetNameLabel, controller: _openaiName),
         const SizedBox(height: 10),
         _inputRow(label: 'API Key', controller: _openaiKey),
         const SizedBox(height: 10),
         _inputRow(label: 'API Base Url', controller: _openaiBase),
         const SizedBox(height: 10),
         if (!_openaiUseResponse) ...[
-          _inputRow(label: zh ? 'API 路径' : 'API Path', controller: _openaiPath, hint: '/chat/completions'),
+          _inputRow(label: l10n.addProviderSheetApiPathLabel, controller: _openaiPath, hint: '/chat/completions'),
           const SizedBox(height: 10),
         ],
         _switchTile(
@@ -123,14 +123,13 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     );
   }
 
-  Widget _googleForm() {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+  Widget _googleForm(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _switchTile(label: zh ? '是否启用' : 'Enabled', value: _googleEnabled, onChanged: (v) => setState(() => _googleEnabled = v)),
+        _switchTile(label: l10n.addProviderSheetEnabledLabel, value: _googleEnabled, onChanged: (v) => setState(() => _googleEnabled = v)),
         const SizedBox(height: 10),
-        _inputRow(label: zh ? '名称' : 'Name', controller: _googleName),
+        _inputRow(label: l10n.addProviderSheetNameLabel, controller: _googleName),
         const SizedBox(height: 10),
         if (!_googleVertex) ...[
           _inputRow(label: 'API Key', controller: _googleKey),
@@ -145,19 +144,19 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         ),
         const SizedBox(height: 10),
         if (_googleVertex) ...[
-          _inputRow(label: zh ? '位置' : 'Location', controller: _googleLocation, hint: 'us-central1'),
+          _inputRow(label: l10n.addProviderSheetVertexAiLocationLabel, controller: _googleLocation, hint: 'us-central1'),
           const SizedBox(height: 10),
-          _inputRow(label: zh ? '项目ID' : 'Project ID', controller: _googleProject),
+          _inputRow(label: l10n.addProviderSheetVertexAiProjectIdLabel, controller: _googleProject),
           const SizedBox(height: 10),
           _multilineRow(
-            label: zh ? '服务账号 JSON（粘贴或导入）' : 'Service Account JSON (paste or import)',
+            label: l10n.addProviderSheetVertexAiServiceAccountJsonLabel,
             controller: _googleSaJson,
             hint: '{\n  "type": "service_account", ...\n}',
             actions: [
               TextButton.icon(
                 onPressed: _importGoogleServiceAccount,
                 icon: const Icon(Icons.upload_file, size: 16),
-                label: Text(zh ? '导入 JSON' : 'Import JSON'),
+                label: Text(l10n.addProviderSheetImportJsonButton),
               ),
             ],
           ),
@@ -166,14 +165,13 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     );
   }
 
-  Widget _claudeForm() {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+  Widget _claudeForm(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _switchTile(label: zh ? '是否启用' : 'Enabled', value: _claudeEnabled, onChanged: (v) => setState(() => _claudeEnabled = v)),
+        _switchTile(label: l10n.addProviderSheetEnabledLabel, value: _claudeEnabled, onChanged: (v) => setState(() => _claudeEnabled = v)),
         const SizedBox(height: 10),
-        _inputRow(label: zh ? '名称' : 'Name', controller: _claudeName),
+        _inputRow(label: l10n.addProviderSheetNameLabel, controller: _claudeName),
         const SizedBox(height: 10),
         _inputRow(label: 'API Key', controller: _claudeKey),
         const SizedBox(height: 10),
@@ -282,7 +280,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Padding(
@@ -310,7 +308,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                   children: [
                     Expanded(
                       child: Text(
-                        zh ? '添加供应商' : 'Add Provider',
+                        l10n.addProviderSheetTitle,
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -355,9 +353,9 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                           final idx = _tab.index;
                           return Column(
                             children: [
-                              if (idx == 0) _openaiForm(),
-                              if (idx == 1) _googleForm(),
-                              if (idx == 2) _claudeForm(),
+                              if (idx == 0) _openaiForm(l10n),
+                              if (idx == 1) _googleForm(l10n),
+                              if (idx == 2) _claudeForm(l10n),
                             ],
                           );
                         },
@@ -378,7 +376,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                           side: BorderSide(color: cs.primary.withOpacity(0.5)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: Text(zh ? '取消' : 'Cancel', style: TextStyle(color: cs.primary)),
+                        child: Text(l10n.addProviderSheetCancelButton, style: TextStyle(color: cs.primary)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -392,7 +390,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
-                        label: Text(zh ? '添加' : 'Add'),
+                        label: Text(l10n.addProviderSheetAddButton),
                       ),
                     ),
                   ],

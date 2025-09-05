@@ -3043,6 +3043,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'models'**
   String get providersPageModelsCountSingleSuffix;
+
+  /// No description provided for @addProviderSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Provider'**
+  String get addProviderSheetTitle;
+
+  /// No description provided for @addProviderSheetEnabledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get addProviderSheetEnabledLabel;
+
+  /// No description provided for @addProviderSheetNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get addProviderSheetNameLabel;
+
+  /// No description provided for @addProviderSheetApiPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Path'**
+  String get addProviderSheetApiPathLabel;
+
+  /// No description provided for @addProviderSheetVertexAiLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get addProviderSheetVertexAiLocationLabel;
+
+  /// No description provided for @addProviderSheetVertexAiProjectIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Project ID'**
+  String get addProviderSheetVertexAiProjectIdLabel;
+
+  /// No description provided for @addProviderSheetVertexAiServiceAccountJsonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Account JSON (paste or import)'**
+  String get addProviderSheetVertexAiServiceAccountJsonLabel;
+
+  /// No description provided for @addProviderSheetImportJsonButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import JSON'**
+  String get addProviderSheetImportJsonButton;
+
+  /// No description provided for @addProviderSheetCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get addProviderSheetCancelButton;
+
+  /// No description provided for @addProviderSheetAddButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addProviderSheetAddButton;
 }
 
 class _AppLocalizationsDelegate

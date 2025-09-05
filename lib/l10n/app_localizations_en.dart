@@ -1576,4 +1576,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providersPageModelsCountSingleSuffix => 'models';
+
+  @override
+  String get addProviderSheetTitle => 'Add Provider';
+
+  @override
+  String get addProviderSheetEnabledLabel => 'Enabled';
+
+  @override
+  String get addProviderSheetNameLabel => 'Name';
+
+  @override
+  String get addProviderSheetApiPathLabel => 'API Path';
+
+  @override
+  String get addProviderSheetVertexAiLocationLabel => 'Location';
+
+  @override
+  String get addProviderSheetVertexAiProjectIdLabel => 'Project ID';
+
+  @override
+  String get addProviderSheetVertexAiServiceAccountJsonLabel =>
+      'Service Account JSON (paste or import)';
+
+  @override
+  String get addProviderSheetImportJsonButton => 'Import JSON';
+
+  @override
+  String get addProviderSheetCancelButton => 'Cancel';
+
+  @override
+  String get addProviderSheetAddButton => 'Add';
 }

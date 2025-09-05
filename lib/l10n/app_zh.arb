@@ -489,5 +489,15 @@
   "providersPageEnabledStatus": "启用",
   "providersPageDisabledStatus": "禁用",
   "providersPageModelsCountSuffix": " models",
-  "providersPageModelsCountSingleSuffix": "个模型"
+  "providersPageModelsCountSingleSuffix": "个模型",
+  "addProviderSheetTitle": "添加供应商",
+  "addProviderSheetEnabledLabel": "是否启用",
+  "addProviderSheetNameLabel": "名称",
+  "addProviderSheetApiPathLabel": "API 路径",
+  "addProviderSheetVertexAiLocationLabel": "位置",
+  "addProviderSheetVertexAiProjectIdLabel": "项目ID",
+  "addProviderSheetVertexAiServiceAccountJsonLabel": "服务账号 JSON（粘贴或导入）",
+  "addProviderSheetImportJsonButton": "导入 JSON",
+  "addProviderSheetCancelButton": "取消",
+  "addProviderSheetAddButton": "添加"
 }
