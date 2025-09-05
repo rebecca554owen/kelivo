@@ -34,7 +34,6 @@ import '../../chat/pages/message_edit_page.dart';
 import '../../chat/widgets/message_export_sheet.dart';
 import '../../assistant/widgets/mcp_assistant_sheet.dart';
 import '../../chat/widgets/reasoning_budget_sheet.dart';
-import '../../settings/pages/more_page.dart';
 import '../../search/widgets/search_settings_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
@@ -389,12 +388,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return inferred.abilities.contains(ModelAbility.tool);
   }
 
-  void _openMorePage() {
-    _dismissKeyboard();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const MorePage()),
-    );
-  }
+  // More page entry is temporarily removed.
+  // void _openMorePage() {
+  //   _dismissKeyboard();
+  //   Navigator.of(context).push(
+  //     MaterialPageRoute(builder: (_) => const MorePage()),
+  //   );
+  // }
 
   void _dismissKeyboard() {
     _inputFocus.unfocus();
@@ -2160,6 +2160,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         resizeToAvoidBottomInset: true,
         extendBodyBehindAppBar: true,
       appBar: AppBar(
+        // centerTitle: true,
         systemOverlayStyle: (Theme.of(context).brightness == Brightness.dark)
             ? const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -2188,12 +2189,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (!isOpen) _suppressNextOpenHaptic = true;
             _drawerController.toggle?.call();
           },
-          icon: const Icon(Lucide.ListTree, size: 22),
+          icon: SvgPicture.asset(
+            'assets/icons/list.svg',
+            width: 14,
+            height: 14,
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).iconTheme.color ?? Theme.of(context).colorScheme.onSurface,
+              BlendMode.srcIn,
+            ),
+          ),
         ),
-        titleSpacing: 0,
+        titleSpacing: 2,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
+          // crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
@@ -2228,14 +2238,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MorePage()),
-              );
-            },
-            icon: const Icon(Lucide.Menu, size: 22),
-          ),
+          // Temporarily hidden: More menu button
+          // IconButton(
+          //   onPressed: () {
+          //     Navigator.of(context).push(
+          //       MaterialPageRoute(builder: (_) => const MorePage()),
+          //     );
+          //   },
+          //   icon: const Icon(Lucide.Menu, size: 22),
+          // ),
           IconButton(
             onPressed: () async {
               await _createNewConversation();
