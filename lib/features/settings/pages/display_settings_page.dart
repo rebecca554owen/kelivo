@@ -6,6 +6,7 @@ import 'package:syncfusion_flutter_core/theme.dart';
 import '../../../core/providers/settings_provider.dart';
 import 'theme_settings_page.dart';
 import '../../../theme/palettes.dart';
+import '../../../l10n/app_localizations.dart';
 
 class DisplaySettingsPage extends StatefulWidget {
   const DisplaySettingsPage({super.key});
@@ -19,7 +20,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     context.watch<SettingsProvider>(); // keep theme reactivity
 
     Widget sectionTitle(String text) => Padding(
@@ -37,9 +38,9 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.settingsPageBackButton,
         ),
-        title: Text(zh ? '显示设置' : 'Display Settings'),
+        title: Text(l10n.settingsPageDisplay),
       ),
       body: ListView(
         children: [
@@ -51,89 +52,71 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
           const SizedBox(height: 4),
           _SwitchTile(
             icon: Lucide.User,
-            title: zh ? '显示用户头像' : 'Show User Avatar',
-            subtitle: zh
-                ? '是否在聊天消息中显示用户头像'
-                : 'Display user avatar in chat messages',
+            title: l10n.displaySettingsPageShowUserAvatarTitle,
+            subtitle: l10n.displaySettingsPageShowUserAvatarSubtitle,
             value: context.watch<SettingsProvider>().showUserAvatar,
             onChanged: (v) => context.read<SettingsProvider>().setShowUserAvatar(v),
           ),
           const SizedBox(height: 6),
           _SwitchTile(
             icon: Lucide.Bot,
-            title: zh ? '聊天列表模型图标' : 'Chat Model Icon',
-            subtitle: zh
-                ? '是否在聊天消息中显示模型图标'
-                : 'Show model icon in chat messages',
+            title: l10n.displaySettingsPageChatModelIconTitle,
+            subtitle: l10n.displaySettingsPageChatModelIconSubtitle,
             value: context.watch<SettingsProvider>().showModelIcon,
             onChanged: (v) => context.read<SettingsProvider>().setShowModelIcon(v),
           ),
           const SizedBox(height: 6),
           _SwitchTile(
             icon: Lucide.Type,
-            title: zh ? '显示Token和上下文统计' : 'Show Token & Context Stats',
-            subtitle: zh
-                ? '显示 token 用量与消息数量'
-                : 'Show token usage and message count',
+            title: l10n.displaySettingsPageShowTokenStatsTitle,
+            subtitle: l10n.displaySettingsPageShowTokenStatsSubtitle,
             value: context.watch<SettingsProvider>().showTokenStats,
             onChanged: (v) => context.read<SettingsProvider>().setShowTokenStats(v),
           ),
           _SwitchTile(
             icon: Lucide.Brain,
-            title: zh ? '自动折叠思考' : 'Auto-collapse Thinking',
-            subtitle: zh
-                ? '思考完成后自动折叠，保持界面简洁'
-                : 'Collapse reasoning after finish',
+            title: l10n.displaySettingsPageAutoCollapseThinkingTitle,
+            subtitle: l10n.displaySettingsPageAutoCollapseThinkingSubtitle,
             value: context.watch<SettingsProvider>().autoCollapseThinking,
             onChanged: (v) => context.read<SettingsProvider>().setAutoCollapseThinking(v),
           ),
           _SwitchTile(
             icon: Lucide.BadgeInfo,
-            title: zh ? '显示更新' : 'Show Updates',
-            subtitle: zh
-                ? '显示应用更新通知'
-                : 'Show app update notifications',
+            title: l10n.displaySettingsPageShowUpdatesTitle,
+            subtitle: l10n.displaySettingsPageShowUpdatesSubtitle,
             value: context.watch<SettingsProvider>().showAppUpdates,
             onChanged: (v) => context.read<SettingsProvider>().setShowAppUpdates(v),
           ),
           _SwitchTile(
             icon: Lucide.ChevronRight,
-            title: zh ? '消息导航按钮' : 'Message Navigation Buttons',
-            subtitle: zh
-                ? '滚动时显示快速跳转按钮'
-                : 'Show quick jump buttons when scrolling',
+            title: l10n.displaySettingsPageMessageNavButtonsTitle,
+            subtitle: l10n.displaySettingsPageMessageNavButtonsSubtitle,
             value: context.watch<SettingsProvider>().showMessageNavButtons,
             onChanged: (v) => context.read<SettingsProvider>().setShowMessageNavButtons(v),
           ),
           _SwitchTile(
             icon: Lucide.Vibrate,
-            title: zh ? '侧边栏触觉反馈' : 'Haptics on Sidebar',
-            subtitle: zh
-                ? '打开/关闭侧边栏时启用触觉反馈'
-                : 'Enable haptic feedback when opening/closing sidebar',
+            title: l10n.displaySettingsPageHapticsOnSidebarTitle,
+            subtitle: l10n.displaySettingsPageHapticsOnSidebarSubtitle,
             value: context.watch<SettingsProvider>().hapticsOnDrawer,
             onChanged: (v) => context.read<SettingsProvider>().setHapticsOnDrawer(v),
           ),
           _SwitchTile(
             icon: Lucide.Vibrate,
-            title: zh ? '消息生成触觉反馈' : 'Haptics on Generate',
-            subtitle: zh
-                ? '生成消息时启用触觉反馈'
-                : 'Enable haptic feedback during generation',
+            title: l10n.displaySettingsPageHapticsOnGenerateTitle,
+            subtitle: l10n.displaySettingsPageHapticsOnGenerateSubtitle,
             value: context.watch<SettingsProvider>().hapticsOnGenerate,
             onChanged: (v) => context.read<SettingsProvider>().setHapticsOnGenerate(v),
           ),
           _SwitchTile(
             icon: Lucide.MessageCirclePlus,
-            title: zh ? '启动时新建对话' : 'New Chat on Launch',
-            subtitle: zh
-                ? '应用启动时自动创建新对话'
-                : 'Automatically create a new chat on launch',
+            title: l10n.displaySettingsPageNewChatOnLaunchTitle,
+            subtitle: l10n.displaySettingsPageNewChatOnLaunchSubtitle,
             value: context.watch<SettingsProvider>().newChatOnLaunch,
             onChanged: (v) => context.read<SettingsProvider>().setNewChatOnLaunch(v),
           ),
 
-          sectionTitle(zh ? '聊天字体大小' : 'Chat Font Size'),
+          sectionTitle(l10n.displaySettingsPageChatFontSizeTitle),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
             child: Container(
@@ -212,7 +195,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        zh ? '这是一个示例的聊天文本' : 'This is a sample chat text',
+                        l10n.displaySettingsPageChatFontSampleText,
                         style: TextStyle(fontSize: 16 * context.watch<SettingsProvider>().chatFontScale),
                       ),
                     ),
@@ -296,10 +279,10 @@ class _ThemeEntryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
     final palette = ThemePalettes.byId(settings.themePaletteId);
-    final subtitleText = zh ? palette.displayNameZh : palette.displayNameEn;
+    final subtitleText = Localizations.localeOf(context).languageCode == 'zh' ? palette.displayNameZh : palette.displayNameEn;
     return Material(
       color: cs.surfaceVariant.withOpacity(isDark ? 0.18 : 0.5),
       borderRadius: BorderRadius.circular(12),
@@ -327,7 +310,7 @@ class _ThemeEntryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(zh ? '主题设置' : 'Theme Settings',
+                    Text(l10n.displaySettingsPageThemeSettingsTitle,
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
                     Text(subtitleText, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),

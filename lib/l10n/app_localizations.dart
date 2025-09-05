@@ -3541,6 +3541,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'License'**
   String get aboutPageLicense;
+
+  /// No description provided for @displaySettingsPageShowUserAvatarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show User Avatar'**
+  String get displaySettingsPageShowUserAvatarTitle;
+
+  /// No description provided for @displaySettingsPageShowUserAvatarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Display user avatar in chat messages'**
+  String get displaySettingsPageShowUserAvatarSubtitle;
+
+  /// No description provided for @displaySettingsPageChatModelIconTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Model Icon'**
+  String get displaySettingsPageChatModelIconTitle;
+
+  /// No description provided for @displaySettingsPageChatModelIconSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show model icon in chat messages'**
+  String get displaySettingsPageChatModelIconSubtitle;
+
+  /// No description provided for @displaySettingsPageShowTokenStatsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Token & Context Stats'**
+  String get displaySettingsPageShowTokenStatsTitle;
+
+  /// No description provided for @displaySettingsPageShowTokenStatsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show token usage and message count'**
+  String get displaySettingsPageShowTokenStatsSubtitle;
+
+  /// No description provided for @displaySettingsPageAutoCollapseThinkingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-collapse Thinking'**
+  String get displaySettingsPageAutoCollapseThinkingTitle;
+
+  /// No description provided for @displaySettingsPageAutoCollapseThinkingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse reasoning after finish'**
+  String get displaySettingsPageAutoCollapseThinkingSubtitle;
+
+  /// No description provided for @displaySettingsPageShowUpdatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Updates'**
+  String get displaySettingsPageShowUpdatesTitle;
+
+  /// No description provided for @displaySettingsPageShowUpdatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show app update notifications'**
+  String get displaySettingsPageShowUpdatesSubtitle;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Message Navigation Buttons'**
+  String get displaySettingsPageMessageNavButtonsTitle;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show quick jump buttons when scrolling'**
+  String get displaySettingsPageMessageNavButtonsSubtitle;
+
+  /// No description provided for @displaySettingsPageHapticsOnSidebarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptics on Sidebar'**
+  String get displaySettingsPageHapticsOnSidebarTitle;
+
+  /// No description provided for @displaySettingsPageHapticsOnSidebarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable haptic feedback when opening/closing sidebar'**
+  String get displaySettingsPageHapticsOnSidebarSubtitle;
+
+  /// No description provided for @displaySettingsPageHapticsOnGenerateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptics on Generate'**
+  String get displaySettingsPageHapticsOnGenerateTitle;
+
+  /// No description provided for @displaySettingsPageHapticsOnGenerateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable haptic feedback during generation'**
+  String get displaySettingsPageHapticsOnGenerateSubtitle;
+
+  /// No description provided for @displaySettingsPageNewChatOnLaunchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Chat on Launch'**
+  String get displaySettingsPageNewChatOnLaunchTitle;
+
+  /// No description provided for @displaySettingsPageNewChatOnLaunchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically create a new chat on launch'**
+  String get displaySettingsPageNewChatOnLaunchSubtitle;
+
+  /// No description provided for @displaySettingsPageChatFontSizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Font Size'**
+  String get displaySettingsPageChatFontSizeTitle;
+
+  /// No description provided for @displaySettingsPageChatFontSampleText.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a sample chat text'**
+  String get displaySettingsPageChatFontSampleText;
+
+  /// No description provided for @displaySettingsPageThemeSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme Settings'**
+  String get displaySettingsPageThemeSettingsTitle;
 }
 
 class _AppLocalizationsDelegate

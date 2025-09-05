@@ -1838,4 +1838,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutPageLicense => 'License';
+
+  @override
+  String get displaySettingsPageShowUserAvatarTitle => 'Show User Avatar';
+
+  @override
+  String get displaySettingsPageShowUserAvatarSubtitle =>
+      'Display user avatar in chat messages';
+
+  @override
+  String get displaySettingsPageChatModelIconTitle => 'Chat Model Icon';
+
+  @override
+  String get displaySettingsPageChatModelIconSubtitle =>
+      'Show model icon in chat messages';
+
+  @override
+  String get displaySettingsPageShowTokenStatsTitle =>
+      'Show Token & Context Stats';
+
+  @override
+  String get displaySettingsPageShowTokenStatsSubtitle =>
+      'Show token usage and message count';
+
+  @override
+  String get displaySettingsPageAutoCollapseThinkingTitle =>
+      'Auto-collapse Thinking';
+
+  @override
+  String get displaySettingsPageAutoCollapseThinkingSubtitle =>
+      'Collapse reasoning after finish';
+
+  @override
+  String get displaySettingsPageShowUpdatesTitle => 'Show Updates';
+
+  @override
+  String get displaySettingsPageShowUpdatesSubtitle =>
+      'Show app update notifications';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsTitle =>
+      'Message Navigation Buttons';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsSubtitle =>
+      'Show quick jump buttons when scrolling';
+
+  @override
+  String get displaySettingsPageHapticsOnSidebarTitle => 'Haptics on Sidebar';
+
+  @override
+  String get displaySettingsPageHapticsOnSidebarSubtitle =>
+      'Enable haptic feedback when opening/closing sidebar';
+
+  @override
+  String get displaySettingsPageHapticsOnGenerateTitle => 'Haptics on Generate';
+
+  @override
+  String get displaySettingsPageHapticsOnGenerateSubtitle =>
+      'Enable haptic feedback during generation';
+
+  @override
+  String get displaySettingsPageNewChatOnLaunchTitle => 'New Chat on Launch';
+
+  @override
+  String get displaySettingsPageNewChatOnLaunchSubtitle =>
+      'Automatically create a new chat on launch';
+
+  @override
+  String get displaySettingsPageChatFontSizeTitle => 'Chat Font Size';
+
+  @override
+  String get displaySettingsPageChatFontSampleText =>
+      'This is a sample chat text';
+
+  @override
+  String get displaySettingsPageThemeSettingsTitle => 'Theme Settings';
 }

@@ -1789,4 +1789,68 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutPageLicense => '许可证';
+
+  @override
+  String get displaySettingsPageShowUserAvatarTitle => '显示用户头像';
+
+  @override
+  String get displaySettingsPageShowUserAvatarSubtitle => '是否在聊天消息中显示用户头像';
+
+  @override
+  String get displaySettingsPageChatModelIconTitle => '聊天列表模型图标';
+
+  @override
+  String get displaySettingsPageChatModelIconSubtitle => '是否在聊天消息中显示模型图标';
+
+  @override
+  String get displaySettingsPageShowTokenStatsTitle => '显示Token和上下文统计';
+
+  @override
+  String get displaySettingsPageShowTokenStatsSubtitle => '显示 token 用量与消息数量';
+
+  @override
+  String get displaySettingsPageAutoCollapseThinkingTitle => '自动折叠思考';
+
+  @override
+  String get displaySettingsPageAutoCollapseThinkingSubtitle =>
+      '思考完成后自动折叠，保持界面简洁';
+
+  @override
+  String get displaySettingsPageShowUpdatesTitle => '显示更新';
+
+  @override
+  String get displaySettingsPageShowUpdatesSubtitle => '显示应用更新通知';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsTitle => '消息导航按钮';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsSubtitle => '滚动时显示快速跳转按钮';
+
+  @override
+  String get displaySettingsPageHapticsOnSidebarTitle => '侧边栏触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnSidebarSubtitle => '打开/关闭侧边栏时启用触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnGenerateTitle => '消息生成触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnGenerateSubtitle => '生成消息时启用触觉反馈';
+
+  @override
+  String get displaySettingsPageNewChatOnLaunchTitle => '启动时新建对话';
+
+  @override
+  String get displaySettingsPageNewChatOnLaunchSubtitle => '应用启动时自动创建新对话';
+
+  @override
+  String get displaySettingsPageChatFontSizeTitle => '聊天字体大小';
+
+  @override
+  String get displaySettingsPageChatFontSampleText => '这是一个示例的聊天文本';
+
+  @override
+  String get displaySettingsPageThemeSettingsTitle => '主题设置';
 }
