@@ -3157,6 +3157,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import'**
   String get importProviderSheetImportButton;
+
+  /// No description provided for @shareProviderSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Provider'**
+  String get shareProviderSheetTitle;
+
+  /// No description provided for @shareProviderSheetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy or share via QR code.'**
+  String get shareProviderSheetDescription;
+
+  /// No description provided for @shareProviderSheetCopiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get shareProviderSheetCopiedMessage;
+
+  /// No description provided for @shareProviderSheetCopyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get shareProviderSheetCopyButton;
+
+  /// No description provided for @shareProviderSheetShareButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get shareProviderSheetShareButton;
+
+  /// No description provided for @qrScanPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR'**
+  String get qrScanPageTitle;
+
+  /// No description provided for @qrScanPageInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Align the QR code within the frame'**
+  String get qrScanPageInstruction;
 }
 
 class _AppLocalizationsDelegate

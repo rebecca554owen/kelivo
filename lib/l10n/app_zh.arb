@@ -508,5 +508,12 @@
   "importProviderSheetDescription": "粘贴分享字符串（可多行，每行一个）或 ChatBox JSON",
   "importProviderSheetInputHint": "ai-provider:v1:...",
   "importProviderSheetCancelButton": "取消",
-  "importProviderSheetImportButton": "导入"
+  "importProviderSheetImportButton": "导入",
+  "shareProviderSheetTitle": "分享供应商配置",
+  "shareProviderSheetDescription": "复制下面的分享字符串，或使用二维码分享。",
+  "shareProviderSheetCopiedMessage": "已复制",
+  "shareProviderSheetCopyButton": "复制",
+  "shareProviderSheetShareButton": "分享",
+  "qrScanPageTitle": "扫码导入",
+  "qrScanPageInstruction": "将二维码对准取景框"
 }

@@ -1597,4 +1597,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importProviderSheetImportButton => '导入';
+
+  @override
+  String get shareProviderSheetTitle => '分享供应商配置';
+
+  @override
+  String get shareProviderSheetDescription => '复制下面的分享字符串，或使用二维码分享。';
+
+  @override
+  String get shareProviderSheetCopiedMessage => '已复制';
+
+  @override
+  String get shareProviderSheetCopyButton => '复制';
+
+  @override
+  String get shareProviderSheetShareButton => '分享';
+
+  @override
+  String get qrScanPageTitle => '扫码导入';
+
+  @override
+  String get qrScanPageInstruction => '将二维码对准取景框';
 }

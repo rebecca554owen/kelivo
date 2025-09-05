@@ -1639,4 +1639,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importProviderSheetImportButton => 'Import';
+
+  @override
+  String get shareProviderSheetTitle => 'Share Provider';
+
+  @override
+  String get shareProviderSheetDescription => 'Copy or share via QR code.';
+
+  @override
+  String get shareProviderSheetCopiedMessage => 'Copied';
+
+  @override
+  String get shareProviderSheetCopyButton => 'Copy';
+
+  @override
+  String get shareProviderSheetShareButton => 'Share';
+
+  @override
+  String get qrScanPageTitle => 'Scan QR';
+
+  @override
+  String get qrScanPageInstruction => 'Align the QR code within the frame';
 }

@@ -683,5 +683,12 @@
   "importProviderSheetDescription": "Paste share strings (multi-line supported) or ChatBox JSON",
   "importProviderSheetInputHint": "ai-provider:v1:... or JSON",
   "importProviderSheetCancelButton": "Cancel",
-  "importProviderSheetImportButton": "Import"
+  "importProviderSheetImportButton": "Import",
+  "shareProviderSheetTitle": "Share Provider",
+  "shareProviderSheetDescription": "Copy or share via QR code.",
+  "shareProviderSheetCopiedMessage": "Copied",
+  "shareProviderSheetCopyButton": "Copy",
+  "shareProviderSheetShareButton": "Share",
+  "qrScanPageTitle": "Scan QR",
+  "qrScanPageInstruction": "Align the QR code within the frame"
 }

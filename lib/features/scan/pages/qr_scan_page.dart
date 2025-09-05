@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
 
 class QrScanPage extends StatefulWidget {
   const QrScanPage({super.key});
@@ -15,14 +16,14 @@ class _QrScanPageState extends State<QrScanPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Lucide.ArrowLeft),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: Text(zh ? '扫码导入' : 'Scan QR'),
+        title: Text(l10n.qrScanPageTitle),
       ),
       body: Stack(
         children: [
@@ -51,7 +52,7 @@ class _QrScanPageState extends State<QrScanPage> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  zh ? '将二维码对准取景框' : 'Align the QR code within the frame',
+                  l10n.qrScanPageInstruction,
                   style: TextStyle(color: cs.onSurface),
                 ),
               ),

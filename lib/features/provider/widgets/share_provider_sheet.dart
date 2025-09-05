@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
+import '../../../l10n/app_localizations.dart';
 
 String encodeProviderConfig(ProviderConfig cfg) {
   String type;
@@ -48,7 +49,7 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
-      final zh = Localizations.localeOf(ctx).languageCode == 'zh';
+      final l10n = AppLocalizations.of(ctx)!;
       final controller = TextEditingController(text: code);
       return SafeArea(
         top: false,
@@ -66,9 +67,9 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
                   child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
                 ),
                 const SizedBox(height: 12),
-                Text(zh ? '分享供应商配置' : 'Share Provider', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                Text(l10n.shareProviderSheetTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
-                Text(zh ? '复制下面的分享字符串，或使用二维码分享。' : 'Copy or share via QR code.'),
+                Text(l10n.shareProviderSheetDescription),
                 const SizedBox(height: 10),
                 Expanded(
                   child: ListView(
@@ -107,9 +108,9 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
                         icon: const Icon(Lucide.Copy, size: 18),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: controller.text));
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '已复制' : 'Copied')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.shareProviderSheetCopiedMessage)));
                         },
-                        label: Text(zh ? '复制' : 'Copy'),
+                        label: Text(l10n.shareProviderSheetCopyButton),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: cs.primary.withOpacity(0.5)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -123,7 +124,7 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
                         onPressed: () async {
                           await Share.share(code, subject: 'AI Provider');
                         },
-                        label: Text(zh ? '分享' : 'Share'),
+                        label: Text(l10n.shareProviderSheetShareButton),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: cs.primary,
                           foregroundColor: cs.onPrimary,
