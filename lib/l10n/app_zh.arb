@@ -636,5 +636,6 @@
   "imageViewerPageShareFailedOpenFile": "无法分享，已尝试打开文件: {message}",
   "imageViewerPageShareFailed": "分享失败: {error}",
   "imageViewerPageShareButton": "分享图片",
-  "settingsShare": "Kelivo - 开源移动端AI助手"
+  "settingsShare": "Kelivo - 开源移动端AI助手",
+  "titleForLocale": "新对话"
 }

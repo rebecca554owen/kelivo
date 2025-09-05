@@ -832,5 +832,6 @@
     }
   },
   "imageViewerPageShareButton": "Share Image",
-  "settingsShare": "Kelivo - Open Source Mobile AI Assistant"
+  "settingsShare": "Kelivo - Open Source Mobile AI Assistant",
+  "titleForLocale": "New Chat"
 }

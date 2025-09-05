@@ -3872,6 +3872,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Kelivo - Open Source Mobile AI Assistant'**
   String get settingsShare;
+
+  /// No description provided for @titleForLocale.
+  ///
+  /// In en, this message translates to:
+  /// **'New Chat'**
+  String get titleForLocale;
 }
 
 class _AppLocalizationsDelegate

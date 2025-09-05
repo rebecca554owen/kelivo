@@ -2032,4 +2032,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsShare => 'Kelivo - Open Source Mobile AI Assistant';
+
+  @override
+  String get titleForLocale => 'New Chat';
 }

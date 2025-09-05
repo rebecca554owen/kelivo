@@ -1967,4 +1967,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsShare => 'Kelivo - 开源移动端AI助手';
+
+  @override
+  String get titleForLocale => '新对话';
 }

@@ -241,8 +241,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   String _titleForLocale(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    return lang == 'zh' ? '新对话' : 'New Chat';
+    final l10n = AppLocalizations.of(context)!;
+    return l10n.titleForLocale;
   }
 
   // Version selections (groupId -> selected version index)
