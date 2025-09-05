@@ -1660,4 +1660,129 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qrScanPageInstruction => 'Align the QR code within the frame';
+
+  @override
+  String get searchServicesPageBackTooltip => 'Back';
+
+  @override
+  String get searchServicesPageTitle => 'Search Services';
+
+  @override
+  String get searchServicesPageDone => 'Done';
+
+  @override
+  String get searchServicesPageEdit => 'Edit';
+
+  @override
+  String get searchServicesPageAddProvider => 'Add Provider';
+
+  @override
+  String get searchServicesPageSearchProviders => 'Search Providers';
+
+  @override
+  String get searchServicesPageGeneralOptions => 'General Options';
+
+  @override
+  String get searchServicesPageMaxResults => 'Max Results';
+
+  @override
+  String get searchServicesPageTimeoutSeconds => 'Timeout (seconds)';
+
+  @override
+  String get searchServicesPageAtLeastOneServiceRequired =>
+      'At least one search service is required';
+
+  @override
+  String get searchServicesPageTestingStatus => 'Testing…';
+
+  @override
+  String get searchServicesPageConnectedStatus => 'Connected';
+
+  @override
+  String get searchServicesPageFailedStatus => 'Failed';
+
+  @override
+  String get searchServicesPageNotTestedStatus => 'Not tested';
+
+  @override
+  String get searchServicesPageTestConnectionTooltip => 'Test Connection';
+
+  @override
+  String get searchServicesPageConfiguredStatus => 'Configured';
+
+  @override
+  String get searchServicesPageApiKeyRequiredStatus => 'API Key Required';
+
+  @override
+  String get searchServicesPageUrlRequiredStatus => 'URL Required';
+
+  @override
+  String get searchServicesAddDialogTitle => 'Add Search Service';
+
+  @override
+  String get searchServicesAddDialogServiceType => 'Service Type';
+
+  @override
+  String get searchServicesAddDialogBingLocal => 'Local';
+
+  @override
+  String get searchServicesAddDialogCancel => 'Cancel';
+
+  @override
+  String get searchServicesAddDialogAdd => 'Add';
+
+  @override
+  String get searchServicesAddDialogApiKeyRequired => 'API Key is required';
+
+  @override
+  String get searchServicesAddDialogInstanceUrl => 'Instance URL';
+
+  @override
+  String get searchServicesAddDialogUrlRequired => 'URL is required';
+
+  @override
+  String get searchServicesAddDialogEnginesOptional => 'Engines (optional)';
+
+  @override
+  String get searchServicesAddDialogLanguageOptional => 'Language (optional)';
+
+  @override
+  String get searchServicesAddDialogUsernameOptional => 'Username (optional)';
+
+  @override
+  String get searchServicesAddDialogPasswordOptional => 'Password (optional)';
+
+  @override
+  String get searchServicesEditDialogEdit => 'Edit';
+
+  @override
+  String get searchServicesEditDialogCancel => 'Cancel';
+
+  @override
+  String get searchServicesEditDialogSave => 'Save';
+
+  @override
+  String get searchServicesEditDialogBingLocalNoConfig =>
+      'No configuration required for Bing Local search.';
+
+  @override
+  String get searchServicesEditDialogApiKeyRequired => 'API Key is required';
+
+  @override
+  String get searchServicesEditDialogInstanceUrl => 'Instance URL';
+
+  @override
+  String get searchServicesEditDialogUrlRequired => 'URL is required';
+
+  @override
+  String get searchServicesEditDialogEnginesOptional => 'Engines (optional)';
+
+  @override
+  String get searchServicesEditDialogLanguageOptional => 'Language (optional)';
+
+  @override
+  String get searchServicesEditDialogUsernameOptional => 'Username (optional)';
+
+  @override
+  String get searchServicesEditDialogPasswordOptional => 'Password (optional)';
 }

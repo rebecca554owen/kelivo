@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/services/search/search_service.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SearchServicesPage extends StatefulWidget {
   const SearchServicesPage({super.key});
@@ -61,8 +62,9 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
 
   void _deleteService(int index) {
     if (_services.length <= 1) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('At least one search service is required')),
+        SnackBar(content: Text(l10n.searchServicesPageAtLeastOneServiceRequired)),
       );
       return;
     }
@@ -129,7 +131,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -137,18 +139,18 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.searchServicesPageBackTooltip,
         ),
-        title: Text(zh ? '搜索服务' : 'Search Services'),
+        title: Text(l10n.searchServicesPageTitle),
         actions: [
           IconButton(
-            tooltip: _isEditing ? (zh ? '完成' : 'Done') : (zh ? '编辑' : 'Edit'),
+            tooltip: _isEditing ? l10n.searchServicesPageDone : l10n.searchServicesPageEdit,
             icon: Icon(_isEditing ? Lucide.Check : Lucide.Edit, color: cs.onSurface),
             onPressed: () => setState(() => _isEditing = !_isEditing),
           ),
           const SizedBox(width: 4),
           IconButton(
-            tooltip: zh ? '添加提供商' : 'Add Provider',
+            tooltip: l10n.searchServicesPageAddProvider,
             icon: Icon(Lucide.Plus, color: cs.onSurface),
             onPressed: _addService,
           ),
@@ -158,7 +160,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          _sectionHeader(zh ? '搜索提供商' : 'Search Providers', cs),
+          _sectionHeader(l10n.searchServicesPageSearchProviders, cs),
           const SizedBox(height: 8),
           for (int i = 0; i < _services.length; i++) ...[
             Padding(
@@ -167,7 +169,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
             ),
           ],
           const SizedBox(height: 18),
-          _sectionHeader(zh ? '通用选项' : 'General Options', cs),
+          _sectionHeader(l10n.searchServicesPageGeneralOptions, cs),
           const SizedBox(height: 8),
           _buildCommonOptionsCard(context),
         ],
@@ -185,7 +187,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final settings = context.watch<SettingsProvider>();
     final commonOptions = settings.searchCommonOptions;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final bg = isDark ? Colors.white10 : cs.primary.withOpacity(0.06);
     final border = cs.primary.withOpacity(0.35);
 
@@ -200,7 +202,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(zh ? '最大结果数' : 'Max Results', style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(l10n.searchServicesPageMaxResults, style: const TextStyle(fontWeight: FontWeight.w700)),
             Row(
               children: [
                 IconButton(
@@ -238,7 +240,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(zh ? '超时时间（秒）' : 'Timeout (seconds)', style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(l10n.searchServicesPageTimeoutSeconds, style: const TextStyle(fontWeight: FontWeight.w700)),
             Row(
               children: [
                 IconButton(
@@ -285,7 +287,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     final isDark = theme.brightness == Brightness.dark;
     final isSelected = index == _selectedIndex;
     final searchService = SearchService.getService(service);
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final bg = isDark ? Colors.white10 : cs.primary.withOpacity(0.06);
     final border = isSelected ? cs.primary : cs.primary.withOpacity(0.35);
     // Connection status label (replaces previous "已配置/需要Key")
@@ -295,19 +297,19 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     Color statusBg;
     Color statusFg;
     if (testing) {
-      statusText = zh ? '测试中…' : 'Testing…';
+      statusText = l10n.searchServicesPageTestingStatus;
       statusBg = cs.primary.withOpacity(0.12);
       statusFg = cs.primary;
     } else if (conn == true) {
-      statusText = zh ? '已连接' : 'Connected';
+      statusText = l10n.searchServicesPageConnectedStatus;
       statusBg = Colors.green.withOpacity(0.12);
       statusFg = Colors.green;
     } else if (conn == false) {
-      statusText = zh ? '连接失败' : 'Failed';
+      statusText = l10n.searchServicesPageFailedStatus;
       statusBg = Colors.orange.withOpacity(0.12);
       statusFg = Colors.orange;
     } else {
-      statusText = zh ? '未测试' : 'Not tested';
+      statusText = l10n.searchServicesPageNotTestedStatus;
       statusBg = cs.onSurface.withOpacity(0.06);
       statusFg = cs.onSurface.withOpacity(0.7);
     }
@@ -348,7 +350,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
                                     ),
                                   )
                                 : IconButton(
-                                    tooltip: zh ? '测试连接' : 'Test Connection',
+                                    tooltip: l10n.searchServicesPageTestConnectionTooltip,
                                     icon: Icon(Lucide.Activity, size: 18, color: cs.onSurface.withOpacity(0.9)),
                                     onPressed: () => _testConnection(index),
                                   ))
@@ -391,15 +393,15 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
   }
 
   String? _getServiceStatus(SearchServiceOptions service) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     if (service is BingLocalOptions) return null;
-    if (service is TavilyOptions) return service.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (service is ExaOptions) return service.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (service is ZhipuOptions) return service.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (service is SearXNGOptions) return service.url.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 URL' : 'URL Required');
-    if (service is LinkUpOptions) return service.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (service is BraveOptions) return service.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
-    if (service is MetasoOptions) return service.apiKey.isNotEmpty ? (zh ? '已配置' : 'Configured') : (zh ? '需要 API Key' : 'API Key Required');
+    if (service is TavilyOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is ExaOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is ZhipuOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is SearXNGOptions) return service.url.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageUrlRequiredStatus;
+    if (service is LinkUpOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is BraveOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is MetasoOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     return null;
   }
 
@@ -505,10 +507,10 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     
     return AlertDialog(
-      title: Text(zh ? '添加搜索服务' : 'Add Search Service'),
+      title: Text(l10n.searchServicesAddDialogTitle),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -518,18 +520,18 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
               DropdownButtonFormField<String>(
                 value: _selectedType,
                 decoration: InputDecoration(
-                  labelText: zh ? '服务类型' : 'Service Type',
+                  labelText: l10n.searchServicesAddDialogServiceType,
                   border: const OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 'bing_local', child: Text('Bing (${zh ? '本地' : 'Local'})')),
+                  DropdownMenuItem(value: 'bing_local', child: Text('Bing (${l10n.searchServicesAddDialogBingLocal})')),
                   const DropdownMenuItem(value: 'tavily', child: Text('Tavily')),
                   const DropdownMenuItem(value: 'exa', child: Text('Exa')),
-                  DropdownMenuItem(value: 'zhipu', child: Text('Zhipu (${zh ? '智谱' : ''})')),
+                  const DropdownMenuItem(value: 'zhipu', child: Text('Zhipu (智谱)')),
                   const DropdownMenuItem(value: 'searxng', child: Text('SearXNG')),
                   const DropdownMenuItem(value: 'linkup', child: Text('LinkUp')),
                   const DropdownMenuItem(value: 'brave', child: Text('Brave Search')),
-                  DropdownMenuItem(value: 'metaso', child: Text('Metaso (${zh ? '秘塔' : ''})')),
+                  const DropdownMenuItem(value: 'metaso', child: Text('Metaso (秘塔)')),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -547,7 +549,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(zh ? '取消' : 'Cancel'),
+          child: Text(l10n.searchServicesAddDialogCancel),
         ),
         FilledButton(
           onPressed: () {
@@ -557,14 +559,14 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
               Navigator.pop(context);
             }
           },
-          child: Text(zh ? '添加' : 'Add'),
+          child: Text(l10n.searchServicesAddDialogAdd),
         ),
       ],
     );
   }
 
   List<Widget> _buildFieldsForType(String type) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     
     switch (type) {
       case 'bing_local':
@@ -585,7 +587,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return zh ? 'API Key 必填' : 'API Key is required';
+                return l10n.searchServicesAddDialogApiKeyRequired;
               }
               return null;
             },
@@ -601,12 +603,12 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           TextFormField(
             controller: _controllers['url'],
             decoration: InputDecoration(
-              labelText: zh ? '实例 URL' : 'Instance URL',
+              labelText: l10n.searchServicesAddDialogInstanceUrl,
               border: const OutlineInputBorder(),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return zh ? 'URL 必填' : 'URL is required';
+                return l10n.searchServicesAddDialogUrlRequired;
               }
               return null;
             },
@@ -615,7 +617,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           TextFormField(
             controller: _controllers['engines'],
             decoration: InputDecoration(
-              labelText: zh ? '搜索引擎（可选）' : 'Engines (optional)',
+              labelText: l10n.searchServicesAddDialogEnginesOptional,
               hintText: 'google,duckduckgo',
               border: const OutlineInputBorder(),
             ),
@@ -624,7 +626,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           TextFormField(
             controller: _controllers['language'],
             decoration: InputDecoration(
-              labelText: zh ? '语言（可选）' : 'Language (optional)',
+              labelText: l10n.searchServicesAddDialogLanguageOptional,
               hintText: 'en-US',
               border: const OutlineInputBorder(),
             ),
@@ -633,7 +635,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           TextFormField(
             controller: _controllers['username'],
             decoration: InputDecoration(
-              labelText: zh ? '用户名（可选）' : 'Username (optional)',
+              labelText: l10n.searchServicesAddDialogUsernameOptional,
               border: const OutlineInputBorder(),
             ),
           ),
@@ -642,7 +644,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
             controller: _controllers['password'],
             obscureText: true,
             decoration: InputDecoration(
-              labelText: zh ? '密码（可选）' : 'Password (optional)',
+              labelText: l10n.searchServicesAddDialogPasswordOptional,
               border: const OutlineInputBorder(),
             ),
           ),
@@ -761,11 +763,11 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final searchService = SearchService.getService(widget.service);
     
     return AlertDialog(
-      title: Text('${zh ? '编辑' : 'Edit'} ${searchService.name}'),
+      title: Text('${l10n.searchServicesEditDialogEdit} ${searchService.name}'),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -778,7 +780,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(zh ? '取消' : 'Cancel'),
+          child: Text(l10n.searchServicesEditDialogCancel),
         ),
         FilledButton(
           onPressed: () {
@@ -788,18 +790,18 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
               Navigator.pop(context);
             }
           },
-          child: Text(zh ? '保存' : 'Save'),
+          child: Text(l10n.searchServicesEditDialogSave),
         ),
       ],
     );
   }
 
   List<Widget> _buildFields() {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final service = widget.service;
     
     if (service is BingLocalOptions) {
-      return [Text(zh ? 'Bing 本地搜索不需要配置。' : 'No configuration required for Bing Local search.')];
+      return [Text(l10n.searchServicesEditDialogBingLocalNoConfig)];
     } else if (service is TavilyOptions || 
                service is ExaOptions || 
                service is ZhipuOptions ||
@@ -815,7 +817,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return zh ? 'API Key 必填' : 'API Key is required';
+              return l10n.searchServicesEditDialogApiKeyRequired;
             }
             return null;
           },
@@ -826,12 +828,12 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         TextFormField(
           controller: _controllers['url'],
           decoration: InputDecoration(
-            labelText: zh ? '实例 URL' : 'Instance URL',
+            labelText: l10n.searchServicesEditDialogInstanceUrl,
             border: const OutlineInputBorder(),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return zh ? 'URL 必填' : 'URL is required';
+              return l10n.searchServicesEditDialogUrlRequired;
             }
             return null;
           },
@@ -840,7 +842,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         TextFormField(
           controller: _controllers['engines'],
           decoration: InputDecoration(
-            labelText: zh ? '搜索引擎（可选）' : 'Engines (optional)',
+            labelText: l10n.searchServicesEditDialogEnginesOptional,
             hintText: 'google,duckduckgo',
             border: const OutlineInputBorder(),
           ),
@@ -849,7 +851,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         TextFormField(
           controller: _controllers['language'],
           decoration: InputDecoration(
-            labelText: zh ? '语言（可选）' : 'Language (optional)',
+            labelText: l10n.searchServicesEditDialogLanguageOptional,
             hintText: 'en-US',
             border: const OutlineInputBorder(),
           ),
@@ -858,7 +860,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         TextFormField(
           controller: _controllers['username'],
           decoration: InputDecoration(
-            labelText: zh ? '用户名（可选）' : 'Username (optional)',
+            labelText: l10n.searchServicesEditDialogUsernameOptional,
             border: const OutlineInputBorder(),
           ),
         ),
@@ -867,7 +869,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           controller: _controllers['password'],
           obscureText: true,
           decoration: InputDecoration(
-            labelText: zh ? '密码（可选）' : 'Password (optional)',
+            labelText: l10n.searchServicesEditDialogPasswordOptional,
             border: const OutlineInputBorder(),
           ),
         ),

@@ -3199,6 +3199,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Align the QR code within the frame'**
   String get qrScanPageInstruction;
+
+  /// No description provided for @searchServicesPageBackTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get searchServicesPageBackTooltip;
+
+  /// No description provided for @searchServicesPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Services'**
+  String get searchServicesPageTitle;
+
+  /// No description provided for @searchServicesPageDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get searchServicesPageDone;
+
+  /// No description provided for @searchServicesPageEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get searchServicesPageEdit;
+
+  /// No description provided for @searchServicesPageAddProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Provider'**
+  String get searchServicesPageAddProvider;
+
+  /// No description provided for @searchServicesPageSearchProviders.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Providers'**
+  String get searchServicesPageSearchProviders;
+
+  /// No description provided for @searchServicesPageGeneralOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'General Options'**
+  String get searchServicesPageGeneralOptions;
+
+  /// No description provided for @searchServicesPageMaxResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Results'**
+  String get searchServicesPageMaxResults;
+
+  /// No description provided for @searchServicesPageTimeoutSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout (seconds)'**
+  String get searchServicesPageTimeoutSeconds;
+
+  /// No description provided for @searchServicesPageAtLeastOneServiceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'At least one search service is required'**
+  String get searchServicesPageAtLeastOneServiceRequired;
+
+  /// No description provided for @searchServicesPageTestingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing…'**
+  String get searchServicesPageTestingStatus;
+
+  /// No description provided for @searchServicesPageConnectedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get searchServicesPageConnectedStatus;
+
+  /// No description provided for @searchServicesPageFailedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get searchServicesPageFailedStatus;
+
+  /// No description provided for @searchServicesPageNotTestedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Not tested'**
+  String get searchServicesPageNotTestedStatus;
+
+  /// No description provided for @searchServicesPageTestConnectionTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Connection'**
+  String get searchServicesPageTestConnectionTooltip;
+
+  /// No description provided for @searchServicesPageConfiguredStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Configured'**
+  String get searchServicesPageConfiguredStatus;
+
+  /// No description provided for @searchServicesPageApiKeyRequiredStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key Required'**
+  String get searchServicesPageApiKeyRequiredStatus;
+
+  /// No description provided for @searchServicesPageUrlRequiredStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'URL Required'**
+  String get searchServicesPageUrlRequiredStatus;
+
+  /// No description provided for @searchServicesAddDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Search Service'**
+  String get searchServicesAddDialogTitle;
+
+  /// No description provided for @searchServicesAddDialogServiceType.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Type'**
+  String get searchServicesAddDialogServiceType;
+
+  /// No description provided for @searchServicesAddDialogBingLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get searchServicesAddDialogBingLocal;
+
+  /// No description provided for @searchServicesAddDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get searchServicesAddDialogCancel;
+
+  /// No description provided for @searchServicesAddDialogAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get searchServicesAddDialogAdd;
+
+  /// No description provided for @searchServicesAddDialogApiKeyRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key is required'**
+  String get searchServicesAddDialogApiKeyRequired;
+
+  /// No description provided for @searchServicesAddDialogInstanceUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Instance URL'**
+  String get searchServicesAddDialogInstanceUrl;
+
+  /// No description provided for @searchServicesAddDialogUrlRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'URL is required'**
+  String get searchServicesAddDialogUrlRequired;
+
+  /// No description provided for @searchServicesAddDialogEnginesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Engines (optional)'**
+  String get searchServicesAddDialogEnginesOptional;
+
+  /// No description provided for @searchServicesAddDialogLanguageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Language (optional)'**
+  String get searchServicesAddDialogLanguageOptional;
+
+  /// No description provided for @searchServicesAddDialogUsernameOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Username (optional)'**
+  String get searchServicesAddDialogUsernameOptional;
+
+  /// No description provided for @searchServicesAddDialogPasswordOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Password (optional)'**
+  String get searchServicesAddDialogPasswordOptional;
+
+  /// No description provided for @searchServicesEditDialogEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get searchServicesEditDialogEdit;
+
+  /// No description provided for @searchServicesEditDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get searchServicesEditDialogCancel;
+
+  /// No description provided for @searchServicesEditDialogSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get searchServicesEditDialogSave;
+
+  /// No description provided for @searchServicesEditDialogBingLocalNoConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'No configuration required for Bing Local search.'**
+  String get searchServicesEditDialogBingLocalNoConfig;
+
+  /// No description provided for @searchServicesEditDialogApiKeyRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key is required'**
+  String get searchServicesEditDialogApiKeyRequired;
+
+  /// No description provided for @searchServicesEditDialogInstanceUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Instance URL'**
+  String get searchServicesEditDialogInstanceUrl;
+
+  /// No description provided for @searchServicesEditDialogUrlRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'URL is required'**
+  String get searchServicesEditDialogUrlRequired;
+
+  /// No description provided for @searchServicesEditDialogEnginesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Engines (optional)'**
+  String get searchServicesEditDialogEnginesOptional;
+
+  /// No description provided for @searchServicesEditDialogLanguageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Language (optional)'**
+  String get searchServicesEditDialogLanguageOptional;
+
+  /// No description provided for @searchServicesEditDialogUsernameOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Username (optional)'**
+  String get searchServicesEditDialogUsernameOptional;
+
+  /// No description provided for @searchServicesEditDialogPasswordOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Password (optional)'**
+  String get searchServicesEditDialogPasswordOptional;
 }
 
 class _AppLocalizationsDelegate

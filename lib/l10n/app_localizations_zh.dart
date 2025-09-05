@@ -1618,4 +1618,127 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get qrScanPageInstruction => '将二维码对准取景框';
+
+  @override
+  String get searchServicesPageBackTooltip => '返回';
+
+  @override
+  String get searchServicesPageTitle => '搜索服务';
+
+  @override
+  String get searchServicesPageDone => '完成';
+
+  @override
+  String get searchServicesPageEdit => '编辑';
+
+  @override
+  String get searchServicesPageAddProvider => '添加提供商';
+
+  @override
+  String get searchServicesPageSearchProviders => '搜索提供商';
+
+  @override
+  String get searchServicesPageGeneralOptions => '通用选项';
+
+  @override
+  String get searchServicesPageMaxResults => '最大结果数';
+
+  @override
+  String get searchServicesPageTimeoutSeconds => '超时时间（秒）';
+
+  @override
+  String get searchServicesPageAtLeastOneServiceRequired => '至少需要一个搜索服务';
+
+  @override
+  String get searchServicesPageTestingStatus => '测试中…';
+
+  @override
+  String get searchServicesPageConnectedStatus => '已连接';
+
+  @override
+  String get searchServicesPageFailedStatus => '连接失败';
+
+  @override
+  String get searchServicesPageNotTestedStatus => '未测试';
+
+  @override
+  String get searchServicesPageTestConnectionTooltip => '测试连接';
+
+  @override
+  String get searchServicesPageConfiguredStatus => '已配置';
+
+  @override
+  String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';
+
+  @override
+  String get searchServicesPageUrlRequiredStatus => '需要 URL';
+
+  @override
+  String get searchServicesAddDialogTitle => '添加搜索服务';
+
+  @override
+  String get searchServicesAddDialogServiceType => '服务类型';
+
+  @override
+  String get searchServicesAddDialogBingLocal => '本地';
+
+  @override
+  String get searchServicesAddDialogCancel => '取消';
+
+  @override
+  String get searchServicesAddDialogAdd => '添加';
+
+  @override
+  String get searchServicesAddDialogApiKeyRequired => 'API Key 必填';
+
+  @override
+  String get searchServicesAddDialogInstanceUrl => '实例 URL';
+
+  @override
+  String get searchServicesAddDialogUrlRequired => 'URL 必填';
+
+  @override
+  String get searchServicesAddDialogEnginesOptional => '搜索引擎（可选）';
+
+  @override
+  String get searchServicesAddDialogLanguageOptional => '语言（可选）';
+
+  @override
+  String get searchServicesAddDialogUsernameOptional => '用户名（可选）';
+
+  @override
+  String get searchServicesAddDialogPasswordOptional => '密码（可选）';
+
+  @override
+  String get searchServicesEditDialogEdit => '编辑';
+
+  @override
+  String get searchServicesEditDialogCancel => '取消';
+
+  @override
+  String get searchServicesEditDialogSave => '保存';
+
+  @override
+  String get searchServicesEditDialogBingLocalNoConfig => 'Bing 本地搜索不需要配置。';
+
+  @override
+  String get searchServicesEditDialogApiKeyRequired => 'API Key 必填';
+
+  @override
+  String get searchServicesEditDialogInstanceUrl => '实例 URL';
+
+  @override
+  String get searchServicesEditDialogUrlRequired => 'URL 必填';
+
+  @override
+  String get searchServicesEditDialogEnginesOptional => '搜索引擎（可选）';
+
+  @override
+  String get searchServicesEditDialogLanguageOptional => '语言（可选）';
+
+  @override
+  String get searchServicesEditDialogUsernameOptional => '用户名（可选）';
+
+  @override
+  String get searchServicesEditDialogPasswordOptional => '密码（可选）';
 }
