@@ -312,8 +312,9 @@ class _SideDrawerState extends State<SideDrawer> {
         .getAllConversations()
         .where((c) => c.assistantId == currentAssistantId || c.assistantId == null)
         .toList();
+    // Use last-activity time (updatedAt) for ordering and grouping
     final all = conversations
-        .map((c) => ChatItem(id: c.id, title: c.title, created: c.createdAt))
+        .map((c) => ChatItem(id: c.id, title: c.title, created: c.updatedAt))
         .toList();
 
     final base = _query.trim().isEmpty
