@@ -1607,4 +1607,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addProviderSheetAddButton => 'Add';
+
+  @override
+  String get importProviderSheetTitle => 'Import Provider';
+
+  @override
+  String get importProviderSheetScanQrTooltip => 'Scan QR';
+
+  @override
+  String get importProviderSheetFromGalleryTooltip => 'From Gallery';
+
+  @override
+  String importProviderSheetImportSuccessMessage(int count) {
+    return 'Imported $count provider(s)';
+  }
+
+  @override
+  String importProviderSheetImportFailedMessage(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get importProviderSheetDescription =>
+      'Paste share strings (multi-line supported) or ChatBox JSON';
+
+  @override
+  String get importProviderSheetInputHint => 'ai-provider:v1:... or JSON';
+
+  @override
+  String get importProviderSheetCancelButton => 'Cancel';
+
+  @override
+  String get importProviderSheetImportButton => 'Import';
 }

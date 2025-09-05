@@ -6,6 +6,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../scan/pages/qr_scan_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../../l10n/app_localizations.dart';
 
 class _ImportResult {
   final String key;
@@ -211,7 +212,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
-      final zh = Localizations.localeOf(ctx).languageCode == 'zh';
+      final l10n = AppLocalizations.of(ctx)!;
       return SafeArea(
         top: false,
         child: AnimatedPadding(
@@ -235,9 +236,9 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: Text(zh ? '导入供应商' : 'Import Provider', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
+                    Expanded(child: Text(l10n.importProviderSheetTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
                     IconButton(
-                      tooltip: zh ? '扫码导入' : 'Scan QR',
+                      tooltip: l10n.importProviderSheetScanQrTooltip,
                       icon: const Icon(Lucide.Camera),
                       onPressed: () async {
                         final code = await Navigator.of(ctx).push<String>(
@@ -262,14 +263,14 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                             await settings.setProvidersOrder(order);
                           }
                           Navigator.of(ctx).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '已导入${results.length}个供应商' : 'Imported ${results.length} provider(s)')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportSuccessMessage(results.length))));
                         } catch (e) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(zh ? '导入失败: $e' : 'Import failed: $e')));
+                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportFailedMessage(e.toString()))));
                         }
                       },
                     ),
                     IconButton(
-                      tooltip: zh ? '从相册导入' : 'From Gallery',
+                      tooltip: l10n.importProviderSheetFromGalleryTooltip,
                       icon: const Icon(Lucide.Image),
                       onPressed: () async {
                         try {
@@ -292,7 +293,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                               }
                             } catch (_) {}
                           }
-                          if (code == null || code!.isEmpty) throw '未识别到二维码';
+                          if (code == null || code!.isEmpty) throw 'QR not detected';
                           final settings = ctx.read<SettingsProvider>();
                           final results = <_ImportResult>[];
                           if (code!.startsWith('ai-provider:v1:')) {
@@ -300,7 +301,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                           } else if (code!.startsWith('{')) {
                             results.addAll(_decodeChatBoxJson(ctx, code!));
                           } else {
-                            throw '不支持的内容';
+                            throw 'Unsupported content';
                           }
                           for (final r in results) {
                             await settings.setProviderConfig(r.key, r.cfg);
@@ -310,16 +311,16 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                             await settings.setProvidersOrder(order);
                           }
                           Navigator.of(ctx).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '已导入${results.length}个供应商' : 'Imported ${results.length} provider(s)')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportSuccessMessage(results.length))));
                         } catch (e) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(zh ? '导入失败: $e' : 'Import failed: $e')));
+                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportFailedMessage(e.toString()))));
                         }
                       },
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(zh ? '粘贴分享字符串（可多行，每行一个）或 ChatBox JSON' : 'Paste share strings (multi-line supported) or ChatBox JSON'),
+                Text(l10n.importProviderSheetDescription),
                 const SizedBox(height: 10),
                 Expanded(
                   child: ListView(
@@ -328,7 +329,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                         controller: controller,
                         maxLines: 10,
                         decoration: InputDecoration(
-                          hintText: zh ? 'ai-provider:v1:...' : 'ai-provider:v1:... or {...}',
+                          hintText: l10n.importProviderSheetInputHint,
                           filled: true,
                           fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
@@ -355,7 +356,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                           side: BorderSide(color: cs.primary.withOpacity(0.5)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: Text(zh ? '取消' : 'Cancel', style: TextStyle(color: cs.primary)),
+                        child: Text(l10n.importProviderSheetCancelButton, style: TextStyle(color: cs.primary)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -408,15 +409,15 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                             }
                             Navigator.of(ctx).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(zh ? '已导入${results.length}个供应商' : 'Imported ${results.length} provider(s)')),
+                              SnackBar(content: Text(l10n.importProviderSheetImportSuccessMessage(results.length))),
                             );
                           } catch (e) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(zh ? '导入失败: $e' : 'Import failed: $e')),
+                              SnackBar(content: Text(l10n.importProviderSheetImportFailedMessage(e.toString()))),
                             );
                           }
                         },
-                        label: Text(zh ? '导入' : 'Import'),
+                        label: Text(l10n.importProviderSheetImportButton),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: cs.primary,
                           foregroundColor: cs.onPrimary,

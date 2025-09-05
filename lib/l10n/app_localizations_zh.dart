@@ -1565,4 +1565,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get addProviderSheetAddButton => '添加';
+
+  @override
+  String get importProviderSheetTitle => '导入供应商';
+
+  @override
+  String get importProviderSheetScanQrTooltip => '扫码导入';
+
+  @override
+  String get importProviderSheetFromGalleryTooltip => '从相册导入';
+
+  @override
+  String importProviderSheetImportSuccessMessage(int count) {
+    return '已导入$count个供应商';
+  }
+
+  @override
+  String importProviderSheetImportFailedMessage(String error) {
+    return '导入失败: $error';
+  }
+
+  @override
+  String get importProviderSheetDescription =>
+      '粘贴分享字符串（可多行，每行一个）或 ChatBox JSON';
+
+  @override
+  String get importProviderSheetInputHint => 'ai-provider:v1:...';
+
+  @override
+  String get importProviderSheetCancelButton => '取消';
+
+  @override
+  String get importProviderSheetImportButton => '导入';
 }

@@ -3103,6 +3103,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get addProviderSheetAddButton;
+
+  /// No description provided for @importProviderSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Provider'**
+  String get importProviderSheetTitle;
+
+  /// No description provided for @importProviderSheetScanQrTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR'**
+  String get importProviderSheetScanQrTooltip;
+
+  /// No description provided for @importProviderSheetFromGalleryTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'From Gallery'**
+  String get importProviderSheetFromGalleryTooltip;
+
+  /// No description provided for @importProviderSheetImportSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} provider(s)'**
+  String importProviderSheetImportSuccessMessage(int count);
+
+  /// No description provided for @importProviderSheetImportFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String importProviderSheetImportFailedMessage(String error);
+
+  /// No description provided for @importProviderSheetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste share strings (multi-line supported) or ChatBox JSON'**
+  String get importProviderSheetDescription;
+
+  /// No description provided for @importProviderSheetInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'ai-provider:v1:... or JSON'**
+  String get importProviderSheetInputHint;
+
+  /// No description provided for @importProviderSheetCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get importProviderSheetCancelButton;
+
+  /// No description provided for @importProviderSheetImportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importProviderSheetImportButton;
 }
 
 class _AppLocalizationsDelegate

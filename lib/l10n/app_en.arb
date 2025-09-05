@@ -660,5 +660,28 @@
   "addProviderSheetVertexAiServiceAccountJsonLabel": "Service Account JSON (paste or import)",
   "addProviderSheetImportJsonButton": "Import JSON",
   "addProviderSheetCancelButton": "Cancel",
-  "addProviderSheetAddButton": "Add"
+  "addProviderSheetAddButton": "Add",
+  "importProviderSheetTitle": "Import Provider",
+  "importProviderSheetScanQrTooltip": "Scan QR",
+  "importProviderSheetFromGalleryTooltip": "From Gallery",
+  "importProviderSheetImportSuccessMessage": "Imported {count} provider(s)",
+  "@importProviderSheetImportSuccessMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importProviderSheetImportFailedMessage": "Import failed: {error}",
+  "@importProviderSheetImportFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importProviderSheetDescription": "Paste share strings (multi-line supported) or ChatBox JSON",
+  "importProviderSheetInputHint": "ai-provider:v1:... or JSON",
+  "importProviderSheetCancelButton": "Cancel",
+  "importProviderSheetImportButton": "Import"
 }
