@@ -172,6 +172,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageLanguageEnglishLabel => 'English';
 
   @override
+  String get homePagePleaseSelectModel => '请先选择模型';
+
+  @override
+  String get homePagePleaseSetupTranslateModel => '请先设置翻译模型';
+
+  @override
+  String get homePageTranslating => '翻译中...';
+
+  @override
+  String homePageTranslateFailed(String error) {
+    return '翻译失败: $error';
+  }
+
+  @override
   String get homePageDeleteMessage => '删除消息';
 
   @override

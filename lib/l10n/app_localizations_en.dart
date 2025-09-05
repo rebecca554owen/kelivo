@@ -173,6 +173,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageLanguageEnglishLabel => 'English';
 
   @override
+  String get homePagePleaseSelectModel => 'Please select a model first';
+
+  @override
+  String get homePagePleaseSetupTranslateModel =>
+      'Please set a translation model first';
+
+  @override
+  String get homePageTranslating => 'Translating...';
+
+  @override
+  String homePageTranslateFailed(String error) {
+    return 'Translation failed: $error';
+  }
+
+  @override
   String get homePageDeleteMessage => 'Delete Message';
 
   @override
@@ -1608,7 +1623,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providersPageModelsCountSuffix => ' models';
 
   @override
-  String get providersPageModelsCountSingleSuffix => 'models';
+  String get providersPageModelsCountSingleSuffix => ' models';
 
   @override
   String get addProviderSheetTitle => 'Add Provider';

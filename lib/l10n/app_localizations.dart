@@ -405,6 +405,30 @@ abstract class AppLocalizations {
   /// **'English'**
   String get displaySettingsPageLanguageEnglishLabel;
 
+  /// No description provided for @homePagePleaseSelectModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a model first'**
+  String get homePagePleaseSelectModel;
+
+  /// No description provided for @homePagePleaseSetupTranslateModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Please set a translation model first'**
+  String get homePagePleaseSetupTranslateModel;
+
+  /// No description provided for @homePageTranslating.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating...'**
+  String get homePageTranslating;
+
+  /// No description provided for @homePageTranslateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation failed: {error}'**
+  String homePageTranslateFailed(String error);
+
   /// No description provided for @homePageDeleteMessage.
   ///
   /// In en, this message translates to:
@@ -3096,7 +3120,7 @@ abstract class AppLocalizations {
   /// No description provided for @providersPageModelsCountSingleSuffix.
   ///
   /// In en, this message translates to:
-  /// **'models'**
+  /// **' models'**
   String get providersPageModelsCountSingleSuffix;
 
   /// No description provided for @addProviderSheetTitle.

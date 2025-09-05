@@ -152,6 +152,15 @@
   "displaySettingsPageLanguageSubtitle": "选择界面语言",
   "displaySettingsPageLanguageChineseLabel": "简体中文",
   "displaySettingsPageLanguageEnglishLabel": "English",
+  "homePagePleaseSelectModel": "请先选择模型",
+  "homePagePleaseSetupTranslateModel": "请先设置翻译模型",
+  "homePageTranslating": "翻译中...",
+  "homePageTranslateFailed": "翻译失败: {error}",
+  "@homePageTranslateFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "mcpAssistantSheetTitle": "MCP服务器",
   "mcpAssistantSheetSubtitle": "为该助手启用的服务",
   "mcpAssistantSheetSelectAll": "全选",

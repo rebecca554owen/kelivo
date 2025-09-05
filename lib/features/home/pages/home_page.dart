@@ -638,7 +638,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (a?.chatModelProvider != null && a?.chatModelId != null) {
       await settings.setCurrentModel(a!.chatModelProvider!, a.chatModelId!);
     }
-    final conversation = await _chatService.createDraftConversation(title: '新对话', assistantId: assistantId);
+    final conversation = await _chatService.createDraftConversation(title: _titleForLocale(context), assistantId: assistantId);
     // Default-enable MCP: select all connected servers for this conversation
     // MCP defaults are now managed per assistant; no per-conversation enabling here
     setState(() {
@@ -665,8 +665,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final assistant = context.read<AssistantProvider>().currentAssistant;
 
     if (providerKey == null || modelId == null) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先选择模型')),
+        SnackBar(content: Text(l10n.homePagePleaseSelectModel)),
       );
       return;
     }
@@ -1509,7 +1510,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final assistant = context.read<AssistantProvider>().currentAssistant;
 
     if (providerKey == null || modelId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请先选择模型')));
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.homePagePleaseSelectModel)));
       return;
     }
 
@@ -1874,7 +1876,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Future<void> _maybeGenerateTitle({bool force = false}) async {
     final convo = _currentConversation;
     if (convo == null) return;
-    if (!force && convo.title.isNotEmpty && convo.title != '新对话') return;
+    if (!force && convo.title.isNotEmpty && convo.title != _titleForLocale(context)) return;
 
     final settings = context.read<SettingsProvider>();
     // Decide model: prefer title model, else fall back to current chat model
@@ -1971,6 +1973,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   // Translate message functionality
   Future<void> _translateMessage(ChatMessage message) async {
+    final l10n = AppLocalizations.of(context)!;
     // Show language selector
     final language = await showLanguageSelector(context);
     if (language == null) return;
@@ -1999,7 +2002,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     if (translateProvider == null || translateModelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先设置翻译模型')),
+        SnackBar(content: Text(l10n.homePagePleaseSetupTranslateModel)),
       );
       return;
     }
@@ -2008,7 +2011,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     String textToTranslate = message.content;
 
     // Set loading state and initialize translation data
-    final loadingMessage = message.copyWith(translation: '翻译中...');
+    final loadingMessage = message.copyWith(translation: l10n.homePageTranslating);
     setState(() {
       final index = _messages.indexWhere((m) => m.id == message.id);
       if (index != -1) {
@@ -2068,7 +2071,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       await _chatService.updateMessage(message.id, translation: '');
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('翻译失败: $e')),
+        SnackBar(content: Text(l10n.homePageTranslateFailed(e.toString()))),
       );
     }
   }
