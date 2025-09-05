@@ -69,6 +69,12 @@
 
 特别感谢 [RikkaHub](https://github.com/re-ovo/rikkahub) 项目提供的 UI 设计灵感。Kelivo 的界面设计深受 RikkaHub 优美且实用的设计启发。
 
+## ⭐ Star History
+
+如果你喜欢这个项目，可以给个Star ⭐
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Chevey339/kelivo&type=Date)](https://star-history.com/#Chevey339/kelivo&Date)
+
 ## 📄 许可证
 
 本项目采用 AGPL-3.0 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
