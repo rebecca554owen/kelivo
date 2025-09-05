@@ -2407,6 +2407,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Variables: source text: {sourceVar}, target language: {targetVar}'**
   String defaultModelPageTranslateVars(String sourceVar, String targetVar);
+
+  /// No description provided for @modelDetailSheetAddModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Model'**
+  String get modelDetailSheetAddModel;
+
+  /// No description provided for @modelDetailSheetEditModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Model'**
+  String get modelDetailSheetEditModel;
+
+  /// No description provided for @modelDetailSheetBasicTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get modelDetailSheetBasicTab;
+
+  /// No description provided for @modelDetailSheetAdvancedTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get modelDetailSheetAdvancedTab;
+
+  /// No description provided for @modelDetailSheetModelIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID'**
+  String get modelDetailSheetModelIdLabel;
+
+  /// No description provided for @modelDetailSheetModelIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Required, suggest lowercase/digits/hyphens'**
+  String get modelDetailSheetModelIdHint;
+
+  /// No description provided for @modelDetailSheetModelIdDisabledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{modelId}'**
+  String modelDetailSheetModelIdDisabledHint(String modelId);
+
+  /// No description provided for @modelDetailSheetModelNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Name'**
+  String get modelDetailSheetModelNameLabel;
+
+  /// No description provided for @modelDetailSheetModelTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Type'**
+  String get modelDetailSheetModelTypeLabel;
+
+  /// No description provided for @modelDetailSheetChatType.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get modelDetailSheetChatType;
+
+  /// No description provided for @modelDetailSheetEmbeddingType.
+  ///
+  /// In en, this message translates to:
+  /// **'Embedding'**
+  String get modelDetailSheetEmbeddingType;
+
+  /// No description provided for @modelDetailSheetInputModesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Modes'**
+  String get modelDetailSheetInputModesLabel;
+
+  /// No description provided for @modelDetailSheetOutputModesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Output Modes'**
+  String get modelDetailSheetOutputModesLabel;
+
+  /// No description provided for @modelDetailSheetAbilitiesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Abilities'**
+  String get modelDetailSheetAbilitiesLabel;
+
+  /// No description provided for @modelDetailSheetTextMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get modelDetailSheetTextMode;
+
+  /// No description provided for @modelDetailSheetImageMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get modelDetailSheetImageMode;
+
+  /// No description provided for @modelDetailSheetToolsAbility.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools'**
+  String get modelDetailSheetToolsAbility;
+
+  /// No description provided for @modelDetailSheetReasoningAbility.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning'**
+  String get modelDetailSheetReasoningAbility;
+
+  /// No description provided for @modelDetailSheetProviderOverrideDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider overrides: customize provider for a specific model.'**
+  String get modelDetailSheetProviderOverrideDescription;
+
+  /// No description provided for @modelDetailSheetAddProviderOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Provider Override'**
+  String get modelDetailSheetAddProviderOverride;
+
+  /// No description provided for @modelDetailSheetCustomHeadersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Headers'**
+  String get modelDetailSheetCustomHeadersTitle;
+
+  /// No description provided for @modelDetailSheetAddHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Header'**
+  String get modelDetailSheetAddHeader;
+
+  /// No description provided for @modelDetailSheetCustomBodyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Body'**
+  String get modelDetailSheetCustomBodyTitle;
+
+  /// No description provided for @modelDetailSheetAddBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Body'**
+  String get modelDetailSheetAddBody;
+
+  /// No description provided for @modelDetailSheetBuiltinToolsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in tools currently support limited APIs (e.g., Gemini).'**
+  String get modelDetailSheetBuiltinToolsDescription;
+
+  /// No description provided for @modelDetailSheetSearchTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get modelDetailSheetSearchTool;
+
+  /// No description provided for @modelDetailSheetSearchToolDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Google Search integration'**
+  String get modelDetailSheetSearchToolDescription;
+
+  /// No description provided for @modelDetailSheetUrlContextTool.
+  ///
+  /// In en, this message translates to:
+  /// **'URL Context'**
+  String get modelDetailSheetUrlContextTool;
+
+  /// No description provided for @modelDetailSheetUrlContextToolDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable URL content ingestion'**
+  String get modelDetailSheetUrlContextToolDescription;
+
+  /// No description provided for @modelDetailSheetCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get modelDetailSheetCancelButton;
+
+  /// No description provided for @modelDetailSheetAddButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get modelDetailSheetAddButton;
+
+  /// No description provided for @modelDetailSheetConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get modelDetailSheetConfirmButton;
+
+  /// No description provided for @modelDetailSheetInvalidIdError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid model ID (>=2 chars, no spaces)'**
+  String get modelDetailSheetInvalidIdError;
+
+  /// No description provided for @modelDetailSheetModelIdExistsError.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID already exists'**
+  String get modelDetailSheetModelIdExistsError;
+
+  /// No description provided for @modelDetailSheetHeaderKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Key'**
+  String get modelDetailSheetHeaderKeyHint;
+
+  /// No description provided for @modelDetailSheetHeaderValueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Value'**
+  String get modelDetailSheetHeaderValueHint;
+
+  /// No description provided for @modelDetailSheetBodyKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Body Key'**
+  String get modelDetailSheetBodyKeyHint;
+
+  /// No description provided for @modelDetailSheetBodyJsonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Body JSON'**
+  String get modelDetailSheetBodyJsonHint;
 }
 
 class _AppLocalizationsDelegate

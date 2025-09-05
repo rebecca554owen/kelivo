@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
 
 Future<bool?> showModelDetailSheet(BuildContext context, {required String providerKey, required String modelId}) {
   final cs = Theme.of(context).colorScheme;
@@ -146,7 +147,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.8,
@@ -158,27 +159,27 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
             const SizedBox(height: 8),
             Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
             const SizedBox(height: 8),
-            _buildHeader(context, zh),
-            _buildTabs(context, zh),
+            _buildHeader(context, l10n),
+            _buildTabs(context, l10n),
             Expanded(
               child: ListView(
                 controller: scrollController,
                 padding: EdgeInsets.zero,
                 children: [
-                  ..._buildTabContent(context, zh),
+                  ..._buildTabContent(context, l10n),
                   const SizedBox(height: 12),
                   SizedBox(height: MediaQuery.of(context).padding.bottom),
                 ],
               ),
             ),
-            _buildFooter(context, zh),
+            _buildFooter(context, l10n),
           ],
         );
       },
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool zh) {
+  Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       height: 48,
@@ -186,14 +187,14 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Expanded(child: Text(widget.isNew ? (zh ? '添加模型' : 'Add Model') : (zh ? '编辑模型' : 'Edit Model'), style: TextStyle(fontSize: 16, color: cs.onSurface, fontWeight: FontWeight.w600))),
+          Expanded(child: Text(widget.isNew ? l10n.modelDetailSheetAddModel : l10n.modelDetailSheetEditModel, style: TextStyle(fontSize: 16, color: cs.onSurface, fontWeight: FontWeight.w600))),
           // Close button intentionally removed for both Add and Edit dialogs per spec.
         ],
       ),
     );
   }
 
-  Widget _buildTabs(BuildContext context, bool zh) {
+  Widget _buildTabs(BuildContext context, AppLocalizations l10n) {
     // Match the TabBar style used in add_provider_sheet.dart (OpenAI/Google/Claude)
     final cs = Theme.of(context).colorScheme;
     return Padding(
@@ -213,26 +214,26 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
           dividerColor: Colors.transparent,
           indicatorSize: TabBarIndicatorSize.tab,
           tabs: [
-            Tab(text: zh ? '基本设置' : 'Basic'),
-            Tab(text: zh ? '高级设置' : 'Advanced'),
+            Tab(text: l10n.modelDetailSheetBasicTab),
+            Tab(text: l10n.modelDetailSheetAdvancedTab),
           ],
         ),
       ),
     );
   }
 
-  List<Widget> _buildTabContent(BuildContext context, bool zh) {
+  List<Widget> _buildTabContent(BuildContext context, AppLocalizations l10n) {
     switch (_tab) {
       case _TabKind.basic:
-        return _buildBasic(context, zh);
+        return _buildBasic(context, l10n);
       case _TabKind.advanced:
-        return _buildAdvanced(context, zh);
+        return _buildAdvanced(context, l10n);
       case _TabKind.tools:
-        return _buildTools(context, zh);
+        return _buildTools(context, l10n);
     }
   }
 
-  List<Widget> _buildBasic(BuildContext context, bool zh) {
+  List<Widget> _buildBasic(BuildContext context, AppLocalizations l10n) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return [
@@ -241,7 +242,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _label(context, zh ? '模型 ID' : 'Model ID'),
+            _label(context, l10n.modelDetailSheetModelIdLabel),
             const SizedBox(height: 6),
             TextField(
               controller: _idCtrl,
@@ -257,14 +258,14 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
               decoration: InputDecoration(
                 filled: true,
                 fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-                hintText: widget.isNew ? (zh ? '必填，建议小写字母、数字、连字符' : 'Required, suggest lowercase/digits/hyphens') : widget.modelId,
+                hintText: widget.isNew ? l10n.modelDetailSheetModelIdHint : l10n.modelDetailSheetModelIdDisabledHint(widget.modelId),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.4))),
               ),
             ),
             const SizedBox(height: 12),
-            _label(context, zh ? '模型名称' : 'Model Name'),
+            _label(context, l10n.modelDetailSheetModelNameLabel),
             const SizedBox(height: 6),
             TextField(
               controller: _nameCtrl,
@@ -280,10 +281,10 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
               ),
             ),
             const SizedBox(height: 12),
-            _label(context, zh ? '模型类型' : 'Model Type'),
+            _label(context, l10n.modelDetailSheetModelTypeLabel),
             const SizedBox(height: 6),
             _SegmentedSingle(
-              options: [zh ? '聊天' : 'Chat', zh ? '嵌入' : 'Embedding'],
+              options: [l10n.modelDetailSheetChatType, l10n.modelDetailSheetEmbeddingType],
               value: _type == ModelType.chat ? 0 : 1,
               onChanged: (i) => setState(() => _type = i == 0 ? ModelType.chat : ModelType.embedding),
             ),
@@ -296,10 +297,10 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _label(context, zh ? '输入模式' : 'Input Modes'),
+              _label(context, l10n.modelDetailSheetInputModesLabel),
               const SizedBox(height: 6),
               _SegmentedMulti(
-                options: [zh ? '文本' : 'Text', zh ? '图片' : 'Image'],
+                options: [l10n.modelDetailSheetTextMode, l10n.modelDetailSheetImageMode],
                 isSelected: [
                   _input.contains(Modality.text),
                   _input.contains(Modality.image),
@@ -315,10 +316,10 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
                 }),
               ),
               const SizedBox(height: 12),
-              _label(context, zh ? '输出模式' : 'Output Modes'),
+              _label(context, l10n.modelDetailSheetOutputModesLabel),
               const SizedBox(height: 6),
               _SegmentedMulti(
-                options: [zh ? '文本' : 'Text', zh ? '图片' : 'Image'],
+                options: [l10n.modelDetailSheetTextMode, l10n.modelDetailSheetImageMode],
                 isSelected: [
                   _output.contains(Modality.text),
                   _output.contains(Modality.image),
@@ -334,10 +335,10 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
                 }),
               ),
               const SizedBox(height: 12),
-              _label(context, zh ? '能力' : 'Abilities'),
+              _label(context, l10n.modelDetailSheetAbilitiesLabel),
               const SizedBox(height: 6),
               _SegmentedMulti(
-                options: [zh ? '工具' : 'Tools', zh ? '推理' : 'Reasoning'],
+                options: [l10n.modelDetailSheetToolsAbility, l10n.modelDetailSheetReasoningAbility],
                 isSelected: [
                   _abilities.contains(ModelAbility.tool),
                   _abilities.contains(ModelAbility.reasoning),
@@ -358,7 +359,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
     ];
   }
 
-  List<Widget> _buildAdvanced(BuildContext context, bool zh) {
+  List<Widget> _buildAdvanced(BuildContext context, AppLocalizations l10n) {
     final cs = Theme.of(context).colorScheme;
     return [
       Padding(
@@ -367,14 +368,14 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              zh ? '供应商重写：允许为特定模型自定义供应商设置。（暂未实现）' : 'Provider overrides: customize provider for a specific model.',
+              l10n.modelDetailSheetProviderOverrideDescription,
               style: TextStyle(color: cs.onSurface.withOpacity(0.8), fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Center(
               child: _OutlinedAddButton(
-                label: zh ? '添加供应商重写' : 'Add Provider Override',
+                label: l10n.modelDetailSheetAddProviderOverride,
                 onTap: () {},
               ),
             ),
@@ -383,7 +384,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Text(zh ? '自定义 Headers' : 'Custom Headers', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        child: Text(l10n.modelDetailSheetCustomHeadersTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -392,7 +393,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
             for (int i = 0; i < _headers.length; i++) _HeaderRow(kv: _headers[i], onDelete: () => setState(() => _headers.removeAt(i))),
             const SizedBox(height: 8),
             _OutlinedAddButton(
-              label: zh ? '添加 Header' : 'Add Header',
+              label: l10n.modelDetailSheetAddHeader,
               onTap: () => setState(() => _headers.add(_HeaderKV())),
             ),
           ],
@@ -400,7 +401,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Text(zh ? '自定义 Body' : 'Custom Body', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        child: Text(l10n.modelDetailSheetCustomBodyTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -409,7 +410,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
             for (int i = 0; i < _bodies.length; i++) _BodyRow(kv: _bodies[i], onDelete: () => setState(() => _bodies.removeAt(i))),
             const SizedBox(height: 8),
             _OutlinedAddButton(
-              label: zh ? '添加 Body' : 'Add Body',
+              label: l10n.modelDetailSheetAddBody,
               onTap: () => setState(() => _bodies.add(_BodyKV())),
             ),
           ],
@@ -418,21 +419,21 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
     ];
   }
 
-  List<Widget> _buildTools(BuildContext context, bool zh) {
+  List<Widget> _buildTools(BuildContext context, AppLocalizations l10n) {
     final cs = Theme.of(context).colorScheme;
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Text(
-          zh ? '内置工具仅支持部分 API（例如 Gemini 官方 API）（暂未实现）。' : 'Built-in tools currently support limited APIs (e.g., Gemini).',
+          l10n.modelDetailSheetBuiltinToolsDescription,
           style: TextStyle(color: cs.onSurface.withOpacity(0.8), fontSize: 13),
         ),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         child: _ToolTile(
-          title: zh ? '搜索' : 'Search',
-          desc: zh ? '启用 Google 搜索集成' : 'Enable Google Search integration',
+          title: l10n.modelDetailSheetSearchTool,
+          desc: l10n.modelDetailSheetSearchToolDescription,
           value: _searchTool,
           onChanged: (v) => setState(() => _searchTool = v),
         ),
@@ -440,8 +441,8 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         child: _ToolTile(
-          title: zh ? 'URL 上下文' : 'URL Context',
-          desc: zh ? '启用 URL 内容处理' : 'Enable URL content ingestion',
+          title: l10n.modelDetailSheetUrlContextTool,
+          desc: l10n.modelDetailSheetUrlContextToolDescription,
           value: _urlContextTool,
           onChanged: (v) => setState(() => _urlContextTool = v),
         ),
@@ -449,19 +450,19 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
     ];
   }
 
-  Widget _buildFooter(BuildContext context, bool zh) {
+  Widget _buildFooter(BuildContext context, AppLocalizations l10n) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 12, 10 + MediaQuery.of(context).padding.bottom),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(onPressed: () => Navigator.of(context).maybePop(false), child: Text(zh ? '取消' : 'Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).maybePop(false), child: Text(l10n.modelDetailSheetCancelButton)),
           const SizedBox(width: 8),
           TextButton(
             onPressed: _save,
             style: TextButton.styleFrom(foregroundColor: cs.primary),
-            child: Text(widget.isNew ? (zh ? '添加' : 'Add') : (zh ? '确认' : 'Confirm')),
+            child: Text(widget.isNew ? l10n.modelDetailSheetAddButton : l10n.modelDetailSheetConfirmButton),
           ),
         ],
       ),
@@ -484,13 +485,13 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
     if (widget.isNew) {
       id = _idCtrl.text.trim();
       if (id.isEmpty || id.length < 2 || id.contains(' ')) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '请输入有效的模型 ID（不少于2个字符且不含空格）' : 'Please enter a valid model ID (>=2 chars, no spaces)')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.modelDetailSheetInvalidIdError)));
         return;
       }
       if (old.models.contains(id)) {
-        final zh = Localizations.localeOf(context).languageCode == 'zh';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(zh ? '模型 ID 已存在' : 'Model ID already exists')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.modelDetailSheetModelIdExistsError)));
         return;
       }
     }
@@ -715,6 +716,7 @@ class _HeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -725,7 +727,7 @@ class _HeaderRow extends StatelessWidget {
                 child: TextField(
                   controller: kv.name,
                   decoration: InputDecoration(
-                    hintText: 'Header Key',
+                    hintText: l10n.modelDetailSheetHeaderKeyHint,
                     filled: true,
                     fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
@@ -741,7 +743,7 @@ class _HeaderRow extends StatelessWidget {
           TextField(
             controller: kv.value,
             decoration: InputDecoration(
-              hintText: 'Header Value',
+              hintText: l10n.modelDetailSheetHeaderValueHint,
               filled: true,
               fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
@@ -761,6 +763,7 @@ class _BodyRow extends StatelessWidget {
   final VoidCallback onDelete;
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -772,7 +775,7 @@ class _BodyRow extends StatelessWidget {
                 child: TextField(
                   controller: kv.keyCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Body Key',
+                    hintText: l10n.modelDetailSheetBodyKeyHint,
                     filled: true,
                     fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
@@ -790,7 +793,7 @@ class _BodyRow extends StatelessWidget {
             minLines: 3,
             maxLines: 6,
             decoration: InputDecoration(
-              hintText: 'Body JSON',
+              hintText: l10n.modelDetailSheetBodyJsonHint,
               filled: true,
               fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),

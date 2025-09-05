@@ -1212,4 +1212,122 @@ class AppLocalizationsZh extends AppLocalizations {
   String defaultModelPageTranslateVars(String sourceVar, String targetVar) {
     return '变量：原始文本：$sourceVar，目标语言：$targetVar';
   }
+
+  @override
+  String get modelDetailSheetAddModel => '添加模型';
+
+  @override
+  String get modelDetailSheetEditModel => '编辑模型';
+
+  @override
+  String get modelDetailSheetBasicTab => '基本设置';
+
+  @override
+  String get modelDetailSheetAdvancedTab => '高级设置';
+
+  @override
+  String get modelDetailSheetModelIdLabel => '模型 ID';
+
+  @override
+  String get modelDetailSheetModelIdHint => '必填，建议小写字母、数字、连字符';
+
+  @override
+  String modelDetailSheetModelIdDisabledHint(String modelId) {
+    return '$modelId';
+  }
+
+  @override
+  String get modelDetailSheetModelNameLabel => '模型名称';
+
+  @override
+  String get modelDetailSheetModelTypeLabel => '模型类型';
+
+  @override
+  String get modelDetailSheetChatType => '聊天';
+
+  @override
+  String get modelDetailSheetEmbeddingType => '嵌入';
+
+  @override
+  String get modelDetailSheetInputModesLabel => '输入模式';
+
+  @override
+  String get modelDetailSheetOutputModesLabel => '输出模式';
+
+  @override
+  String get modelDetailSheetAbilitiesLabel => '能力';
+
+  @override
+  String get modelDetailSheetTextMode => '文本';
+
+  @override
+  String get modelDetailSheetImageMode => '图片';
+
+  @override
+  String get modelDetailSheetToolsAbility => '工具';
+
+  @override
+  String get modelDetailSheetReasoningAbility => '推理';
+
+  @override
+  String get modelDetailSheetProviderOverrideDescription =>
+      '供应商重写：允许为特定模型自定义供应商设置。（暂未实现）';
+
+  @override
+  String get modelDetailSheetAddProviderOverride => '添加供应商重写';
+
+  @override
+  String get modelDetailSheetCustomHeadersTitle => '自定义 Headers';
+
+  @override
+  String get modelDetailSheetAddHeader => '添加 Header';
+
+  @override
+  String get modelDetailSheetCustomBodyTitle => '自定义 Body';
+
+  @override
+  String get modelDetailSheetAddBody => '添加 Body';
+
+  @override
+  String get modelDetailSheetBuiltinToolsDescription =>
+      '内置工具仅支持部分 API（例如 Gemini 官方 API）（暂未实现）。';
+
+  @override
+  String get modelDetailSheetSearchTool => '搜索';
+
+  @override
+  String get modelDetailSheetSearchToolDescription => '启用 Google 搜索集成';
+
+  @override
+  String get modelDetailSheetUrlContextTool => 'URL 上下文';
+
+  @override
+  String get modelDetailSheetUrlContextToolDescription => '启用 URL 内容处理';
+
+  @override
+  String get modelDetailSheetCancelButton => '取消';
+
+  @override
+  String get modelDetailSheetAddButton => '添加';
+
+  @override
+  String get modelDetailSheetConfirmButton => '确认';
+
+  @override
+  String get modelDetailSheetInvalidIdError => '请输入有效的模型 ID（不少于2个字符且不含空格）';
+
+  @override
+  String get modelDetailSheetModelIdExistsError => '模型 ID 已存在';
+
+  @override
+  String get modelDetailSheetHeaderKeyHint => 'Header Key';
+
+  @override
+  String get modelDetailSheetHeaderValueHint => 'Header Value';
+
+  @override
+  String get modelDetailSheetBodyKeyHint => 'Body Key';
+
+  @override
+  String get modelDetailSheetBodyJsonHint => 'Body JSON';
 }

@@ -539,5 +539,48 @@
       "sourceVar": { "type": "String" },
       "targetVar": { "type": "String" }
     }
-  }
+  },
+  "modelDetailSheetAddModel": "Add Model",
+  "modelDetailSheetEditModel": "Edit Model",
+  "modelDetailSheetBasicTab": "Basic",
+  "modelDetailSheetAdvancedTab": "Advanced",
+  "modelDetailSheetModelIdLabel": "Model ID",
+  "modelDetailSheetModelIdHint": "Required, suggest lowercase/digits/hyphens",
+  "modelDetailSheetModelIdDisabledHint": "{modelId}",
+  "@modelDetailSheetModelIdDisabledHint": {
+    "placeholders": {
+      "modelId": { "type": "String" }
+    }
+  },
+  "modelDetailSheetModelNameLabel": "Model Name",
+  "modelDetailSheetModelTypeLabel": "Model Type",
+  "modelDetailSheetChatType": "Chat",
+  "modelDetailSheetEmbeddingType": "Embedding",
+  "modelDetailSheetInputModesLabel": "Input Modes",
+  "modelDetailSheetOutputModesLabel": "Output Modes",
+  "modelDetailSheetAbilitiesLabel": "Abilities",
+  "modelDetailSheetTextMode": "Text",
+  "modelDetailSheetImageMode": "Image",
+  "modelDetailSheetToolsAbility": "Tools",
+  "modelDetailSheetReasoningAbility": "Reasoning",
+  "modelDetailSheetProviderOverrideDescription": "Provider overrides: customize provider for a specific model.",
+  "modelDetailSheetAddProviderOverride": "Add Provider Override",
+  "modelDetailSheetCustomHeadersTitle": "Custom Headers",
+  "modelDetailSheetAddHeader": "Add Header",
+  "modelDetailSheetCustomBodyTitle": "Custom Body",
+  "modelDetailSheetAddBody": "Add Body",
+  "modelDetailSheetBuiltinToolsDescription": "Built-in tools currently support limited APIs (e.g., Gemini).",
+  "modelDetailSheetSearchTool": "Search",
+  "modelDetailSheetSearchToolDescription": "Enable Google Search integration",
+  "modelDetailSheetUrlContextTool": "URL Context",
+  "modelDetailSheetUrlContextToolDescription": "Enable URL content ingestion",
+  "modelDetailSheetCancelButton": "Cancel",
+  "modelDetailSheetAddButton": "Add",
+  "modelDetailSheetConfirmButton": "Confirm",
+  "modelDetailSheetInvalidIdError": "Please enter a valid model ID (>=2 chars, no spaces)",
+  "modelDetailSheetModelIdExistsError": "Model ID already exists",
+  "modelDetailSheetHeaderKeyHint": "Header Key",
+  "modelDetailSheetHeaderValueHint": "Header Value",
+  "modelDetailSheetBodyKeyHint": "Body Key",
+  "modelDetailSheetBodyJsonHint": "Body JSON"
 }

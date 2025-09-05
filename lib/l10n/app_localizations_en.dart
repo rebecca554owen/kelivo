@@ -1246,4 +1246,126 @@ class AppLocalizationsEn extends AppLocalizations {
   String defaultModelPageTranslateVars(String sourceVar, String targetVar) {
     return 'Variables: source text: $sourceVar, target language: $targetVar';
   }
+
+  @override
+  String get modelDetailSheetAddModel => 'Add Model';
+
+  @override
+  String get modelDetailSheetEditModel => 'Edit Model';
+
+  @override
+  String get modelDetailSheetBasicTab => 'Basic';
+
+  @override
+  String get modelDetailSheetAdvancedTab => 'Advanced';
+
+  @override
+  String get modelDetailSheetModelIdLabel => 'Model ID';
+
+  @override
+  String get modelDetailSheetModelIdHint =>
+      'Required, suggest lowercase/digits/hyphens';
+
+  @override
+  String modelDetailSheetModelIdDisabledHint(String modelId) {
+    return '$modelId';
+  }
+
+  @override
+  String get modelDetailSheetModelNameLabel => 'Model Name';
+
+  @override
+  String get modelDetailSheetModelTypeLabel => 'Model Type';
+
+  @override
+  String get modelDetailSheetChatType => 'Chat';
+
+  @override
+  String get modelDetailSheetEmbeddingType => 'Embedding';
+
+  @override
+  String get modelDetailSheetInputModesLabel => 'Input Modes';
+
+  @override
+  String get modelDetailSheetOutputModesLabel => 'Output Modes';
+
+  @override
+  String get modelDetailSheetAbilitiesLabel => 'Abilities';
+
+  @override
+  String get modelDetailSheetTextMode => 'Text';
+
+  @override
+  String get modelDetailSheetImageMode => 'Image';
+
+  @override
+  String get modelDetailSheetToolsAbility => 'Tools';
+
+  @override
+  String get modelDetailSheetReasoningAbility => 'Reasoning';
+
+  @override
+  String get modelDetailSheetProviderOverrideDescription =>
+      'Provider overrides: customize provider for a specific model.';
+
+  @override
+  String get modelDetailSheetAddProviderOverride => 'Add Provider Override';
+
+  @override
+  String get modelDetailSheetCustomHeadersTitle => 'Custom Headers';
+
+  @override
+  String get modelDetailSheetAddHeader => 'Add Header';
+
+  @override
+  String get modelDetailSheetCustomBodyTitle => 'Custom Body';
+
+  @override
+  String get modelDetailSheetAddBody => 'Add Body';
+
+  @override
+  String get modelDetailSheetBuiltinToolsDescription =>
+      'Built-in tools currently support limited APIs (e.g., Gemini).';
+
+  @override
+  String get modelDetailSheetSearchTool => 'Search';
+
+  @override
+  String get modelDetailSheetSearchToolDescription =>
+      'Enable Google Search integration';
+
+  @override
+  String get modelDetailSheetUrlContextTool => 'URL Context';
+
+  @override
+  String get modelDetailSheetUrlContextToolDescription =>
+      'Enable URL content ingestion';
+
+  @override
+  String get modelDetailSheetCancelButton => 'Cancel';
+
+  @override
+  String get modelDetailSheetAddButton => 'Add';
+
+  @override
+  String get modelDetailSheetConfirmButton => 'Confirm';
+
+  @override
+  String get modelDetailSheetInvalidIdError =>
+      'Please enter a valid model ID (>=2 chars, no spaces)';
+
+  @override
+  String get modelDetailSheetModelIdExistsError => 'Model ID already exists';
+
+  @override
+  String get modelDetailSheetHeaderKeyHint => 'Header Key';
+
+  @override
+  String get modelDetailSheetHeaderValueHint => 'Header Value';
+
+  @override
+  String get modelDetailSheetBodyKeyHint => 'Body Key';
+
+  @override
+  String get modelDetailSheetBodyJsonHint => 'Body JSON';
 }
