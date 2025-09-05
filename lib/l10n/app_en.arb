@@ -738,5 +738,14 @@
   "searchSettingsSheetWebSearchTitle": "Web Search",
   "searchSettingsSheetWebSearchDescription": "Enable web search in chat",
   "searchSettingsSheetOpenSearchServicesTooltip": "Open search services",
-  "searchSettingsSheetNoServicesMessage": "No services. Add from Search Services."
+  "searchSettingsSheetNoServicesMessage": "No services. Add from Search Services.",
+  "aboutPageEasterEggTitle": "Easter Egg Unlocked!",
+  "aboutPageEasterEggMessage": "Thanks for exploring! \n (No egg yet)",
+  "aboutPageEasterEggButton": "Nice!",
+  "aboutPageAppDescription": "Open-source Mobile AI Assistant",
+  "aboutPageNoQQGroup": "No QQ group yet",
+  "aboutPageVersion": "Version",
+  "aboutPageSystem": "System",
+  "aboutPageWebsite": "Website",
+  "aboutPageLicense": "License"
 }

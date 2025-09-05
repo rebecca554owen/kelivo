@@ -1810,4 +1810,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get searchSettingsSheetNoServicesMessage =>
       'No services. Add from Search Services.';
+
+  @override
+  String get aboutPageEasterEggTitle => 'Easter Egg Unlocked!';
+
+  @override
+  String get aboutPageEasterEggMessage =>
+      'Thanks for exploring! \n (No egg yet)';
+
+  @override
+  String get aboutPageEasterEggButton => 'Nice!';
+
+  @override
+  String get aboutPageAppDescription => 'Open-source Mobile AI Assistant';
+
+  @override
+  String get aboutPageNoQQGroup => 'No QQ group yet';
+
+  @override
+  String get aboutPageVersion => 'Version';
+
+  @override
+  String get aboutPageSystem => 'System';
+
+  @override
+  String get aboutPageWebsite => 'Website';
+
+  @override
+  String get aboutPageLicense => 'License';
 }

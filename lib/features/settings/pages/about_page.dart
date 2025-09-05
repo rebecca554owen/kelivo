@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../icons/lucide_adapter.dart';
+import '../../../l10n/app_localizations.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -76,7 +77,7 @@ class _AboutPageState extends State<AboutPage> {
 
   void _showEasterEgg() {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -101,16 +102,14 @@ class _AboutPageState extends State<AboutPage> {
                   Icon(Lucide.Sparkles, size: 28, color: cs.primary),
                   const SizedBox(height: 10),
                   Text(
-                    zh ? '彩蛋已解锁！' : 'Easter Egg Unlocked!',
+                    l10n.aboutPageEasterEggTitle,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Text(
-                        zh
-                            ? '\n（好吧现在还没彩蛋）'
-                            : 'Thanks for exploring! \n (No egg yet)',
+                        l10n.aboutPageEasterEggMessage,
                         style: TextStyle(color: cs.onSurface.withOpacity(0.75), height: 1.3),
                       ),
                     ),
@@ -118,7 +117,7 @@ class _AboutPageState extends State<AboutPage> {
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => Navigator.of(ctx).maybePop(),
-                    child: Text(zh ? '好的' : 'Nice!'),
+                    child: Text(l10n.aboutPageEasterEggButton),
                   ),
                 ],
               ),
@@ -132,16 +131,16 @@ class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.settingsPageBackButton,
         ),
-        title: Text(zh ? '关于' : 'About'),
+        title: Text(l10n.settingsPageAbout),
       ),
       body: CustomScrollView(
         slivers: [
@@ -166,7 +165,7 @@ class _AboutPageState extends State<AboutPage> {
                   Text('Kelivo', style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: 6),
                   Text(
-                    zh ? '开源移动端 AI 助手' : 'Open-source Mobile AI Assistant',
+                    l10n.aboutPageAppDescription,
                     style: TextStyle(color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 12),
@@ -177,7 +176,7 @@ class _AboutPageState extends State<AboutPage> {
                         assetPath: 'assets/icons/tencent-qq.svg',
                         label: 'Tencent',
                         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(zh ? '暂无QQ群' : 'No QQ group yet')),
+                          SnackBar(content: Text(l10n.aboutPageNoQQGroup)),
                         ),
                       ),
                       _SvgChipButton(
@@ -197,18 +196,18 @@ class _AboutPageState extends State<AboutPage> {
               const SizedBox(height: 8),
               _AboutItem(
                 icon: Lucide.Code,
-                title: zh ? '版本' : 'Version',
+                title: l10n.aboutPageVersion,
                 subtitle: _version.isEmpty ? '...' : '$_version / $_buildNumber',
                 onTap: _onVersionTap,
               ),
               _AboutItem(
                 icon: Lucide.Phone,
-                title: zh ? '系统' : 'System',
+                title: l10n.aboutPageSystem,
                 subtitle: _systemInfo.isEmpty ? '...' : _systemInfo,
               ),
               _AboutItem(
                 icon: Lucide.Earth,
-                title: zh ? '官网' : 'Website',
+                title: l10n.aboutPageWebsite,
                 subtitle: 'https://kelivo.vercel.app/',
                 onTap: () => _openUrl('https://kelivo.vercel.app/'),
               ),
@@ -220,7 +219,7 @@ class _AboutPageState extends State<AboutPage> {
               ),
               _AboutItem(
                 icon: Lucide.FileText,
-                title: zh ? '许可证' : 'License',
+                title: l10n.aboutPageLicense,
                 subtitle: 'https://github.com/Chevey339/kelivo/blob/master/LICENSE',
                 onTap: () => _openUrl('https://github.com/Chevey339/kelivo/blob/master/LICENSE'),
               ),

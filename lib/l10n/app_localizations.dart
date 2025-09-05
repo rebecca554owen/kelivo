@@ -3487,6 +3487,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No services. Add from Search Services.'**
   String get searchSettingsSheetNoServicesMessage;
+
+  /// No description provided for @aboutPageEasterEggTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Easter Egg Unlocked!'**
+  String get aboutPageEasterEggTitle;
+
+  /// No description provided for @aboutPageEasterEggMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for exploring! \n (No egg yet)'**
+  String get aboutPageEasterEggMessage;
+
+  /// No description provided for @aboutPageEasterEggButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Nice!'**
+  String get aboutPageEasterEggButton;
+
+  /// No description provided for @aboutPageAppDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source Mobile AI Assistant'**
+  String get aboutPageAppDescription;
+
+  /// No description provided for @aboutPageNoQQGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'No QQ group yet'**
+  String get aboutPageNoQQGroup;
+
+  /// No description provided for @aboutPageVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get aboutPageVersion;
+
+  /// No description provided for @aboutPageSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get aboutPageSystem;
+
+  /// No description provided for @aboutPageWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get aboutPageWebsite;
+
+  /// No description provided for @aboutPageLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'License'**
+  String get aboutPageLicense;
 }
 
 class _AppLocalizationsDelegate

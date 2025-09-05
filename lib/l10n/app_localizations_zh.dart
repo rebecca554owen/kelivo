@@ -1762,4 +1762,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchSettingsSheetNoServicesMessage => '暂无可用服务，请先在\"搜索服务\"中添加';
+
+  @override
+  String get aboutPageEasterEggTitle => '彩蛋已解锁！';
+
+  @override
+  String get aboutPageEasterEggMessage => '\n（好吧现在还没彩蛋）';
+
+  @override
+  String get aboutPageEasterEggButton => '好的';
+
+  @override
+  String get aboutPageAppDescription => '开源移动端 AI 助手';
+
+  @override
+  String get aboutPageNoQQGroup => '暂无QQ群';
+
+  @override
+  String get aboutPageVersion => '版本';
+
+  @override
+  String get aboutPageSystem => '系统';
+
+  @override
+  String get aboutPageWebsite => '官网';
+
+  @override
+  String get aboutPageLicense => '许可证';
 }
