@@ -772,5 +772,33 @@
   "themeSettingsPageDynamicColorSection": "Dynamic Color",
   "themeSettingsPageUseDynamicColorTitle": "Use Dynamic Color",
   "themeSettingsPageUseDynamicColorSubtitle": "Use system colors (Android 12+)",
-  "themeSettingsPageColorPalettesSection": "Color Palettes"
+  "themeSettingsPageColorPalettesSection": "Color Palettes",
+  "ttsServicesPageBackButton": "Back",
+  "ttsServicesPageTitle": "Text-to-Speech",
+  "ttsServicesPageAddTooltip": "Add",
+  "ttsServicesPageAddNotImplemented": "Add TTS service not implemented",
+  "ttsServicesPageSystemTtsTitle": "System TTS",
+  "ttsServicesPageSystemTtsAvailableSubtitle": "Use system built-in TTS",
+  "ttsServicesPageSystemTtsUnavailableSubtitle": "Unavailable: {error}",
+  "@ttsServicesPageSystemTtsUnavailableSubtitle": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsServicesPageSystemTtsUnavailableNotInitialized": "not initialized",
+  "ttsServicesPageTestSpeechText": "Hello, this is a test speech.",
+  "ttsServicesPageConfigureTooltip": "Configure",
+  "ttsServicesPageTestVoiceTooltip": "Test voice",
+  "ttsServicesPageStopTooltip": "Stop",
+  "ttsServicesPageDeleteTooltip": "Delete",
+  "ttsServicesPageSystemTtsSettingsTitle": "System TTS Settings",
+  "ttsServicesPageEngineLabel": "Engine",
+  "ttsServicesPageAutoLabel": "Auto",
+  "ttsServicesPageLanguageLabel": "Language",
+  "ttsServicesPageSpeechRateLabel": "Speech rate",
+  "ttsServicesPagePitchLabel": "Pitch",
+  "ttsServicesPageSettingsSavedMessage": "Settings saved.",
+  "ttsServicesPageDoneButton": "Done"
 }

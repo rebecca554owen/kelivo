@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/tts_provider.dart';
+import '../../../l10n/app_localizations.dart';
 
 class TtsServicesPage extends StatelessWidget {
   const TtsServicesPage({super.key});
@@ -9,7 +10,7 @@ class TtsServicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -17,16 +18,16 @@ class TtsServicesPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.ttsServicesPageBackButton,
         ),
-        title: Text(zh ? '语音服务' : 'Text-to-Speech'),
+        title: Text(l10n.ttsServicesPageTitle),
         actions: [
           IconButton(
-            tooltip: zh ? '新增' : 'Add',
+            tooltip: l10n.ttsServicesPageAddTooltip,
             icon: Icon(Lucide.Plus, color: cs.onSurface),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(zh ? '新增 TTS 服务暂未实现' : 'Add TTS service not implemented')),
+                SnackBar(content: Text(l10n.ttsServicesPageAddNotImplemented)),
               );
             },
           ),
@@ -38,18 +39,22 @@ class TtsServicesPage extends StatelessWidget {
         children: [
           Consumer<TtsProvider>(builder: (context, tts, _) {
             final available = tts.isAvailable && (tts.error == null);
+            final titleText = l10n.ttsServicesPageSystemTtsTitle;
+            final avatarText = titleText.trim().isEmpty
+                ? '?'
+                : titleText.trim().substring(0, 1).toUpperCase();
             return _TtsServiceCard(
-              avatarText: '系',
-              title: zh ? '系统TTS' : 'System TTS',
+              avatarText: avatarText,
+              title: titleText,
               subtitle: available
-                  ? (zh ? '使用系统内置语音合成' : 'Use system built-in TTS')
-                  : (zh ? '不可用：${tts.error ?? '未初始化'}' : 'Unavailable: ${tts.error ?? 'not initialized'}'),
+                  ? l10n.ttsServicesPageSystemTtsAvailableSubtitle
+                  : l10n.ttsServicesPageSystemTtsUnavailableSubtitle(tts.error ?? l10n.ttsServicesPageSystemTtsUnavailableNotInitialized),
               selected: true,
               speaking: tts.isSpeaking,
               onTest: available
                   ? () async {
                       if (!tts.isSpeaking) {
-                        final demo = zh ? '你好，这是一次测试语音。' : 'Hello, this is a test speech.';
+                        final demo = l10n.ttsServicesPageTestSpeechText;
                         await tts.speak(demo);
                       } else {
                         await tts.stop();
@@ -90,6 +95,7 @@ class _TtsServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = selected
         ? (isDark ? Colors.white10 : cs.primary.withOpacity(0.08))
@@ -140,7 +146,7 @@ class _TtsServiceCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 IconButton(
-                  tooltip: Localizations.localeOf(context).languageCode == 'zh' ? '配置' : 'Configure',
+                  tooltip: l10n.ttsServicesPageConfigureTooltip,
                   onPressed: onConfig,
                   icon: Icon(Lucide.Settings, size: 20, color: cs.primary),
                 ),
@@ -152,15 +158,13 @@ class _TtsServiceCard extends StatelessWidget {
               children: [
                 const Spacer(),
                 IconButton(
-                  tooltip: Localizations.localeOf(context).languageCode == 'zh'
-                      ? (speaking ? '停止' : '测试语音')
-                      : (speaking ? 'Stop' : 'Test voice'),
+                  tooltip: speaking ? l10n.ttsServicesPageStopTooltip : l10n.ttsServicesPageTestVoiceTooltip,
                   onPressed: onTest,
                   icon: Icon(speaking ? Lucide.CircleStop : Lucide.Volume2, size: 20, color: cs.onSurface),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  tooltip: Localizations.localeOf(context).languageCode == 'zh' ? '删除' : 'Delete',
+                  tooltip: l10n.ttsServicesPageDeleteTooltip,
                   onPressed: onDelete,
                   icon: Icon(
                     Lucide.Trash2,
@@ -211,7 +215,7 @@ class _CircleAvatar extends StatelessWidget {
 
 Future<void> _showSystemTtsConfig(BuildContext context) async {
   final cs = Theme.of(context).colorScheme;
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   final tts = context.read<TtsProvider>();
   double rate = tts.speechRate;
   double pitch = tts.pitch;
@@ -234,7 +238,7 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                 children: [
                   Icon(Lucide.Settings, size: 18, color: cs.primary),
                   const SizedBox(width: 8),
-                  Text(zh ? '系统 TTS 设置' : 'System TTS Settings', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(l10n.ttsServicesPageSystemTtsSettingsTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -247,8 +251,8 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                   return ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(zh ? '引擎' : 'Engine', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
-                    subtitle: Text(cur.isEmpty ? (zh ? '自动' : 'Auto') : cur, style: const TextStyle(fontSize: 13)),
+                    title: Text(l10n.ttsServicesPageEngineLabel, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
+                    subtitle: Text(cur.isEmpty ? l10n.ttsServicesPageAutoLabel : cur, style: const TextStyle(fontSize: 13)),
                     trailing: const Icon(Icons.keyboard_arrow_right),
                     onTap: engines.isEmpty ? null : () async {
                       final picked = await showModalBottomSheet<String>(
@@ -285,8 +289,8 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                   return ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(zh ? '语言' : 'Language', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
-                    subtitle: Text(cur.isEmpty ? (zh ? '自动' : 'Auto') : cur, style: const TextStyle(fontSize: 13)),
+                    title: Text(l10n.ttsServicesPageLanguageLabel, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
+                    subtitle: Text(cur.isEmpty ? l10n.ttsServicesPageAutoLabel : cur, style: const TextStyle(fontSize: 13)),
                     trailing: const Icon(Icons.keyboard_arrow_right),
                     onTap: langs.isEmpty ? null : () async {
                       final picked = await showModalBottomSheet<String>(
@@ -314,7 +318,7 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                 },
               ),
               const SizedBox(height: 8),
-              Text(zh ? '语速' : 'Speech rate', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
+              Text(l10n.ttsServicesPageSpeechRateLabel, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
               Slider(
                 value: rate,
                 min: 0.1,
@@ -329,7 +333,7 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                 },
               ),
               const SizedBox(height: 4),
-              Text(zh ? '音调' : 'Pitch', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
+              Text(l10n.ttsServicesPagePitchLabel, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
               Slider(
                 value: pitch,
                 min: 0.5,
@@ -347,12 +351,12 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: () async {
-                    final demo = zh ? '设置已保存。' : 'Settings saved.';
+                    final demo = l10n.ttsServicesPageSettingsSavedMessage;
                     Navigator.of(ctx).maybePop();
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(demo)));
                   },
                   icon: Icon(Lucide.Check, size: 16),
-                  label: Text(zh ? '完成' : 'Done'),
+                  label: Text(l10n.ttsServicesPageDoneButton),
                 ),
               ),
             ],

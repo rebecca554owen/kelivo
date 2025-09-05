@@ -1927,4 +1927,72 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeSettingsPageColorPalettesSection => 'Color Palettes';
+
+  @override
+  String get ttsServicesPageBackButton => 'Back';
+
+  @override
+  String get ttsServicesPageTitle => 'Text-to-Speech';
+
+  @override
+  String get ttsServicesPageAddTooltip => 'Add';
+
+  @override
+  String get ttsServicesPageAddNotImplemented =>
+      'Add TTS service not implemented';
+
+  @override
+  String get ttsServicesPageSystemTtsTitle => 'System TTS';
+
+  @override
+  String get ttsServicesPageSystemTtsAvailableSubtitle =>
+      'Use system built-in TTS';
+
+  @override
+  String ttsServicesPageSystemTtsUnavailableSubtitle(String error) {
+    return 'Unavailable: $error';
+  }
+
+  @override
+  String get ttsServicesPageSystemTtsUnavailableNotInitialized =>
+      'not initialized';
+
+  @override
+  String get ttsServicesPageTestSpeechText => 'Hello, this is a test speech.';
+
+  @override
+  String get ttsServicesPageConfigureTooltip => 'Configure';
+
+  @override
+  String get ttsServicesPageTestVoiceTooltip => 'Test voice';
+
+  @override
+  String get ttsServicesPageStopTooltip => 'Stop';
+
+  @override
+  String get ttsServicesPageDeleteTooltip => 'Delete';
+
+  @override
+  String get ttsServicesPageSystemTtsSettingsTitle => 'System TTS Settings';
+
+  @override
+  String get ttsServicesPageEngineLabel => 'Engine';
+
+  @override
+  String get ttsServicesPageAutoLabel => 'Auto';
+
+  @override
+  String get ttsServicesPageLanguageLabel => 'Language';
+
+  @override
+  String get ttsServicesPageSpeechRateLabel => 'Speech rate';
+
+  @override
+  String get ttsServicesPagePitchLabel => 'Pitch';
+
+  @override
+  String get ttsServicesPageSettingsSavedMessage => 'Settings saved.';
+
+  @override
+  String get ttsServicesPageDoneButton => 'Done';
 }

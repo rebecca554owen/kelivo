@@ -3691,6 +3691,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Color Palettes'**
   String get themeSettingsPageColorPalettesSection;
+
+  /// No description provided for @ttsServicesPageBackButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get ttsServicesPageBackButton;
+
+  /// No description provided for @ttsServicesPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text-to-Speech'**
+  String get ttsServicesPageTitle;
+
+  /// No description provided for @ttsServicesPageAddTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get ttsServicesPageAddTooltip;
+
+  /// No description provided for @ttsServicesPageAddNotImplemented.
+  ///
+  /// In en, this message translates to:
+  /// **'Add TTS service not implemented'**
+  String get ttsServicesPageAddNotImplemented;
+
+  /// No description provided for @ttsServicesPageSystemTtsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System TTS'**
+  String get ttsServicesPageSystemTtsTitle;
+
+  /// No description provided for @ttsServicesPageSystemTtsAvailableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use system built-in TTS'**
+  String get ttsServicesPageSystemTtsAvailableSubtitle;
+
+  /// No description provided for @ttsServicesPageSystemTtsUnavailableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable: {error}'**
+  String ttsServicesPageSystemTtsUnavailableSubtitle(String error);
+
+  /// No description provided for @ttsServicesPageSystemTtsUnavailableNotInitialized.
+  ///
+  /// In en, this message translates to:
+  /// **'not initialized'**
+  String get ttsServicesPageSystemTtsUnavailableNotInitialized;
+
+  /// No description provided for @ttsServicesPageTestSpeechText.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, this is a test speech.'**
+  String get ttsServicesPageTestSpeechText;
+
+  /// No description provided for @ttsServicesPageConfigureTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure'**
+  String get ttsServicesPageConfigureTooltip;
+
+  /// No description provided for @ttsServicesPageTestVoiceTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Test voice'**
+  String get ttsServicesPageTestVoiceTooltip;
+
+  /// No description provided for @ttsServicesPageStopTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get ttsServicesPageStopTooltip;
+
+  /// No description provided for @ttsServicesPageDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get ttsServicesPageDeleteTooltip;
+
+  /// No description provided for @ttsServicesPageSystemTtsSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System TTS Settings'**
+  String get ttsServicesPageSystemTtsSettingsTitle;
+
+  /// No description provided for @ttsServicesPageEngineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Engine'**
+  String get ttsServicesPageEngineLabel;
+
+  /// No description provided for @ttsServicesPageAutoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get ttsServicesPageAutoLabel;
+
+  /// No description provided for @ttsServicesPageLanguageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get ttsServicesPageLanguageLabel;
+
+  /// No description provided for @ttsServicesPageSpeechRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech rate'**
+  String get ttsServicesPageSpeechRateLabel;
+
+  /// No description provided for @ttsServicesPagePitchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get ttsServicesPagePitchLabel;
+
+  /// No description provided for @ttsServicesPageSettingsSavedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings saved.'**
+  String get ttsServicesPageSettingsSavedMessage;
+
+  /// No description provided for @ttsServicesPageDoneButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get ttsServicesPageDoneButton;
 }
 
 class _AppLocalizationsDelegate

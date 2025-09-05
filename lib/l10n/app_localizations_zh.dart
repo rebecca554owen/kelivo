@@ -1865,4 +1865,69 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeSettingsPageColorPalettesSection => '配色方案';
+
+  @override
+  String get ttsServicesPageBackButton => '返回';
+
+  @override
+  String get ttsServicesPageTitle => '语音服务';
+
+  @override
+  String get ttsServicesPageAddTooltip => '新增';
+
+  @override
+  String get ttsServicesPageAddNotImplemented => '新增 TTS 服务暂未实现';
+
+  @override
+  String get ttsServicesPageSystemTtsTitle => '系统TTS';
+
+  @override
+  String get ttsServicesPageSystemTtsAvailableSubtitle => '使用系统内置语音合成';
+
+  @override
+  String ttsServicesPageSystemTtsUnavailableSubtitle(String error) {
+    return '不可用：$error';
+  }
+
+  @override
+  String get ttsServicesPageSystemTtsUnavailableNotInitialized => '未初始化';
+
+  @override
+  String get ttsServicesPageTestSpeechText => '你好，这是一次测试语音。';
+
+  @override
+  String get ttsServicesPageConfigureTooltip => '配置';
+
+  @override
+  String get ttsServicesPageTestVoiceTooltip => '测试语音';
+
+  @override
+  String get ttsServicesPageStopTooltip => '停止';
+
+  @override
+  String get ttsServicesPageDeleteTooltip => '删除';
+
+  @override
+  String get ttsServicesPageSystemTtsSettingsTitle => '系统 TTS 设置';
+
+  @override
+  String get ttsServicesPageEngineLabel => '引擎';
+
+  @override
+  String get ttsServicesPageAutoLabel => '自动';
+
+  @override
+  String get ttsServicesPageLanguageLabel => '语言';
+
+  @override
+  String get ttsServicesPageSpeechRateLabel => '语速';
+
+  @override
+  String get ttsServicesPagePitchLabel => '音调';
+
+  @override
+  String get ttsServicesPageSettingsSavedMessage => '设置已保存。';
+
+  @override
+  String get ttsServicesPageDoneButton => '完成';
 }
