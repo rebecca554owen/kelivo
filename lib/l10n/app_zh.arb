@@ -421,5 +421,10 @@
   "modelDetailSheetHeaderKeyHint": "Header Key",
   "modelDetailSheetHeaderValueHint": "Header Value",
   "modelDetailSheetBodyKeyHint": "Body Key",
-  "modelDetailSheetBodyJsonHint": "Body JSON"
+  "modelDetailSheetBodyJsonHint": "Body JSON",
+  "modelSelectSheetSearchHint": "输入模型名称搜索",
+  "modelSelectSheetFavoritesSection": "收藏",
+  "modelSelectSheetFavoriteTooltip": "收藏",
+  "modelSelectSheetChatType": "聊天",
+  "modelSelectSheetEmbeddingType": "嵌入"
 }

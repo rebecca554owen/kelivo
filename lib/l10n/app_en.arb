@@ -582,5 +582,10 @@
   "modelDetailSheetHeaderKeyHint": "Header Key",
   "modelDetailSheetHeaderValueHint": "Header Value",
   "modelDetailSheetBodyKeyHint": "Body Key",
-  "modelDetailSheetBodyJsonHint": "Body JSON"
+  "modelDetailSheetBodyJsonHint": "Body JSON",
+  "modelSelectSheetSearchHint": "Type model name to search",
+  "modelSelectSheetFavoritesSection": "Favorites",
+  "modelSelectSheetFavoriteTooltip": "Favorite",
+  "modelSelectSheetChatType": "Chat",
+  "modelSelectSheetEmbeddingType": "Embedding"
 }

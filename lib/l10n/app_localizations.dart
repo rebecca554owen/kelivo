@@ -2635,6 +2635,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Body JSON'**
   String get modelDetailSheetBodyJsonHint;
+
+  /// No description provided for @modelSelectSheetSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type model name to search'**
+  String get modelSelectSheetSearchHint;
+
+  /// No description provided for @modelSelectSheetFavoritesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get modelSelectSheetFavoritesSection;
+
+  /// No description provided for @modelSelectSheetFavoriteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite'**
+  String get modelSelectSheetFavoriteTooltip;
+
+  /// No description provided for @modelSelectSheetChatType.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get modelSelectSheetChatType;
+
+  /// No description provided for @modelSelectSheetEmbeddingType.
+  ///
+  /// In en, this message translates to:
+  /// **'Embedding'**
+  String get modelSelectSheetEmbeddingType;
 }
 
 class _AppLocalizationsDelegate

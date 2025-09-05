@@ -1330,4 +1330,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get modelDetailSheetBodyJsonHint => 'Body JSON';
+
+  @override
+  String get modelSelectSheetSearchHint => '输入模型名称搜索';
+
+  @override
+  String get modelSelectSheetFavoritesSection => '收藏';
+
+  @override
+  String get modelSelectSheetFavoriteTooltip => '收藏';
+
+  @override
+  String get modelSelectSheetChatType => '聊天';
+
+  @override
+  String get modelSelectSheetEmbeddingType => '嵌入';
 }

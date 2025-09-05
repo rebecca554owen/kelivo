@@ -7,6 +7,7 @@ import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'model_detail_sheet.dart';
 import '../../provider/pages/provider_detail_page.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ModelSelection {
   final String providerKey;
@@ -73,7 +74,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         widget.limitProviderKey!: settings.providerConfigs[widget.limitProviderKey]!,
     };
     final currentKey = settings.currentModelKey;
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
 
     // Build data map: providerKey -> (displayName, models)
     final Map<String, _ProviderGroup> groups = {};
@@ -129,7 +130,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         controller: _search,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          hintText: zh ? '输入模型名称搜索' : 'Type model name to search',
+          hintText: l10n.modelSelectSheetSearchHint,
           prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface.withOpacity(0.6)),
           filled: true,
           fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
@@ -149,7 +150,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         final key = GlobalKey();
         _headers['__fav__'] = key;
         _headerOffsets['__fav__'] = currentOffset;
-        slivers.add(_sectionHeader(context, zh ? '收藏' : 'Favorites', key));
+        slivers.add(_sectionHeader(context, l10n.modelSelectSheetFavoritesSection, key));
         currentOffset += 44; // Approximate height of section header
         slivers.addAll(items.map((m) {
           final tile = _modelTile(context, m);
@@ -232,6 +233,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   }
 
   Widget _modelTile(BuildContext context, _ModelItem m) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final settings = context.read<SettingsProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -272,7 +274,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
                   return IconButton(
                     onPressed: () => settings.togglePinModel(m.providerKey, m.id),
                     icon: Icon(icon, size: 20, color: cs.primary),
-                    tooltip: Localizations.localeOf(context).languageCode == 'zh' ? '收藏' : 'Favorite',
+                    tooltip: l10n.modelSelectSheetFavoriteTooltip,
                   );
                 }),
               ],
@@ -492,7 +494,7 @@ class _BrandAvatar extends StatelessWidget {
 
 Widget _modelTagWrap(BuildContext context, ModelInfo m) {
   final cs = Theme.of(context).colorScheme;
-  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final l10n = AppLocalizations.of(context)!;
   final isDark = Theme.of(context).brightness == Brightness.dark;
   List<Widget> chips = [];
   // type tag
@@ -503,7 +505,7 @@ Widget _modelTagWrap(BuildContext context, ModelInfo m) {
       border: Border.all(color: cs.primary.withOpacity(0.2), width: 0.5),
     ),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    child: Text(m.type == ModelType.chat ? (zh ? '聊天' : 'Chat') : (zh ? '嵌入' : 'Embedding'), style: TextStyle(fontSize: 11, color: isDark ? cs.primary : cs.primary.withOpacity(0.9), fontWeight: FontWeight.w500)),
+    child: Text(m.type == ModelType.chat ? l10n.modelSelectSheetChatType : l10n.modelSelectSheetEmbeddingType, style: TextStyle(fontSize: 11, color: isDark ? cs.primary : cs.primary.withOpacity(0.9), fontWeight: FontWeight.w500)),
   ));
   // modality tag capsule with icons (keep consistent with provider detail page)
   chips.add(Container(

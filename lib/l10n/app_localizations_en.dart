@@ -1368,4 +1368,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modelDetailSheetBodyJsonHint => 'Body JSON';
+
+  @override
+  String get modelSelectSheetSearchHint => 'Type model name to search';
+
+  @override
+  String get modelSelectSheetFavoritesSection => 'Favorites';
+
+  @override
+  String get modelSelectSheetFavoriteTooltip => 'Favorite';
+
+  @override
+  String get modelSelectSheetChatType => 'Chat';
+
+  @override
+  String get modelSelectSheetEmbeddingType => 'Embedding';
 }
