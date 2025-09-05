@@ -188,6 +188,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get chatServiceDefaultConversationTitle => 'New Chat';
+
+  @override
+  String get userProviderDefaultUserName => 'User';
+
+  @override
   String get homePageDeleteMessage => 'Delete Message';
 
   @override

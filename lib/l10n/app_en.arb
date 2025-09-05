@@ -88,6 +88,8 @@
       "error": { "type": "String" }
     }
   },
+  "chatServiceDefaultConversationTitle": "New Chat",
+  "userProviderDefaultUserName": "User",
   "homePageDeleteMessage": "Delete Message",
   "homePageDeleteMessageConfirm": "Are you sure you want to delete this message? This cannot be undone.",
   "homePageCancel": "Cancel",

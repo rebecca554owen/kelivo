@@ -186,6 +186,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get chatServiceDefaultConversationTitle => '新对话';
+
+  @override
+  String get userProviderDefaultUserName => '用户';
+
+  @override
   String get homePageDeleteMessage => '删除消息';
 
   @override

@@ -429,6 +429,18 @@ abstract class AppLocalizations {
   /// **'Translation failed: {error}'**
   String homePageTranslateFailed(String error);
 
+  /// No description provided for @chatServiceDefaultConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Chat'**
+  String get chatServiceDefaultConversationTitle;
+
+  /// No description provided for @userProviderDefaultUserName.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get userProviderDefaultUserName;
+
   /// No description provided for @homePageDeleteMessage.
   ///
   /// In en, this message translates to:

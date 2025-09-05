@@ -20,6 +20,13 @@ class ChatService extends ChangeNotifier {
   final Map<String, List<ChatMessage>> _messagesCache = {};
   final Map<String, Conversation> _draftConversations = {};
 
+  // Localized default title for new conversations; set by UI on startup.
+  String _defaultConversationTitle = 'New Chat';
+  void setDefaultConversationTitle(String title) {
+    if (title.trim().isEmpty) return;
+    _defaultConversationTitle = title.trim();
+  }
+
   bool _initialized = false;
   bool get initialized => _initialized;
 
@@ -94,7 +101,7 @@ class ChatService extends ChangeNotifier {
     if (!_initialized) await init();
 
     final conversation = Conversation(
-      title: title ?? '新对话',
+      title: title ?? _defaultConversationTitle,
       assistantId: assistantId,
     );
 
@@ -107,7 +114,7 @@ class ChatService extends ChangeNotifier {
   // Create a draft conversation that is not persisted until first message arrives.
   Future<Conversation> createDraftConversation({String? title, String? assistantId}) async {
     if (!_initialized) await init();
-    final conversation = Conversation(title: title ?? '新对话', assistantId: assistantId);
+    final conversation = Conversation(title: title ?? _defaultConversationTitle, assistantId: assistantId);
     _draftConversations[conversation.id] = conversation;
     _currentConversationId = conversation.id;
     notifyListeners();
@@ -389,7 +396,7 @@ class ChatService extends ChangeNotifier {
         conversation = draft;
       } else {
         // Create a new one on the fly as a fallback
-        conversation = Conversation(id: conversationId, title: '新对话');
+        conversation = Conversation(id: conversationId, title: _defaultConversationTitle);
         await _conversationsBox.put(conversationId, conversation);
       }
     }

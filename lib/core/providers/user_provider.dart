@@ -9,8 +9,9 @@ class UserProvider extends ChangeNotifier {
   static const String _prefsAvatarTypeKey = 'avatar_type'; // emoji | url | file | null
   static const String _prefsAvatarValueKey = 'avatar_value';
 
-  String _name = '用户';
+  String _name = 'User';
   String get name => _name;
+  bool _hasSavedName = false;
 
   String? _avatarType; // 'emoji', 'url', 'file'
   String? _avatarValue;
@@ -26,6 +27,7 @@ class UserProvider extends ChangeNotifier {
     final n = prefs.getString(_prefsUserNameKey);
     if (n != null && n.isNotEmpty) {
       _name = n;
+      _hasSavedName = true;
       notifyListeners();
     }
     _avatarType = prefs.getString(_prefsAvatarTypeKey);
@@ -33,6 +35,17 @@ class UserProvider extends ChangeNotifier {
     _avatarValue = rawAvatar == null ? null : SandboxPathResolver.fix(rawAvatar);
     // Only notify if avatar exists; otherwise rely on name notify above
     if (_avatarType != null && _avatarValue != null) {
+      notifyListeners();
+    }
+  }
+
+  // Set localized default name if user hasn't saved a custom one
+  void setDefaultNameIfUnset(String localizedDefaultName) {
+    if (_hasSavedName) return;
+    final v = localizedDefaultName.trim();
+    if (v.isEmpty) return;
+    if (_name != v) {
+      _name = v;
       notifyListeners();
     }
   }

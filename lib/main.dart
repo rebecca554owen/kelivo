@@ -136,13 +136,15 @@ class MyApp extends StatelessWidget {
                           systemNavigationBarDividerColor: Colors.transparent,
                           systemNavigationBarContrastEnforced: false,
                         );
-                  // Ensure localized default assistants after first frame
-                  if (!_didEnsureAssistants) {
-                    _didEnsureAssistants = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      try { ctx.read<AssistantProvider>().ensureDefaults(ctx); } catch (_) {}
-                    });
-                  }
+              // Ensure localized defaults (assistants and chat default title) after first frame
+              if (!_didEnsureAssistants) {
+                _didEnsureAssistants = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  try { ctx.read<AssistantProvider>().ensureDefaults(ctx); } catch (_) {}
+                  try { ctx.read<ChatService>().setDefaultConversationTitle(AppLocalizations.of(ctx)!.chatServiceDefaultConversationTitle); } catch (_) {}
+                  try { ctx.read<UserProvider>().setDefaultNameIfUnset(AppLocalizations.of(ctx)!.userProviderDefaultUserName); } catch (_) {}
+                });
+              }
 
                   return AnnotatedRegion<SystemUiOverlayStyle>(
                     value: overlay,
