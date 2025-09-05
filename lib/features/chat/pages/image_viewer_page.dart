@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import '../../../utils/sandbox_path_resolver.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ImageViewerPage extends StatefulWidget {
   const ImageViewerPage({super.key, required this.images, this.initialIndex = 0});
@@ -156,6 +156,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
   }
 
   Future<void> _shareCurrent() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final src = widget.images[_index];
       String? pathToSave;
@@ -204,7 +205,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
         if (!mounted) return;
         if (res.type != ResultType.done) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('无法分享，已尝试打开文件: ${res.message ?? res.type.name}')),
+            SnackBar(content: Text(l10n.imageViewerPageShareFailedOpenFile(res.message ?? res.type.name))),
           );
         }
       } on PlatformException catch (_) {
@@ -212,20 +213,21 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
         if (!mounted) return;
         if (res.type != ResultType.done) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('无法分享，已尝试打开文件: ${res.message ?? res.type.name}')),
+            SnackBar(content: Text(l10n.imageViewerPageShareFailedOpenFile(res.message ?? res.type.name))),
           );
         }
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('分享失败: $e')),
+        SnackBar(content: Text(l10n.imageViewerPageShareFailed(e.toString()))),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -366,7 +368,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
                     ),
                     onPressed: _shareCurrent,
                     icon: const Icon(Icons.share),
-                    label: const Text('分享图片'),
+                    label: Text(l10n.imageViewerPageShareButton),
                   ),
                 ),
               ),

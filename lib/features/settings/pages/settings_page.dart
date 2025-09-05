@@ -268,7 +268,7 @@ class SettingsPage extends StatelessWidget {
             icon: Lucide.Share2,
             title: l10n.settingsPageShare,
             onTap: () async {
-              await Share.share('Kelivo - 开源移动端AI助手');
+              await Share.share(l10n.settingsShare);
             },
           ),
 

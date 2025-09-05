@@ -139,6 +139,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePageDefaultAssistant => '默认助手';
 
   @override
+  String get assistantProviderDefaultAssistantName => '默认助手';
+
+  @override
+  String get assistantProviderSampleAssistantName => '示例助手';
+
+  @override
+  String get assistantProviderNewAssistantName => '新助手';
+
+  @override
+  String assistantProviderSampleAssistantSystemPrompt(
+    String model_name,
+    String cur_datetime,
+    String locale,
+    String timezone,
+    String device_info,
+    String system_version,
+  ) {
+    return '你是$model_name, 一个人工智能助手，乐意为用户提供准确，有益的帮助。现在时间是$cur_datetime，用户设备语言为$locale，时区为$timezone，用户正在使用$device_info，版本$system_version。如果用户没有明确说明，请使用用户设备语言进行回复。';
+  }
+
+  @override
   String get homePageDeleteMessage => '删除消息';
 
   @override
@@ -1930,4 +1951,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ttsServicesPageDoneButton => '完成';
+
+  @override
+  String imageViewerPageShareFailedOpenFile(String message) {
+    return '无法分享，已尝试打开文件: $message';
+  }
+
+  @override
+  String imageViewerPageShareFailed(String error) {
+    return '分享失败: $error';
+  }
+
+  @override
+  String get imageViewerPageShareButton => '分享图片';
+
+  @override
+  String get settingsShare => 'Kelivo - 开源移动端AI助手';
 }

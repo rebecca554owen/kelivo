@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/assistant.dart';
+import '../../l10n/app_localizations.dart';
 
 class AssistantProvider extends ChangeNotifier {
   static const String _assistantsKey = 'assistants_v1';
@@ -13,7 +13,12 @@ class AssistantProvider extends ChangeNotifier {
 
   List<Assistant> get assistants => List.unmodifiable(_assistants);
   String? get currentAssistantId => _currentAssistantId;
-  Assistant? get currentAssistant => _assistants.firstWhere((a) => a.id == _currentAssistantId, orElse: () => _assistants.isNotEmpty ? _assistants.first : _defaultAssistant());
+  Assistant? get currentAssistant {
+    final idx = _assistants.indexWhere((a) => a.id == _currentAssistantId);
+    if (idx != -1) return _assistants[idx];
+    if (_assistants.isNotEmpty) return _assistants.first;
+    return null;
+  }
 
   AssistantProvider() {
     _load();
@@ -27,34 +32,59 @@ class AssistantProvider extends ChangeNotifier {
         ..clear()
         ..addAll(Assistant.decodeList(raw));
     }
-    // Ensure default assistants exist
-    if (_assistants.isEmpty) {
-      // 1) 默认助手
-      _assistants.add(_defaultAssistant());
-      // 2) 示例助手（带提示词）
-      _assistants.add(Assistant(
-        id: const Uuid().v4(),
-        name: '示例助手',
-        systemPrompt: '你是{model_name}, 一个人工智能助手，乐意为用户提供准确，有益的帮助。现在时间是{cur_datetime}，用户设备语言为"{locale}"，时区为{timezone}，用户正在使用{device_info}，版本{system_version}。如果用户没有明确说明，请使用用户设备语言和用户对话。',
-        deletable: false,
-        temperature: 0.6,
-        topP: 1.0,
-      ));
-      await _persist();
+    // Do not create defaults here because localization is not available.
+    // Defaults will be ensured later via ensureDefaults(context).
+    // Restore current assistant if present
+    final savedId = prefs.getString(_currentAssistantKey);
+    if (savedId != null && _assistants.any((a) => a.id == savedId)) {
+      _currentAssistantId = savedId;
+    } else {
+      _currentAssistantId = null;
     }
-    _currentAssistantId = prefs.getString(_currentAssistantKey) ?? _assistants.first.id;
     notifyListeners();
   }
 
-  Assistant _defaultAssistant() => Assistant(
+  Assistant _defaultAssistant(AppLocalizations l10n) => Assistant(
         id: const Uuid().v4(),
-        name: '默认助手',
+        name: l10n.assistantProviderDefaultAssistantName,
         systemPrompt: '',
         deletable: false,
         thinkingBudget: null,
         temperature: 0.6,
         topP: 1.0,
       );
+
+  // Ensure localized default assistants exist; call this after localization is ready.
+  Future<void> ensureDefaults(dynamic context) async {
+    if (_assistants.isNotEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    // 1) 默认助手
+    _assistants.add(_defaultAssistant(l10n));
+    // 2) 示例助手（带提示词模板）
+    _assistants.add(Assistant(
+      id: const Uuid().v4(),
+      name: l10n.assistantProviderSampleAssistantName,
+      systemPrompt: l10n.assistantProviderSampleAssistantSystemPrompt(
+        '{model_name}',
+        '{cur_datetime}',
+        '"{locale}"',
+        '{timezone}',
+        '{device_info}',
+        '{system_version}',
+      ),
+      deletable: false,
+      temperature: 0.6,
+      topP: 1.0,
+    ));
+    await _persist();
+    // Set current assistant if not set
+    if (_currentAssistantId == null && _assistants.isNotEmpty) {
+      _currentAssistantId = _assistants.first.id;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_currentAssistantKey, _currentAssistantId!);
+    }
+    notifyListeners();
+  }
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
@@ -75,10 +105,12 @@ class AssistantProvider extends ChangeNotifier {
     return _assistants[idx];
   }
 
-  Future<String> addAssistant({String? name}) async {
+  Future<String> addAssistant({String? name, dynamic context}) async {
     final a = Assistant(
       id: const Uuid().v4(),
-      name: (name ?? '新助手'),
+      name: (name ?? (context != null
+          ? AppLocalizations.of(context)!.assistantProviderNewAssistantName
+          : 'New Assistant')),
       temperature: 0.6,
       topP: 1.0,
     );

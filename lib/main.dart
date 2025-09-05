@@ -21,6 +21,7 @@ import 'utils/sandbox_path_resolver.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver = RouteObserver<ModalRoute<dynamic>>();
 bool _didCheckUpdates = false; // one-time update check flag
+bool _didEnsureAssistants = false; // ensure defaults after l10n ready
 
 
 Future<void> main() async {
@@ -135,6 +136,14 @@ class MyApp extends StatelessWidget {
                           systemNavigationBarDividerColor: Colors.transparent,
                           systemNavigationBarContrastEnforced: false,
                         );
+                  // Ensure localized default assistants after first frame
+                  if (!_didEnsureAssistants) {
+                    _didEnsureAssistants = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      try { ctx.read<AssistantProvider>().ensureDefaults(ctx); } catch (_) {}
+                    });
+                  }
+
                   return AnnotatedRegion<SystemUiOverlayStyle>(
                     value: overlay,
                     child: child ?? const SizedBox.shrink(),

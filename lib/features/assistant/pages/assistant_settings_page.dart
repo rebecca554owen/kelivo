@@ -33,7 +33,7 @@ class AssistantSettingsPage extends StatelessWidget {
             onPressed: () async {
               final name = await _showAddAssistantSheet(context);
               if (name == null) return;
-              final id = await context.read<AssistantProvider>().addAssistant(name: name.trim());
+              final id = await context.read<AssistantProvider>().addAssistant(name: name.trim(), context: context);
               if (!context.mounted) return;
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),

@@ -350,6 +350,37 @@ abstract class AppLocalizations {
   /// **'Default Assistant'**
   String get homePageDefaultAssistant;
 
+  /// No description provided for @assistantProviderDefaultAssistantName.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Assistant'**
+  String get assistantProviderDefaultAssistantName;
+
+  /// No description provided for @assistantProviderSampleAssistantName.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample Assistant'**
+  String get assistantProviderSampleAssistantName;
+
+  /// No description provided for @assistantProviderNewAssistantName.
+  ///
+  /// In en, this message translates to:
+  /// **'New Assistant'**
+  String get assistantProviderNewAssistantName;
+
+  /// No description provided for @assistantProviderSampleAssistantSystemPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'You are {model_name}, an AI assistant who gladly provides accurate and helpful assistance. The current time is {cur_datetime}, the device language is {locale}, timezone is {timezone}, the user is using {device_info}, version {system_version}. If the user does not explicitly specify otherwise, please use the user\'s device language when replying.'**
+  String assistantProviderSampleAssistantSystemPrompt(
+    String model_name,
+    String cur_datetime,
+    String locale,
+    String timezone,
+    String device_info,
+    String system_version,
+  );
+
   /// No description provided for @homePageDeleteMessage.
   ///
   /// In en, this message translates to:
@@ -3817,6 +3848,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get ttsServicesPageDoneButton;
+
+  /// No description provided for @imageViewerPageShareFailedOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to share, tried to open file: {message}'**
+  String imageViewerPageShareFailedOpenFile(String message);
+
+  /// No description provided for @imageViewerPageShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Share failed: {error}'**
+  String imageViewerPageShareFailed(String error);
+
+  /// No description provided for @imageViewerPageShareButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Image'**
+  String get imageViewerPageShareButton;
+
+  /// No description provided for @settingsShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Kelivo - Open Source Mobile AI Assistant'**
+  String get settingsShare;
 }
 
 class _AppLocalizationsDelegate
