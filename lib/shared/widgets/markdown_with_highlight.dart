@@ -48,9 +48,10 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     if (cbIdx != -1) components[cbIdx] = ModernCheckBoxMd();
     final rbIdx = components.indexWhere((c) => c is RadioButtonMd);
     if (rbIdx != -1) components[rbIdx] = ModernRadioMd();
-    // Prepend our custom renderers so they take precedence
-    components.insert(0, AtxHeadingMd());
+    // Prepend custom renderers in priority order (fence first)
     components.insert(0, LabelValueLineMd());
+    components.insert(0, AtxHeadingMd());
+    components.insert(0, FencedCodeBlockMd());
     return GptMarkdown(
       normalized,
       style: baseTextStyle,
@@ -365,9 +366,12 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
   }
 
   static String _preprocessFences(String input) {
+    // Normalize newlines to simplify regex handling
+    var out = input.replaceAll('\r\n', '\n');
+
     // 1) Move fenced code from list lines to the next line: "* ```lang" -> "*\n```lang"
     final bulletFence = RegExp(r"^(\s*(?:[*+-]|\d+\.)\s+)```([^\s`]*)\s*$", multiLine: true);
-    var out = input.replaceAllMapped(bulletFence, (m) => "${m[1]}\n```${m[2]}" );
+    out = out.replaceAllMapped(bulletFence, (m) => "${m[1]}\n```${m[2]}" );
 
     // 2) Dedent opening fences: leading spaces before ```lang
     final dedentOpen = RegExp(r"^[ \t]+```([^\n`]*)\s*$", multiLine: true);
@@ -391,6 +395,14 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     // Insert a zero-width non-joiner after the dot to prevent list parsing without changing visual text.
     final atxEnum = RegExp(r"^(\s{0,3}#{1,6}\s+\d+)\.(\s*)(\S)", multiLine: true);
     out = out.replaceAllMapped(atxEnum, (m) => "${m[1]}.\u200C${m[2]}${m[3]}");
+
+    // 7) Auto-close an unmatched opening code fence at EOF
+    final fenceAtBol = RegExp(r"^\s*```", multiLine: true);
+    final count = fenceAtBol.allMatches(out).length;
+    if (count % 2 == 1) {
+      if (!out.endsWith('\n')) out += '\n';
+      out += '```';
+    }
 
     return out;
   }
@@ -607,10 +619,32 @@ class SoftHrLine extends BlockMd {
   }
 }
 
+// Robust fenced code block that takes precedence over other blocks
+class FencedCodeBlockMd extends BlockMd {
+  @override
+  // Match ```lang\n...\n``` at line starts. Non-greedy to stop at first closing fence.
+  String get expString => (r"^\s*```([^\n`]*)\s*\n([\s\S]*?)\n```$");
+
+  @override
+  Widget build(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text);
+    if (m == null) return const SizedBox.shrink();
+    final lang = (m.group(1) ?? '').trim();
+    final code = (m.group(2) ?? '');
+    return _CollapsibleCodeBlock(
+      language: lang,
+      code: code,
+    );
+  }
+}
+
 // Balanced ATX-style headings (#, ##, ###, …) with consistent spacing and typography
 class AtxHeadingMd extends BlockMd {
   @override
-  String get expString => (r"^\s{0,3}(#{1,6})\s+(.+?)(?:\s+#+\s*)?$");
+  // Restrict heading content to a single line to avoid swallowing
+  // subsequent blocks (e.g., fenced code) when the engine builds
+  // the regex with dotAll=true. Using [^\n]+ keeps it line-bound.
+  String get expString => (r"^\s{0,3}(#{1,6})\s+([^\n]+?)(?:\s+#+\s*)?$");
 
   @override
   Widget build(BuildContext context, String text, GptMarkdownConfig config) {
