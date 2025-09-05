@@ -4,13 +4,14 @@ import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../theme/palettes.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ThemeSettingsPage extends StatelessWidget {
   const ThemeSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
 
@@ -29,31 +30,29 @@ class ThemeSettingsPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Lucide.ArrowLeft, size: 22),
           onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: zh ? '返回' : 'Back',
+          tooltip: l10n.settingsPageBackButton,
         ),
-        title: Text(zh ? '主题设置' : 'Theme Settings'),
+        title: Text(l10n.displaySettingsPageThemeSettingsTitle),
       ),
       body: ListView(
         children: [
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && settings.dynamicColorSupported) ...[
-            sectionTitle(zh ? '动态颜色' : 'Dynamic Color'),
+            sectionTitle(l10n.themeSettingsPageDynamicColorSection),
             _SwitchTile(
               icon: Lucide.Palette,
-              title: zh ? '使用动态颜色' : 'Use Dynamic Color',
-              subtitle: zh
-                  ? '基于系统配色（Android 12+）'
-                  : 'Use system colors (Android 12+)',
+              title: l10n.themeSettingsPageUseDynamicColorTitle,
+              subtitle: l10n.themeSettingsPageUseDynamicColorSubtitle,
               value: settings.useDynamicColor,
               onChanged: (v) => context.read<SettingsProvider>().setUseDynamicColor(v),
             ),
           ],
 
-          sectionTitle(zh ? '配色方案' : 'Color Palettes'),
+          sectionTitle(l10n.themeSettingsPageColorPalettesSection),
           const SizedBox(height: 6),
           ...ThemePalettes.all.map((p) {
             final isSelected = settings.themePaletteId == p.id;
             return _PaletteTile(
-              title: zh ? p.displayNameZh : p.displayNameEn,
+              title: Localizations.localeOf(context).languageCode == 'zh' ? p.displayNameZh : p.displayNameEn,
               color: p.light.primary,
               selected: isSelected,
               onTap: () => context.read<SettingsProvider>().setThemePalette(p.id),

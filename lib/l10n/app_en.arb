@@ -768,5 +768,9 @@
   "displaySettingsPageNewChatOnLaunchSubtitle": "Automatically create a new chat on launch",
   "displaySettingsPageChatFontSizeTitle": "Chat Font Size",
   "displaySettingsPageChatFontSampleText": "This is a sample chat text",
-  "displaySettingsPageThemeSettingsTitle": "Theme Settings"
+  "displaySettingsPageThemeSettingsTitle": "Theme Settings",
+  "themeSettingsPageDynamicColorSection": "Dynamic Color",
+  "themeSettingsPageUseDynamicColorTitle": "Use Dynamic Color",
+  "themeSettingsPageUseDynamicColorSubtitle": "Use system colors (Android 12+)",
+  "themeSettingsPageColorPalettesSection": "Color Palettes"
 }

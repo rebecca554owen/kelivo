@@ -1853,4 +1853,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get displaySettingsPageThemeSettingsTitle => '主题设置';
+
+  @override
+  String get themeSettingsPageDynamicColorSection => '动态颜色';
+
+  @override
+  String get themeSettingsPageUseDynamicColorTitle => '使用动态颜色';
+
+  @override
+  String get themeSettingsPageUseDynamicColorSubtitle => '基于系统配色（Android 12+）';
+
+  @override
+  String get themeSettingsPageColorPalettesSection => '配色方案';
 }

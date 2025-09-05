@@ -593,5 +593,9 @@
   "displaySettingsPageNewChatOnLaunchSubtitle": "应用启动时自动创建新对话",
   "displaySettingsPageChatFontSizeTitle": "聊天字体大小",
   "displaySettingsPageChatFontSampleText": "这是一个示例的聊天文本",
-  "displaySettingsPageThemeSettingsTitle": "主题设置"
+  "displaySettingsPageThemeSettingsTitle": "主题设置",
+  "themeSettingsPageDynamicColorSection": "动态颜色",
+  "themeSettingsPageUseDynamicColorTitle": "使用动态颜色",
+  "themeSettingsPageUseDynamicColorSubtitle": "基于系统配色（Android 12+）",
+  "themeSettingsPageColorPalettesSection": "配色方案"
 }

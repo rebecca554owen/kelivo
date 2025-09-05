@@ -1914,4 +1914,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageThemeSettingsTitle => 'Theme Settings';
+
+  @override
+  String get themeSettingsPageDynamicColorSection => 'Dynamic Color';
+
+  @override
+  String get themeSettingsPageUseDynamicColorTitle => 'Use Dynamic Color';
+
+  @override
+  String get themeSettingsPageUseDynamicColorSubtitle =>
+      'Use system colors (Android 12+)';
+
+  @override
+  String get themeSettingsPageColorPalettesSection => 'Color Palettes';
 }

@@ -3667,6 +3667,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Theme Settings'**
   String get displaySettingsPageThemeSettingsTitle;
+
+  /// No description provided for @themeSettingsPageDynamicColorSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamic Color'**
+  String get themeSettingsPageDynamicColorSection;
+
+  /// No description provided for @themeSettingsPageUseDynamicColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Dynamic Color'**
+  String get themeSettingsPageUseDynamicColorTitle;
+
+  /// No description provided for @themeSettingsPageUseDynamicColorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use system colors (Android 12+)'**
+  String get themeSettingsPageUseDynamicColorSubtitle;
+
+  /// No description provided for @themeSettingsPageColorPalettesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Color Palettes'**
+  String get themeSettingsPageColorPalettesSection;
 }
 
 class _AppLocalizationsDelegate
