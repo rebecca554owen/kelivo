@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,69 @@ class _BackupPageState extends State<BackupPage> {
   void initState() {
     super.initState();
     _pageCtrl = PageController(initialPage: _currentIndex);
+  }
+
+  Future<RestoreMode?> _chooseImportModeDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cardColor = Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF7F7F9);
+
+    return showDialog<RestoreMode>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.backupPageSelectImportMode),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ActionCard(
+              color: cardColor,
+              icon: Lucide.RotateCw,
+              title: l10n.backupPageOverwriteMode,
+              subtitle: l10n.backupPageOverwriteModeDescription,
+              onTap: () => Navigator.of(ctx).pop(RestoreMode.overwrite),
+            ),
+            const SizedBox(height: 10),
+            _ActionCard(
+              color: cardColor,
+              icon: Lucide.GitFork,
+              title: l10n.backupPageMergeMode,
+              subtitle: l10n.backupPageMergeModeDescription,
+              onTap: () => Navigator.of(ctx).pop(RestoreMode.merge),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.backupPageCancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<T> _runWithImportingOverlay<T>(BuildContext context, Future<T> Function() task) async {
+    final cs = Theme.of(context).colorScheme;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
+          ),
+          child: const CupertinoActivityIndicator(radius: 14),
+        ),
+      ),
+    );
+    try {
+      final res = await task();
+      return res;
+    } finally {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   @override
@@ -248,51 +312,13 @@ class _BackupPageState extends State<BackupPage> {
                 onRestore: (item) async {
                   Navigator.of(ctx).pop();
                   
-                  // Show import mode selection dialog
+                  // Show import mode selection dialog (refined iOS-like options)
                   if (!mounted) return;
-                  final mode = await showDialog<RestoreMode>(
-                    context: context,
-                    builder: (mctx) => AlertDialog(
-                      title: Text(l10n.backupPageSelectImportMode),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(l10n.backupPageSelectImportModeDescription),
-                          const SizedBox(height: 20),
-                          ListTile(
-                            title: Text(l10n.backupPageOverwriteMode),
-                            subtitle: Text(l10n.backupPageOverwriteModeDescription),
-                            leading: Radio<RestoreMode>(
-                              value: RestoreMode.overwrite,
-                              groupValue: RestoreMode.overwrite,
-                              onChanged: (_) => Navigator.of(mctx).pop(RestoreMode.overwrite),
-                            ),
-                            onTap: () => Navigator.of(mctx).pop(RestoreMode.overwrite),
-                          ),
-                          ListTile(
-                            title: Text(l10n.backupPageMergeMode),
-                            subtitle: Text(l10n.backupPageMergeModeDescription),
-                            leading: Radio<RestoreMode>(
-                              value: RestoreMode.merge,
-                              groupValue: RestoreMode.overwrite,
-                              onChanged: (_) => Navigator.of(mctx).pop(RestoreMode.merge),
-                            ),
-                            onTap: () => Navigator.of(mctx).pop(RestoreMode.merge),
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(mctx).pop(),
-                          child: Text(l10n.backupPageCancel),
-                        ),
-                      ],
-                    ),
-                  );
+                  final mode = await _chooseImportModeDialog(context);
                   
                   if (mode == null) return;
                   
-                  await vm.restoreFromItem(item, mode: mode);
+                  await _runWithImportingOverlay(context, () => vm.restoreFromItem(item, mode: mode));
                   if (!mounted) return;
                   await showDialog(
                     context: context,
@@ -352,51 +378,13 @@ class _BackupPageState extends State<BackupPage> {
       final path = result?.files.single.path;
       if (path == null) return;
       
-      // Show import mode selection dialog
+      // Show import mode selection dialog (refined iOS-like options)
       if (!mounted) return;
-      final mode = await showDialog<RestoreMode>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.backupPageSelectImportMode),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.backupPageSelectImportModeDescription),
-              const SizedBox(height: 20),
-              ListTile(
-                title: Text(l10n.backupPageOverwriteMode),
-                subtitle: Text(l10n.backupPageOverwriteModeDescription),
-                leading: Radio<RestoreMode>(
-                  value: RestoreMode.overwrite,
-                  groupValue: RestoreMode.overwrite,
-                  onChanged: (_) => Navigator.of(ctx).pop(RestoreMode.overwrite),
-                ),
-                onTap: () => Navigator.of(ctx).pop(RestoreMode.overwrite),
-              ),
-              ListTile(
-                title: Text(l10n.backupPageMergeMode),
-                subtitle: Text(l10n.backupPageMergeModeDescription),
-                leading: Radio<RestoreMode>(
-                  value: RestoreMode.merge,
-                  groupValue: RestoreMode.overwrite,
-                  onChanged: (_) => Navigator.of(ctx).pop(RestoreMode.merge),
-                ),
-                onTap: () => Navigator.of(ctx).pop(RestoreMode.merge),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(l10n.backupPageCancel),
-            ),
-          ],
-        ),
-      );
+      final mode = await _chooseImportModeDialog(context);
       
       if (mode == null) return;
       
-      await vm.restoreFromLocalFile(File(path), mode: mode);
+      await _runWithImportingOverlay(context, () => vm.restoreFromLocalFile(File(path), mode: mode));
       if (!mounted) return;
       await showDialog(
         context: context,
