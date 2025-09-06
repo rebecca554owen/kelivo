@@ -157,7 +157,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                               child: SfSlider(
                                 value: scale,
                                 min: 0.8,
-                                max: 1.5,
+                                max: 1.50001,
                                 stepSize: 0.05,
                                 showTicks: true,
                                 showLabels: true,
@@ -355,7 +355,7 @@ class _LanguageTile extends StatelessWidget {
             await _showLanguageSheet(context);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Container(
@@ -395,8 +395,8 @@ class _LanguageTile extends StatelessWidget {
                             : labelForLocale(settings.appLocale),
                         style: TextStyle(color: cs.primary, fontSize: 13),
                       ),
-                      const SizedBox(width: 6),
-                      Icon(Lucide.ChevronDown, size: 16, color: cs.primary),
+                      // const SizedBox(width: 6),
+                      // Icon(Lucide.ChevronDown, size: 16, color: cs.primary),
                     ],
                   ),
                 ),
