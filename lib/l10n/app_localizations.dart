@@ -1163,6 +1163,48 @@ abstract class AppLocalizations {
   /// **'OK'**
   String get backupPageOK;
 
+  /// No description provided for @backupPageCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get backupPageCancel;
+
+  /// No description provided for @backupPageSelectImportMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Import Mode'**
+  String get backupPageSelectImportMode;
+
+  /// No description provided for @backupPageSelectImportModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how to import the backup data:'**
+  String get backupPageSelectImportModeDescription;
+
+  /// No description provided for @backupPageOverwriteMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Overwrite'**
+  String get backupPageOverwriteMode;
+
+  /// No description provided for @backupPageOverwriteModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all local data and restore from backup'**
+  String get backupPageOverwriteModeDescription;
+
+  /// No description provided for @backupPageMergeMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Merge'**
+  String get backupPageMergeMode;
+
+  /// No description provided for @backupPageMergeModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add only non-existing data (intelligent deduplication)'**
+  String get backupPageMergeModeDescription;
+
   /// No description provided for @backupPageRestore.
   ///
   /// In en, this message translates to:

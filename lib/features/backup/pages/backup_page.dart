@@ -247,7 +247,52 @@ class _BackupPageState extends State<BackupPage> {
                 },
                 onRestore: (item) async {
                   Navigator.of(ctx).pop();
-                  await vm.restoreFromItem(item);
+                  
+                  // Show import mode selection dialog
+                  if (!mounted) return;
+                  final mode = await showDialog<RestoreMode>(
+                    context: context,
+                    builder: (mctx) => AlertDialog(
+                      title: Text(l10n.backupPageSelectImportMode),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(l10n.backupPageSelectImportModeDescription),
+                          const SizedBox(height: 20),
+                          ListTile(
+                            title: Text(l10n.backupPageOverwriteMode),
+                            subtitle: Text(l10n.backupPageOverwriteModeDescription),
+                            leading: Radio<RestoreMode>(
+                              value: RestoreMode.overwrite,
+                              groupValue: RestoreMode.overwrite,
+                              onChanged: (_) => Navigator.of(mctx).pop(RestoreMode.overwrite),
+                            ),
+                            onTap: () => Navigator.of(mctx).pop(RestoreMode.overwrite),
+                          ),
+                          ListTile(
+                            title: Text(l10n.backupPageMergeMode),
+                            subtitle: Text(l10n.backupPageMergeModeDescription),
+                            leading: Radio<RestoreMode>(
+                              value: RestoreMode.merge,
+                              groupValue: RestoreMode.overwrite,
+                              onChanged: (_) => Navigator.of(mctx).pop(RestoreMode.merge),
+                            ),
+                            onTap: () => Navigator.of(mctx).pop(RestoreMode.merge),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(mctx).pop(),
+                          child: Text(l10n.backupPageCancel),
+                        ),
+                      ],
+                    ),
+                  );
+                  
+                  if (mode == null) return;
+                  
+                  await vm.restoreFromItem(item, mode: mode);
                   if (!mounted) return;
                   await showDialog(
                     context: context,
@@ -306,7 +351,52 @@ class _BackupPageState extends State<BackupPage> {
       final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['zip']);
       final path = result?.files.single.path;
       if (path == null) return;
-      await vm.restoreFromLocalFile(File(path));
+      
+      // Show import mode selection dialog
+      if (!mounted) return;
+      final mode = await showDialog<RestoreMode>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.backupPageSelectImportMode),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.backupPageSelectImportModeDescription),
+              const SizedBox(height: 20),
+              ListTile(
+                title: Text(l10n.backupPageOverwriteMode),
+                subtitle: Text(l10n.backupPageOverwriteModeDescription),
+                leading: Radio<RestoreMode>(
+                  value: RestoreMode.overwrite,
+                  groupValue: RestoreMode.overwrite,
+                  onChanged: (_) => Navigator.of(ctx).pop(RestoreMode.overwrite),
+                ),
+                onTap: () => Navigator.of(ctx).pop(RestoreMode.overwrite),
+              ),
+              ListTile(
+                title: Text(l10n.backupPageMergeMode),
+                subtitle: Text(l10n.backupPageMergeModeDescription),
+                leading: Radio<RestoreMode>(
+                  value: RestoreMode.merge,
+                  groupValue: RestoreMode.overwrite,
+                  onChanged: (_) => Navigator.of(ctx).pop(RestoreMode.merge),
+                ),
+                onTap: () => Navigator.of(ctx).pop(RestoreMode.merge),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(l10n.backupPageCancel),
+            ),
+          ],
+        ),
+      );
+      
+      if (mode == null) return;
+      
+      await vm.restoreFromLocalFile(File(path), mode: mode);
       if (!mounted) return;
       await showDialog(
         context: context,

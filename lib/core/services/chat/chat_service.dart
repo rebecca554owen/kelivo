@@ -300,6 +300,33 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Add a message directly to an existing conversation (for merge mode)
+  Future<void> addMessageDirectly(String conversationId, ChatMessage message) async {
+    if (!_initialized) await init();
+    
+    // Add message to box
+    await _messagesBox.put(message.id, message);
+    
+    // Update conversation
+    final conversation = _conversationsBox.get(conversationId);
+    if (conversation != null) {
+      if (!conversation.messageIds.contains(message.id)) {
+        conversation.messageIds.add(message.id);
+        // Keep original updatedAt during restore
+        await conversation.save();
+      }
+    }
+    
+    // Update cache
+    if (_messagesCache.containsKey(conversationId)) {
+      if (!_messagesCache[conversationId]!.any((m) => m.id == message.id)) {
+        _messagesCache[conversationId]!.add(message);
+      }
+    }
+    
+    notifyListeners();
+  }
+
   // Conversation-scoped MCP servers selection
   List<String> getConversationMcpServers(String conversationId) {
     if (!_initialized) return const <String>[];

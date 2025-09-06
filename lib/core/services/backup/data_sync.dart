@@ -246,7 +246,7 @@ class DataSync {
     return items;
   }
 
-  Future<void> restoreFromWebDav(WebDavConfig cfg, BackupFileItem item) async {
+  Future<void> restoreFromWebDav(WebDavConfig cfg, BackupFileItem item, {RestoreMode mode = RestoreMode.overwrite}) async {
     final res = await http.get(item.href, headers: _authHeaders(cfg));
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('Download failed: ${res.statusCode}');
@@ -254,7 +254,7 @@ class DataSync {
     final tmpDir = await getTemporaryDirectory();
     final file = File(p.join(tmpDir.path, item.displayName));
     await file.writeAsBytes(res.bodyBytes);
-    await _restoreFromBackupFile(file, cfg);
+    await _restoreFromBackupFile(file, cfg, mode: mode);
     try { await file.delete(); } catch (_) {}
   }
 
@@ -269,9 +269,9 @@ class DataSync {
 
   Future<File> exportToFile(WebDavConfig cfg) => prepareBackupFile(cfg);
 
-  Future<void> restoreFromLocalFile(File file, WebDavConfig cfg) async {
+  Future<void> restoreFromLocalFile(File file, WebDavConfig cfg, {RestoreMode mode = RestoreMode.overwrite}) async {
     if (!await file.exists()) throw Exception('备份文件不存在');
-    await _restoreFromBackupFile(file, cfg);
+    await _restoreFromBackupFile(file, cfg, mode: mode);
   }
 
   // ===== Internal helpers =====
@@ -329,7 +329,7 @@ class DataSync {
     return jsonEncode(obj);
   }
 
-  Future<void> _restoreFromBackupFile(File file, WebDavConfig cfg) async {
+  Future<void> _restoreFromBackupFile(File file, WebDavConfig cfg, {RestoreMode mode = RestoreMode.overwrite}) async {
     // Extract to temp
     final tmp = await getTemporaryDirectory();
     final extractDir = Directory(p.join(tmp.path, 'restore_${DateTime.now().millisecondsSinceEpoch}'));
@@ -353,7 +353,100 @@ class DataSync {
         final txt = await settingsFile.readAsString();
         final map = jsonDecode(txt) as Map<String, dynamic>;
         final prefs = await SharedPreferencesAsync.instance;
-        await prefs.restore(map);
+        if (mode == RestoreMode.overwrite) {
+          // For overwrite mode, restore all settings
+          await prefs.restore(map);
+        } else {
+          // For merge mode, intelligently merge settings
+          final existing = await prefs.snapshot();
+          
+          // Keys that should be merged as JSON arrays/objects
+          const mergeableKeys = {
+            'assistants_v1',       // Assistant configurations
+            'provider_configs_v1', // Provider configurations
+            'pinned_models_v1',    // Pinned models list
+            'providers_order_v1',  // Provider order list
+            'search_services_v1',  // Search services configuration
+          };
+          
+          for (final entry in map.entries) {
+            final key = entry.key;
+            final newValue = entry.value;
+            
+            if (mergeableKeys.contains(key)) {
+              // Special handling for mergeable configurations
+              if (key == 'assistants_v1' && existing.containsKey(key)) {
+                // Merge assistants: combine both lists and deduplicate by ID
+                try {
+                  final existingAssistants = jsonDecode(existing[key] as String) as List;
+                  final newAssistants = jsonDecode(newValue as String) as List;
+                  final assistantMap = <String, dynamic>{};
+                  
+                  // Add existing assistants
+                  for (final assistant in existingAssistants) {
+                    if (assistant is Map && assistant.containsKey('id')) {
+                      assistantMap[assistant['id']] = assistant;
+                    }
+                  }
+                  
+                  // Add/update with new assistants
+                  for (final assistant in newAssistants) {
+                    if (assistant is Map && assistant.containsKey('id')) {
+                      assistantMap[assistant['id']] = assistant;
+                    }
+                  }
+                  
+                  final mergedAssistants = assistantMap.values.toList();
+                  await prefs.restoreSingle(key, jsonEncode(mergedAssistants));
+                } catch (e) {
+                  // If merge fails, keep existing
+                }
+              } else if (key == 'provider_configs_v1' && existing.containsKey(key)) {
+                // Merge provider configs: combine both maps
+                try {
+                  final existingConfigs = jsonDecode(existing[key] as String) as Map<String, dynamic>;
+                  final newConfigs = jsonDecode(newValue as String) as Map<String, dynamic>;
+                  
+                  // Merge configs, new values override existing for same keys
+                  final mergedConfigs = {...existingConfigs, ...newConfigs};
+                  await prefs.restoreSingle(key, jsonEncode(mergedConfigs));
+                } catch (e) {
+                  // If merge fails, keep existing
+                }
+              } else if (key == 'pinned_models_v1' && existing.containsKey(key)) {
+                // Merge pinned models: combine and deduplicate
+                try {
+                  final existingModels = jsonDecode(existing[key] as String) as List;
+                  final newModels = jsonDecode(newValue as String) as List;
+                  final modelSet = <String>{};
+                  
+                  // Add all models to set for deduplication
+                  for (final model in existingModels) {
+                    if (model is String) modelSet.add(model);
+                  }
+                  for (final model in newModels) {
+                    if (model is String) modelSet.add(model);
+                  }
+                  
+                  await prefs.restoreSingle(key, jsonEncode(modelSet.toList()));
+                } catch (e) {
+                  // If merge fails, keep existing
+                }
+              } else if ((key == 'providers_order_v1' || key == 'search_services_v1') && existing.containsKey(key)) {
+                // For these lists, prefer the imported version if different
+                // This ensures new providers/services are properly ordered
+                await prefs.restoreSingle(key, newValue);
+              } else {
+                // For new keys, add them
+                await prefs.restoreSingle(key, newValue);
+              }
+            } else if (!existing.containsKey(key)) {
+              // For non-mergeable keys, only add if not existing
+              await prefs.restoreSingle(key, newValue);
+            }
+            // Skip existing non-mergeable keys to preserve user preferences
+          }
+        }
       } catch (_) {}
     }
 
@@ -372,75 +465,180 @@ class DataSync {
             const <ChatMessage>[];
         final toolEvents = ((obj['toolEvents'] as Map?) ?? const <String, dynamic>{})
             .map((k, v) => MapEntry(k.toString(), (v as List).cast<Map>().map((e) => e.cast<String, dynamic>()).toList()));
-        // Clear and restore via ChatService
-        await chatService.clearAllData();
-        final byConv = <String, List<ChatMessage>>{};
-        for (final m in msgs) {
-          (byConv[m.conversationId] ??= <ChatMessage>[]).add(m);
-        }
-        for (final c in convs) {
-          final list = byConv[c.id] ?? const <ChatMessage>[];
-          await chatService.restoreConversation(c, list);
-        }
-        // Tool events
-        for (final entry in toolEvents.entries) {
-          try { await chatService.setToolEvents(entry.key, entry.value); } catch (_) {}
+        
+        if (mode == RestoreMode.overwrite) {
+          // Clear and restore via ChatService
+          await chatService.clearAllData();
+          final byConv = <String, List<ChatMessage>>{};
+          for (final m in msgs) {
+            (byConv[m.conversationId] ??= <ChatMessage>[]).add(m);
+          }
+          for (final c in convs) {
+            final list = byConv[c.id] ?? const <ChatMessage>[];
+            await chatService.restoreConversation(c, list);
+          }
+          // Tool events
+          for (final entry in toolEvents.entries) {
+            try { await chatService.setToolEvents(entry.key, entry.value); } catch (_) {}
+          }
+        } else {
+          // Merge mode: Add only non-existing conversations and messages
+          final existingConvs = chatService.getAllConversations();
+          final existingConvIds = existingConvs.map((c) => c.id).toSet();
+          
+          // Create a map of message IDs to avoid duplicates
+          final existingMsgIds = <String>{};
+          for (final conv in existingConvs) {
+            final messages = chatService.getMessages(conv.id);
+            existingMsgIds.addAll(messages.map((m) => m.id));
+          }
+          
+          // Group messages by conversation
+          final byConv = <String, List<ChatMessage>>{};
+          for (final m in msgs) {
+            if (!existingMsgIds.contains(m.id)) {
+              (byConv[m.conversationId] ??= <ChatMessage>[]).add(m);
+            }
+          }
+          
+          // Restore non-existing conversations and their messages
+          for (final c in convs) {
+            if (!existingConvIds.contains(c.id)) {
+              final list = byConv[c.id] ?? const <ChatMessage>[];
+              await chatService.restoreConversation(c, list);
+            } else if (byConv.containsKey(c.id)) {
+              // Conversation exists but has new messages
+              final newMessages = byConv[c.id]!;
+              for (final msg in newMessages) {
+                await chatService.addMessageDirectly(c.id, msg);
+              }
+            }
+          }
+          
+          // Merge tool events
+          for (final entry in toolEvents.entries) {
+            final existing = chatService.getToolEvents(entry.key);
+            if (existing.isEmpty) {
+              try { await chatService.setToolEvents(entry.key, entry.value); } catch (_) {}
+            }
+          }
         }
       } catch (_) {}
     }
 
     // Restore files
     if (cfg.includeFiles) {
-      // Restore upload directory
-      final uploadSrc = Directory(p.join(extractDir.path, 'upload'));
-      if (await uploadSrc.exists()) {
-        final dst = await _getUploadDir();
-        if (await dst.exists()) {
-          try { await dst.delete(recursive: true); } catch (_) {}
-        }
-        await dst.create(recursive: true);
-        for (final ent in uploadSrc.listSync(recursive: true)) {
-          if (ent is File) {
-            final rel = p.relative(ent.path, from: uploadSrc.path);
-            final target = File(p.join(dst.path, rel));
-            await target.parent.create(recursive: true);
-            await ent.copy(target.path);
+      if (mode == RestoreMode.overwrite) {
+        // Overwrite mode: Delete existing directories and copy all
+        // Restore upload directory
+        final uploadSrc = Directory(p.join(extractDir.path, 'upload'));
+        if (await uploadSrc.exists()) {
+          final dst = await _getUploadDir();
+          if (await dst.exists()) {
+            try { await dst.delete(recursive: true); } catch (_) {}
+          }
+          await dst.create(recursive: true);
+          for (final ent in uploadSrc.listSync(recursive: true)) {
+            if (ent is File) {
+              final rel = p.relative(ent.path, from: uploadSrc.path);
+              final target = File(p.join(dst.path, rel));
+              await target.parent.create(recursive: true);
+              await ent.copy(target.path);
+            }
           }
         }
-      }
 
-      // Restore images directory
-      final imagesSrc = Directory(p.join(extractDir.path, 'images'));
-      if (await imagesSrc.exists()) {
-        final dst = await _getImagesDir();
-        if (await dst.exists()) {
-          try { await dst.delete(recursive: true); } catch (_) {}
-        }
-        await dst.create(recursive: true);
-        for (final ent in imagesSrc.listSync(recursive: true)) {
-          if (ent is File) {
-            final rel = p.relative(ent.path, from: imagesSrc.path);
-            final target = File(p.join(dst.path, rel));
-            await target.parent.create(recursive: true);
-            await ent.copy(target.path);
+        // Restore images directory
+        final imagesSrc = Directory(p.join(extractDir.path, 'images'));
+        if (await imagesSrc.exists()) {
+          final dst = await _getImagesDir();
+          if (await dst.exists()) {
+            try { await dst.delete(recursive: true); } catch (_) {}
+          }
+          await dst.create(recursive: true);
+          for (final ent in imagesSrc.listSync(recursive: true)) {
+            if (ent is File) {
+              final rel = p.relative(ent.path, from: imagesSrc.path);
+              final target = File(p.join(dst.path, rel));
+              await target.parent.create(recursive: true);
+              await ent.copy(target.path);
+            }
           }
         }
-      }
 
-      // Restore avatars directory
-      final avatarsSrc = Directory(p.join(extractDir.path, 'avatars'));
-      if (await avatarsSrc.exists()) {
-        final dst = await _getAvatarsDir();
-        if (await dst.exists()) {
-          try { await dst.delete(recursive: true); } catch (_) {}
+        // Restore avatars directory
+        final avatarsSrc = Directory(p.join(extractDir.path, 'avatars'));
+        if (await avatarsSrc.exists()) {
+          final dst = await _getAvatarsDir();
+          if (await dst.exists()) {
+            try { await dst.delete(recursive: true); } catch (_) {}
+          }
+          await dst.create(recursive: true);
+          for (final ent in avatarsSrc.listSync(recursive: true)) {
+            if (ent is File) {
+              final rel = p.relative(ent.path, from: avatarsSrc.path);
+              final target = File(p.join(dst.path, rel));
+              await target.parent.create(recursive: true);
+              await ent.copy(target.path);
+            }
+          }
         }
-        await dst.create(recursive: true);
-        for (final ent in avatarsSrc.listSync(recursive: true)) {
-          if (ent is File) {
-            final rel = p.relative(ent.path, from: avatarsSrc.path);
-            final target = File(p.join(dst.path, rel));
-            await target.parent.create(recursive: true);
-            await ent.copy(target.path);
+      } else {
+        // Merge mode: Only copy non-existing files
+        // Merge upload directory
+        final uploadSrc = Directory(p.join(extractDir.path, 'upload'));
+        if (await uploadSrc.exists()) {
+          final dst = await _getUploadDir();
+          if (!await dst.exists()) {
+            await dst.create(recursive: true);
+          }
+          for (final ent in uploadSrc.listSync(recursive: true)) {
+            if (ent is File) {
+              final rel = p.relative(ent.path, from: uploadSrc.path);
+              final target = File(p.join(dst.path, rel));
+              if (!await target.exists()) {
+                await target.parent.create(recursive: true);
+                await ent.copy(target.path);
+              }
+            }
+          }
+        }
+
+        // Merge images directory
+        final imagesSrc = Directory(p.join(extractDir.path, 'images'));
+        if (await imagesSrc.exists()) {
+          final dst = await _getImagesDir();
+          if (!await dst.exists()) {
+            await dst.create(recursive: true);
+          }
+          for (final ent in imagesSrc.listSync(recursive: true)) {
+            if (ent is File) {
+              final rel = p.relative(ent.path, from: imagesSrc.path);
+              final target = File(p.join(dst.path, rel));
+              if (!await target.exists()) {
+                await target.parent.create(recursive: true);
+                await ent.copy(target.path);
+              }
+            }
+          }
+        }
+
+        // Merge avatars directory
+        final avatarsSrc = Directory(p.join(extractDir.path, 'avatars'));
+        if (await avatarsSrc.exists()) {
+          final dst = await _getAvatarsDir();
+          if (!await dst.exists()) {
+            await dst.create(recursive: true);
+          }
+          for (final ent in avatarsSrc.listSync(recursive: true)) {
+            if (ent is File) {
+              final rel = p.relative(ent.path, from: avatarsSrc.path);
+              final target = File(p.join(dst.path, rel));
+              if (!await target.exists()) {
+                await target.parent.create(recursive: true);
+                await ent.copy(target.path);
+              }
+            }
           }
         }
       }
@@ -481,6 +679,17 @@ class SharedPreferencesAsync {
       else if (v is List) {
         await prefs.setStringList(k, v.whereType<String>().toList());
       }
+    }
+  }
+  
+  Future<void> restoreSingle(String key, dynamic value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value is bool) await prefs.setBool(key, value);
+    else if (value is int) await prefs.setInt(key, value);
+    else if (value is double) await prefs.setDouble(key, value);
+    else if (value is String) await prefs.setString(key, value);
+    else if (value is List) {
+      await prefs.setStringList(key, value.whereType<String>().toList());
     }
   }
 }

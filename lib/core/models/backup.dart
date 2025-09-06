@@ -1,5 +1,10 @@
 import 'dart:convert';
 
+enum RestoreMode {
+  overwrite, // 完全覆盖：清空本地后恢复
+  merge,     // 增量合并：智能去重
+}
+
 class WebDavConfig {
   final String url;
   final String username;

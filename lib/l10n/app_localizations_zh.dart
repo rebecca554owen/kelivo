@@ -557,6 +557,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageOK => '好的';
 
   @override
+  String get backupPageCancel => '取消';
+
+  @override
+  String get backupPageSelectImportMode => '选择导入模式';
+
+  @override
+  String get backupPageSelectImportModeDescription => '请选择如何导入备份数据：';
+
+  @override
+  String get backupPageOverwriteMode => '完全覆盖';
+
+  @override
+  String get backupPageOverwriteModeDescription => '清空本地所有数据后恢复';
+
+  @override
+  String get backupPageMergeMode => '智能合并';
+
+  @override
+  String get backupPageMergeModeDescription => '仅添加不存在的数据（智能去重）';
+
+  @override
   String get backupPageRestore => '恢复';
 
   @override
@@ -2607,6 +2628,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get backupPageOK => '好的';
+
+  @override
+  String get backupPageCancel => '取消';
+
+  @override
+  String get backupPageSelectImportMode => '选择导入模式';
+
+  @override
+  String get backupPageSelectImportModeDescription => '请选择如何导入备份数据：';
+
+  @override
+  String get backupPageOverwriteMode => '完全覆盖';
+
+  @override
+  String get backupPageOverwriteModeDescription => '清空本地所有数据后恢复';
+
+  @override
+  String get backupPageMergeMode => '智能合并';
+
+  @override
+  String get backupPageMergeModeDescription => '仅添加不存在的数据（智能去重）';
 
   @override
   String get backupPageRestore => '恢复';

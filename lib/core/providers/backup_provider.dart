@@ -50,9 +50,9 @@ class BackupProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> restoreFromItem(BackupFileItem item) async {
+  Future<void> restoreFromItem(BackupFileItem item, {RestoreMode mode = RestoreMode.overwrite}) async {
     _busy = true; _message = null; notifyListeners();
-    try { await _dataSync.restoreFromWebDav(_cfg, item); _message = 'Restored'; }
+    try { await _dataSync.restoreFromWebDav(_cfg, item, mode: mode); _message = 'Restored'; }
     catch (e) { _message = e.toString(); }
     finally { _busy = false; notifyListeners(); }
   }
@@ -67,6 +67,6 @@ class BackupProvider extends ChangeNotifier {
   }
 
   Future<File> exportToFile() => _dataSync.exportToFile(_cfg);
-  Future<void> restoreFromLocalFile(File file) => _dataSync.restoreFromLocalFile(file, _cfg);
+  Future<void> restoreFromLocalFile(File file, {RestoreMode mode = RestoreMode.overwrite}) => _dataSync.restoreFromLocalFile(file, _cfg, mode: mode);
 }
 

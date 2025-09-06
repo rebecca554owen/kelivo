@@ -571,6 +571,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageOK => 'OK';
 
   @override
+  String get backupPageCancel => 'Cancel';
+
+  @override
+  String get backupPageSelectImportMode => 'Select Import Mode';
+
+  @override
+  String get backupPageSelectImportModeDescription =>
+      'Choose how to import the backup data:';
+
+  @override
+  String get backupPageOverwriteMode => 'Complete Overwrite';
+
+  @override
+  String get backupPageOverwriteModeDescription =>
+      'Clear all local data and restore from backup';
+
+  @override
+  String get backupPageMergeMode => 'Smart Merge';
+
+  @override
+  String get backupPageMergeModeDescription =>
+      'Add only non-existing data (intelligent deduplication)';
+
+  @override
   String get backupPageRestore => 'Restore';
 
   @override
