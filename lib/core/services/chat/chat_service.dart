@@ -284,7 +284,7 @@ class ChatService extends ChangeNotifier {
       id: conversation.id,
       title: conversation.title,
       createdAt: conversation.createdAt,
-      updatedAt: DateTime.now(),
+      updatedAt: conversation.updatedAt,
       messageIds: ids,
       isPinned: conversation.isPinned,
       mcpServerIds: List.of(conversation.mcpServerIds),
