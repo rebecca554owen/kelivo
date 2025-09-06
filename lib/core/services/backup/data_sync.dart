@@ -120,8 +120,9 @@ class DataSync {
       encoder.addFile(await _writeTempText('chats.json', chatsJson));
     }
 
-    // files under upload/
+    // files under upload/, images/, and avatars/
     if (cfg.includeFiles) {
+      // Export upload directory
       final uploadDir = await _getUploadDir();
       if (await uploadDir.exists()) {
         final entries = uploadDir.listSync(recursive: true, followLinks: false);
@@ -129,6 +130,42 @@ class DataSync {
           if (ent is File) {
             final rel = p.relative(ent.path, from: uploadDir.path);
             encoder.addFile(ent, p.join('upload', rel));
+          }
+        }
+      }
+
+      // Export avatars directory
+      final avatarsDir = await _getAvatarsDir();
+      if (await avatarsDir.exists()) {
+        final entries = avatarsDir.listSync(recursive: true, followLinks: false);
+        for (final ent in entries) {
+          if (ent is File) {
+            final rel = p.relative(ent.path, from: avatarsDir.path);
+            encoder.addFile(ent, p.join('avatars', rel));
+          }
+        }
+      }
+
+      // Export images directory
+      final imagesDir = await _getImagesDir();
+      if (await imagesDir.exists()) {
+        final entries = imagesDir.listSync(recursive: true, followLinks: false);
+        for (final ent in entries) {
+          if (ent is File) {
+            final rel = p.relative(ent.path, from: imagesDir.path);
+            encoder.addFile(ent, p.join('images', rel));
+          }
+        }
+      }
+
+      // Export avatars directory
+      final avatarsDir2 = await _getAvatarsDir();
+      if (await avatarsDir2.exists()) {
+        final entries = avatarsDir2.listSync(recursive: true, followLinks: false);
+        for (final ent in entries) {
+          if (ent is File) {
+            final rel = p.relative(ent.path, from: avatarsDir2.path);
+            encoder.addFile(ent, p.join('avatars', rel));
           }
         }
       }
@@ -250,6 +287,16 @@ class DataSync {
     return Directory(p.join(docs.path, 'upload'));
   }
 
+  Future<Directory> _getImagesDir() async {
+    final docs = await getApplicationDocumentsDirectory();
+    return Directory(p.join(docs.path, 'images'));
+  }
+
+  Future<Directory> _getAvatarsDir() async {
+    final docs = await getApplicationDocumentsDirectory();
+    return Directory(p.join(docs.path, 'avatars'));
+  }
+
   Future<String> _exportSettingsJson() async {
     final prefs = await SharedPreferencesAsync.instance;
     final map = await prefs.snapshot();
@@ -344,6 +391,7 @@ class DataSync {
 
     // Restore files
     if (cfg.includeFiles) {
+      // Restore upload directory
       final uploadSrc = Directory(p.join(extractDir.path, 'upload'));
       if (await uploadSrc.exists()) {
         final dst = await _getUploadDir();
@@ -354,6 +402,42 @@ class DataSync {
         for (final ent in uploadSrc.listSync(recursive: true)) {
           if (ent is File) {
             final rel = p.relative(ent.path, from: uploadSrc.path);
+            final target = File(p.join(dst.path, rel));
+            await target.parent.create(recursive: true);
+            await ent.copy(target.path);
+          }
+        }
+      }
+
+      // Restore images directory
+      final imagesSrc = Directory(p.join(extractDir.path, 'images'));
+      if (await imagesSrc.exists()) {
+        final dst = await _getImagesDir();
+        if (await dst.exists()) {
+          try { await dst.delete(recursive: true); } catch (_) {}
+        }
+        await dst.create(recursive: true);
+        for (final ent in imagesSrc.listSync(recursive: true)) {
+          if (ent is File) {
+            final rel = p.relative(ent.path, from: imagesSrc.path);
+            final target = File(p.join(dst.path, rel));
+            await target.parent.create(recursive: true);
+            await ent.copy(target.path);
+          }
+        }
+      }
+
+      // Restore avatars directory
+      final avatarsSrc = Directory(p.join(extractDir.path, 'avatars'));
+      if (await avatarsSrc.exists()) {
+        final dst = await _getAvatarsDir();
+        if (await dst.exists()) {
+          try { await dst.delete(recursive: true); } catch (_) {}
+        }
+        await dst.create(recursive: true);
+        for (final ent in avatarsSrc.listSync(recursive: true)) {
+          if (ent is File) {
+            final rel = p.relative(ent.path, from: avatarsSrc.path);
             final target = File(p.join(dst.path, rel));
             await target.parent.create(recursive: true);
             await ent.copy(target.path);
