@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../../utils/sandbox_path_resolver.dart';
 import '../models/assistant.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -123,7 +126,105 @@ class AssistantProvider extends ChangeNotifier {
   Future<void> updateAssistant(Assistant updated) async {
     final idx = _assistants.indexWhere((a) => a.id == updated.id);
     if (idx == -1) return;
-    _assistants[idx] = updated;
+
+    var next = updated;
+
+    // If avatar changed and is a local file path (from gallery/cache),
+    // copy it to persistent Documents/avatars and store that path.
+    try {
+      final prev = _assistants[idx];
+      final raw = (updated.avatar ?? '').trim();
+      final prevRaw = (prev.avatar ?? '').trim();
+      final changed = raw != prevRaw;
+      final isLocalPath = raw.isNotEmpty && (raw.startsWith('/') || raw.contains(':')) && !raw.startsWith('http');
+      // Skip if it's already under our avatars folder
+      if (changed && isLocalPath && !raw.contains('/avatars/')) {
+        final fixedInput = SandboxPathResolver.fix(raw);
+        final src = File(fixedInput);
+        if (await src.exists()) {
+          final docs = await getApplicationDocumentsDirectory();
+          final avatarsDir = Directory('${docs.path}/avatars');
+          if (!await avatarsDir.exists()) {
+            await avatarsDir.create(recursive: true);
+          }
+          String ext = '';
+          final dot = fixedInput.lastIndexOf('.');
+          if (dot != -1 && dot < fixedInput.length - 1) {
+            ext = fixedInput.substring(dot + 1).toLowerCase();
+            if (ext.length > 6) ext = 'jpg';
+          } else {
+            ext = 'jpg';
+          }
+          final filename = 'assistant_${updated.id}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+          final dest = File('${avatarsDir.path}/$filename');
+          await src.copy(dest.path);
+
+          // Optionally remove old stored avatar if it lives in our avatars folder
+          if (prevRaw.isNotEmpty && prevRaw.contains('/avatars/')) {
+            try {
+              final old = File(prevRaw);
+              if (await old.exists() && old.path != dest.path) {
+                await old.delete();
+              }
+            } catch (_) {}
+          }
+
+          next = updated.copyWith(avatar: dest.path);
+        }
+      }
+
+      // Handle background persistence similar to avatar, but under images/
+      final bgRaw = (updated.background ?? '').trim();
+      final prevBgRaw = (prev.background ?? '').trim();
+      final bgChanged = bgRaw != prevBgRaw;
+      final bgIsLocal = bgRaw.isNotEmpty && (bgRaw.startsWith('/') || bgRaw.contains(':')) && !bgRaw.startsWith('http');
+      if (bgChanged && bgIsLocal && !bgRaw.contains('/images/')) {
+        final fixedBg = SandboxPathResolver.fix(bgRaw);
+        final srcBg = File(fixedBg);
+        if (await srcBg.exists()) {
+          final docs = await getApplicationDocumentsDirectory();
+          final imagesDir = Directory('${docs.path}/images');
+          if (!await imagesDir.exists()) {
+            await imagesDir.create(recursive: true);
+          }
+          String ext = '';
+          final dot = fixedBg.lastIndexOf('.');
+          if (dot != -1 && dot < fixedBg.length - 1) {
+            ext = fixedBg.substring(dot + 1).toLowerCase();
+            if (ext.length > 6) ext = 'jpg';
+          } else {
+            ext = 'jpg';
+          }
+          final filename = 'background_${updated.id}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+          final destBg = File('${imagesDir.path}/$filename');
+          await srcBg.copy(destBg.path);
+
+          // Clean old stored background if it lived in images/
+          if (prevBgRaw.isNotEmpty && prevBgRaw.contains('/images/')) {
+            try {
+              final oldBg = File(prevBgRaw);
+              if (await oldBg.exists() && oldBg.path != destBg.path) {
+                await oldBg.delete();
+              }
+            } catch (_) {}
+          }
+
+          next = next.copyWith(background: destBg.path);
+        }
+      } else if (bgChanged && bgRaw.isEmpty && prevBgRaw.contains('/images/')) {
+        // If background cleared, optionally remove previous stored file
+        try {
+          final oldBg = File(prevBgRaw);
+          if (await oldBg.exists()) {
+            await oldBg.delete();
+          }
+        } catch (_) {}
+      }
+    } catch (_) {
+      // On any failure, fall back to the provided value unchanged.
+    }
+
+    _assistants[idx] = next;
     await _persist();
     notifyListeners();
   }

@@ -526,7 +526,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         if (av.startsWith('http')) {
           inner = ClipOval(child: Image.network(av, width: size, height: size, fit: BoxFit.cover));
         } else if (av.startsWith('/') || av.contains(':')) {
-          inner = ClipOval(child: Image.file(File(av), width: size, height: size, fit: BoxFit.cover));
+          final fixed = SandboxPathResolver.fix(av);
+          inner = ClipOval(child: Image.file(File(fixed), width: size, height: size, fit: BoxFit.cover));
         } else {
           inner = Text(av, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700, fontSize: size * 0.42));
         }
@@ -799,7 +800,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                     height: 36,
                     child: (a.background!.startsWith('http'))
                         ? Image.network(a.background!, fit: BoxFit.cover)
-                        : Image.file(File(a.background!), fit: BoxFit.cover),
+                        : Image.file(File(SandboxPathResolver.fix(a.background!)), fit: BoxFit.cover),
                   ),
                 ),
               ],

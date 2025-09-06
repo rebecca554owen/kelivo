@@ -944,8 +944,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         );
       }
       if (av.startsWith('/') || av.contains(':')) {
+        final fixed = SandboxPathResolver.fix(av);
         return ClipOval(
-          child: Image.file(File(av), width: 32, height: 32, fit: BoxFit.cover,
+          child: Image.file(File(fixed), width: 32, height: 32, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => _assistantInitial(cs)),
         );
       }
