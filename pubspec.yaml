@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.4+1
+version: 1.0.5+1
 
 environment:
   sdk: ^3.8.1
@@ -104,7 +104,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/icons/
-    - assets/app_icon_foreground.svg
+    - assets/app_icon.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -151,8 +151,8 @@ flutter_native_splash:
   color_dark: "#000000"
 
   # Center image (re-use app icon foreground)
-  image: assets/app_icon_foreground.png
-  image_dark: assets/app_icon_foreground.png
+  image: assets/start.png
+  image_dark: assets/start.png
 
   # iOS content mode to keep logo centered
   ios_content_mode: center
@@ -161,5 +161,5 @@ flutter_native_splash:
   android_12:
     color: "#FFFFFF"
     color_dark: "#000000"
-    image: assets/app_icon_foreground.png
-    image_dark: assets/app_icon_foreground.png
+    image: assets/start.png
+    image_dark: assets/start.png

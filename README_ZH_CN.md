@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/app_icon_foreground.svg" alt="Kelivo Icon" width="100" />
+  <img src="assets/app_icon.png" alt="Kelivo Icon" width="100" />
   <h1>Kelivo</h1>
 
 一个 Flutter LLM 聊天客户端

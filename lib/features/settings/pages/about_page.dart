@@ -156,7 +156,7 @@ class _AboutPageState extends State<AboutPage> {
                       width: 120,
                       height: 120,
                       child: SvgPicture.asset(
-                        'assets/app_icon_foreground.svg',
+                        'assets/app_icon.png',
                         fit: BoxFit.cover,
                       ),
                     ),
