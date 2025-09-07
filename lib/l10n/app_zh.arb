@@ -191,6 +191,7 @@
   "backupPageRestore": "恢复",
   "backupPageBackupUploaded": "已上传备份",
   "backupPageBackup": "立即备份",
+  "backupPageExporting": "正在导出...",
   "backupPageExportToFile": "导出为文件",
   "backupPageExportToFileSubtitle": "导出APP数据为文件",
   "backupPageImportBackupFile": "备份文件导入",

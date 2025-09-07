@@ -1223,6 +1223,12 @@ abstract class AppLocalizations {
   /// **'Backup'**
   String get backupPageBackup;
 
+  /// No description provided for @backupPageExporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting...'**
+  String get backupPageExporting;
+
   /// No description provided for @backupPageExportToFile.
   ///
   /// In en, this message translates to:

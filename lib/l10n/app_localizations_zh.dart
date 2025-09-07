@@ -587,6 +587,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageBackup => '立即备份';
 
   @override
+  String get backupPageExporting => '正在导出...';
+
+  @override
   String get backupPageExportToFile => '导出为文件';
 
   @override
@@ -2660,6 +2663,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backupPageBackup => '立即备份';
 
   @override
+  String get backupPageExporting => '正在导出...';
+
+  @override
   String get backupPageExportToFile => '导出为文件';
 
   @override
@@ -4731,6 +4737,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupPageBackup => '立即備份';
+
+  @override
+  String get backupPageExporting => '正在匯出...';
 
   @override
   String get backupPageExportToFile => '匯出為檔案';

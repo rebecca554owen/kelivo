@@ -230,6 +230,7 @@
   "backupPageRestore": "Restore",
   "backupPageBackupUploaded": "Backup uploaded",
   "backupPageBackup": "Backup",
+  "backupPageExporting": "Exporting...",
   "backupPageExportToFile": "Export to File",
   "backupPageExportToFileSubtitle": "Export app data to a file",
   "backupPageImportBackupFile": "Import Backup File",

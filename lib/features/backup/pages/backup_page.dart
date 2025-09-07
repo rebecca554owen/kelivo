@@ -77,6 +77,42 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
+  Future<T> _runWithExportingOverlay<T>(BuildContext context, Future<T> Function() task) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CupertinoActivityIndicator(radius: 16),
+              const SizedBox(height: 12),
+              Text(
+                l10n.backupPageExporting ?? 'Exporting...',
+                style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.8)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    try {
+      final res = await task();
+      return res;
+    } finally {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
   Future<T> _runWithImportingOverlay<T>(BuildContext context, Future<T> Function() task) async {
     final cs = Theme.of(context).colorScheme;
     showDialog<void>(
@@ -344,7 +380,7 @@ class _BackupPageState extends State<BackupPage> {
         const SizedBox(height: 8),
         ElevatedButton.icon(
           onPressed: vm.busy ? null : () async {
-            await vm.backup();
+            await _runWithExportingOverlay(context, () => vm.backup());
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(vm.message ?? l10n.backupPageBackupUploaded)),
@@ -368,7 +404,7 @@ class _BackupPageState extends State<BackupPage> {
     final cardColor = Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF7F7F9);
 
     Future<void> doExport() async {
-      final file = await vm.exportToFile();
+      final file = await _runWithExportingOverlay(context, () => vm.exportToFile());
       if (!mounted) return;
       await Share.shareXFiles([XFile(file.path)]);
     }

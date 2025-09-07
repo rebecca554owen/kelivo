@@ -604,6 +604,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageBackup => 'Backup';
 
   @override
+  String get backupPageExporting => 'Exporting...';
+
+  @override
   String get backupPageExportToFile => 'Export to File';
 
   @override
