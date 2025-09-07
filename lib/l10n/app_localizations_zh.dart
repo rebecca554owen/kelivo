@@ -4703,6 +4703,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get backupPageOK => '好的';
 
   @override
+  String get backupPageCancel => '取消';
+
+  @override
+  String get backupPageSelectImportMode => '選擇匯入模式';
+
+  @override
+  String get backupPageSelectImportModeDescription => '請選擇如何匯入備份資料：';
+
+  @override
+  String get backupPageOverwriteMode => '完全覆蓋';
+
+  @override
+  String get backupPageOverwriteModeDescription => '清空本地所有資料後恢復';
+
+  @override
+  String get backupPageMergeMode => '智能合併';
+
+  @override
+  String get backupPageMergeModeDescription => '僅添加不存在的資料（智能去重）';
+
+  @override
   String get backupPageRestore => '還原';
 
   @override
