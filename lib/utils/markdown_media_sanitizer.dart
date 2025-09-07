@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 class MarkdownMediaSanitizer {
+  static final Uuid _uuid = const Uuid();
   static final RegExp _imgRe = RegExp(
     r'!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\r\n]+)\)',
     multiLine: true,
@@ -51,11 +53,16 @@ class MarkdownMediaSanitizer {
       // }
 
       // Decode in a background isolate (pure Dart decode)
-      final bytes = await compute(_decodeBase64, payload);
+      final normalized = payload.replaceAll('\n', '');
+      final bytes = await compute(_decodeBase64, normalized);
 
-      // Write to file
-      final file = File('${dir.path}/img_${DateTime.now().millisecondsSinceEpoch}_$idx.$ext');
-      await file.writeAsBytes(bytes, flush: true);
+      // Deterministic filename by content hash to prevent duplicates
+      // Same base64 -> same filename across runs
+      final digest = _uuid.v5(Uuid.NAMESPACE_URL, normalized);
+      final file = File('${dir.path}/img_$digest.$ext');
+      if (!await file.exists()) {
+        await file.writeAsBytes(bytes, flush: true);
+      }
 
       // Replace only the URL part inside the parentheses
       final replaced = markdown.substring(m.start, m.end).replaceFirst(dataUrl, file.path);
