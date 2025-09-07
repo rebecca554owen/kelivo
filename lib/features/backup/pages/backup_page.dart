@@ -84,23 +84,24 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CupertinoActivityIndicator(radius: 16),
-              const SizedBox(height: 12),
-              Text(
-                l10n.backupPageExporting ?? 'Exporting...',
-                style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.8)),
-              ),
-            ],
+        child: Material(
+          color: cs.surface,
+          elevation: 6,
+          shadowColor: Colors.black.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CupertinoActivityIndicator(radius: 16),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.backupPageExporting,
+                  style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.8)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -119,14 +120,15 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
+        child: Material(
+          color: cs.surface,
+          elevation: 6,
+          shadowColor: Colors.black.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(14),
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: CupertinoActivityIndicator(radius: 14),
           ),
-          child: const CupertinoActivityIndicator(radius: 14),
         ),
       ),
     );
