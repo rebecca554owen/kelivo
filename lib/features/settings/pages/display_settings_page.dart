@@ -312,7 +312,7 @@ class _ThemeEntryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.displaySettingsPageThemeSettingsTitle,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 2),
                     Text(subtitleText, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
                   ],
