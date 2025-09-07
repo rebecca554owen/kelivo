@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
+import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -107,17 +108,21 @@ class DataSync {
     final outFile = File(p.join(tmp.path, 'kelivo_backup_$timestamp.zip'));
     if (await outFile.exists()) await outFile.delete();
 
-    final encoder = ZipFileEncoder();
-    encoder.create(outFile.path);
+    // Use Archive instead of ZipFileEncoder for better control
+    final archive = Archive();
 
     // settings.json
     final settingsJson = await _exportSettingsJson();
-    encoder.addFile(await _writeTempText('settings.json', settingsJson));
+    final settingsBytes = utf8.encode(settingsJson);
+    final settingsArchiveFile = ArchiveFile('settings.json', settingsBytes.length, settingsBytes);
+    archive.addFile(settingsArchiveFile);
 
     // chats
     if (cfg.includeChats) {
       final chatsJson = await _exportChatsJson();
-      encoder.addFile(await _writeTempText('chats.json', chatsJson));
+      final chatsBytes = utf8.encode(chatsJson);
+      final chatsArchiveFile = ArchiveFile('chats.json', chatsBytes.length, chatsBytes);
+      archive.addFile(chatsArchiveFile);
     }
 
     // files under upload/, images/, and avatars/
@@ -129,7 +134,9 @@ class DataSync {
         for (final ent in entries) {
           if (ent is File) {
             final rel = p.relative(ent.path, from: uploadDir.path);
-            encoder.addFile(ent, p.join('upload', rel));
+            final fileBytes = await ent.readAsBytes();
+            final archiveFile = ArchiveFile(p.join('upload', rel), fileBytes.length, fileBytes);
+            archive.addFile(archiveFile);
           }
         }
       }
@@ -141,7 +148,9 @@ class DataSync {
         for (final ent in entries) {
           if (ent is File) {
             final rel = p.relative(ent.path, from: avatarsDir.path);
-            encoder.addFile(ent, p.join('avatars', rel));
+            final fileBytes = await ent.readAsBytes();
+            final archiveFile = ArchiveFile(p.join('avatars', rel), fileBytes.length, fileBytes);
+            archive.addFile(archiveFile);
           }
         }
       }
@@ -153,25 +162,19 @@ class DataSync {
         for (final ent in entries) {
           if (ent is File) {
             final rel = p.relative(ent.path, from: imagesDir.path);
-            encoder.addFile(ent, p.join('images', rel));
-          }
-        }
-      }
-
-      // Export avatars directory
-      final avatarsDir2 = await _getAvatarsDir();
-      if (await avatarsDir2.exists()) {
-        final entries = avatarsDir2.listSync(recursive: true, followLinks: false);
-        for (final ent in entries) {
-          if (ent is File) {
-            final rel = p.relative(ent.path, from: avatarsDir2.path);
-            encoder.addFile(ent, p.join('avatars', rel));
+            final fileBytes = await ent.readAsBytes();
+            final archiveFile = ArchiveFile(p.join('images', rel), fileBytes.length, fileBytes);
+            archive.addFile(archiveFile);
           }
         }
       }
     }
 
-    encoder.close();
+    // Encode archive to ZIP
+    final zipEncoder = ZipEncoder();
+    final zipBytes = zipEncoder.encode(archive)!;
+    await outFile.writeAsBytes(zipBytes);
+    
     return outFile;
   }
 
