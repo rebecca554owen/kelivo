@@ -58,7 +58,7 @@ dependencies:
   read_pdf_text: ^0.3.1
   open_filex: ^4.5.0
   easy_image_viewer: ^1.4.6
-  share_plus: ^7.2.1
+  share_plus: ^11.1.0
   pretty_qr_code: ^3.5.0
   mobile_scanner: ^7.0.1
   mcp_client: ^1.0.1
