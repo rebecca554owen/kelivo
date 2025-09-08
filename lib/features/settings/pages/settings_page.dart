@@ -248,7 +248,7 @@ class SettingsPage extends StatelessWidget {
             icon: Lucide.Library,
             title: l10n.settingsPageDocs,
             onTap: () async {
-              final uri = Uri.parse('https://kelivo.vercel.app/');
+              final uri = Uri.parse('https://kelivo.psycheas.top/');
               if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
                 await launchUrl(uri, mode: LaunchMode.platformDefault);
               }

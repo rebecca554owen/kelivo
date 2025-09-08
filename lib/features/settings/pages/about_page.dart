@@ -208,8 +208,8 @@ class _AboutPageState extends State<AboutPage> {
               _AboutItem(
                 icon: Lucide.Earth,
                 title: l10n.aboutPageWebsite,
-                subtitle: 'https://kelivo.vercel.app/',
-                onTap: () => _openUrl('https://kelivo.vercel.app/'),
+                subtitle: 'https://kelivo.psycheas.top/',
+                onTap: () => _openUrl('https://kelivo.psycheas.top/'),
               ),
               _AboutItem(
                 icon: Lucide.Github,
