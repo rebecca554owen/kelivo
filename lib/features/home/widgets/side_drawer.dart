@@ -413,66 +413,58 @@ class _SideDrawerState extends State<SideDrawer> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. 用户信息区（点击昵称可修改）
+                  // 1. 搜索框 + 历史按钮（固定头部）
                   Row(
                     children: [
-                      InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => _editAvatar(context),
-                        child: avatarWidget(widget.userName, context.watch<UserProvider>(), size: 48),
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            InkWell(
-                              borderRadius: BorderRadius.circular(6),
-                              onTap: () => _editUserName(context),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
-                                child: Text(
-                                  widget.userName,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: textBase,
-                                  ),
-                                ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(context)!.sideDrawerSearchHint,
+                            filled: true,
+                            fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: BorderSide(color: Colors.transparent),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: BorderSide(color: Colors.transparent),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: BorderSide(color: Colors.transparent),
+                            ),
+                          ),
+                          style: TextStyle(color: textBase, fontSize: 14),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // 历史按钮（圆形，无文字）
+                      ClipOval(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              final selectedId = await Navigator.of(context).push<String>(
+                                MaterialPageRoute(builder: (_) => ChatHistoryPage(assistantId: currentAssistantId)),
+                              );
+                              if (selectedId != null && selectedId.isNotEmpty) {
+                                widget.onSelectConversation?.call(selectedId);
+                              }
+                            },
+                            child: SizedBox(
+                              width: 45,
+                              height: 45,
+                              child: Center(
+                                child: Icon(Lucide.History, size: 22, color: textBase),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(_greeting(context),
-                                style: TextStyle(color: textBase, fontSize: 13)),
-                          ],
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. 搜索框（固定头部下方）
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.sideDrawerSearchHint,
-                      filled: true,
-                      fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5), // 非常浅的淡灰色（白天），夜间自适配
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(50), // 胶囊
-                        borderSide: BorderSide(color: Colors.transparent),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(50),
-                        borderSide: BorderSide(color: Colors.transparent),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(50),
-                        borderSide: BorderSide(color: Colors.transparent),
-                      ),
-                    ),
-                    style: TextStyle(color: textBase, fontSize: 14), // 黑色（白天）
                   ),
 
                   const SizedBox(height: 12),
@@ -692,56 +684,54 @@ class _SideDrawerState extends State<SideDrawer> {
 
                   Row(
                     children: [
+                      const SizedBox(width: 6),
+                      // 用户头像（可点击更换）
+                      InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => _editAvatar(context),
+                        child: avatarWidget(
+                          widget.userName,
+                          context.watch<UserProvider>(),
+                          size: 42,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      // 用户名称（可点击编辑，垂直居中）
                       Expanded(
-                        child: Material(
-                          color: cs.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () async {
-                              final selectedId = await Navigator.of(context).push<String>(
-                                MaterialPageRoute(builder: (_) => ChatHistoryPage(assistantId: currentAssistantId)),
-                              );
-                              if (selectedId != null && selectedId.isNotEmpty) {
-                                widget.onSelectConversation?.call(selectedId);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Lucide.History, size: 18, color: cs.primary),
-                                  const SizedBox(width: 6),
-                                  Text(AppLocalizations.of(context)!.sideDrawerHistory, style: TextStyle(color: textBase)),
-                                ],
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () => _editUserName(context),
+                          child: Container(
+                            height: 45,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              widget.userName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: textBase,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
+                      const SizedBox(width: 8),
+                      // 设置按钮（圆形，无文字）
+                      ClipOval(
                         child: Material(
-                          color: cs.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.transparent,
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const SettingsPage()),
                               );
                             },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Lucide.Settings, size: 18, color: cs.primary),
-                                  const SizedBox(width: 6),
-                                  Text(AppLocalizations.of(context)!.sideDrawerSettings, style: TextStyle(color: textBase)),
-                                ],
-                              ),
+                            child: SizedBox(
+                              width: 45,
+                              height: 45,
+                              child: Center(child: Icon(Lucide.Settings, size: 22, color: textBase)),
                             ),
                           ),
                         ),
