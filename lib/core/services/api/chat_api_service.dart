@@ -1171,15 +1171,22 @@ class ChatApiService {
           // definitive finish that's not tool_calls, end the stream now so
           // the UI can persist the message.
           if (config.useResponseApi != true && finishReason != null && finishReason != 'tool_calls') {
-            final approxTotal = approxPromptTokens + _approxTokensFromChars(approxCompletionChars);
-            yield ChatStreamChunk(
-              content: '',
-              reasoning: null,
-              isDone: true,
-              totalTokens: usage?.totalTokens ?? approxTotal,
-              usage: usage,
-            );
-            return;
+            final bool hasPendingToolCalls = toolAcc.isNotEmpty || toolAccResp.isNotEmpty;
+            if (hasPendingToolCalls) {
+              // print('[ChatApi/OpenAI] suppress early finish due to pending tool_calls (acc.size=' + toolAcc.length.toString() + ')');
+            } else if (host.contains('openrouter.ai')) {
+              // print('[ChatApi/OpenAI] suppress early finish due to OpenRouter host; wait for [DONE]');
+            } else {
+              final approxTotal = approxPromptTokens + _approxTokensFromChars(approxCompletionChars);
+              yield ChatStreamChunk(
+                content: '',
+                reasoning: null,
+                isDone: true,
+                totalTokens: usage?.totalTokens ?? approxTotal,
+                usage: usage,
+              );
+              return;
+            }
           }
 
           // If model finished with tool_calls, execute them and follow-up

@@ -1766,6 +1766,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
 
       if ((chunk.toolCalls ?? const []).isNotEmpty) {
+        // Finish current reasoning segment if one is open, so follow-up reasoning becomes a new card
+        final segments = _reasoningSegments[assistantMessage.id] ?? <_ReasoningSegmentData>[];
+        if (segments.isNotEmpty && segments.last.finishedAt == null) {
+          segments.last.finishedAt = DateTime.now();
+          final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
+          if (autoCollapse) {
+            segments.last.expanded = false;
+            final rd = _reasoning[assistantMessage.id];
+            if (rd != null) rd.expanded = false;
+          }
+          _reasoningSegments[assistantMessage.id] = segments;
+          try {
+            await _chatService.updateMessage(
+              assistantMessage.id,
+              reasoningSegmentsJson: _serializeReasoningSegments(segments),
+            );
+          } catch (_) {}
+        }
+
         final existing = List<ToolUIPart>.of(_toolParts[assistantMessage.id] ?? const []);
         for (final c in chunk.toolCalls!) {
           existing.add(ToolUIPart(id: c.id, toolName: c.name, arguments: c.arguments, loading: true));
