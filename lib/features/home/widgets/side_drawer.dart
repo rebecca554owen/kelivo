@@ -692,7 +692,7 @@ class _SideDrawerState extends State<SideDrawer> {
                         child: avatarWidget(
                           widget.userName,
                           context.watch<UserProvider>(),
-                          size: 42,
+                          size: 40,
                         ),
                       ),
                       const SizedBox(width: 20),
