@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -220,9 +222,49 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
+        if (widget.keyName.toLowerCase() == 'pollinations') ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: cs.primary.withOpacity(0.35)),
+            ),
+            child: Text.rich(
+              TextSpan(
+                text: 'Powered by ',
+                style: TextStyle(color: cs.onSurface.withOpacity(0.8)),
+                children: [
+                  TextSpan(
+                    text: 'Pollinations AI',
+                    style: TextStyle(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () async {
+                        final uri = Uri.parse('https://pollinations.ai');
+                        try {
+                          final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          if (!ok) {
+                            await launchUrl(uri);
+                          }
+                        } catch (_) {
+                          await launchUrl(uri);
+                        }
+                      },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         // Provider type selector cards
-        _buildProviderTypeSelector(context, cs, l10n),
-        const SizedBox(height: 12),
+        if (widget.keyName.toLowerCase() != 'pollinations') ...[
+          _buildProviderTypeSelector(context, cs, l10n),
+          const SizedBox(height: 12),
+        ],
         _switchRow(
           icon: Icons.check_circle_outline,
           title: l10n.providerDetailPageEnabledTitle,
@@ -230,7 +272,13 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           onChanged: (v) => setState(() => _enabled = v),
         ),
         const SizedBox(height: 12),
-        _inputRow(context, label: l10n.providerDetailPageNameLabel, controller: _nameCtrl, hint: widget.displayName),
+        _inputRow(
+          context,
+          label: l10n.providerDetailPageNameLabel,
+          controller: _nameCtrl,
+          hint: widget.displayName,
+          enabled: widget.keyName.toLowerCase() != 'pollinations',
+        ),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
           if (widget.keyName.toLowerCase() != 'pollinations') ...[
@@ -248,7 +296,13 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             ),
             const SizedBox(height: 12),
           ],
-          _inputRow(context, label: 'API Base URL', controller: _baseCtrl, hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl),
+          _inputRow(
+            context,
+            label: 'API Base URL',
+            controller: _baseCtrl,
+            hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
+            enabled: widget.keyName.toLowerCase() != 'pollinations',
+          ),
         ],
         if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'pollinations') ...[
           const SizedBox(height: 12),
@@ -1658,6 +1712,7 @@ class _BrandAvatar extends StatelessWidget {
       RegExp(r'step|阶跃'): 'stepfun-color.svg',
       RegExp(r'intern|书生'): 'internlm-color.svg',
       RegExp(r'cohere|command-.+'): 'cohere-color.svg',
+      RegExp(r'kelivo'): 'kelivo.png',
     };
     for (final e in mapping.entries) {
       if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';

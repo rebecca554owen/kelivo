@@ -186,6 +186,9 @@ class SettingsProvider extends ChangeNotifier {
     if (webdavStr != null && webdavStr.isNotEmpty) {
       try { _webDavConfig = WebDavConfig.fromJson(jsonDecode(webdavStr) as Map<String, dynamic>); } catch (_) {}
     }
+    if (_providerConfigs.isEmpty) {
+      getProviderConfig('Pollinations', defaultName: 'KelivoIN');
+    }
     
     // kick off a one-time connectivity test for services (exclude local Bing)
     _initSearchConnectivityTests();

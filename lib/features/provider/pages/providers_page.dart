@@ -139,7 +139,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
   }
 
   List<_Provider> _providers({required AppLocalizations l10n}) => [
-        _p('Pollinations', 'Pollinations', enabled: true, models: 0),
+        _p('KelivoIN', 'Pollinations', enabled: true, models: 0),
         _p('OpenAI', 'OpenAI', enabled: true, models: 0),
         _p('Gemini', 'Gemini', enabled: true, models: 0),
         _p(l10n.providersPageSiliconFlowName, 'SiliconFlow', enabled: true, models: 0),
@@ -343,6 +343,7 @@ class _BrandAvatar extends StatelessWidget {
       RegExp(r'step|阶跃'): 'stepfun-color.svg',
       RegExp(r'intern|书生'): 'internlm-color.svg',
       RegExp(r'cohere|command-.+'): 'cohere-color.svg',
+      RegExp(r'kelivo'): 'kelivo.png',
     };
     for (final e in mapping.entries) {
       if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';
