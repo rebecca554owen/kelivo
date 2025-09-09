@@ -992,7 +992,6 @@ class ProviderConfig {
               'mistral',
               'openai-fast',
               'qwen-coder',
-              'bidara',
             ],
             modelOverrides: const {
               'gemini': {
@@ -1014,12 +1013,6 @@ class ProviderConfig {
                 'abilities': ['tool'],
               },
               'qwen-coder': {
-                'type': 'chat',
-                'input': ['text'],
-                'output': ['text'],
-                'abilities': ['tool'],
-              },
-              'bidara': {
                 'type': 'chat',
                 'input': ['text'],
                 'output': ['text'],
