@@ -65,7 +65,7 @@ class UpdateProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final ts = DateTime.now().millisecondsSinceEpoch;
-      final url = Uri.parse('https://kelivo-7r8h40ph.maozi.io/update.json?kelivo=$ts');
+      final url = Uri.parse('https://kelivo.psycheas.top/update.json?kelivo=$ts');
       final resp = await http.get(url);
       if (resp.statusCode != 200) {
         throw Exception('HTTP ${resp.statusCode}');
