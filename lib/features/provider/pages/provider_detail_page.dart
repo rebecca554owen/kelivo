@@ -95,6 +95,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       const fixed = {
         'OpenAI', 'Gemini', 'SiliconFlow', 'OpenRouter',
         'DeepSeek', 'Aliyun', 'Zhipu AI', 'Claude', 'Grok', 'ByteDance',
+        'Pollinations',
       };
       return !fixed.contains(key);
     }
@@ -232,22 +233,24 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         _inputRow(context, label: l10n.providerDetailPageNameLabel, controller: _nameCtrl, hint: widget.displayName),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
-          _inputRow(
-            context,
-            label: 'API Key',
-            controller: _keyCtrl,
-            hint: l10n.providerDetailPageApiKeyHint,
-            obscure: !_showApiKey,
-            suffix: IconButton(
-              tooltip: _showApiKey ? l10n.providerDetailPageHideTooltip : l10n.providerDetailPageShowTooltip,
-              icon: Icon(_showApiKey ? Lucide.EyeOff : Lucide.Eye, color: cs.onSurface.withOpacity(0.7), size: 18),
-              onPressed: () => setState(() => _showApiKey = !_showApiKey),
+          if (widget.keyName.toLowerCase() != 'pollinations') ...[
+            _inputRow(
+              context,
+              label: 'API Key',
+              controller: _keyCtrl,
+              hint: l10n.providerDetailPageApiKeyHint,
+              obscure: !_showApiKey,
+              suffix: IconButton(
+                tooltip: _showApiKey ? l10n.providerDetailPageHideTooltip : l10n.providerDetailPageShowTooltip,
+                icon: Icon(_showApiKey ? Lucide.EyeOff : Lucide.Eye, color: cs.onSurface.withOpacity(0.7), size: 18),
+                onPressed: () => setState(() => _showApiKey = !_showApiKey),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           _inputRow(context, label: 'API Base URL', controller: _baseCtrl, hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl),
         ],
-        if (_kind == ProviderKind.openai) ...[
+        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'pollinations') ...[
           const SizedBox(height: 12),
           _inputRow(
             context,

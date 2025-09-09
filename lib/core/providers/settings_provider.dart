@@ -909,6 +909,7 @@ class ProviderConfig {
 
   static String _defaultBase(String key) {
     final k = key.toLowerCase();
+    if (k.contains('pollinations')) return 'https://text.pollinations.ai/openai';
     if (k.contains('openrouter')) return 'https://openrouter.ai/api/v1';
     if (RegExp(r'qwen|aliyun|dashscope').hasMatch(k)) return 'https://dashscope.aliyuncs.com/compatible-mode/v1';
     if (RegExp(r'bytedance|doubao|volces|ark').hasMatch(k)) return 'https://ark.cn-beijing.volces.com/api/v3';
@@ -928,9 +929,11 @@ class ProviderConfig {
       if (s.contains('gemini') || s.contains('google')) return true;
       if (s.contains('silicon')) return true;
       if (s.contains('openrouter')) return true;
+      if (s.contains('pollinations')) return true;
       return false; // others disabled by default
     }
     final kind = classify(key);
+    final lowerKey = key.toLowerCase();
     switch (kind) {
       case ProviderKind.google:
         return ProviderConfig(
@@ -970,6 +973,63 @@ class ProviderConfig {
         );
       case ProviderKind.openai:
       default:
+        // Special-case Pollinations default models and overrides
+        if (lowerKey.contains('pollinations')) {
+          return ProviderConfig(
+            id: key,
+            enabled: _defaultEnabled(key),
+            name: displayName ?? key,
+            apiKey: 'kelivo',
+            baseUrl: _defaultBase(key),
+            providerType: ProviderKind.openai,
+            chatPath: null, // keep empty in UI; code uses default '/chat/completions'
+            useResponseApi: false,
+            models: const [
+              'gemini',
+              'mistral',
+              'openai-fast',
+              'qwen-coder',
+              'bidara',
+            ],
+            modelOverrides: const {
+              'gemini': {
+                'type': 'chat',
+                'input': ['text', 'image'],
+                'output': ['text'],
+                'abilities': ['tool'],
+              },
+              'mistral': {
+                'type': 'chat',
+                'input': ['text', 'image'],
+                'output': ['text'],
+                'abilities': ['tool'],
+              },
+              'openai-fast': {
+                'type': 'chat',
+                'input': ['text', 'image'],
+                'output': ['text'],
+                'abilities': ['tool'],
+              },
+              'qwen-coder': {
+                'type': 'chat',
+                'input': ['text'],
+                'output': ['text'],
+                'abilities': ['tool'],
+              },
+              'bidara': {
+                'type': 'chat',
+                'input': ['text'],
+                'output': ['text'],
+                'abilities': ['tool'],
+              },
+            },
+            proxyEnabled: false,
+            proxyHost: '',
+            proxyPort: '8080',
+            proxyUsername: '',
+            proxyPassword: '',
+          );
+        }
         return ProviderConfig(
           id: key,
           enabled: _defaultEnabled(key),
