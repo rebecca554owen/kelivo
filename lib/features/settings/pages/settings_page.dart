@@ -250,8 +250,8 @@ class SettingsPage extends StatelessWidget {
             title: l10n.settingsPageDocs,
             onTap: () async {
               final uri = Uri.parse('https://kelivo.psycheas.top/');
-              if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                await launchUrl(uri, mode: LaunchMode.platformDefault);
+              if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },
           ),

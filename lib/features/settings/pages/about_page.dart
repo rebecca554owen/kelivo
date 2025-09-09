@@ -209,7 +209,12 @@ class _AboutPageState extends State<AboutPage> {
                 icon: Lucide.Earth,
                 title: l10n.aboutPageWebsite,
                 subtitle: 'https://kelivo.psycheas.top/',
-                onTap: () => _openUrl('https://kelivo.psycheas.top/'),
+                onTap: () async {
+                  final uri = Uri.parse('https://kelivo.psycheas.top/');
+                  if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
               ),
               _AboutItem(
                 icon: Lucide.Github,
