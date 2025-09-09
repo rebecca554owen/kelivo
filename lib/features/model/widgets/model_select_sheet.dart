@@ -176,10 +176,23 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       }));
     });
 
-    // Bottom provider tabs
-    final providerTabs = widget.limitProviderKey == null
-        ? groups.entries.map((e) => _providerTab(context, e.key, e.value.name)).toList()
-        : <Widget>[];
+    // Bottom provider tabs (ordered per ProvidersPage order)
+    final List<Widget> providerTabs = <Widget>[];
+    if (widget.limitProviderKey == null) {
+      final order = settings.providersOrder;
+      // Build ordered keys: first by saved order, then append remaining in insertion order
+      final keysInOrder = <String>[];
+      for (final k in order) {
+        if (groups.containsKey(k)) keysInOrder.add(k);
+      }
+      for (final k in groups.keys) {
+        if (!keysInOrder.contains(k)) keysInOrder.add(k);
+      }
+      for (final k in keysInOrder) {
+        final g = groups[k]!;
+        providerTabs.add(_providerTab(context, k, g.name));
+      }
+    }
 
     return SafeArea(
       top: false,
