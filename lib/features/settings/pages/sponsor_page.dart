@@ -155,7 +155,15 @@ class _SponsorPageState extends State<SponsorPage> {
                   icon: Lucide.Heart,
                   title: l10n.sponsorPageAfdianTitle,
                   subtitle: l10n.sponsorPageAfdianSubtitle,
-                  onTap: () => _openUrl('https://afdian.com/a/kelivo'),
+                  // onTap: () => _openUrl('https://afdian.com/a/kelivo'),
+                  onTap: () async {
+                    final uri = Uri.parse('https://afdian.com/a/kelivo');
+                    if (!await launchUrl(
+                        uri, mode: LaunchMode.platformDefault)) {
+                      await launchUrl(
+                          uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
                 const SizedBox(width: 10),
                 _sponsorMethodCard(
@@ -163,7 +171,14 @@ class _SponsorPageState extends State<SponsorPage> {
                   icon: Lucide.Link,
                   title: l10n.sponsorPageWeChatTitle,
                   subtitle: l10n.sponsorPageWeChatSubtitle,
-                  onTap: () => _openUrl('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg'),
+                  onTap: () async {
+                    final uri = Uri.parse('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg');
+                    if (!await launchUrl(
+                        uri, mode: LaunchMode.platformDefault)) {
+                      await launchUrl(
+                          uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
               ],
             ),
