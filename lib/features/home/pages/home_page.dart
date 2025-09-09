@@ -859,6 +859,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     }
 
+    // Convert any local Markdown image links to inline base64 for model context
+    for (int i = 0; i < apiMessages.length; i++) {
+      final s = (apiMessages[i]['content'] ?? '').toString();
+      if (s.isNotEmpty) {
+        apiMessages[i]['content'] = await MarkdownMediaSanitizer.inlineLocalImagesToBase64(s);
+      }
+    }
+
     // Get provider config
     final config = settings.getProviderConfig(providerKey);
 
@@ -943,16 +951,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (aBody.isEmpty) aBody = null;
       }
 
-      final stream = ChatApiService.sendMessageStream(
-        config: config,
-        modelId: modelId,
-        messages: apiMessages,
-        userImagePaths: input.imagePaths,
-        thinkingBudget: assistant?.thinkingBudget ?? settings.thinkingBudget,
-        temperature: assistant?.temperature,
-        topP: assistant?.topP,
-        maxTokens: assistant?.maxTokens,
-        tools: toolDefs.isEmpty ? null : toolDefs,
+    final stream = ChatApiService.sendMessageStream(
+      config: config,
+      modelId: modelId,
+      messages: apiMessages,
+      userImagePaths: input.imagePaths,
+      thinkingBudget: assistant?.thinkingBudget ?? settings.thinkingBudget,
+      temperature: assistant?.temperature,
+      topP: assistant?.topP,
+      maxTokens: assistant?.maxTokens,
+      tools: toolDefs.isEmpty ? null : toolDefs,
         onToolCall: onToolCall,
         extraHeaders: aHeaders,
         extraBody: aBody,
@@ -1609,6 +1617,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (tail.length > keep) {
         final trimmed = tail.sublist(tail.length - keep);
         apiMessages..removeRange(startIdx, apiMessages.length)..addAll(trimmed);
+      }
+    }
+
+    // Convert any local Markdown image links to inline base64 for model context
+    for (int i = 0; i < apiMessages.length; i++) {
+      final s = (apiMessages[i]['content'] ?? '').toString();
+      if (s.isNotEmpty) {
+        apiMessages[i]['content'] = await MarkdownMediaSanitizer.inlineLocalImagesToBase64(s);
       }
     }
 

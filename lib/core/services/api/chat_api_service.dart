@@ -112,6 +112,54 @@ class ChatApiService {
     return 'image/png';
   }
 
+  static String _mimeFromDataUrl(String dataUrl) {
+    try {
+      final start = dataUrl.indexOf(':');
+      final semi = dataUrl.indexOf(';');
+      if (start >= 0 && semi > start) {
+        return dataUrl.substring(start + 1, semi);
+      }
+    } catch (_) {}
+    return 'image/png';
+  }
+
+  // Simple container for parsed text + image refs
+  static _ParsedTextAndImages _parseTextAndImages(String raw) {
+    if (raw.isEmpty) return const _ParsedTextAndImages('', <_ImageRef>[]);
+    final mdImg = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
+    final customImg = RegExp(r"\\[image:(.+?)\\]");
+    final images = <_ImageRef>[];
+    final buf = StringBuffer();
+    int i = 0;
+    while (i < raw.length) {
+      final m1 = mdImg.matchAsPrefix(raw, i);
+      final m2 = customImg.matchAsPrefix(raw, i);
+      if (m1 != null) {
+        final url = (m1.group(1) ?? '').trim();
+        if (url.isNotEmpty) {
+          if (url.startsWith('data:')) {
+            images.add(_ImageRef('data', url));
+          } else if (url.startsWith('http://') || url.startsWith('https://')) {
+            images.add(_ImageRef('url', url));
+          } else {
+            images.add(_ImageRef('path', url));
+          }
+        }
+        i = m1.end;
+        continue;
+      }
+      if (m2 != null) {
+        final p = (m2.group(1) ?? '').trim();
+        if (p.isNotEmpty) images.add(_ImageRef('path', p));
+        i = m2.end;
+        continue;
+      }
+      buf.write(raw[i]);
+      i++;
+    }
+    return _ParsedTextAndImages(buf.toString().trim(), images);
+  }
+
   static Future<String> _encodeBase64File(String path, {bool withPrefix = false}) async {
     final fixed = SandboxPathResolver.fix(path);
     final file = File(fixed);
@@ -425,21 +473,36 @@ class ChatApiService {
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final isLast = i == messages.length - 1;
-        if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
-          final text = (m['content'] ?? '').toString();
-          final parts = <Map<String, dynamic>>[];
-          if (text.isNotEmpty) {
-            parts.add({'type': 'input_text', 'text': text});
+        final raw = (m['content'] ?? '').toString();
+        final parsed = _parseTextAndImages(raw);
+        final parts = <Map<String, dynamic>>[];
+        if (parsed.text.isNotEmpty) {
+          parts.add({'type': 'input_text', 'text': parsed.text});
+        }
+        // Images extracted from this message's text
+        for (final ref in parsed.images) {
+          String url;
+          if (ref.kind == 'data') {
+            url = ref.src;
+          } else if (ref.kind == 'path') {
+            url = await _encodeBase64File(ref.src, withPrefix: true);
+          } else {
+            url = ref.src; // http(s)
           }
+          parts.add({'type': 'input_image', 'image_url': url});
+        }
+        // Additional images explicitly attached to the last user message
+        if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
           for (final p in userImagePaths!) {
-            final dataUrl = (p.startsWith('http') || p.startsWith('data:'))
-                ? p
-                : await _encodeBase64File(p, withPrefix: true);
+            final dataUrl = (p.startsWith('http') || p.startsWith('data:')) ? p : await _encodeBase64File(p, withPrefix: true);
             parts.add({'type': 'input_image', 'image_url': dataUrl});
           }
+        }
+        // Use parts when any exist; otherwise raw string
+        if (parts.isNotEmpty) {
           input.add({'role': m['role'] ?? 'user', 'content': parts});
         } else {
-          input.add({'role': m['role'] ?? 'user', 'content': m['content'] ?? ''});
+          input.add({'role': m['role'] ?? 'user', 'content': raw});
         }
       }
       body = {
@@ -462,21 +525,33 @@ class ChatApiService {
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final isLast = i == messages.length - 1;
-        if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
-          final text = (m['content'] ?? '').toString();
-          final parts = <Map<String, dynamic>>[];
-          if (text.isNotEmpty) {
-            parts.add({'type': 'text', 'text': text});
+        final raw = (m['content'] ?? '').toString();
+        final parsed = _parseTextAndImages(raw);
+        final parts = <Map<String, dynamic>>[];
+        if (parsed.text.isNotEmpty) {
+          parts.add({'type': 'text', 'text': parsed.text});
+        }
+        for (final ref in parsed.images) {
+          String url;
+          if (ref.kind == 'data') {
+            url = ref.src;
+          } else if (ref.kind == 'path') {
+            url = await _encodeBase64File(ref.src, withPrefix: true);
+          } else {
+            url = ref.src;
           }
+          parts.add({'type': 'image_url', 'image_url': {'url': url}});
+        }
+        if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
           for (final p in userImagePaths!) {
-            final dataUrl = (p.startsWith('http') || p.startsWith('data:'))
-                ? p
-                : await _encodeBase64File(p, withPrefix: true);
+            final dataUrl = (p.startsWith('http') || p.startsWith('data:')) ? p : await _encodeBase64File(p, withPrefix: true);
             parts.add({'type': 'image_url', 'image_url': {'url': dataUrl}});
           }
+        }
+        if (parts.isNotEmpty) {
           mm.add({'role': m['role'] ?? 'user', 'content': parts});
         } else {
-          mm.add({'role': m['role'] ?? 'user', 'content': m['content'] ?? ''});
+          mm.add({'role': m['role'] ?? 'user', 'content': raw});
         }
       }
       body = {
@@ -1558,22 +1633,47 @@ class ChatApiService {
       final role = msg['role'] == 'assistant' ? 'model' : 'user';
       final isLast = i == messages.length - 1;
       final parts = <Map<String, dynamic>>[];
-      final text = (msg['content'] ?? '').toString();
-      if (text.isNotEmpty) parts.add({'text': text});
+      final raw = (msg['content'] ?? '').toString();
+      final parsed = _parseTextAndImages(raw);
+      if (parsed.text.isNotEmpty) parts.add({'text': parsed.text});
+      // Images extracted from this message's text
+      for (final ref in parsed.images) {
+        if (ref.kind == 'data') {
+          final mime = _mimeFromDataUrl(ref.src);
+          final idx = ref.src.indexOf('base64,');
+          if (idx > 0) {
+            final b64 = ref.src.substring(idx + 7);
+            parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
+          } else {
+            // If malformed data URL, include as plain text fallback
+            parts.add({'text': ref.src});
+          }
+        } else if (ref.kind == 'path') {
+          final mime = _mimeFromPath(ref.src);
+          final b64 = await _encodeBase64File(ref.src, withPrefix: false);
+          parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
+        } else {
+          // Remote URL: Gemini official API doesn't fetch http(s) here; keep short reference
+          parts.add({'text': '(image) ${ref.src}'});
+        }
+      }
       if (isLast && role == 'user' && (userImagePaths?.isNotEmpty == true)) {
         for (final p in userImagePaths!) {
-          if (p.startsWith('http') || p.startsWith('data:')) {
-            // Google inline_data expects base64; skip remote/data
-            continue;
-          }
-          final mime = _mimeFromPath(p);
-          final b64 = await _encodeBase64File(p, withPrefix: false);
-          parts.add({
-            'inline_data': {
-              'mime_type': mime,
-              'data': b64,
+          if (p.startsWith('data:')) {
+            final mime = _mimeFromDataUrl(p);
+            final idx = p.indexOf('base64,');
+            if (idx > 0) {
+              final b64 = p.substring(idx + 7);
+              parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
             }
-          });
+          } else if (!(p.startsWith('http://') || p.startsWith('https://'))) {
+            final mime = _mimeFromPath(p);
+            final b64 = await _encodeBase64File(p, withPrefix: false);
+            parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
+          } else {
+            // http url fallback reference text
+            parts.add({'text': '(image) ${p}'});
+          }
         }
       }
       contents.add({'role': role, 'parts': parts});
@@ -1945,6 +2045,19 @@ class ChatApiService {
     }
     return null;
   }
+
+}
+
+class _ImageRef {
+  final String kind; // 'data' | 'path' | 'url'
+  final String src;
+  const _ImageRef(this.kind, this.src);
+}
+
+class _ParsedTextAndImages {
+  final String text;
+  final List<_ImageRef> images;
+  const _ParsedTextAndImages(this.text, this.images);
 }
 
 class ChatStreamChunk {
