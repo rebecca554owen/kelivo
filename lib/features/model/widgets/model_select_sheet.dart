@@ -50,7 +50,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   final Map<String, GlobalKey> _headers = {};
   final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
   static const double _initialSize = 0.7;
-  static const double _maxSize = 0.95;
+  static const double _maxSize = 0.85;
   ScrollController? _listCtrl; // controller from DraggableScrollableSheet
   final Map<String, double> _headerOffsets = {}; // Store computed offsets for providers
 
@@ -160,10 +160,19 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       }
     }
 
-    // Provider sections
-    groups.forEach((pk, g) {
+    // Provider sections ordered by ProvidersPage order
+    final order = settings.providersOrder;
+    final orderedKeys = <String>[];
+    for (final k in order) {
+      if (groups.containsKey(k)) orderedKeys.add(k);
+    }
+    for (final k in groups.keys) {
+      if (!orderedKeys.contains(k)) orderedKeys.add(k);
+    }
+    for (final pk in orderedKeys) {
+      final g = groups[pk]!;
       final items = g.items.where((e) => query.isEmpty || e.id.toLowerCase().contains(query)).toList();
-      if (items.isEmpty) return;
+      if (items.isEmpty) continue;
       final key = GlobalKey();
       _headers[pk] = key;
       _headerOffsets[pk] = currentOffset;
@@ -174,7 +183,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         currentOffset += 68; // Approximate height of model tile
         return tile;
       }));
-    });
+    }
 
     // Bottom provider tabs (ordered per ProvidersPage order)
     final List<Widget> providerTabs = <Widget>[];
