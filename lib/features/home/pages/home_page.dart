@@ -3020,6 +3020,7 @@ class _CurrentModelIcon extends StatelessWidget {
       RegExp(r'step|阶跃'): 'stepfun-color.svg',
       RegExp(r'intern|书生'): 'internlm-color.svg',
       RegExp(r'cohere|command-.+'): 'cohere-color.svg',
+      RegExp(r'kelivo'): 'kelivo.png',
     };
     for (final e in mapping.entries) {
       if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';

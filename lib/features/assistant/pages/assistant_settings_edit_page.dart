@@ -2087,6 +2087,7 @@ class _BrandAvatarLike extends StatelessWidget {
       RegExp(r'aihubmix'): 'aihubmix-color.svg',
       RegExp(r'ollama'): 'ollama.svg',
       RegExp(r'github'): 'github.svg',
+      RegExp(r'kelivo'): 'kelivo.png',
     };
     for (final e in mapping.entries) {
       if (e.key.hasMatch(lower)) { asset = 'assets/icons/${e.value}'; break; }
