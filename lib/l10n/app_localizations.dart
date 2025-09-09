@@ -274,6 +274,48 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get settingsPageShare;
 
+  /// No description provided for @sponsorPageMethodsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsorship Methods'**
+  String get sponsorPageMethodsSectionTitle;
+
+  /// No description provided for @sponsorPageSponsorsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsors'**
+  String get sponsorPageSponsorsSectionTitle;
+
+  /// No description provided for @sponsorPageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No sponsors yet'**
+  String get sponsorPageEmpty;
+
+  /// No description provided for @sponsorPageAfdianTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Afdian'**
+  String get sponsorPageAfdianTitle;
+
+  /// No description provided for @sponsorPageAfdianSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'afdian.com/a/kelivo'**
+  String get sponsorPageAfdianSubtitle;
+
+  /// No description provided for @sponsorPageWeChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat Sponsor'**
+  String get sponsorPageWeChatTitle;
+
+  /// No description provided for @sponsorPageWeChatSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat sponsor code'**
+  String get sponsorPageWeChatSubtitle;
+
   /// No description provided for @languageDisplaySimplifiedChinese.
   ///
   /// In en, this message translates to:

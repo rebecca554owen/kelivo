@@ -11,6 +11,7 @@ import '../../mcp/pages/mcp_page.dart';
 import '../../assistant/pages/assistant_settings_page.dart';
 import 'about_page.dart';
 import 'tts_services_page.dart';
+import 'sponsor_page.dart';
 import '../../search/pages/search_services_page.dart';
 import '../../backup/pages/backup_page.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -257,11 +258,10 @@ class SettingsPage extends StatelessWidget {
           SettingRow(
             icon: Lucide.Heart,
             title: l10n.settingsPageSponsor,
-            onTap: () async {
-              final uri = Uri.parse('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg');
-              if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SponsorPage()),
+              );
             },
           ),
           SettingRow(

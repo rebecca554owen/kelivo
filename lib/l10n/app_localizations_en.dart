@@ -99,6 +99,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageShare => 'Share';
 
   @override
+  String get sponsorPageMethodsSectionTitle => 'Sponsorship Methods';
+
+  @override
+  String get sponsorPageSponsorsSectionTitle => 'Sponsors';
+
+  @override
+  String get sponsorPageEmpty => 'No sponsors yet';
+
+  @override
+  String get sponsorPageAfdianTitle => 'Afdian';
+
+  @override
+  String get sponsorPageAfdianSubtitle => 'afdian.com/a/kelivo';
+
+  @override
+  String get sponsorPageWeChatTitle => 'WeChat Sponsor';
+
+  @override
+  String get sponsorPageWeChatSubtitle => 'WeChat sponsor code';
+
+  @override
   String get languageDisplaySimplifiedChinese => 'Simplified Chinese';
 
   @override
