@@ -782,7 +782,15 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               ),
               Consumer<TtsProvider>(
                 builder: (context, tts, _) => IconButton(
-                  icon: Icon(tts.isSpeaking ? Lucide.CircleStop : Lucide.Volume2, size: 16),
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: FadeTransition(opacity: anim, child: child)),
+                    child: Icon(
+                      tts.isSpeaking ? Lucide.CircleStop : Lucide.Volume2,
+                      key: ValueKey(tts.isSpeaking ? 'stop' : 'speak'),
+                      size: 16,
+                    ),
+                  ),
                   onPressed: widget.onSpeak,
                   tooltip: tts.isSpeaking ? l10n.chatMessageWidgetStopTooltip : l10n.chatMessageWidgetSpeakTooltip,
                   visualDensity: VisualDensity.compact,

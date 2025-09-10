@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../icons/lucide_adapter.dart';
+import '../../../shared/animations/widgets.dart';
 import '../../../core/models/backup.dart';
 import '../../../core/providers/backup_provider.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -271,7 +272,12 @@ class _BackupPageState extends State<BackupPage> {
                   obscure: !_showPassword,
                   onChanged: (v) => persist(cfg.copyWith(password: v)),
                   suffix: IconButton(
-                    icon: Icon(_showPassword ? Lucide.EyeOff : Lucide.Eye),
+                    icon: AnimatedIconSwap(
+                      child: Icon(
+                        _showPassword ? Lucide.EyeOff : Lucide.Eye,
+                        key: ValueKey(_showPassword ? 'hide' : 'show'),
+                      ),
+                    ),
                     onPressed: () => setState(() => _showPassword = !_showPassword),
                   ),
                 ),

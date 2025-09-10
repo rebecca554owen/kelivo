@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:animations/animations.dart';
+import '../../../shared/animations/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../../icons/lucide_adapter.dart';
@@ -15,7 +17,7 @@ class ChatHistoryPage extends StatefulWidget {
   State<ChatHistoryPage> createState() => _ChatHistoryPageState();
 }
 
-class _ChatHistoryPageState extends State<ChatHistoryPage> {
+class _ChatHistoryPageState extends State<ChatHistoryPage> with TickerProviderStateMixin {
   final TextEditingController _searchCtrl = TextEditingController();
   bool _searching = false;
 
@@ -51,7 +53,12 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
         actions: [
           IconButton(
             tooltip: l10n.chatHistoryPageSearchTooltip,
-            icon: Icon(_searching ? Lucide.X : Lucide.Search),
+            icon: AnimatedIconSwap(
+              child: Icon(
+                _searching ? Lucide.X : Lucide.Search,
+                key: ValueKey(_searching ? 'x' : 'search'),
+              ),
+            ),
             onPressed: () {
               setState(() {
                 if (_searching) _searchCtrl.clear();
@@ -101,44 +108,60 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_searching)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: TextField(
-                  controller: _searchCtrl,
-                  autofocus: true,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: l10n.chatHistoryPageSearchHint,
-                    filled: true,
-                    fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(50),
-                      borderSide: const BorderSide(color: Colors.transparent),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(50),
-                      borderSide: const BorderSide(color: Colors.transparent),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(50),
-                      borderSide: BorderSide(color: cs.primary.withOpacity(0.3)),
-                    ),
-                    prefixIcon: Icon(Lucide.Search, color: cs.onSurface.withOpacity(0.7), size: 18),
-                    suffixIcon: (q.isNotEmpty)
-                        ? IconButton(
-                            icon: Icon(Lucide.X, size: 16, color: cs.onSurface.withOpacity(0.7)),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
-                  ),
-                  style: const TextStyle(fontSize: 14),
+            AnimatedSize(
+              duration: kAnim,
+              alignment: Alignment.topCenter,
+              curve: Curves.easeOutCubic,
+              child: PageTransitionSwitcher(
+                duration: kAnim,
+                reverse: !_searching,
+                transitionBuilder: (child, anim, sec) => SharedAxisTransition(
+                  animation: anim,
+                  secondaryAnimation: sec,
+                  transitionType: SharedAxisTransitionType.vertical,
+                  child: child,
                 ),
+                child: !_searching
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: TextField(
+                          controller: _searchCtrl,
+                          autofocus: true,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: l10n.chatHistoryPageSearchHint,
+                            filled: true,
+                            fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: const BorderSide(color: Colors.transparent),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: const BorderSide(color: Colors.transparent),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: BorderSide(color: cs.primary.withOpacity(0.3)),
+                            ),
+                            prefixIcon: Icon(Lucide.Search, color: cs.onSurface.withOpacity(0.7), size: 18),
+                            suffixIcon: (q.isNotEmpty)
+                                ? IconButton(
+                                    icon: Icon(Lucide.X, size: 16, color: cs.onSurface.withOpacity(0.7)),
+                                    onPressed: () {
+                                      _searchCtrl.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                          ),
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
               ),
+            ),
 
             Expanded(
               child: filtered.isEmpty
@@ -279,7 +302,8 @@ class _PinButton extends StatelessWidget {
         await context.read<ChatService>().togglePinConversation(conversation.id);
       },
       radius: 20,
-      child: Container(
+      child: AnimatedContainer(
+        duration: kAnim,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: pinned ? cs.primary.withOpacity(0.12) : cs.surface,
@@ -289,11 +313,22 @@ class _PinButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(pinned ? Lucide.PinOff : Lucide.Pin, size: 16, color: pinned ? cs.primary : cs.onSurface.withOpacity(0.7)),
+            AnimatedIconSwap(
+              child: Icon(
+                pinned ? Lucide.PinOff : Lucide.Pin,
+                key: ValueKey(pinned ? 'pinOff' : 'pin'),
+                size: 16,
+                color: pinned ? cs.primary : cs.onSurface.withOpacity(0.7),
+              ),
+            ),
             const SizedBox(width: 6),
-            Text(
-              pinned ? l10n.chatHistoryPagePinned : l10n.chatHistoryPagePin,
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: pinned ? cs.primary : cs.onSurface.withOpacity(0.8)),
+            AnimatedTextSwap(
+              text: pinned ? l10n.chatHistoryPagePinned : l10n.chatHistoryPagePin,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: pinned ? cs.primary : cs.onSurface.withOpacity(0.8),
+              ),
             ),
           ],
         ),

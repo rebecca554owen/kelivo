@@ -407,15 +407,19 @@ class _CircleIconButton extends StatelessWidget {
     final bgColor = active ? theme.colorScheme.primary.withOpacity(0.12) : Colors.transparent;
     final fgColor = active ? theme.colorScheme.primary : (isDark ? Colors.white : Colors.black87);
 
-    final button = Material(
-      color: bgColor,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.all(padding ?? 10),
-          child: child ?? Icon(icon, size: 22, color: fgColor),
+    final button = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: const ShapeDecoration(shape: CircleBorder()),
+      child: Material(
+        color: bgColor,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.all(padding ?? 10),
+            child: child ?? Icon(icon, size: 22, color: fgColor),
+          ),
         ),
       ),
     );
@@ -456,14 +460,19 @@ class _SendButton extends StatelessWidget {
         onTap: loading ? onStop : (enabled ? onSend : null),
         child: Padding(
           padding: const EdgeInsets.all(9),
-          child: loading 
-            ? SvgPicture.asset(
-                'assets/icons/stop.svg',
-                width: 22,
-                height: 22,
-                colorFilter: ColorFilter.mode(fg, BlendMode.srcIn),
-              )
-            : Icon(icon, size: 22, color: fg),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: FadeTransition(opacity: anim, child: child)),
+            child: loading
+                ? SvgPicture.asset(
+                    key: const ValueKey('stop'),
+                    'assets/icons/stop.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: ColorFilter.mode(fg, BlendMode.srcIn),
+                  )
+                : Icon(icon, key: const ValueKey('send'), size: 22, color: fg),
+          ),
         ),
       ),
     );

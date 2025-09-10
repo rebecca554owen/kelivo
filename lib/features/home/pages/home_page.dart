@@ -46,6 +46,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../core/services/learning_mode_store.dart';
+import '../../../shared/animations/widgets.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -2240,18 +2241,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           mainAxisSize: MainAxisSize.min,
           // crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeOutCubic,
-              transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-              child: Text(
-                title,
-                key: ValueKey<String>(title),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            AnimatedTextSwap(
+              text: title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
             ),
             if (providerName != null && modelDisplay != null)
               Padding(
