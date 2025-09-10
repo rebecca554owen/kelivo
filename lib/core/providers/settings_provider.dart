@@ -187,7 +187,7 @@ class SettingsProvider extends ChangeNotifier {
       try { _webDavConfig = WebDavConfig.fromJson(jsonDecode(webdavStr) as Map<String, dynamic>); } catch (_) {}
     }
     if (_providerConfigs.isEmpty) {
-      getProviderConfig('Pollinations', defaultName: 'KelivoIN');
+      getProviderConfig('KelivoIN', defaultName: 'KelivoIN');
     }
     
     // kick off a one-time connectivity test for services (exclude local Bing)
@@ -912,7 +912,7 @@ class ProviderConfig {
 
   static String _defaultBase(String key) {
     final k = key.toLowerCase();
-    if (k.contains('pollinations')) return 'https://text.pollinations.ai/openai';
+    if (k.contains('kelivoin')) return 'https://text.pollinations.ai/openai';
     if (k.contains('openrouter')) return 'https://openrouter.ai/api/v1';
     if (RegExp(r'qwen|aliyun|dashscope').hasMatch(k)) return 'https://dashscope.aliyuncs.com/compatible-mode/v1';
     if (RegExp(r'bytedance|doubao|volces|ark').hasMatch(k)) return 'https://ark.cn-beijing.volces.com/api/v3';
@@ -932,7 +932,7 @@ class ProviderConfig {
       if (s.contains('gemini') || s.contains('google')) return true;
       if (s.contains('silicon')) return true;
       if (s.contains('openrouter')) return true;
-      if (s.contains('pollinations')) return true;
+      if (s.contains('kelivoin')) return true;
       return false; // others disabled by default
     }
     final kind = classify(key);
@@ -976,8 +976,8 @@ class ProviderConfig {
         );
       case ProviderKind.openai:
       default:
-        // Special-case Pollinations default models and overrides
-        if (lowerKey.contains('pollinations')) {
+        // Special-case KelivoIN default models and overrides
+        if (lowerKey.contains('kelivoin')) {
           return ProviderConfig(
             id: key,
             enabled: _defaultEnabled(key),

@@ -95,9 +95,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     final l10n = AppLocalizations.of(context)!;
     bool _isUserAdded(String key) {
       const fixed = {
-        'OpenAI', 'Gemini', 'SiliconFlow', 'OpenRouter',
+        'KelivoIN', 'OpenAI', 'Gemini', 'SiliconFlow', 'OpenRouter',
         'DeepSeek', 'Aliyun', 'Zhipu AI', 'Claude', 'Grok', 'ByteDance',
-        'Pollinations',
       };
       return !fixed.contains(key);
     }
@@ -222,7 +221,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        if (widget.keyName.toLowerCase() == 'pollinations') ...[
+        if (widget.keyName.toLowerCase() == 'kelivoin') ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
@@ -261,7 +260,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           const SizedBox(height: 12),
         ],
         // Provider type selector cards
-        if (widget.keyName.toLowerCase() != 'pollinations') ...[
+        if (widget.keyName.toLowerCase() != 'kelivoin') ...[
           _buildProviderTypeSelector(context, cs, l10n),
           const SizedBox(height: 12),
         ],
@@ -277,11 +276,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           label: l10n.providerDetailPageNameLabel,
           controller: _nameCtrl,
           hint: widget.displayName,
-          enabled: widget.keyName.toLowerCase() != 'pollinations',
+          enabled: widget.keyName.toLowerCase() != 'kelivoin',
         ),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
-          if (widget.keyName.toLowerCase() != 'pollinations') ...[
+          if (widget.keyName.toLowerCase() != 'kelivoin') ...[
             _inputRow(
               context,
               label: 'API Key',
@@ -301,10 +300,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           //   label: 'API Base URL',
           //   controller: _baseCtrl,
           //   hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
-          //   enabled: widget.keyName.toLowerCase() != 'pollinations',
+          //   enabled: widget.keyName.toLowerCase() != 'kelivoin',
           // ),
         ],
-        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'pollinations') ...[
+        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin') ...[
           const SizedBox(height: 12),
           _inputRow(
             context,
