@@ -423,8 +423,11 @@ class _SideDrawerState extends State<SideDrawer> {
       // shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       // elevation: 0, // 可选：去阴影更像全屏层
       child: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
+            // Main column content
+            Column(
+              children: [
             // Fixed header + search
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -746,6 +749,32 @@ class _SideDrawerState extends State<SideDrawer> {
                     ],
                   ),
                 ],
+              ),
+            ),
+              ],
+            ),
+
+            // iOS-style blur/fade effect above user area
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 62, // Approximate height of user area
+              child: IgnorePointer(
+                child: Container(
+                  height: 20,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        cs.surface.withOpacity(0.0),
+                        cs.surface.withOpacity(0.8),
+                        cs.surface.withOpacity(1.0),
+                      ],
+                      stops: const [0.0, 0.6, 1.0],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
