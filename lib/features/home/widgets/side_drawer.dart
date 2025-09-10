@@ -48,11 +48,14 @@ class _SideDrawerState extends State<SideDrawer> {
   // Assistant avatar renderer shared across drawer views
   Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28}) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final av = a?.avatar?.trim() ?? '';
     final name = a?.name ?? '';
+    
+    Widget avatar;
     if (av.isNotEmpty) {
       if (av.startsWith('http')) {
-        return ClipOval(
+        avatar = ClipOval(
           child: Image.network(
             av,
             width: size,
@@ -62,7 +65,7 @@ class _SideDrawerState extends State<SideDrawer> {
           ),
         );
       } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
-        return ClipOval(
+        avatar = ClipOval(
           child: Image(
             image: FileImage(File(av)),
             width: size,
@@ -71,10 +74,25 @@ class _SideDrawerState extends State<SideDrawer> {
           ),
         );
       } else {
-        return _assistantEmojiAvatar(cs, av, size);
+        avatar = _assistantEmojiAvatar(cs, av, size);
       }
+    } else {
+      avatar = _assistantInitialAvatar(cs, name, size);
     }
-    return _assistantInitialAvatar(cs, name, size);
+    
+    // Add border
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isDark ? Colors.white24 : Colors.black12,
+          width: 0.5,
+        ),
+      ),
+      child: avatar,
+    );
   }
 
   Widget _assistantInitialAvatar(ColorScheme cs, String name, double size) {
@@ -468,6 +486,50 @@ class _SideDrawerState extends State<SideDrawer> {
                   ),
 
                   const SizedBox(height: 12),
+                  
+                  // 当前助手区域（固定）
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Material(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => _showAssistantPicker(context),
+                        onLongPress: () {
+                          final id = context.read<AssistantProvider>().currentAssistantId;
+                          if (id != null) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                            );
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                          child: Row(
+                            children: [
+                              _assistantAvatar(context, ap.currentAssistant, size: 32),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  (ap.currentAssistant?.name ?? widget.assistantName),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textBase),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Lucide.ChevronDown,
+                                size: 18,
+                                color: textBase.withOpacity(0.7),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -475,7 +537,7 @@ class _SideDrawerState extends State<SideDrawer> {
             // Scrollable conversation list below fixed header
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: [
                   // Update banner under search box
                   Builder(builder: (context) {
@@ -627,61 +689,6 @@ class _SideDrawerState extends State<SideDrawer> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Material(
-                        color: cs.surface,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () {
-                            final id = context.read<AssistantProvider>().currentAssistantId;
-                            if (id != null) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-                              );
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Icon(Lucide.Bot, size: 22, color: cs.primary),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // 右：默认助手卡片（仅关闭抽屉）
-                      Expanded(
-                        child: Material(
-                          color: cs.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () => _showAssistantPicker(context),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              child: Row(
-                                children: [
-                                  _assistantAvatar(context, ap.currentAssistant, size: 28),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      (ap.currentAssistant?.name ?? widget.assistantName),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: textBase),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
                   Row(
                     children: [
                       const SizedBox(width: 6),
