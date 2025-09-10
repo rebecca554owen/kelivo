@@ -295,13 +295,13 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             ),
             const SizedBox(height: 12),
           ],
-          // _inputRow(
-          //   context,
-          //   label: 'API Base URL',
-          //   controller: _baseCtrl,
-          //   hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
-          //   enabled: widget.keyName.toLowerCase() != 'kelivoin',
-          // ),
+          _inputRow(
+            context,
+            label: 'API Base URL',
+            controller: _baseCtrl,
+            hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
+            enabled: widget.keyName.toLowerCase() != 'kelivoin',
+          ),
         ],
         if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin') ...[
           const SizedBox(height: 12),
