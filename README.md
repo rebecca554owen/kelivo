@@ -42,16 +42,6 @@ English | [简体中文](README_ZH_CN.md)
 - 💾 **Data Backup** - Supports chat history backup and restoration.
 - 🌐 **Custom Requests** - Supports custom HTTP request headers and bodies.
 
-## 🛠️ Tech Stack
-
-- **[Flutter](https://flutter.dev/)** - Cross-platform UI framework
-- **[Dart](https://dart.dev/)** - Development language
-- **[Provider](https://pub.dev/packages/provider)** - State management
-- **[Hive](https://pub.dev/packages/hive)** - Local data storage
-- **[Dynamic Color](https://pub.dev/packages/dynamic_color)** - Dynamic theming
-- **[GPT Markdown](https://pub.dev/packages/gpt_markdown)** - Markdown rendering
-- **[MCP Client](https://pub.dev/packages/mcp_client)** - MCP protocol support
-
 ## 📱 Platform Support
 
 - ✅ Android

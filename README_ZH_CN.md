@@ -41,16 +41,6 @@
 - 💾 **数据备份** - 支持聊天记录备份和恢复
 - 🌐 **自定义请求** - 支持自定义 HTTP 请求头和请求体
 
-## 🛠️ 技术栈
-
-- **[Flutter](https://flutter.dev/)** - 跨平台 UI 框架
-- **[Dart](https://dart.dev/)** - 开发语言
-- **[Provider](https://pub.dev/packages/provider)** - 状态管理
-- **[Hive](https://pub.dev/packages/hive)** - 本地数据存储
-- **[Dynamic Color](https://pub.dev/packages/dynamic_color)** - 动态主题色
-- **[GPT Markdown](https://pub.dev/packages/gpt_markdown)** - Markdown 渲染
-- **[MCP Client](https://pub.dev/packages/mcp_client)** - MCP 协议支持
-
 ## 📱 平台支持
 
 - ✅ Android
