@@ -2757,6 +2757,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             ),
           ),
 
+          // // iOS-style blur/fade effect above input area
+          // Positioned(
+          //   left: 0,
+          //   right: 0,
+          //   bottom: _inputBarHeight,
+          //   child: IgnorePointer(
+          //     child: Container(
+          //       height: 20,
+          //       decoration: BoxDecoration(
+          //         gradient: LinearGradient(
+          //           begin: Alignment.topCenter,
+          //           end: Alignment.bottomCenter,
+          //           colors: [
+          //             Theme.of(context).colorScheme.background.withOpacity(0.0),
+          //             Theme.of(context).colorScheme.background.withOpacity(0.8),
+          //             Theme.of(context).colorScheme.background.withOpacity(1.0),
+          //           ],
+          //           stops: const [0.0, 0.6, 1.0],
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
+
           // Backdrop to close sheet on tap
           IgnorePointer(
             ignoring: !_toolsOpen,
