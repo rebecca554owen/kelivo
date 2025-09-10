@@ -370,7 +370,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       onSend: _handleSend,
                       onStop: widget.loading ? widget.onStop : null,
                       color: theme.colorScheme.primary,
-                      icon: widget.loading ? Lucide.X : Lucide.ArrowUp,
+                      icon: Lucide.ArrowUp,
                     ),
                   ],
                 ),
@@ -455,8 +455,15 @@ class _SendButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: loading ? onStop : (enabled ? onSend : null),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, size: 20, color: fg),
+          padding: const EdgeInsets.all(9),
+          child: loading 
+            ? SvgPicture.asset(
+                'assets/icons/stop.svg',
+                width: 22,
+                height: 22,
+                colorFilter: ColorFilter.mode(fg, BlendMode.srcIn),
+              )
+            : Icon(icon, size: 22, color: fg),
         ),
       ),
     );

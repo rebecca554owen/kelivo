@@ -93,4 +93,5 @@ class Lucide {
   static const IconData chevronDown = lucide.LucideIcons.chevronDown;
   static const IconData panelLeft = lucide.LucideIcons.panelLeft;
   static const IconData panelRight = lucide.LucideIcons.panelRight;
+  static const IconData Square = lucide.LucideIcons.square;
 }
