@@ -22,6 +22,7 @@ English | [简体中文](README_ZH_CN.md)
 ## 🚀 Download
 
 🔗 [Download the latest version](https://github.com/Chevey339/kelivo/releases/latest)
+
 🔗 Or [TestFlight](https://testflight.apple.com/join/PZZyRMyY) for beta testing.
 
 ## ✨ Features
