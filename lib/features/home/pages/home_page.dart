@@ -1034,8 +1034,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               final r = _reasoning[assistantMessage.id] ?? _ReasoningData();
               r.text += chunk.reasoning!;
               r.startAt ??= DateTime.now();
-              r.finishedAt = null;
-              r.expanded = true; // auto expand while generating
+              // keep finishedAt as-is; don't reset to null once set
+              r.expanded = false; // default collapsed while generating
               _reasoning[assistantMessage.id] = r;
 
               // Add to reasoning segments for mixed display
@@ -1046,7 +1046,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 final newSegment = _ReasoningSegmentData();
                 newSegment.text = chunk.reasoning!;
                 newSegment.startAt = DateTime.now();
-                newSegment.expanded = true;
+                newSegment.expanded = false; // default collapsed while generating
                 newSegment.toolStartIndex = (_toolParts[assistantMessage.id]?.length ?? 0);
                 segments.add(newSegment);
               } else {
@@ -1059,7 +1059,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   final newSegment = _ReasoningSegmentData();
                   newSegment.text = chunk.reasoning!;
                   newSegment.startAt = DateTime.now();
-                  newSegment.expanded = true;
+                  newSegment.expanded = false; // default collapsed while generating
                   newSegment.toolStartIndex = (_toolParts[assistantMessage.id]?.length ?? 0);
                   segments.add(newSegment);
                 } else {
@@ -1241,14 +1241,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             }
 
             if (streamOutput) {
-              // If content has started, consider reasoning finished and collapse
+              // If content has started, consider reasoning finished and collapse (respect setting)
               if ((chunk.content).isNotEmpty) {
                 final r = _reasoning[assistantMessage.id];
                 if (r != null && r.startAt != null && r.finishedAt == null) {
                   r.finishedAt = DateTime.now();
                   final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
                   if (autoCollapse) {
-                    r.expanded = false; // auto collapse once main content starts
+                    r.expanded = false; // collapse once main content starts
                   }
                   _reasoning[assistantMessage.id] = r;
                   await _chatService.updateMessage(
@@ -1748,15 +1748,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           final r = _reasoning[assistantMessage.id] ?? _ReasoningData();
           r.text += chunk.reasoning!;
           r.startAt ??= DateTime.now();
-          r.finishedAt = null;
-          r.expanded = true;
+          // keep finishedAt as-is; don't reset to null once set
+          r.expanded = false; // default collapsed while generating
           _reasoning[assistantMessage.id] = r;
           final segments = _reasoningSegments[assistantMessage.id] ?? <_ReasoningSegmentData>[];
           if (segments.isEmpty) {
             final seg = _ReasoningSegmentData();
             seg.text = chunk.reasoning!;
             seg.startAt = DateTime.now();
-            seg.expanded = true;
+            seg.expanded = false; // default collapsed while generating
             seg.toolStartIndex = (_toolParts[assistantMessage.id]?.length ?? 0);
             segments.add(seg);
           } else {
@@ -1765,7 +1765,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               final seg = _ReasoningSegmentData();
               seg.text = chunk.reasoning!;
               seg.startAt = DateTime.now();
-              seg.expanded = true;
+              seg.expanded = false; // default collapsed while generating
               seg.toolStartIndex = (_toolParts[assistantMessage.id]?.length ?? 0);
               segments.add(seg);
             } else {
@@ -1839,6 +1839,38 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
       if (chunk.content.isNotEmpty) {
         fullContent += chunk.content;
+
+        // Respect auto-collapse setting when main content starts: always stop timer, collapse only if enabled
+        final rd = _reasoning[assistantMessage.id];
+        if (rd != null && rd.startAt != null && rd.finishedAt == null) {
+          rd.finishedAt = DateTime.now();
+          final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
+          if (autoCollapse) rd.expanded = false;
+          _reasoning[assistantMessage.id] = rd;
+          try {
+            await _chatService.updateMessage(
+              assistantMessage.id,
+              reasoningText: rd.text,
+              reasoningFinishedAt: rd.finishedAt,
+            );
+          } catch (_) {}
+          if (mounted) setState(() {});
+        }
+        final segs = _reasoningSegments[assistantMessage.id];
+        if (segs != null && segs.isNotEmpty && segs.last.finishedAt == null) {
+          segs.last.finishedAt = DateTime.now();
+          final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
+          if (autoCollapse) segs.last.expanded = false;
+          _reasoningSegments[assistantMessage.id] = segs;
+          try {
+            await _chatService.updateMessage(
+              assistantMessage.id,
+              reasoningSegmentsJson: _serializeReasoningSegments(segs),
+            );
+          } catch (_) {}
+          if (mounted) setState(() {});
+        }
+
         if (streamOutput) {
           setState(() {
             final i = _messages.indexWhere((m) => m.id == assistantMessage.id);

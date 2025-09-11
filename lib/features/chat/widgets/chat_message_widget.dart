@@ -1486,15 +1486,23 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
   void initState() {
     super.initState();
     if (widget.loading) _ticker.start();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOverflow());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkOverflow();
+      if (widget.loading && _scroll.hasClients) {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
   void didUpdateWidget(covariant _ReasoningSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.loading && !_ticker.isActive) _ticker.start();
-    if (!widget.loading && _ticker.isActive) _ticker.stop();
-    if (widget.loading && widget.expanded) {
+    if (widget.loading && widget.finishedAt == null) {
+      if (!_ticker.isActive) _ticker.start();
+    } else {
+      if (_ticker.isActive) _ticker.stop();
+    }
+    if (widget.loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) {
           _scroll.jumpTo(_scroll.position.maxScrollExtent);
@@ -1619,7 +1627,7 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
       ),
     );
 
-    if (isLoading) {
+    if (isLoading && !widget.expanded) {
       body = Padding(
         padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
         child: ConstrainedBox(
