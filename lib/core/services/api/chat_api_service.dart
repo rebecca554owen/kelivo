@@ -474,34 +474,40 @@ class ChatApiService {
         final m = messages[i];
         final isLast = i == messages.length - 1;
         final raw = (m['content'] ?? '').toString();
-        final parsed = _parseTextAndImages(raw);
-        final parts = <Map<String, dynamic>>[];
-        if (parsed.text.isNotEmpty) {
-          parts.add({'type': 'input_text', 'text': parsed.text});
-        }
-        // Images extracted from this message's text
-        for (final ref in parsed.images) {
-          String url;
-          if (ref.kind == 'data') {
-            url = ref.src;
-          } else if (ref.kind == 'path') {
-            url = await _encodeBase64File(ref.src, withPrefix: true);
-          } else {
-            url = ref.src; // http(s)
+        
+        // Only parse images if there are images to process
+        final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+        final hasCustomImages = raw.contains('[image:');
+        final hasAttachedImages = isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user');
+        
+        if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
+          final parsed = _parseTextAndImages(raw);
+          final parts = <Map<String, dynamic>>[];
+          if (parsed.text.isNotEmpty) {
+            parts.add({'type': 'input_text', 'text': parsed.text});
           }
-          parts.add({'type': 'input_image', 'image_url': url});
-        }
-        // Additional images explicitly attached to the last user message
-        if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
-          for (final p in userImagePaths!) {
-            final dataUrl = (p.startsWith('http') || p.startsWith('data:')) ? p : await _encodeBase64File(p, withPrefix: true);
-            parts.add({'type': 'input_image', 'image_url': dataUrl});
+          // Images extracted from this message's text
+          for (final ref in parsed.images) {
+            String url;
+            if (ref.kind == 'data') {
+              url = ref.src;
+            } else if (ref.kind == 'path') {
+              url = await _encodeBase64File(ref.src, withPrefix: true);
+            } else {
+              url = ref.src; // http(s)
+            }
+            parts.add({'type': 'input_image', 'image_url': url});
           }
-        }
-        // Use parts when any exist; otherwise raw string
-        if (parts.isNotEmpty) {
+          // Additional images explicitly attached to the last user message
+          if (hasAttachedImages) {
+            for (final p in userImagePaths!) {
+              final dataUrl = (p.startsWith('http') || p.startsWith('data:')) ? p : await _encodeBase64File(p, withPrefix: true);
+              parts.add({'type': 'input_image', 'image_url': dataUrl});
+            }
+          }
           input.add({'role': m['role'] ?? 'user', 'content': parts});
         } else {
+          // No images, use simple string content
           input.add({'role': m['role'] ?? 'user', 'content': raw});
         }
       }
@@ -526,31 +532,38 @@ class ChatApiService {
         final m = messages[i];
         final isLast = i == messages.length - 1;
         final raw = (m['content'] ?? '').toString();
-        final parsed = _parseTextAndImages(raw);
-        final parts = <Map<String, dynamic>>[];
-        if (parsed.text.isNotEmpty) {
-          parts.add({'type': 'text', 'text': parsed.text});
-        }
-        for (final ref in parsed.images) {
-          String url;
-          if (ref.kind == 'data') {
-            url = ref.src;
-          } else if (ref.kind == 'path') {
-            url = await _encodeBase64File(ref.src, withPrefix: true);
-          } else {
-            url = ref.src;
+        
+        // Only parse images if there are images to process
+        final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+        final hasCustomImages = raw.contains('[image:');
+        final hasAttachedImages = isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user');
+        
+        if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
+          final parsed = _parseTextAndImages(raw);
+          final parts = <Map<String, dynamic>>[];
+          if (parsed.text.isNotEmpty) {
+            parts.add({'type': 'text', 'text': parsed.text});
           }
-          parts.add({'type': 'image_url', 'image_url': {'url': url}});
-        }
-        if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
-          for (final p in userImagePaths!) {
-            final dataUrl = (p.startsWith('http') || p.startsWith('data:')) ? p : await _encodeBase64File(p, withPrefix: true);
-            parts.add({'type': 'image_url', 'image_url': {'url': dataUrl}});
+          for (final ref in parsed.images) {
+            String url;
+            if (ref.kind == 'data') {
+              url = ref.src;
+            } else if (ref.kind == 'path') {
+              url = await _encodeBase64File(ref.src, withPrefix: true);
+            } else {
+              url = ref.src;
+            }
+            parts.add({'type': 'image_url', 'image_url': {'url': url}});
           }
-        }
-        if (parts.isNotEmpty) {
+          if (hasAttachedImages) {
+            for (final p in userImagePaths!) {
+              final dataUrl = (p.startsWith('http') || p.startsWith('data:')) ? p : await _encodeBase64File(p, withPrefix: true);
+              parts.add({'type': 'image_url', 'image_url': {'url': dataUrl}});
+            }
+          }
           mm.add({'role': m['role'] ?? 'user', 'content': parts});
         } else {
+          // No images, use simple string content
           mm.add({'role': m['role'] ?? 'user', 'content': raw});
         }
       }
@@ -1634,47 +1647,58 @@ class ChatApiService {
       final isLast = i == messages.length - 1;
       final parts = <Map<String, dynamic>>[];
       final raw = (msg['content'] ?? '').toString();
-      final parsed = _parseTextAndImages(raw);
-      if (parsed.text.isNotEmpty) parts.add({'text': parsed.text});
-      // Images extracted from this message's text
-      for (final ref in parsed.images) {
-        if (ref.kind == 'data') {
-          final mime = _mimeFromDataUrl(ref.src);
-          final idx = ref.src.indexOf('base64,');
-          if (idx > 0) {
-            final b64 = ref.src.substring(idx + 7);
-            parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
-          } else {
-            // If malformed data URL, include as plain text fallback
-            parts.add({'text': ref.src});
-          }
-        } else if (ref.kind == 'path') {
-          final mime = _mimeFromPath(ref.src);
-          final b64 = await _encodeBase64File(ref.src, withPrefix: false);
-          parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
-        } else {
-          // Remote URL: Gemini official API doesn't fetch http(s) here; keep short reference
-          parts.add({'text': '(image) ${ref.src}'});
-        }
-      }
-      if (isLast && role == 'user' && (userImagePaths?.isNotEmpty == true)) {
-        for (final p in userImagePaths!) {
-          if (p.startsWith('data:')) {
-            final mime = _mimeFromDataUrl(p);
-            final idx = p.indexOf('base64,');
+      
+      // Only parse images if there are images to process
+      final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+      final hasCustomImages = raw.contains('[image:');
+      final hasAttachedImages = isLast && role == 'user' && (userImagePaths?.isNotEmpty == true);
+      
+      if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
+        final parsed = _parseTextAndImages(raw);
+        if (parsed.text.isNotEmpty) parts.add({'text': parsed.text});
+        // Images extracted from this message's text
+        for (final ref in parsed.images) {
+          if (ref.kind == 'data') {
+            final mime = _mimeFromDataUrl(ref.src);
+            final idx = ref.src.indexOf('base64,');
             if (idx > 0) {
-              final b64 = p.substring(idx + 7);
+              final b64 = ref.src.substring(idx + 7);
               parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
+            } else {
+              // If malformed data URL, include as plain text fallback
+              parts.add({'text': ref.src});
             }
-          } else if (!(p.startsWith('http://') || p.startsWith('https://'))) {
-            final mime = _mimeFromPath(p);
-            final b64 = await _encodeBase64File(p, withPrefix: false);
+          } else if (ref.kind == 'path') {
+            final mime = _mimeFromPath(ref.src);
+            final b64 = await _encodeBase64File(ref.src, withPrefix: false);
             parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
           } else {
-            // http url fallback reference text
-            parts.add({'text': '(image) ${p}'});
+            // Remote URL: Gemini official API doesn't fetch http(s) here; keep short reference
+            parts.add({'text': '(image) ${ref.src}'});
           }
         }
+        if (hasAttachedImages) {
+          for (final p in userImagePaths!) {
+            if (p.startsWith('data:')) {
+              final mime = _mimeFromDataUrl(p);
+              final idx = p.indexOf('base64,');
+              if (idx > 0) {
+                final b64 = p.substring(idx + 7);
+                parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
+              }
+            } else if (!(p.startsWith('http://') || p.startsWith('https://'))) {
+              final mime = _mimeFromPath(p);
+              final b64 = await _encodeBase64File(p, withPrefix: false);
+              parts.add({'inline_data': {'mime_type': mime, 'data': b64}});
+            } else {
+              // http url fallback reference text
+              parts.add({'text': '(image) ${p}'});
+            }
+          }
+        }
+      } else {
+        // No images, use simple text content
+        if (raw.isNotEmpty) parts.add({'text': raw});
       }
       contents.add({'role': role, 'parts': parts});
     }
