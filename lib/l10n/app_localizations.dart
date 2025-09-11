@@ -4121,6 +4121,12 @@ abstract class AppLocalizations {
   /// **'Metaso'**
   String get searchServiceNameMetaso;
 
+  /// No description provided for @generationInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation interrupted'**
+  String get generationInterrupted;
+
   /// No description provided for @titleForLocale.
   ///
   /// In en, this message translates to:

@@ -1366,7 +1366,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
           _messageStreamSubscription = null;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('生成已中断: $e')),
+            SnackBar(content: Text('${AppLocalizations.of(context)!.generationInterrupted}: $e')),
           );
         },
         onDone: () async {
@@ -1435,7 +1435,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
       _messageStreamSubscription = null;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('生成已中断: $e')),
+        SnackBar(content: Text('${AppLocalizations.of(context)!.generationInterrupted}: $e')),
       );
     }
   }

@@ -683,5 +683,6 @@
   "searchServiceNameLinkUp": "LinkUp",
   "searchServiceNameBrave": "Brave 搜尋",
   "searchServiceNameMetaso": "Metaso（秘塔）",
+  "generationInterrupted": "生成已中斷",
   "titleForLocale": "新對話"
 }

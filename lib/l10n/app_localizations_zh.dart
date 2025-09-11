@@ -2098,6 +2098,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServiceNameMetaso => '秘塔';
 
   @override
+  String get generationInterrupted => '生成已中断';
+
+  @override
   String get titleForLocale => '新对话';
 }
 
@@ -4195,6 +4198,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServiceNameMetaso => '秘塔';
 
   @override
+  String get generationInterrupted => '生成已中断';
+
+  @override
   String get titleForLocale => '新对话';
 }
 
@@ -6289,6 +6295,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameMetaso => 'Metaso（秘塔）';
+
+  @override
+  String get generationInterrupted => '生成已中斷';
 
   @override
   String get titleForLocale => '新對話';

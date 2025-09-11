@@ -879,5 +879,6 @@
   "searchServiceNameLinkUp": "LinkUp",
   "searchServiceNameBrave": "Brave Search",
   "searchServiceNameMetaso": "Metaso",
+  "generationInterrupted": "Generation interrupted",
   "titleForLocale": "New Chat"
 }

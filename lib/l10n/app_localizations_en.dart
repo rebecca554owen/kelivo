@@ -2171,5 +2171,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServiceNameMetaso => 'Metaso';
 
   @override
+  String get generationInterrupted => 'Generation interrupted';
+
+  @override
   String get titleForLocale => 'New Chat';
 }
