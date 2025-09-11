@@ -652,11 +652,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                DefaultTextStyle.merge(
-                  style: const TextStyle(fontSize: 15.7, height: 1.5),
-                  child: MarkdownWithCodeHighlight(
-                    text: widget.message.content,
-                    onCitationTap: (id) => _handleCitationTap(id),
+                SelectionArea(
+                  child: DefaultTextStyle.merge(
+                    style: const TextStyle(fontSize: 15.7, height: 1.5),
+                    child: MarkdownWithCodeHighlight(
+                      text: widget.message.content,
+                      onCitationTap: (id) => _handleCitationTap(id),
+                    ),
                   ),
                 ),
                 // Inline sources removed; show a summary card at bottom instead
@@ -733,11 +735,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                             else
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
-                                child: DefaultTextStyle.merge(
-                                  style: const TextStyle(fontSize: 15.5, height: 1.4),
-                                  child: MarkdownWithCodeHighlight(
-                                    text: widget.message.translation!,
-                                    onCitationTap: (id) => _handleCitationTap(id),
+                                child: SelectionArea(
+                                  child: DefaultTextStyle.merge(
+                                    style: const TextStyle(fontSize: 15.5, height: 1.4),
+                                    child: MarkdownWithCodeHighlight(
+                                      text: widget.message.translation!,
+                                      onCitationTap: (id) => _handleCitationTap(id),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1683,6 +1687,9 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
         ),
       );
     }
+
+    // Enable long-press text selection in reasoning body
+    // body = SelectionArea(child: body);
 
 
     return AnimatedSize(
