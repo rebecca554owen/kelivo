@@ -996,19 +996,19 @@ class ProviderConfig {
             modelOverrides: const {
               'gemini': {
                 'type': 'chat',
-                'input': ['text', 'image'],
+                'input': ['text'],
                 'output': ['text'],
                 'abilities': ['tool'],
               },
               'mistral': {
                 'type': 'chat',
-                'input': ['text', 'image'],
+                'input': ['text'],
                 'output': ['text'],
                 'abilities': ['tool'],
               },
               'openai-fast': {
                 'type': 'chat',
-                'input': ['text', 'image'],
+                'input': ['text'],
                 'output': ['text'],
                 'abilities': ['tool'],
               },
