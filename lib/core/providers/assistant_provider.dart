@@ -247,4 +247,19 @@ class AssistantProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  Future<void> reorderAssistants(int oldIndex, int newIndex) async {
+    if (oldIndex == newIndex) return;
+    if (oldIndex < 0 || oldIndex >= _assistants.length) return;
+    if (newIndex < 0 || newIndex >= _assistants.length) return;
+    
+    final assistant = _assistants.removeAt(oldIndex);
+    _assistants.insert(newIndex, assistant);
+    
+    // Notify listeners immediately for smooth UI update
+    notifyListeners();
+    
+    // Then persist the changes
+    await _persist();
+  }
 }

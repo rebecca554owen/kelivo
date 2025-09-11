@@ -42,13 +42,44 @@ class AssistantSettingsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      body: ReorderableListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
         itemCount: assistants.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        onReorder: (oldIndex, newIndex) async {
+          if (newIndex > oldIndex) newIndex -= 1;
+          // Immediately update UI for smooth experience
+          final assistantProvider = context.read<AssistantProvider>();
+          await assistantProvider.reorderAssistants(oldIndex, newIndex);
+        },
+        proxyDecorator: (child, index, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final t = Curves.easeOutBack.transform(animation.value);
+              return Transform.scale(
+                scale: 0.98 + 0.02 * t,
+                child: Material(
+                  elevation: 8 * t,
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  child: child,
+                ),
+              );
+            },
+          );
+        },
         itemBuilder: (context, index) {
           final item = assistants[index];
-          return _AssistantCard(item: item);
+          return KeyedSubtree(
+            key: ValueKey('reorder-assistant-${item.id}'),
+            child: ReorderableDelayedDragStartListener(
+              index: index,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _AssistantCard(item: item),
+              ),
+            ),
+          );
         },
       ),
     );
