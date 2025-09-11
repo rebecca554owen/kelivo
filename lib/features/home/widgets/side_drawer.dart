@@ -792,6 +792,7 @@ class _SideDrawerState extends State<SideDrawer> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: cs.surface,
+      isScrollControlled: true, // Allow custom height control
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -810,33 +811,48 @@ class _SideDrawerState extends State<SideDrawer> {
                   ],
                 ),
               ),
-              for (final a in list)
-                ListTile(
-                  leading: _assistantAvatar(context, a, size: 36),
-                  title: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: (a.id == currentId) ? Icon(Lucide.Check, size: 18, color: cs.primary) : null,
-                  onTap: () async {
-                    final ap = context.read<AssistantProvider>();
-                    final settings = context.read<SettingsProvider>();
-                    await ap.setCurrentAssistant(a.id);
-                    // Seed current model with assistant default if provided
-                    if ((a.chatModelProvider ?? '').isNotEmpty && (a.chatModelId ?? '').isNotEmpty) {
-                      await settings.setCurrentModel(a.chatModelProvider!, a.chatModelId!);
-                    }
-                    // Close the picker sheet
-                    if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
-                    // Trigger host's new-chat flow instead of creating here
-                    widget.onNewConversation?.call();
-                    // Close the drawer without extra snackbars
-                    Navigator.of(context).maybePop();
-                  },
-                  onLongPress: () {
-                    // Long press opens settings quickly
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: a.id)),
-                    );
-                  },
+              // Add flexible scrollable area for assistants
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.6, // Limit to 80% of screen height
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final a in list)
+                          ListTile(
+                            leading: _assistantAvatar(context, a, size: 36),
+                            title: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            trailing: (a.id == currentId) ? Icon(Lucide.Check, size: 18, color: cs.primary) : null,
+                            onTap: () async {
+                              final ap = context.read<AssistantProvider>();
+                              final settings = context.read<SettingsProvider>();
+                              await ap.setCurrentAssistant(a.id);
+                              // Seed current model with assistant default if provided
+                              if ((a.chatModelProvider ?? '').isNotEmpty && (a.chatModelId ?? '').isNotEmpty) {
+                                await settings.setCurrentModel(a.chatModelProvider!, a.chatModelId!);
+                              }
+                              // Close the picker sheet
+                              if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+                              // Trigger host's new-chat flow instead of creating here
+                              widget.onNewConversation?.call();
+                              // Close the drawer without extra snackbars
+                              Navigator.of(context).maybePop();
+                            },
+                            onLongPress: () {
+                              // Long press opens settings quickly
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: a.id)),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
+              ),
               const SizedBox(height: 10),
             ],
           ),
