@@ -156,8 +156,6 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   final Map<String, double> _providerOffsets = {}; // Store cumulative offset for each provider
   
   // Constants for item heights
-  static const double _dragIndicatorHeight = 20.0;
-  static const double _searchFieldHeight = 64.0;
   static const double _sectionHeaderHeight = 44.0;
   static const double _modelTileHeight = 68.0;
   
@@ -270,44 +268,60 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           builder: (c, controller) {
             _listCtrl = controller;
             
-            // Show loading indicator while models are loading
-            if (_isLoading) {
-              return Column(
-                children: [
-                  // Header drag indicator
-                  Column(children: [
-                    const SizedBox(height: 8),
-                    Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
-                    const SizedBox(height: 8),
-                  ]),
-                  // Search field (disabled while loading)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        hintText: l10n.modelSelectSheetSearchHint,
-                        prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface.withOpacity(0.3)),
-                        filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-                        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+            return Column(
+              children: [
+                // Fixed header section with rounded corners
+                Container(
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Column(
+                    children: [
+                      // Header drag indicator
+                      Column(children: [
+                        const SizedBox(height: 8),
+                        Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
+                        const SizedBox(height: 8),
+                      ]),
+                      // Fixed search field
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: TextField(
+                          controller: _search,
+                          enabled: !_isLoading,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: l10n.modelSelectSheetSearchHint,
+                            prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface.withOpacity(_isLoading ? 0.3 : 0.6)),
+                            filled: true,
+                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                            disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  // Loading indicator
-                  const Expanded(
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                ),
+                // Scrollable content
+                Expanded(
+                  child: Container(
+                    color: cs.surface, // Ensure background color continuity
+                    child: _isLoading 
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildContent(context, controller),
                   ),
-                ],
-              );
-            }
-            
-            // Build the actual content
-            return _buildContent(context, controller);
+                ),
+                // Fixed bottom tabs
+                Container(
+                  color: cs.surface, // Ensure background color continuity
+                  child: _buildBottomTabs(context),
+                ),
+              ],
+            );
           },
         ),
       ),
@@ -315,7 +329,6 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   }
 
   Widget _buildContent(BuildContext context, ScrollController controller) {
-    final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
     final query = _search.text.trim().toLowerCase();
@@ -323,34 +336,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     _providerOffsets.clear();
     double currentOffset = 0;
 
-    // Header drag indicator
-    final dragIndicator = Column(children: [
-      const SizedBox(height: 8),
-      Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
-      const SizedBox(height: 8),
-    ]);
-    slivers.add(dragIndicator);
-    currentOffset += _dragIndicatorHeight;
-
-    // Search field
-    final searchField = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: TextField(
-        controller: _search,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          hintText: l10n.modelSelectSheetSearchHint,
-          prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface.withOpacity(0.6)),
-          filled: true,
-          fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
-        ),
-      ),
-    );
-    slivers.add(searchField);
-    currentOffset += _searchFieldHeight;
+    // Note: No drag indicator or search field here - they're now fixed at the top
 
     // Favorites section (only when not limited)
     if (_favItems.isNotEmpty && widget.limitProviderKey == null) {
@@ -386,36 +372,36 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       }));
     }
 
+    return SingleChildScrollView(
+      controller: controller,
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: slivers,
+      ),
+    );
+  }
+
+  Widget _buildBottomTabs(BuildContext context) {
     // Bottom provider tabs (ordered per ProvidersPage order)
     final List<Widget> providerTabs = <Widget>[];
-    if (widget.limitProviderKey == null) {
+    if (widget.limitProviderKey == null && !_isLoading) {
       for (final k in _orderedKeys) {
-        final g = _groups[k]!;
-        providerTabs.add(_providerTab(context, k, g.name));
+        final g = _groups[k];
+        if (g != null) {
+          providerTabs.add(_providerTab(context, k, g.name));
+        }
       }
     }
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            controller: controller,
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              children: slivers,
-            ),
-          ),
-        ),
-        if (providerTabs.isNotEmpty)
-          Padding(
-            // SafeArea already applies bottom inset; avoid doubling it here.
-            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: providerTabs),
-            ),
-          ),
-      ],
+    if (providerTabs.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      // SafeArea already applies bottom inset; avoid doubling it here.
+      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: providerTabs),
+      ),
     );
   }
 
