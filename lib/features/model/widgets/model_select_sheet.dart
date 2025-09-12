@@ -368,70 +368,131 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
 
   Widget _buildContent(BuildContext context, ScrollController controller) {
     final l10n = AppLocalizations.of(context)!;
-
     final query = _search.text.trim();
-    List<Widget> slivers = [];
-    _providerOffsets.clear();
-    double currentOffset = 0;
 
-    // Note: No drag indicator or search field here - they're now fixed at the top
+    // Build a flattened list of entries with fixed heights, and compute offsets
+    final List<_Entry> entries = [];
+    _providerOffsets.clear();
+    double cumulative = 0.0;
 
     // Favorites section (only when not limited)
     if (_favItems.isNotEmpty && widget.limitProviderKey == null) {
-      final items = _favItems.where((e) => _matchesSearch(query, e, e.providerName)).toList();
-      if (items.isNotEmpty) {
-        final key = GlobalKey();
-        _headers['__fav__'] = key;
-        _providerOffsets['__fav__'] = currentOffset;
-        slivers.add(_sectionHeader(context, l10n.modelSelectSheetFavoritesSection, key));
-        currentOffset += _sectionHeaderHeight;
-        slivers.addAll(items.map((m) {
-          final tile = _modelTile(context, m, showProviderLabel: true);
-          currentOffset += _modelTileHeight;
-          return tile;
-        }));
+      final favs = _favItems.where((e) => _matchesSearch(query, e, e.providerName)).toList();
+      if (favs.isNotEmpty) {
+        _headers['__fav__'] ??= GlobalKey();
+        _providerOffsets['__fav__'] = cumulative;
+        final favKey = _headers['__fav__']!;
+        entries.add(_Entry(
+          height: _sectionHeaderHeight,
+          builder: () => _sectionHeader(context, l10n.modelSelectSheetFavoritesSection, favKey),
+        ));
+        cumulative += _sectionHeaderHeight;
+        for (final m in favs) {
+          entries.add(_Entry(
+            height: _modelTileHeight,
+            builder: () => _modelTile(context, m, showProviderLabel: true),
+          ));
+          cumulative += _modelTileHeight;
+        }
       }
     }
 
     // Provider sections with enhanced search
     for (final pk in _orderedKeys) {
       final g = _groups[pk]!;
-      
-      // Check if provider matches the search query
       final providerMatches = _providerMatchesSearch(query, g.name, pk);
-      
       List<_ModelItem> items;
-      if (query.isEmpty) {
-        // No search query - show all models
-        items = g.items;
-      } else if (providerMatches) {
-        // Provider name matches - show all models from this provider
+      if (query.isEmpty || providerMatches) {
         items = g.items;
       } else {
-        // Provider doesn't match - only show models that match the query
         items = g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
       }
-      
       if (items.isEmpty) continue;
-      
-      final key = GlobalKey();
-      _headers[pk] = key;
-      _providerOffsets[pk] = currentOffset;
-      slivers.add(_sectionHeader(context, g.name, key));
-      currentOffset += _sectionHeaderHeight;
-      slivers.addAll(items.map((m) {
-        final tile = _modelTile(context, m);
-        currentOffset += _modelTileHeight;
-        return tile;
-      }));
+
+      _headers[pk] ??= GlobalKey();
+      _providerOffsets[pk] = cumulative;
+      final headerKey = _headers[pk]!;
+      entries.add(_Entry(
+        height: _sectionHeaderHeight,
+        builder: () => _sectionHeader(context, g.name, headerKey),
+      ));
+      cumulative += _sectionHeaderHeight;
+
+      for (final m in items) {
+        entries.add(_Entry(
+          height: _modelTileHeight,
+          builder: () => _modelTile(context, m),
+        ));
+        cumulative += _modelTileHeight;
+      }
     }
 
-    return SingleChildScrollView(
-      controller: controller,
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        children: slivers,
-      ),
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Precompute prefix heights for O(1) range height queries
+    final int n = entries.length;
+    final List<double> prefix = List<double>.filled(n + 1, 0.0);
+    for (int i = 0; i < n; i++) {
+      prefix[i + 1] = prefix[i] + entries[i].height;
+    }
+
+    int lowerBound(List<double> a, double x) {
+      int l = 0, r = a.length; // [l, r)
+      while (l < r) {
+        final m = (l + r) >> 1;
+        if (a[m] < x) {
+          l = m + 1;
+        } else {
+          r = m;
+        }
+      }
+      return l;
+    }
+
+    const int bufferItems = 12; // a small render buffer around viewport 额外渲染的缓冲条目数量
+
+    return LayoutBuilder(
+      builder: (context, cons) {
+        final viewport = cons.maxHeight;
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) {
+            final has = controller.hasClients;
+            final double offset = has ? controller.offset.clamp(0.0, (prefix.last - viewport).clamp(0.0, double.infinity)) as double : 0.0;
+
+            // Find visible index range using prefix sums + binary search
+            // startIndex: first entry whose end > offset
+            int startIndex = (lowerBound(prefix, offset) - 1).clamp(0, n - 1);
+            // endIndex: last entry whose start < offset + viewport
+            int endIndex = (lowerBound(prefix, offset + viewport) - 1).clamp(0, n - 1);
+
+            // Expand by buffer
+            startIndex = (startIndex - bufferItems).clamp(0, n - 1);
+            endIndex = (endIndex + bufferItems).clamp(0, n - 1);
+
+            final double topGap = prefix[startIndex];
+            final double bottomGap = prefix.last - prefix[endIndex + 1];
+
+            final visibleChildren = <Widget>[
+              for (int i = startIndex; i <= endIndex; i++) entries[i].builder(),
+            ];
+
+            return SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                children: [
+                  SizedBox(height: topGap),
+                  ...visibleChildren,
+                  SizedBox(height: bottomGap),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -685,6 +746,13 @@ class _ModelItem {
   final bool selected;
   _ModelItem({required this.providerKey, required this.providerName, required this.id, required this.info, this.pinned = false, this.selected = false});
   _ModelItem copyWith({bool? pinned, bool? selected}) => _ModelItem(providerKey: providerKey, providerName: providerName, id: id, info: info, pinned: pinned ?? this.pinned, selected: selected ?? this.selected);
+}
+
+// Virtualization entry: fixed height + lazy builder
+class _Entry {
+  final double height;
+  final Widget Function() builder;
+  const _Entry({required this.height, required this.builder});
 }
 
 // Reuse badges and avatars similar to provider detail
