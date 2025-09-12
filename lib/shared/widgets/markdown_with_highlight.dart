@@ -613,7 +613,52 @@ class _MermaidBlockState extends State<_MermaidBlock> {
     final Color bodyBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
     final Color headerBg = isDark ? Colors.white12 : const Color(0xFFE9ECF1);
 
-    final handle = createMermaidView(widget.code, isDark);
+    // Build theme variables mapping for Mermaid from Material ColorScheme
+    String hex(Color c) {
+      final v = c.value & 0xFFFFFFFF;
+      final r = (v >> 16) & 0xFF;
+      final g = (v >> 8) & 0xFF;
+      final b = v & 0xFF;
+      return '#'
+          '${r.toRadixString(16).padLeft(2, '0')}'
+          '${g.toRadixString(16).padLeft(2, '0')}'
+          '${b.toRadixString(16).padLeft(2, '0')}'
+          .toUpperCase();
+    }
+
+    final themeVars = <String, String>{
+      'primaryColor': hex(cs.primary),
+      'primaryTextColor': hex(cs.onPrimary),
+      'primaryBorderColor': hex(cs.primary),
+      'secondaryColor': hex(cs.secondary),
+      'secondaryTextColor': hex(cs.onSecondary),
+      'secondaryBorderColor': hex(cs.secondary),
+      'tertiaryColor': hex(cs.tertiary),
+      'tertiaryTextColor': hex(cs.onTertiary),
+      'tertiaryBorderColor': hex(cs.tertiary),
+      'background': hex(cs.background),
+      'mainBkg': hex(cs.primaryContainer),
+      'secondBkg': hex(cs.secondaryContainer),
+      'lineColor': hex(cs.onBackground),
+      'textColor': hex(cs.onBackground),
+      'nodeBkg': hex(cs.surface),
+      'nodeBorder': hex(cs.primary),
+      'clusterBkg': hex(cs.surface),
+      'clusterBorder': hex(cs.primary),
+      'actorBorder': hex(cs.primary),
+      'actorBkg': hex(cs.surface),
+      'actorTextColor': hex(cs.onBackground),
+      'actorLineColor': hex(cs.primary),
+      'taskBorderColor': hex(cs.primary),
+      'taskBkgColor': hex(cs.primary),
+      'taskTextLightColor': hex(cs.onPrimary),
+      'taskTextDarkColor': hex(cs.onBackground),
+      'labelColor': hex(cs.onBackground),
+      'errorBkgColor': hex(cs.error),
+      'errorTextColor': hex(cs.onError),
+    };
+
+    final handle = createMermaidView(widget.code, isDark, themeVars: themeVars);
     final mermaidView = handle?.widget;
 
     return Container(

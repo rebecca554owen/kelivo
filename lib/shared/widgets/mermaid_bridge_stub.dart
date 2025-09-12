@@ -16,9 +16,9 @@ class MermaidViewHandle {
 
 /// Mobile/desktop (non-web) Mermaid renderer using webview_flutter.
 /// Returns a handle with the widget and an export-to-PNG action.
-MermaidViewHandle? createMermaidView(String code, bool dark) {
+MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String>? themeVars}) {
   final key = GlobalKey<_MermaidInlineWebViewState>();
-  final widget = _MermaidInlineWebView(key: key, code: code, dark: dark);
+  final widget = _MermaidInlineWebView(key: key, code: code, dark: dark, themeVars: themeVars);
   Future<bool> doExport() async => await key.currentState?.exportPng() ?? false;
   return MermaidViewHandle(widget: widget, exportPng: doExport);
 }
@@ -26,7 +26,8 @@ MermaidViewHandle? createMermaidView(String code, bool dark) {
 class _MermaidInlineWebView extends StatefulWidget {
   final String code;
   final bool dark;
-  const _MermaidInlineWebView({Key? key, required this.code, required this.dark}) : super(key: key);
+  final Map<String, String>? themeVars;
+  const _MermaidInlineWebView({Key? key, required this.code, required this.dark, this.themeVars}) : super(key: key);
 
   @override
   State<_MermaidInlineWebView> createState() => _MermaidInlineWebViewState();
@@ -84,17 +85,23 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
   Future<void> _loadHtml() async {
     // Load mermaid script from assets and inline it to avoid external requests.
     final mermaidJs = await rootBundle.loadString('assets/mermaid.min.js');
-    final html = _buildHtml(widget.code, widget.dark, mermaidJs);
+    final html = _buildHtml(widget.code, widget.dark, mermaidJs, widget.themeVars);
     await _controller.loadHtmlString(html);
   }
 
-  String _buildHtml(String code, bool dark, String mermaidJs) {
+  String _buildHtml(String code, bool dark, String mermaidJs, Map<String, String>? themeVars) {
     final bg = dark ? '#111111' : '#ffffff';
     final fg = dark ? '#eaeaea' : '#222222';
     final escaped = code
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;');
+    // Build themeVariables JSON
+    String themeVarsJson = '{}';
+    if (themeVars != null && themeVars.isNotEmpty) {
+      final entries = themeVars.entries.map((e) => '"${e.key}": "${e.value}"').join(',');
+      themeVarsJson = '{' + entries + '}';
+    }
     return '''
 <!DOCTYPE html>
 <html>
@@ -151,7 +158,7 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
           ExportChannel.postMessage('');
         }
       };
-      mermaid.initialize({ startOnLoad:false, theme: '${dark ? 'dark' : 'default'}', securityLevel:'loose', fontFamily: 'inherit' });
+      mermaid.initialize({ startOnLoad:false, theme: '${dark ? 'dark' : 'default'}', securityLevel:'loose', fontFamily: 'inherit', themeVariables: ${themeVarsJson} });
       mermaid.run({ querySelector: '.mermaid' }).then(postHeight).catch(postHeight);
       window.addEventListener('resize', postHeight);
       document.addEventListener('DOMContentLoaded', postHeight);

@@ -15,7 +15,7 @@ final Map<String, html.DivElement> _containers = {};
 
 /// Web-only Mermaid renderer using JS injection (no extra Dart packages).
 /// Returns a handle with the widget and an export-to-PNG action.
-MermaidViewHandle? createMermaidView(String code, bool dark) {
+MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String>? themeVars}) {
   final container = html.DivElement()
     ..style.width = '100%'
     ..style.height = '120px' // initial minimal height to avoid zero-sized box
@@ -45,12 +45,16 @@ MermaidViewHandle? createMermaidView(String code, bool dark) {
     try {
       final theme = dark ? 'dark' : 'default';
       final mermaid = js_util.getProperty(html.window, 'mermaid');
-      js_util.callMethod(mermaid, 'initialize', [js_util.jsify({
+      final init = {
         'startOnLoad': false,
         'theme': theme,
         'securityLevel': 'loose',
         'fontFamily': 'inherit',
-      })]);
+      };
+      if (themeVars != null && themeVars.isNotEmpty) {
+        init['themeVariables'] = themeVars;
+      }
+      js_util.callMethod(mermaid, 'initialize', [js_util.jsify(init)]);
 
       // Render only this node and set explicit height to fit content
       await js_util.promiseToFuture(js_util.callMethod(mermaid, 'run', [js_util.jsify({
@@ -89,7 +93,8 @@ MermaidViewHandle? createMermaidView(String code, bool dark) {
       img.onError.listen((_) => completer.complete());
       img.src = 'data:image/svg+xml;charset=utf-8,' + Uri.encodeComponent(xmlRaw);
       await completer.future;
-      ctx.fillStyle = '#ffffff';
+      final bg = (themeVars != null && themeVars['background'] != null) ? themeVars['background']! : '#ffffff';
+      ctx.fillStyle = bg;
       ctx.fillRect(0, 0, canvas.width!.toDouble(), canvas.height!.toDouble());
       ctx.drawImageScaled(img, 0, 0, canvas.width!, canvas.height!);
       final dataUrl = canvas.toDataUrl('image/png');
