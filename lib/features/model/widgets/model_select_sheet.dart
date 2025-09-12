@@ -336,42 +336,19 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     super.dispose();
   }
 
-  // Enhanced search function that matches both provider names and model names
+  // Match model name/id only (avoid provider key causing false positives)
   bool _matchesSearch(String query, _ModelItem item, String providerName) {
     if (query.isEmpty) return true;
-    
-    final lowerQuery = query.toLowerCase();
-    final lowerModelId = item.id.toLowerCase();
-    final lowerProviderName = providerName.toLowerCase();
-    final lowerProviderKey = item.providerKey.toLowerCase();
-    
-    // Check if query matches model name/id
-    if (lowerModelId.contains(lowerQuery)) {
-      return true;
-    }
-    
-    // Check if query matches provider display name
-    if (lowerProviderName.contains(lowerQuery)) {
-      return true;
-    }
-    
-    // Check if query matches provider key (internal name)
-    if (lowerProviderKey.contains(lowerQuery)) {
-      return true;
-    }
-    
-    return false;
+    final q = query.toLowerCase();
+    return item.id.toLowerCase().contains(q) || item.info.displayName.toLowerCase().contains(q);
   }
 
-  // Check if a provider should be shown based on search query
-  bool _providerMatchesSearch(String query, String providerName, String providerKey) {
+  // Check if a provider should be shown based on search query (match display name only)
+  bool _providerMatchesSearch(String query, String providerName) {
     if (query.isEmpty) return true;
-    
     final lowerQuery = query.toLowerCase();
     final lowerProviderName = providerName.toLowerCase();
-    final lowerProviderKey = providerKey.toLowerCase();
-    
-    return lowerProviderName.contains(lowerQuery) || lowerProviderKey.contains(lowerQuery);
+    return lowerProviderName.contains(lowerQuery);
   }
 
   @override
@@ -513,12 +490,14 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     // Provider sections with enhanced search
     for (final pk in _orderedKeys) {
       final g = _groups[pk]!;
-      final providerMatches = _providerMatchesSearch(query, g.name, pk);
       List<_ModelItem> items;
-      if (query.isEmpty || providerMatches) {
+      if (query.isEmpty) {
         items = g.items;
       } else {
-        items = g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
+        final providerMatches = _providerMatchesSearch(query, g.name);
+        items = providerMatches
+            ? g.items
+            : g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
       }
       if (items.isEmpty) continue;
 
