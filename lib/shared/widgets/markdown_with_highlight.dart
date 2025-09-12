@@ -11,6 +11,7 @@ import 'dart:io';
 import 'dart:convert';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../features/chat/pages/image_viewer_page.dart';
+import 'mermaid_bridge.dart';
 
 /// gpt_markdown with custom code block highlight and inline code styling.
 class MarkdownWithCodeHighlight extends StatelessWidget {
@@ -279,10 +280,10 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
       // Fenced code block styling via codeBuilder (with collapse/expand)
       codeBuilder: (ctx, name, code, closed) {
         final lang = name.trim();
-        return _CollapsibleCodeBlock(
-          language: lang,
-          code: code,
-        );
+        if (lang.toLowerCase() == 'mermaid') {
+          return _MermaidBlock(code: code);
+        }
+        return _CollapsibleCodeBlock(language: lang, code: code);
       },
     );
   }
@@ -592,6 +593,226 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
   }
 }
 
+class _MermaidBlock extends StatefulWidget {
+  final String code;
+  const _MermaidBlock({required this.code});
+
+  @override
+  State<_MermaidBlock> createState() => _MermaidBlockState();
+}
+
+class _MermaidBlockState extends State<_MermaidBlock> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bodyBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final Color headerBg = isDark ? Colors.white12 : const Color(0xFFE9ECF1);
+
+    final handle = createMermaidView(widget.code, isDark);
+    final mermaidView = handle?.widget;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Material(
+            color: headerBg,
+            child: InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.25), width: 0.8),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'mermaid',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: cs.secondary,
+                        height: 1.0,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: widget.code));
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(MarkdownWithCodeHighlight._isZh(context) ? '已复制代码' : 'Code copied'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(
+                        Lucide.Copy,
+                        size: 16,
+                        color: cs.onSurface.withOpacity(0.7),
+                      ),
+                      tooltip: MarkdownWithCodeHighlight._isZh(context) ? '复制' : 'Copy',
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 16,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      padding: EdgeInsets.zero,
+                    ),
+                    if (handle != null) ...[
+                      const SizedBox(width: 2),
+                      IconButton(
+                        onPressed: () async {
+                          final ok = await handle.exportPng();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ok
+                                    ? (MarkdownWithCodeHighlight._isZh(context) ? '已导出 PNG（请在分享目标中保存）' : 'Exported PNG (use share target to save)')
+                                    : (MarkdownWithCodeHighlight._isZh(context) ? '导出失败' : 'Export failed'),
+                              ),
+                            ),
+                          );
+                        },
+                        icon: Icon(
+                          Lucide.Download,
+                          size: 16,
+                          color: cs.onSurface.withOpacity(0.7),
+                        ),
+                        tooltip: MarkdownWithCodeHighlight._isZh(context) ? '导出 PNG' : 'Export PNG',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 16,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                    const SizedBox(width: 4),
+                    Icon(
+                      _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
+                      size: 16,
+                      color: cs.onSurface.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_expanded)
+            Container(
+              width: double.infinity,
+              color: bodyBg,
+              padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (mermaidView != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: mermaidView,
+                    ),
+                  ] else ...[
+                    // Fallback: show raw code and a preview button (opens browser)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: HighlightView(
+                        widget.code,
+                        language: 'plaintext',
+                        theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? atomOneDarkReasonableTheme
+                              : githubTheme,
+                        ),
+                        padding: EdgeInsets.zero,
+                        textStyle: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => _openMermaidPreviewInBrowser(context, widget.code,
+                            Theme.of(context).brightness == Brightness.dark),
+                        icon: Icon(Lucide.Eye, size: 16),
+                        label: Text(MarkdownWithCodeHighlight._isZh(context) ? '浏览器预览' : 'Open Preview'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openMermaidPreviewInBrowser(BuildContext context, String code, bool dark) async {
+    final htmlStr = _buildMermaidHtml(code, dark);
+    final uri = Uri.dataFromString(htmlStr, mimeType: 'text/html', encoding: utf8);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(MarkdownWithCodeHighlight._isZh(context) ? '无法打开预览' : 'Cannot open preview')),
+      );
+    }
+  }
+
+  String _buildMermaidHtml(String code, bool dark) {
+    final bg = dark ? '#111111' : '#ffffff';
+    final fg = dark ? '#eaeaea' : '#222222';
+    final escaped = code
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    return '''
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0">
+    <title>Mermaid Preview</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      body{ margin:0; padding:12px; background:${bg}; color:${fg}; }
+      .wrap{ max-width: 1000px; margin: 0 auto; }
+      .mermaid{ text-align:center; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="mermaid">${escaped}</div>
+    </div>
+    <script>
+      mermaid.initialize({ startOnLoad:false, theme: '${dark ? 'dark' : 'default'}', securityLevel:'loose' });
+      mermaid.run({ querySelector: '.mermaid' });
+    </script>
+  </body>
+</html>
+''';
+  }
+}
+
 // Softer horizontal rule: shorter width and subtle color
 class SoftHrLine extends BlockMd {
   @override
@@ -631,10 +852,10 @@ class FencedCodeBlockMd extends BlockMd {
     if (m == null) return const SizedBox.shrink();
     final lang = (m.group(1) ?? '').trim();
     final code = (m.group(2) ?? '');
-    return _CollapsibleCodeBlock(
-      language: lang,
-      code: code,
-    );
+    if (lang.toLowerCase() == 'mermaid') {
+      return _MermaidBlock(code: code);
+    }
+    return _CollapsibleCodeBlock(language: lang, code: code);
   }
 }
 

@@ -69,6 +69,7 @@ dependencies:
   flutter_zoom_drawer: ^3.2.0
   animations: ^2.0.11
   flutter_animate: ^4.5.2
+  webview_flutter: ^4.7.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -107,6 +108,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/app_icon.png
+    - assets/mermaid.min.js
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
