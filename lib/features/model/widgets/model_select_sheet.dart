@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
@@ -13,6 +13,107 @@ class ModelSelection {
   final String providerKey;
   final String modelId;
   ModelSelection(this.providerKey, this.modelId);
+}
+
+// Data class for compute function
+class _ModelProcessingData {
+  final Map<String, dynamic> providerConfigs;
+  final Set<String> pinnedModels;
+  final String currentModelKey;
+  final List<String> providersOrder;
+  final String? limitProviderKey;
+  
+  _ModelProcessingData({
+    required this.providerConfigs,
+    required this.pinnedModels,
+    required this.currentModelKey,
+    required this.providersOrder,
+    this.limitProviderKey,
+  });
+}
+
+class _ModelProcessingResult {
+  final Map<String, _ProviderGroup> groups;
+  final List<_ModelItem> favItems;
+  final List<String> orderedKeys;
+  
+  _ModelProcessingResult({
+    required this.groups,
+    required this.favItems,
+    required this.orderedKeys,
+  });
+}
+
+// Static function for compute - must be top-level
+_ModelProcessingResult _processModelsInBackground(_ModelProcessingData data) {
+  final providers = data.limitProviderKey == null
+      ? data.providerConfigs
+      : {
+    if (data.providerConfigs.containsKey(data.limitProviderKey))
+      data.limitProviderKey!: data.providerConfigs[data.limitProviderKey]!,
+  };
+  
+  // Build data map: providerKey -> (displayName, models)
+  final Map<String, _ProviderGroup> groups = {};
+  
+  providers.forEach((key, cfg) {
+    // Skip disabled providers entirely so they can't be selected
+    if (!(cfg['enabled'] as bool)) return;
+    final models = cfg['models'] as List<dynamic>? ?? [];
+    if (models.isEmpty) return;
+    
+    final name = (cfg['name'] as String?) ?? '';
+    final list = <_ModelItem>[
+      for (final id in models)
+        _ModelItem(
+          providerKey: key,
+          providerName: name.isNotEmpty ? name : key,
+          id: id.toString(),
+          info: ModelRegistry.infer(ModelInfo(id: id.toString(), displayName: id.toString())),
+          pinned: data.pinnedModels.contains('$key::$id'),
+          selected: data.currentModelKey == '$key::$id',
+        )
+    ];
+    groups[key] = _ProviderGroup(name: name.isNotEmpty ? name : key, items: list);
+  });
+  
+  // Build favorites group (duplicate items)
+  final favItems = <_ModelItem>[];
+  for (final k in data.pinnedModels) {
+    final parts = k.split('::');
+    if (parts.length < 2) continue;
+    final pk = parts[0];
+    final mid = parts.sublist(1).join('::');
+    final g = groups[pk];
+    if (g == null) continue;
+    final found = g.items.firstWhere(
+      (e) => e.id == mid,
+      orElse: () => _ModelItem(
+        providerKey: pk,
+        providerName: g.name,
+        id: mid,
+        info: ModelRegistry.infer(ModelInfo(id: mid, displayName: mid)),
+        pinned: true,
+        selected: data.currentModelKey == '$pk::$mid',
+      ),
+    );
+    favItems.add(found.copyWith(pinned: true));
+  }
+  
+  // Provider sections ordered by ProvidersPage order
+  final orderedKeys = <String>[];
+  for (final k in data.providersOrder) {
+    if (groups.containsKey(k)) orderedKeys.add(k);
+  }
+  for (final k in groups.keys) {
+    if (!orderedKeys.contains(k)) orderedKeys.add(k);
+  }
+  
+  return _ModelProcessingResult(
+    groups: groups,
+    favItems: favItems,
+    orderedKeys: orderedKeys,
+  );
 }
 
 Future<ModelSelection?> showModelSelector(BuildContext context, {String? limitProviderKey}) async {
@@ -52,7 +153,94 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   static const double _initialSize = 0.7;
   static const double _maxSize = 0.85;
   ScrollController? _listCtrl; // controller from DraggableScrollableSheet
-  final Map<String, double> _headerOffsets = {}; // Store computed offsets for providers
+  final Map<String, double> _providerOffsets = {}; // Store cumulative offset for each provider
+  
+  // Constants for item heights
+  static const double _dragIndicatorHeight = 20.0;
+  static const double _searchFieldHeight = 64.0;
+  static const double _sectionHeaderHeight = 44.0;
+  static const double _modelTileHeight = 68.0;
+  
+  // Async loading state
+  bool _isLoading = true;
+  Map<String, _ProviderGroup> _groups = {};
+  List<_ModelItem> _favItems = [];
+  List<String> _orderedKeys = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Delay loading to allow the sheet to open first
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) {
+        _loadModelsAsync();
+      }
+    });
+  }
+
+  Future<void> _loadModelsAsync() async {
+    try {
+      final settings = context.read<SettingsProvider>();
+      
+      // Prepare data for background processing
+      final processingData = _ModelProcessingData(
+        providerConfigs: Map<String, dynamic>.from(
+          settings.providerConfigs.map((key, value) => MapEntry(key, {
+            'enabled': value.enabled,
+            'name': value.name,
+            'models': value.models,
+          })),
+        ),
+        pinnedModels: settings.pinnedModels,
+        currentModelKey: settings.currentModelKey ?? '',
+        providersOrder: settings.providersOrder,
+        limitProviderKey: widget.limitProviderKey,
+      );
+      
+      // Process in background isolate
+      final result = await compute(_processModelsInBackground, processingData);
+      
+      if (mounted) {
+        setState(() {
+          _groups = result.groups;
+          _favItems = result.favItems;
+          _orderedKeys = result.orderedKeys;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // If compute fails (e.g., on web), fall back to synchronous processing
+      if (mounted) {
+        _loadModelsSynchronously();
+      }
+    }
+  }
+  
+  void _loadModelsSynchronously() {
+    final settings = context.read<SettingsProvider>();
+    final processingData = _ModelProcessingData(
+      providerConfigs: Map<String, dynamic>.from(
+        settings.providerConfigs.map((key, value) => MapEntry(key, {
+          'enabled': value.enabled,
+          'name': value.name,
+          'models': value.models,
+        })),
+      ),
+      pinnedModels: settings.pinnedModels,
+      currentModelKey: settings.currentModelKey ?? '',
+      providersOrder: settings.providersOrder,
+      limitProviderKey: widget.limitProviderKey,
+    );
+    
+    final result = _processModelsInBackground(processingData);
+    
+    setState(() {
+      _groups = result.groups;
+      _favItems = result.favItems;
+      _orderedKeys = result.orderedKeys;
+      _isLoading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -65,53 +253,74 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final settings = context.watch<SettingsProvider>();
-    final pinned = settings.pinnedModels;
-    final providers = widget.limitProviderKey == null
-        ? settings.providerConfigs
-        : {
-      if (settings.providerConfigs.containsKey(widget.limitProviderKey))
-        widget.limitProviderKey!: settings.providerConfigs[widget.limitProviderKey]!,
-    };
-    final currentKey = settings.currentModelKey;
     final l10n = AppLocalizations.of(context)!;
 
-    // Build data map: providerKey -> (displayName, models)
-    final Map<String, _ProviderGroup> groups = {};
-    providers.forEach((key, cfg) {
-      // Skip disabled providers entirely so they can't be selected
-      if (!(cfg.enabled)) return;
-      if (cfg.models.isEmpty) return;
-      final list = <_ModelItem>[
-        for (final id in cfg.models)
-          _ModelItem(
-            providerKey: key,
-            providerName: cfg.name.isNotEmpty ? cfg.name : key,
-            id: id,
-            info: ModelRegistry.infer(ModelInfo(id: id, displayName: id)),
-            pinned: pinned.contains('$key::$id'),
-            selected: currentKey == '$key::$id',
-          )
-      ];
-      groups[key] = _ProviderGroup(name: cfg.name.isNotEmpty ? cfg.name : key, items: list);
-    });
+    return SafeArea(
+      top: false,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: DraggableScrollableSheet(
+          controller: _sheetCtrl,
+          expand: false,
+          initialChildSize: _initialSize,
+          maxChildSize: _maxSize,
+          minChildSize: 0.4,
+          builder: (c, controller) {
+            _listCtrl = controller;
+            
+            // Show loading indicator while models are loading
+            if (_isLoading) {
+              return Column(
+                children: [
+                  // Header drag indicator
+                  Column(children: [
+                    const SizedBox(height: 8),
+                    Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
+                    const SizedBox(height: 8),
+                  ]),
+                  // Search field (disabled while loading)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        hintText: l10n.modelSelectSheetSearchHint,
+                        prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface.withOpacity(0.3)),
+                        filled: true,
+                        fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                      ),
+                    ),
+                  ),
+                  // Loading indicator
+                  const Expanded(
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                ],
+              );
+            }
+            
+            // Build the actual content
+            return _buildContent(context, controller);
+          },
+        ),
+      ),
+    );
+  }
 
-    // Build favorites group (duplicate items)
-    final favItems = <_ModelItem>[];
-    for (final k in pinned) {
-      final parts = k.split('::');
-      if (parts.length < 2) continue;
-      final pk = parts[0];
-      final mid = parts.sublist(1).join('::');
-      final g = groups[pk];
-      if (g == null) continue;
-      final found = g.items.firstWhere((e) => e.id == mid, orElse: () => _ModelItem(providerKey: pk, providerName: g.name, id: mid, info: ModelRegistry.infer(ModelInfo(id: mid, displayName: mid)), pinned: true, selected: currentKey == '$pk::$mid'));
-      favItems.add(found.copyWith(pinned: true));
-    }
+  Widget _buildContent(BuildContext context, ScrollController controller) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     final query = _search.text.trim().toLowerCase();
     List<Widget> slivers = [];
-    _headerOffsets.clear(); // Clear previous offsets
+    _providerOffsets.clear();
     double currentOffset = 0;
 
     // Header drag indicator
@@ -121,7 +330,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       const SizedBox(height: 8),
     ]);
     slivers.add(dragIndicator);
-    currentOffset += 20; // Approximate height of drag indicator
+    currentOffset += _dragIndicatorHeight;
 
     // Search field
     final searchField = Padding(
@@ -141,46 +350,38 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       ),
     );
     slivers.add(searchField);
-    currentOffset += 64; // Approximate height of search field
+    currentOffset += _searchFieldHeight;
 
     // Favorites section (only when not limited)
-    if (favItems.isNotEmpty && widget.limitProviderKey == null) {
-      final items = favItems.where((e) => query.isEmpty || e.id.toLowerCase().contains(query)).toList();
+    if (_favItems.isNotEmpty && widget.limitProviderKey == null) {
+      final items = _favItems.where((e) => query.isEmpty || e.id.toLowerCase().contains(query)).toList();
       if (items.isNotEmpty) {
         final key = GlobalKey();
         _headers['__fav__'] = key;
-        _headerOffsets['__fav__'] = currentOffset;
+        _providerOffsets['__fav__'] = currentOffset;
         slivers.add(_sectionHeader(context, l10n.modelSelectSheetFavoritesSection, key));
-        currentOffset += 44; // Approximate height of section header
+        currentOffset += _sectionHeaderHeight;
         slivers.addAll(items.map((m) {
           final tile = _modelTile(context, m);
-          currentOffset += 68; // Approximate height of model tile
+          currentOffset += _modelTileHeight;
           return tile;
         }));
       }
     }
 
-    // Provider sections ordered by ProvidersPage order
-    final order = settings.providersOrder;
-    final orderedKeys = <String>[];
-    for (final k in order) {
-      if (groups.containsKey(k)) orderedKeys.add(k);
-    }
-    for (final k in groups.keys) {
-      if (!orderedKeys.contains(k)) orderedKeys.add(k);
-    }
-    for (final pk in orderedKeys) {
-      final g = groups[pk]!;
+    // Provider sections
+    for (final pk in _orderedKeys) {
+      final g = _groups[pk]!;
       final items = g.items.where((e) => query.isEmpty || e.id.toLowerCase().contains(query)).toList();
       if (items.isEmpty) continue;
       final key = GlobalKey();
       _headers[pk] = key;
-      _headerOffsets[pk] = currentOffset;
+      _providerOffsets[pk] = currentOffset;
       slivers.add(_sectionHeader(context, g.name, key));
-      currentOffset += 44; // Approximate height of section header
+      currentOffset += _sectionHeaderHeight;
       slivers.addAll(items.map((m) {
         final tile = _modelTile(context, m);
-        currentOffset += 68; // Approximate height of model tile
+        currentOffset += _modelTileHeight;
         return tile;
       }));
     }
@@ -188,59 +389,33 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     // Bottom provider tabs (ordered per ProvidersPage order)
     final List<Widget> providerTabs = <Widget>[];
     if (widget.limitProviderKey == null) {
-      final order = settings.providersOrder;
-      // Build ordered keys: first by saved order, then append remaining in insertion order
-      final keysInOrder = <String>[];
-      for (final k in order) {
-        if (groups.containsKey(k)) keysInOrder.add(k);
-      }
-      for (final k in groups.keys) {
-        if (!keysInOrder.contains(k)) keysInOrder.add(k);
-      }
-      for (final k in keysInOrder) {
-        final g = groups[k]!;
+      for (final k in _orderedKeys) {
+        final g = _groups[k]!;
         providerTabs.add(_providerTab(context, k, g.name));
       }
     }
 
-    return SafeArea(
-      top: false,
-      child: AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: DraggableScrollableSheet(
-          controller: _sheetCtrl,
-          expand: false,
-          initialChildSize: _initialSize,
-          maxChildSize: _maxSize,
-          minChildSize: 0.4,
-          builder: (c, controller) {
-            _listCtrl = controller;
-            return Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    controller: controller,
-                    padding: const EdgeInsets.only(bottom: 12),
-                    children: slivers,
-                  ),
-                ),
-                if (providerTabs.isNotEmpty)
-                  if (providerTabs.isNotEmpty)
-                    Padding(
-                      // SafeArea already applies bottom inset; avoid doubling it here.
-                      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10), // bottom: MediaQuery.of(context).padding.bottom
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(children: providerTabs),
-                      ),
-                    ),
-              ],
-            );
-          },
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            controller: controller,
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              children: slivers,
+            ),
+          ),
         ),
-      ),
+        if (providerTabs.isNotEmpty)
+          Padding(
+            // SafeArea already applies bottom inset; avoid doubling it here.
+            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: providerTabs),
+            ),
+          ),
+      ],
     );
   }
 
@@ -349,16 +524,31 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     // Clear search if needed to ensure provider is visible
     if (_search.text.isNotEmpty) {
       setState(() => _search.clear());
-      // Wait for the widget tree to rebuild
-      await Future.delayed(const Duration(milliseconds: 50));
+      // Wait for the widget tree to rebuild and all widgets to be rendered
+      await Future.delayed(const Duration(milliseconds: 150));
     }
 
-    // Use pre-calculated offset
-    final targetOffset = _headerOffsets[pk];
+    // Try to use GlobalKey to scroll to the exact position
+    final targetKey = _headers[pk];
+    if (targetKey != null) {
+      final context = targetKey.currentContext;
+      if (context != null) {
+        // Use Scrollable.ensureVisible for accurate scrolling
+        await Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          alignment: 0.0, // Align to top of viewport
+        );
+        return;
+      }
+    }
+    
+    // Fallback: use pre-calculated offset if GlobalKey doesn't work
+    final targetOffset = _providerOffsets[pk];
     if (targetOffset != null && _listCtrl?.hasClients == true) {
-      // Calculate the actual scroll position
-      // Subtract a small offset to show the header at the top with some padding
-      final scrollTo = (targetOffset - 10).clamp(0.0, _listCtrl!.position.maxScrollExtent);
+      // Ensure the offset is within valid bounds
+      final scrollTo = targetOffset.clamp(0.0, _listCtrl!.position.maxScrollExtent);
       
       await _listCtrl!.animateTo(
         scrollTo,
