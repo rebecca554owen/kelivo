@@ -44,6 +44,49 @@ class _ModelProcessingResult {
   });
 }
 
+// Lightweight brand asset resolver usable in isolates
+String? _assetForNameStatic(String n) {
+  final lower = n.toLowerCase();
+  final mapping = <RegExp, String>{
+    RegExp(r'openai|gpt|o\d'): 'openai.svg',
+    RegExp(r'gemini'): 'gemini-color.svg',
+    RegExp(r'google'): 'google-color.svg',
+    RegExp(r'claude'): 'claude-color.svg',
+    RegExp(r'anthropic'): 'anthropic.svg',
+    RegExp(r'deepseek'): 'deepseek-color.svg',
+    RegExp(r'grok'): 'grok.svg',
+    RegExp(r'qwen|qwq|qvq|aliyun|dashscope'): 'qwen-color.svg',
+    RegExp(r'doubao|ark|volc'): 'doubao-color.svg',
+    RegExp(r'openrouter'): 'openrouter.svg',
+    RegExp(r'zhipu|智谱|glm'): 'zhipu-color.svg',
+    RegExp(r'mistral'): 'mistral-color.svg',
+    RegExp(r'(?<!o)llama|meta'): 'meta-color.svg',
+    RegExp(r'hunyuan|tencent'): 'hunyuan-color.svg',
+    RegExp(r'gemma'): 'gemma-color.svg',
+    RegExp(r'perplexity'): 'perplexity-color.svg',
+    RegExp(r'aliyun|阿里云|百炼'): 'alibabacloud-color.svg',
+    RegExp(r'bytedance|火山'): 'bytedance-color.svg',
+    RegExp(r'silicon|硅基'): 'siliconflow-color.svg',
+    RegExp(r'aihubmix'): 'aihubmix-color.svg',
+    RegExp(r'ollama'): 'ollama.svg',
+    RegExp(r'github'): 'github.svg',
+    RegExp(r'cloudflare'): 'cloudflare-color.svg',
+    RegExp(r'minimax'): 'minimax-color.svg',
+    RegExp(r'xai|grok'): 'xai.svg',
+    RegExp(r'juhenext'): 'juhenext.png',
+    RegExp(r'kimi'): 'kimi-color.svg',
+    RegExp(r'302'): '302ai-color.svg',
+    RegExp(r'step|阶跃'): 'stepfun-color.svg',
+    RegExp(r'intern|书生'): 'internlm-color.svg',
+    RegExp(r'cohere|command-.+'): 'cohere-color.svg',
+    RegExp(r'kelivo'): 'kelivo.png',
+  };
+  for (final e in mapping.entries) {
+    if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';
+  }
+  return null;
+}
+
 // Static function for compute - must be top-level
 _ModelProcessingResult _processModelsInBackground(_ModelProcessingData data) {
   final providers = data.limitProviderKey == null
@@ -63,16 +106,59 @@ _ModelProcessingResult _processModelsInBackground(_ModelProcessingData data) {
     if (models.isEmpty) return;
     
     final name = (cfg['name'] as String?) ?? '';
+    final overrides = (cfg['overrides'] as Map?)?.map((k, v) => MapEntry(k.toString(), v)) ?? const <String, dynamic>{};
     final list = <_ModelItem>[
       for (final id in models)
-        _ModelItem(
-          providerKey: key,
-          providerName: name.isNotEmpty ? name : key,
-          id: id.toString(),
-          info: ModelRegistry.infer(ModelInfo(id: id.toString(), displayName: id.toString())),
-          pinned: data.pinnedModels.contains('$key::$id'),
-          selected: data.currentModelKey == '$key::$id',
-        )
+        () {
+          final String mid = id.toString();
+          ModelInfo base = ModelRegistry.infer(ModelInfo(id: mid, displayName: mid));
+          final ov = overrides[mid] as Map?;
+          if (ov != null) {
+            // display name override
+            final n = (ov['name'] as String?)?.trim();
+            // type override
+            ModelType? type;
+            final t = (ov['type'] as String?)?.trim();
+            if (t != null) {
+              type = (t == 'embedding') ? ModelType.embedding : ModelType.chat;
+            }
+            // modality override
+            List<Modality>? input;
+            if (ov['input'] is List) {
+              input = [
+                for (final e in (ov['input'] as List)) (e.toString() == 'image' ? Modality.image : Modality.text)
+              ];
+            }
+            List<Modality>? output;
+            if (ov['output'] is List) {
+              output = [
+                for (final e in (ov['output'] as List)) (e.toString() == 'image' ? Modality.image : Modality.text)
+              ];
+            }
+            List<ModelAbility>? abilities;
+            if (ov['abilities'] is List) {
+              abilities = [
+                for (final e in (ov['abilities'] as List)) (e.toString() == 'reasoning' ? ModelAbility.reasoning : ModelAbility.tool)
+              ];
+            }
+            base = base.copyWith(
+              displayName: (n != null && n.isNotEmpty) ? n : base.displayName,
+              type: type ?? base.type,
+              input: input ?? base.input,
+              output: output ?? base.output,
+              abilities: abilities ?? base.abilities,
+            );
+          }
+          return _ModelItem(
+            providerKey: key,
+            providerName: name.isNotEmpty ? name : key,
+            id: mid,
+            info: base,
+            pinned: data.pinnedModels.contains('$key::$mid'),
+            selected: data.currentModelKey == '$key::$mid',
+            asset: _assetForNameStatic(mid),
+          );
+        }()
     ];
     groups[key] = _ProviderGroup(name: name.isNotEmpty ? name : key, items: list);
   });
@@ -187,6 +273,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
             'enabled': value.enabled,
             'name': value.name,
             'models': value.models,
+            'overrides': value.modelOverrides,
           })),
         ),
         pinnedModels: settings.pinnedModels,
@@ -222,6 +309,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           'enabled': value.enabled,
           'name': value.name,
           'models': value.models,
+          'overrides': value.modelOverrides,
         })),
       ),
       pinnedModels: settings.pinnedModels,
@@ -375,24 +463,49 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     _providerOffsets.clear();
     double cumulative = 0.0;
 
-    // Favorites section (only when not limited)
-    if (_favItems.isNotEmpty && widget.limitProviderKey == null) {
-      final favs = _favItems.where((e) => _matchesSearch(query, e, e.providerName)).toList();
-      if (favs.isNotEmpty) {
-        _headers['__fav__'] ??= GlobalKey();
-        _providerOffsets['__fav__'] = cumulative;
-        final favKey = _headers['__fav__']!;
-        entries.add(_Entry(
-          height: _sectionHeaderHeight,
-          builder: () => _sectionHeader(context, l10n.modelSelectSheetFavoritesSection, favKey),
-        ));
-        cumulative += _sectionHeaderHeight;
-        for (final m in favs) {
+    // Favorites section (reactive; only when not limited and not searching)
+    if (widget.limitProviderKey == null && query.isEmpty) {
+      final pinned = context.watch<SettingsProvider>().pinnedModels;
+      if (pinned.isNotEmpty) {
+        final favs = <_ModelItem>[];
+        for (final k in pinned) {
+          final parts = k.split('::');
+          if (parts.length < 2) continue;
+          final pk = parts[0];
+          final mid = parts.sublist(1).join('::');
+          final g = _groups[pk];
+          if (g == null) continue;
+          final found = g.items.firstWhere(
+            (e) => e.id == mid,
+            orElse: () => _ModelItem(
+              providerKey: pk,
+              providerName: g.name,
+              id: mid,
+              info: ModelRegistry.infer(ModelInfo(id: mid, displayName: mid)),
+              pinned: true,
+              selected: false,
+            ),
+          );
+          if (_matchesSearch(query, found, found.providerName)) {
+            favs.add(found.copyWith(pinned: true));
+          }
+        }
+        if (favs.isNotEmpty) {
+          _headers['__fav__'] ??= GlobalKey();
+          _providerOffsets['__fav__'] = cumulative;
+          final favKey = _headers['__fav__']!;
           entries.add(_Entry(
-            height: _modelTileHeight,
-            builder: () => _modelTile(context, m, showProviderLabel: true),
+            height: _sectionHeaderHeight,
+            builder: () => _sectionHeader(context, l10n.modelSelectSheetFavoritesSection, favKey),
           ));
-          cumulative += _modelTileHeight;
+          cumulative += _sectionHeaderHeight;
+          for (final m in favs) {
+            entries.add(_Entry(
+              height: _modelTileHeight,
+              builder: () => _modelTile(context, m, showProviderLabel: true),
+            ));
+            cumulative += _modelTileHeight;
+          }
         }
       }
     }
@@ -451,7 +564,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       return l;
     }
 
-    const int bufferItems = 12; // a small render buffer around viewport 额外渲染的缓冲条目数量
+    const int bufferItems = 8; // small render buffer around viewport 额外渲染的缓冲条目数量
 
     return LayoutBuilder(
       builder: (context, cons) {
@@ -536,74 +649,77 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     final settings = context.read<SettingsProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = m.selected ? (isDark ? cs.primary.withOpacity(0.12) : cs.primary.withOpacity(0.08)) : cs.surface;
-    final effective = _effectiveInfo(context, m);
+    final effective = m.info; // precomputed effective info
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
+      child: RepaintBoundary(
+        child: Material(
+          color: bg,
           borderRadius: BorderRadius.circular(12),
-          onTap: () => Navigator.of(context).pop(ModelSelection(m.providerKey, m.id)),
-          onLongPress: () async {
-            // Edit model overrides in-place; refresh list after closing
-            await showModelDetailSheet(context, providerKey: m.providerKey, modelId: m.id);
-            if (mounted) setState(() {});
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                _BrandAvatar(name: m.id, size: 28),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Builder(builder: (context) {
-                        final name = _displayName(context, m);
-                        if (!showProviderLabel) {
-                          return Text(
-                            name,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => Navigator.of(context).pop(ModelSelection(m.providerKey, m.id)),
+            onLongPress: () async {
+              // Edit model overrides in-place; refresh list after closing
+              await showModelDetailSheet(context, providerKey: m.providerKey, modelId: m.id);
+              if (mounted) {
+                // Recompute to reflect overrides changes
+                _isLoading = true;
+                setState(() {});
+                await _loadModelsAsync();
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  _BrandAvatar(name: m.id, assetOverride: m.asset, size: 28),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!showProviderLabel)
+                          Text(
+                            m.info.displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                          );
-                        }
-                        final cs = Theme.of(context).colorScheme;
-                        return Text.rich(
-                          TextSpan(
-                            text: name,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                            children: [
-                              TextSpan(
-                                text: ' | ${m.providerName}',
-                                style: TextStyle(
-                                  color: cs.onSurface.withOpacity(0.6),
-                                  fontSize: 12,
+                          )
+                        else
+                          Text.rich(
+                            TextSpan(
+                              text: m.info.displayName,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                              children: [
+                                TextSpan(
+                                  text: ' | ${m.providerName}',
+                                  style: TextStyle(
+                                    color: cs.onSurface.withOpacity(0.6),
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        );
-                      }),
-                      const SizedBox(height: 4),
-                      _modelTagWrap(context, effective),
-                    ],
+                        const SizedBox(height: 4),
+                        _modelTagWrap(context, effective),
+                      ],
+                    ),
                   ),
-                ),
-                Builder(builder: (context) {
-                  final pinnedNow = context.select<SettingsProvider, bool>((s) => s.isModelPinned(m.providerKey, m.id));
-                  final icon = pinnedNow ? Icons.favorite : Icons.favorite_border;
-                  return IconButton(
-                    onPressed: () => settings.togglePinModel(m.providerKey, m.id),
-                    icon: Icon(icon, size: 20, color: cs.primary),
-                    tooltip: l10n.modelSelectSheetFavoriteTooltip,
-                  );
-                }),
-              ],
+                  Builder(builder: (context) {
+                    final pinnedNow = context.select<SettingsProvider, bool>((s) => s.isModelPinned(m.providerKey, m.id));
+                    final icon = pinnedNow ? Icons.favorite : Icons.favorite_border;
+                    return IconButton(
+                      onPressed: () => settings.togglePinModel(m.providerKey, m.id),
+                      icon: Icon(icon, size: 20, color: cs.primary),
+                      tooltip: l10n.modelSelectSheetFavoriteTooltip,
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ),
@@ -687,48 +803,8 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     }
   }
 
-  String _displayName(BuildContext context, _ModelItem m) {
-    final cfg = context.read<SettingsProvider>().getProviderConfig(m.providerKey, defaultName: m.providerName);
-    final ov = cfg.modelOverrides[m.id] as Map?;
-    if (ov != null) {
-      final n = (ov['name'] as String?)?.trim();
-      if (n != null && n.isNotEmpty) return n;
-    }
-    return m.info.displayName;
-  }
-
-  ModelInfo _effectiveInfo(BuildContext context, _ModelItem m) {
-    final cfg = context.read<SettingsProvider>().getProviderConfig(m.providerKey, defaultName: m.providerName);
-    final ov = cfg.modelOverrides[m.id] as Map?;
-    if (ov == null) return m.info;
-    ModelType? type;
-    final t = (ov['type'] as String?) ?? '';
-    if (t == 'embedding') type = ModelType.embedding; else if (t == 'chat') type = ModelType.chat;
-    List<Modality>? input;
-    if (ov['input'] is List) {
-      input = [
-        for (final e in (ov['input'] as List)) (e.toString() == 'image' ? Modality.image : Modality.text)
-      ];
-    }
-    List<Modality>? output;
-    if (ov['output'] is List) {
-      output = [
-        for (final e in (ov['output'] as List)) (e.toString() == 'image' ? Modality.image : Modality.text)
-      ];
-    }
-    List<ModelAbility>? abilities;
-    if (ov['abilities'] is List) {
-      abilities = [
-        for (final e in (ov['abilities'] as List)) (e.toString() == 'reasoning' ? ModelAbility.reasoning : ModelAbility.tool)
-      ];
-    }
-    return m.info.copyWith(
-      type: type ?? m.info.type,
-      input: input ?? m.info.input,
-      output: output ?? m.info.output,
-      abilities: abilities ?? m.info.abilities,
-    );
-  }
+  String _displayName(BuildContext context, _ModelItem m) => m.info.displayName;
+  ModelInfo _effectiveInfo(BuildContext context, _ModelItem m) => m.info;
 }
 
 class _ProviderGroup {
@@ -744,8 +820,9 @@ class _ModelItem {
   final ModelInfo info;
   final bool pinned;
   final bool selected;
-  _ModelItem({required this.providerKey, required this.providerName, required this.id, required this.info, this.pinned = false, this.selected = false});
-  _ModelItem copyWith({bool? pinned, bool? selected}) => _ModelItem(providerKey: providerKey, providerName: providerName, id: id, info: info, pinned: pinned ?? this.pinned, selected: selected ?? this.selected);
+  final String? asset; // pre-resolved avatar asset for performance
+  _ModelItem({required this.providerKey, required this.providerName, required this.id, required this.info, this.pinned = false, this.selected = false, this.asset});
+  _ModelItem copyWith({bool? pinned, bool? selected}) => _ModelItem(providerKey: providerKey, providerName: providerName, id: id, info: info, pinned: pinned ?? this.pinned, selected: selected ?? this.selected, asset: asset);
 }
 
 // Virtualization entry: fixed height + lazy builder
@@ -757,9 +834,10 @@ class _Entry {
 
 // Reuse badges and avatars similar to provider detail
 class _BrandAvatar extends StatelessWidget {
-  const _BrandAvatar({required this.name, this.size = 20});
+  const _BrandAvatar({required this.name, this.size = 20, this.assetOverride});
   final String name;
   final double size;
+  final String? assetOverride;
 
   String? _assetForName(String n) {
     final lower = n.toLowerCase();
@@ -807,7 +885,7 @@ class _BrandAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final asset = _assetForName(name);
+    final asset = assetOverride ?? _assetForName(name);
     Widget inner;
     if (asset != null) {
       if (asset.endsWith('.svg')) {
