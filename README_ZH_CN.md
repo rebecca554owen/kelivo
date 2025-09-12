@@ -45,7 +45,7 @@
 
 - ✅ Android
 - ✅ iOS
-- 🚧 Harmony (计划中)
+- ✅ Harmony ([kelivo-ohos](https://github.com/Chevey339/kelivo-ohos))
 
 ## 🤝 贡献指南
 
