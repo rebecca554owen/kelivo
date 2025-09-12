@@ -386,7 +386,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         slivers.add(_sectionHeader(context, l10n.modelSelectSheetFavoritesSection, key));
         currentOffset += _sectionHeaderHeight;
         slivers.addAll(items.map((m) {
-          final tile = _modelTile(context, m);
+          final tile = _modelTile(context, m, showProviderLabel: true);
           currentOffset += _modelTileHeight;
           return tile;
         }));
@@ -469,7 +469,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     );
   }
 
-  Widget _modelTile(BuildContext context, _ModelItem m) {
+  Widget _modelTile(BuildContext context, _ModelItem m, {bool showProviderLabel = false}) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final settings = context.read<SettingsProvider>();
@@ -499,7 +499,35 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_displayName(context, m), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Builder(builder: (context) {
+                        final name = _displayName(context, m);
+                        if (!showProviderLabel) {
+                          return Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          );
+                        }
+                        final cs = Theme.of(context).colorScheme;
+                        return Text.rich(
+                          TextSpan(
+                            text: name,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            children: [
+                              TextSpan(
+                                text: ' | ${m.providerName}',
+                                style: TextStyle(
+                                  color: cs.onSurface.withOpacity(0.6),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      }),
                       const SizedBox(height: 4),
                       _modelTagWrap(context, effective),
                     ],
