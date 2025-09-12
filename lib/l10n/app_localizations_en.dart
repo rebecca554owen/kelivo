@@ -161,6 +161,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePageDefaultAssistant => 'Default Assistant';
 
   @override
+  String get mermaidExportPng => 'Export PNG';
+
+  @override
+  String get mermaidExportFailed => 'Export failed';
+
+  @override
+  String get mermaidPreviewOpen => 'Open Preview';
+
+  @override
+  String get mermaidPreviewOpenFailed => 'Cannot open preview';
+
+  @override
   String get assistantProviderDefaultAssistantName => 'Default Assistant';
 
   @override

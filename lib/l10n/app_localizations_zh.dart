@@ -160,6 +160,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePageDefaultAssistant => '默认助手';
 
   @override
+  String get mermaidExportPng => '导出 PNG';
+
+  @override
+  String get mermaidExportFailed => '导出失败';
+
+  @override
+  String get mermaidPreviewOpen => '浏览器预览';
+
+  @override
+  String get mermaidPreviewOpenFailed => '无法打开预览';
+
+  @override
   String get assistantProviderDefaultAssistantName => '默认助手';
 
   @override
@@ -2260,6 +2272,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get homePageDefaultAssistant => '默认助手';
 
   @override
+  String get mermaidExportPng => '导出 PNG';
+
+  @override
+  String get mermaidExportFailed => '导出失败';
+
+  @override
+  String get mermaidPreviewOpen => '浏览器预览';
+
+  @override
+  String get mermaidPreviewOpenFailed => '无法打开预览';
+
+  @override
   String get assistantProviderDefaultAssistantName => '默认助手';
 
   @override
@@ -4358,6 +4382,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homePageDefaultAssistant => '預設助理';
+
+  @override
+  String get mermaidExportPng => '匯出 PNG';
+
+  @override
+  String get mermaidExportFailed => '匯出失敗';
+
+  @override
+  String get mermaidPreviewOpen => '瀏覽器預覽';
+
+  @override
+  String get mermaidPreviewOpenFailed => '無法打開預覽';
 
   @override
   String get assistantProviderDefaultAssistantName => '預設助理';

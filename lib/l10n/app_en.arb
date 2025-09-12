@@ -68,6 +68,10 @@
     }
   },
   "homePageDefaultAssistant": "Default Assistant",
+  "mermaidExportPng": "Export PNG",
+  "mermaidExportFailed": "Export failed",
+  "mermaidPreviewOpen": "Open Preview",
+  "mermaidPreviewOpenFailed": "Cannot open preview",
   "assistantProviderDefaultAssistantName": "Default Assistant",
   "assistantProviderSampleAssistantName": "Sample Assistant",
   "assistantProviderNewAssistantName": "New Assistant",

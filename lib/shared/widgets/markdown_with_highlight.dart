@@ -12,6 +12,7 @@ import 'dart:convert';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../features/chat/pages/image_viewer_page.dart';
 import 'mermaid_bridge.dart';
+import 'package:Kelivo/l10n/app_localizations.dart';
 
 /// gpt_markdown with custom code block highlight and inline code styling.
 class MarkdownWithCodeHighlight extends StatelessWidget {
@@ -538,7 +539,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(MarkdownWithCodeHighlight._isZh(context) ? '已复制代码' : 'Code copied'),
+                              content: Text(AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard),
                             ),
                           );
                         }
@@ -548,7 +549,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                         size: 16,
                         color: cs.onSurface.withOpacity(0.7),
                       ),
-                      tooltip: MarkdownWithCodeHighlight._isZh(context) ? '复制' : 'Copy',
+                      tooltip: AppLocalizations.of(context)!.shareProviderSheetCopyButton,
                       visualDensity: VisualDensity.compact,
                       iconSize: 16,
                       constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -658,7 +659,7 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(MarkdownWithCodeHighlight._isZh(context) ? '已复制代码' : 'Code copied'),
+                              content: Text(AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard),
                             ),
                           );
                         }
@@ -668,7 +669,7 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                         size: 16,
                         color: cs.onSurface.withOpacity(0.7),
                       ),
-                      tooltip: MarkdownWithCodeHighlight._isZh(context) ? '复制' : 'Copy',
+                      tooltip: AppLocalizations.of(context)!.shareProviderSheetCopyButton,
                       visualDensity: VisualDensity.compact,
                       iconSize: 16,
                       constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -680,22 +681,19 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                         onPressed: () async {
                           final ok = await handle.exportPng();
                           if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok
-                                    ? (MarkdownWithCodeHighlight._isZh(context) ? '已导出 PNG（请在分享目标中保存）' : 'Exported PNG (use share target to save)')
-                                    : (MarkdownWithCodeHighlight._isZh(context) ? '导出失败' : 'Export failed'),
-                              ),
-                            ),
-                          );
+                          if (!ok) {
+                            final l10n = AppLocalizations.of(context)!;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.mermaidExportFailed)),
+                            );
+                          }
                         },
                         icon: Icon(
                           Lucide.Download,
                           size: 16,
                           color: cs.onSurface.withOpacity(0.7),
                         ),
-                        tooltip: MarkdownWithCodeHighlight._isZh(context) ? '导出 PNG' : 'Export PNG',
+                        tooltip: AppLocalizations.of(context)!.mermaidExportPng,
                         visualDensity: VisualDensity.compact,
                         iconSize: 16,
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -753,7 +751,7 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                         onPressed: () => _openMermaidPreviewInBrowser(context, widget.code,
                             Theme.of(context).brightness == Brightness.dark),
                         icon: Icon(Lucide.Eye, size: 16),
-                        label: Text(MarkdownWithCodeHighlight._isZh(context) ? '浏览器预览' : 'Open Preview'),
+                        label: Text(AppLocalizations.of(context)!.mermaidPreviewOpen),
                       ),
                     ),
                   ],
@@ -772,9 +770,8 @@ class _MermaidBlockState extends State<_MermaidBlock> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(MarkdownWithCodeHighlight._isZh(context) ? '无法打开预览' : 'Cannot open preview')),
-      );
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.mermaidPreviewOpenFailed)));
     }
   }
 

@@ -394,6 +394,30 @@ abstract class AppLocalizations {
   /// **'Default Assistant'**
   String get homePageDefaultAssistant;
 
+  /// No description provided for @mermaidExportPng.
+  ///
+  /// In en, this message translates to:
+  /// **'Export PNG'**
+  String get mermaidExportPng;
+
+  /// No description provided for @mermaidExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed'**
+  String get mermaidExportFailed;
+
+  /// No description provided for @mermaidPreviewOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Preview'**
+  String get mermaidPreviewOpen;
+
+  /// No description provided for @mermaidPreviewOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open preview'**
+  String get mermaidPreviewOpenFailed;
+
   /// No description provided for @assistantProviderDefaultAssistantName.
   ///
   /// In en, this message translates to:
