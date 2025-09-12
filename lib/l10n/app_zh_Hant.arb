@@ -466,7 +466,7 @@
   "modelDetailSheetHeaderValueHint": "Header Value",
   "modelDetailSheetBodyKeyHint": "Body Key",
   "modelDetailSheetBodyJsonHint": "Body JSON",
-  "modelSelectSheetSearchHint": "輸入模型名稱搜尋",
+  "modelSelectSheetSearchHint": "搜尋模型或供應商",
   "modelSelectSheetFavoritesSection": "收藏",
   "modelSelectSheetFavoriteTooltip": "收藏",
   "modelSelectSheetChatType": "聊天",

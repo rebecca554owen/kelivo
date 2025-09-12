@@ -1430,7 +1430,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get modelDetailSheetBodyJsonHint => 'Body JSON';
 
   @override
-  String get modelSelectSheetSearchHint => '输入模型名称搜索';
+  String get modelSelectSheetSearchHint => '搜索模型或服务商';
 
   @override
   String get modelSelectSheetFavoritesSection => '收藏';
@@ -3530,7 +3530,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get modelDetailSheetBodyJsonHint => 'Body JSON';
 
   @override
-  String get modelSelectSheetSearchHint => '输入模型名称搜索';
+  String get modelSelectSheetSearchHint => '搜索模型或服务商';
 
   @override
   String get modelSelectSheetFavoritesSection => '收藏';
@@ -5630,7 +5630,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get modelDetailSheetBodyJsonHint => 'Body JSON';
 
   @override
-  String get modelSelectSheetSearchHint => '輸入模型名稱搜尋';
+  String get modelSelectSheetSearchHint => '搜尋模型或供應商';
 
   @override
   String get modelSelectSheetFavoritesSection => '收藏';

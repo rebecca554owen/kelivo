@@ -627,7 +627,7 @@
   "modelDetailSheetHeaderValueHint": "Header Value",
   "modelDetailSheetBodyKeyHint": "Body Key",
   "modelDetailSheetBodyJsonHint": "Body JSON",
-  "modelSelectSheetSearchHint": "Type model name to search",
+  "modelSelectSheetSearchHint": "Search models or providers",
   "modelSelectSheetFavoritesSection": "Favorites",
   "modelSelectSheetFavoriteTooltip": "Favorite",
   "modelSelectSheetChatType": "Chat",

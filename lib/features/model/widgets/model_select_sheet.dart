@@ -248,6 +248,44 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     super.dispose();
   }
 
+  // Enhanced search function that matches both provider names and model names
+  bool _matchesSearch(String query, _ModelItem item, String providerName) {
+    if (query.isEmpty) return true;
+    
+    final lowerQuery = query.toLowerCase();
+    final lowerModelId = item.id.toLowerCase();
+    final lowerProviderName = providerName.toLowerCase();
+    final lowerProviderKey = item.providerKey.toLowerCase();
+    
+    // Check if query matches model name/id
+    if (lowerModelId.contains(lowerQuery)) {
+      return true;
+    }
+    
+    // Check if query matches provider display name
+    if (lowerProviderName.contains(lowerQuery)) {
+      return true;
+    }
+    
+    // Check if query matches provider key (internal name)
+    if (lowerProviderKey.contains(lowerQuery)) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Check if a provider should be shown based on search query
+  bool _providerMatchesSearch(String query, String providerName, String providerKey) {
+    if (query.isEmpty) return true;
+    
+    final lowerQuery = query.toLowerCase();
+    final lowerProviderName = providerName.toLowerCase();
+    final lowerProviderKey = providerKey.toLowerCase();
+    
+    return lowerProviderName.contains(lowerQuery) || lowerProviderKey.contains(lowerQuery);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -331,7 +369,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   Widget _buildContent(BuildContext context, ScrollController controller) {
     final l10n = AppLocalizations.of(context)!;
 
-    final query = _search.text.trim().toLowerCase();
+    final query = _search.text.trim();
     List<Widget> slivers = [];
     _providerOffsets.clear();
     double currentOffset = 0;
@@ -340,7 +378,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
 
     // Favorites section (only when not limited)
     if (_favItems.isNotEmpty && widget.limitProviderKey == null) {
-      final items = _favItems.where((e) => query.isEmpty || e.id.toLowerCase().contains(query)).toList();
+      final items = _favItems.where((e) => _matchesSearch(query, e, e.providerName)).toList();
       if (items.isNotEmpty) {
         final key = GlobalKey();
         _headers['__fav__'] = key;
@@ -355,11 +393,27 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       }
     }
 
-    // Provider sections
+    // Provider sections with enhanced search
     for (final pk in _orderedKeys) {
       final g = _groups[pk]!;
-      final items = g.items.where((e) => query.isEmpty || e.id.toLowerCase().contains(query)).toList();
+      
+      // Check if provider matches the search query
+      final providerMatches = _providerMatchesSearch(query, g.name, pk);
+      
+      List<_ModelItem> items;
+      if (query.isEmpty) {
+        // No search query - show all models
+        items = g.items;
+      } else if (providerMatches) {
+        // Provider name matches - show all models from this provider
+        items = g.items;
+      } else {
+        // Provider doesn't match - only show models that match the query
+        items = g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
+      }
+      
       if (items.isEmpty) continue;
+      
       final key = GlobalKey();
       _headers[pk] = key;
       _providerOffsets[pk] = currentOffset;

@@ -2822,7 +2822,7 @@ abstract class AppLocalizations {
   /// No description provided for @modelSelectSheetSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Type model name to search'**
+  /// **'Search models or providers'**
   String get modelSelectSheetSearchHint;
 
   /// No description provided for @modelSelectSheetFavoritesSection.
