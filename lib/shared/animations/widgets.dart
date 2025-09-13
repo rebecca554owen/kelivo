@@ -33,10 +33,14 @@ class AnimatedTextSwap extends StatelessWidget {
     required this.text,
     this.style,
     this.duration = kAnim,
+    this.maxLines,
+    this.overflow,
   });
   final String text;
   final TextStyle? style;
   final Duration duration;
+  final int? maxLines;
+  final TextOverflow? overflow;
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
@@ -54,7 +58,7 @@ class AnimatedTextSwap extends StatelessWidget {
           child: SlideTransition(position: offset, child: child),
         );
       },
-      child: Text(text, key: ValueKey(text), style: style),
+      child: Text(text, key: ValueKey(text), style: style, maxLines: maxLines, overflow: overflow),
     );
   }
 }

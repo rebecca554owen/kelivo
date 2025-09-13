@@ -2280,18 +2280,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (providerName != null && modelDisplay != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 160),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeOutCubic,
-                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                  child: Text(
-                    '$modelDisplay ($providerName)',
-                    key: ValueKey<String>('${settings.currentModelKey ?? ''}'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
-                  ),
+                child: AnimatedTextSwap(
+                  text: '$modelDisplay ($providerName)',
+                  style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
           ],
