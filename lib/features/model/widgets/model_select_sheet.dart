@@ -250,6 +250,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   Map<String, _ProviderGroup> _groups = {};
   List<_ModelItem> _favItems = [];
   List<String> _orderedKeys = [];
+  bool _autoScrolled = false; // ensure we only auto-scroll once per open
 
   @override
   void initState() {
@@ -292,6 +293,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           _orderedKeys = result.orderedKeys;
           _isLoading = false;
         });
+        _scheduleAutoScrollToCurrent();
       }
     } catch (e) {
       // If compute fails (e.g., on web), fall back to synchronous processing
@@ -326,6 +328,61 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       _orderedKeys = result.orderedKeys;
       _isLoading = false;
     });
+    _scheduleAutoScrollToCurrent();
+  }
+
+  void _scheduleAutoScrollToCurrent() {
+    if (_autoScrolled) return;
+    // Wait until the content has been laid out and offsets computed in _buildContent
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _autoScrolled) return;
+      await _jumpToCurrentSelection();
+      _autoScrolled = true;
+    });
+  }
+
+  Future<void> _jumpToCurrentSelection() async {
+    final settings = context.read<SettingsProvider>();
+    final pk = settings.currentModelProvider;
+    final mid = settings.currentModelId;
+    if (pk == null || mid == null) return;
+
+    // Optionally expand a bit for better context
+    if (_sheetCtrl.size < _initialSize + 0.05) {
+      try {
+        await _sheetCtrl.animateTo(
+          _initialSize.clamp(0.0, _maxSize),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+        );
+      } catch (_) {}
+    }
+
+    // Ensure list controller is ready
+    if (_listCtrl == null || !_listCtrl!.hasClients) {
+      await Future.delayed(const Duration(milliseconds: 60));
+    }
+    if (_listCtrl == null || !_listCtrl!.hasClients) return;
+
+    // Locate provider and item index
+    final group = _groups[pk];
+    if (group == null) return;
+    final index = group.items.indexWhere((e) => e.id == mid);
+    if (index < 0) return;
+
+    // Use precomputed section offsets from latest build
+    final base = _providerOffsets[pk] ?? 0.0;
+    final target = base + _sectionHeaderHeight + index * _modelTileHeight;
+    final maxOff = _listCtrl!.position.maxScrollExtent;
+    final to = target.clamp(0.0, maxOff);
+
+    try {
+      await _listCtrl!.animateTo(
+        to,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      );
+    } catch (_) {}
   }
 
   @override
