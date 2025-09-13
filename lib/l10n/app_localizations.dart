@@ -3761,6 +3761,18 @@ abstract class AppLocalizations {
   /// **'Display user avatar in chat messages'**
   String get displaySettingsPageShowUserAvatarSubtitle;
 
+  /// No description provided for @displaySettingsPageShowUserNameTimestampTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show User Name & Timestamp'**
+  String get displaySettingsPageShowUserNameTimestampTitle;
+
+  /// No description provided for @displaySettingsPageShowUserNameTimestampSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show user name and the timestamp below it in chat messages'**
+  String get displaySettingsPageShowUserNameTimestampSubtitle;
+
   /// No description provided for @displaySettingsPageChatModelIconTitle.
   ///
   /// In en, this message translates to:

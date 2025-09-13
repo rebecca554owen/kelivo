@@ -1907,6 +1907,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageShowUserAvatarSubtitle => '是否在聊天消息中显示用户头像';
 
   @override
+  String get displaySettingsPageShowUserNameTimestampTitle => '显示用户名称和时间戳';
+
+  @override
+  String get displaySettingsPageShowUserNameTimestampSubtitle =>
+      '是否在聊天消息中显示用户名称和时间戳';
+
+  @override
   String get displaySettingsPageChatModelIconTitle => '聊天列表模型图标';
 
   @override
@@ -4019,6 +4026,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageShowUserAvatarSubtitle => '是否在聊天消息中显示用户头像';
 
   @override
+  String get displaySettingsPageShowUserNameTimestampTitle => '显示用户名称和时间戳';
+
+  @override
+  String get displaySettingsPageShowUserNameTimestampSubtitle =>
+      '是否在聊天消息中显示用户名称和时间戳';
+
+  @override
   String get displaySettingsPageChatModelIconTitle => '聊天列表模型图标';
 
   @override
@@ -6128,6 +6142,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageShowUserAvatarSubtitle => '是否在聊天訊息中顯示使用者頭像';
+
+  @override
+  String get displaySettingsPageShowUserNameTimestampTitle => '顯示使用者名稱與時間戳';
+
+  @override
+  String get displaySettingsPageShowUserNameTimestampSubtitle =>
+      '是否在聊天訊息中顯示使用者名稱以時間戳';
 
   @override
   String get displaySettingsPageChatModelIconTitle => '聊天列表模型圖示';

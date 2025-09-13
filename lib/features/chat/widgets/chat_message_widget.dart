@@ -279,6 +279,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final userProvider = context.watch<UserProvider>();
     final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
     final parsed = _parseUserContent(widget.message.content);
 
     return Padding(
@@ -290,27 +291,28 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    userProvider.name,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: cs.onSurface.withOpacity(0.7),
+              if (settings.showUserNameTimestamp)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      userProvider.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurface.withOpacity(0.7),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _dateFormat.format(widget.message.timestamp),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: cs.onSurface.withOpacity(0.5),
+                    const SizedBox(height: 2),
+                    Text(
+                      _dateFormat.format(widget.message.timestamp),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurface.withOpacity(0.5),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               if (widget.showUserAvatar) ...[
                 const SizedBox(width: 8),
                 // User avatar

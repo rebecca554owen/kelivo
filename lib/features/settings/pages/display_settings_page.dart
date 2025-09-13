@@ -60,6 +60,14 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
           ),
           const SizedBox(height: 6),
           _SwitchTile(
+            icon: Lucide.MessageSquare,
+            title: l10n.displaySettingsPageShowUserNameTimestampTitle,
+            subtitle: l10n.displaySettingsPageShowUserNameTimestampSubtitle,
+            value: context.watch<SettingsProvider>().showUserNameTimestamp,
+            onChanged: (v) => context.read<SettingsProvider>().setShowUserNameTimestamp(v),
+          ),
+          const SizedBox(height: 6),
+          _SwitchTile(
             icon: Lucide.Bot,
             title: l10n.displaySettingsPageChatModelIconTitle,
             subtitle: l10n.displaySettingsPageChatModelIconSubtitle,

@@ -798,6 +798,8 @@
   "aboutPageLicense": "License",
   "displaySettingsPageShowUserAvatarTitle": "Show User Avatar",
   "displaySettingsPageShowUserAvatarSubtitle": "Display user avatar in chat messages",
+  "displaySettingsPageShowUserNameTimestampTitle": "Show User Name & Timestamp",
+  "displaySettingsPageShowUserNameTimestampSubtitle": "Show user name and the timestamp below it in chat messages",
   "displaySettingsPageChatModelIconTitle": "Chat Model Icon",
   "displaySettingsPageChatModelIconSubtitle": "Show model icon in chat messages",
   "displaySettingsPageShowTokenStatsTitle": "Show Token & Context Stats",

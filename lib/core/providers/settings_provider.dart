@@ -20,6 +20,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayShowUserAvatarKey = 'display_show_user_avatar_v1';
   static const String _displayShowModelIconKey = 'display_show_model_icon_v1';
   static const String _displayShowTokenStatsKey = 'display_show_token_stats_v1';
+  static const String _displayShowUserNameTimestampKey = 'display_show_user_name_timestamp_v1';
   static const String _displayAutoCollapseThinkingKey = 'display_auto_collapse_thinking_v1';
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
   static const String _displayHapticsOnGenerateKey = 'display_haptics_on_generate_v1';
@@ -151,6 +152,7 @@ class SettingsProvider extends ChangeNotifier {
     _showUserAvatar = prefs.getBool(_displayShowUserAvatarKey) ?? true;
     _showModelIcon = prefs.getBool(_displayShowModelIconKey) ?? true;
     _showTokenStats = prefs.getBool(_displayShowTokenStatsKey) ?? true;
+    _showUserNameTimestamp = prefs.getBool(_displayShowUserNameTimestampKey) ?? true;
     _autoCollapseThinking = prefs.getBool(_displayAutoCollapseThinkingKey) ?? true;
     _showMessageNavButtons = prefs.getBool(_displayShowMessageNavKey) ?? true;
     _hapticsOnGenerate = prefs.getBool(_displayHapticsOnGenerateKey) ?? false;
@@ -572,6 +574,17 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayShowUserAvatarKey, v);
   }
 
+  // Display: user name & timestamp (for user messages)
+  bool _showUserNameTimestamp = true;
+  bool get showUserNameTimestamp => _showUserNameTimestamp;
+  Future<void> setShowUserNameTimestamp(bool v) async {
+    if (_showUserNameTimestamp == v) return;
+    _showUserNameTimestamp = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayShowUserNameTimestampKey, v);
+  }
+
   bool _showModelIcon = true;
   bool get showModelIcon => _showModelIcon;
   Future<void> setShowModelIcon(bool v) async {
@@ -748,6 +761,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._showUserAvatar = _showUserAvatar;
     copy._showModelIcon = _showModelIcon;
     copy._showTokenStats = _showTokenStats;
+    copy._showUserNameTimestamp = _showUserNameTimestamp;
     copy._autoCollapseThinking = _autoCollapseThinking;
     copy._showMessageNavButtons = _showMessageNavButtons;
     copy._hapticsOnGenerate = _hapticsOnGenerate;
