@@ -2280,11 +2280,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (providerName != null && modelDisplay != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: AnimatedTextSwap(
-                  text: '$modelDisplay ($providerName)',
-                  style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () => showModelSelectSheet(context),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                    child: AnimatedTextSwap(
+                      text: '$modelDisplay ($providerName)',
+                      style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               ),
           ],
