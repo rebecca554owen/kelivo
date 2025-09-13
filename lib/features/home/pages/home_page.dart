@@ -401,6 +401,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _inputFocus.unfocus();
     FocusManager.instance.primaryFocus?.unfocus();
     FocusScope.of(context).unfocus();
+    try { SystemChannels.textInput.invokeMethod('TextInput.hide'); } catch (_) {}
   }
 
   @override
@@ -458,6 +459,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _lastDrawerState == DrawerState.closed ||
         _lastDrawerState == DrawerState.closing;
     if (wasClosedLike && s == DrawerState.opening) {
+      _dismissKeyboard();
       if (_suppressNextOpenHaptic) {
         // Skip duplicate when we already vibrated on programmatic open
         _suppressNextOpenHaptic = false;
@@ -2246,6 +2248,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: () {
+            // Always dismiss keyboard when toggling the sidebar
+            _dismissKeyboard();
             // Haptic feedback on opening/closing the sidebar
             try {
               if (context.read<SettingsProvider>().hapticsOnDrawer) {
