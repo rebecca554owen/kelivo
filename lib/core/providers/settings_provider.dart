@@ -19,6 +19,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _thinkingBudgetKey = 'thinking_budget_v1';
   static const String _displayShowUserAvatarKey = 'display_show_user_avatar_v1';
   static const String _displayShowModelIconKey = 'display_show_model_icon_v1';
+  static const String _displayShowModelNameTimestampKey = 'display_show_model_name_timestamp_v1';
   static const String _displayShowTokenStatsKey = 'display_show_token_stats_v1';
   static const String _displayShowUserNameTimestampKey = 'display_show_user_name_timestamp_v1';
   static const String _displayAutoCollapseThinkingKey = 'display_auto_collapse_thinking_v1';
@@ -151,6 +152,7 @@ class SettingsProvider extends ChangeNotifier {
     // display settings
     _showUserAvatar = prefs.getBool(_displayShowUserAvatarKey) ?? true;
     _showModelIcon = prefs.getBool(_displayShowModelIconKey) ?? true;
+    _showModelNameTimestamp = prefs.getBool(_displayShowModelNameTimestampKey) ?? true;
     _showTokenStats = prefs.getBool(_displayShowTokenStatsKey) ?? true;
     _showUserNameTimestamp = prefs.getBool(_displayShowUserNameTimestampKey) ?? true;
     _autoCollapseThinking = prefs.getBool(_displayAutoCollapseThinkingKey) ?? true;
@@ -595,6 +597,17 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayShowModelIconKey, v);
   }
 
+  // Display: model name & timestamp (for assistant messages)
+  bool _showModelNameTimestamp = true;
+  bool get showModelNameTimestamp => _showModelNameTimestamp;
+  Future<void> setShowModelNameTimestamp(bool v) async {
+    if (_showModelNameTimestamp == v) return;
+    _showModelNameTimestamp = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayShowModelNameTimestampKey, v);
+  }
+
   // Display: token/context stats
   bool _showTokenStats = true;
   bool get showTokenStats => _showTokenStats;
@@ -760,6 +773,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._thinkingBudget = _thinkingBudget;
     copy._showUserAvatar = _showUserAvatar;
     copy._showModelIcon = _showModelIcon;
+    copy._showModelNameTimestamp = _showModelNameTimestamp;
     copy._showTokenStats = _showTokenStats;
     copy._showUserNameTimestamp = _showUserNameTimestamp;
     copy._autoCollapseThinking = _autoCollapseThinking;

@@ -1969,6 +1969,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show user name and the timestamp below it in chat messages';
 
   @override
+  String get displaySettingsPageShowModelNameTimestampTitle =>
+      'Show Model Name & Timestamp';
+
+  @override
+  String get displaySettingsPageShowModelNameTimestampSubtitle =>
+      'Show model name and the timestamp below it in chat messages';
+
+  @override
   String get displaySettingsPageChatModelIconTitle => 'Chat Model Icon';
 
   @override

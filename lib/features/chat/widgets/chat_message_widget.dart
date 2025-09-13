@@ -550,6 +550,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   Widget _buildAssistantMessage() {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
 
     // Extract vendor inline <think>...</think> content (if present)
     final extractedThinking = THINKING_REGEX
@@ -588,37 +589,42 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.useAssistantAvatar
-                        ? (widget.assistantName?.trim().isNotEmpty == true ? widget.assistantName!.trim() : 'Assistant')
-                        : (widget.message.modelId ?? 'AI Assistant'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: cs.onSurface.withOpacity(0.7),
+                  if (settings.showModelNameTimestamp)
+                    Text(
+                      widget.useAssistantAvatar
+                          ? (widget.assistantName?.trim().isNotEmpty == true ? widget.assistantName!.trim() : 'Assistant')
+                          : (widget.message.modelId ?? 'AI Assistant'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurface.withOpacity(0.7),
+                      ),
                     ),
-                  ),
-                  Row(
-                    children: [
-                      Text(
+                  Builder(builder: (context) {
+                    final List<Widget> rowChildren = [];
+                    if (settings.showModelNameTimestamp) {
+                      rowChildren.add(Text(
                         _dateFormat.format(widget.message.timestamp),
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurface.withOpacity(0.5),
                         ),
-                      ),
-                      if (widget.showTokenStats && widget.message.totalTokens != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '${widget.message.totalTokens} tokens',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withOpacity(0.5),
-                          ),
+                      ));
+                    }
+                    if (widget.showTokenStats && widget.message.totalTokens != null) {
+                      if (rowChildren.isNotEmpty) rowChildren.add(const SizedBox(width: 8));
+                      rowChildren.add(Text(
+                        '${widget.message.totalTokens} tokens',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withOpacity(0.5),
                         ),
-                      ],
-                    ],
-                  ),
+                      ));
+                    }
+                    return rowChildren.isNotEmpty
+                        ? Row(children: rowChildren)
+                        : const SizedBox.shrink();
+                  }),
                 ],
               ),
             ],

@@ -625,6 +625,8 @@
   "displaySettingsPageShowUserAvatarSubtitle": "是否在聊天消息中显示用户头像",
   "displaySettingsPageShowUserNameTimestampTitle": "显示用户名称和时间戳",
   "displaySettingsPageShowUserNameTimestampSubtitle": "是否在聊天消息中显示用户名称和时间戳",
+  "displaySettingsPageShowModelNameTimestampTitle": "显示模型名称和时间戳",
+  "displaySettingsPageShowModelNameTimestampSubtitle": "是否在聊天消息中显示模型名称和时间戳",
   "displaySettingsPageChatModelIconTitle": "聊天列表模型图标",
   "displaySettingsPageChatModelIconSubtitle": "是否在聊天消息中显示模型图标",
   "displaySettingsPageShowTokenStatsTitle": "显示Token和上下文统计",
