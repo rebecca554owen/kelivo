@@ -37,6 +37,8 @@ class ChatMessageWidget extends StatefulWidget {
   final VoidCallback? onTranslate;
   final VoidCallback? onSpeak;
   final VoidCallback? onMore;
+  final VoidCallback? onEdit; // user: edit
+  final VoidCallback? onDelete; // user: delete
   // Optional version switcher (branch) UI controls
   final int? versionIndex; // zero-based
   final int? versionCount;
@@ -73,6 +75,8 @@ class ChatMessageWidget extends StatefulWidget {
     this.onTranslate,
     this.onSpeak,
     this.onMore,
+    this.onEdit,
+    this.onDelete,
     this.versionIndex,
     this.versionCount,
     this.onPrevVersion,
@@ -103,6 +107,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   bool? _inlineThinkExpanded;
   bool _inlineThinkManuallyToggled = false;
   bool _inlineThinkWasLoading = false;
+  // User message context menu state
+  final GlobalKey _userBubbleKey = GlobalKey();
+  OverlayEntry? _userMenuOverlay;
+  bool _userMenuActive = false; // for bubble highlight/scale
   late final Ticker _ticker = Ticker((_) {
     if (mounted && _tickActive) setState(() {});
   });
@@ -186,9 +194,151 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
 
   @override
   void dispose() {
+    try { _userMenuOverlay?.remove(); } catch (_) {}
+    _userMenuOverlay = null;
     _ticker.dispose();
     _reasoningScroll.dispose();
     super.dispose();
+  }
+
+  void _removeUserMenuOverlay() {
+    try { _userMenuOverlay?.remove(); } catch (_) {}
+    _userMenuOverlay = null;
+    if (mounted && _userMenuActive) setState(() => _userMenuActive = false);
+  }
+
+  void _showUserContextMenu() {
+    // Haptic feedback (optional)
+    try { HapticFeedback.lightImpact(); } catch (_) {}
+
+    final box = _userBubbleKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context);
+    final overlayBox = overlay?.context.findRenderObject() as RenderBox?;
+    if (box == null || overlayBox == null || overlay == null) return;
+
+    final bubbleTopLeft = box.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final bubbleSize = box.size;
+    final screenSize = overlayBox.size;
+    final insets = MediaQuery.of(context).padding; // status bar / gesture insets
+    final safeLeft = insets.left + 12;
+    final safeRight = insets.right + 12;
+    final safeTop = insets.top + 12;
+    final safeBottom = insets.bottom + 12;
+
+    const double menuWidth = 220; // compact width
+    const double estMenuHeight = 140; // ~ 3 rows
+    const double gap = 10; // space between bubble and menu
+
+    // Horizontal placement: align menu's right edge to bubble's right edge,
+    // and clamp into safe area for better reachability on long messages.
+    final double bubbleRight = bubbleTopLeft.dx + bubbleSize.width;
+    double x = bubbleRight - menuWidth;
+    final double minX = safeLeft;
+    final double maxX = screenSize.width - safeRight - menuWidth;
+    if (x < minX) x = minX;
+    if (x > maxX) x = maxX;
+
+    // Decide above vs below using safe area
+    final availableAbove = bubbleTopLeft.dy - gap - safeTop;
+    final availableBelow = (screenSize.height - safeBottom) - (bubbleTopLeft.dy + bubbleSize.height + gap);
+    final bool canPlaceAbove = availableAbove >= estMenuHeight;
+    final bool canPlaceBelow = availableBelow >= estMenuHeight;
+
+    bool placeAbove;
+    if (canPlaceAbove) {
+      placeAbove = true;
+    } else if (canPlaceBelow) {
+      placeAbove = false;
+    } else {
+      // Fallback: choose the side with more space
+      placeAbove = availableAbove > availableBelow;
+    }
+
+    double y = placeAbove
+        ? (bubbleTopLeft.dy - estMenuHeight - gap)
+        : (bubbleTopLeft.dy + bubbleSize.height + gap);
+
+    // Clamp vertically to remain fully visible within safe area
+    final double minY = safeTop;
+    final double maxY = screenSize.height - safeBottom - estMenuHeight;
+    if (y < minY) y = minY;
+    if (y > maxY) y = maxY;
+
+    if (mounted) setState(() => _userMenuActive = true);
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'context-menu',
+      barrierColor: Colors.black.withOpacity(0.08),
+      pageBuilder: (ctx, _, __) {
+        return Stack(
+          children: [
+            // Positioned popup
+            Positioned(
+              left: x,
+              top: y,
+              width: menuWidth,
+              child: _AnimatedPopup(
+                child: Material(
+                  color: cs.surface,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: cs.outlineVariant.withOpacity(0.28), width: 1),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MenuItem(
+                        icon: Lucide.Pencil,
+                        label: l10n.messageMoreSheetEdit,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          (widget.onEdit ?? widget.onMore)?.call();
+                        },
+                      ),
+                      _MenuItem(
+                        icon: Lucide.Copy,
+                        label: l10n.shareProviderSheetCopyButton,
+                        onTap: () async {
+                          Navigator.of(ctx).pop();
+                          if (widget.onCopy != null) {
+                            widget.onCopy!.call();
+                          } else {
+                            await Clipboard.setData(ClipboardData(text: widget.message.content));
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(l10n.chatMessageWidgetCopiedToClipboard)),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                      _MenuItem(
+                        icon: Lucide.Trash2,
+                        danger: true,
+                        label: l10n.messageMoreSheetDelete,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          (widget.onDelete ?? widget.onMore)?.call();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      if (mounted) setState(() => _userMenuActive = false);
+    });
   }
 
   Widget _buildUserAvatar(UserProvider userProvider, ColorScheme cs) {
@@ -321,21 +471,25 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             ],
           ),
           const SizedBox(height: 8),
-          // Message content
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
-            ),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? cs.primary.withOpacity(0.15)
-                  : cs.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
+          // Message content (long-press for context menu)
+          GestureDetector(
+            onLongPressStart: (_) => _showUserContextMenu(),
+            behavior: HitTestBehavior.translucent,
+            child: Container(
+              key: _userBubbleKey,
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? cs.primary.withOpacity(0.15)
+                    : cs.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
                 if (parsed.text.isNotEmpty)
                   Text(
                     parsed.text,
@@ -468,41 +622,16 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     }).toList(),
                   ),
                 ],
-              ],
+                ],
+              ),
             ),
           ),
-          // Action buttons
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                icon: Icon(Lucide.Copy, size: 16),
-                onPressed: widget.onCopy ?? () {
-                  Clipboard.setData(ClipboardData(text: widget.message.content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.chatMessageWidgetCopiedToClipboard)),
-                  );
-                },
-                visualDensity: VisualDensity.compact,
-                iconSize: 16,
-              ),
-              IconButton(
-                icon: Icon(Lucide.RefreshCw, size: 16),
-                onPressed: widget.onResend,
-                tooltip: l10n.chatMessageWidgetResendTooltip,
-                visualDensity: VisualDensity.compact,
-                iconSize: 16,
-              ),
-              IconButton(
-                icon: Icon(Lucide.Ellipsis, size: 16),
-                onPressed: widget.onMore,
-                tooltip: l10n.chatMessageWidgetMoreTooltip,
-                visualDensity: VisualDensity.compact,
-                iconSize: 16,
-              ),
-              if ((widget.versionCount ?? 1) > 1) ...[
-                const SizedBox(width: 6),
+          // Version switcher when applicable
+          if ((widget.versionCount ?? 1) > 1) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
                 _BranchSelector(
                   index: widget.versionIndex ?? 0,
                   total: widget.versionCount ?? 1,
@@ -510,8 +639,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                   onNext: widget.onNextVersion,
                 ),
               ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -1092,6 +1221,75 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     if (widget.message.role == 'user') return _buildUserMessage();
     if (widget.message.role == 'tool') return _buildToolMessage();
     return _buildAssistantMessage();
+  }
+}
+
+class _AnimatedPopup extends StatefulWidget {
+  const _AnimatedPopup({required this.child});
+  final Widget child;
+
+  @override
+  State<_AnimatedPopup> createState() => _AnimatedPopupState();
+}
+
+class _AnimatedPopupState extends State<_AnimatedPopup> {
+  double _opacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() { _opacity = 1.0; });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOutCubic,
+      opacity: _opacity,
+      child: widget.child,
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  const _MenuItem({required this.icon, required this.label, this.onTap, this.danger = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fg = danger ? Colors.red.shade600 : cs.onSurface;
+    final ic = danger ? Colors.red.shade600 : cs.onSurface.withOpacity(0.9);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          try { HapticFeedback.selectionClick(); } catch (_) {}
+          onTap?.call();
+        },
+        overlayColor: MaterialStatePropertyAll(cs.primary.withOpacity(0.06)),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.centerLeft,
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: ic),
+              const SizedBox(width: 10),
+              Expanded(child: Text(label, style: TextStyle(fontSize: 14.5, color: fg))),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

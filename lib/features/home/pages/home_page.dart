@@ -2513,6 +2513,53 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                           }
                                         }
                                       : null,
+                                  onEdit: message.role == 'user' ? () async {
+                                    final edited = await Navigator.of(context).push<String>(
+                                      MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
+                                    );
+                                    if (edited != null) {
+                                      final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
+                                      if (!mounted) return;
+                                      setState(() {
+                                        if (newMsg != null) {
+                                          _messages.add(newMsg);
+                                          final gid2 = (newMsg.groupId ?? newMsg.id);
+                                          _versionSelections[gid2] = newMsg.version;
+                                        }
+                                      });
+                                    }
+                                  } : null,
+                                  onDelete: message.role == 'user' ? () async {
+                                    final l10n = AppLocalizations.of(context)!;
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: Text(l10n.homePageDeleteMessage),
+                                        content: Text(l10n.homePageDeleteMessageConfirm),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(ctx).pop(false),
+                                            child: Text(l10n.homePageCancel),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(ctx).pop(true),
+                                            child: Text(l10n.homePageDelete, style: const TextStyle(color: Colors.red)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      final id = message.id;
+                                      setState(() {
+                                        _messages.removeWhere((m) => m.id == id);
+                                        _reasoning.remove(id);
+                                        _translations.remove(id);
+                                        _toolParts.remove(id);
+                                        _reasoningSegments.remove(id);
+                                      });
+                                      await _chatService.deleteMessage(id);
+                                    }
+                                  } : null,
                               onMore: () async {
                                 final action = await showMessageMoreSheet(context, message);
                                 if (!mounted) return;
