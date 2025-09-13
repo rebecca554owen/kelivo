@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:gpt_markdown/custom_widgets/markdown_config.dart' show GptMarkdownConfig;
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
@@ -52,13 +53,17 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     if (rbIdx != -1) components[rbIdx] = ModernRadioMd();
     // Prepend custom renderers in priority order (fence first)
     components.insert(0, LabelValueLineMd());
+    // Ensure LaTeX formulas scroll instead of overflow
+    components.insert(0, InlineLatexScrollableMd());
+    components.insert(0, LatexBlockScrollableMd());
     components.insert(0, AtxHeadingMd());
     components.insert(0, FencedCodeBlockMd());
     return GptMarkdown(
       normalized,
       style: baseTextStyle,
       followLinkColor: true,
-      useDollarSignsForLatex: true,
+      // Disable built-in $...$ LaTeX so our custom scrollable handlers take over
+      useDollarSignsForLatex: false,
       onLinkTap: (url, title) => _handleLinkTap(context, url),
       components: components,
       imageBuilder: (ctx, url) {
@@ -237,20 +242,18 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
           ],
         );
 
-        return Scrollbar(
-          thumbVisibility: false,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(ctx).colorScheme.surface,
-                  border: Border.all(color: borderColor, width: 0.8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: table,
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          primary: false,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.surface,
+                border: Border.all(color: borderColor, width: 0.8),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: table,
             ),
           ),
         );
@@ -571,13 +574,14 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
               width: double.infinity,
               color: bodyBg,
               padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: HighlightView(
-                  widget.code,
-                  language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
-                  theme: MarkdownWithCodeHighlight._transparentBgTheme(
-                    isDark ? atomOneDarkReasonableTheme : githubTheme,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              primary: false,
+              child: HighlightView(
+                widget.code,
+                language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
+                theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                  isDark ? atomOneDarkReasonableTheme : githubTheme,
                   ),
                   padding: EdgeInsets.zero,
                   textStyle: const TextStyle(
@@ -898,6 +902,80 @@ class FencedCodeBlockMd extends BlockMd {
       return _MermaidBlock(code: code);
     }
     return _CollapsibleCodeBlock(language: lang, code: code);
+  }
+}
+
+/// Scrollable LaTeX block to prevent overflow when equations are very wide
+class LatexBlockScrollableMd extends BlockMd {
+  @override
+  // Match either $$...$$ or \[...\] as standalone block
+  String get expString => (r"^(?:\s*\$\$([\s\S]*?)\$\$\s*|\s*\\\[([\s\S]*?)\\\]\s*)$");
+
+  @override
+  Widget build(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text.trim());
+    if (m == null) return const SizedBox.shrink();
+    final body = ((m.group(1) ?? m.group(2) ?? '')).trim();
+    if (body.isEmpty) return const SizedBox.shrink();
+
+    final math = Math.tex(
+      body,
+      textStyle: (config.style ?? const TextStyle()),
+    );
+    // Wrap in horizontal scroll to avoid overflow; no extra background
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: math,
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Inline LaTeX `$...$` rendered in a horizontally scrollable bubble to avoid line overflow
+class InlineLatexScrollableMd extends InlineMd {
+  @override
+  // Match single-dollar $...$ or \(...\) inline math (avoid $$ block)
+  RegExp get exp => RegExp(r"(?:(?<!\$)\$([^\$\n]+?)\$(?!\$)|\\\(([^\n]+?)\\\))");
+
+  @override
+  InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text);
+    if (m == null) return TextSpan(text: text, style: config.style);
+    final body = ((m.group(1) ?? m.group(2) ?? '')).trim();
+    if (body.isEmpty) return TextSpan(text: text, style: config.style);
+    final math = Math.tex(
+      body,
+      mathStyle: MathStyle.text,
+      textStyle: () {
+        final base = (config.style ?? const TextStyle());
+        final baseSize = base.fontSize ?? 15.5;
+        // Slightly enlarge inline math for readability
+        return base.copyWith(fontSize: baseSize * 1.2);
+      }(),
+    );
+    // Wrap in horizontal scroll to prevent line overflow; no extra background
+    final w = LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          primary: false,
+          child: math,
+        );
+      },
+    );
+
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: w,
+    );
   }
 }
 
