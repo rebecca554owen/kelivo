@@ -478,6 +478,16 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
                           decoration: InputDecoration(
                             hintText: l10n.modelSelectSheetSearchHint,
                             prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface.withOpacity(_isLoading ? 0.3 : 0.6)),
+                            suffixIcon: (widget.limitProviderKey == null && context.watch<SettingsProvider>().pinnedModels.isNotEmpty)
+                                ? Tooltip(
+                                    message: l10n.modelSelectSheetFavoritesSection,
+                                    child: IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: _jumpToFavorites,
+                                      icon: Icon(Lucide.Bookmark, size: 18, color: cs.onSurface.withOpacity(_isLoading ? 0.3 : 0.6)),
+                                    ),
+                                  )
+                                : null,
                             filled: true,
                             fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
@@ -871,6 +881,56 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
 
   String _displayName(BuildContext context, _ModelItem m) => m.info.displayName;
   ModelInfo _effectiveInfo(BuildContext context, _ModelItem m) => m.info;
+
+  Future<void> _jumpToFavorites() async {
+    if (widget.limitProviderKey != null) return;
+    // Expand sheet first to reveal more content
+    if (_sheetCtrl.size < _maxSize) {
+      try {
+        await _sheetCtrl.animateTo(
+          _maxSize,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    // If search text hides favorites section, clear it to ensure favorites are visible
+    if (_search.text.isNotEmpty) {
+      setState(() => _search.clear());
+      await Future.delayed(const Duration(milliseconds: 150));
+    }
+
+    // Try GlobalKey first
+    final favKey = _headers['__fav__'];
+    if (favKey != null) {
+      final ctx = favKey.currentContext;
+      if (ctx != null) {
+        try {
+          await Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+            alignment: 0.0,
+          );
+          return;
+        } catch (_) {}
+      }
+    }
+    // Fallback to offset scrolling
+    final base = _providerOffsets['__fav__'];
+    if (base != null && _listCtrl?.hasClients == true) {
+      final target = base.clamp(0.0, _listCtrl!.position.maxScrollExtent);
+      try {
+        await _listCtrl!.animateTo(
+          target,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      } catch (_) {}
+    }
+  }
 }
 
 class _ProviderGroup {
