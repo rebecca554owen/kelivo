@@ -61,7 +61,7 @@ class BottomToolsSheet extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: const BorderRadius.only(
