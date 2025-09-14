@@ -521,8 +521,9 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     _providerOffsets.clear();
     double cumulative = 0.0;
 
-    // Favorites section (reactive; only when not limited and not searching)
-    if (widget.limitProviderKey == null && query.isEmpty) {
+    // Favorites section (reactive; when not limited; supports search)
+    final Set<String> _favMatchedKeys = <String>{};
+    if (widget.limitProviderKey == null) {
       final pinned = context.watch<SettingsProvider>().pinnedModels;
       if (pinned.isNotEmpty) {
         final favs = <_ModelItem>[];
@@ -546,6 +547,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           );
           if (_matchesSearch(query, found, found.providerName)) {
             favs.add(found.copyWith(pinned: true));
+            _favMatchedKeys.add('$pk::$mid');
           }
         }
         if (favs.isNotEmpty) {
@@ -579,6 +581,10 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         items = providerMatches
             ? g.items
             : g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
+        // When searching, avoid duplicating favorites already listed in the favorites section
+        if (_favMatchedKeys.isNotEmpty) {
+          items = items.where((e) => !_favMatchedKeys.contains('${e.providerKey}::${e.id}')).toList();
+        }
       }
       if (items.isEmpty) continue;
 
