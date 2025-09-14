@@ -25,19 +25,21 @@ class BottomToolsSheet extends StatelessWidget {
           height: 72,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
-            ],
+            // Remove tile shadow per design
           ),
           child: Material(
-            color: bg,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white10
+                : const Color(0xFFF2F3F5),
             borderRadius: BorderRadius.circular(14),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
-              overlayColor: MaterialStateProperty.resolveWith(
-                (states) => primary.withOpacity(states.contains(MaterialState.pressed) ? 0.14 : 0.08),
-              ),
-              splashColor: primary.withOpacity(0.18),
+              overlayColor: MaterialStateProperty.resolveWith((states) {
+                final on = Theme.of(context).colorScheme.onSurface;
+                final base = states.contains(MaterialState.pressed) ? 0.08 : 0.05;
+                return on.withOpacity(base);
+              }),
+              splashColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
               onTap: () {
                 HapticFeedback.selectionClick();
                 onTap?.call();
@@ -46,7 +48,7 @@ class BottomToolsSheet extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: 24, color: primary),
+                    Icon(icon, size: 24, color: Theme.of(context).colorScheme.onSurface),
                     const SizedBox(height: 6),
                     Text(label, style: const TextStyle(fontSize: 13)),
                   ],
@@ -75,6 +77,16 @@ class BottomToolsSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+          // Drag handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               roundedAction(
@@ -90,37 +102,14 @@ class BottomToolsSheet extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               roundedAction(
-                icon: Lucide.Upload,
+                icon: Lucide.Paperclip,
                 label: l10n.bottomToolsSheetUpload,
                 onTap: onUpload,
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _LearningModeTile(),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: Material(
-              color: bg,
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                overlayColor: MaterialStateProperty.resolveWith(
-                  (states) => primary.withOpacity(states.contains(MaterialState.pressed) ? 0.14 : 0.08),
-                ),
-                splashColor: primary.withOpacity(0.18),
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onClear?.call();
-                },
-                child: Center(
-                  child: Text(clearLabel ?? l10n.bottomToolsSheetClearContext, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                ),
-              ),
-            ),
-          ),
+          _LearningAndClearSection(clearLabel: clearLabel, onClear: onClear),
         ],
       ),
     ),
@@ -128,12 +117,16 @@ class BottomToolsSheet extends StatelessWidget {
   }
 }
 
-class _LearningModeTile extends StatefulWidget {
+class _LearningAndClearSection extends StatefulWidget {
+  const _LearningAndClearSection({this.onClear, this.clearLabel});
+  final VoidCallback? onClear;
+  final String? clearLabel;
+
   @override
-  State<_LearningModeTile> createState() => _LearningModeTileState();
+  State<_LearningAndClearSection> createState() => _LearningAndClearSectionState();
 }
 
-class _LearningModeTileState extends State<_LearningModeTile> {
+class _LearningAndClearSectionState extends State<_LearningAndClearSection> {
   bool _enabled = false;
   bool _loading = true;
 
@@ -152,73 +145,81 @@ class _LearningModeTileState extends State<_LearningModeTile> {
     });
   }
 
+  Widget _row({required IconData icon, required String label, bool selected = false, VoidCallback? onTap, VoidCallback? onLongPress}) {
+    final cs = Theme.of(context).colorScheme;
+    final onColor = selected ? cs.primary : cs.onSurface;
+    final radius = BorderRadius.circular(14);
+    return Material(
+      color: Colors.transparent,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: radius,
+        overlayColor: MaterialStateProperty.resolveWith((states) {
+          final on = Theme.of(context).colorScheme.onSurface;
+          final base = states.contains(MaterialState.pressed) ? 0.08 : 0.05;
+          return on.withOpacity(base);
+        }),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: onColor),
+              const SizedBox(width: 10),
+              Expanded(child: Text(label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: onColor))),
+              if (selected) Icon(Lucide.Check, size: 18, color: cs.primary) else const SizedBox(width: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: Icon(Lucide.BookOpenText, size: 20, color: cs.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.bottomToolsSheetLearningMode,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+    final bg = Theme.of(context).colorScheme.surface;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+          child: _loading
+              ? const SizedBox(height: 48)
+              : _row(
+                  icon: Lucide.BookOpenText,
+                  label: l10n.bottomToolsSheetLearningMode,
+                  selected: _enabled,
+                  onTap: () async {
+                    HapticFeedback.selectionClick();
+                    final next = !_enabled;
+                    await LearningModeStore.setEnabled(next);
+                    if (!mounted) return;
+                    setState(() => _enabled = next);
+                    // Close bottom sheet after toggling
+                    Navigator.of(context).maybePop();
+                  },
+                  onLongPress: () => _showLearningPromptSheet(context),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.bottomToolsSheetLearningModeDescription,
-                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+          child: _row(
+            icon: Lucide.Eraser,
+            label: widget.clearLabel ?? l10n.bottomToolsSheetClearContext,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              widget.onClear?.call();
+            },
           ),
-          IconButton(
-            tooltip: l10n.bottomToolsSheetConfigurePrompt,
-            onPressed: () => _showLearningPromptSheet(context),
-            icon: Icon(Lucide.Settings, size: 20, color: cs.primary),
-          ),
-          IgnorePointer(
-            ignoring: _loading,
-            child: Opacity(
-              opacity: _loading ? 0.5 : 1,
-              child: Switch(
-                value: _enabled,
-                onChanged: (v) async {
-                  await LearningModeStore.setEnabled(v);
-                  if (!mounted) return;
-                  setState(() => _enabled = v);
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

@@ -57,8 +57,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin, RouteAware {
-  bool _toolsOpen = false;
-  static const double _sheetHeight = 256; // height of tools area
+  // Inline bottom tools panel removed; using modal bottom sheet instead
   // Animation tuning
   static const Duration _scrollAnimateDuration = Duration(milliseconds: 300);
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
@@ -366,15 +365,45 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _currentConversation = updated;
       });
     }
-    if (_toolsOpen) _toggleTools();
+    // No inline panel to close; modal sheet is dismissed before action
   }
 
-  void _toggleTools() {
-    setState(() {
-      final opening = !_toolsOpen;
-      _toolsOpen = !_toolsOpen;
-      if (opening) _dismissKeyboard();
-    });
+  void _toggleTools() async {
+    // Open as modal bottom sheet instead of inline overlay
+    _dismissKeyboard();
+    final cs = Theme.of(context).colorScheme;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: false,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: BottomToolsSheet(
+            onPhotos: () {
+              Navigator.of(ctx).maybePop();
+              _onPickPhotos();
+            },
+            onCamera: () {
+              Navigator.of(ctx).maybePop();
+              _onPickCamera();
+            },
+            onUpload: () {
+              Navigator.of(ctx).maybePop();
+              _onPickFiles();
+            },
+            onClear: () async {
+              Navigator.of(ctx).maybePop();
+              await _onClearContext();
+            },
+            clearLabel: _clearContextLabel(),
+          ),
+        );
+      },
+    );
   }
 
   bool _isToolModel(String providerKey, String modelId) {
@@ -567,9 +596,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _mediaController.addImages(paths);
         _scrollToBottomSoon();
       }
-    } catch (_) {} finally {
-      if (mounted && _toolsOpen) _toggleTools();
-    }
+    } catch (_) {}
   }
 
   Future<void> _onPickCamera() async {
@@ -582,9 +609,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _mediaController.addImages(paths);
         _scrollToBottomSoon();
       }
-    } catch (_) {} finally {
-      if (mounted && _toolsOpen) _toggleTools();
-    }
+    } catch (_) {}
   }
 
   String _inferMimeByExtension(String name) {
@@ -627,9 +652,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _mediaController.addFiles(docs);
         _scrollToBottomSoon();
       }
-    } catch (_) {} finally {
-      if (mounted && _toolsOpen) _toggleTools();
-    }
+    } catch (_) {}
   }
 
   Future<void> _createNewConversation() async {
@@ -2709,130 +2732,123 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ),
                 ),
               ),
-              // Input bar; lifts when tools open
-              AnimatedPadding(
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOutCubic,
-                padding: EdgeInsets.only(bottom: _toolsOpen ? _sheetHeight : 0),
-                child: NotificationListener<SizeChangedLayoutNotification>(
-                  onNotification: (n) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputBar());
-                    return false;
-                  },
-                  child: SizeChangedLayoutNotifier(
-                  child: Builder(builder: (context) {
-                    // Enforce model capabilities: disable MCP selection if model doesn't support tools
-                    final settings = context.watch<SettingsProvider>();
-                    final pk = settings.currentModelProvider;
-                    final mid = settings.currentModelId;
-                    if (pk != null && mid != null) {
-                      final ap = context.read<AssistantProvider>();
-                      final a = ap.currentAssistant;
-                      // Enforce tool ability: clear MCP bindings when unsupported
-                      final supportsTools = _isToolModel(pk, mid);
-                      if (!supportsTools && (a?.mcpServerIds.isNotEmpty ?? false)) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final aa = ap.currentAssistant;
-                          if (aa != null && aa.mcpServerIds.isNotEmpty) {
-                            ap.updateAssistant(aa.copyWith(mcpServerIds: const <String>[]));
-                          }
-                        });
-                      }
-                      // Enforce reasoning ability: set thinkingBudget OFF when unsupported
-                      final supportsReasoning = _isReasoningModel(pk, mid);
-                      if (!supportsReasoning && a != null) {
-                        final enabledNow = _isReasoningEnabled(a.thinkingBudget ?? settings.thinkingBudget);
-                        if (enabledNow) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+              // Input bar
+              NotificationListener<SizeChangedLayoutNotification>(
+                onNotification: (n) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputBar());
+                  return false;
+                },
+                child: SizeChangedLayoutNotifier(
+                  child: Builder(
+                    builder: (context) {
+                      // Enforce model capabilities: disable MCP selection if model doesn't support tools
+                      final settings = context.watch<SettingsProvider>();
+                      final pk = settings.currentModelProvider;
+                      final mid = settings.currentModelId;
+                      if (pk != null && mid != null) {
+                        final ap = context.read<AssistantProvider>();
+                        final a = ap.currentAssistant;
+                        final supportsTools = _isToolModel(pk, mid);
+                        if (!supportsTools && (a?.mcpServerIds.isNotEmpty ?? false)) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
                             final aa = ap.currentAssistant;
-                            if (aa != null) {
-                              await ap.updateAssistant(aa.copyWith(thinkingBudget: 0));
+                            if (aa != null && aa.mcpServerIds.isNotEmpty) {
+                              ap.updateAssistant(aa.copyWith(mcpServerIds: const <String>[]));
                             }
                           });
                         }
+                        final supportsReasoning = _isReasoningModel(pk, mid);
+                        if (!supportsReasoning && a != null) {
+                          final enabledNow = _isReasoningEnabled(a.thinkingBudget ?? settings.thinkingBudget);
+                          if (enabledNow) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) async {
+                              final aa = ap.currentAssistant;
+                              if (aa != null) {
+                                await ap.updateAssistant(aa.copyWith(thinkingBudget: 0));
+                              }
+                            });
+                          }
+                        }
                       }
-                    }
-                    // Compute whether built-in Gemini search is active to highlight the search button
-                    final cfg = (settings.currentModelProvider != null)
-                        ? settings.getProviderConfig(settings.currentModelProvider!)
-                        : null;
-                    bool builtinSearchActive = false;
-                    if (cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true)) {
-                      final mid = settings.currentModelId;
-                      if ((mid ?? '').isNotEmpty) {
-                        final ov = cfg.modelOverrides[mid] as Map?;
-                        final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
-                        builtinSearchActive = list.map((e) => e.toString().toLowerCase()).contains('search');
+                      // Compute whether built-in Gemini search is active to highlight the search button
+                      final cfg = (settings.currentModelProvider != null)
+                          ? settings.getProviderConfig(settings.currentModelProvider!)
+                          : null;
+                      bool builtinSearchActive = false;
+                      if (cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true)) {
+                        final mid2 = settings.currentModelId;
+                        if ((mid2 ?? '').isNotEmpty) {
+                          final ov = cfg.modelOverrides[mid2] as Map?;
+                          final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
+                          builtinSearchActive = list.map((e) => e.toString().toLowerCase()).contains('search');
+                        }
                       }
-                    }
-
-                    return ChatInputBar(
-                  key: _inputBarKey,
-                  onMore: _toggleTools,
-                  moreOpen: _toolsOpen,
-                  // Highlight when app-level search enabled OR model built-in search enabled
-                  searchEnabled: context.watch<SettingsProvider>().searchEnabled || builtinSearchActive,
-                  onToggleSearch: (enabled) {
-                    context.read<SettingsProvider>().setSearchEnabled(enabled);
-                  },
-                  onSelectModel: () => showModelSelectSheet(context),
-                  onOpenMcp: () {
-                    final a = context.read<AssistantProvider>().currentAssistant;
-                    if (a != null) {
-                      showAssistantMcpSheet(context, assistantId: a.id);
-                    }
-                  },
-                  onStop: _cancelStreaming,
-                  modelIcon: (settings.showModelIcon && settings.currentModelProvider != null && settings.currentModelId != null)
-                      ? _CurrentModelIcon(
-                    providerKey: settings.currentModelProvider,
-                    modelId: settings.currentModelId,
-                    size: 40,
-                  )
-                      : null,
-                  focusNode: _inputFocus,
-                  controller: _inputController,
-                  mediaController: _mediaController,
-                  onConfigureReasoning: () async {
-                    final assistant = context.read<AssistantProvider>().currentAssistant;
-                    if (assistant != null) {
-                      if (assistant.thinkingBudget != null) {
-                        context.read<SettingsProvider>().setThinkingBudget(assistant.thinkingBudget);
-                      }
-                      await showReasoningBudgetSheet(context);
-                      final chosen = context.read<SettingsProvider>().thinkingBudget;
-                      await context.read<AssistantProvider>().updateAssistant(
-                        assistant.copyWith(thinkingBudget: chosen),
+                      return ChatInputBar(
+                        key: _inputBarKey,
+                        onMore: _toggleTools,
+                        // Highlight when app-level search enabled OR model built-in search enabled
+                        searchEnabled: context.watch<SettingsProvider>().searchEnabled || builtinSearchActive,
+                        onToggleSearch: (enabled) {
+                          context.read<SettingsProvider>().setSearchEnabled(enabled);
+                        },
+                        onSelectModel: () => showModelSelectSheet(context),
+                        onOpenMcp: () {
+                          final a = context.read<AssistantProvider>().currentAssistant;
+                          if (a != null) {
+                            showAssistantMcpSheet(context, assistantId: a.id);
+                          }
+                        },
+                        onStop: _cancelStreaming,
+                        modelIcon: (settings.showModelIcon && settings.currentModelProvider != null && settings.currentModelId != null)
+                            ? _CurrentModelIcon(
+                                providerKey: settings.currentModelProvider,
+                                modelId: settings.currentModelId,
+                                size: 40,
+                              )
+                            : null,
+                        focusNode: _inputFocus,
+                        controller: _inputController,
+                        mediaController: _mediaController,
+                        onConfigureReasoning: () async {
+                          final assistant = context.read<AssistantProvider>().currentAssistant;
+                          if (assistant != null) {
+                            if (assistant.thinkingBudget != null) {
+                              context.read<SettingsProvider>().setThinkingBudget(assistant.thinkingBudget);
+                            }
+                            await showReasoningBudgetSheet(context);
+                            final chosen = context.read<SettingsProvider>().thinkingBudget;
+                            await context.read<AssistantProvider>().updateAssistant(
+                              assistant.copyWith(thinkingBudget: chosen),
+                            );
+                          }
+                        },
+                        reasoningActive: _isReasoningEnabled((context.watch<AssistantProvider>().currentAssistant?.thinkingBudget) ?? settings.thinkingBudget),
+                        supportsReasoning: (settings.currentModelProvider != null && settings.currentModelId != null)
+                            ? _isReasoningModel(settings.currentModelProvider!, settings.currentModelId!)
+                            : false,
+                        onOpenSearch: () => showSearchSettingsSheet(context),
+                        onSend: (text) {
+                          _sendMessage(text);
+                          _inputController.clear();
+                          // Dismiss keyboard after sending
+                          _dismissKeyboard();
+                        },
+                        loading: _isLoading,
+                        showMcpButton: (() {
+                          final pk2 = settings.currentModelProvider;
+                          final mid3 = settings.currentModelId;
+                          if (pk2 == null || mid3 == null) return false;
+                          return _isToolModel(pk2, mid3) && context.watch<McpProvider>().servers.isNotEmpty;
+                        })(),
+                        mcpActive: (() {
+                          final a = context.watch<AssistantProvider>().currentAssistant;
+                          final connected = context.watch<McpProvider>().connectedServers;
+                          final selected = a?.mcpServerIds ?? const <String>[];
+                          if (selected.isEmpty || connected.isEmpty) return false;
+                          return connected.any((s) => selected.contains(s.id));
+                        })(),
                       );
-                    }
-                  },
-                  reasoningActive: _isReasoningEnabled((context.watch<AssistantProvider>().currentAssistant?.thinkingBudget) ?? settings.thinkingBudget),
-                  supportsReasoning: (settings.currentModelProvider != null && settings.currentModelId != null)
-                      ? _isReasoningModel(settings.currentModelProvider!, settings.currentModelId!)
-                      : false,
-                  onOpenSearch: () => showSearchSettingsSheet(context),
-                  onSend: (text) {
-                    _sendMessage(text);
-                    _inputController.clear();
-                    // Dismiss keyboard after sending
-                    _dismissKeyboard();
-                  },
-                  loading: _isLoading,
-                  showMcpButton: (() {
-                    final pk = settings.currentModelProvider;
-                    final mid = settings.currentModelId;
-                    if (pk == null || mid == null) return false;
-                    return _isToolModel(pk, mid) && context.watch<McpProvider>().servers.isNotEmpty;
-                  })(),
-                  mcpActive: (() {
-                    final a = context.watch<AssistantProvider>().currentAssistant;
-                    final connected = context.watch<McpProvider>().connectedServers;
-                    final selected = a?.mcpServerIds ?? const <String>[];
-                    if (selected.isEmpty || connected.isEmpty) return false;
-                    return connected.any((s) => selected.contains(s.id));
-                  })(),
-                );
-                    }),
+                    },
                   ),
                 ),
               ),
@@ -2864,54 +2880,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           //   ),
           // ),
 
-          // Backdrop to close sheet on tap
-          IgnorePointer(
-            ignoring: !_toolsOpen,
-            child: AnimatedOpacity(
-              opacity: _toolsOpen ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: GestureDetector(
-                onTap: _toggleTools,
-                behavior: HitTestBehavior.opaque,
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-
-          // Tools sheet overlayed at the bottom
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SafeArea(
-              top: false,
-              child: AnimatedSlide(
-                offset: _toolsOpen ? Offset.zero : const Offset(0, 1),
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                child: AnimatedOpacity(
-                  opacity: _toolsOpen ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  child: SizedBox(
-                    height: _sheetHeight,
-                    width: double.infinity,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                      child: BottomToolsSheet(
-                        onPhotos: _onPickPhotos,
-                        onCamera: _onPickCamera,
-                        onUpload: _onPickFiles,
-                        onClear: _onClearContext,
-                        clearLabel: _clearContextLabel(),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // Inline tools sheet removed; replaced by modal bottom sheet
 
           // Selection toolbar overlay (above input bar)
           if (_selecting)
@@ -2920,7 +2889,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: _toolsOpen ? (_sheetHeight + 72) : 72),
+                  padding: const EdgeInsets.only(bottom: 72),
                   child: _SelectionToolbar(
                     onCancel: () {
                       setState(() {
@@ -2959,7 +2928,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (!showSetting || _messages.isEmpty) return const SizedBox.shrink();
             final cs = Theme.of(context).colorScheme;
             final isDark = Theme.of(context).brightness == Brightness.dark;
-            final bottomOffset = (_toolsOpen ? _sheetHeight : 0) + _inputBarHeight + 12;
+            final bottomOffset = _inputBarHeight + 12;
             return Align(
               alignment: Alignment.bottomRight,
               child: SafeArea(
