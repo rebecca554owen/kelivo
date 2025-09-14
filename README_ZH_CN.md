@@ -20,9 +20,12 @@
 
 ## 🚀 下载
 
+[![Download on the App Store](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/us/app/kelivo/id6752122930)
+
+
 🔗 [下载最新版本](https://github.com/Chevey339/kelivo/releases/latest)
 
-🔗 或 [TestFlight](https://testflight.apple.com/join/PZZyRMyY) 参与测试版体验。
+🔗 [TestFlight](https://testflight.apple.com/join/PZZyRMyY) 参与测试版体验。
 
 ## ✨ 功能特性
 
