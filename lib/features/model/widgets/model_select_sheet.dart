@@ -364,15 +364,39 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     }
     if (_listCtrl == null || !_listCtrl!.hasClients) return;
 
-    // Locate provider and item index
-    final group = _groups[pk];
-    if (group == null) return;
-    final index = group.items.indexWhere((e) => e.id == mid);
-    if (index < 0) return;
+    // If current model is pinned and favorites section is visible, jump there first
+    final currentKey = '${pk}::${mid}';
+    final bool showFavorites = widget.limitProviderKey == null && (_search.text.isEmpty);
+    final bool isPinned = settings.pinnedModels.contains(currentKey);
+    double? target;
+    if (showFavorites && isPinned && _providerOffsets.containsKey('__fav__')) {
+      // Compute index of current model within favorites as displayed
+      final favKeysDisplay = <String>[];
+      for (final k in settings.pinnedModels) {
+        final parts = k.split('::');
+        if (parts.length < 2) continue;
+        final p = parts[0];
+        if (_groups[p] == null) continue;
+        favKeysDisplay.add(k);
+      }
+      final favIndex = favKeysDisplay.indexOf(currentKey);
+      if (favIndex >= 0) {
+        final baseFav = _providerOffsets['__fav__'] ?? 0.0;
+        target = baseFav + _sectionHeaderHeight + favIndex * _modelTileHeight;
+      }
+    }
+
+    // Fallback to provider section if not pinned or favorites not available
+    if (target == null) {
+      final group = _groups[pk];
+      if (group == null) return;
+      final index = group.items.indexWhere((e) => e.id == mid);
+      if (index < 0) return;
+      final base = _providerOffsets[pk] ?? 0.0;
+      target = base + _sectionHeaderHeight + index * _modelTileHeight;
+    }
 
     // Use precomputed section offsets from latest build
-    final base = _providerOffsets[pk] ?? 0.0;
-    final target = base + _sectionHeaderHeight + index * _modelTileHeight;
     final maxOff = _listCtrl!.position.maxScrollExtent;
     final to = target.clamp(0.0, maxOff);
 
