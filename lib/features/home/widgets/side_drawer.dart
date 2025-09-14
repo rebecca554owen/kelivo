@@ -540,7 +540,9 @@ class _SideDrawerState extends State<SideDrawer> {
             // Scrollable conversation list below fixed header
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                // Reduce side paddings to extend tile backgrounds while
+                // keeping text position unchanged (compensated in tile padding)
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 16),
                 children: [
                   // Update banner under search box
                   Builder(builder: (context) {
@@ -633,7 +635,8 @@ class _SideDrawerState extends State<SideDrawer> {
                       children: [
                         if (pinnedList.isNotEmpty) ...[
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 6, 0, 6),
+                            // Keep label text aligned with tiles (8 outer + 16 inner = 24)
+                            padding: const EdgeInsets.fromLTRB(14, 6, 0, 6),
                             child: Text(
                               AppLocalizations.of(context)!.sideDrawerPinnedLabel,
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary),
@@ -655,7 +658,8 @@ class _SideDrawerState extends State<SideDrawer> {
                         ],
                         for (final group in groups) ...[
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 6, 0, 6),
+                            // Keep label text aligned with tiles (8 outer + 16 inner = 24)
+                            padding: const EdgeInsets.fromLTRB(14, 6, 0, 6),
                             child: Text(
                               group.label,
                               textAlign: TextAlign.left,
@@ -1411,7 +1415,9 @@ class _ChatTile extends StatelessWidget {
           onLongPress: onLongPress,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            // Increase left padding to keep text aligned after reducing ListView side padding
+            // New absolute left = 8 (list padding) + 16 (tile) = 24 (unchanged)
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
             child: Text(
               chat.title,
               maxLines: 1,
