@@ -132,6 +132,7 @@
   "assistantEditTemperatureDescription": "Controls randomness, range 0–2",
   "assistantEditTopPDescription": "Do not change unless you know what you are doing",
   "assistantEditParameterDisabled": "Disabled (uses provider default)",
+  "assistantEditParameterDisabled2": "Disabled (no restrictions)",
   "assistantEditContextMessagesTitle": "Context Messages",
   "assistantEditContextMessagesDescription": "How many recent messages to keep in context",
   "assistantEditStreamOutputTitle": "Stream Output",

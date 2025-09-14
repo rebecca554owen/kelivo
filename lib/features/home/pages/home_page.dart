@@ -341,7 +341,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   String _clearContextLabel() {
     final l10n = AppLocalizations.of(context)!;
     final assistant = context.read<AssistantProvider>().currentAssistant;
-    final configured = assistant?.contextMessageSize ?? 0;
+    final configured = (assistant?.limitContextMessages ?? true) ? (assistant?.contextMessageSize ?? 0) : 0;
     final t = _currentConversation?.truncateIndex ?? -1;
     int remaining = 0;
     for (int i = 0; i < _messages.length; i++) {
@@ -846,7 +846,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     } catch (_) {}
 
     // Limit context length according to assistant settings
-    if ((assistant?.contextMessageSize ?? 0) > 0) {
+    if ((assistant?.limitContextMessages ?? true) && (assistant?.contextMessageSize ?? 0) > 0) {
       final keep = assistant!.contextMessageSize.clamp(1, 512).toInt();
       // Always keep the first message if it's system
       int startIdx = 0;
@@ -1610,7 +1610,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     } catch (_) {}
 
     // Limit context length
-    if ((assistant?.contextMessageSize ?? 0) > 0) {
+    if ((assistant?.limitContextMessages ?? true) && (assistant?.contextMessageSize ?? 0) > 0) {
       final keep = assistant!.contextMessageSize.clamp(1, 512).toInt();
       int startIdx = 0;
       if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {

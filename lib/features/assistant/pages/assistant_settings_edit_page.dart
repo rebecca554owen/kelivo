@@ -688,15 +688,33 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Context messages
         card(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            titleDesc(l10n.assistantEditContextMessagesTitle, l10n.assistantEditContextMessagesDescription),
-            _SliderTileNew(
-              value: a.contextMessageSize.toDouble().clamp(0, 256),
-              min: 0,
-              max: 256,
-              divisions: 64, // step=4: every 4 messages per tick
-              label: a.contextMessageSize.toString(),
-              onChanged: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(contextMessageSize: v.round())),
-            ),
+            Row(children: [
+              Expanded(child: titleDesc(l10n.assistantEditContextMessagesTitle, l10n.assistantEditContextMessagesDescription)),
+              Switch(
+                value: a.limitContextMessages,
+                onChanged: (v) async {
+                  await context.read<AssistantProvider>().updateAssistant(a.copyWith(limitContextMessages: v));
+                },
+              ),
+            ]),
+            if (a.limitContextMessages) ...[
+              _SliderTileNew(
+                value: a.contextMessageSize.toDouble().clamp(0, 256),
+                min: 0,
+                max: 256,
+                divisions: 64, // step=4: every 4 messages per tick
+                label: a.contextMessageSize.toString(),
+                onChanged: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(contextMessageSize: v.round())),
+              ),
+            ] else ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+                child: Text(
+                  l10n.assistantEditParameterDisabled2,
+                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                ),
+              ),
+            ],
           ]),
         ),
 

@@ -10,6 +10,7 @@ class Assistant {
   final double? temperature; // null to disable; else 0.0 - 2.0
   final double? topP; // null to disable; else 0.0 - 1.0
   final int contextMessageSize; // number of previous messages to include
+  final bool limitContextMessages; // whether to enforce contextMessageSize
   final bool streamOutput; // streaming responses
   final int? thinkingBudget; // null = use global/default; 0=off; >0 tokens budget
   final int? maxTokens; // null = unlimited
@@ -32,6 +33,7 @@ class Assistant {
     this.temperature,
     this.topP,
     this.contextMessageSize = 64,
+    this.limitContextMessages = true,
     this.streamOutput = true,
     this.thinkingBudget,
     this.maxTokens,
@@ -54,6 +56,7 @@ class Assistant {
     double? temperature,
     double? topP,
     int? contextMessageSize,
+    bool? limitContextMessages,
     bool? streamOutput,
     int? thinkingBudget,
     int? maxTokens,
@@ -82,6 +85,7 @@ class Assistant {
       temperature: clearTemperature ? null : (temperature ?? this.temperature),
       topP: clearTopP ? null : (topP ?? this.topP),
       contextMessageSize: contextMessageSize ?? this.contextMessageSize,
+      limitContextMessages: limitContextMessages ?? this.limitContextMessages,
       streamOutput: streamOutput ?? this.streamOutput,
       thinkingBudget: clearThinkingBudget ? null : (thinkingBudget ?? this.thinkingBudget),
       maxTokens: clearMaxTokens ? null : (maxTokens ?? this.maxTokens),
@@ -105,6 +109,7 @@ class Assistant {
         'temperature': temperature,
         'topP': topP,
         'contextMessageSize': contextMessageSize,
+        'limitContextMessages': limitContextMessages,
         'streamOutput': streamOutput,
         'thinkingBudget': thinkingBudget,
         'maxTokens': maxTokens,
@@ -127,6 +132,7 @@ class Assistant {
         temperature: (json['temperature'] as num?)?.toDouble(),
         topP: (json['topP'] as num?)?.toDouble(),
         contextMessageSize: (json['contextMessageSize'] as num?)?.toInt() ?? 64,
+        limitContextMessages: json['limitContextMessages'] as bool? ?? true,
         streamOutput: json['streamOutput'] as bool? ?? true,
         thinkingBudget: (json['thinkingBudget'] as num?)?.toInt(),
         maxTokens: (json['maxTokens'] as num?)?.toInt(),

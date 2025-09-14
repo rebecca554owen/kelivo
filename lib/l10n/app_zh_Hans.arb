@@ -70,6 +70,7 @@
   "assistantEditTemperatureDescription": "控制输出的随机性，范围 0–2",
   "assistantEditTopPDescription": "请不要修改此值，除非你知道自己在做什么",
   "assistantEditParameterDisabled": "已关闭（使用服务商默认）",
+  "assistantEditParameterDisabled2": "已关闭（无限制）",
   "assistantEditContextMessagesTitle": "上下文消息数量",
   "assistantEditContextMessagesDescription": "多少历史消息会被当作上下文发送给模型，超过数量会忽略，只保留最近 N 条",
   "assistantEditStreamOutputTitle": "流式输出",

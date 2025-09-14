@@ -319,6 +319,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditParameterDisabled => '已关闭（使用服务商默认）';
 
   @override
+  String get assistantEditParameterDisabled2 => '已关闭（无限制）';
+
+  @override
   String get assistantEditContextMessagesTitle => '上下文消息数量';
 
   @override
@@ -2445,6 +2448,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditParameterDisabled => '已关闭（使用服务商默认）';
 
   @override
+  String get assistantEditParameterDisabled2 => '已关闭（无限制）';
+
+  @override
   String get assistantEditContextMessagesTitle => '上下文消息数量';
 
   @override
@@ -4569,6 +4575,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditParameterDisabled => '已關閉（使用服務商預設）';
+
+  @override
+  String get assistantEditParameterDisabled2 => '已關閉（無限制）';
 
   @override
   String get assistantEditContextMessagesTitle => '上下文訊息數量';

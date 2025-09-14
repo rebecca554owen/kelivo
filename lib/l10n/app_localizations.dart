@@ -695,6 +695,12 @@ abstract class AppLocalizations {
   /// **'Disabled (uses provider default)'**
   String get assistantEditParameterDisabled;
 
+  /// No description provided for @assistantEditParameterDisabled2.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled (no restrictions)'**
+  String get assistantEditParameterDisabled2;
+
   /// No description provided for @assistantEditContextMessagesTitle.
   ///
   /// In en, this message translates to:

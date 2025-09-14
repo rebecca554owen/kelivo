@@ -74,6 +74,7 @@
   "assistantEditTemperatureDescription": "控制輸出的隨機性，範圍 0–2",
   "assistantEditTopPDescription": "請不要修改此值，除非你知道自己在做什麼",
   "assistantEditParameterDisabled": "已關閉（使用服務商預設）",
+  "assistantEditParameterDisabled2": "已關閉（無限制）",
   "assistantEditContextMessagesTitle": "上下文訊息數量",
   "assistantEditContextMessagesDescription": "多少歷史訊息會被當作上下文傳送給模型，超過數量會忽略，只保留最近 N 條",
   "assistantEditStreamOutputTitle": "串流輸出",

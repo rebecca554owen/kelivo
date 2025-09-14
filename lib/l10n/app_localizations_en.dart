@@ -326,6 +326,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Disabled (uses provider default)';
 
   @override
+  String get assistantEditParameterDisabled2 => 'Disabled (no restrictions)';
+
+  @override
   String get assistantEditContextMessagesTitle => 'Context Messages';
 
   @override
