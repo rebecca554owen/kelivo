@@ -311,8 +311,28 @@ class ChatApiService {
         }
         final data = jsonDecode(resp.body);
         if (config.useResponseApi == true) {
-          final output = data['output'];
-          return (output?['content'] ?? '').toString();
+          // Prefer SDK-style convenience when present
+          final ot = data['output_text'];
+          if (ot is String && ot.isNotEmpty) return ot;
+          // Aggregate text from `output` list of message blocks
+          final out = data['output'];
+          if (out is List) {
+            final buf = StringBuffer();
+            for (final item in out) {
+              if (item is! Map) continue;
+              final content = item['content'];
+              if (content is List) {
+                for (final c in content) {
+                  if (c is Map && (c['type'] == 'output_text') && (c['text'] is String)) {
+                    buf.write(c['text']);
+                  }
+                }
+              }
+            }
+            final s = buf.toString();
+            if (s.isNotEmpty) return s;
+          }
+          return '';
         } else {
           final choices = data['choices'] as List?;
           if (choices != null && choices.isNotEmpty) {
@@ -470,10 +490,21 @@ class ChatApiService {
         Map<String, dynamic> body;
     if (config.useResponseApi == true) {
       final input = <Map<String, dynamic>>[];
+      // Extract system messages into `instructions` (Responses API best practice)
+      String instructions = '';
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final isLast = i == messages.length - 1;
         final raw = (m['content'] ?? '').toString();
+        final roleRaw = (m['role'] ?? 'user').toString();
+
+        // Responses API supports a top-level `instructions` field that has higher priority
+        if (roleRaw == 'system') {
+          if (raw.isNotEmpty) {
+            instructions = instructions.isEmpty ? raw : (instructions + '\n\n' + raw);
+          }
+          continue;
+        }
         
         // Only parse images if there are images to process
         final hasMarkdownImages = raw.contains('![') && raw.contains('](');
@@ -505,16 +536,17 @@ class ChatApiService {
               parts.add({'type': 'input_image', 'image_url': dataUrl});
             }
           }
-          input.add({'role': m['role'] ?? 'user', 'content': parts});
+          input.add({'role': roleRaw, 'content': parts});
         } else {
           // No images, use simple string content
-          input.add({'role': m['role'] ?? 'user', 'content': raw});
+          input.add({'role': roleRaw, 'content': raw});
         }
       }
       body = {
         'model': modelId,
         'input': input,
         'stream': true,
+        if (instructions.isNotEmpty) 'instructions': instructions,
         if (temperature != null) 'temperature': temperature,
         if (topP != null) 'top_p': topP,
         if (maxTokens != null) 'max_output_tokens': maxTokens,
