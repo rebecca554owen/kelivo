@@ -29,6 +29,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayShowAppUpdatesKey = 'display_show_app_updates_v1';
   static const String _displayNewChatOnLaunchKey = 'display_new_chat_on_launch_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
+  static const String _displayAutoScrollIdleSecondsKey = 'display_auto_scroll_idle_seconds_v1';
   static const String _appLocaleKey = 'app_locale_v1';
   static const String _translateModelKey = 'translate_model_v1';
   static const String _translatePromptKey = 'translate_prompt_v1';
@@ -162,6 +163,7 @@ class SettingsProvider extends ChangeNotifier {
     _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
+    _autoScrollIdleSeconds = prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
     // Load app locale; default to follow system on first launch
     _appLocaleTag = prefs.getString(_appLocaleKey);
     if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
@@ -664,6 +666,18 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setDouble(_displayChatFontScaleKey, _chatFontScale);
   }
 
+  // Display: auto-scroll back to bottom idle timeout (seconds)
+  int _autoScrollIdleSeconds = 8;
+  int get autoScrollIdleSeconds => _autoScrollIdleSeconds;
+  Future<void> setAutoScrollIdleSeconds(int seconds) async {
+    final v = seconds.clamp(2, 64);
+    if (_autoScrollIdleSeconds == v) return;
+    _autoScrollIdleSeconds = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_displayAutoScrollIdleSecondsKey, _autoScrollIdleSeconds);
+  }
+
   // Display: haptics on message generation
   bool _hapticsOnGenerate = false;
   bool get hapticsOnGenerate => _hapticsOnGenerate;
@@ -783,6 +797,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._showAppUpdates = _showAppUpdates;
     copy._newChatOnLaunch = _newChatOnLaunch;
     copy._chatFontScale = _chatFontScale;
+    copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
     return copy;
   }
 }

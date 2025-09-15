@@ -513,7 +513,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         
         // Cancel previous timer and set a new one
         _userScrollTimer?.cancel();
-        _userScrollTimer = Timer(const Duration(milliseconds: 1500), () {
+        final secs = context.read<SettingsProvider>().autoScrollIdleSeconds;
+        _userScrollTimer = Timer(Duration(seconds: secs), () {
           if (mounted) {
             setState(() {
               _isUserScrolling = false;

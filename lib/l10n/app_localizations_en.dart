@@ -2042,6 +2042,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageChatFontSizeTitle => 'Chat Font Size';
 
   @override
+  String get displaySettingsPageAutoScrollIdleTitle => 'Auto-Scroll Back Delay';
+
+  @override
+  String get displaySettingsPageAutoScrollIdleSubtitle =>
+      'Wait time after user scroll before jumping to bottom';
+
+  @override
   String get displaySettingsPageChatFontSampleText =>
       'This is a sample chat text';
 

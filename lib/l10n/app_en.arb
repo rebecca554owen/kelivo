@@ -820,6 +820,8 @@
   "displaySettingsPageNewChatOnLaunchTitle": "New Chat on Launch",
   "displaySettingsPageNewChatOnLaunchSubtitle": "Automatically create a new chat on launch",
   "displaySettingsPageChatFontSizeTitle": "Chat Font Size",
+  "displaySettingsPageAutoScrollIdleTitle": "Auto-Scroll Back Delay",
+  "displaySettingsPageAutoScrollIdleSubtitle": "Wait time after user scroll before jumping to bottom",
   "displaySettingsPageChatFontSampleText": "This is a sample chat text",
   "displaySettingsPageThemeSettingsTitle": "Theme Settings",
   "themeSettingsPageDynamicColorSection": "Dynamic Color",

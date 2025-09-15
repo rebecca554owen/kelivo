@@ -135,7 +135,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
 
           sectionTitle(l10n.displaySettingsPageChatFontSizeTitle),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
             child: Container(
               decoration: BoxDecoration(
                 color: cs.surfaceVariant.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.18 : 0.5),
@@ -215,6 +215,88 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                         l10n.displaySettingsPageChatFontSampleText,
                         style: TextStyle(fontSize: 16 * context.watch<SettingsProvider>().chatFontScale),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Auto-scroll back delay slider
+          sectionTitle(l10n.displaySettingsPageAutoScrollIdleTitle),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cs.surfaceVariant.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.18 : 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Builder(builder: (context) {
+                      final theme = Theme.of(context);
+                      final cs = theme.colorScheme;
+                      final isDark = theme.brightness == Brightness.dark;
+                      final seconds = context.watch<SettingsProvider>().autoScrollIdleSeconds;
+                      return Row(
+                        children: [
+                          Text('2s', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 12)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SfSliderTheme(
+                              data: SfSliderThemeData(
+                                activeTrackHeight: 8,
+                                inactiveTrackHeight: 8,
+                                overlayRadius: 14,
+                                activeTrackColor: cs.primary,
+                                inactiveTrackColor: cs.onSurface.withOpacity(isDark ? 0.25 : 0.20),
+                                tooltipBackgroundColor: cs.primary,
+                                tooltipTextStyle: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600),
+                                activeTickColor: cs.onSurface.withOpacity(isDark ? 0.45 : 0.35),
+                                inactiveTickColor: cs.onSurface.withOpacity(isDark ? 0.30 : 0.25),
+                                activeMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.34 : 0.28),
+                                inactiveMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.24 : 0.20),
+                              ),
+                              child: SfSlider(
+                                value: seconds.toDouble(),
+                                min: 2.0,
+                                max: 64.0,
+                                stepSize: 2.0,
+                                showTicks: true,
+                                showLabels: true,
+                                interval: 10.0,
+                                minorTicksPerInterval: 1,
+                                enableTooltip: true,
+                                shouldAlwaysShowTooltip: false,
+                                tooltipShape: const SfPaddleTooltipShape(),
+                                labelFormatterCallback: (value, text) => value.toInt().toString(),
+                                thumbIcon: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: cs.primary,
+                                    shape: BoxShape.circle,
+                                    boxShadow: isDark ? [] : [
+                                      BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2)),
+                                    ],
+                                  ),
+                                ),
+                                onChanged: (v) => context.read<SettingsProvider>().setAutoScrollIdleSeconds((v as double).round()),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text('${seconds.round()}s', style: TextStyle(color: cs.onSurface, fontSize: 12)),
+                        ],
+                      );
+                    }),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.displaySettingsPageAutoScrollIdleSubtitle,
+                      style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
                     ),
                   ],
                 ),
