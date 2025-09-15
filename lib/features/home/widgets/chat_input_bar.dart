@@ -269,7 +269,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 children: [
                   // Input field
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xxs),
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xxs, AppSpacing.md, AppSpacing.xs),
                     child: TextField(
                       controller: _controller,
                       focusNode: widget.focusNode,
@@ -282,7 +282,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         hintText: _hint(context),
                         hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.45)),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 2),
                       ),
                       style: TextStyle(
                         color: theme.colorScheme.onSurface,
