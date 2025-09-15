@@ -2495,7 +2495,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     if (mounted) setState(() {});
                                   } : null,
                                   modelIcon: (!useAssist && message.role == 'assistant' && message.providerId != null && message.modelId != null)
-                                      ? _CurrentModelIcon(providerKey: message.providerId, modelId: message.modelId)
+                                      ? _CurrentModelIcon(providerKey: message.providerId, modelId: message.modelId, size: 30)
                                       : null,
                                   showModelIcon: useAssist ? false : context.watch<SettingsProvider>().showModelIcon,
                                   useAssistantAvatar: useAssist && message.role == 'assistant',
@@ -2804,6 +2804,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                 providerKey: settings.currentModelProvider,
                                 modelId: settings.currentModelId,
                                 size: 40,
+                                withBackground: true,
+                                backgroundColor: Colors.transparent,
                               )
                             : null,
                         focusNode: _inputFocus,
@@ -3049,10 +3051,18 @@ class _TranslationData {
 }
 
 class _CurrentModelIcon extends StatelessWidget {
-  const _CurrentModelIcon({required this.providerKey, required this.modelId, this.size = 28});
+  const _CurrentModelIcon({
+    required this.providerKey,
+    required this.modelId,
+    this.size = 28,
+    this.withBackground = true,
+    this.backgroundColor,
+  });
   final String? providerKey;
   final String? modelId;
   final double size; // outer diameter
+  final bool withBackground; // whether to draw circular background
+  final Color? backgroundColor; // override background color if provided
 
   String? _assetForName(String n) {
     final lower = n.toLowerCase();
@@ -3128,7 +3138,12 @@ class _CurrentModelIcon extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(color: Colors.transparent, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: withBackground
+            ? (backgroundColor ?? (isDark ? Colors.white10 : cs.primary.withOpacity(0.1)))
+            : Colors.transparent,
+        shape: BoxShape.circle,
+      ),
       alignment: Alignment.center,
       child: SizedBox(
         width: size * 0.64,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import '../../../theme/design_tokens.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -253,20 +254,26 @@ class _ChatInputBarState extends State<ChatInputBar> {
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            // Main input container with border
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.05) : theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark 
-                      ? Colors.white.withOpacity(0.1) 
-                      : theme.colorScheme.outline.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
+            // Main input container with iOS-like frosted glass effect
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(
+                  decoration: BoxDecoration(
+                    // Translucent background over blurred content
+                    color: isDark ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(20),
+                    // Use previous gray border for better contrast on white
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.10)
+                          : theme.colorScheme.outline.withOpacity(0.20),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
                   // Input field
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xxs, AppSpacing.md, AppSpacing.xs),
@@ -383,8 +390,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   ),
                 ],
               ),
-            ),
-          ],
+                )),)],
+
         ),
       ),
     );
@@ -415,10 +422,12 @@ class _CompactIconButton extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final fgColor = active ? theme.colorScheme.primary : (isDark ? Colors.white70 : Colors.black54);
 
-    // Adjust padding based on whether it's a model icon
-    final padding = modelIcon ? (child != null ? 5.0 : 6.0) : 6.0;
-    // Adjust icon size for all icons - larger size
-    final iconSize = 20.0;
+    // Keep overall button size constant. For model icon with child, enlarge child slightly
+    // and reduce padding so (2*padding + childSize) stays unchanged.
+    final bool isModelChild = modelIcon && child != null;
+    final double iconSize = 20.0; // default glyph size
+    final double childSize = isModelChild ? 28.0 : iconSize; // enlarge circle a bit more
+    final double padding = isModelChild ? 1.0 : 6.0; // keep total ~30px (2*1 + 28)
 
     final button = Material(
       color: Colors.transparent,
@@ -430,8 +439,8 @@ class _CompactIconButton extends StatelessWidget {
           padding: EdgeInsets.all(padding),
           child: child != null 
               ? SizedBox(
-                  width: iconSize,
-                  height: iconSize,
+                  width: childSize,
+                  height: childSize,
                   child: child,
                 )
               : Icon(icon, size: 20, color: fgColor),
