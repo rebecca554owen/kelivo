@@ -1408,9 +1408,9 @@ class _ChatTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: selected ? cs.primary.withOpacity(0.12) : cs.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           onLongPress: onLongPress,
           child: Container(
