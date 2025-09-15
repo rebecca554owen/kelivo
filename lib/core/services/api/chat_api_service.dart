@@ -1459,13 +1459,13 @@ class ChatApiService {
       }
     }
 
-    // Map OpenAI-style tools to Anthropic tools if provided
+    // Map OpenAI-style tools to Anthropic custom tools if provided
     List<Map<String, dynamic>>? anthropicTools;
     if (tools != null && tools.isNotEmpty) {
       anthropicTools = [];
       for (final t in tools) {
         final fn = (t['function'] as Map<String, dynamic>?);
-        if (fn == null) continue;
+        if (fn == null) continue; // skip non-function entries here (server tools handled below)
         final name = (fn['name'] ?? '').toString();
         if (name.isEmpty) continue;
         final desc = (fn['description'] ?? '').toString();
@@ -1478,6 +1478,40 @@ class ChatApiService {
       }
     }
 
+    // Collect final tools list: custom tools + pass-through server tool entries + built-in web_search if enabled
+    final List<Map<String, dynamic>> allTools = [];
+    if (anthropicTools != null && anthropicTools.isNotEmpty) allTools.addAll(anthropicTools);
+    // Pass-through server tools provided directly by caller (e.g., web_search_20250305)
+    if (tools != null && tools.isNotEmpty) {
+      for (final t in tools) {
+        if (t is Map && t['type'] is String && (t['type'] as String).startsWith('web_search_')) {
+          allTools.add(t);
+        }
+      }
+    }
+    // Enable Claude built-in web search via per-model override "builtInTools": ["search"]
+    final builtIns = _builtInTools(config, modelId);
+    if (builtIns.contains('search')) {
+      // Optional parameters can be supplied via modelOverrides[modelId]['webSearch'] map
+      Map<String, dynamic> ws = const <String, dynamic>{};
+      try {
+        final ov = config.modelOverrides[modelId];
+        if (ov is Map && ov['webSearch'] is Map) {
+          ws = (ov['webSearch'] as Map).cast<String, dynamic>();
+        }
+      } catch (_) {}
+      final entry = <String, dynamic>{
+        'type': 'web_search_20250305',
+        'name': 'web_search',
+      };
+      // Copy supported optional fields if present and valid
+      if (ws['max_uses'] is int && (ws['max_uses'] as int) > 0) entry['max_uses'] = ws['max_uses'];
+      if (ws['allowed_domains'] is List) entry['allowed_domains'] = List<String>.from((ws['allowed_domains'] as List).map((e) => e.toString()));
+      if (ws['blocked_domains'] is List) entry['blocked_domains'] = List<String>.from((ws['blocked_domains'] as List).map((e) => e.toString()));
+      if (ws['user_location'] is Map) entry['user_location'] = (ws['user_location'] as Map).cast<String, dynamic>();
+      allTools.add(entry);
+    }
+
     final body = <String, dynamic>{
       'model': modelId,
       'max_tokens': maxTokens ?? 4096,
@@ -1486,8 +1520,8 @@ class ChatApiService {
       if (systemPrompt.isNotEmpty) 'system': systemPrompt,
       if (temperature != null) 'temperature': temperature,
       if (topP != null) 'top_p': topP,
-      if (anthropicTools != null && anthropicTools.isNotEmpty) 'tools': anthropicTools,
-      if (anthropicTools != null && anthropicTools.isNotEmpty) 'tool_choice': {'type': 'auto'},
+      if (allTools.isNotEmpty) 'tools': allTools,
+      if (allTools.isNotEmpty) 'tool_choice': {'type': 'auto'},
       if (isReasoning)
         'thinking': {
           'type': (thinkingBudget == 0) ? 'disabled' : 'enabled',
@@ -1526,8 +1560,12 @@ class ChatApiService {
     int totalTokens = 0;
     TokenUsage? usage;
 
-    // Accumulate tool_use inputs by id
+    // Accumulate tool_use inputs by id (client tools)
     final Map<String, Map<String, dynamic>> _anthToolUse = <String, Map<String, dynamic>>{}; // id -> {name, argsStr}
+    // Track server tool use (web_search) input JSON by block index/id
+    final Map<int, String> _srvIndexToId = <int, String>{};
+    final Map<String, String> _srvArgsStr = <String, String>{}; // id -> raw partial_json concatenated
+    final Map<String, Map<String, dynamic>> _srvArgs = <String, Map<String, dynamic>>{}; // id -> parsed args
 
     await for (final chunk in stream) {
       buffer += chunk;
@@ -1572,6 +1610,17 @@ class ChatApiService {
                   final argsDelta = (delta['partial_json'] ?? delta['input'] ?? delta['text'] ?? '').toString();
                   if (argsDelta.isNotEmpty) entry['args'] = (entry['args'] ?? '') + argsDelta;
                 }
+              } else if (delta['type'] == 'input_json_delta') {
+                // Server tool (web_search) input streamed as JSON
+                final idx = json['index'];
+                final index = (idx is int) ? idx : int.tryParse((idx ?? '').toString());
+                if (index != null && _srvIndexToId.containsKey(index)) {
+                  final id = _srvIndexToId[index]!;
+                  final part = (delta['partial_json'] ?? '').toString();
+                  if (part.isNotEmpty) {
+                    _srvArgsStr[id] = (_srvArgsStr[id] ?? '') + part;
+                  }
+                }
               }
             }
           } else if (type == 'content_block_start') {
@@ -1583,6 +1632,49 @@ class ChatApiService {
               if (id.isNotEmpty) {
                 _anthToolUse.putIfAbsent(id, () => {'name': name, 'args': ''});
               }
+            } else if (cb is Map && (cb['type'] == 'server_tool_use')) {
+              // Record mapping index -> id so we can attach input_json_delta fragments
+              final id = (cb['id'] ?? '').toString();
+              final idx = (json['index'] is int) ? json['index'] as int : int.tryParse((json['index'] ?? '').toString()) ?? -1;
+              if (id.isNotEmpty && idx >= 0) {
+                _srvIndexToId[idx] = id;
+                _srvArgsStr[id] = '';
+              }
+            } else if (cb is Map && (cb['type'] == 'web_search_tool_result')) {
+              // Emit a tool result for web_search with simplified items list for UI
+              final toolUseId = (cb['tool_use_id'] ?? '').toString();
+              final contentBlock = cb['content'];
+              final items = <Map<String, dynamic>>[];
+              String? errorCode;
+              if (contentBlock is List) {
+                for (int i = 0; i < contentBlock.length; i++) {
+                  final it = contentBlock[i];
+                  if (it is Map && (it['type'] == 'web_search_result')) {
+                    items.add({
+                      'index': i + 1,
+                      'title': (it['title'] ?? '').toString(),
+                      'url': (it['url'] ?? '').toString(),
+                      if ((it['page_age'] ?? '').toString().isNotEmpty) 'page_age': (it['page_age'] ?? '').toString(),
+                    });
+                  }
+                }
+              } else if (contentBlock is Map && (contentBlock['type'] == 'web_search_tool_result_error')) {
+                errorCode = (contentBlock['error_code'] ?? '').toString();
+              }
+              Map<String, dynamic> args = const <String, dynamic>{};
+              if (_srvArgs.containsKey(toolUseId)) args = _srvArgs[toolUseId]!;
+              // Use toolName 'search_web' for UI consistency
+              final payload = jsonEncode({
+                'items': items,
+                if ((errorCode ?? '').isNotEmpty) 'error': errorCode,
+              });
+              yield ChatStreamChunk(
+                content: '',
+                isDone: false,
+                totalTokens: totalTokens,
+                usage: usage,
+                toolResults: [ToolResultInfo(id: toolUseId.isEmpty ? 'builtin_search' : toolUseId, name: 'search_web', arguments: args, content: payload)],
+              );
             }
           } else if (type == 'content_block_stop') {
             // Finalize tool_use and emit tool call + result
@@ -1599,6 +1691,23 @@ class ChatApiService {
                 final res = await onToolCall(name, args) ?? '';
                 final results = [ToolResultInfo(id: id, name: name, arguments: args, content: res)];
                 yield ChatStreamChunk(content: '', isDone: false, totalTokens: totalTokens, toolResults: results, usage: usage);
+              }
+            } else {
+              // Possibly end of server_tool_use: map by index
+              final idx = (json['index'] is int) ? json['index'] as int : int.tryParse((json['index'] ?? '').toString());
+              if (idx != null && _srvIndexToId.containsKey(idx)) {
+                final sid = _srvIndexToId[idx]!;
+                Map<String, dynamic> args;
+                try { args = (jsonDecode((_srvArgsStr[sid] ?? '{}')) as Map).cast<String, dynamic>(); } catch (_) { args = <String, dynamic>{}; }
+                _srvArgs[sid] = args;
+                // Emit a placeholder tool call for UI with name 'search_web'
+                yield ChatStreamChunk(
+                  content: '',
+                  isDone: false,
+                  totalTokens: totalTokens,
+                  usage: usage,
+                  toolCalls: [ToolCallInfo(id: sid, name: 'search_web', arguments: args)],
+                );
               }
             }
           } else if (type == 'message_stop') {

@@ -2771,14 +2771,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           }
                         }
                       }
-                      // Compute whether built-in Gemini search is active to highlight the search button
+                      // Compute whether built-in built-in search (Gemini official or Claude) is active to highlight the search button
                       final cfg = (settings.currentModelProvider != null)
                           ? settings.getProviderConfig(settings.currentModelProvider!)
                           : null;
                       bool builtinSearchActive = false;
-                      if (cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true)) {
-                        final mid2 = settings.currentModelId;
-                        if ((mid2 ?? '').isNotEmpty) {
+                      if (cfg != null && settings.currentModelId != null) {
+                        final mid2 = settings.currentModelId!;
+                        final isGeminiOfficial = cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
+                        final isClaude = cfg.providerType == ProviderKind.claude;
+                        if (isGeminiOfficial || isClaude) {
                           final ov = cfg.modelOverrides[mid2] as Map?;
                           final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
                           builtinSearchActive = list.map((e) => e.toString().toLowerCase()).contains('search');

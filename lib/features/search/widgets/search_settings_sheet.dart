@@ -50,19 +50,30 @@ class _SearchSettingsSheet extends StatelessWidget {
     final selected = settings.searchServiceSelected.clamp(0, services.isNotEmpty ? services.length - 1 : 0);
     final enabled = settings.searchEnabled;
 
-    // Determine if current selected model supports Gemini built-in search (official API only)
+    // Determine if current selected model supports built-in search
     final providerKey = settings.currentModelProvider;
     final modelId = settings.currentModelId;
     final cfg = (providerKey != null) ? settings.getProviderConfig(providerKey) : null;
     final isOfficialGemini = cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
+    final isClaude = cfg != null && cfg.providerType == ProviderKind.claude;
     // Read current built-in search toggle from modelOverrides
     bool hasBuiltInSearch = false;
-    if (isOfficialGemini && providerKey != null && (modelId ?? '').isNotEmpty) {
+    if ((isOfficialGemini || isClaude) && providerKey != null && (modelId ?? '').isNotEmpty) {
       final mid = modelId!;
       final ov = cfg!.modelOverrides[mid] as Map?;
       final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
       hasBuiltInSearch = list.map((e) => e.toString().toLowerCase()).contains('search');
     }
+    // Claude supported models per Anthropic docs
+    final claudeSupportedModels = <String>{
+      'claude-opus-4-1-20250805',
+      'claude-opus-4-20250514',
+      'claude-sonnet-4-20250514',
+      'claude-3-7-sonnet-20250219',
+      'claude-3-5-sonnet-latest',
+      'claude-3-5-haiku-latest',
+    };
+    final isClaudeSupportedModel = isClaude && (modelId != null) && claudeSupportedModels.contains(modelId.toLowerCase());
 
     return SafeArea(
       top: false,
@@ -97,8 +108,8 @@ class _SearchSettingsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Built-in search toggle (Gemini official only)
-                if (isOfficialGemini && (providerKey != null) && (modelId ?? '').isNotEmpty) ...[
+                // Built-in search toggle (Gemini official or Claude supported models)
+                if ((isOfficialGemini || isClaudeSupportedModel) && (providerKey != null) && (modelId ?? '').isNotEmpty) ...[
                   Material(
                     color: hasBuiltInSearch ? cs.primary.withOpacity(0.08) : theme.cardColor,
                     borderRadius: BorderRadius.circular(12),
