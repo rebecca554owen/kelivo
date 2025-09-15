@@ -2780,7 +2780,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         final mid2 = settings.currentModelId!;
                         final isGeminiOfficial = cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
                         final isClaude = cfg.providerType == ProviderKind.claude;
-                        if (isGeminiOfficial || isClaude) {
+                        final isOpenAIResponses = cfg.providerType == ProviderKind.openai && (cfg.useResponseApi == true);
+                        if (isGeminiOfficial || isClaude || isOpenAIResponses) {
                           final ov = cfg.modelOverrides[mid2] as Map?;
                           final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
                           builtinSearchActive = list.map((e) => e.toString().toLowerCase()).contains('search');

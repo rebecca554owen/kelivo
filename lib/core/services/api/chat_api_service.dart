@@ -278,20 +278,54 @@ class ChatApiService {
             : config.baseUrl;
         final path = (config.useResponseApi == true) ? '/responses' : (config.chatPath ?? '/chat/completions');
         final url = Uri.parse('$base$path');
-        final body = (config.useResponseApi == true)
-            ? {
-                'model': modelId,
-                'input': [
-                  {'role': 'user', 'content': prompt}
-                ],
+        Map<String, dynamic> body;
+        if (config.useResponseApi == true) {
+          // Inject built-in web_search tool when enabled and supported
+          final toolsList = <Map<String, dynamic>>[];
+          bool _isResponsesWebSearchSupported(String id) {
+            final m = id.toLowerCase();
+            if (m.startsWith('gpt-4o')) return true;
+            if (m == 'gpt-4.1' || m == 'gpt-4.1-mini') return true;
+            if (m.startsWith('o4-mini')) return true;
+            if (m == 'o3' || m.startsWith('o3-')) return true;
+            if (m.startsWith('gpt-5')) return true;
+            return false;
+          }
+          if (_isResponsesWebSearchSupported(modelId)) {
+            final builtIns = _builtInTools(config, modelId);
+            if (builtIns.contains('search')) {
+              Map<String, dynamic> ws = const <String, dynamic>{};
+              try {
+                final ov = config.modelOverrides[modelId];
+                if (ov is Map && ov['webSearch'] is Map) ws = (ov['webSearch'] as Map).cast<String, dynamic>();
+              } catch (_) {}
+              final usePreview = (ws['preview'] == true) || ((ws['tool'] ?? '').toString() == 'preview');
+              final entry = <String, dynamic>{'type': usePreview ? 'web_search_preview' : 'web_search'};
+              if (ws['allowed_domains'] is List && (ws['allowed_domains'] as List).isNotEmpty) {
+                entry['filters'] = {'allowed_domains': List<String>.from((ws['allowed_domains'] as List).map((e) => e.toString()))};
               }
-            : {
+              if (ws['user_location'] is Map) entry['user_location'] = (ws['user_location'] as Map).cast<String, dynamic>();
+              if (usePreview && ws['search_context_size'] is String) entry['search_context_size'] = ws['search_context_size'];
+              toolsList.add(entry);
+            }
+          }
+          body = {
+            'model': modelId,
+            'input': [
+              {'role': 'user', 'content': prompt}
+            ],
+            if (toolsList.isNotEmpty) 'tools': toolsList,
+            if (toolsList.isNotEmpty) 'tool_choice': 'auto',
+          };
+        } else {
+          body = {
                 'model': modelId,
                 'messages': [
                   {'role': 'user', 'content': prompt}
                 ],
                 'temperature': 0.3,
               };
+        }
         final headers = <String, String>{
           'Authorization': 'Bearer ${config.apiKey}',
           'Content-Type': 'application/json',
@@ -492,6 +526,60 @@ class ChatApiService {
       final input = <Map<String, dynamic>>[];
       // Extract system messages into `instructions` (Responses API best practice)
       String instructions = '';
+      // Prepare tools list for Responses path (may be augmented with built-in web search)
+      final List<Map<String, dynamic>> toolList = [];
+      if (tools != null && tools.isNotEmpty) {
+        for (final t in tools) {
+          if (t is Map<String, dynamic>) toolList.add(Map<String, dynamic>.from(t));
+        }
+      }
+
+      // Built-in web search for Responses API when enabled on supported models
+      bool _isResponsesWebSearchSupported(String id) {
+        final m = id.toLowerCase();
+        if (m.startsWith('gpt-4o')) return true; // gpt-4o, gpt-4o-mini
+        if (m == 'gpt-4.1' || m == 'gpt-4.1-mini') return true;
+        if (m.startsWith('o4-mini')) return true;
+        if (m == 'o3' || m.startsWith('o3-')) return true;
+        if (m.startsWith('gpt-5')) return true; // supports reasoning web search
+        return false;
+      }
+
+      if (_isResponsesWebSearchSupported(modelId)) {
+        final builtIns = _builtInTools(config, modelId);
+        if (builtIns.contains('search')) {
+          // Optional per-model configuration under modelOverrides[modelId]['webSearch']
+          Map<String, dynamic> ws = const <String, dynamic>{};
+          try {
+            final ov = config.modelOverrides[modelId];
+            if (ov is Map && ov['webSearch'] is Map) {
+              ws = (ov['webSearch'] as Map).cast<String, dynamic>();
+            }
+          } catch (_) {}
+          final usePreview = (ws['preview'] == true) || ((ws['tool'] ?? '').toString() == 'preview');
+          final entry = <String, dynamic>{'type': usePreview ? 'web_search_preview' : 'web_search'};
+          // Domain filters
+          if (ws['allowed_domains'] is List && (ws['allowed_domains'] as List).isNotEmpty) {
+            entry['filters'] = {
+              'allowed_domains': List<String>.from((ws['allowed_domains'] as List).map((e) => e.toString())),
+            };
+          }
+          // User location
+          if (ws['user_location'] is Map) {
+            entry['user_location'] = (ws['user_location'] as Map).cast<String, dynamic>();
+          }
+          // Search context size (preview tool only)
+          if (usePreview && ws['search_context_size'] is String) {
+            entry['search_context_size'] = ws['search_context_size'];
+          }
+          toolList.add(entry);
+          // Optionally request sources in output
+          if (ws['include_sources'] == true) {
+            // Merge/append include array
+            // We'll add this after input loop when building body
+          }
+        }
+      }
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final isLast = i == messages.length - 1;
@@ -550,14 +638,22 @@ class ChatApiService {
         if (temperature != null) 'temperature': temperature,
         if (topP != null) 'top_p': topP,
         if (maxTokens != null) 'max_output_tokens': maxTokens,
-        if (tools != null && tools.isNotEmpty) 'tools': tools,
-        if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
+        if (toolList.isNotEmpty) 'tools': toolList,
+        if (toolList.isNotEmpty) 'tool_choice': 'auto',
         if (isReasoning && effort != 'off')
           'reasoning': {
             'summary': 'auto',
             if (effort != 'auto') 'effort': effort,
           },
       };
+      // Append include parameter if we opted into sources via overrides
+      try {
+        final ov = config.modelOverrides[modelId];
+        final ws = (ov is Map ? ov['webSearch'] : null);
+        if (ws is Map && ws['include_sources'] == true) {
+          (body as Map<String, dynamic>)['include'] = ['web_search_call.action.sources'];
+        }
+      } catch (_) {}
     } else {
       final mm = <Map<String, dynamic>>[];
       for (int i = 0; i < messages.length; i++) {
@@ -1132,6 +1228,46 @@ class ChatApiService {
                 usage = (usage ?? const TokenUsage()).merge(TokenUsage(promptTokens: inTok, completionTokens: outTok));
                 totalTokens = usage!.totalTokens;
               }
+              // Extract web search citations from final output (Responses API)
+              try {
+                final output = json['response']?['output'];
+                final items = <Map<String, dynamic>>[];
+                if (output is List) {
+                  int idx = 1;
+                  final seen = <String>{};
+                  for (final it in output) {
+                    if (it is! Map) continue;
+                    if (it['type'] == 'message') {
+                      final content = it['content'] as List? ?? const <dynamic>[];
+                      for (final block in content) {
+                        if (block is! Map) continue;
+                        final anns = block['annotations'] as List? ?? const <dynamic>[];
+                        for (final an in anns) {
+                          if (an is! Map) continue;
+                          if ((an['type'] ?? '') == 'url_citation') {
+                            final url = (an['url'] ?? '').toString();
+                            if (url.isEmpty || seen.contains(url)) continue;
+                            final title = (an['title'] ?? '').toString();
+                            items.add({'index': idx, 'url': url, if (title.isNotEmpty) 'title': title});
+                            seen.add(url);
+                            idx += 1;
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                if (items.isNotEmpty) {
+                  final payload = jsonEncode({'items': items});
+                  yield ChatStreamChunk(
+                    content: '',
+                    isDone: false,
+                    totalTokens: totalTokens,
+                    usage: usage,
+                    toolResults: [ToolResultInfo(id: 'builtin_search', name: 'search_web', arguments: const <String, dynamic>{}, content: payload)],
+                  );
+                }
+              } catch (_) {}
               // Responses: emit any collected tool calls from previous deltas
               if (onToolCall != null && toolAccResp.isNotEmpty) {
                 final callInfos = <ToolCallInfo>[];

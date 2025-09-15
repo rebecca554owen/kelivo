@@ -56,9 +56,10 @@ class _SearchSettingsSheet extends StatelessWidget {
     final cfg = (providerKey != null) ? settings.getProviderConfig(providerKey) : null;
     final isOfficialGemini = cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
     final isClaude = cfg != null && cfg.providerType == ProviderKind.claude;
+    final isOpenAIResponses = cfg != null && cfg.providerType == ProviderKind.openai && (cfg.useResponseApi == true);
     // Read current built-in search toggle from modelOverrides
     bool hasBuiltInSearch = false;
-    if ((isOfficialGemini || isClaude) && providerKey != null && (modelId ?? '').isNotEmpty) {
+    if ((isOfficialGemini || isClaude || isOpenAIResponses) && providerKey != null && (modelId ?? '').isNotEmpty) {
       final mid = modelId!;
       final ov = cfg!.modelOverrides[mid] as Map?;
       final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
@@ -74,6 +75,12 @@ class _SearchSettingsSheet extends StatelessWidget {
       'claude-3-5-haiku-latest',
     };
     final isClaudeSupportedModel = isClaude && (modelId != null) && claudeSupportedModels.contains(modelId.toLowerCase());
+    // OpenAI Responses supported models for web_search tool
+    bool _isOpenAIResponsesSupportedModel(String id) {
+      final m = id.toLowerCase();
+      return m.startsWith('gpt-4o') || m.startsWith('gpt-4.1') || m.startsWith('o4-mini') || m == 'o3' || m.startsWith('o3-') || m.startsWith('gpt-5');
+    }
+    final isOpenAIResponsesSupportedModel = isOpenAIResponses && (modelId != null) && _isOpenAIResponsesSupportedModel(modelId!);
 
     return SafeArea(
       top: false,
@@ -108,8 +115,8 @@ class _SearchSettingsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Built-in search toggle (Gemini official or Claude supported models)
-                if ((isOfficialGemini || isClaudeSupportedModel) && (providerKey != null) && (modelId ?? '').isNotEmpty) ...[
+                // Built-in search toggle (Gemini official, Claude supported, or OpenAI Responses supported)
+                if ((isOfficialGemini || isClaudeSupportedModel || isOpenAIResponsesSupportedModel) && (providerKey != null) && (modelId ?? '').isNotEmpty) ...[
                   Material(
                     color: hasBuiltInSearch ? cs.primary.withOpacity(0.08) : theme.cardColor,
                     borderRadius: BorderRadius.circular(12),
