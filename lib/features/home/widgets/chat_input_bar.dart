@@ -253,128 +253,136 @@ class _ChatInputBarState extends State<ChatInputBar> {
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            // Top: large rounded input capsule
-            DecoratedBox(
+            // Main input container with border
+            Container(
               decoration: BoxDecoration(
-                color: isDark ? Colors.white12 : theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppRadii.capsule),
-                boxShadow: isDark
-                    ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.35),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-                    : AppShadows.soft,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xxs),
-                child: TextField(
-                  controller: _controller,
-                  focusNode: widget.focusNode,
-                  onChanged: (_) => setState(() {}),
-                  minLines: 1,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.newline,
-                  autofocus: false,
-                  decoration: InputDecoration(
-                    hintText: _hint(context),
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.55)),
-                    border: InputBorder.none,
-                  ),
-                  style: TextStyle(color: theme.colorScheme.onSurface),
-                  cursorColor: theme.colorScheme.primary,
+                color: isDark ? Colors.white.withOpacity(0.05) : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark 
+                      ? Colors.white.withOpacity(0.1) 
+                      : theme.colorScheme.outline.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            // Bottom: circular buttons row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    _CircleIconButton(
-                      tooltip: AppLocalizations.of(context)!.chatInputBarSelectModelTooltip,
-                      icon: Lucide.Boxes,
-                      child: widget.modelIcon,
-                      padding: widget.modelIcon != null ? 1 : 10,
-                      onTap: widget.onSelectModel,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    _CircleIconButton(
-                      tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
-                      icon: Lucide.Globe,
-                      active: _searchEnabled,
-                      onTap: widget.onOpenSearch,
-                    ),
-                    if (widget.supportsReasoning) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      _CircleIconButton(
-                        tooltip: AppLocalizations.of(context)!.chatInputBarReasoningStrengthTooltip,
-                        icon: Lucide.Brain,
-                        active: widget.reasoningActive,
-                        onTap: widget.onConfigureReasoning,
-                        child: SvgPicture.asset(
-                          'assets/icons/deepthink.svg',
-                          width: 22,
-                          height: 22,
-                          colorFilter: ColorFilter.mode(
-                            widget.reasoningActive
-                                ? theme.colorScheme.primary
-                                : (isDark ? Colors.white : Colors.black87),
-                            BlendMode.srcIn,
-                          ),
-                        ),
+              child: Column(
+                children: [
+                  // Input field
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xxs),
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: widget.focusNode,
+                      onChanged: (_) => setState(() {}),
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.newline,
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        hintText: _hint(context),
+                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.45)),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                    ],
-                    if (widget.showMcpButton) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      _CircleIconButton(
-                        tooltip: AppLocalizations.of(context)!.chatInputBarMcpServersTooltip,
-                        icon: Lucide.Terminal,
-                        active: widget.mcpActive,
-                        onTap: widget.onOpenMcp,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 15,
                       ),
-                    ],
-                  ],
-                ),
-                Row(
-                  children: [
-                    _CircleIconButton(
-                      tooltip: AppLocalizations.of(context)!.chatInputBarMoreTooltip,
-                      icon: Lucide.Plus,
-                      active: widget.moreOpen,
-                      onTap: widget.onMore,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        transitionBuilder: (child, anim) => RotationTransition(
-                          turns: Tween<double>(begin: 0.85, end: 1).animate(anim),
-                          child: FadeTransition(opacity: anim, child: child),
-                        ),
-                        child: Icon(
-                          widget.moreOpen ? Lucide.X : Lucide.Plus,
-                          key: ValueKey(widget.moreOpen ? 'close' : 'add'),
-                          size: 22,
-                          color: widget.moreOpen
-                              ? theme.colorScheme.primary
-                              : (isDark ? Colors.white : Colors.black87),
-                        ),
-                      ),
+                      cursorColor: theme.colorScheme.primary,
                     ),
-                    const SizedBox(width: AppSpacing.xs),
-                    _SendButton(
-                      enabled: (hasText || hasImages || hasDocs) && !widget.loading,
-                      loading: widget.loading,
-                      onSend: _handleSend,
-                      onStop: widget.loading ? widget.onStop : null,
-                      color: theme.colorScheme.primary,
-                      icon: Lucide.ArrowUp,
+                  ),
+                  // Bottom buttons row (no divider)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.xs, 0, AppSpacing.xs, AppSpacing.xs),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            _CompactIconButton(
+                              tooltip: AppLocalizations.of(context)!.chatInputBarSelectModelTooltip,
+                              icon: Lucide.Boxes,
+                              child: widget.modelIcon,
+                              modelIcon: true,
+                              onTap: widget.onSelectModel,
+                            ),
+                            const SizedBox(width: 8),
+                            _CompactIconButton(
+                              tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
+                              icon: Lucide.Globe,
+                              active: _searchEnabled,
+                              onTap: widget.onOpenSearch,
+                            ),
+                            if (widget.supportsReasoning) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.chatInputBarReasoningStrengthTooltip,
+                                icon: Lucide.Brain,
+                                active: widget.reasoningActive,
+                                onTap: widget.onConfigureReasoning,
+                                child: SvgPicture.asset(
+                                  'assets/icons/deepthink.svg',
+                                  width: 20,
+                                  height: 20,
+                                  colorFilter: ColorFilter.mode(
+                                    widget.reasoningActive
+                                        ? theme.colorScheme.primary
+                                        : (isDark ? Colors.white70 : Colors.black54),
+                                    BlendMode.srcIn,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (widget.showMcpButton) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.chatInputBarMcpServersTooltip,
+                                icon: Lucide.Terminal,
+                                active: widget.mcpActive,
+                                onTap: widget.onOpenMcp,
+                              ),
+                            ],
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            _CompactIconButton(
+                              tooltip: AppLocalizations.of(context)!.chatInputBarMoreTooltip,
+                              icon: Lucide.Plus,
+                              active: widget.moreOpen,
+                              onTap: widget.onMore,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                transitionBuilder: (child, anim) => RotationTransition(
+                                  turns: Tween<double>(begin: 0.85, end: 1).animate(anim),
+                                  child: FadeTransition(opacity: anim, child: child),
+                                ),
+                                child: Icon(
+                                  widget.moreOpen ? Lucide.X : Lucide.Plus,
+                                  key: ValueKey(widget.moreOpen ? 'close' : 'add'),
+                                  size: 20,
+                                  color: widget.moreOpen
+                                      ? theme.colorScheme.primary
+                                      : (isDark ? Colors.white70 : Colors.black54),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _CompactSendButton(
+                              enabled: (hasText || hasImages || hasDocs) && !widget.loading,
+                              loading: widget.loading,
+                              onSend: _handleSend,
+                              onStop: widget.loading ? widget.onStop : null,
+                              color: theme.colorScheme.primary,
+                              icon: Lucide.ArrowUp,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -383,6 +391,59 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 }
 
+// New compact button for the integrated input bar
+class _CompactIconButton extends StatelessWidget {
+  const _CompactIconButton({
+    required this.icon,
+    this.onTap,
+    this.tooltip,
+    this.active = false,
+    this.child,
+    this.modelIcon = false,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+  final String? tooltip;
+  final bool active;
+  final Widget? child;
+  final bool modelIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final fgColor = active ? theme.colorScheme.primary : (isDark ? Colors.white70 : Colors.black54);
+
+    // Adjust padding based on whether it's a model icon
+    final padding = modelIcon ? (child != null ? 5.0 : 6.0) : 6.0;
+    // Adjust icon size for all icons - larger size
+    final iconSize = 20.0;
+
+    final button = Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: child != null 
+              ? SizedBox(
+                  width: iconSize,
+                  height: iconSize,
+                  child: child,
+                )
+              : Icon(icon, size: 20, color: fgColor),
+        ),
+      ),
+    );
+
+    return tooltip == null ? button : Semantics(tooltip: tooltip!, child: button);
+  }
+}
+
+// Keep original button for compatibility if needed elsewhere
 class _CircleIconButton extends StatelessWidget {
   const _CircleIconButton({
     required this.icon,
@@ -429,6 +490,58 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
+// New compact send button for the integrated input bar
+class _CompactSendButton extends StatelessWidget {
+  const _CompactSendButton({
+    required this.enabled,
+    required this.onSend,
+    required this.color,
+    required this.icon,
+    this.loading = false,
+    this.onStop,
+  });
+
+  final bool enabled;
+  final bool loading;
+  final VoidCallback onSend;
+  final VoidCallback? onStop;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = (enabled || loading) ? color : (isDark ? Colors.white12 : Colors.grey.shade300);
+    final fg = (enabled || loading) ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.grey.shade600);
+
+    return Material(
+      color: bg,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: loading ? onStop : (enabled ? onSend : null),
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: FadeTransition(opacity: anim, child: child)),
+            child: loading
+                ? SvgPicture.asset(
+                    key: const ValueKey('stop'),
+                    'assets/icons/stop.svg',
+                    width: 18,
+                    height: 18,
+                    colorFilter: ColorFilter.mode(fg, BlendMode.srcIn),
+                  )
+                : Icon(icon, key: const ValueKey('send'), size: 18, color: fg),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Keep original button for compatibility if needed elsewhere
 class _SendButton extends StatelessWidget {
   const _SendButton({
     required this.enabled,

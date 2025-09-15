@@ -3128,7 +3128,7 @@ class _CurrentModelIcon extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: isDark ? Colors.white10 : cs.primary.withOpacity(0.1), shape: BoxShape.circle),
+      decoration: const BoxDecoration(color: Colors.transparent, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: SizedBox(
         width: size * 0.64,

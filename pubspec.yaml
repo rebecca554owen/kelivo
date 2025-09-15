@@ -39,7 +39,7 @@ dependencies:
   lucide_icons_flutter: ^3.0.9
   shared_preferences: ^2.2.3
   image_picker: 1.1.2
-  flutter_svg: ^2.0.10+1
+  flutter_svg: ^2.2.1
   http: ^1.2.1
   jose: ^0.3.4
   reorderable_grid_view: ^2.2.8
