@@ -151,7 +151,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       right: false,
       bottom: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.xs, AppSpacing.sm, AppSpacing.sm),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.xxs, AppSpacing.sm, AppSpacing.sm),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
