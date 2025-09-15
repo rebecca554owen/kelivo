@@ -138,6 +138,26 @@ class _ChatInputBarState extends State<ChatInputBar> {
     setState(() {});
   }
 
+  void _insertNewlineAtCursor() {
+    final value = _controller.value;
+    final selection = value.selection;
+    final text = value.text;
+    if (!selection.isValid) {
+      _controller.text = text + '\n';
+      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+    } else {
+      final start = selection.start;
+      final end = selection.end;
+      final newText = text.replaceRange(start, end, '\n');
+      _controller.value = value.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + 1),
+        composing: TextRange.empty,
+      );
+    }
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -283,7 +303,30 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       onChanged: (_) => setState(() {}),
                       minLines: 1,
                       maxLines: 5,
-                      textInputAction: TextInputAction.newline,
+                      // On iOS, show "Send" on the return key and submit on tap.
+                      // Still keep multiline so pasted text preserves line breaks.
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: Platform.isIOS ? TextInputAction.send : TextInputAction.newline,
+                      onSubmitted: Platform.isIOS ? (_) => _handleSend() : null,
+                      contextMenuBuilder: Platform.isIOS
+                          ? (BuildContext context, EditableTextState state) {
+                              final l10n = AppLocalizations.of(context)!;
+                              return AdaptiveTextSelectionToolbar.buttonItems(
+                                anchors: state.contextMenuAnchors,
+                                buttonItems: <ContextMenuButtonItem>[
+                                  ...state.contextMenuButtonItems,
+                                  ContextMenuButtonItem(
+                                    onPressed: () {
+                                      // Insert a newline at current caret or replace selection
+                                      _insertNewlineAtCursor();
+                                      state.hideToolbar();
+                                    },
+                                    label: l10n.chatInputBarInsertNewline,
+                                  ),
+                                ],
+                              );
+                            }
+                          : null,
                       autofocus: false,
                       decoration: InputDecoration(
                         hintText: _hint(context),

@@ -1162,6 +1162,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputBarMoreTooltip => 'Add';
 
   @override
+  String get chatInputBarInsertNewline => 'Newline';
+
+  @override
   String get mcpPageBackTooltip => 'Back';
 
   @override

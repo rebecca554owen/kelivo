@@ -370,6 +370,7 @@
   "chatInputBarReasoningStrengthTooltip": "思维链强度",
   "chatInputBarMcpServersTooltip": "MCP服务器",
   "chatInputBarMoreTooltip": "更多",
+  "chatInputBarInsertNewline": "换行",
   "mcpPageBackTooltip": "返回",
   "mcpPageAddMcpTooltip": "添加 MCP",
   "mcpPageNoServers": "暂无 MCP 服务器",

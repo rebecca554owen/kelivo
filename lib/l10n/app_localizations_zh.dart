@@ -1129,6 +1129,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInputBarMoreTooltip => '更多';
 
   @override
+  String get chatInputBarInsertNewline => '换行';
+
+  @override
   String get mcpPageBackTooltip => '返回';
 
   @override
@@ -3264,6 +3267,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get chatInputBarMoreTooltip => '更多';
 
   @override
+  String get chatInputBarInsertNewline => '换行';
+
+  @override
   String get mcpPageBackTooltip => '返回';
 
   @override
@@ -5397,6 +5403,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputBarMoreTooltip => '更多';
+
+  @override
+  String get chatInputBarInsertNewline => '換行';
 
   @override
   String get mcpPageBackTooltip => '返回';

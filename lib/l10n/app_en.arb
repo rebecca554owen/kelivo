@@ -500,6 +500,7 @@
   "chatInputBarReasoningStrengthTooltip": "Reasoning Strength",
   "chatInputBarMcpServersTooltip": "MCP Servers",
   "chatInputBarMoreTooltip": "Add",
+  "chatInputBarInsertNewline": "Newline",
   "mcpPageBackTooltip": "Back",
   "mcpPageAddMcpTooltip": "Add MCP",
   "mcpPageNoServers": "No MCP servers",

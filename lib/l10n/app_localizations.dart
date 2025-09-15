@@ -2243,6 +2243,12 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get chatInputBarMoreTooltip;
 
+  /// No description provided for @chatInputBarInsertNewline.
+  ///
+  /// In en, this message translates to:
+  /// **'Newline'**
+  String get chatInputBarInsertNewline;
+
   /// No description provided for @mcpPageBackTooltip.
   ///
   /// In en, this message translates to:
