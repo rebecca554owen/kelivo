@@ -38,7 +38,7 @@ import '../../search/widgets/search_settings_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
-import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -2348,10 +2348,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       body: Stack(
         children: [
           // Assistant-specific chat background + gradient overlay to improve readability
-          Builder(builder: (context) {
+          Builder(
+            builder: (context) {
             final bg = context.watch<AssistantProvider>().currentAssistant?.background;
             if (bg == null || bg.trim().isEmpty) return const SizedBox.shrink();
-            final cs = Theme.of(context).colorScheme;
             ImageProvider provider;
             if (bg.startsWith('http')) {
               provider = NetworkImage(bg);
@@ -2948,27 +2948,38 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       opacity: _showJumpToBottom ? 1 : 0,
                       child: Padding(
                         padding: EdgeInsets.only(right: 16, bottom: bottomOffset),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
-                            width: 1,
-                          ),
-                          boxShadow: isDark ? [] : [
-                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: Offset(0, 2)),
-                          ],
-                        ),
-                        child: Material(
-                          type: MaterialType.transparency,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _forceScrollToBottom,
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Icon(Lucide.ChevronDown, size: 16, color: isDark ? Colors.white : Colors.black87),
+                        child: ClipOval(
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.06)
+                                    : Colors.white.withOpacity(0.07),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.10)
+                                      : Theme.of(context).colorScheme.outline.withOpacity(0.20),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Material(
+                                type: MaterialType.transparency,
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: _forceScrollToBottom,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Icon(
+                                      Lucide.ChevronDown,
+                                      size: 16,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -2977,7 +2988,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     ),
                   ),
                 ),
-              ),
             );
           }),
         ],
