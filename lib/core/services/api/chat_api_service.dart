@@ -1412,11 +1412,26 @@ class ChatApiService {
         .abilities
         .contains(ModelAbility.reasoning);
 
+    // Extract system prompt (Anthropic uses top-level `system`, not a `system` role)
+    String systemPrompt = '';
+    final nonSystemMessages = <Map<String, dynamic>>[];
+    for (final m in messages) {
+      final role = (m['role'] ?? '').toString();
+      if (role == 'system') {
+        final s = (m['content'] ?? '').toString();
+        if (s.isNotEmpty) {
+          systemPrompt = systemPrompt.isEmpty ? s : (systemPrompt + '\n\n' + s);
+        }
+        continue; // skip adding to messages array
+      }
+      nonSystemMessages.add({'role': role.isEmpty ? 'user' : role, 'content': m['content'] ?? ''});
+    }
+
     // Transform last user message to include images per Anthropic schema
     final transformed = <Map<String, dynamic>>[];
-    for (int i = 0; i < messages.length; i++) {
-      final m = messages[i];
-      final isLast = i == messages.length - 1;
+    for (int i = 0; i < nonSystemMessages.length; i++) {
+      final m = nonSystemMessages[i];
+      final isLast = i == nonSystemMessages.length - 1;
       if (isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user')) {
         final parts = <Map<String, dynamic>>[];
         final text = (m['content'] ?? '').toString();
@@ -1468,6 +1483,7 @@ class ChatApiService {
       'max_tokens': maxTokens ?? 4096,
       'messages': transformed,
       'stream': true,
+      if (systemPrompt.isNotEmpty) 'system': systemPrompt,
       if (temperature != null) 'temperature': temperature,
       if (topP != null) 'top_p': topP,
       if (anthropicTools != null && anthropicTools.isNotEmpty) 'tools': anthropicTools,
