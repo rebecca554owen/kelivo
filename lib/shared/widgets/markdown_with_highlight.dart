@@ -249,18 +249,20 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
           ],
         );
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          primary: false,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.surface,
-                border: Border.all(color: borderColor, width: 0.8),
-                borderRadius: BorderRadius.circular(12),
+        return SelectionContainer.disabled(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.surface,
+                  border: Border.all(color: borderColor, width: 0.8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: table,
               ),
-              child: table,
             ),
           ),
         );
@@ -581,23 +583,25 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
               width: double.infinity,
               color: bodyBg,
               padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              primary: false,
-              child: HighlightView(
-                widget.code,
-                language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
-                theme: MarkdownWithCodeHighlight._transparentBgTheme(
-                  isDark ? atomOneDarkReasonableTheme : githubTheme,
-                  ),
-                  padding: EdgeInsets.zero,
-                  textStyle: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    height: 1.5,
+            child: SelectionContainer.disabled(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                primary: false,
+                child: HighlightView(
+                  widget.code,
+                  language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
+                  theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                    isDark ? atomOneDarkReasonableTheme : githubTheme,
+                    ),
+                    padding: EdgeInsets.zero,
+                    textStyle: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
                   ),
                 ),
-              ),
+            ),
             ),
         ],
       ),
@@ -782,21 +786,23 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                     ),
                   ] else ...[
                     // Fallback: show raw code and a preview button (opens browser)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: HighlightView(
-                        widget.code,
-                        language: 'plaintext',
-                        theme: MarkdownWithCodeHighlight._transparentBgTheme(
-                          Theme.of(context).brightness == Brightness.dark
-                              ? atomOneDarkReasonableTheme
-                              : githubTheme,
-                        ),
-                        padding: EdgeInsets.zero,
-                        textStyle: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          height: 1.5,
+                    SelectionContainer.disabled(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: HighlightView(
+                          widget.code,
+                          language: 'plaintext',
+                          theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? atomOneDarkReasonableTheme
+                                : githubTheme,
+                          ),
+                          padding: EdgeInsets.zero,
+                          textStyle: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
                         ),
                       ),
                     ),
@@ -934,10 +940,12 @@ class LatexBlockScrollableMd extends BlockMd {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            primary: false,
-            child: math,
+          return SelectionContainer.disabled(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              primary: false,
+              child: math,
+            ),
           );
         },
       ),
@@ -970,10 +978,12 @@ class InlineLatexScrollableMd extends InlineMd {
     // Wrap in horizontal scroll to prevent line overflow; no extra background
     final w = LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          primary: false,
-          child: math,
+        return SelectionContainer.disabled(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: math,
+          ),
         );
       },
     );

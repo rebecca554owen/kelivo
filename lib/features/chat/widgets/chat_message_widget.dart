@@ -295,14 +295,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _MenuItem(
-                        icon: Lucide.Pencil,
-                        label: l10n.messageMoreSheetEdit,
-                        onTap: () {
-                          Navigator.of(ctx).pop();
-                          (widget.onEdit ?? widget.onMore)?.call();
-                        },
-                      ),
-                      _MenuItem(
                         icon: Lucide.Copy,
                         label: l10n.shareProviderSheetCopyButton,
                         onTap: () async {
@@ -317,6 +309,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               );
                             }
                           }
+                        },
+                      ),
+                      _MenuItem(
+                        icon: Lucide.Pencil,
+                        label: l10n.messageMoreSheetEdit,
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          (widget.onEdit ?? widget.onMore)?.call();
                         },
                       ),
                       _MenuItem(
