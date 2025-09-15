@@ -189,6 +189,9 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
         }
 
         Widget cell(String text, TextAlign align, {bool header = false, bool lastCol = false, bool lastRow = false}) {
+          // Render inline markdown (bold, code, links) inside table cells
+          final innerCfg = cfg.copyWith(style: header ? headerStyle : style);
+          final children = MarkdownComponent.generate(ctx, text, innerCfg, true);
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
@@ -208,7 +211,11 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
                     return Alignment.centerLeft;
                 }
               }(),
-              child: Text(text, style: header ? headerStyle : style, textAlign: align),
+              child: RichText(
+                text: TextSpan(style: header ? headerStyle : style, children: children),
+                textAlign: align,
+                textScaler: MediaQuery.of(ctx).textScaler,
+              ),
             ),
           );
         }
