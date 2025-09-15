@@ -3,6 +3,7 @@ import '../../../l10n/app_localizations.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'dart:ui';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -809,20 +810,14 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                     ),
                   ),
                 ),
-              if ((a.background ?? '').isNotEmpty) ...[
-                const SizedBox(width: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 56,
-                    height: 36,
-                    child: (a.background!.startsWith('http'))
-                        ? Image.network(a.background!, fit: BoxFit.cover)
-                        : Image.file(File(SandboxPathResolver.fix(a.background!)), fit: BoxFit.cover),
-                  ),
-                ),
-              ],
             ]),
+            if ((a.background ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: _BackgroundPreview(path: a.background!),
+              ),
+            ],
           ]),
         ),
       ],
@@ -898,6 +893,89 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     } catch (_) {}
   }
 
+}
+
+class _BackgroundPreview extends StatefulWidget {
+  const _BackgroundPreview({required this.path});
+  final String path;
+
+  @override
+  State<_BackgroundPreview> createState() => _BackgroundPreviewState();
+}
+
+class _BackgroundPreviewState extends State<_BackgroundPreview> {
+  Size? _size;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveSize();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BackgroundPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      _size = null;
+      _resolveSize();
+    }
+  }
+
+  Future<void> _resolveSize() async {
+    try {
+      if (widget.path.startsWith('http')) {
+        // Skip network size probe; render with a sensible max height
+        setState(() => _size = null);
+        return;
+      }
+      final file = File(SandboxPathResolver.fix(widget.path));
+      if (!await file.exists()) {
+        setState(() => _size = null);
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      final img = await decodeImageFromList(bytes);
+      final s = Size(img.width.toDouble(), img.height.toDouble());
+      if (mounted) setState(() => _size = s);
+    } catch (_) {
+      if (mounted) setState(() => _size = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isNetwork = widget.path.startsWith('http');
+    final imageWidget = isNetwork
+        ? Image.network(widget.path, fit: BoxFit.contain)
+        : Image.file(File(SandboxPathResolver.fix(widget.path)), fit: BoxFit.contain);
+    // When size known, maintain aspect ratio; otherwise cap the height to avoid overflow
+    if (_size != null && _size!.width > 0 && _size!.height > 0) {
+      final ratio = _size!.width / _size!.height;
+      return SizedBox(
+        width: double.infinity,
+        child: AspectRatio(
+          aspectRatio: ratio,
+          child: imageWidget,
+        ),
+      );
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxHeight: 280,
+        minHeight: 100,
+        minWidth: double.infinity,
+      ),
+      child: FittedBox(
+        fit: BoxFit.contain,
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: 400,
+          height: 240,
+          child: imageWidget,
+        ),
+      ),
+    );
+  }
 }
 
 class _SliderTileNew extends StatelessWidget {
