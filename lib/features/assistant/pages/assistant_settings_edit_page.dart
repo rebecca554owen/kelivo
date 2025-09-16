@@ -605,6 +605,12 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                 );
               }
             },
+            onLongPress: () async {
+              // Reset to use global default model
+              await context.read<AssistantProvider>().updateAssistant(
+                a.copyWith(clearChatModel: true),
+              );
+            },
           ),
         ),
 
@@ -2067,6 +2073,7 @@ class _AssistantModelCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onPick,
+    this.onLongPress,
     this.providerKey,
     this.modelId,
   });
@@ -2074,6 +2081,7 @@ class _AssistantModelCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onPick;
+  final VoidCallback? onLongPress;
   final String? providerKey;
   final String? modelId;
 
@@ -2110,6 +2118,7 @@ class _AssistantModelCard extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: onPick,
+            onLongPress: onLongPress,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               decoration: BoxDecoration(
