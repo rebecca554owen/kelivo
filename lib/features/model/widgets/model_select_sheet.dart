@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
+import '../../../core/providers/assistant_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'model_detail_sheet.dart';
@@ -215,12 +216,26 @@ Future<ModelSelection?> showModelSelector(BuildContext context, {String? limitPr
   );
 }
 
-Future<void> showModelSelectSheet(BuildContext context) async {
+Future<void> showModelSelectSheet(BuildContext context, {bool updateAssistant = true}) async {
   final sel = await showModelSelector(context);
   if (sel != null) {
-    // persist as current model
-    final settings = context.read<SettingsProvider>();
-    await settings.setCurrentModel(sel.providerKey, sel.modelId);
+    if (updateAssistant) {
+      // Update assistant's model instead of global default
+      final assistantProvider = context.read<AssistantProvider>();
+      final assistant = assistantProvider.currentAssistant;
+      if (assistant != null) {
+        await assistantProvider.updateAssistant(
+          assistant.copyWith(
+            chatModelProvider: sel.providerKey,
+            chatModelId: sel.modelId,
+          ),
+        );
+      }
+    } else {
+      // Only update global default when explicitly requested (e.g., from settings)
+      final settings = context.read<SettingsProvider>();
+      await settings.setCurrentModel(sel.providerKey, sel.modelId);
+    }
   }
 }
 
@@ -266,6 +281,14 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   Future<void> _loadModelsAsync() async {
     try {
       final settings = context.read<SettingsProvider>();
+      final assistant = context.read<AssistantProvider>().currentAssistant;
+      
+      // Determine current model - use assistant's model if set, otherwise global default
+      final currentProvider = assistant?.chatModelProvider ?? settings.currentModelProvider;
+      final currentModelId = assistant?.chatModelId ?? settings.currentModelId;
+      final currentKey = (currentProvider != null && currentModelId != null) 
+          ? '$currentProvider::$currentModelId' 
+          : '';
       
       // Prepare data for background processing
       final processingData = _ModelProcessingData(
@@ -278,7 +301,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           })),
         ),
         pinnedModels: settings.pinnedModels,
-        currentModelKey: settings.currentModelKey ?? '',
+        currentModelKey: currentKey,
         providersOrder: settings.providersOrder,
         limitProviderKey: widget.limitProviderKey,
       );
@@ -305,6 +328,15 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   
   void _loadModelsSynchronously() {
     final settings = context.read<SettingsProvider>();
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    
+    // Determine current model - use assistant's model if set, otherwise global default
+    final currentProvider = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final currentModelId = assistant?.chatModelId ?? settings.currentModelId;
+    final currentKey = (currentProvider != null && currentModelId != null) 
+        ? '$currentProvider::$currentModelId' 
+        : '';
+    
     final processingData = _ModelProcessingData(
       providerConfigs: Map<String, dynamic>.from(
         settings.providerConfigs.map((key, value) => MapEntry(key, {
@@ -315,7 +347,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         })),
       ),
       pinnedModels: settings.pinnedModels,
-      currentModelKey: settings.currentModelKey ?? '',
+      currentModelKey: currentKey,
       providersOrder: settings.providersOrder,
       limitProviderKey: widget.limitProviderKey,
     );
@@ -343,8 +375,11 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
 
   Future<void> _jumpToCurrentSelection() async {
     final settings = context.read<SettingsProvider>();
-    final pk = settings.currentModelProvider;
-    final mid = settings.currentModelId;
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    
+    // Use assistant's model if set, otherwise fall back to global default
+    final pk = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final mid = assistant?.chatModelId ?? settings.currentModelId;
     if (pk == null || mid == null) return;
 
     // Optionally expand a bit for better context

@@ -832,12 +832,9 @@ class _SideDrawerState extends State<SideDrawer> {
                             trailing: (a.id == currentId) ? Icon(Lucide.Check, size: 18, color: cs.primary) : null,
                             onTap: () async {
                               final ap = context.read<AssistantProvider>();
-                              final settings = context.read<SettingsProvider>();
                               await ap.setCurrentAssistant(a.id);
-                              // Seed current model with assistant default if provided
-                              if ((a.chatModelProvider ?? '').isNotEmpty && (a.chatModelId ?? '').isNotEmpty) {
-                                await settings.setCurrentModel(a.chatModelProvider!, a.chatModelId!);
-                              }
+                              // Don't change global default model when switching assistants
+                              // The assistant's model will be used automatically when sending messages
                               // Close the picker sheet
                               if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
                               // Trigger host's new-chat flow instead of creating here

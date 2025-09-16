@@ -660,11 +660,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final ap = context.read<AssistantProvider>();
     final settings = context.read<SettingsProvider>();
     final assistantId = ap.currentAssistantId;
-    // If assistant has a default chat model, seed the global current model for this new conversation
+    // Don't change global default model - just use assistant's model if set
     final a = ap.currentAssistant;
-    if (a?.chatModelProvider != null && a?.chatModelId != null) {
-      await settings.setCurrentModel(a!.chatModelProvider!, a.chatModelId!);
-    }
     final conversation = await _chatService.createDraftConversation(title: _titleForLocale(context), assistantId: assistantId);
     // Default-enable MCP: select all connected servers for this conversation
     // MCP defaults are now managed per assistant; no per-conversation enabling here
@@ -686,10 +683,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (_currentConversation == null) await _createNewConversation();
 
     final settings = context.read<SettingsProvider>();
-    // Use the user's currently selected model (seeded on new chat by assistant default if set)
-    final providerKey = settings.currentModelProvider;
-    final modelId = settings.currentModelId;
     final assistant = context.read<AssistantProvider>().currentAssistant;
+    
+    // Use assistant's model if set, otherwise fall back to global default
+    final providerKey = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final modelId = assistant?.chatModelId ?? settings.currentModelId;
 
     if (providerKey == null || modelId == null) {
       final l10n = AppLocalizations.of(context)!;
@@ -1540,9 +1538,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     // Start a new assistant generation from current context
     final settings = context.read<SettingsProvider>();
-    final providerKey = settings.currentModelProvider;
-    final modelId = settings.currentModelId;
     final assistant = context.read<AssistantProvider>().currentAssistant;
+    
+    // Use assistant's model if set, otherwise fall back to global default
+    final providerKey = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final modelId = assistant?.chatModelId ?? settings.currentModelId;
 
     if (providerKey == null || modelId == null) {
       final l10n = AppLocalizations.of(context)!;
@@ -2177,8 +2177,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         : _titleForLocale(context);
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
-    final providerKey = settings.currentModelProvider;
-    final modelId = settings.currentModelId;
+    final assistant = context.watch<AssistantProvider>().currentAssistant;
+    
+    // Use assistant's model if set, otherwise fall back to global default
+    final providerKey = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final modelId = assistant?.chatModelId ?? settings.currentModelId;
     String? providerName;
     String? modelDisplay;
     if (providerKey != null && modelId != null) {
@@ -2744,11 +2747,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     builder: (context) {
                       // Enforce model capabilities: disable MCP selection if model doesn't support tools
                       final settings = context.watch<SettingsProvider>();
-                      final pk = settings.currentModelProvider;
-                      final mid = settings.currentModelId;
+                      final ap = context.watch<AssistantProvider>();
+                      final a = ap.currentAssistant;
+                      // Use assistant's model if set, otherwise fall back to global default
+                      final pk = a?.chatModelProvider ?? settings.currentModelProvider;
+                      final mid = a?.chatModelId ?? settings.currentModelId;
                       if (pk != null && mid != null) {
-                        final ap = context.read<AssistantProvider>();
-                        final a = ap.currentAssistant;
                         final supportsTools = _isToolModel(pk, mid);
                         if (!supportsTools && (a?.mcpServerIds.isNotEmpty ?? false)) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2772,12 +2776,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         }
                       }
                       // Compute whether built-in built-in search (Gemini official or Claude) is active to highlight the search button
-                      final cfg = (settings.currentModelProvider != null)
-                          ? settings.getProviderConfig(settings.currentModelProvider!)
+                      final currentProvider = a?.chatModelProvider ?? settings.currentModelProvider;
+                      final currentModelId = a?.chatModelId ?? settings.currentModelId;
+                      final cfg = (currentProvider != null)
+                          ? settings.getProviderConfig(currentProvider)
                           : null;
                       bool builtinSearchActive = false;
-                      if (cfg != null && settings.currentModelId != null) {
-                        final mid2 = settings.currentModelId!;
+                      if (cfg != null && currentModelId != null) {
+                        final mid2 = currentModelId;
                         final isGeminiOfficial = cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
                         final isClaude = cfg.providerType == ProviderKind.claude;
                         final isOpenAIResponses = cfg.providerType == ProviderKind.openai && (cfg.useResponseApi == true);
@@ -2803,10 +2809,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           }
                         },
                         onStop: _cancelStreaming,
-                        modelIcon: (settings.showModelIcon && settings.currentModelProvider != null && settings.currentModelId != null)
+                        modelIcon: (settings.showModelIcon && ((a?.chatModelProvider ?? settings.currentModelProvider) != null) && ((a?.chatModelId ?? settings.currentModelId) != null))
                             ? _CurrentModelIcon(
-                                providerKey: settings.currentModelProvider,
-                                modelId: settings.currentModelId,
+                                providerKey: a?.chatModelProvider ?? settings.currentModelProvider,
+                                modelId: a?.chatModelId ?? settings.currentModelId,
                                 size: 40,
                                 withBackground: true,
                                 backgroundColor: Colors.transparent,
@@ -2829,8 +2835,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           }
                         },
                         reasoningActive: _isReasoningEnabled((context.watch<AssistantProvider>().currentAssistant?.thinkingBudget) ?? settings.thinkingBudget),
-                        supportsReasoning: (settings.currentModelProvider != null && settings.currentModelId != null)
-                            ? _isReasoningModel(settings.currentModelProvider!, settings.currentModelId!)
+                        supportsReasoning: (pk != null && mid != null)
+                            ? _isReasoningModel(pk, mid)
                             : false,
                         onOpenSearch: () => showSearchSettingsSheet(context),
                         onSend: (text) {
@@ -2841,8 +2847,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         },
                         loading: _isLoading,
                         showMcpButton: (() {
-                          final pk2 = settings.currentModelProvider;
-                          final mid3 = settings.currentModelId;
+                          final pk2 = a?.chatModelProvider ?? settings.currentModelProvider;
+                          final mid3 = a?.chatModelId ?? settings.currentModelId;
                           if (pk2 == null || mid3 == null) return false;
                           return _isToolModel(pk2, mid3) && context.watch<McpProvider>().servers.isNotEmpty;
                         })(),
