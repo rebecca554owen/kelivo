@@ -536,38 +536,56 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                     : const Color(0xFFF2F3F5),
                 borderRadius: BorderRadius.circular(999),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => _showModelPicker(context),
-                    child: Container(
-                      decoration: const BoxDecoration(shape: BoxShape.circle),
-                      padding: const EdgeInsets.all(10),
-                      child: Icon(Lucide.Boxes, size: 20, color: cs.primary),
+                  Material(
+                    color: Colors.transparent,
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () => _showModelPicker(context),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: cs.primary.withOpacity(0.35)),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Lucide.Boxes, size: 20, color: cs.primary),
+                            const SizedBox(width: 8),
+                            Text('获取', style: TextStyle(color: cs.primary, fontSize: 14, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: () async {
-                      await showCreateModelSheet(context, providerKey: widget.keyName);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Lucide.Plus, size: 18, color: cs.primary),
-                          const SizedBox(width: 6),
-                          Text(l10n.providerDetailPageAddNewModelButton, style: TextStyle(color: cs.primary, fontSize: 13)),
-                        ],
+                  Material(
+                    color: Colors.transparent,
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () async {
+                        await showCreateModelSheet(context, providerKey: widget.keyName);
+                      },
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          color: cs.primary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Lucide.Plus, size: 20, color: cs.primary),
+                            const SizedBox(width: 8),
+                            Text(l10n.providerDetailPageAddNewModelButton, style: TextStyle(color: cs.primary, fontSize: 14)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
