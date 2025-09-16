@@ -20,6 +20,7 @@ import '../../../shared/widgets/markdown_with_highlight.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/model_provider.dart';
 
 class ChatMessageWidget extends StatefulWidget {
   final ChatMessage message;
@@ -190,6 +191,31 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     } else {
       if (_ticker.isActive) _ticker.stop();
     }
+  }
+
+  String _resolveModelDisplayName(SettingsProvider settings) {
+    final modelId = widget.message.modelId;
+    if (modelId == null || modelId.trim().isEmpty) {
+      return 'AI Assistant';
+    }
+
+    final providerId = widget.message.providerId;
+    if (providerId != null && providerId.isNotEmpty) {
+      try {
+        final cfg = settings.getProviderConfig(providerId);
+        final ov = cfg.modelOverrides[modelId] as Map?;
+        final name = (ov?['name'] as String?)?.trim();
+        if (name != null && name.isNotEmpty) {
+          return name;
+        }
+      } catch (_) {
+        // ignore lookup failures; fall through to inferred name.
+      }
+    }
+
+    final inferred = ModelRegistry.infer(ModelInfo(id: modelId, displayName: modelId));
+    final fallback = inferred.displayName.trim();
+    return fallback.isNotEmpty ? fallback : modelId;
   }
 
   @override
@@ -722,7 +748,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     Text(
                       widget.useAssistantAvatar
                           ? (widget.assistantName?.trim().isNotEmpty == true ? widget.assistantName!.trim() : 'Assistant')
-                          : (widget.message.modelId ?? 'AI Assistant'),
+                          : _resolveModelDisplayName(settings),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,

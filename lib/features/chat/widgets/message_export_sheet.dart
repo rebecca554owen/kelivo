@@ -16,6 +16,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/model_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
@@ -34,20 +35,29 @@ String _guessImageMime(String path) {
 
 String? _modelDisplayName(BuildContext context, ChatMessage msg) {
   if (msg.role != 'assistant') return null;
-  if (msg.providerId == null || msg.modelId == null) return null;
+  final modelId = msg.modelId;
+  if (modelId == null || modelId.isEmpty) return null;
   final settings = context.read<SettingsProvider>();
-  try {
-    final cfg = settings.getProviderConfig(msg.providerId!);
-    final ov = cfg.modelOverrides[msg.modelId!] as Map?;
-    if (ov != null) {
-      final name = (ov['name'] as String?)?.trim();
-      if (name != null && name.isNotEmpty) return name;
+  String? name;
+  final providerId = msg.providerId;
+  if (providerId != null && providerId.isNotEmpty) {
+    try {
+      final cfg = settings.getProviderConfig(providerId);
+      final ov = cfg.modelOverrides[modelId] as Map?;
+      final overrideName = (ov?['name'] as String?)?.trim();
+      if (overrideName != null && overrideName.isNotEmpty) {
+        name = overrideName;
+      }
+    } catch (_) {
+      // ignore lookup issues; fall back to inference below.
     }
-    return msg.modelId!;
-  } catch (_) {
-    return msg.modelId!;
   }
+
+  final inferred = ModelRegistry.infer(ModelInfo(id: modelId, displayName: modelId));
+  final fallback = inferred.displayName.trim();
+  return name ?? (fallback.isNotEmpty ? fallback : modelId);
 }
+
 
 String _getRoleName(BuildContext context, ChatMessage msg) {
   final l10n = AppLocalizations.of(context)!;

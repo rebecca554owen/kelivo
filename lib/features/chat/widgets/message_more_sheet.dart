@@ -4,6 +4,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/chat_message.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/model_provider.dart';
 import '../pages/select_copy_page.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -52,17 +53,24 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
     if (msg.role != 'assistant') return null;
     if (msg.providerId == null || msg.modelId == null) return null;
     final settings = context.read<SettingsProvider>();
-    try {
-      final cfg = settings.getProviderConfig(msg.providerId!);
-      final ov = cfg.modelOverrides[msg.modelId!] as Map?;
-      if (ov != null) {
-        final name = (ov['name'] as String?)?.trim();
-        if (name != null && name.isNotEmpty) return name;
+    final modelId = msg.modelId!;
+    String? name;
+    if (msg.providerId!.isNotEmpty) {
+      try {
+        final cfg = settings.getProviderConfig(msg.providerId!);
+        final ov = cfg.modelOverrides[modelId] as Map?;
+        final overrideName = (ov?['name'] as String?)?.trim();
+        if (overrideName != null && overrideName.isNotEmpty) {
+          name = overrideName;
+        }
+      } catch (_) {
+        // Ignore lookup issues; fall back to inference below.
       }
-      return msg.modelId!;
-    } catch (_) {
-      return msg.modelId!;
     }
+
+    final inferred = ModelRegistry.infer(ModelInfo(id: modelId, displayName: modelId));
+    final fallback = inferred.displayName.trim();
+    return name ?? (fallback.isNotEmpty ? fallback : modelId);
   }
 
   Widget _actionItem({
