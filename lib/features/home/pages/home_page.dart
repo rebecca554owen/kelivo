@@ -92,6 +92,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   bool _suppressNextOpenHaptic = false; // set when we already vibrated on programmatic open
   ValueNotifier<DrawerState>? _drawerStateNotifier;
 
+  // Swipe-to-open anywhere detection (raw pointer based to avoid gesture conflicts)
+  static const double _swipeOpenDistance = 72.0; // px
+  static const double _swipeOpenHorizontalRatio = 1.6; // dx must be > dy * ratio
+  Offset? _swipeStartGlobal;
+  bool _swipeOpenTriggered = false;
+
   // Deduplicate tool UI parts by id or by name+args when id is empty
   List<ToolUIPart> _dedupeToolPartsList(List<ToolUIPart> parts) {
     final seen = <String>{};
@@ -2363,12 +2369,38 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Assistant-specific chat background + gradient overlay to improve readability
-          Builder(
-            builder: (context) {
-            final bg = context.watch<AssistantProvider>().currentAssistant?.background;
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (evt) {
+          _swipeStartGlobal = evt.position;
+          _swipeOpenTriggered = false;
+        },
+        onPointerMove: (evt) {
+          if (_swipeOpenTriggered) return;
+          final start = _swipeStartGlobal;
+          if (start == null) return;
+          // Ignore if drawer is already opening/open
+          final s = _drawerController.stateNotifier?.value;
+          if (s == DrawerState.open || s == DrawerState.opening) return;
+          final dx = evt.position.dx - start.dx;
+          final dy = evt.position.dy - start.dy;
+          // Detect right-swipe: enough horizontal movement and mostly horizontal
+          if (dx > _swipeOpenDistance && dx.abs() > (dy.abs() * _swipeOpenHorizontalRatio)) {
+            _swipeOpenTriggered = true;
+            _dismissKeyboard();
+            _drawerController.open?.call();
+          }
+        },
+        onPointerUp: (_) {
+          _swipeStartGlobal = null;
+          _swipeOpenTriggered = false;
+        },
+        child: Stack(
+          children: [
+            // Assistant-specific chat background + gradient overlay to improve readability
+            Builder(
+              builder: (context) {
+              final bg = context.watch<AssistantProvider>().currentAssistant?.background;
             if (bg == null || bg.trim().isEmpty) return const SizedBox.shrink();
             ImageProvider provider;
             if (bg.startsWith('http')) {
@@ -3015,8 +3047,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             );
           }),
         ],
+        ),
       ),
-      ),
+      )
     );
   }
 
