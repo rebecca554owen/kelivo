@@ -136,6 +136,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   }
 
   void _applyAutoCollapseInlineThinkIfFinished({ChatMessageWidget? oldWidget}) {
+    if (!mounted) return;
     // Determine if using inline <think>
     final newExtracted = THINKING_REGEX
         .allMatches(widget.message.content)
