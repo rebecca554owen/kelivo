@@ -387,9 +387,20 @@ class _ChatInputBarState extends State<ChatInputBar> {
                               const SizedBox(width: 8),
                               _CompactIconButton(
                                 tooltip: AppLocalizations.of(context)!.chatInputBarMcpServersTooltip,
-                                icon: Lucide.Terminal,
+                                icon: Lucide.Hammer,
                                 active: widget.mcpActive,
                                 onTap: widget.onOpenMcp,
+                                // child: SvgPicture.asset(
+                                //   'assets/icons/codex.svg',
+                                //   width: 20,
+                                //   height: 20,
+                                //   colorFilter: ColorFilter.mode(
+                                //     widget.mcpActive
+                                //         ? theme.colorScheme.primary
+                                //         : (isDark ? Colors.white70 : Colors.black54),
+                                //     BlendMode.srcIn,
+                                //   ),
+                                // ),
                               ),
                             ],
                           ],
