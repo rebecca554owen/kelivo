@@ -903,6 +903,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final bool streamOutput = assistant?.streamOutput ?? true;
     String _bufferedReasoning = '';
     DateTime? _reasoningStartAt;
+    bool _finishHandled = false;
+    bool _titleQueued = false;
 
     try {
       // Prepare tools (Search tool + MCP tools)
@@ -992,6 +994,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       );
 
       Future<void> finish({bool generateTitle = true}) async {
+        final shouldGenerateTitle = generateTitle && !_titleQueued;
+        if (_finishHandled) {
+          if (shouldGenerateTitle) {
+            _titleQueued = true;
+            _maybeGenerateTitle();
+          }
+          return;
+        }
+        _finishHandled = true;
+        if (shouldGenerateTitle) {
+          _titleQueued = true;
+        }
         // Replace extremely long inline base64 images with local files to avoid jank
         final processedContent = await MarkdownMediaSanitizer.replaceInlineBase64Images(fullContent);
         await _chatService.updateMessage(
@@ -1044,7 +1058,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             reasoningSegmentsJson: _serializeReasoningSegments(segments),
           );
         }
-        if (generateTitle) {
+        if (shouldGenerateTitle) {
           _maybeGenerateTitle();
         }
       }
