@@ -557,7 +557,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                           children: [
                             Icon(Lucide.Boxes, size: 20, color: cs.primary),
                             const SizedBox(width: 8),
-                            Text('获取', style: TextStyle(color: cs.primary, fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text(l10n.providerDetailPageFetchModelsButton, style: TextStyle(color: cs.primary, fontSize: 14, fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ),

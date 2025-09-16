@@ -510,6 +510,7 @@
   "providerDetailPageModelDeletedSnackbar": "已删除模型",
   "providerDetailPageUndoButton": "撤销",
   "providerDetailPageAddNewModelButton": "添加新模型",
+  "providerDetailPageFetchModelsButton": "获取",
   "providerDetailPageEnableProxyTitle": "是否启用代理",
   "providerDetailPageHostLabel": "主机地址",
   "providerDetailPagePortLabel": "端口",

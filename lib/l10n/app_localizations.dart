@@ -3083,6 +3083,12 @@ abstract class AppLocalizations {
   /// **'Add Model'**
   String get providerDetailPageAddNewModelButton;
 
+  /// No description provided for @providerDetailPageFetchModelsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch'**
+  String get providerDetailPageFetchModelsButton;
+
   /// No description provided for @providerDetailPageEnableProxyTitle.
   ///
   /// In en, this message translates to:

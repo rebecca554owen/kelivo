@@ -1562,6 +1562,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageAddNewModelButton => '添加新模型';
 
   @override
+  String get providerDetailPageFetchModelsButton => '获取';
+
+  @override
   String get providerDetailPageEnableProxyTitle => '是否启用代理';
 
   @override
@@ -3700,6 +3703,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageAddNewModelButton => '添加新模型';
 
   @override
+  String get providerDetailPageFetchModelsButton => '获取';
+
+  @override
   String get providerDetailPageEnableProxyTitle => '是否启用代理';
 
   @override
@@ -5836,6 +5842,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageAddNewModelButton => '新增新模型';
+
+  @override
+  String get providerDetailPageFetchModelsButton => '取得';
 
   @override
   String get providerDetailPageEnableProxyTitle => '是否啟用代理';

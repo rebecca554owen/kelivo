@@ -671,6 +671,7 @@
   "providerDetailPageModelDeletedSnackbar": "Model deleted",
   "providerDetailPageUndoButton": "Undo",
   "providerDetailPageAddNewModelButton": "Add Model",
+  "providerDetailPageFetchModelsButton": "Fetch",
   "providerDetailPageEnableProxyTitle": "Enable Proxy",
   "providerDetailPageHostLabel": "Host",
   "providerDetailPagePortLabel": "Port",

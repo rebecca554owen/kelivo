@@ -1608,6 +1608,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageAddNewModelButton => 'Add Model';
 
   @override
+  String get providerDetailPageFetchModelsButton => 'Fetch';
+
+  @override
   String get providerDetailPageEnableProxyTitle => 'Enable Proxy';
 
   @override
