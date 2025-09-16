@@ -1038,13 +1038,30 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               child: DraggableScrollableSheet(
                 expand: false,
                 initialChildSize: 0.7,
-                maxChildSize: 0.95,
+                maxChildSize: 0.8,
                 minChildSize: 0.4,
                 builder: (c, scrollController) {
+                  final bottomPadding = MediaQuery.of(ctx).padding.bottom + 16;
                   return Column(
                     children: [
                       const SizedBox(height: 8),
                       Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: TextField(
+                          controller: controller,
+                          onChanged: (_) => setLocal(() {}),
+                          decoration: InputDecoration(
+                            hintText: l10n.providerDetailPageFilterHint,
+                            filled: true,
+                            fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: loading
@@ -1053,6 +1070,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                               ? Center(child: Text(error, style: TextStyle(color: cs.error)))
                               : ListView(
                                   controller: scrollController,
+                                  padding: EdgeInsets.only(bottom: bottomPadding),
                                   children: [
                                     for (final g in groupKeys) ...[
                                       // Group header with actions
@@ -1182,21 +1200,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                   ],
                                 ),
                     ),
-                      Padding(
-                        padding: EdgeInsets.only(left: 16, right: 16, bottom: MediaQuery.of(ctx).padding.bottom + 12),
-                        child: TextField(
-                          controller: controller,
-                          onChanged: (_) => setLocal(() {}),
-                          decoration: InputDecoration(
-                            hintText: l10n.providerDetailPageFilterHint,
-                            filled: true,
-                            fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
-                          ),
-                        ),
-                      ),
                     ],
                   );
                 },
