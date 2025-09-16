@@ -251,8 +251,8 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   final ScrollController _scroll = ScrollController();
   final Map<String, GlobalKey> _headers = {};
   final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
-  static const double _initialSize = 0.7;
-  static const double _maxSize = 0.85;
+  static const double _initialSize = 0.8;
+  static const double _maxSize = 0.8;
   ScrollController? _listCtrl; // controller from DraggableScrollableSheet
   final Map<String, double> _providerOffsets = {}; // Store cumulative offset for each provider
   
