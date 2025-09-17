@@ -560,14 +560,14 @@ class _SideDrawerState extends State<SideDrawer> {
                                 context,
                                 ap.currentAssistant,
                                 size: 32,
-                                onTap: () {
-                                  final id = context.read<AssistantProvider>().currentAssistantId;
-                                  if (id != null) {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-                                    );
-                                  }
-                                },
+                                // onTap: () {
+                                //   final id = context.read<AssistantProvider>().currentAssistantId;
+                                //   if (id != null) {
+                                //     Navigator.of(context).push(
+                                //       MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                                //     );
+                                //   }
+                                // },
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -959,7 +959,7 @@ class _SideDrawerState extends State<SideDrawer> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 12, 2),
+                          padding: const EdgeInsets.fromLTRB(16, 6, 12, 2),
                           child: Row(
                             children: [
                               Icon(Lucide.Bot, size: 18, color: cs.primary),
@@ -1030,7 +1030,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                               context,
                                               assistant,
                                               size: 28,
-                                              onTap: () => _openAssistantSettings(assistant.id),
+                                              // onTap: () => _openAssistantSettings(assistant.id),
                                             ),
                                             const SizedBox(width: 10),
                                             Expanded(
