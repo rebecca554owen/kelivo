@@ -892,9 +892,9 @@ class _SideDrawerState extends State<SideDrawer> {
     final screenSize = MediaQuery.of(context).size;
 
     const double headerHeight = 56;
-    const double rowExtent = 64;
-    const double listExtraPadding = 20;
-    final double maxHeight = screenSize.height * 0.7;
+    const double rowExtent = 58;
+    const double listExtraPadding = 24;
+    final double maxHeight = screenSize.height * 0.6;
     final double availableBody = math.max(0.0, maxHeight - headerHeight);
     final double bodyHeight;
     if (assistants.isEmpty) {
@@ -1023,7 +1023,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                       highlightColor: cs.primary.withOpacity(0.10),
                                       onTap: () => _handleSelectAssistant(assistant),
                                     child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                         child: Row(
                                           children: [
                                             _assistantAvatar(
