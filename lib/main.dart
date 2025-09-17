@@ -53,7 +53,7 @@ Future<void> main() async {
   //   // Use debugPrint to avoid truncation in Flutter log viewer
   //   debugPrint(msg.toString());
   // });
-  // runApp(const MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
