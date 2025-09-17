@@ -1023,7 +1023,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                       highlightColor: cs.primary.withOpacity(0.10),
                                       onTap: () => _handleSelectAssistant(assistant),
                                     child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
                                         child: Row(
                                           children: [
                                             _assistantAvatar(
@@ -1039,7 +1039,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                                                  fontWeight: FontWeight.w500,
                                                   color: cs.onSurface,
                                                 ),
                                               ),
