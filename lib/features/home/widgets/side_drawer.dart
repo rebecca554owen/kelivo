@@ -560,14 +560,14 @@ class _SideDrawerState extends State<SideDrawer> {
                                 context,
                                 ap.currentAssistant,
                                 size: 32,
-                                onTap: () {
-                                  final id = context.read<AssistantProvider>().currentAssistantId;
-                                  if (id != null) {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-                                    );
-                                  }
-                                },
+                                // onTap: () {
+                                //   final id = context.read<AssistantProvider>().currentAssistantId;
+                                //   if (id != null) {
+                                //     Navigator.of(context).push(
+                                //       MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                                //     );
+                                //   }
+                                // },
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -959,7 +959,7 @@ class _SideDrawerState extends State<SideDrawer> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 12, 2),
+                          padding: const EdgeInsets.fromLTRB(16, 6, 12, 2),
                           child: Row(
                             children: [
                               Icon(Lucide.Bot, size: 18, color: cs.primary),
@@ -1023,14 +1023,14 @@ class _SideDrawerState extends State<SideDrawer> {
                                       highlightColor: cs.primary.withOpacity(0.10),
                                       onTap: () => _handleSelectAssistant(assistant),
                                     child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
                                         child: Row(
                                           children: [
                                             _assistantAvatar(
                                               context,
                                               assistant,
                                               size: 28,
-                                              onTap: () => _openAssistantSettings(assistant.id),
+                                              // onTap: () => _openAssistantSettings(assistant.id),
                                             ),
                                             const SizedBox(width: 10),
                                             Expanded(
@@ -1039,7 +1039,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                                                  fontWeight: FontWeight.w500,
                                                   color: cs.onSurface,
                                                 ),
                                               ),
