@@ -46,6 +46,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../core/services/learning_mode_store.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/animations/widgets.dart';
 
 
@@ -2412,7 +2413,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (bg.startsWith('http')) {
               provider = NetworkImage(bg);
             } else {
-              provider = FileImage(File(bg));
+              final localPath = SandboxPathResolver.fix(bg);
+              final file = File(localPath);
+              if (!file.existsSync()) return const SizedBox.shrink();
+              provider = FileImage(file);
             }
             return Positioned.fill(
               child: Stack(
