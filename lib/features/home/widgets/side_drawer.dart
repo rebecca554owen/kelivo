@@ -46,7 +46,7 @@ class _SideDrawerState extends State<SideDrawer> {
   String _query = '';
 
   // Assistant avatar renderer shared across drawer views
-  Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28}) {
+  Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28, VoidCallback? onTap}) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final av = a?.avatar?.trim() ?? '';
@@ -81,7 +81,7 @@ class _SideDrawerState extends State<SideDrawer> {
     }
     
     // Add border
-    return Container(
+    final child = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -92,6 +92,14 @@ class _SideDrawerState extends State<SideDrawer> {
         ),
       ),
       child: avatar,
+    );
+
+    if (onTap == null) return child;
+
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: child,
     );
   }
 
@@ -511,7 +519,19 @@ class _SideDrawerState extends State<SideDrawer> {
                           padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
                           child: Row(
                             children: [
-                              _assistantAvatar(context, ap.currentAssistant, size: 32),
+                              _assistantAvatar(
+                                context,
+                                ap.currentAssistant,
+                                size: 32,
+                                onTap: () {
+                                  final id = context.read<AssistantProvider>().currentAssistantId;
+                                  if (id != null) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                                    );
+                                  }
+                                },
+                              ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Text(
@@ -827,7 +847,16 @@ class _SideDrawerState extends State<SideDrawer> {
                       children: [
                         for (final a in list)
                           ListTile(
-                            leading: _assistantAvatar(context, a, size: 36),
+                            leading: _assistantAvatar(
+                              context,
+                              a,
+                              size: 36,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: a.id)),
+                                );
+                              },
+                            ),
                             title: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                             trailing: (a.id == currentId) ? Icon(Lucide.Check, size: 18, color: cs.primary) : null,
                             onTap: () async {
