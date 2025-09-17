@@ -22,6 +22,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -30,12 +31,14 @@ class SideDrawer extends StatefulWidget {
     required this.assistantName,
     this.onSelectConversation,
     this.onNewConversation,
+    this.closePickerTicker,
   });
 
   final String userName;
   final String assistantName;
   final void Function(String id)? onSelectConversation;
   final VoidCallback? onNewConversation;
+  final ValueNotifier<int>? closePickerTicker;
 
   @override
   State<SideDrawer> createState() => _SideDrawerState();
@@ -44,6 +47,9 @@ class SideDrawer extends StatefulWidget {
 class _SideDrawerState extends State<SideDrawer> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  final GlobalKey _assistantTileKey = GlobalKey();
+  OverlayEntry? _assistantPickerEntry;
+  ValueNotifier<int>? _closeTicker;
 
   // Assistant avatar renderer shared across drawer views
   Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28, VoidCallback? onTap}) {
@@ -140,6 +146,7 @@ class _SideDrawerState extends State<SideDrawer> {
   @override
   void initState() {
     super.initState();
+    _attachCloseTicker(widget.closePickerTicker);
     _searchController.addListener(() {
       if (_query != _searchController.text) {
         setState(() => _query = _searchController.text);
@@ -276,8 +283,36 @@ class _SideDrawerState extends State<SideDrawer> {
 
   @override
   void dispose() {
+    _assistantPickerEntry?.remove();
+    _assistantPickerEntry = null;
+    _closeTicker?.removeListener(_handleCloseTick);
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    _closeAssistantPicker();
+    super.deactivate();
+  }
+
+  @override
+  void didUpdateWidget(covariant SideDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.closePickerTicker != widget.closePickerTicker) {
+      _attachCloseTicker(widget.closePickerTicker);
+    }
+  }
+
+  void _attachCloseTicker(ValueNotifier<int>? ticker) {
+    if (_closeTicker == ticker) return;
+    _closeTicker?.removeListener(_handleCloseTick);
+    _closeTicker = ticker;
+    _closeTicker?.addListener(_handleCloseTick);
+  }
+
+  void _handleCloseTick() {
+    _closeAssistantPicker();
   }
 
 
@@ -502,12 +537,14 @@ class _SideDrawerState extends State<SideDrawer> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Material(
+                      key: _assistantTileKey,
                       color: cs.surface,
                       borderRadius: BorderRadius.circular(16),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
-                        onTap: () => _showAssistantPicker(context),
+                        onTap: _toggleAssistantPicker,
                         onLongPress: () {
+                          _closeAssistantPicker();
                           final id = context.read<AssistantProvider>().currentAssistantId;
                           if (id != null) {
                             Navigator.of(context).push(
@@ -516,9 +553,9 @@ class _SideDrawerState extends State<SideDrawer> {
                           }
                         },
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
-                          child: Row(
-                            children: [
+                            padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                            child: Row(
+                              children: [
                               _assistantAvatar(
                                 context,
                                 ap.currentAssistant,
@@ -543,7 +580,7 @@ class _SideDrawerState extends State<SideDrawer> {
                               ),
                               const SizedBox(width: 8),
                               Icon(
-                                Lucide.ChevronDown,
+                                _assistantPickerEntry != null ? Lucide.ChevronUp : Lucide.ChevronDown,
                                 size: 18,
                                 color: textBase.withOpacity(0.7),
                               ),
@@ -807,88 +844,249 @@ class _SideDrawerState extends State<SideDrawer> {
     );
   }
 
-  Future<void> _showAssistantPicker(BuildContext context) async {
+  void _toggleAssistantPicker() {
+    if (_assistantPickerEntry != null) {
+      _closeAssistantPicker();
+    } else {
+      _showAssistantPickerOverlay();
+    }
+  }
+
+  void _closeAssistantPicker() {
+    if (_assistantPickerEntry == null) return;
+    _assistantPickerEntry?.remove();
+    _assistantPickerEntry = null;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _handleSelectAssistant(Assistant assistant) async {
+    _closeAssistantPicker();
+    final ap = context.read<AssistantProvider>();
+    await ap.setCurrentAssistant(assistant.id);
+    if (!mounted) return;
+    widget.onNewConversation?.call();
+    Navigator.of(context).maybePop();
+  }
+
+  void _openAssistantSettings(String id) {
+    _closeAssistantPicker();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+    );
+  }
+
+  void _showAssistantPickerOverlay() {
+    final overlay = Overlay.of(context);
+    if (overlay == null) return;
+    final tileBox = _assistantTileKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlayBox = overlay.context.findRenderObject() as RenderBox?;
+    if (tileBox == null || overlayBox == null) return;
+
+    final offset = tileBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final size = tileBox.size;
+
+    final assistants = List<Assistant>.from(context.read<AssistantProvider>().assistants);
+    final currentId = context.read<AssistantProvider>().currentAssistantId;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final ap = context.read<AssistantProvider>();
-    final list = ap.assistants;
-    final currentId = ap.currentAssistantId;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: cs.surface,
-      isScrollControlled: true, // Allow custom height control
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+    final screenSize = MediaQuery.of(context).size;
+
+    const double headerHeight = 56;
+    const double rowExtent = 64;
+    const double listExtraPadding = 20;
+    final double maxHeight = screenSize.height * 0.7;
+    final double availableBody = math.max(0.0, maxHeight - headerHeight);
+    final double bodyHeight;
+    if (assistants.isEmpty) {
+      if (availableBody <= 0) {
+        bodyHeight = 0;
+      } else if (availableBody < 80.0) {
+        bodyHeight = availableBody;
+      } else {
+        bodyHeight = math.min(availableBody, 140.0);
+      }
+    } else {
+      bodyHeight = math.min(availableBody, assistants.length * rowExtent + listExtraPadding);
+    }
+    final double totalHeight = math.min(maxHeight, headerHeight + bodyHeight);
+
+    double top = offset.dy + size.height + 8;
+    if (top + totalHeight > screenSize.height - 16) {
+      top = math.max(16, screenSize.height - totalHeight - 16);
+    }
+    double left = offset.dx;
+    final double width = size.width;
+    if (left + width > screenSize.width - 16) {
+      left = math.max(16, screenSize.width - width - 16);
+    }
+
+    _assistantPickerEntry = OverlayEntry(
       builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                child: Row(
-                  children: [
-                    Icon(Lucide.Bot, size: 18, color: cs.primary),
-                    const SizedBox(width: 8),
-                    Text(l10n.sideDrawerChooseAssistantTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  ],
-                ),
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _closeAssistantPicker,
               ),
-              // Add flexible scrollable area for assistants
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.6, // Limit to 80% of screen height
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              width: width,
+              child: Material(
+                color: Colors.transparent,
+                child: Animate(
+                  effects: [
+                    FadeEffect(duration: 180.ms, curve: Curves.easeOutCubic),
+                    SlideEffect(begin: const Offset(0, -0.04), end: Offset.zero, duration: 220.ms, curve: Curves.easeOutCubic),
+                  ],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 18,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: SizedBox(
+                      height: totalHeight,
+                      child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        for (final a in list)
-                          ListTile(
-                            leading: _assistantAvatar(
-                              context,
-                              a,
-                              size: 36,
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: a.id)),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 12, 2),
+                          child: Row(
+                            children: [
+                              Icon(Lucide.Bot, size: 18, color: cs.primary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  l10n.sideDrawerChooseAssistantTitle,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: l10n.assistantProviderNewAssistantName,
+                                icon: Icon(Lucide.Plus, size: 18, color: cs.primary),
+                                onPressed: () async {
+                                  _closeAssistantPicker();
+                                  final id = await context.read<AssistantProvider>().addAssistant(context: context);
+                                  if (!mounted) return;
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        // const SizedBox(height: 1),
+                        if (assistants.isEmpty)
+                          Expanded(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  l10n.sideDrawerChooseAssistantTitle,
+                                  style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              itemCount: assistants.length,
+                              physics: const ClampingScrollPhysics(),
+                              itemBuilder: (ctx, index) {
+                                final assistant = assistants[index];
+                                final selected = assistant.id == currentId;
+                                final tile = Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    8,
+                                    index == 0 ? 2.0 : 1.5,
+                                    8,
+                                    index == assistants.length - 1 ? 2.0 : 1.5,
+                                  ),
+                                  child: Material(
+                                    color: selected ? cs.primary.withOpacity(0.12) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      splashColor: cs.primary.withOpacity(0.16),
+                                      highlightColor: cs.primary.withOpacity(0.10),
+                                      onTap: () => _handleSelectAssistant(assistant),
+                                    child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        child: Row(
+                                          children: [
+                                            _assistantAvatar(
+                                              context,
+                                              assistant,
+                                              size: 28,
+                                              onTap: () => _openAssistantSettings(assistant.id),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                assistant.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                                                  color: cs.onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              tooltip: l10n.assistantSettingsEditButton,
+                                              icon: Icon(
+                                                Lucide.Pencil,
+                                                size: 18,
+                                                color: cs.onSurface.withOpacity(0.6),
+                                              ),
+                                              splashRadius: 18,
+                                              onPressed: () => _openAssistantSettings(assistant.id),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ).animate(
+                                  delay: (index * 40).ms,
+                                ).fadeIn(
+                                  duration: 200.ms,
+                                  curve: Curves.easeOutCubic,
+                                ).slideY(
+                                  begin: 0.08,
+                                  end: 0,
+                                  duration: 240.ms,
+                                  curve: Curves.easeOutCubic,
                                 );
+                                return tile;
                               },
                             ),
-                            title: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            trailing: (a.id == currentId) ? Icon(Lucide.Check, size: 18, color: cs.primary) : null,
-                            onTap: () async {
-                              final ap = context.read<AssistantProvider>();
-                              await ap.setCurrentAssistant(a.id);
-                              // Don't change global default model when switching assistants
-                              // The assistant's model will be used automatically when sending messages
-                              // Close the picker sheet
-                              if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
-                              // Trigger host's new-chat flow instead of creating here
-                              widget.onNewConversation?.call();
-                              // Close the drawer without extra snackbars
-                              Navigator.of(context).maybePop();
-                            },
-                            onLongPress: () {
-                              // Long press opens settings quickly
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: a.id)),
-                              );
-                            },
                           ),
                       ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-            ],
-          ),
+            ),
+            )],
         );
       },
     );
+
+    overlay.insert(_assistantPickerEntry!);
+    if (mounted) setState(() {});
   }
 }
 

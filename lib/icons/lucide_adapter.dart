@@ -97,4 +97,5 @@ class Lucide {
   static const IconData Square = lucide.LucideIcons.square;
   static const IconData Download = lucide.LucideIcons.download;
   static const IconData Paperclip = lucide.LucideIcons.paperclip;
+  static const IconData ChevronUp = lucide.LucideIcons.chevronUp;
 }

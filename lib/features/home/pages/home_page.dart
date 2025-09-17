@@ -63,6 +63,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ZoomDrawerController _drawerController = ZoomDrawerController();
+  final ValueNotifier<int> _assistantPickerCloseTick = ValueNotifier<int>(0);
   final FocusNode _inputFocus = FocusNode();
   final TextEditingController _inputController = TextEditingController();
   final ChatInputBarController _mediaController = ChatInputBarController();
@@ -505,6 +506,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
         } catch (_) {}
       }
+    }
+    if ((_lastDrawerState == DrawerState.open || _lastDrawerState == DrawerState.opening) &&
+        (s == DrawerState.closing || s == DrawerState.closed)) {
+      _assistantPickerCloseTick.value++;
     }
     _lastDrawerState = s;
   }
@@ -2236,6 +2241,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           final n = a?.name.trim();
           return (n == null || n.isEmpty) ? l10n.homePageDefaultAssistant : n;
         })(),
+        closePickerTicker: _assistantPickerCloseTick,
         onSelectConversation: (id) {
           // Update current selection for highlight in drawer
           _chatService.setCurrentConversation(id);
