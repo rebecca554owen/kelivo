@@ -311,17 +311,28 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               top: y,
               width: menuWidth,
               child: _AnimatedPopup(
-                child: Material(
-                  color: cs.surface,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: cs.outlineVariant.withOpacity(0.28), width: 1),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1C1C1E).withOpacity(0.66)
+                            : Colors.white.withOpacity(0.66),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.08)
+                              : cs.outlineVariant.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                       _MenuItem(
                         icon: Lucide.Copy,
                         label: l10n.shareProviderSheetCopyButton,
@@ -359,11 +370,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         },
                       ),
                     ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
+          )],
         );
       },
     ).whenComplete(() {
