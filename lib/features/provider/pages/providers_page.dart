@@ -8,6 +8,7 @@ import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -83,7 +84,11 @@ class _ProvidersPageState extends State<ProvidersPage> {
               if (createdKey != null && createdKey.isNotEmpty) {
                 setState(() {});
                 final msg = l10n.providersPageProviderAddedSnackbar;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                showAppSnackBar(
+                  context,
+                  message: msg,
+                  type: NotificationType.success,
+                );
               }
             },
           ),

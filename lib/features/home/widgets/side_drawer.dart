@@ -22,6 +22,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class SideDrawer extends StatefulWidget {
@@ -202,11 +203,11 @@ class _SideDrawerState extends State<SideDrawer> {
                   final deletingCurrent = chatService.currentConversationId == chat.id;
                   await chatService.deleteConversation(chat.id);
                   // Show simple snackbar (no undo)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.sideDrawerDeleteSnackbar(chat.title)),
-                      duration: const Duration(seconds: 3),
-                    ),
+                  showAppSnackBar(
+                    context,
+                    message: l10n.sideDrawerDeleteSnackbar(chat.title),
+                    type: NotificationType.success,
+                    duration: const Duration(seconds: 3),
                   );
                   // If the deleted one was the current selection, trigger host's new-topic (draft) flow
                   if (deletingCurrent || chatService.currentConversationId == null) {
@@ -637,8 +638,10 @@ class _SideDrawerState extends State<SideDrawer> {
                             } catch (_) {
                               // Fallback: copy to clipboard
                               Clipboard.setData(ClipboardData(text: url));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l10n.sideDrawerLinkCopied)),
+                              showAppSnackBar(
+                                context,
+                                message: l10n.sideDrawerLinkCopied,
+                                type: NotificationType.success,
                               );
                             }
                           },
@@ -1442,8 +1445,10 @@ extension on _SideDrawerState {
                   if (applied) {
                     if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop(false);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.sideDrawerQQAvatarFetchFailed)),
+                    showAppSnackBar(
+                      context,
+                      message: l10n.sideDrawerQQAvatarFetchFailed,
+                      type: NotificationType.error,
                     );
                   }
                 },
@@ -1503,16 +1508,20 @@ extension on _SideDrawerState {
       // Gracefully degrade when plugin channel isn't available or permission denied.
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.sideDrawerGalleryOpenError)),
+      showAppSnackBar(
+        context,
+        message: l10n.sideDrawerGalleryOpenError,
+        type: NotificationType.error,
       );
       await _inputAvatarUrl(context);
       return;
     } catch (_) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.sideDrawerGeneralImageError)),
+      showAppSnackBar(
+        context,
+        message: l10n.sideDrawerGeneralImageError,
+        type: NotificationType.error,
       );
       await _inputAvatarUrl(context);
       return;

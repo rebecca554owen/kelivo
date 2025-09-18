@@ -6,6 +6,7 @@ import '../../../core/services/search/search_service.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class SearchServicesPage extends StatefulWidget {
   const SearchServicesPage({super.key});
@@ -63,8 +64,10 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
   void _deleteService(int index) {
     if (_services.length <= 1) {
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.searchServicesPageAtLeastOneServiceRequired)),
+      showAppSnackBar(
+        context,
+        message: l10n.searchServicesPageAtLeastOneServiceRequired,
+        type: NotificationType.warning,
       );
       return;
     }

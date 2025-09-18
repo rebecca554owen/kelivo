@@ -48,6 +48,7 @@ import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../core/services/learning_mode_store.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/animations/widgets.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -703,8 +704,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     if (providerKey == null || modelId == null) {
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.homePagePleaseSelectModel)),
+      showAppSnackBar(
+        context,
+        message: l10n.homePagePleaseSelectModel,
+        type: NotificationType.warning,
       );
       return;
     }
@@ -1415,8 +1418,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
 
           _messageStreamSubscription = null;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${AppLocalizations.of(context)!.generationInterrupted}: $e')),
+          showAppSnackBar(
+            context,
+            message: '${AppLocalizations.of(context)!.generationInterrupted}: $e',
+            type: NotificationType.error,
           );
         },
         onDone: () async {
@@ -1484,8 +1489,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
 
       _messageStreamSubscription = null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppLocalizations.of(context)!.generationInterrupted}: $e')),
+      showAppSnackBar(
+        context,
+        message: '${AppLocalizations.of(context)!.generationInterrupted}: $e',
+        type: NotificationType.error,
       );
     }
   }
@@ -1572,7 +1579,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     if (providerKey == null || modelId == null) {
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.homePagePleaseSelectModel)));
+      showAppSnackBar(
+        context,
+        message: l10n.homePagePleaseSelectModel,
+        type: NotificationType.warning,
+      );
       return;
     }
 
@@ -2121,8 +2132,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final translateModelId = settings.translateModelId ?? settings.currentModelId;
 
     if (translateProvider == null || translateModelId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.homePagePleaseSetupTranslateModel)),
+      showAppSnackBar(
+        context,
+        message: l10n.homePagePleaseSetupTranslateModel,
+        type: NotificationType.warning,
       );
       return;
     }
@@ -2190,8 +2203,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
       await _chatService.updateMessage(message.id, translation: '');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.homePageTranslateFailed(e.toString()))),
+      showAppSnackBar(
+        context,
+        message: l10n.homePageTranslateFailed(e.toString()),
+        type: NotificationType.error,
       );
     }
   }
@@ -2975,8 +2990,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       }
                       if (selected.isEmpty) {
                         final l10n = AppLocalizations.of(context)!;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.homePageSelectMessagesToShare)),
+                        showAppSnackBar(
+                          context,
+                          message: l10n.homePageSelectMessagesToShare,
+                          type: NotificationType.info,
                         );
                         return;
                       }

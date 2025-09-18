@@ -7,6 +7,7 @@ import '../../scan/pages/qr_scan_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class _ImportResult {
   final String key;
@@ -263,9 +264,17 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                             await settings.setProvidersOrder(order);
                           }
                           Navigator.of(ctx).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportSuccessMessage(results.length))));
+                          showAppSnackBar(
+                            context,
+                            message: l10n.importProviderSheetImportSuccessMessage(results.length),
+                            type: NotificationType.success,
+                          );
                         } catch (e) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportFailedMessage(e.toString()))));
+                          showAppSnackBar(
+                            ctx,
+                            message: l10n.importProviderSheetImportFailedMessage(e.toString()),
+                            type: NotificationType.error,
+                          );
                         }
                       },
                     ),
@@ -311,9 +320,17 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                             await settings.setProvidersOrder(order);
                           }
                           Navigator.of(ctx).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportSuccessMessage(results.length))));
+                          showAppSnackBar(
+                            context,
+                            message: l10n.importProviderSheetImportSuccessMessage(results.length),
+                            type: NotificationType.success,
+                          );
                         } catch (e) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(l10n.importProviderSheetImportFailedMessage(e.toString()))));
+                          showAppSnackBar(
+                            ctx,
+                            message: l10n.importProviderSheetImportFailedMessage(e.toString()),
+                            type: NotificationType.error,
+                          );
                         }
                       },
                     ),
@@ -408,12 +425,16 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                               await settings.setProvidersOrder(order);
                             }
                             Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(l10n.importProviderSheetImportSuccessMessage(results.length))),
+                            showAppSnackBar(
+                              context,
+                              message: l10n.importProviderSheetImportSuccessMessage(results.length),
+                              type: NotificationType.success,
                             );
                           } catch (e) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text(l10n.importProviderSheetImportFailedMessage(e.toString()))),
+                            showAppSnackBar(
+                              ctx,
+                              message: l10n.importProviderSheetImportFailedMessage(e.toString()),
+                              type: NotificationType.error,
                             );
                           }
                         },

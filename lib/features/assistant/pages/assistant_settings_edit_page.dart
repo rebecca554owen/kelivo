@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'dart:ui';
@@ -1410,8 +1411,10 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                   if (applied) {
                     if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop(false);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.assistantEditQQAvatarFailedMessage)),
+                    showAppSnackBar(
+                      context,
+                      message: l10n.assistantEditQQAvatarFailedMessage,
+                      type: NotificationType.error,
                     );
                   }
                 },
@@ -1470,16 +1473,20 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
     } on PlatformException catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.assistantEditGalleryErrorMessage)),
+      showAppSnackBar(
+        context,
+        message: l10n.assistantEditGalleryErrorMessage,
+        type: NotificationType.error,
       );
       await _inputAvatarUrl(context, a);
       return;
     } catch (_) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.assistantEditGeneralErrorMessage)),
+      showAppSnackBar(
+        context,
+        message: l10n.assistantEditGeneralErrorMessage,
+        type: NotificationType.error,
       );
       await _inputAvatarUrl(context, a);
       return;

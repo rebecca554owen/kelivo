@@ -14,6 +14,7 @@ import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/share_provider_sheet.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -152,8 +153,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   await context.read<SettingsProvider>().removeProviderConfig(widget.keyName);
                   if (!mounted) return;
                   Navigator.of(context).maybePop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.providerDetailPageProviderDeletedSnackbar)),
+                  showAppSnackBar(
+                    context,
+                    message: l10n.providerDetailPageProviderDeletedSnackbar,
+                    type: NotificationType.success,
                   );
                 }
               },
@@ -490,11 +493,13 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             final newOverrides = Map<String, dynamic>.from(prevOverrides)..remove(id);
                             await settings.setProviderConfig(widget.keyName, old.copyWith(models: newList, modelOverrides: newOverrides));
                             if (!mounted) return;
-                            final snack = SnackBar(
-                              content: Text(l10n.providerDetailPageModelDeletedSnackbar),
-                              action: SnackBarAction(
-                                label: l10n.providerDetailPageUndoButton,
-                                onPressed: () async {
+                            showAppSnackBar(
+                              context,
+                              message: l10n.providerDetailPageModelDeletedSnackbar,
+                              type: NotificationType.info,
+                              actionLabel: l10n.providerDetailPageUndoButton,
+                              onAction: () {
+                                Future(() async {
                                   final cfg2 = context.read<SettingsProvider>().getProviderConfig(widget.keyName, defaultName: widget.displayName);
                                   final restoredList = List<String>.from(cfg2.models);
                                   if (!restoredList.contains(id)) {
@@ -509,10 +514,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                     restoredOverrides[id] = prevOverrides[id];
                                   }
                                   await settings.setProviderConfig(widget.keyName, cfg2.copyWith(models: restoredList, modelOverrides: restoredOverrides));
-                                },
-                              ),
+                                });
+                              },
                             );
-                            ScaffoldMessenger.of(context).showSnackBar(snack);
                           },
                         ),
                       ],
@@ -728,7 +732,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     await settings.setProviderConfig(widget.keyName, updated);
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.providerDetailPageSavedSnackbar)));
+    showAppSnackBar(
+      context,
+      message: l10n.providerDetailPageSavedSnackbar,
+      type: NotificationType.success,
+    );
     setState(() {});
   }
 
@@ -790,7 +798,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       if (mounted) setState(() {});
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      showAppSnackBar(
+        context,
+        message: '$e',
+        type: NotificationType.error,
+      );
     }
   }
 
@@ -833,7 +845,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     await settings.setProviderConfig(widget.keyName, cfg);
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.providerDetailPageSavedSnackbar)));
+    showAppSnackBar(
+      context,
+      message: l10n.providerDetailPageSavedSnackbar,
+      type: NotificationType.success,
+    );
   }
 
   Widget _buildProviderTypeSelector(BuildContext context, ColorScheme cs, AppLocalizations l10n) {

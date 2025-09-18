@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class SelectCopyPage extends StatelessWidget {
   const SelectCopyPage({super.key, required this.message});
@@ -14,8 +15,10 @@ class SelectCopyPage extends StatelessWidget {
     // Here we bypass system menu by writing directly to clipboard and showing a snackbar
     await Clipboard.setData(ClipboardData(text: message.content));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.selectCopyPageCopiedAll)),
+    showAppSnackBar(
+      context,
+      message: l10n.selectCopyPageCopiedAll,
+      type: NotificationType.success,
     );
   }
 

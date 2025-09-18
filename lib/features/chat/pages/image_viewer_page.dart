@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import '../../../utils/sandbox_path_resolver.dart';
+import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
 
 class ImageViewerPage extends StatefulWidget {
@@ -204,23 +205,29 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
         final res = await OpenFilex.open(pathToSave);
         if (!mounted) return;
         if (res.type != ResultType.done) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.imageViewerPageShareFailedOpenFile(res.message ?? res.type.name))),
+          showAppSnackBar(
+            context,
+            message: l10n.imageViewerPageShareFailedOpenFile(res.message ?? res.type.name),
+            type: NotificationType.error,
           );
         }
       } on PlatformException catch (_) {
         final res = await OpenFilex.open(pathToSave);
         if (!mounted) return;
         if (res.type != ResultType.done) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.imageViewerPageShareFailedOpenFile(res.message ?? res.type.name))),
+          showAppSnackBar(
+            context,
+            message: l10n.imageViewerPageShareFailedOpenFile(res.message ?? res.type.name),
+            type: NotificationType.error,
           );
         }
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.imageViewerPageShareFailed(e.toString()))),
+      showAppSnackBar(
+        context,
+        message: l10n.imageViewerPageShareFailed(e.toString()),
+        type: NotificationType.error,
       );
     }
   }

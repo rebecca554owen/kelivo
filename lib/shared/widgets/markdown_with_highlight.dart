@@ -12,6 +12,7 @@ import 'dart:io';
 import 'dart:convert';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../features/chat/pages/image_viewer_page.dart';
+import 'snackbar.dart';
 import 'mermaid_bridge.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -437,15 +438,19 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     try {
       uri = _normalizeUrl(url);
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isZh(context) ? '无效链接' : 'Invalid link')),
+      showAppSnackBar(
+        context,
+        message: _isZh(context) ? '无效链接' : 'Invalid link',
+        type: NotificationType.error,
       );
       return;
     }
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isZh(context) ? '无法打开链接' : 'Cannot open link')),
+      showAppSnackBar(
+        context,
+        message: _isZh(context) ? '无法打开链接' : 'Cannot open link',
+        type: NotificationType.error,
       );
     }
   }
@@ -549,10 +554,10 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                       onPressed: () async {
                         await Clipboard.setData(ClipboardData(text: widget.code));
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard),
-                            ),
+                          showAppSnackBar(
+                            context,
+                            message: AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard,
+                            type: NotificationType.success,
                           );
                         }
                       },
@@ -717,10 +722,10 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                       onPressed: () async {
                         await Clipboard.setData(ClipboardData(text: widget.code));
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard),
-                            ),
+                          showAppSnackBar(
+                            context,
+                            message: AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard,
+                            type: NotificationType.success,
                           );
                         }
                       },
@@ -743,8 +748,10 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                           if (!mounted) return;
                           if (!ok) {
                             final l10n = AppLocalizations.of(context)!;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(l10n.mermaidExportFailed)),
+                            showAppSnackBar(
+                              context,
+                              message: l10n.mermaidExportFailed,
+                              type: NotificationType.error,
                             );
                           }
                         },
@@ -833,7 +840,11 @@ class _MermaidBlockState extends State<_MermaidBlock> {
     } catch (_) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.mermaidPreviewOpenFailed)));
+      showAppSnackBar(
+        context,
+        message: l10n.mermaidPreviewOpenFailed,
+        type: NotificationType.error,
+      );
     }
   }
 

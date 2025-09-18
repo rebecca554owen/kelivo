@@ -17,6 +17,7 @@ import 'package:intl/intl.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
+import '../../../shared/widgets/snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -331,8 +332,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                           } else {
                             await Clipboard.setData(ClipboardData(text: widget.message.content));
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l10n.chatMessageWidgetCopiedToClipboard)),
+                              showAppSnackBar(
+                                context,
+                                message: l10n.chatMessageWidgetCopiedToClipboard,
+                                type: NotificationType.success,
                               );
                             }
                           }
@@ -607,20 +610,26 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               final fixed = SandboxPathResolver.fix(d.path);
                               final f = File(fixed);
                               if (!(await f.exists())) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.chatMessageWidgetFileNotFound(d.fileName))),
+                                showAppSnackBar(
+                                  context,
+                                  message: l10n.chatMessageWidgetFileNotFound(d.fileName),
+                                  type: NotificationType.error,
                                 );
                                 return;
                               }
                               final res = await OpenFilex.open(fixed, type: d.mime);
                               if (res.type != ResultType.done) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.chatMessageWidgetCannotOpenFile(res.message ?? res.type.toString()))),
+                                showAppSnackBar(
+                                  context,
+                                  message: l10n.chatMessageWidgetCannotOpenFile(res.message ?? res.type.toString()),
+                                  type: NotificationType.error,
                                 );
                               }
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l10n.chatMessageWidgetOpenFileError(e.toString()))),
+                              showAppSnackBar(
+                                context,
+                                message: l10n.chatMessageWidgetOpenFileError(e.toString()),
+                                type: NotificationType.error,
                               );
                             }
                           },
@@ -1027,8 +1036,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 icon: Icon(Lucide.Copy, size: 16),
                 onPressed: widget.onCopy ?? () {
                   Clipboard.setData(ClipboardData(text: widget.message.content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.chatMessageWidgetCopiedToClipboard)),
+                  showAppSnackBar(
+                    context,
+                    message: l10n.chatMessageWidgetCopiedToClipboard,
+                    type: NotificationType.success,
                   );
                 },
                 visualDensity: VisualDensity.compact,
@@ -1099,8 +1110,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final url = match?['url']?.toString();
     if (url == null || url.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.chatMessageWidgetCitationNotFound)),
+        showAppSnackBar(
+          context,
+          message: l10n.chatMessageWidgetCitationNotFound,
+          type: NotificationType.warning,
         );
       }
       return;
@@ -1108,14 +1121,18 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     try {
       final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.chatMessageWidgetCannotOpenUrl(url))),
+        showAppSnackBar(
+          context,
+          message: l10n.chatMessageWidgetCannotOpenUrl(url),
+          type: NotificationType.error,
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.chatMessageWidgetOpenLinkError)),
+        showAppSnackBar(
+          context,
+          message: l10n.chatMessageWidgetOpenLinkError,
+          type: NotificationType.error,
         );
       }
     }

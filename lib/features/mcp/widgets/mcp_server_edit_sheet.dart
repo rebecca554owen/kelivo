@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class _HeaderEntry {
   final TextEditingController key;
@@ -250,7 +251,11 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
     final url = _urlCtrl.text.trim();
     if (url.isEmpty) {
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.mcpServerEditSheetUrlRequired)));
+      showAppSnackBar(
+        context,
+        message: l10n.mcpServerEditSheetUrlRequired,
+        type: NotificationType.warning,
+      );
       return;
     }
     final headers = <String, String>{

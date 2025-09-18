@@ -4,6 +4,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 Future<bool?> showModelDetailSheet(BuildContext context, {required String providerKey, required String modelId}) {
   final cs = Theme.of(context).colorScheme;
@@ -486,12 +487,20 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
       id = _idCtrl.text.trim();
       if (id.isEmpty || id.length < 2 || id.contains(' ')) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.modelDetailSheetInvalidIdError)));
+        showAppSnackBar(
+          context,
+          message: l10n.modelDetailSheetInvalidIdError,
+          type: NotificationType.error,
+        );
         return;
       }
       if (old.models.contains(id)) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.modelDetailSheetModelIdExistsError)));
+        showAppSnackBar(
+          context,
+          message: l10n.modelDetailSheetModelIdExistsError,
+          type: NotificationType.error,
+        );
         return;
       }
     }

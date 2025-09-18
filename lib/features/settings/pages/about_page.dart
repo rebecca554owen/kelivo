@@ -311,8 +311,10 @@ class _AboutPageState extends State<AboutPage> {
                       _SvgChipButton(
                         assetPath: 'assets/icons/tencent-qq.svg',
                         label: 'Tencent',
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.aboutPageNoQQGroup)),
+                        onTap: () => showAppSnackBar(
+                          context,
+                          message: l10n.aboutPageNoQQGroup,
+                          type: NotificationType.info,
                         ),
                       ),
                       _SvgChipButton(

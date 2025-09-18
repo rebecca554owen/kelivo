@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:animations/animations.dart';
 import '../../../shared/animations/widgets.dart';
+import '../../../shared/widgets/snackbar.dart';
 import 'package:provider/provider.dart';
 
 import '../../../icons/lucide_adapter.dart';
@@ -95,8 +96,10 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> with TickerProviderSt
                   await svc.deleteConversation(id);
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.chatHistoryPageDeletedAllSnackbar)),
+                showAppSnackBar(
+                  context,
+                  message: l10n.chatHistoryPageDeletedAllSnackbar,
+                  type: NotificationType.success,
                 );
               }
             },

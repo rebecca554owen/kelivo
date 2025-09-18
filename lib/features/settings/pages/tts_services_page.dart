@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class TtsServicesPage extends StatelessWidget {
   const TtsServicesPage({super.key});
@@ -26,8 +27,10 @@ class TtsServicesPage extends StatelessWidget {
             tooltip: l10n.ttsServicesPageAddTooltip,
             icon: Icon(Lucide.Plus, color: cs.onSurface),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.ttsServicesPageAddNotImplemented)),
+              showAppSnackBar(
+                context,
+                message: l10n.ttsServicesPageAddNotImplemented,
+                type: NotificationType.warning,
               );
             },
           ),
@@ -353,7 +356,11 @@ Future<void> _showSystemTtsConfig(BuildContext context) async {
                   onPressed: () async {
                     final demo = l10n.ttsServicesPageSettingsSavedMessage;
                     Navigator.of(ctx).maybePop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(demo)));
+                    showAppSnackBar(
+                      context,
+                      message: demo,
+                      type: NotificationType.success,
+                    );
                   },
                   icon: Icon(Lucide.Check, size: 16),
                   label: Text(l10n.ttsServicesPageDoneButton),

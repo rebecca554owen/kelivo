@@ -6,6 +6,7 @@ import '../../../core/providers/mcp_provider.dart';
 import '../../../theme/design_tokens.dart';
 import '../widgets/mcp_server_edit_sheet.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class McpPage extends StatelessWidget {
   const McpPage({super.key});
@@ -332,12 +333,14 @@ class McpPage extends StatelessWidget {
                             final prev = prov.getById(s.id);
                             await prov.removeServer(s.id);
                             if (!context.mounted) return;
-                            final snack = SnackBar(
-                              content: Text(l10n.mcpPageServerDeleted),
-                              action: SnackBarAction(
-                                label: l10n.mcpPageUndo,
-                                onPressed: () async {
-                                  if (prev == null) return;
+                            showAppSnackBar(
+                              context,
+                              message: l10n.mcpPageServerDeleted,
+                              type: NotificationType.info,
+                              actionLabel: l10n.mcpPageUndo,
+                              onAction: () {
+                                if (prev == null) return;
+                                Future(() async {
                                   final newId = await prov.addServer(
                                     enabled: prev.enabled,
                                     name: prev.name,
@@ -347,10 +350,9 @@ class McpPage extends StatelessWidget {
                                   );
                                   // Try to refresh tools when back online
                                   try { await prov.refreshTools(newId); } catch (_) {}
-                                },
-                              ),
+                                });
+                              },
                             );
-                            ScaffoldMessenger.of(context).showSnackBar(snack);
                           },
                         ),
                       ],

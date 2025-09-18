@@ -22,6 +22,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
+import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
 
 // Shared helpers
@@ -475,8 +476,10 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     try {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExporting)),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExporting,
+          type: NotificationType.info,
         );
       }
       final ctx = context;
@@ -526,8 +529,10 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExportFailed('$e'),
+          type: NotificationType.error,
         );
       }
     } finally {
@@ -545,8 +550,10 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     try {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExporting)),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExporting,
+          type: NotificationType.info,
         );
       }
       final file = await _renderAndSaveChatImage(context, widget.conversation, widget.messages);
@@ -556,8 +563,10 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExportFailed('$e'),
+          type: NotificationType.error,
         );
       }
     } finally {
@@ -687,15 +696,19 @@ class _ExportSheetState extends State<_ExportSheet> {
 
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExportedAs(filename))),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExportedAs(filename),
+          type: NotificationType.success,
         );
       }
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExportFailed('$e'),
+          type: NotificationType.error,
         );
       }
     } finally {
@@ -713,8 +726,10 @@ class _ExportSheetState extends State<_ExportSheet> {
     try {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExporting)),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExporting,
+          type: NotificationType.info,
         );
       }
       final file = await _renderAndSaveMessageImage(context, widget.message);
@@ -724,8 +739,10 @@ class _ExportSheetState extends State<_ExportSheet> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.messageExportSheetExportFailed('$e'))),
+        showAppSnackBar(
+          context,
+          message: l10n.messageExportSheetExportFailed('$e'),
+          type: NotificationType.error,
         );
       }
     } finally {

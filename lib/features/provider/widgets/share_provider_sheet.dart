@@ -7,6 +7,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 String encodeProviderConfig(ProviderConfig cfg) {
   String type;
@@ -108,7 +109,11 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
                         icon: const Icon(Lucide.Copy, size: 18),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: controller.text));
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.shareProviderSheetCopiedMessage)));
+                          showAppSnackBar(
+                            context,
+                            message: l10n.shareProviderSheetCopiedMessage,
+                            type: NotificationType.success,
+                          );
                         },
                         label: Text(l10n.shareProviderSheetCopyButton),
                         style: OutlinedButton.styleFrom(

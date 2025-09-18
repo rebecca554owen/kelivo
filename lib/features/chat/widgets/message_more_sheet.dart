@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../pages/select_copy_page.dart';
+import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
 
 enum MessageMoreAction { edit, fork, delete, share }
@@ -182,11 +183,11 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                       label: l10n.messageMoreSheetRenderWebView,
                       onTap: () {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.messageMoreSheetNotImplemented),
-                            duration: const Duration(seconds: 3),
-                          ),
+                        showAppSnackBar(
+                          context,
+                          message: l10n.messageMoreSheetNotImplemented,
+                          type: NotificationType.warning,
+                          duration: const Duration(seconds: 3),
                         );
                       },
                     ),

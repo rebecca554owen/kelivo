@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -323,8 +324,14 @@ class _BackupPageState extends State<BackupPage> {
           onPressed: vm.busy ? null : () async {
             await vm.test();
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(vm.message ?? l10n.backupPageTestDone)),
+            final rawMessage = vm.message;
+            final message = rawMessage ?? l10n.backupPageTestDone;
+            showAppSnackBar(
+              context,
+              message: message,
+              type: rawMessage != null && rawMessage != 'OK'
+                  ? NotificationType.error
+                  : NotificationType.success,
             );
           },
           icon: Icon(Lucide.Cable, size: 18, color: cs.primary),
@@ -390,8 +397,12 @@ class _BackupPageState extends State<BackupPage> {
           onPressed: vm.busy ? null : () async {
             await _runWithExportingOverlay(context, () => vm.backup());
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(vm.message ?? l10n.backupPageBackupUploaded)),
+            final rawMessage = vm.message;
+            final message = rawMessage ?? l10n.backupPageBackupUploaded;
+            showAppSnackBar(
+              context,
+              message: message,
+              type: NotificationType.info,
             );
           },
           icon: const Icon(Lucide.Upload, size: 18),
@@ -471,7 +482,11 @@ class _BackupPageState extends State<BackupPage> {
           subtitle: l10n.backupPageNotSupportedYet,
           onTap: () async {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.backupPageNotSupportedYet)));
+            showAppSnackBar(
+              context,
+              message: l10n.backupPageNotSupportedYet,
+              type: NotificationType.warning,
+            );
           },
         ),
       ],
