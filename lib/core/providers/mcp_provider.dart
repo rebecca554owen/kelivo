@@ -282,15 +282,18 @@ class McpProvider extends ChangeNotifier {
         enableDebugLogging: false,
       );
 
-      final mergedHeaders = <String, String>{...server.headers};
+      final mergedHeaders = <String, String>{
+        'User-Agent': 'MCP-Client/1.0',
+        ...server.headers,
+      };
       final transportConfig = server.transport == McpTransportType.sse
           ? mcp.TransportConfig.sse(
               serverUrl: server.url,
-              headers: mergedHeaders.isEmpty ? null : mergedHeaders,
+              headers: mergedHeaders,
             )
           : mcp.TransportConfig.streamableHttp(
               baseUrl: server.url,
-              headers: mergedHeaders.isEmpty ? null : mergedHeaders,
+              headers: mergedHeaders,
             );
 
       final clientResult = await mcp.McpClient.createAndConnect(
