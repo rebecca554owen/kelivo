@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/snackbar.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -91,38 +92,173 @@ class _AboutPageState extends State<AboutPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: 0.5,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(Lucide.Sparkles, size: 28, color: cs.primary),
-                  const SizedBox(height: 10),
-                  Text(
-                    l10n.aboutPageEasterEggTitle,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        l10n.aboutPageEasterEggMessage,
-                        style: TextStyle(color: cs.onSurface.withOpacity(0.75), height: 1.3),
+        return StatefulBuilder(
+          builder: (dialogContext, dialogSetState) {
+            int testCounter = 0;
+            
+            return SafeArea(
+              child: FractionallySizedBox(
+                heightFactor: 0.7,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Lucide.Sparkles, size: 28, color: cs.primary),
+                      const SizedBox(height: 10),
+                      Text(
+                        l10n.aboutPageEasterEggTitle,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Text(
+                                l10n.aboutPageEasterEggMessage,
+                                style: TextStyle(color: cs.onSurface.withValues(alpha: 0.75), height: 1.3),
+                              ),
+                              const SizedBox(height: 24),
+                              const Divider(),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Toast Notification Test Area',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  _TestButton(
+                                    label: 'Success',
+                                    color: const Color(0xFF34C759),
+                                    onTap: () {
+                                      testCounter++;
+                                      showAppSnackBar(
+                                        context,
+                                        message: 'Operation completed successfully! #$testCounter',
+                                        type: NotificationType.success,
+                                      );
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'Error',
+                                    color: const Color(0xFFFF3B30),
+                                    onTap: () {
+                                      testCounter++;
+                                      showAppSnackBar(
+                                        context,
+                                        message: 'An error occurred. Please try again. #$testCounter',
+                                        type: NotificationType.error,
+                                      );
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'Warning',
+                                    color: const Color(0xFFFF9500),
+                                    onTap: () {
+                                      testCounter++;
+                                      showAppSnackBar(
+                                        context,
+                                        message: 'Warning: Low battery detected #$testCounter',
+                                        type: NotificationType.warning,
+                                      );
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'Info',
+                                    color: cs.primary,
+                                    onTap: () {
+                                      testCounter++;
+                                      showAppSnackBar(
+                                        context,
+                                        message: 'New message received #$testCounter',
+                                        type: NotificationType.info,
+                                      );
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'With Action',
+                                    color: cs.secondary,
+                                    onTap: () {
+                                      testCounter++;
+                                      showAppSnackBar(
+                                        context,
+                                        message: 'File downloaded #$testCounter',
+                                        type: NotificationType.success,
+                                        actionLabel: 'Open',
+                                        onAction: () {
+                                          showAppSnackBar(
+                                            context,
+                                            message: 'Opening file...',
+                                            type: NotificationType.info,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'Long Message',
+                                    color: cs.tertiary,
+                                    onTap: () {
+                                      testCounter++;
+                                      showAppSnackBar(
+                                        context,
+                                        message: 'This is a very long message that demonstrates how the toast notification handles multiline text gracefully #$testCounter',
+                                        type: NotificationType.info,
+                                        duration: const Duration(seconds: 5),
+                                      );
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'Quick Burst',
+                                    color: cs.onSurface.withValues(alpha: 0.7),
+                                    onTap: () {
+                                      for (int i = 0; i < 5; i++) {
+                                        Future.delayed(Duration(milliseconds: i * 100), () {
+                                          if (mounted) {
+                                            showAppSnackBar(
+                                              context,
+                                              message: 'Rapid notification ${i + 1}',
+                                              type: NotificationType.info,
+                                              duration: const Duration(seconds: 2),
+                                            );
+                                          }
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  _TestButton(
+                                    label: 'Dismiss All',
+                                    color: cs.error,
+                                    onTap: () {
+                                      AppSnackBarManager().dismissAll();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: () => Navigator.of(ctx).maybePop(),
+                        child: Text(l10n.aboutPageEasterEggButton),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () => Navigator.of(ctx).maybePop(),
-                    child: Text(l10n.aboutPageEasterEggButton),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -257,7 +393,7 @@ class _AboutItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       child: Material(
-        color: cs.surfaceVariant.withOpacity(isDark ? 0.18 : 0.5),
+        color: cs.surfaceContainerHighest.withValues(alpha: isDark ? 0.18 : 0.5),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -286,7 +422,7 @@ class _AboutItem extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
-                          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                          style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.7)),
                         ),
                       ],
                     ],
@@ -294,37 +430,6 @@ class _AboutItem extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChipButton extends StatelessWidget {
-  const _ChipButton({required this.icon, required this.label, required this.onTap});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.primary.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: cs.primary),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: cs.primary)),
-            ],
           ),
         ),
       ),
@@ -343,7 +448,7 @@ class _SvgChipButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: isDark ? Colors.white10 : cs.primary.withOpacity(0.08),
+      color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -362,6 +467,42 @@ class _SvgChipButton extends StatelessWidget {
               const SizedBox(width: 6),
               Text(label, style: TextStyle(color: cs.primary)),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TestButton extends StatelessWidget {
+  const _TestButton({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? color : color.withValues(alpha: 0.9),
+            ),
           ),
         ),
       ),

@@ -19,6 +19,7 @@ import 'core/providers/update_provider.dart';
 import 'core/services/chat/chat_service.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
 import 'utils/sandbox_path_resolver.dart';
+import 'shared/widgets/snackbar.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver = RouteObserver<ModalRoute<dynamic>>();
 bool _didCheckUpdates = false; // one-time update check flag
@@ -163,7 +164,9 @@ class MyApp extends StatelessWidget {
 
                   return AnnotatedRegion<SystemUiOverlayStyle>(
                     value: overlay,
-                    child: child ?? const SizedBox.shrink(),
+                    child: AppSnackBarOverlay(
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   );
                 },
               );
