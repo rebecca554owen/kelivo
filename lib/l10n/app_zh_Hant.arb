@@ -628,6 +628,8 @@
   "displaySettingsPageShowUserAvatarSubtitle": "是否在聊天訊息中顯示使用者頭像",
   "displaySettingsPageShowUserNameTimestampTitle": "顯示使用者名稱與時間戳",
   "displaySettingsPageShowUserNameTimestampSubtitle": "是否在聊天訊息中顯示使用者名稱以時間戳",
+  "displaySettingsPageShowUserMessageActionsTitle": "顯示使用者訊息操作按鈕",
+  "displaySettingsPageShowUserMessageActionsSubtitle": "在使用者訊息下方顯示複製、重傳與更多按鈕",
   "displaySettingsPageShowModelNameTimestampTitle": "顯示模型名稱與時間戳",
   "displaySettingsPageShowModelNameTimestampSubtitle": "是否在聊天訊息中顯示模型名稱及時間戳",
   "displaySettingsPageChatModelIconTitle": "聊天列表模型圖示",

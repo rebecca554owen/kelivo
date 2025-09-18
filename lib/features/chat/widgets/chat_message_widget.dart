@@ -461,6 +461,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
     final parsed = _parseUserContent(widget.message.content);
+    final showUserActions = settings.showUserMessageActions;
+    final showVersionSwitcher = (widget.versionCount ?? 1) > 1;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -662,18 +664,49 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               ),
             ),
           ),
-          // Version switcher when applicable
-          if ((widget.versionCount ?? 1) > 1) ...[
-            const SizedBox(height: 6),
+          if (showUserActions || showVersionSwitcher) ...[
+            SizedBox(height: showUserActions ? 4 : 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _BranchSelector(
-                  index: widget.versionIndex ?? 0,
-                  total: widget.versionCount ?? 1,
-                  onPrev: widget.onPrevVersion,
-                  onNext: widget.onNextVersion,
-                ),
+                if (showUserActions) ...[
+                  IconButton(
+                    icon: Icon(Lucide.Copy, size: 16),
+                    onPressed: widget.onCopy ?? () {
+                      Clipboard.setData(ClipboardData(text: widget.message.content));
+                      showAppSnackBar(
+                        context,
+                        message: l10n.chatMessageWidgetCopiedToClipboard,
+                        type: NotificationType.success,
+                      );
+                    },
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 16,
+                  ),
+                  IconButton(
+                    icon: Icon(Lucide.RefreshCw, size: 16),
+                    onPressed: widget.onResend,
+                    tooltip: l10n.chatMessageWidgetResendTooltip,
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 16,
+                  ),
+                  IconButton(
+                    icon: Icon(Lucide.Ellipsis, size: 16),
+                    onPressed: widget.onMore,
+                    tooltip: l10n.chatMessageWidgetMoreTooltip,
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 16,
+                  ),
+                ],
+                if (showVersionSwitcher) ...[
+                  if (showUserActions) const SizedBox(width: 8),
+                  _BranchSelector(
+                    index: widget.versionIndex ?? 0,
+                    total: widget.versionCount ?? 1,
+                    onPrev: widget.onPrevVersion,
+                    onNext: widget.onNextVersion,
+                  ),
+                ],
               ],
             ),
           ],

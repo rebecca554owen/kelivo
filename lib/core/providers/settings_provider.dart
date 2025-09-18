@@ -22,6 +22,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayShowModelNameTimestampKey = 'display_show_model_name_timestamp_v1';
   static const String _displayShowTokenStatsKey = 'display_show_token_stats_v1';
   static const String _displayShowUserNameTimestampKey = 'display_show_user_name_timestamp_v1';
+  static const String _displayShowUserMessageActionsKey = 'display_show_user_message_actions_v1';
   static const String _displayAutoCollapseThinkingKey = 'display_auto_collapse_thinking_v1';
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
   static const String _displayHapticsOnGenerateKey = 'display_haptics_on_generate_v1';
@@ -156,6 +157,7 @@ class SettingsProvider extends ChangeNotifier {
     _showModelNameTimestamp = prefs.getBool(_displayShowModelNameTimestampKey) ?? true;
     _showTokenStats = prefs.getBool(_displayShowTokenStatsKey) ?? true;
     _showUserNameTimestamp = prefs.getBool(_displayShowUserNameTimestampKey) ?? true;
+    _showUserMessageActions = prefs.getBool(_displayShowUserMessageActionsKey) ?? true;
     _autoCollapseThinking = prefs.getBool(_displayAutoCollapseThinkingKey) ?? true;
     _showMessageNavButtons = prefs.getBool(_displayShowMessageNavKey) ?? true;
     _hapticsOnGenerate = prefs.getBool(_displayHapticsOnGenerateKey) ?? false;
@@ -589,6 +591,16 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayShowUserNameTimestampKey, v);
   }
 
+  bool _showUserMessageActions = true;
+  bool get showUserMessageActions => _showUserMessageActions;
+  Future<void> setShowUserMessageActions(bool v) async {
+    if (_showUserMessageActions == v) return;
+    _showUserMessageActions = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayShowUserMessageActionsKey, v);
+  }
+
   bool _showModelIcon = true;
   bool get showModelIcon => _showModelIcon;
   Future<void> setShowModelIcon(bool v) async {
@@ -790,6 +802,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._showModelNameTimestamp = _showModelNameTimestamp;
     copy._showTokenStats = _showTokenStats;
     copy._showUserNameTimestamp = _showUserNameTimestamp;
+    copy._showUserMessageActions = _showUserMessageActions;
     copy._autoCollapseThinking = _autoCollapseThinking;
     copy._showMessageNavButtons = _showMessageNavButtons;
     copy._hapticsOnGenerate = _hapticsOnGenerate;

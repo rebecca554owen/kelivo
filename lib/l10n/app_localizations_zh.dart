@@ -1923,6 +1923,13 @@ class AppLocalizationsZh extends AppLocalizations {
       '是否在聊天消息中显示用户名称和时间戳';
 
   @override
+  String get displaySettingsPageShowUserMessageActionsTitle => '显示用户消息操作按钮';
+
+  @override
+  String get displaySettingsPageShowUserMessageActionsSubtitle =>
+      '在用户消息下方显示复制、重发与更多按钮';
+
+  @override
   String get displaySettingsPageShowModelNameTimestampTitle => '显示模型名称和时间戳';
 
   @override
@@ -4064,6 +4071,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '是否在聊天消息中显示用户名称和时间戳';
 
   @override
+  String get displaySettingsPageShowUserMessageActionsTitle => '显示用户消息操作按钮';
+
+  @override
+  String get displaySettingsPageShowUserMessageActionsSubtitle =>
+      '在用户消息下方显示复制、重发与更多按钮';
+
+  @override
   String get displaySettingsPageShowModelNameTimestampTitle => '显示模型名称和时间戳';
 
   @override
@@ -6202,6 +6216,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get displaySettingsPageShowUserNameTimestampSubtitle =>
       '是否在聊天訊息中顯示使用者名稱以時間戳';
+
+  @override
+  String get displaySettingsPageShowUserMessageActionsTitle => '顯示使用者訊息操作按鈕';
+
+  @override
+  String get displaySettingsPageShowUserMessageActionsSubtitle =>
+      '在使用者訊息下方顯示複製、重傳與更多按鈕';
 
   @override
   String get displaySettingsPageShowModelNameTimestampTitle => '顯示模型名稱與時間戳';

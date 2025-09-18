@@ -803,6 +803,8 @@
   "displaySettingsPageShowUserAvatarSubtitle": "Display user avatar in chat messages",
   "displaySettingsPageShowUserNameTimestampTitle": "Show User Name & Timestamp",
   "displaySettingsPageShowUserNameTimestampSubtitle": "Show user name and the timestamp below it in chat messages",
+  "displaySettingsPageShowUserMessageActionsTitle": "Show User Message Actions",
+  "displaySettingsPageShowUserMessageActionsSubtitle": "Display copy, resend, and more buttons below your messages",
   "displaySettingsPageShowModelNameTimestampTitle": "Show Model Name & Timestamp",
   "displaySettingsPageShowModelNameTimestampSubtitle": "Show model name and the timestamp below it in chat messages",
   "displaySettingsPageChatModelIconTitle": "Chat Model Icon",

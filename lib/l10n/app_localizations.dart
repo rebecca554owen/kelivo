@@ -3791,6 +3791,18 @@ abstract class AppLocalizations {
   /// **'Show user name and the timestamp below it in chat messages'**
   String get displaySettingsPageShowUserNameTimestampSubtitle;
 
+  /// No description provided for @displaySettingsPageShowUserMessageActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show User Message Actions'**
+  String get displaySettingsPageShowUserMessageActionsTitle;
+
+  /// No description provided for @displaySettingsPageShowUserMessageActionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Display copy, resend, and more buttons below your messages'**
+  String get displaySettingsPageShowUserMessageActionsSubtitle;
+
   /// No description provided for @displaySettingsPageShowModelNameTimestampTitle.
   ///
   /// In en, this message translates to:
