@@ -101,6 +101,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Offset? _swipeStartGlobal;
   bool _swipeOpenTriggered = false;
 
+  // Guard: suppress drawer swipe-open when user is interacting
+  // with a horizontal scrollable (e.g., wide tables/code blocks)
+  bool _blockDrawerSwipeForHorizontalScroll = false;
+  Timer? _blockDrawerSwipeResetTimer;
+  void _activateHorizontalScrollGuard() {
+    _blockDrawerSwipeForHorizontalScroll = true;
+    _blockDrawerSwipeResetTimer?.cancel();
+    // Safety timeout in case ScrollEnd is missed
+    _blockDrawerSwipeResetTimer = Timer(const Duration(milliseconds: 300), () {
+      _blockDrawerSwipeForHorizontalScroll = false;
+    });
+  }
+  void _deactivateHorizontalScrollGuard() {
+    _blockDrawerSwipeResetTimer?.cancel();
+    _blockDrawerSwipeForHorizontalScroll = false;
+  }
+
   // Deduplicate tool UI parts by id or by name+args when id is empty
   List<ToolUIPart> _dedupeToolPartsList(List<ToolUIPart> parts) {
     final seen = <String>{};
@@ -2391,14 +2408,31 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ],
       ),
-      body: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (evt) {
-          _swipeStartGlobal = evt.position;
-          _swipeOpenTriggered = false;
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (n) {
+          // Only care about horizontal scrollables (tables, code blocks, etc.)
+          final isHorizontal = axisDirectionToAxis(n.metrics.axisDirection) == Axis.horizontal;
+          if (!isHorizontal) return false;
+          if (n is ScrollStartNotification ||
+              n is ScrollUpdateNotification ||
+              n is OverscrollNotification ||
+              (n is UserScrollNotification && n.direction != ScrollDirection.idle)) {
+            _activateHorizontalScrollGuard();
+          } else if (n is ScrollEndNotification) {
+            _deactivateHorizontalScrollGuard();
+          }
+          return false; // don't stop the notification from bubbling
         },
-        onPointerMove: (evt) {
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (evt) {
+            _swipeStartGlobal = evt.position;
+            _swipeOpenTriggered = false;
+          },
+          onPointerMove: (evt) {
           if (_swipeOpenTriggered) return;
+          // If interacting with a horizontal scroller, don't trigger drawer
+          if (_blockDrawerSwipeForHorizontalScroll) return;
           final start = _swipeStartGlobal;
           if (start == null) return;
           // Ignore if drawer is already opening/open
@@ -2416,6 +2450,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         onPointerUp: (_) {
           _swipeStartGlobal = null;
           _swipeOpenTriggered = false;
+          // Release guard shortly after finger up to allow quick re-open
+          // while still preventing accidental triggers during fling
+          Future.microtask(() => _deactivateHorizontalScrollGuard());
         },
         child: Stack(
           children: [
@@ -3077,7 +3114,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ),
       ),
       )
-    );
+      ));
   }
 
   @override
