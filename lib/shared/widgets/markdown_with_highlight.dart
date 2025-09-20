@@ -515,10 +515,10 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
       ),
       clipBehavior: Clip.antiAlias,
@@ -532,7 +532,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
             child: InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.25), width: 0.8),
@@ -540,6 +540,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                 ),
                 child: Row(
                   children: [
+                    const SizedBox(width: 2),
                     Text(
                       MarkdownWithCodeHighlight._displayLanguage(context, widget.language),
                       style: TextStyle(
