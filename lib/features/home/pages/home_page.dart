@@ -84,6 +84,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final Map<String, _TranslationData> _translations = <String, _TranslationData>{};
   final Map<String, List<ToolUIPart>> _toolParts = <String, List<ToolUIPart>>{}; // assistantMessageId -> parts
   final Map<String, List<_ReasoningSegmentData>> _reasoningSegments = <String, List<_ReasoningSegmentData>>{}; // assistantMessageId -> reasoning segments
+  // Message widget keys for navigation to previous question
+  final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  GlobalKey _keyForMessage(String id) => _messageKeys.putIfAbsent(id, () => GlobalKey(debugLabel: 'msg:$id'));
   McpProvider? _mcpProvider;
   Set<String> _connectedMcpIds = <String>{};
   bool _showJumpToBottom = false;
@@ -117,6 +120,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _blockDrawerSwipeResetTimer?.cancel();
     _blockDrawerSwipeForHorizontalScroll = false;
   }
+
+  // Anchor for chained "jump to previous question" navigation
+  String? _lastJumpUserMessageId;
 
   // Deduplicate tool UI parts by id or by name+args when id is empty
   List<ToolUIPart> _dedupeToolPartsList(List<ToolUIPart> parts) {
@@ -540,6 +546,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       // Detect user scrolling
       if (_scrollController.position.userScrollDirection != ScrollDirection.idle) {
         _isUserScrolling = true;
+        // Reset chained jump anchor when user manually scrolls
+        _lastJumpUserMessageId = null;
         
         // Cancel previous timer and set a new one
         _userScrollTimer?.cancel();
@@ -2089,6 +2097,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // Force scroll to bottom when user explicitly clicks the button
     _isUserScrolling = false;
     _userScrollTimer?.cancel();
+    _lastJumpUserMessageId = null;
     _scrollToBottom();
   }
 
@@ -2117,6 +2126,84 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void _scrollToBottomSoon() {
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     Future.delayed(const Duration(milliseconds: 120), _scrollToBottom);
+  }
+
+  // Jump to the previous user message (question) above the current viewport
+  Future<void> _jumpToPreviousQuestion() async {
+    try {
+      if (!mounted || !_scrollController.hasClients) return;
+      final messages = _collapseVersions(_messages);
+      if (messages.isEmpty) return;
+      // Build an id->index map for quick lookup
+      final Map<String, int> idxById = <String, int>{};
+      for (int i = 0; i < messages.length; i++) { idxById[messages[i].id] = i; }
+
+      // Determine anchor index: prefer last jumped user; otherwise bottom-most visible item
+      int? anchor;
+      if (_lastJumpUserMessageId != null && idxById.containsKey(_lastJumpUserMessageId)) {
+        anchor = idxById[_lastJumpUserMessageId!];
+      } else {
+        final media = MediaQuery.of(context);
+        final double listTop = kToolbarHeight + media.padding.top;
+        final double listBottom = media.size.height - media.padding.bottom - _inputBarHeight - 8;
+        int? firstVisibleIdx;
+        int? lastVisibleIdx;
+        for (int i = 0; i < messages.length; i++) {
+          final key = _messageKeys[messages[i].id];
+          final ctx = key?.currentContext;
+          if (ctx == null) continue;
+          final box = ctx.findRenderObject() as RenderBox?;
+          if (box == null || !box.attached) continue;
+          final top = box.localToGlobal(Offset.zero).dy;
+          final bottom = top + box.size.height;
+          final visible = bottom > listTop && top < listBottom;
+          if (visible) {
+            firstVisibleIdx ??= i;
+            lastVisibleIdx = i;
+          }
+        }
+        anchor = lastVisibleIdx ?? firstVisibleIdx ?? (messages.length - 1);
+      }
+      // Search backward for previous user message from the anchor index
+      int target = -1;
+      for (int i = (anchor ?? 0) - 1; i >= 0; i--) {
+        if (messages[i].role == 'user') { target = i; break; }
+      }
+      if (target < 0) {
+        // No earlier user message; jump to top
+        await _scrollController.animateTo(0.0, duration: _scrollAnimateDuration, curve: Curves.easeOutCubic);
+        _lastJumpUserMessageId = null;
+        return;
+      }
+      // If target widget is not built yet (off-screen far above), page up until it is
+      const int maxAttempts = 12; // about 10 pages max
+      for (int attempt = 0; attempt < maxAttempts; attempt++) {
+        final tKey = _messageKeys[messages[target].id];
+        final tCtx = tKey?.currentContext;
+        if (tCtx != null) {
+          await Scrollable.ensureVisible(
+            tCtx,
+            alignment: 0.08,
+            duration: _scrollAnimateDuration,
+            curve: Curves.easeOutCubic,
+          );
+          _lastJumpUserMessageId = messages[target].id;
+          return;
+        }
+        // Step up by ~85% of viewport height
+        final pos = _scrollController.position;
+        final viewH = MediaQuery.of(context).size.height;
+        final step = viewH * 0.85;
+        final newOffset = (pos.pixels - step) < 0 ? 0.0 : (pos.pixels - step);
+        if ((pos.pixels - newOffset).abs() < 1) break; // reached top
+        await _scrollController.animateTo(newOffset, duration: _scrollAnimateDuration, curve: Curves.easeOutCubic);
+        // Let the list build newly visible children
+        await Future.delayed(const Duration(milliseconds: 16));
+      }
+      // Final fallback: go to top if still not found
+      await _scrollController.animateTo(0.0, duration: _scrollAnimateDuration, curve: Curves.easeOutCubic);
+      _lastJumpUserMessageId = null;
+    } catch (_) {}
   }
 
   // Translate message functionality
@@ -2564,6 +2651,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           final effectiveIndex = showMsgNav ? selectedIdx : 0;
 
                           return Column(
+                            key: _keyForMessage(message.id),
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Row(
@@ -3094,6 +3182,74 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     padding: const EdgeInsets.all(6),
                                     child: Icon(
                                       Lucide.ChevronDown,
+                                      size: 16,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    ),
+                  ),
+                ),
+            );
+          }),
+
+          // Scroll-to-previous-question button (stacked above the bottom button)
+          Builder(builder: (context) {
+            final showSetting = context.watch<SettingsProvider>().showMessageNavButtons;
+            if (!showSetting || _messages.isEmpty) return const SizedBox.shrink();
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final bottomOffset = _inputBarHeight + 12 + 52; // place above the bottom button with gap
+            // Visibility follows the same logic as the bottom button (hide at bottom)
+            final showUp = _showJumpToBottom;
+            return Align(
+              alignment: Alignment.bottomRight,
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: IgnorePointer(
+                  ignoring: !showUp,
+                  child: AnimatedScale(
+                    scale: showUp ? 1.0 : 0.9,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      opacity: showUp ? 1 : 0,
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 16, bottom: bottomOffset),
+                        child: ClipOval(
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.06)
+                                    : Colors.white.withOpacity(0.07),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.10)
+                                      : Theme.of(context).colorScheme.outline.withOpacity(0.20),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Material(
+                                type: MaterialType.transparency,
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: _jumpToPreviousQuestion,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Icon(
+                                      Lucide.ChevronUp,
                                       size: 16,
                                       color: isDark ? Colors.white : Colors.black87,
                                     ),
