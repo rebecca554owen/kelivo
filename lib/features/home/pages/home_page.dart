@@ -2365,7 +2365,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           children: [
             AnimatedTextSwap(
               text: title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             if (providerName != null && modelDisplay != null)
               Padding(

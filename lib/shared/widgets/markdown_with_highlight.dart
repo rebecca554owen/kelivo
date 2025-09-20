@@ -15,6 +15,7 @@ import '../../features/chat/pages/image_viewer_page.dart';
 import 'snackbar.dart';
 import 'mermaid_bridge.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/theme/theme_factory.dart' show kDefaultFontFamilyFallback;
 
 /// gpt_markdown with custom code block highlight and inline code styling.
 class MarkdownWithCodeHighlight extends StatelessWidget {
@@ -1075,6 +1076,7 @@ class AtxHeadingMd extends BlockMd {
       height: h,
       letterSpacing: ls,
       color: cs.onSurface,
+      fontFamilyFallback: kDefaultFontFamilyFallback,
     );
   }
 }

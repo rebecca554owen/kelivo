@@ -2,6 +2,35 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// CJK/Latin fallback to stabilize fontWeight (w100–w600) on iOS for Chinese
+const List<String> kDefaultFontFamilyFallback = <String>[
+  'PingFang SC',
+  'Heiti SC',
+  'Hiragino Sans GB',
+  'Roboto',
+];
+
+TextTheme _withFontFallback(TextTheme base, List<String> fallback) {
+  TextStyle? f(TextStyle? s) => s?.copyWith(fontFamilyFallback: fallback);
+  return base.copyWith(
+    displayLarge: f(base.displayLarge),
+    displayMedium: f(base.displayMedium),
+    displaySmall: f(base.displaySmall),
+    headlineLarge: f(base.headlineLarge),
+    headlineMedium: f(base.headlineMedium),
+    headlineSmall: f(base.headlineSmall),
+    titleLarge: f(base.titleLarge),
+    titleMedium: f(base.titleMedium),
+    titleSmall: f(base.titleSmall),
+    bodyLarge: f(base.bodyLarge),
+    bodyMedium: f(base.bodyMedium),
+    bodySmall: f(base.bodySmall),
+    labelLarge: f(base.labelLarge),
+    labelMedium: f(base.labelMedium),
+    labelSmall: f(base.labelSmall),
+  );
+}
+
 // String _hex(Color c) => '#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
 // String _rgb(Color c) => 'r=${c.red}, g=${c.green}, b=${c.blue}, a=${(c.alpha / 255).toStringAsFixed(3)}';
 // String _hsl(Color c) {
@@ -102,14 +131,19 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
   );
   // _logColorScheme('Light ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
 
-  return ThemeData(
+  final theme = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
-      contentTextStyle: TextStyle(color: scheme.onInverseSurface, fontSize: 14, fontWeight: FontWeight.w500),
+      contentTextStyle: TextStyle(
+        color: scheme.onInverseSurface,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamilyFallback: kDefaultFontFamilyFallback,
+      ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       actionTextColor: scheme.primary,
@@ -126,7 +160,7 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
         color: Colors.black,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ),
+      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
       iconTheme: const IconThemeData(color: Colors.black),
       actionsIconTheme: const IconThemeData(color: Colors.black),
       systemOverlayStyle: const SystemUiOverlayStyle(
@@ -138,19 +172,28 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
       ),
     ),
   );
+  return theme.copyWith(
+    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+  );
 }
 
 // New: Build themes from a provided static palette (with optional dynamic override)
 ThemeData buildLightThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynamicScheme}) {
   final scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
-  return ThemeData(
+  final theme = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
-      contentTextStyle: TextStyle(color: scheme.onInverseSurface, fontSize: 14, fontWeight: FontWeight.w500),
+      contentTextStyle: TextStyle(
+        color: scheme.onInverseSurface,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamilyFallback: kDefaultFontFamilyFallback,
+      ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       actionTextColor: scheme.primary,
@@ -167,7 +210,7 @@ ThemeData buildLightThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynam
         color: Colors.black,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ),
+      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
       iconTheme: const IconThemeData(color: Colors.black),
       actionsIconTheme: const IconThemeData(color: Colors.black),
       systemOverlayStyle: SystemUiOverlayStyle(
@@ -176,6 +219,10 @@ ThemeData buildLightThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynam
         systemNavigationBarColor: scheme.surface,
       ),
     ),
+  );
+  return theme.copyWith(
+    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
   );
 }
 
@@ -215,14 +262,19 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
   );
   // _logColorScheme('Dark ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
 
-  return ThemeData(
+  final theme = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
-      contentTextStyle: TextStyle(color: scheme.onInverseSurface, fontSize: 14, fontWeight: FontWeight.w500),
+      contentTextStyle: TextStyle(
+        color: scheme.onInverseSurface,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamilyFallback: kDefaultFontFamilyFallback,
+      ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       actionTextColor: scheme.primary,
@@ -239,7 +291,7 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
         color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ),
+      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
       iconTheme: const IconThemeData(color: Colors.white),
       actionsIconTheme: const IconThemeData(color: Colors.white),
       systemOverlayStyle: const SystemUiOverlayStyle(
@@ -251,18 +303,27 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
       ),
     ),
   );
+  return theme.copyWith(
+    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+  );
 }
 
 ThemeData buildDarkThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynamicScheme}) {
   final scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
-  return ThemeData(
+  final theme = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
-      contentTextStyle: TextStyle(color: scheme.onInverseSurface, fontSize: 14, fontWeight: FontWeight.w500),
+      contentTextStyle: TextStyle(
+        color: scheme.onInverseSurface,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        fontFamilyFallback: kDefaultFontFamilyFallback,
+      ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       actionTextColor: scheme.primary,
@@ -279,7 +340,7 @@ ThemeData buildDarkThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynami
         color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ),
+      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
       iconTheme: const IconThemeData(color: Colors.white),
       actionsIconTheme: const IconThemeData(color: Colors.white),
       systemOverlayStyle: SystemUiOverlayStyle(
@@ -288,5 +349,9 @@ ThemeData buildDarkThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynami
         systemNavigationBarColor: scheme.surface,
       ),
     ),
+  );
+  return theme.copyWith(
+    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
   );
 }
