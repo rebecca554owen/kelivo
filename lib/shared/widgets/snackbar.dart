@@ -271,8 +271,10 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
 
   void _handleDragUpdate(DragUpdateDetails details) {
     if (!widget.isTop || _isDismissing) return;
+    // 禁止向下滑动，仅允许向上滑动以关闭
+    if (details.delta.dy > 0) return;
     setState(() {
-      _dragOffset += details.delta.dy;
+      _dragOffset = math.min(0, _dragOffset + details.delta.dy);
     });
   }
 
@@ -354,6 +356,9 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
     final interactiveScale = _isDismissing ? 0.98 : 1.0;
     
     return GestureDetector(
+      onVerticalDragStart: (_) {
+        if (_dragController.isAnimating) _dragController.stop();
+      },
       onVerticalDragUpdate: _handleDragUpdate,
       onVerticalDragEnd: _handleDragEnd,
       onTap: () {
