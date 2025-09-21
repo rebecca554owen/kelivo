@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -247,7 +248,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
             const SizedBox(height: 6),
             TextField(
               controller: _idCtrl,
-              enabled: widget.isNew,
+              enabled: true, // allow editing existing model ID
               onChanged: widget.isNew
                   ? (v) {
                       if (!_nameEdited) {
@@ -259,7 +260,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
               decoration: InputDecoration(
                 filled: true,
                 fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-                hintText: widget.isNew ? l10n.modelDetailSheetModelIdHint : l10n.modelDetailSheetModelIdDisabledHint(widget.modelId),
+                hintText: l10n.modelDetailSheetModelIdHint,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.4))),
@@ -481,29 +482,30 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
   Future<void> _save() async {
     final settings = context.read<SettingsProvider>();
     final old = settings.getProviderConfig(widget.providerKey);
-    // Validate new ID
-    String id = widget.modelId;
-    if (widget.isNew) {
-      id = _idCtrl.text.trim();
-      if (id.isEmpty || id.length < 2 || id.contains(' ')) {
-        final l10n = AppLocalizations.of(context)!;
-        showAppSnackBar(
-          context,
-          message: l10n.modelDetailSheetInvalidIdError,
-          type: NotificationType.error,
-        );
-        return;
-      }
-      if (old.models.contains(id)) {
-        final l10n = AppLocalizations.of(context)!;
-        showAppSnackBar(
-          context,
-          message: l10n.modelDetailSheetModelIdExistsError,
-          type: NotificationType.error,
-        );
-        return;
-      }
+    // Determine target ID (allow editing even when not new)
+    final String prevId = widget.modelId;
+    String id = _idCtrl.text.trim();
+    // Basic validation
+    if (id.isEmpty || id.length < 2 || id.contains(' ')) {
+      final l10n = AppLocalizations.of(context)!;
+      showAppSnackBar(
+        context,
+        message: l10n.modelDetailSheetInvalidIdError,
+        type: NotificationType.error,
+      );
+      return;
     }
+    // Prevent duplicate IDs in models list (except self when unchanged)
+    if (old.models.contains(id) && id != prevId) {
+      final l10n = AppLocalizations.of(context)!;
+      showAppSnackBar(
+        context,
+        message: l10n.modelDetailSheetModelIdExistsError,
+        type: NotificationType.error,
+      );
+      return;
+    }
+
     final ov = Map<String, dynamic>.from(old.modelOverrides);
     final headers = [
       for (final h in _headers)
@@ -528,11 +530,48 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet> with SingleTickerP
         'urlContext': _urlContextTool,
       },
     };
-    // If create, also add to provider models list
-    if (widget.isNew) {
+    // When editing, remove old override key if ID changed
+    if (id != prevId && ov.containsKey(prevId)) {
+      ov.remove(prevId);
+    }
+
+    // Apply updates to provider config
+    if (prevId.isEmpty || widget.isNew) {
+      // Creating a new model
       final list = old.models.toList()..add(id);
       await settings.setProviderConfig(widget.providerKey, old.copyWith(modelOverrides: ov, models: list));
+    } else if (id != prevId) {
+      // Renaming existing model ID: update models list entry
+      final list = <String>[for (final m in old.models) m == prevId ? id : m];
+      await settings.setProviderConfig(widget.providerKey, old.copyWith(modelOverrides: ov, models: list));
+      // Update selections referencing this model
+      if (settings.currentModelProvider == widget.providerKey && settings.currentModelId == prevId) {
+        await settings.setCurrentModel(widget.providerKey, id);
+      }
+      if (settings.titleModelProvider == widget.providerKey && settings.titleModelId == prevId) {
+        await settings.setTitleModel(widget.providerKey, id);
+      }
+      if (settings.translateModelProvider == widget.providerKey && settings.translateModelId == prevId) {
+        await settings.setTranslateModel(widget.providerKey, id);
+      }
+      // Update pinned models
+      if (settings.isModelPinned(widget.providerKey, prevId)) {
+        await settings.togglePinModel(widget.providerKey, prevId); // remove old
+        if (!settings.isModelPinned(widget.providerKey, id)) {
+          await settings.togglePinModel(widget.providerKey, id); // add new
+        }
+      }
+      // Update assistants default model references
+      try {
+        final ap = context.read<AssistantProvider>();
+        for (final a in ap.assistants) {
+          if (a.chatModelProvider == widget.providerKey && a.chatModelId == prevId) {
+            await ap.updateAssistant(a.copyWith(chatModelId: id));
+          }
+        }
+      } catch (_) {}
     } else {
+      // ID unchanged; just persist overrides
       await settings.setProviderConfig(widget.providerKey, old.copyWith(modelOverrides: ov));
     }
     if (!mounted) return;
