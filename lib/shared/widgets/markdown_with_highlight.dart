@@ -41,6 +41,7 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
           height: 1.55,
           letterSpacing: _isZh(context) ? 0.0 : 0.05,
           color: null, // let components decide foreground where needed
+          // fontWeight: FontWeight.w400, // keep assistant/body text normal weight
         );
 
     // Replace default components and add our own where needed

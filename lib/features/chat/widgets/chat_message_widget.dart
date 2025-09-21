@@ -542,6 +542,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       fontSize: 15.5, // ~112% larger default for user text
                       height: 1.4,
                       color: cs.onSurface,
+                      // // Keep user text slightly bolder on non‑iOS; normal on iOS
+                      // fontWeight: Theme.of(context).platform == TargetPlatform.iOS
+                      //     ? FontWeight.w400
+                      //     : FontWeight.w500,
                     ),
                   ),
                 if (parsed.images.isNotEmpty) ...[

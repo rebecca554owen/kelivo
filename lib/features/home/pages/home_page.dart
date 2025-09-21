@@ -2534,7 +2534,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   borderRadius: BorderRadius.circular(6),
                   onTap: () => showModelSelectSheet(context),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 0),
                     child: AnimatedTextSwap(
                       text: '$modelDisplay ($providerName)',
                       style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
