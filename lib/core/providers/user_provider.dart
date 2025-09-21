@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../utils/sandbox_path_resolver.dart';
+import '../../utils/avatar_cache.dart';
 
 class UserProvider extends ChangeNotifier {
   static const String _prefsUserNameKey = 'user_name';
@@ -79,6 +80,8 @@ class UserProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsAvatarTypeKey, _avatarType!);
     await prefs.setString(_prefsAvatarValueKey, _avatarValue!);
+    // Prefetch to enable offline display later
+    try { await AvatarCache.getPath(u); } catch (_) {}
   }
 
   Future<void> setAvatarFilePath(String path) async {

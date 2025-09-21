@@ -9,6 +9,8 @@ import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:characters/characters.dart';
 import 'assistant_settings_edit_page.dart';
+import '../../../utils/avatar_cache.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 
 class AssistantSettingsPage extends StatelessWidget {
   const AssistantSettingsPage({super.key});
@@ -318,19 +320,36 @@ class _AssistantAvatar extends StatelessWidget {
     final av = (item.avatar ?? '').trim();
     if (av.isNotEmpty) {
       if (av.startsWith('http')) {
-        return ClipOval(
-          child: Image.network(
-            av,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (c, e, s) => _initial(cs),
-          ),
+        return FutureBuilder<String?>(
+          future: AvatarCache.getPath(av),
+          builder: (ctx, snap) {
+            final p = snap.data;
+            if (p != null && File(p).existsSync()) {
+              return ClipOval(
+                child: Image(
+                  image: FileImage(File(p)),
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                ),
+              );
+            }
+            return ClipOval(
+              child: Image.network(
+                av,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => _initial(cs),
+              ),
+            );
+          },
         );
       } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
+        final fixed = SandboxPathResolver.fix(av);
         return ClipOval(
           child: Image(
-            image: FileImage(File(av)),
+            image: FileImage(File(fixed)),
             width: size,
             height: size,
             fit: BoxFit.cover,

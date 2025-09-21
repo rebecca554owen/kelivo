@@ -24,6 +24,8 @@ import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../utils/sandbox_path_resolver.dart';
+import '../../../utils/avatar_cache.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -60,32 +62,49 @@ class _SideDrawerState extends State<SideDrawer> {
     final name = a?.name ?? '';
     
     Widget avatar;
-    if (av.isNotEmpty) {
-      if (av.startsWith('http')) {
-        avatar = ClipOval(
-          child: Image.network(
-            av,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (c, e, s) => _assistantInitialAvatar(cs, name, size),
-          ),
-        );
-      } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
-        avatar = ClipOval(
-          child: Image(
-            image: FileImage(File(av)),
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-          ),
-        );
+      if (av.isNotEmpty) {
+        if (av.startsWith('http')) {
+          avatar = FutureBuilder<String?>(
+            future: AvatarCache.getPath(av),
+            builder: (ctx, snap) {
+              final p = snap.data;
+              if (p != null && File(p).existsSync()) {
+                return ClipOval(
+                  child: Image(
+                    image: FileImage(File(p)),
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              }
+              return ClipOval(
+                child: Image.network(
+                  av,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => _assistantInitialAvatar(cs, name, size),
+                ),
+              );
+            },
+          );
+        } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
+          final fixed = SandboxPathResolver.fix(av);
+          avatar = ClipOval(
+            child: Image(
+              image: FileImage(File(fixed)),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+            ),
+          );
+        } else {
+          avatar = _assistantEmojiAvatar(cs, av, size);
+        }
       } else {
-        avatar = _assistantEmojiAvatar(cs, av, size);
+        avatar = _assistantInitialAvatar(cs, name, size);
       }
-    } else {
-      avatar = _assistantInitialAvatar(cs, name, size);
-    }
     
     // Add border
     final child = Container(
@@ -411,23 +430,39 @@ class _SideDrawerState extends State<SideDrawer> {
         );
       }
       if (type == 'url' && value != null && value.isNotEmpty) {
-        return ClipOval(
-          child: Image.network(
-            value,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (c, e, s) => Container(
-              width: size,
-              height: size,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.15),
-                shape: BoxShape.circle,
+        return FutureBuilder<String?>(
+          future: AvatarCache.getPath(value),
+          builder: (ctx, snap) {
+            final p = snap.data;
+            if (p != null && File(p).existsSync()) {
+              return ClipOval(
+                child: Image(
+                  image: FileImage(File(p)),
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                ),
+              );
+            }
+            return ClipOval(
+              child: Image.network(
+                value,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Container(
+                  width: size,
+                  height: size,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text('?', style: TextStyle(color: cs.primary, fontSize: size * 0.42, fontWeight: FontWeight.w700)),
+                ),
               ),
-              child: Text('?', style: TextStyle(color: cs.primary, fontSize: size * 0.42, fontWeight: FontWeight.w700)),
-            ),
-          ),
+            );
+          },
         );
       }
       if (type == 'file' && value != null && value.isNotEmpty && !kIsWeb) {
@@ -1432,7 +1467,7 @@ extension on _SideDrawerState {
                   for (int i = 0; i < maxTries; i++) {
                     final qq = randomQQ();
                     // debugPrint(qq);
-                    final url = 'http://q2.qlogo.cn/headimg_dl?dst_uin=' + qq + '&spec=100';
+                    final url = 'https://q2.qlogo.cn/headimg_dl?dst_uin=' + qq + '&spec=100';
                     try {
                       final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
                       if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {

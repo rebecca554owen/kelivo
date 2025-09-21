@@ -15,6 +15,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/user_provider.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/sandbox_path_resolver.dart';
+import '../../../utils/avatar_cache.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -395,18 +396,35 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         ),
       );
     } else if (userProvider.avatarType == 'url' && userProvider.avatarValue != null) {
-      avatarContent = ClipOval(
-        child: Image.network(
-          userProvider.avatarValue!,
-          width: 32,
-          height: 32,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Icon(
-            Lucide.User,
-            size: 18,
-            color: cs.primary,
-          ),
-        ),
+      final url = userProvider.avatarValue!;
+      avatarContent = FutureBuilder<String?>(
+        future: AvatarCache.getPath(url),
+        builder: (ctx, snap) {
+          final p = snap.data;
+          if (p != null && File(p).existsSync()) {
+            return ClipOval(
+              child: Image.file(
+                File(p),
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+              ),
+            );
+          }
+          return ClipOval(
+            child: Image.network(
+              url,
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Lucide.User,
+                size: 18,
+                color: cs.primary,
+              ),
+            ),
+          );
+        },
       );
     } else if (userProvider.avatarType == 'file' && userProvider.avatarValue != null) {
       avatarContent = ClipOval(
@@ -1274,9 +1292,30 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final av = (widget.assistantAvatar ?? '').trim();
     if (av.isNotEmpty) {
       if (av.startsWith('http')) {
-        return ClipOval(
-          child: Image.network(av, width: 32, height: 32, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _assistantInitial(cs)),
+        return FutureBuilder<String?>(
+          future: AvatarCache.getPath(av),
+          builder: (ctx, snap) {
+            final p = snap.data;
+            if (p != null && File(p).existsSync()) {
+              return ClipOval(
+                child: Image.file(
+                  File(p),
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                ),
+              );
+            }
+            return ClipOval(
+              child: Image.network(
+                av,
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _assistantInitial(cs),
+              ),
+            );
+          },
         );
       }
       if (av.startsWith('/') || av.contains(':')) {

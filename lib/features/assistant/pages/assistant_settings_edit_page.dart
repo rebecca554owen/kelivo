@@ -27,6 +27,7 @@ import '../../chat/widgets/chat_message_widget.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import 'dart:io' show File;
+import '../../../utils/avatar_cache.dart';
 
 class AssistantSettingsEditPage extends StatefulWidget {
   const AssistantSettingsEditPage({super.key, required this.assistantId});
@@ -526,7 +527,16 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
       final av = a.avatar?.trim();
       if (av != null && av.isNotEmpty) {
         if (av.startsWith('http')) {
-          inner = ClipOval(child: Image.network(av, width: size, height: size, fit: BoxFit.cover));
+          inner = FutureBuilder<String?>(
+            future: AvatarCache.getPath(av),
+            builder: (ctx, snap) {
+              final p = snap.data;
+              if (p != null && File(p).existsSync()) {
+                return ClipOval(child: Image.file(File(p), width: size, height: size, fit: BoxFit.cover));
+              }
+              return ClipOval(child: Image.network(av, width: size, height: size, fit: BoxFit.cover));
+            },
+          );
         } else if (av.startsWith('/') || av.contains(':')) {
           final fixed = SandboxPathResolver.fix(av);
           inner = ClipOval(child: Image.file(File(fixed), width: size, height: size, fit: BoxFit.cover));

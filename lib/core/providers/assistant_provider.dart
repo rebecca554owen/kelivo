@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../utils/sandbox_path_resolver.dart';
 import '../models/assistant.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/avatar_cache.dart';
 
 class AssistantProvider extends ChangeNotifier {
   static const String _assistantsKey = 'assistants_v1';
@@ -171,6 +172,11 @@ class AssistantProvider extends ChangeNotifier {
 
           next = updated.copyWith(avatar: dest.path);
         }
+      }
+
+      // Prefetch URL avatar to allow offline display later
+      if (changed && raw.startsWith('http')) {
+        try { await AvatarCache.getPath(raw); } catch (_) {}
       }
 
       // Handle background persistence similar to avatar, but under images/
