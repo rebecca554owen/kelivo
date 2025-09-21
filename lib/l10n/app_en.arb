@@ -758,6 +758,8 @@
   "searchServicesPageNotTestedStatus": "Not tested",
   "searchServicesPageTestConnectionTooltip": "Test Connection",
   "searchServicesPageConfiguredStatus": "Configured",
+  "miniMapTitle": "Minimap",
+  "miniMapTooltip": "Minimap",
   "searchServicesPageApiKeyRequiredStatus": "API Key Required",
   "searchServicesPageUrlRequiredStatus": "URL Required",
   "searchServicesAddDialogTitle": "Add Search Service",

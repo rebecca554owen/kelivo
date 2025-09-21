@@ -700,4 +700,6 @@
   "searchServiceNameMetaso": "秘塔",
   "generationInterrupted": "生成已中断",
   "titleForLocale": "新对话"
+  ,"miniMapTitle": "迷你地图",
+  "miniMapTooltip": "迷你地图"
 }

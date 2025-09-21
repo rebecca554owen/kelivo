@@ -3521,6 +3521,18 @@ abstract class AppLocalizations {
   /// **'Configured'**
   String get searchServicesPageConfiguredStatus;
 
+  /// No description provided for @miniMapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimap'**
+  String get miniMapTitle;
+
+  /// No description provided for @miniMapTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimap'**
+  String get miniMapTooltip;
+
   /// No description provided for @searchServicesPageApiKeyRequiredStatus.
   ///
   /// In en, this message translates to:

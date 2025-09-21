@@ -1834,6 +1834,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServicesPageConfiguredStatus => 'Configured';
 
   @override
+  String get miniMapTitle => 'Minimap';
+
+  @override
+  String get miniMapTooltip => 'Minimap';
+
+  @override
   String get searchServicesPageApiKeyRequiredStatus => 'API Key Required';
 
   @override

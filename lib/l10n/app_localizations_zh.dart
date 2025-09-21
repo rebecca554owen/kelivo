@@ -1787,6 +1787,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServicesPageConfiguredStatus => '已配置';
 
   @override
+  String get miniMapTitle => '迷你地图';
+
+  @override
+  String get miniMapTooltip => '迷你地图';
+
+  @override
   String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';
 
   @override
@@ -3935,6 +3941,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServicesPageConfiguredStatus => '已配置';
 
   @override
+  String get miniMapTitle => '迷你地图';
+
+  @override
+  String get miniMapTooltip => '迷你地图';
+
+  @override
   String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';
 
   @override
@@ -6080,6 +6092,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServicesPageConfiguredStatus => '已設定';
+
+  @override
+  String get miniMapTitle => '迷你地圖';
+
+  @override
+  String get miniMapTooltip => '迷你地圖';
 
   @override
   String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';

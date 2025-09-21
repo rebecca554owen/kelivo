@@ -35,6 +35,7 @@ import '../../chat/widgets/message_export_sheet.dart';
 import '../../assistant/widgets/mcp_assistant_sheet.dart';
 import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../search/widgets/search_settings_sheet.dart';
+import '../widgets/mini_map_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
@@ -2128,6 +2129,78 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     Future.delayed(const Duration(milliseconds: 120), _scrollToBottom);
   }
 
+  // Scroll to a specific message id (from mini map selection)
+  Future<void> _scrollToMessageId(String targetId) async {
+    try {
+      if (!mounted || !_scrollController.hasClients) return;
+      final messages = _collapseVersions(_messages);
+      final tIndex = messages.indexWhere((m) => m.id == targetId);
+      if (tIndex < 0) return;
+
+      // Try direct ensureVisible first
+      final tKey = _messageKeys[targetId];
+      final tCtx = tKey?.currentContext;
+      if (tCtx != null) {
+        await Scrollable.ensureVisible(
+          tCtx,
+          alignment: 0.1,
+          duration: Duration.zero,
+          curve: Curves.linear,
+        );
+        _lastJumpUserMessageId = targetId; // allow chaining with prev-question
+        return;
+      }
+
+      // Determine direction using visible anchor indices
+      final media = MediaQuery.of(context);
+      final double listTop = kToolbarHeight + media.padding.top;
+      final double listBottom = media.size.height - media.padding.bottom - _inputBarHeight - 8;
+      int? firstVisibleIdx;
+      int? lastVisibleIdx;
+      for (int i = 0; i < messages.length; i++) {
+        final key = _messageKeys[messages[i].id];
+        final ctx = key?.currentContext;
+        if (ctx == null) continue;
+        final box = ctx.findRenderObject() as RenderBox?;
+        if (box == null || !box.attached) continue;
+        final top = box.localToGlobal(Offset.zero).dy;
+        final bottom = top + box.size.height;
+        final visible = bottom > listTop && top < listBottom;
+        if (visible) {
+          firstVisibleIdx ??= i;
+          lastVisibleIdx = i;
+        }
+      }
+      final anchor = lastVisibleIdx ?? firstVisibleIdx ?? 0;
+      final dirDown = tIndex > anchor; // target below
+
+      // Page in steps until the target builds, then ensureVisible
+      const int maxAttempts = 18;
+      for (int attempt = 0; attempt < maxAttempts; attempt++) {
+        final ctx2 = _messageKeys[targetId]?.currentContext;
+        if (ctx2 != null) {
+          await Scrollable.ensureVisible(
+            ctx2,
+            alignment: 0.1,
+            duration: Duration.zero,
+            curve: Curves.linear,
+          );
+          _lastJumpUserMessageId = targetId;
+          return;
+        }
+        final pos = _scrollController.position;
+        final viewH = media.size.height;
+        final step = viewH * 0.85 * (dirDown ? 1 : -1);
+        double newOffset = pos.pixels + step;
+        if (newOffset < 0) newOffset = 0;
+        if (newOffset > pos.maxScrollExtent) newOffset = pos.maxScrollExtent;
+        if ((newOffset - pos.pixels).abs() < 1) break;
+        _scrollController.jumpTo(newOffset);
+        await WidgetsBinding.instance.endOfFrame;
+      }
+    } catch (_) {}
+  }
+
   // Jump to the previous user message (question) above the current viewport
   Future<void> _jumpToPreviousQuestion() async {
     try {
@@ -2170,8 +2243,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (messages[i].role == 'user') { target = i; break; }
       }
       if (target < 0) {
-        // No earlier user message; jump to top
-        await _scrollController.animateTo(0.0, duration: _scrollAnimateDuration, curve: Curves.easeOutCubic);
+        // No earlier user message; jump to top instantly
+        _scrollController.jumpTo(0.0);
         _lastJumpUserMessageId = null;
         return;
       }
@@ -2184,8 +2257,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           await Scrollable.ensureVisible(
             tCtx,
             alignment: 0.08,
-            duration: _scrollAnimateDuration,
-            curve: Curves.easeOutCubic,
+            duration: Duration.zero,
+            curve: Curves.linear,
           );
           _lastJumpUserMessageId = messages[target].id;
           return;
@@ -2196,12 +2269,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         final step = viewH * 0.85;
         final newOffset = (pos.pixels - step) < 0 ? 0.0 : (pos.pixels - step);
         if ((pos.pixels - newOffset).abs() < 1) break; // reached top
-        await _scrollController.animateTo(newOffset, duration: _scrollAnimateDuration, curve: Curves.easeOutCubic);
+        _scrollController.jumpTo(newOffset);
         // Let the list build newly visible children
-        await Future.delayed(const Duration(milliseconds: 16));
+        await WidgetsBinding.instance.endOfFrame;
       }
       // Final fallback: go to top if still not found
-      await _scrollController.animateTo(0.0, duration: _scrollAnimateDuration, curve: Curves.easeOutCubic);
+      _scrollController.jumpTo(0.0);
       _lastJumpUserMessageId = null;
     } catch (_) {}
   }
@@ -2474,6 +2547,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ],
         ),
         actions: [
+          // Mini map button (to the left of new conversation)
+          IconButton(
+            onPressed: () async {
+              final collapsed = _collapseVersions(_messages);
+              final selectedId = await showMiniMapSheet(context, collapsed);
+              if (!mounted) return;
+              if (selectedId != null && selectedId.isNotEmpty) {
+                await _scrollToMessageId(selectedId);
+              }
+            },
+            icon: const Icon(Lucide.Map, size: 20),
+            tooltip: AppLocalizations.of(context)!.miniMapTooltip,
+          ),
           // Temporarily hidden: More menu button
           // IconButton(
           //   onPressed: () {
