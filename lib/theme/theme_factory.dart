@@ -181,6 +181,8 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
 // New: Build themes from a provided static palette (with optional dynamic override)
 ThemeData buildLightThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynamicScheme}) {
   final scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
+  // Align logging behavior with buildLightTheme so diagnostics are consistent.
+  // _logColorScheme('Light ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
   final theme = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
@@ -311,6 +313,8 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
 
 ThemeData buildDarkThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynamicScheme}) {
   final scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
+  // Align logging behavior with buildDarkTheme so diagnostics are consistent.
+  // _logColorScheme('Dark ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
   final theme = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
