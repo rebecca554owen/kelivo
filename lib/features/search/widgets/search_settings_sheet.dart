@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/search/search_service.dart';
+import '../../../core/providers/assistant_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../pages/search_services_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -46,13 +47,15 @@ class _SearchSettingsSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
+    final ap = context.watch<AssistantProvider>();
+    final a = ap.currentAssistant;
     final services = settings.searchServices;
     final selected = settings.searchServiceSelected.clamp(0, services.isNotEmpty ? services.length - 1 : 0);
     final enabled = settings.searchEnabled;
 
     // Determine if current selected model supports built-in search
-    final providerKey = settings.currentModelProvider;
-    final modelId = settings.currentModelId;
+    final providerKey = a?.chatModelProvider ?? settings.currentModelProvider;
+    final modelId = a?.chatModelId ?? settings.currentModelId;
     final cfg = (providerKey != null) ? settings.getProviderConfig(providerKey) : null;
     final isOfficialGemini = cfg != null && cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
     final isClaude = cfg != null && cfg.providerType == ProviderKind.claude;
