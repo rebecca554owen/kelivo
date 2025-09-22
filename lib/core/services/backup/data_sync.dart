@@ -427,6 +427,22 @@ class DataSync {
                         }
                       }
 
+                      // Special rule: do not override existing non-empty background
+                      final localBg = (local['background'] ?? '').toString();
+                      final incomingBg = (incoming['background'] ?? '');
+                      if (localBg.trim().isNotEmpty) {
+                        // Keep local background regardless of imported value
+                        merged['background'] = localBg;
+                      } else {
+                        // Only take imported background if present (non-empty)
+                        final sb = incomingBg is String ? incomingBg : incomingBg?.toString();
+                        if (sb == null || sb.trim().isEmpty) {
+                          merged['background'] = null;
+                        } else {
+                          merged['background'] = sb;
+                        }
+                      }
+
                       assistantMap[id] = merged;
                     }
                   }
