@@ -68,7 +68,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
           ),
           const SizedBox(height: 6),
           _SwitchTile(
-            icon: Lucide.GripHorizontal,
+            icon: Lucide.Ellipsis,
             title: l10n.displaySettingsPageShowUserMessageActionsTitle,
             subtitle: l10n.displaySettingsPageShowUserMessageActionsSubtitle,
             value: context.watch<SettingsProvider>().showUserMessageActions,
