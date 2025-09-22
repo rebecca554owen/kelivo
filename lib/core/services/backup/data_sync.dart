@@ -379,26 +379,58 @@ class DataSync {
             if (mergeableKeys.contains(key)) {
               // Special handling for mergeable configurations
               if (key == 'assistants_v1' && existing.containsKey(key)) {
-                // Merge assistants: combine both lists and deduplicate by ID
+                // Merge assistants by ID with field-level rules.
+                // Preserve local avatar if already set to avoid clearing/overwriting.
                 try {
                   final existingAssistants = jsonDecode(existing[key] as String) as List;
                   final newAssistants = jsonDecode(newValue as String) as List;
-                  final assistantMap = <String, dynamic>{};
-                  
-                  // Add existing assistants
-                  for (final assistant in existingAssistants) {
-                    if (assistant is Map && assistant.containsKey('id')) {
-                      assistantMap[assistant['id']] = assistant;
+                  final assistantMap = <String, Map<String, dynamic>>{};
+
+                  // Seed map with existing assistants
+                  for (final a in existingAssistants) {
+                    if (a is Map && a.containsKey('id')) {
+                      // Store as mutable map<String, dynamic>
+                      assistantMap[a['id'].toString()] = Map<String, dynamic>.from(a as Map);
                     }
                   }
-                  
-                  // Add/update with new assistants
-                  for (final assistant in newAssistants) {
-                    if (assistant is Map && assistant.containsKey('id')) {
-                      assistantMap[assistant['id']] = assistant;
+
+                  // Merge with imported assistants
+                  for (final a in newAssistants) {
+                    if (a is Map && a.containsKey('id')) {
+                      final id = a['id'].toString();
+                      final incoming = Map<String, dynamic>.from(a as Map);
+
+                      if (!assistantMap.containsKey(id)) {
+                        // New assistant entirely
+                        assistantMap[id] = incoming;
+                        continue;
+                      }
+
+                      final local = assistantMap[id]!;
+
+                      // Start with default behavior: imported values override
+                      final merged = <String, dynamic>{...local, ...incoming};
+
+                      // Special rule: do not override existing non-empty avatar
+                      final localAvatar = (local['avatar'] ?? '').toString();
+                      final incomingAvatar = (incoming['avatar'] ?? '');
+                      if (localAvatar.trim().isNotEmpty) {
+                        // Keep local avatar regardless of imported value
+                        merged['avatar'] = localAvatar;
+                      } else {
+                        // Only take imported avatar if present (non-empty)
+                        final s = incomingAvatar is String ? incomingAvatar : incomingAvatar?.toString();
+                        if (s == null || s.trim().isEmpty) {
+                          merged['avatar'] = null;
+                        } else {
+                          merged['avatar'] = s;
+                        }
+                      }
+
+                      assistantMap[id] = merged;
                     }
                   }
-                  
+
                   final mergedAssistants = assistantMap.values.toList();
                   await prefs.restoreSingle(key, jsonEncode(mergedAssistants));
                 } catch (e) {
