@@ -79,8 +79,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late ChatService _chatService;
   Conversation? _currentConversation;
   List<ChatMessage> _messages = [];
-  bool _isLoading = false;
-  StreamSubscription? _messageStreamSubscription;
+  // Support concurrent generation per conversation
+  final Map<String, StreamSubscription> _conversationStreams = <String, StreamSubscription>{}; // conversationId -> subscription
+  final Set<String> _loadingConversationIds = <String>{}; // active generating conversations
   final Map<String, _ReasoningData> _reasoning = <String, _ReasoningData>{};
   final Map<String, _TranslationData> _translations = <String, _TranslationData>{};
   final Map<String, List<ToolUIPart>> _toolParts = <String, List<ToolUIPart>>{}; // assistantMessageId -> parts
@@ -197,13 +198,34 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return inferred.abilities.contains(ModelAbility.reasoning);
   }
 
+  // Whether current conversation is generating
+  bool get _isCurrentConversationLoading {
+    final cid = _currentConversation?.id;
+    if (cid == null) return false;
+    return _loadingConversationIds.contains(cid);
+  }
+
+  // Update loading state for a conversation and refresh UI if needed
+  void _setConversationLoading(String conversationId, bool loading) {
+    final prev = _loadingConversationIds.contains(conversationId);
+    if (loading) {
+      _loadingConversationIds.add(conversationId);
+    } else {
+      _loadingConversationIds.remove(conversationId);
+    }
+    if (mounted && (_currentConversation?.id == conversationId) && prev != loading) {
+      setState(() {});
+    }
+  }
+
   Future<void> _cancelStreaming() async {
-    // Cancel active stream subscription, if any
-    final sub = _messageStreamSubscription;
-    _messageStreamSubscription = null;
+    final cid = _currentConversation?.id;
+    if (cid == null) return;
+    // Cancel active stream for current conversation only
+    final sub = _conversationStreams.remove(cid);
     await sub?.cancel();
 
-    // Find the latest assistant streaming message and mark it finished
+    // Find the latest assistant streaming message within current conversation and mark it finished
     ChatMessage? streaming;
     for (var i = _messages.length - 1; i >= 0; i--) {
       final m = _messages[i];
@@ -213,7 +235,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     }
     if (streaming != null) {
-      // Persist whatever content we have so far and mark finished
       await _chatService.updateMessage(
         streaming.id,
         content: streaming.content,
@@ -226,9 +247,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (idx != -1) {
             _messages[idx] = _messages[idx].copyWith(isStreaming: false);
           }
-          _isLoading = false;
         });
       }
+      _setConversationLoading(cid, false);
+
       final r = _reasoning[streaming.id];
       if (r != null) {
         if (r.finishedAt == null) {
@@ -247,7 +269,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (mounted) setState(() {});
       }
 
-      // Also finalize any unfinished reasoning segment blocks and persist them
       final segs = _reasoningSegments[streaming.id];
       if (segs != null && segs.isNotEmpty && segs.last.finishedAt == null) {
         segs.last.finishedAt = DateTime.now();
@@ -262,7 +283,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         );
       }
     } else {
-      if (mounted) setState(() => _isLoading = false);
+      _setConversationLoading(cid, false);
     }
   }
 
@@ -750,8 +771,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     setState(() {
       _messages.add(userMessage);
-      _isLoading = true;
     });
+    _setConversationLoading(_currentConversation!.id, true);
 
     // 延迟滚动确保UI更新完成
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -1039,7 +1060,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (_finishHandled) {
           if (shouldGenerateTitle) {
             _titleQueued = true;
-            _maybeGenerateTitle();
+            _maybeGenerateTitleFor(assistantMessage.conversationId);
           }
           return;
         }
@@ -1065,8 +1086,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               isStreaming: false,
             );
           }
-          _isLoading = false;
         });
+        _setConversationLoading(assistantMessage.conversationId, false);
         final r = _reasoning[assistantMessage.id];
         if (r != null) {
           if (r.finishedAt == null) {
@@ -1100,12 +1121,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           );
         }
         if (shouldGenerateTitle) {
-          _maybeGenerateTitle();
+          _maybeGenerateTitleFor(assistantMessage.conversationId);
         }
       }
 
-      _messageStreamSubscription?.cancel();
-      _messageStreamSubscription = stream.listen(
+      // Track stream per conversation to allow concurrent sessions
+      final String _cidForStream = assistantMessage.conversationId;
+      await _conversationStreams[_cidForStream]?.cancel();
+      final _sub = stream.listen(
             (chunk) async {
           // Capture reasoning deltas only when reasoning is enabled
           if ((chunk.reasoning ?? '').isNotEmpty && supportsReasoning && _isReasoningEnabled((assistant?.thinkingBudget) ?? settings.thinkingBudget)) {
@@ -1155,7 +1178,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 reasoningSegmentsJson: _serializeReasoningSegments(segments),
               );
 
-              if (mounted) setState(() {});
+              if (mounted && _currentConversation?.id == _cidForStream) setState(() {});
               await _chatService.updateMessage(
                 assistantMessage.id,
                 reasoningText: r.text,
@@ -1194,7 +1217,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             for (final c in chunk.toolCalls!) {
               existing.add(ToolUIPart(id: c.id, toolName: c.name, arguments: c.arguments, loading: true));
             }
-            setState(() {
+            if (mounted && _currentConversation?.id == _cidForStream) setState(() {
               _toolParts[assistantMessage.id] = _dedupeToolPartsList(existing);
             });
 
@@ -1258,7 +1281,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 );
               } catch (_) {}
             }
-            setState(() {
+            if (mounted && _currentConversation?.id == _cidForStream) setState(() {
               _toolParts[assistantMessage.id] = _dedupeToolPartsList(parts);
             });
             _scrollToBottomSoon();
@@ -1296,10 +1319,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 ..startAt = startAt
                 ..finishedAt = now
                 ..expanded = !autoCollapse;
-              if (mounted) setState(() {});
+              if (mounted && _currentConversation?.id == _cidForStream) setState(() {});
             }
-            await _messageStreamSubscription?.cancel();
-            _messageStreamSubscription = null;
+            await _conversationStreams.remove(_cidForStream)?.cancel();
             final r = _reasoning[assistantMessage.id];
             if (r != null && r.finishedAt == null) {
               r.finishedAt = DateTime.now();
@@ -1359,7 +1381,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
             if (streamOutput) {
               // Update UI with streaming content
-              if (mounted) {
+              if (mounted && _currentConversation?.id == _cidForStream) {
                 setState(() {
                   final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
                   if (index != -1) {
@@ -1404,8 +1426,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 totalTokens: totalTokens,
               );
             }
-            _isLoading = false;
           });
+          _setConversationLoading(assistantMessage.conversationId, false);
 
           // End reasoning on error
           final r = _reasoning[assistantMessage.id];
@@ -1443,7 +1465,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             } catch (_) {}
           }
 
-          _messageStreamSubscription = null;
+          await _conversationStreams.remove(_cidForStream)?.cancel();
           showAppSnackBar(
             context,
             message: '${AppLocalizations.of(context)!.generationInterrupted}: $e',
@@ -1452,13 +1474,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         },
         onDone: () async {
           // If stream closed without explicit isDone chunk, finalize
-          if (_isLoading) {
+          if (_loadingConversationIds.contains(_cidForStream)) {
             await finish(generateTitle: true);
           }
-          _messageStreamSubscription = null;
+          await _conversationStreams.remove(_cidForStream)?.cancel();
         },
         cancelOnError: true,
       );
+      _conversationStreams[_cidForStream] = _sub;
     } catch (e) {
       // Preserve partial content on outer error as well
       await _chatService.updateMessage(
@@ -1477,8 +1500,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             totalTokens: totalTokens,
           );
         }
-        _isLoading = false;
       });
+      _setConversationLoading(assistantMessage.conversationId, false);
 
       // End reasoning on error
       final r = _reasoning[assistantMessage.id];
@@ -1514,7 +1537,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         } catch (_) {}
       }
 
-      _messageStreamSubscription = null;
+      await _conversationStreams.remove(assistantMessage.conversationId)?.cancel();
       showAppSnackBar(
         context,
         message: '${AppLocalizations.of(context)!.generationInterrupted}: $e',
@@ -1632,8 +1655,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     setState(() {
       _messages.add(assistantMessage);
-      _isLoading = true;
     });
+    _setConversationLoading(_currentConversation!.id, true);
 
     // Haptics on regenerate
     try {
@@ -1812,8 +1835,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (index != -1) {
           _messages[index] = _messages[index].copyWith(content: processedContent, totalTokens: totalTokens, isStreaming: false);
         }
-        _isLoading = false;
       });
+      _setConversationLoading(assistantMessage.conversationId, false);
       final r = _reasoning[assistantMessage.id];
       if (r != null && r.finishedAt == null) {
         r.finishedAt = DateTime.now();
@@ -1830,8 +1853,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     }
 
-    _messageStreamSubscription?.cancel();
-    _messageStreamSubscription = stream.listen((chunk) async {
+    final String _cid = assistantMessage.conversationId;
+    await _conversationStreams[_cid]?.cancel();
+    final _sub2 = stream.listen((chunk) async {
       if ((chunk.reasoning ?? '').isNotEmpty && enableReasoning) {
         if (streamOutput) {
           final r = _reasoning[assistantMessage.id] ?? _ReasoningData();
@@ -1994,10 +2018,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             ..expanded = !autoCollapse;
           if (mounted) setState(() {});
         }
-        await _messageStreamSubscription?.cancel();
-        _messageStreamSubscription = null;
+        await _conversationStreams.remove(_cid)?.cancel();
       }
     });
+    _conversationStreams[_cid] = _sub2;
   }
 
   ChatInputData _parseInputFromRaw(String raw) {
@@ -2033,6 +2057,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Future<void> _maybeGenerateTitle({bool force = false}) async {
     final convo = _currentConversation;
     if (convo == null) return;
+    await _maybeGenerateTitleFor(convo.id, force: force);
+  }
+
+  Future<void> _maybeGenerateTitleFor(String conversationId, {bool force = false}) async {
+    final convo = _chatService.getConversation(conversationId);
+    if (convo == null) return;
     if (!force && convo.title.isNotEmpty && convo.title != _titleForLocale(context)) return;
 
     final settings = context.read<SettingsProvider>();
@@ -2062,9 +2092,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final title = (await ChatApiService.generateText(config: cfg, modelId: mdlId, prompt: prompt)).trim();
       if (title.isNotEmpty) {
         await _chatService.renameConversation(convo.id, title);
-        setState(() {
-          _currentConversation = _chatService.getConversation(convo.id);
-        });
+        if (mounted && _currentConversation?.id == convo.id) {
+          setState(() {
+            _currentConversation = _chatService.getConversation(convo.id);
+          });
+        }
       }
     } catch (_) {
       // Ignore title generation failure silently
@@ -3127,7 +3159,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           // Dismiss keyboard after sending
                           _dismissKeyboard();
                         },
-                        loading: _isLoading,
+                        loading: _isCurrentConversationLoading,
                         showMcpButton: (() {
                           final pk2 = a?.chatModelProvider ?? settings.currentModelProvider;
                           final mid3 = a?.chatModelId ?? settings.currentModelId;
@@ -3377,7 +3409,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _inputController.dispose();
     _scrollController.removeListener(_onScrollControllerChanged);
     _scrollController.dispose();
-    _messageStreamSubscription?.cancel();
+    try {
+      for (final s in _conversationStreams.values) { s.cancel(); }
+    } catch (_) {}
+    _conversationStreams.clear();
     _userScrollTimer?.cancel();
     routeObserver.unsubscribe(this);
     super.dispose();
