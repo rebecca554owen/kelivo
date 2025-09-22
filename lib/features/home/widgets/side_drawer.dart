@@ -35,6 +35,7 @@ class SideDrawer extends StatefulWidget {
     this.onSelectConversation,
     this.onNewConversation,
     this.closePickerTicker,
+    this.loadingConversationIds = const <String>{},
   });
 
   final String userName;
@@ -42,6 +43,7 @@ class SideDrawer extends StatefulWidget {
   final void Function(String id)? onSelectConversation;
   final VoidCallback? onNewConversation;
   final ValueNotifier<int>? closePickerTicker;
+  final Set<String> loadingConversationIds;
 
   @override
   State<SideDrawer> createState() => _SideDrawerState();
@@ -744,6 +746,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                   chat: chat,
                                   textColor: textBase,
                                   selected: chat.id == chatService.currentConversationId,
+                                  loading: widget.loadingConversationIds.contains(chat.id),
                                   onTap: () => widget.onSelectConversation?.call(chat.id),
                                   onLongPress: () => _showChatMenu(context, chat),
                                 ),
@@ -768,6 +771,7 @@ class _SideDrawerState extends State<SideDrawer> {
                                   chat: chat,
                                   textColor: textBase,
                                   selected: chat.id == chatService.currentConversationId,
+                                  loading: widget.loadingConversationIds.contains(chat.id),
                                   onTap: () => widget.onSelectConversation?.call(chat.id),
                                   onLongPress: () => _showChatMenu(context, chat),
                                 ),
@@ -1661,13 +1665,21 @@ class _ChatGroup {
 }
 
 class _ChatTile extends StatelessWidget {
-  const _ChatTile({required this.chat, required this.textColor, this.onTap, this.onLongPress, this.selected = false});
+  const _ChatTile({
+    required this.chat,
+    required this.textColor,
+    this.onTap,
+    this.onLongPress,
+    this.selected = false,
+    this.loading = false,
+  });
 
   final ChatItem chat;
   final Color textColor;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final bool selected;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -1683,21 +1695,65 @@ class _ChatTile extends StatelessWidget {
           onLongPress: onLongPress,
           child: Container(
             width: double.infinity,
-            // Increase left padding to keep text aligned after reducing ListView side padding
-            // New absolute left = 8 (list padding) + 16 (tile) = 24 (unchanged)
             padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-            child: Text(
-              chat.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 15,
-                color: textColor,
-                fontWeight: FontWeight.w400,
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    chat.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: textColor,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                if (loading) ...[
+                  const SizedBox(width: 8),
+                  _LoadingDot(),
+                ],
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LoadingDot extends StatefulWidget {
+  @override
+  State<_LoadingDot> createState() => _LoadingDotState();
+}
+
+class _LoadingDotState extends State<_LoadingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FadeTransition(
+      opacity: _anim,
+      child: Container(
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
       ),
     );
   }

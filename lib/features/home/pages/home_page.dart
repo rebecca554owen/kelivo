@@ -213,8 +213,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     } else {
       _loadingConversationIds.remove(conversationId);
     }
-    if (mounted && (_currentConversation?.id == conversationId) && prev != loading) {
-      setState(() {});
+    if (mounted && prev != loading) {
+      setState(() {}); // Update input bar + drawer indicators
     }
   }
 
@@ -2467,6 +2467,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           return (n == null || n.isEmpty) ? l10n.homePageDefaultAssistant : n;
         })(),
         closePickerTicker: _assistantPickerCloseTick,
+        loadingConversationIds: _loadingConversationIds,
         onSelectConversation: (id) {
           // Update current selection for highlight in drawer
           _chatService.setCurrentConversation(id);
