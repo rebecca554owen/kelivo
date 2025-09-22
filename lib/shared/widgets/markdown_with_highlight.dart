@@ -516,7 +516,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 2),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
