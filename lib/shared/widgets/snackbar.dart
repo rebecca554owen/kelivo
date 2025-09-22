@@ -408,7 +408,7 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
                     Expanded(
                       child: Text(
                         widget.notification.message,
-                        style: TextStyle(
+                        style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           color: isDark ? Colors.white : const Color(0xFF1C1C1E),
@@ -432,7 +432,7 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
                         ),
                         child: Text(
                           widget.notification.actionLabel!,
-                          style: TextStyle(
+                          style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: cs.primary,
