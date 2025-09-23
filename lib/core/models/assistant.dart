@@ -114,12 +114,12 @@ class Assistant {
         'thinkingBudget': thinkingBudget,
         'maxTokens': maxTokens,
         'systemPrompt': systemPrompt,
-      'messageTemplate': messageTemplate,
-      'mcpServerIds': mcpServerIds,
-      'background': background,
-      'deletable': deletable,
-      'customHeaders': customHeaders,
-      'customBody': customBody,
+        'messageTemplate': messageTemplate,
+        'mcpServerIds': mcpServerIds,
+        'background': background,
+        'deletable': deletable,
+        'customHeaders': customHeaders,
+        'customBody': customBody,
     };
 
   static Assistant fromJson(Map<String, dynamic> json) => Assistant(

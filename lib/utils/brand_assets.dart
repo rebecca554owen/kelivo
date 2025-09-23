@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Centralized brand icon resolver.
 /// Returns an asset path like `assets/icons/openai.svg` for a given name/model.
 class BrandAssets {
@@ -8,12 +6,21 @@ class BrandAssets {
   /// Resolve an icon asset path for a provider/model name.
   /// Returns null if no known mapping matches.
   static String? assetForName(String name) {
-    final lower = name.toLowerCase();
+    final key = name.trim().toLowerCase();
+    if (key.isEmpty) return null;
+    if (_cache.containsKey(key)) return _cache[key];
+    String? result;
     for (final e in _mapping) {
-      if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';
+      if (e.key.hasMatch(key)) { result = 'assets/icons/${e.value}'; break; }
     }
-    return null;
+    _cache[key] = result;
+    return result;
   }
+
+  /// Clear the in-memory cache (useful after changing mappings at runtime).
+  static void clearCache() => _cache.clear();
+
+  static final Map<String, String?> _cache = <String, String?>{};
 
   // Keep order-specific matching using a list of entries.
   static final List<MapEntry<RegExp, String>> _mapping = <MapEntry<RegExp, String>>[
@@ -51,4 +58,3 @@ class BrandAssets {
     MapEntry(RegExp(r'kelivo'), 'kelivo.png'),
   ];
 }
-
