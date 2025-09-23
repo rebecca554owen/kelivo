@@ -1047,7 +1047,6 @@ class ProviderConfig {
               'openai-fast',
               'mistral',
               'qwen-coder',
-              'nova-fast',
             ],
             modelOverrides: const {
               'openai-fast': {
@@ -1063,12 +1062,6 @@ class ProviderConfig {
                 'abilities': ['tool'],
               },
               'qwen-coder': {
-                'type': 'chat',
-                'input': ['text'],
-                'output': ['text'],
-                'abilities': ['tool'],
-              },
-              'nova-fast': {
                 'type': 'chat',
                 'input': ['text'],
                 'output': ['text'],
