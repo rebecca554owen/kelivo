@@ -127,7 +127,9 @@ class ChatApiService {
   static _ParsedTextAndImages _parseTextAndImages(String raw) {
     if (raw.isEmpty) return const _ParsedTextAndImages('', <_ImageRef>[]);
     final mdImg = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
-    final customImg = RegExp(r"\\[image:(.+?)\\]");
+    // Match custom inline image markers like: [image:/absolute/path.png]
+    // Use a single backslash in a raw string to escape '[' and ']' in regex.
+    final customImg = RegExp(r"\[image:(.+?)\]");
     final images = <_ImageRef>[];
     final buf = StringBuffer();
     int i = 0;
