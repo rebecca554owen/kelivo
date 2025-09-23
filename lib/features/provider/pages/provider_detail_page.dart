@@ -1730,7 +1730,6 @@ class _BrandAvatar extends StatelessWidget {
     final asset = BrandAssets.assetForName(name);
     final lower = name.toLowerCase();
     final bool _mono = isDark && (RegExp(r'openai|gpt|o\\d').hasMatch(lower) || RegExp(r'grok|xai').hasMatch(lower) || RegExp(r'openrouter').hasMatch(lower));
-    final bool _purple = RegExp(r'silicon|硅基').hasMatch(lower);
     return CircleAvatar(
       radius: size / 2,
       backgroundColor: isDark ? Colors.white10 : cs.primary.withOpacity(0.1),
@@ -1742,17 +1741,15 @@ class _BrandAvatar extends StatelessWidget {
                   asset,
                   width: size * 0.7,
                   height: size * 0.7,
-                  colorFilter: _mono
-                      ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
-                      : (_purple ? const ColorFilter.mode(Color(0xFF7C4DFF), BlendMode.srcIn) : null),
+                  colorFilter: _mono ? const ColorFilter.mode(Colors.white, BlendMode.srcIn) : null,
                 )
               : Image.asset(
                   asset,
                   width: size * 0.7,
                   height: size * 0.7,
                   fit: BoxFit.contain,
-                  color: _mono ? Colors.white : (_purple ? const Color(0xFF7C4DFF) : null),
-                  colorBlendMode: (_mono || _purple) ? BlendMode.srcIn : null,
+                  color: _mono ? Colors.white : null,
+                  colorBlendMode: _mono ? BlendMode.srcIn : null,
                 )),
     );
   }

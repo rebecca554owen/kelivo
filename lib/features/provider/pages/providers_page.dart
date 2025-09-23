@@ -349,7 +349,6 @@ class _BrandAvatar extends StatelessWidget {
               asset: asset,
               size: size * 0.62,
               monochromeWhite: isDark && _preferMonochromeWhite(name),
-              tintColor: _tintPurpleSilicon(name) ? const Color(0xFF7C4DFF) : null,
             ),
     );
     return circle;
@@ -357,11 +356,10 @@ class _BrandAvatar extends StatelessWidget {
 }
 
 class _IconAsset extends StatelessWidget {
-  const _IconAsset({required this.asset, required this.size, this.monochromeWhite = false, this.tintColor});
+  const _IconAsset({required this.asset, required this.size, this.monochromeWhite = false});
   final String asset;
   final double size;
   final bool monochromeWhite;
-  final Color? tintColor;
   @override
   Widget build(BuildContext context) {
     if (asset.endsWith('.svg')) {
@@ -372,7 +370,7 @@ class _IconAsset extends StatelessWidget {
         fit: BoxFit.contain,
         colorFilter: monochromeWhite
             ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
-            : (tintColor != null ? ColorFilter.mode(tintColor!, BlendMode.srcIn) : null),
+            : null,
       );
     }
     return Image.asset(
@@ -380,8 +378,8 @@ class _IconAsset extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      color: monochromeWhite ? Colors.white : tintColor,
-      colorBlendMode: (monochromeWhite || tintColor != null) ? BlendMode.srcIn : null,
+      color: monochromeWhite ? Colors.white : null,
+      colorBlendMode: monochromeWhite ? BlendMode.srcIn : null,
     );
   }
 }
