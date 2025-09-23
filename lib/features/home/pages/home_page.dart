@@ -1571,9 +1571,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
       nextVersion = maxVer + 1;
     } else {
-      // User message: find the first assistant reply after it to branch from
+      // User message: find the first assistant reply after the FIRST occurrence of this user group,
+      // not after the current version's position (which may be appended at tail after edits).
+      final userGroupId = message.groupId ?? message.id;
+      int userFirst = -1;
+      for (int i = 0; i < _messages.length; i++) {
+        final gid0 = (_messages[i].groupId ?? _messages[i].id);
+        if (gid0 == userGroupId) { userFirst = i; break; }
+      }
+      if (userFirst < 0) userFirst = idx; // fallback
+
       int aid = -1;
-      for (int i = idx + 1; i < _messages.length; i++) {
+      for (int i = userFirst + 1; i < _messages.length; i++) {
         if (_messages[i].role == 'assistant') { aid = i; break; }
       }
       if (aid >= 0) {
@@ -1588,20 +1597,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
         nextVersion = maxVer + 1;
       } else {
-        // No assistant reply yet; keep up to the user message and start new group
-        lastKeep = idx;
+        // No assistant reply yet; keep up to the first user message occurrence and start new group
+        lastKeep = userFirst;
         targetGroupId = null; // will be set to new id automatically
         nextVersion = 0;
       }
     }
 
-    // Remove messages after lastKeep (persistently), but preserve other versions of the target group
+    // Remove messages after lastKeep (persistently), but preserve:
+    // - all versions of groups that already appeared up to lastKeep (e.g., edited user messages), and
+    // - all versions of the target assistant group we are regenerating
     if (lastKeep < _messages.length - 1) {
+      // Collect groups that appear at or before lastKeep
+      final keepGroups = <String>{};
+      for (int i = 0; i <= lastKeep && i < _messages.length; i++) {
+        final g = (_messages[i].groupId ?? _messages[i].id);
+        keepGroups.add(g);
+      }
+      if (targetGroupId != null) keepGroups.add(targetGroupId!);
+
       final trailing = _messages.sublist(lastKeep + 1);
       final removeIds = <String>[];
       for (final m in trailing) {
         final gid = (m.groupId ?? m.id);
-        final shouldKeep = (targetGroupId != null && gid == targetGroupId);
+        final shouldKeep = keepGroups.contains(gid);
         if (!shouldKeep) removeIds.add(m.id);
       }
       for (final id in removeIds) {
@@ -2873,6 +2892,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                           _versionSelections[gid2] = newMsg.version;
                                         }
                                       });
+                                      try {
+                                        if (newMsg != null && _currentConversation != null) {
+                                          final gid2 = (newMsg.groupId ?? newMsg.id);
+                                          await _chatService.setSelectedVersion(_currentConversation!.id, gid2, newMsg.version);
+                                        }
+                                      } catch (_) {}
                                     }
                                   } : null,
                                   onDelete: message.role == 'user' ? () async {
@@ -2953,6 +2978,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         _versionSelections[gid] = newMsg.version;
                                       }
                                     });
+                                    try {
+                                      if (newMsg != null && _currentConversation != null) {
+                                        final gid = (newMsg.groupId ?? newMsg.id);
+                                        await _chatService.setSelectedVersion(_currentConversation!.id, gid, newMsg.version);
+                                      }
+                                    } catch (_) {}
                                   }
                                 } else if (action == MessageMoreAction.fork) {
                                   // Determine included groups up to the message's group (inclusive)
