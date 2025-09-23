@@ -38,6 +38,7 @@ import '../../search/widgets/search_settings_sheet.dart';
 import '../widgets/mini_map_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import '../../../utils/brand_assets.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
@@ -3504,55 +3505,14 @@ class _CurrentModelIcon extends StatelessWidget {
   final bool withBackground; // whether to draw circular background
   final Color? backgroundColor; // override background color if provided
 
-  String? _assetForName(String n) {
-    final lower = n.toLowerCase();
-    final mapping = <RegExp, String>{
-      RegExp(r'openai|gpt|o\d'): 'openai.svg',
-      RegExp(r'gemini'): 'gemini-color.svg',
-      RegExp(r'google'): 'google-color.svg',
-      RegExp(r'claude'): 'claude-color.svg',
-      RegExp(r'anthropic'): 'anthropic.svg',
-      RegExp(r'deepseek'): 'deepseek-color.svg',
-      RegExp(r'grok'): 'grok.svg',
-      RegExp(r'qwen|qwq|qvq|aliyun|dashscope'): 'qwen-color.svg',
-      RegExp(r'doubao|ark|volc'): 'doubao-color.svg',
-      RegExp(r'openrouter'): 'openrouter.svg',
-      RegExp(r'zhipu|智谱|glm'): 'zhipu-color.svg',
-      RegExp(r'mistral'): 'mistral-color.svg',
-      RegExp(r'(?<!o)llama|meta'): 'meta-color.svg',
-      RegExp(r'hunyuan|tencent'): 'hunyuan-color.svg',
-      RegExp(r'gemma'): 'gemma-color.svg',
-      RegExp(r'perplexity'): 'perplexity-color.svg',
-      RegExp(r'aliyun|阿里云|百炼'): 'alibabacloud-color.svg',
-      RegExp(r'bytedance|火山'): 'bytedance-color.svg',
-      RegExp(r'silicon|硅基'): 'siliconflow-color.svg',
-      RegExp(r'aihubmix'): 'aihubmix-color.svg',
-      RegExp(r'ollama'): 'ollama.svg',
-      RegExp(r'github'): 'github.svg',
-      RegExp(r'cloudflare'): 'cloudflare-color.svg',
-      RegExp(r'minimax'): 'minimax-color.svg',
-      RegExp(r'xai|grok'): 'xai.svg',
-      RegExp(r'juhenext'): 'juhenext.png',
-      RegExp(r'kimi'): 'kimi-color.svg',
-      RegExp(r'302'): '302ai-color.svg',
-      RegExp(r'step|阶跃'): 'stepfun-color.svg',
-      RegExp(r'intern|书生'): 'internlm-color.svg',
-      RegExp(r'cohere|command-.+'): 'cohere-color.svg',
-      RegExp(r'kelivo'): 'kelivo.png',
-    };
-    for (final e in mapping.entries) {
-      if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';
-    }
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (providerKey == null || modelId == null) return const SizedBox.shrink();
-    String? asset = _assetForName(modelId!);
-    asset ??= _assetForName(providerKey!);
+    String? asset = BrandAssets.assetForName(modelId!);
+    asset ??= BrandAssets.assetForName(providerKey!);
     Widget inner;
     if (asset != null) {
       if (asset.endsWith('.svg')) {

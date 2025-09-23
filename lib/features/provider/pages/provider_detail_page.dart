@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../utils/brand_assets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
@@ -1714,47 +1715,6 @@ class _BrandAvatar extends StatelessWidget {
   final String name;
   final double size;
 
-  String? _assetForName(String n) {
-    final lower = n.toLowerCase();
-    final mapping = <RegExp, String>{
-      RegExp(r'openai|gpt|o\d'): 'openai.svg',
-      RegExp(r'gemini'): 'gemini-color.svg',
-      RegExp(r'google'): 'google-color.svg',
-      RegExp(r'claude'): 'claude-color.svg',
-      RegExp(r'anthropic'): 'anthropic.svg',
-      RegExp(r'deepseek'): 'deepseek-color.svg',
-      RegExp(r'grok'): 'grok.svg',
-      RegExp(r'qwen|qwq|qvq'): 'qwen-color.svg',
-      RegExp(r'doubao'): 'doubao-color.svg',
-      RegExp(r'openrouter'): 'openrouter.svg',
-      RegExp(r'zhipu|智谱|glm'): 'zhipu-color.svg',
-      RegExp(r'mistral'): 'mistral-color.svg',
-      RegExp(r'(?<!o)llama|meta'): 'meta-color.svg',
-      RegExp(r'hunyuan|tencent'): 'hunyuan-color.svg',
-      RegExp(r'gemma'): 'gemma-color.svg',
-      RegExp(r'perplexity'): 'perplexity-color.svg',
-      RegExp(r'aliyun|阿里云|百炼'): 'alibabacloud-color.svg',
-      RegExp(r'bytedance|火山'): 'bytedance-color.svg',
-      RegExp(r'silicon|硅基'): 'siliconflow-color.svg',
-      RegExp(r'aihubmix'): 'aihubmix-color.svg',
-      RegExp(r'ollama'): 'ollama.svg',
-      RegExp(r'github'): 'github.svg',
-      RegExp(r'cloudflare'): 'cloudflare-color.svg',
-      RegExp(r'minimax'): 'minimax-color.svg',
-      RegExp(r'xai'): 'xai.svg',
-      RegExp(r'juhenext'): 'juhenext.png',
-      RegExp(r'kimi'): 'kimi-color.svg',
-      RegExp(r'302'): '302ai-color.svg',
-      RegExp(r'step|阶跃'): 'stepfun-color.svg',
-      RegExp(r'intern|书生'): 'internlm-color.svg',
-      RegExp(r'cohere|command-.+'): 'cohere-color.svg',
-      RegExp(r'kelivo'): 'kelivo.png',
-    };
-    for (final e in mapping.entries) {
-      if (e.key.hasMatch(lower)) return 'assets/icons/${e.value}';
-    }
-    return null;
-  }
 
   bool _preferMonochromeWhite(String n) {
     final k = n.toLowerCase();
@@ -1767,7 +1727,7 @@ class _BrandAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final asset = _assetForName(name);
+    final asset = BrandAssets.assetForName(name);
     final lower = name.toLowerCase();
     final bool _mono = isDark && (RegExp(r'openai|gpt|o\\d').hasMatch(lower) || RegExp(r'grok|xai').hasMatch(lower) || RegExp(r'openrouter').hasMatch(lower));
     final bool _purple = RegExp(r'silicon|硅基').hasMatch(lower);

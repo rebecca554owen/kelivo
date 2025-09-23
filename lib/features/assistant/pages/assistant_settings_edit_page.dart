@@ -28,6 +28,7 @@ import '../../../core/models/chat_message.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import 'dart:io' show File;
 import '../../../utils/avatar_cache.dart';
+import '../../../utils/brand_assets.dart';
 
 class AssistantSettingsEditPage extends StatefulWidget {
   const AssistantSettingsEditPage({super.key, required this.assistantId});
@@ -2179,41 +2180,7 @@ class _BrandAvatarLike extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Map known names to brand assets used in default_model_page
     String? asset;
-    final lower = name.toLowerCase();
-    final mapping = <RegExp, String>{
-      RegExp(r'openai|gpt|o\d'): 'openai.svg',
-      RegExp(r'gemini'): 'gemini-color.svg',
-      RegExp(r'google'): 'google-color.svg',
-      RegExp(r'claude|anthropic'): 'claude-color.svg',
-      RegExp(r'deepseek'): 'deepseek-color.svg',
-      RegExp(r'grok|xai'): 'xai.svg',
-      RegExp(r'qwen|qwq|qvq|aliyun|dashscope'): 'qwen-color.svg',
-      RegExp(r'doubao|ark|volc'): 'doubao-color.svg',
-      RegExp(r'openrouter'): 'openrouter.svg',
-      RegExp(r'zhipu|glm|智谱'): 'zhipu-color.svg',
-      RegExp(r'mistral'): 'mistral-color.svg',
-      RegExp(r'meta|llama|(?<!o)llama'): 'meta-color.svg',
-      RegExp(r'hunyuan|tencent'): 'hunyuan-color.svg',
-      RegExp(r'gemma'): 'gemma-color.svg',
-      RegExp(r'perplexity'): 'perplexity-color.svg',
-      RegExp(r'alibabacloud|阿里云|百炼'): 'alibabacloud-color.svg',
-      RegExp(r'cloudflare'): 'cloudflare-color.svg',
-      RegExp(r'minimax'): 'minimax-color.svg',
-      RegExp(r'juhenext'): 'juhenext.png',
-      RegExp(r'kimi'): 'kimi-color.svg',
-      RegExp(r'302'): '302ai-color.svg',
-      RegExp(r'stepfun|阶跃|step'): 'stepfun-color.svg',
-      RegExp(r'internlm|书生'): 'internlm-color.svg',
-      RegExp(r'cohere|command-.+'): 'cohere-color.svg',
-      RegExp(r'silicon|硅基'): 'siliconflow-color.svg',
-      RegExp(r'aihubmix'): 'aihubmix-color.svg',
-      RegExp(r'ollama'): 'ollama.svg',
-      RegExp(r'github'): 'github.svg',
-      RegExp(r'kelivo'): 'kelivo.png',
-    };
-    for (final e in mapping.entries) {
-      if (e.key.hasMatch(lower)) { asset = 'assets/icons/${e.value}'; break; }
-    }
+    asset = BrandAssets.assetForName(name);
     if (asset != null) {
       if (asset!.endsWith('.svg')) {
         final isColorful = asset!.contains('color');
