@@ -2398,6 +2398,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         return;
       }
 
+      // Coarse jump based on index ratio to bring target into build range
+      final pos0 = _scrollController.position;
+      final denom = (messages.length - 1).clamp(1, 1 << 30);
+      final ratio = tIndex / denom;
+      final coarse = (pos0.maxScrollExtent * ratio).clamp(0.0, pos0.maxScrollExtent);
+      _scrollController.jumpTo(coarse);
+      await WidgetsBinding.instance.endOfFrame;
+      final tCtxAfterCoarse = _messageKeys[targetId]?.currentContext;
+      if (tCtxAfterCoarse != null) {
+        await Scrollable.ensureVisible(tCtxAfterCoarse, alignment: 0.1, duration: Duration.zero, curve: Curves.linear);
+        _lastJumpUserMessageId = targetId;
+        return;
+      }
+
       // Determine direction using visible anchor indices
       final media = MediaQuery.of(context);
       final double listTop = kToolbarHeight + media.padding.top;
@@ -4039,19 +4053,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     onOpenMiniMap: () async {
                                       final collapsed = _collapseVersions(_messages);
                                       final selectedId = await showMiniMapSheet(context, collapsed);
-                                      if (selectedId != null) {
-                                        final idx = collapsed.indexWhere((m) => m.id == selectedId);
-                                        if (idx != -1) {
-                                          final key = _keyForMessage(selectedId);
-                                          final ctx = key.currentContext;
-                                          if (ctx != null) {
-                                            Scrollable.ensureVisible(
-                                              ctx,
-                                              duration: const Duration(milliseconds: 220),
-                                              curve: Curves.easeOutCubic,
-                                            );
-                                          }
-                                        }
+                                      if (selectedId != null && selectedId.isNotEmpty) {
+                                        await _scrollToMessageId(selectedId);
                                       }
                                     },
                                     onPickCamera: _onPickCamera,
