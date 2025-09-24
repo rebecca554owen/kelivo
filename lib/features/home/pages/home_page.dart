@@ -39,6 +39,7 @@ import '../../search/widgets/search_settings_sheet.dart';
 import '../widgets/mini_map_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../utils/brand_assets.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
@@ -688,26 +689,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       })(),
       closePickerTicker: _assistantPickerCloseTick,
       loadingConversationIds: _loadingConversationIds,
-      onSelectConversation: (id) {
-        _chatService.setCurrentConversation(id);
-        final convo = _chatService.getConversation(id);
-        if (convo != null) {
-          final msgs = _chatService.getMessages(id);
-          setState(() {
-            _currentConversation = convo;
-            _messages = List.of(msgs);
-            _loadVersionSelections();
-            _restoreMessageUiState();
-          });
-          _forceScrollToBottomSoon();
-        }
-      },
-      onNewConversation: () async {
-        await _createNewConversation();
-        if (mounted) {
-          _forceScrollToBottomSoon();
-        }
-      },
+        onSelectConversation: (id) {
+          _chatService.setCurrentConversation(id);
+          final convo = _chatService.getConversation(id);
+          if (convo != null) {
+            final msgs = _chatService.getMessages(id);
+            setState(() {
+              _currentConversation = convo;
+              _messages = List.of(msgs);
+              _loadVersionSelections();
+              _restoreMessageUiState();
+            });
+            _triggerConversationFade();
+            _forceScrollToBottomSoon();
+          }
+        },
+        onNewConversation: () async {
+          await _createNewConversation();
+          if (mounted) {
+            _triggerConversationFade();
+            _forceScrollToBottomSoon();
+          }
+        },
     );
 
     final cs = Theme.of(context).colorScheme;
@@ -2714,6 +2717,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _loadVersionSelections();
               _restoreMessageUiState();
             });
+            _triggerConversationFade();
             _forceScrollToBottomSoon();
           }
           // Haptic feedback when closing the sidebar
@@ -2727,6 +2731,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         onNewConversation: () async {
           await _createNewConversation();
           if (mounted) {
+            _triggerConversationFade();
             _forceScrollToBottomSoon();
           }
           // Haptic feedback when closing the sidebar
@@ -3742,7 +3747,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       constraints: const BoxConstraints(maxWidth: 860),
                       child: Column(
                         children: [
-                          // Message list (copied from mobile branch)
+                          // Message list (add subtle animate on conversation switch)
                           Expanded(
                             child: FadeTransition(
                               opacity: _convoFade,
@@ -3954,7 +3959,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     },
                                   );
                                 })(),
-                              ),
+                              ).animate(key: ValueKey('tab_body_'+(_currentConversation?.id ?? 'none')))
+                               .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic)
+                               .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic),
                             ),
                           ),
 
