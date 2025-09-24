@@ -2970,7 +2970,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         final gid = (m.groupId ?? m.id);
                         byGroup.putIfAbsent(gid, () => <ChatMessage>[]).add(m);
                       }
-                      return ListView.builder(
+                      final list = ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.only(bottom: 16, top: 8),
                         itemCount: messages.length,
@@ -3298,8 +3298,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           );
                         },
                       );
+                      return list;
                     })(),
-                  ),
+                  ).animate(key: ValueKey('mob_body_'+(_currentConversation?.id ?? 'none'))) 
+                   .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic)
+                   .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic),
                 ),
               ),
               // Input bar
