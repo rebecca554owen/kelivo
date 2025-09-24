@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <wincodec.h>
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -43,7 +44,7 @@ bool FlutterWindow::OnCreate() {
       [this](const auto& call, auto result) {
         if (call.method_name() == "getClipboardImages") {
           std::vector<std::string> paths;
-          // Try to read CF_DIB/CF_DIBV5 from clipboard and save as BMP
+          // Try to read CF_DIB/CF_DIBV5 from clipboard and save as PNG via WIC
           if (OpenClipboard(nullptr)) {
             UINT fmt = 0;
             if (IsClipboardFormatAvailable(CF_DIB)) fmt = CF_DIB;
@@ -53,39 +54,54 @@ bool FlutterWindow::OnCreate() {
               if (hData) {
                 void* data = GlobalLock(hData);
                 if (data) {
-                  SIZE_T totalSize = GlobalSize(hData);
-                  // Build BMP file header
-                  BITMAPINFOHEADER* bih = reinterpret_cast<BITMAPINFOHEADER*>(data);
-                  DWORD colorTableSize = 0;
-                  if (bih->biBitCount <= 8) {
-                    colorTableSize = (1u << bih->biBitCount) * 4u;
-                  } else if (bih->biCompression == BI_BITFIELDS) {
-                    colorTableSize = 12u;
+                  BITMAPINFO* bmi = reinterpret_cast<BITMAPINFO*>(data);
+                  void* bits = reinterpret_cast<BYTE*>(data) + bmi->bmiHeader.biSize;
+                  if (bmi->bmiHeader.biBitCount <= 8) {
+                    bits = reinterpret_cast<BYTE*>(bits) + (sizeof(RGBQUAD) * (1u << bmi->bmiHeader.biBitCount));
+                  } else if (bmi->bmiHeader.biCompression == BI_BITFIELDS) {
+                    bits = reinterpret_cast<BYTE*>(bits) + 12; // three DWORD masks
                   }
-                  DWORD bfOffBits = sizeof(BITMAPFILEHEADER) + bih->biSize + colorTableSize;
-                  DWORD bfSize = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + totalSize);
+                  HDC hdc = GetDC(nullptr);
+                  HBITMAP hbmp = CreateDIBitmap(hdc, &bmi->bmiHeader, CBM_INIT, bits, bmi, DIB_RGB_COLORS);
+                  ReleaseDC(nullptr, hdc);
+                  if (hbmp) {
+                    IWICImagingFactory* factory = nullptr;
+                    if (SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory)))) {
+                      IWICBitmap* wicBitmap = nullptr;
+                      if (SUCCEEDED(factory->CreateBitmapFromHBITMAP(hbmp, 0, WICBitmapUseOriginalSize, &wicBitmap))) {
+                        wchar_t tempPath[MAX_PATH];
+                        GetTempPathW(MAX_PATH, tempPath);
+                        wchar_t filename[MAX_PATH];
+                        swprintf_s(filename, L"pasted_%llu.png", static_cast<unsigned long long>(GetTickCount64()));
+                        std::wstring fullPath = std::wstring(tempPath) + filename;
 
-                  BITMAPFILEHEADER bfh{};
-                  bfh.bfType = 0x4D42; // 'BM'
-                  bfh.bfSize = bfSize;
-                  bfh.bfOffBits = bfOffBits;
-
-                  wchar_t tempPath[MAX_PATH];
-                  GetTempPathW(MAX_PATH, tempPath);
-                  wchar_t filename[MAX_PATH];
-                  swprintf_s(filename, L"pasted_%llu.bmp", static_cast<unsigned long long>(GetTickCount64()));
-                  std::wstring fullPath = std::wstring(tempPath) + filename;
-
-                  std::ofstream ofs(fullPath, std::ios::binary);
-                  if (ofs.good()) {
-                    ofs.write(reinterpret_cast<const char*>(&bfh), sizeof(BITMAPFILEHEADER));
-                    ofs.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(totalSize));
-                    ofs.close();
-                    // Convert to UTF-8
-                    int len = WideCharToMultiByte(CP_UTF8, 0, fullPath.c_str(), -1, nullptr, 0, nullptr, nullptr);
-                    std::string utf8(len - 1, '\0');
-                    WideCharToMultiByte(CP_UTF8, 0, fullPath.c_str(), -1, utf8.data(), len, nullptr, nullptr);
-                    paths.push_back(utf8);
+                        IWICStream* stream = nullptr;
+                        if (SUCCEEDED(factory->CreateStream(&stream)) &&
+                            SUCCEEDED(stream->InitializeFromFilename(fullPath.c_str(), GENERIC_WRITE))) {
+                          IWICBitmapEncoder* encoder = nullptr;
+                          if (SUCCEEDED(factory->CreateEncoder(GUID_ContainerFormatPng, nullptr, &encoder)) &&
+                              SUCCEEDED(encoder->Initialize(stream, WICBitmapEncoderNoCache))) {
+                            IWICBitmapFrameEncode* frame = nullptr;
+                            if (SUCCEEDED(encoder->CreateNewFrame(&frame, nullptr)) &&
+                                SUCCEEDED(frame->Initialize(nullptr)) &&
+                                SUCCEEDED(frame->WriteSource(wicBitmap, nullptr)) &&
+                                SUCCEEDED(frame->Commit()) &&
+                                SUCCEEDED(encoder->Commit())) {
+                              int len = WideCharToMultiByte(CP_UTF8, 0, fullPath.c_str(), -1, nullptr, 0, nullptr, nullptr);
+                              std::string utf8(len - 1, '\0');
+                              WideCharToMultiByte(CP_UTF8, 0, fullPath.c_str(), -1, utf8.data(), len, nullptr, nullptr);
+                              paths.push_back(utf8);
+                            }
+                            if (frame) frame->Release();
+                            if (encoder) encoder->Release();
+                          }
+                          if (stream) stream->Release();
+                        }
+                        if (wicBitmap) wicBitmap->Release();
+                      }
+                      if (factory) factory->Release();
+                    }
+                    DeleteObject(hbmp);
                   }
                   GlobalUnlock(hData);
                 }
