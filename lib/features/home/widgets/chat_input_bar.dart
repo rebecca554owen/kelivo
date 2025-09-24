@@ -4,6 +4,9 @@ import '../../../theme/design_tokens.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:flutter/services.dart';
+import '../../../shared/responsive/breakpoints.dart';
+import 'dart:async';
 
 import 'dart:io';
 import '../../../core/models/chat_input_data.dart';
@@ -92,6 +95,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
   bool _searchEnabled = false;
   final List<String> _images = <String>[]; // local file paths
   final List<DocumentAttachment> _docs = <DocumentAttachment>[]; // files to upload
+  final Map<LogicalKeyboardKey, Timer?> _repeatTimers = {};
+  static const Duration _repeatInitialDelay = Duration(milliseconds: 300);
+  static const Duration _repeatPeriod = Duration(milliseconds: 35);
 
   void _addImages(List<String> paths) {
     if (paths.isEmpty) return;
@@ -128,6 +134,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   @override
   void dispose() {
+    _repeatTimers.values.forEach((t) { try { t?.cancel(); } catch (_) {} });
+    _repeatTimers.clear();
     widget.mediaController?._unbind(this);
     if (widget.controller == null) {
       _controller.dispose();
@@ -174,6 +182,90 @@ class _ChatInputBarState extends State<ChatInputBar> {
         selection: TextSelection.collapsed(offset: start + 1),
         composing: TextRange.empty,
       );
+    }
+    setState(() {});
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, RawKeyEvent event) {
+    // Only enhance on tablet/desktop for hardware keyboards
+    final w = MediaQuery.sizeOf(node.context!).width;
+    final isIosTablet = Platform.isIOS && w >= AppBreakpoints.tablet;
+    if (!isIosTablet) return KeyEventResult.ignored;
+
+    bool isDown = event is RawKeyDownEvent;
+    final key = event.logicalKey;
+    final isArrow = key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight;
+    if (!isArrow) return KeyEventResult.ignored;
+
+    final keys = RawKeyboard.instance.keysPressed;
+    final shift = keys.contains(LogicalKeyboardKey.shiftLeft) || keys.contains(LogicalKeyboardKey.shiftRight);
+    final alt = keys.contains(LogicalKeyboardKey.altLeft) || keys.contains(LogicalKeyboardKey.altRight) ||
+        keys.contains(LogicalKeyboardKey.metaLeft) || keys.contains(LogicalKeyboardKey.metaRight) ||
+        keys.contains(LogicalKeyboardKey.controlLeft) || keys.contains(LogicalKeyboardKey.controlRight);
+
+    void moveOnce() {
+      if (key == LogicalKeyboardKey.arrowLeft) {
+        _moveCaret(-1, extend: shift, byWord: alt);
+      } else if (key == LogicalKeyboardKey.arrowRight) {
+        _moveCaret(1, extend: shift, byWord: alt);
+      }
+    }
+
+    if (isDown) {
+      // Initial move
+      moveOnce();
+      // Start repeat timer if not already
+      if (!_repeatTimers.containsKey(key)) {
+        Timer? periodic;
+        final starter = Timer(_repeatInitialDelay, () {
+          periodic = Timer.periodic(_repeatPeriod, (_) => moveOnce());
+          _repeatTimers[key] = periodic!;
+        });
+        // Store starter temporarily; replace when periodic begins
+        _repeatTimers[key] = starter;
+      }
+      return KeyEventResult.handled;
+    } else {
+      // Key up -> cancel repeat
+      final t = _repeatTimers.remove(key);
+      try { t?.cancel(); } catch (_) {}
+      return KeyEventResult.handled;
+    }
+  }
+
+  void _moveCaret(int dir, {bool extend = false, bool byWord = false}) {
+    final text = _controller.text;
+    if (text.isEmpty) return;
+    TextSelection sel = _controller.selection;
+    if (!sel.isValid) {
+      final off = dir < 0 ? text.length : 0;
+      _controller.selection = TextSelection.collapsed(offset: off);
+      return;
+    }
+
+    int nextOffset(int from, int direction) {
+      if (!byWord) return (from + direction).clamp(0, text.length);
+      // Move by simple word boundary: skip whitespace; then skip non-whitespace
+      int i = from;
+      if (direction < 0) {
+        // Move left
+        while (i > 0 && text[i - 1].trim().isEmpty) i--;
+        while (i > 0 && text[i - 1].trim().isNotEmpty) i--;
+      } else {
+        // Move right
+        while (i < text.length && text[i].trim().isEmpty) i++;
+        while (i < text.length && text[i].trim().isNotEmpty) i++;
+      }
+      return i.clamp(0, text.length);
+    }
+
+    if (extend) {
+      final newExtent = nextOffset(sel.extentOffset, dir);
+      _controller.selection = sel.copyWith(extentOffset: newExtent);
+    } else {
+      final base = dir < 0 ? sel.start : sel.end;
+      final collapsed = nextOffset(base, dir);
+      _controller.selection = TextSelection.collapsed(offset: collapsed);
     }
     setState(() {});
   }
@@ -317,7 +409,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   // Input field
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xxs, AppSpacing.md, AppSpacing.xs),
-                    child: TextField(
+                    child: Focus(
+                      onKey: (node, event) => _handleKeyEvent(node, event),
+                      child: TextField(
                       controller: _controller,
                       focusNode: widget.focusNode,
                       onChanged: (_) => setState(() {}),
@@ -360,6 +454,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       ),
                       cursorColor: theme.colorScheme.primary,
                     ),
+                  ),
                   ),
                   // Bottom buttons row (no divider)
                   Padding(
