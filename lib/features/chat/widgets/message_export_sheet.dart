@@ -153,6 +153,19 @@ Future<File?> _renderAndSaveMessageImage(BuildContext context, ChatMessage messa
   return _renderWidgetDirectly(context, content);
 }
 
+Rect _shareAnchorRect(BuildContext context) {
+  try {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box != null && box.hasSize && box.size.width > 0 && box.size.height > 0) {
+      final offset = box.localToGlobal(Offset.zero);
+      return offset & box.size;
+    }
+  } catch (_) {}
+  final size = MediaQuery.of(context).size;
+  final center = Offset(size.width / 2, size.height / 2);
+  return Rect.fromCenter(center: center, width: 1, height: 1);
+}
+
 Future<File?> _renderAndSaveChatImage(BuildContext context, Conversation conversation, List<ChatMessage> messages) async {
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
@@ -525,7 +538,11 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
       final filename = 'chat-export-${DateTime.now().millisecondsSinceEpoch}.md';
       final file = File('${tmp.path}/$filename');
       await file.writeAsString(buf.toString());
-      await Share.shareXFiles([XFile(file.path, mimeType: 'text/markdown', name: filename)], text: title);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/markdown', name: filename)],
+        text: title,
+        sharePositionOrigin: _shareAnchorRect(context),
+      );
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
@@ -542,7 +559,8 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
 
   Future<void> _onExportImage() async {
     if (_exporting) return;
-    
+    // Compute share anchor before closing sheet (iPad/macOS need it)
+    final anchor = _shareAnchorRect(context);
     // Dismiss dialog immediately
     if (mounted) Navigator.of(context).maybePop();
     
@@ -559,7 +577,10 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
       final file = await _renderAndSaveChatImage(context, widget.conversation, widget.messages);
       if (file == null) throw 'render error';
       final filename = file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : 'chat.png';
-      await Share.shareXFiles([XFile(file.path, mimeType: 'image/png', name: filename)]);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png', name: filename)],
+        sharePositionOrigin: anchor,
+      );
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
@@ -692,7 +713,11 @@ class _ExportSheetState extends State<_ExportSheet> {
       final file = File('${tmp.path}/$filename');
       await file.writeAsString(buf.toString());
 
-      await Share.shareXFiles([XFile(file.path, mimeType: 'text/markdown', name: filename)], text: title);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/markdown', name: filename)],
+        text: title,
+        sharePositionOrigin: _shareAnchorRect(context),
+      );
 
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;

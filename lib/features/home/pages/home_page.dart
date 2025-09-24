@@ -2391,8 +2391,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         await Scrollable.ensureVisible(
           tCtx,
           alignment: 0.1,
-          duration: Duration.zero,
-          curve: Curves.linear,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
         );
         _lastJumpUserMessageId = targetId; // allow chaining with prev-question
         return;
@@ -2407,7 +2407,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       await WidgetsBinding.instance.endOfFrame;
       final tCtxAfterCoarse = _messageKeys[targetId]?.currentContext;
       if (tCtxAfterCoarse != null) {
-        await Scrollable.ensureVisible(tCtxAfterCoarse, alignment: 0.1, duration: Duration.zero, curve: Curves.linear);
+        await Scrollable.ensureVisible(tCtxAfterCoarse, alignment: 0.1, duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic);
         _lastJumpUserMessageId = targetId;
         return;
       }
@@ -2436,15 +2436,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final dirDown = tIndex > anchor; // target below
 
       // Page in steps until the target builds, then ensureVisible
-      const int maxAttempts = 18;
+      const int maxAttempts = 40;
       for (int attempt = 0; attempt < maxAttempts; attempt++) {
         final ctx2 = _messageKeys[targetId]?.currentContext;
         if (ctx2 != null) {
           await Scrollable.ensureVisible(
             ctx2,
             alignment: 0.1,
-            duration: Duration.zero,
-            curve: Curves.linear,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOutCubic,
           );
           _lastJumpUserMessageId = targetId;
           return;
@@ -2518,8 +2518,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           await Scrollable.ensureVisible(
             tCtx,
             alignment: 0.08,
-            duration: Duration.zero,
-            curve: Curves.linear,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOutCubic,
           );
           _lastJumpUserMessageId = messages[target].id;
           return;
@@ -3957,7 +3957,110 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                     onMore: () async {
                                                       final action = await showMessageMoreSheet(context, message);
                                                       if (!mounted) return;
-                                                      if (action == 'select') {
+                                                      if (action == MessageMoreAction.delete) {
+                                                        final l10n = AppLocalizations.of(context)!;
+                                                        final confirm = await showDialog<bool>(
+                                                          context: context,
+                                                          builder: (ctx) => AlertDialog(
+                                                            title: Text(l10n.homePageDeleteMessage),
+                                                            content: Text(l10n.homePageDeleteMessageConfirm),
+                                                            actions: [
+                                                              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.homePageCancel)),
+                                                              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.homePageDelete, style: const TextStyle(color: Colors.red))),
+                                                            ],
+                                                          ),
+                                                        );
+                                                        if (confirm == true) {
+                                                          final id = message.id;
+                                                          setState(() {
+                                                            _messages.removeWhere((m) => m.id == id);
+                                                            _reasoning.remove(id);
+                                                            _translations.remove(id);
+                                                            _toolParts.remove(id);
+                                                            _reasoningSegments.remove(id);
+                                                          });
+                                                          await _chatService.deleteMessage(id);
+                                                        }
+                                                      } else if (action == MessageMoreAction.edit) {
+                                                        final edited = await Navigator.of(context).push<String>(
+                                                          MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
+                                                        );
+                                                        if (edited != null) {
+                                                          final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
+                                                          if (!mounted) return;
+                                                          setState(() {
+                                                            if (newMsg != null) {
+                                                              _messages.add(newMsg);
+                                                              final gid = (newMsg.groupId ?? newMsg.id);
+                                                              _versionSelections[gid] = newMsg.version;
+                                                            }
+                                                          });
+                                                          try {
+                                                            if (newMsg != null && _currentConversation != null) {
+                                                              final gid = (newMsg.groupId ?? newMsg.id);
+                                                              await _chatService.setSelectedVersion(_currentConversation!.id, gid, newMsg.version);
+                                                            }
+                                                          } catch (_) {}
+                                                        }
+                                                      } else if (action == MessageMoreAction.fork) {
+                                                        // Determine included groups up to the message's group (inclusive)
+                                                        final Map<String, int> groupFirstIndex = <String, int>{};
+                                                        final List<String> groupOrder = <String>[];
+                                                        for (int i = 0; i < _messages.length; i++) {
+                                                          final gid0 = (_messages[i].groupId ?? _messages[i].id);
+                                                          if (!groupFirstIndex.containsKey(gid0)) {
+                                                            groupFirstIndex[gid0] = i;
+                                                            groupOrder.add(gid0);
+                                                          }
+                                                        }
+                                                        final targetGroup = (message.groupId ?? message.id);
+                                                        final targetOrderIndex = groupOrder.indexOf(targetGroup);
+                                                        if (targetOrderIndex >= 0) {
+                                                          final includeGroups = groupOrder.take(targetOrderIndex + 1).toSet();
+                                                          final selected = [
+                                                            for (final m in _messages)
+                                                              if (includeGroups.contains(m.groupId ?? m.id)) m
+                                                          ];
+                                                          // Filter version selections to included groups
+                                                          final sel = <String, int>{};
+                                                          for (final gid in includeGroups) {
+                                                            final v = _versionSelections[gid];
+                                                            if (v != null) sel[gid] = v;
+                                                          }
+                                                          final newConvo = await _chatService.forkConversation(
+                                                            title: _titleForLocale(context),
+                                                            assistantId: _currentConversation?.assistantId,
+                                                            sourceMessages: selected,
+                                                            versionSelections: sel,
+                                                          );
+                                                          // Switch to the new conversation
+                                                          _chatService.setCurrentConversation(newConvo.id);
+                                                          final msgs = _chatService.getMessages(newConvo.id);
+                                                          if (!mounted) return;
+                                                          setState(() {
+                                                            _currentConversation = newConvo;
+                                                            _messages = List.of(msgs);
+                                                            _loadVersionSelections();
+                                                            _restoreMessageUiState();
+                                                          });
+                                                          _triggerConversationFade();
+                                                          _scrollToBottomSoon();
+                                                        }
+                                                      } else if (action == MessageMoreAction.share) {
+                                                        setState(() {
+                                                          _selecting = true;
+                                                          _selectedItems.clear();
+                                                          final idx = messages.indexWhere((m) => m.id == message.id);
+                                                          for (int i = 0; i <= idx && i < messages.length; i++) {
+                                                            final m = messages[i];
+                                                            final enabled0 = (m.role == 'user' || m.role == 'assistant');
+                                                            if (enabled0) _selectedItems.add(m.id);
+                                                          }
+                                                        });
+                                                      } else if (action == null) {
+                                                        // do nothing
+                                                      } else {
+                                                        // Select action (legacy string)
                                                         setState(() {
                                                           _selecting = true;
                                                           _selectedItems.add(message.id);
