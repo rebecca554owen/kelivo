@@ -187,15 +187,31 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, RawKeyEvent event) {
-    // Only enhance on tablet/desktop for hardware keyboards
+    // Enhance hardware keyboard behavior
     final w = MediaQuery.sizeOf(node.context!).width;
-    final isIosTablet = Platform.isIOS && w >= AppBreakpoints.tablet;
-    if (!isIosTablet) return KeyEventResult.ignored;
+    final isTabletOrDesktop = w >= AppBreakpoints.tablet;
+    final isIosTablet = Platform.isIOS && isTabletOrDesktop;
 
-    bool isDown = event is RawKeyDownEvent;
+    final isDown = event is RawKeyDownEvent;
     final key = event.logicalKey;
+    final isEnter = key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter;
     final isArrow = key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight;
-    if (!isArrow) return KeyEventResult.ignored;
+
+    // Enter handling on tablet/desktop: Enter=send, Shift+Enter=newline
+    if (isEnter && isTabletOrDesktop) {
+      if (!isDown) return KeyEventResult.handled; // ignore key up
+      final keys = RawKeyboard.instance.keysPressed;
+      final shift = keys.contains(LogicalKeyboardKey.shiftLeft) || keys.contains(LogicalKeyboardKey.shiftRight);
+      if (shift) {
+        _insertNewlineAtCursor();
+      } else {
+        _handleSend();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // Arrow repeat fix only needed on iOS tablets
+    if (!isIosTablet || !isArrow) return KeyEventResult.ignored;
 
     final keys = RawKeyboard.instance.keysPressed;
     final shift = keys.contains(LogicalKeyboardKey.shiftLeft) || keys.contains(LogicalKeyboardKey.shiftRight);
