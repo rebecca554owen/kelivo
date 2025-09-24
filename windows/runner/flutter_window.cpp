@@ -1,6 +1,12 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <fstream>
+#include <vector>
+#include <string>
+
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -26,6 +32,74 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  // Method channel for clipboard images
+  auto channel = std::make_shared<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(),
+      "app.clipboard",
+      &flutter::StandardMethodCodec::GetInstance());
+
+  channel->SetMethodCallHandler(
+      [this](const auto& call, auto result) {
+        if (call.method_name() == "getClipboardImages") {
+          std::vector<std::string> paths;
+          // Try to read CF_DIB/CF_DIBV5 from clipboard and save as BMP
+          if (OpenClipboard(nullptr)) {
+            UINT fmt = 0;
+            if (IsClipboardFormatAvailable(CF_DIB)) fmt = CF_DIB;
+            else if (IsClipboardFormatAvailable(CF_DIBV5)) fmt = CF_DIBV5;
+            if (fmt != 0) {
+              HANDLE hData = GetClipboardData(fmt);
+              if (hData) {
+                void* data = GlobalLock(hData);
+                if (data) {
+                  SIZE_T totalSize = GlobalSize(hData);
+                  // Build BMP file header
+                  BITMAPINFOHEADER* bih = reinterpret_cast<BITMAPINFOHEADER*>(data);
+                  DWORD colorTableSize = 0;
+                  if (bih->biBitCount <= 8) {
+                    colorTableSize = (1u << bih->biBitCount) * 4u;
+                  } else if (bih->biCompression == BI_BITFIELDS) {
+                    colorTableSize = 12u;
+                  }
+                  DWORD bfOffBits = sizeof(BITMAPFILEHEADER) + bih->biSize + colorTableSize;
+                  DWORD bfSize = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + totalSize);
+
+                  BITMAPFILEHEADER bfh{};
+                  bfh.bfType = 0x4D42; // 'BM'
+                  bfh.bfSize = bfSize;
+                  bfh.bfOffBits = bfOffBits;
+
+                  wchar_t tempPath[MAX_PATH];
+                  GetTempPathW(MAX_PATH, tempPath);
+                  wchar_t filename[MAX_PATH];
+                  swprintf_s(filename, L"pasted_%llu.bmp", static_cast<unsigned long long>(GetTickCount64()));
+                  std::wstring fullPath = std::wstring(tempPath) + filename;
+
+                  std::ofstream ofs(fullPath, std::ios::binary);
+                  if (ofs.good()) {
+                    ofs.write(reinterpret_cast<const char*>(&bfh), sizeof(BITMAPFILEHEADER));
+                    ofs.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(totalSize));
+                    ofs.close();
+                    // Convert to UTF-8
+                    int len = WideCharToMultiByte(CP_UTF8, 0, fullPath.c_str(), -1, nullptr, 0, nullptr, nullptr);
+                    std::string utf8(len - 1, '\0');
+                    WideCharToMultiByte(CP_UTF8, 0, fullPath.c_str(), -1, utf8.data(), len, nullptr, nullptr);
+                    paths.push_back(utf8);
+                  }
+                  GlobalUnlock(hData);
+                }
+              }
+            }
+            CloseClipboard();
+          }
+          flutter::EncodableList list;
+          for (auto& p : paths) list.emplace_back(p);
+          result->Success(list);
+        } else {
+          result->NotImplemented();
+        }
+      });
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();

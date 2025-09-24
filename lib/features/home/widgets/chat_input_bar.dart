@@ -10,6 +10,7 @@ import 'dart:async';
 
 import 'dart:io';
 import '../../../core/models/chat_input_data.dart';
+import '../../../utils/clipboard_images.dart';
 
 class ChatInputBarController {
   _ChatInputBarState? _state;
@@ -196,6 +197,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final key = event.logicalKey;
     final isEnter = key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter;
     final isArrow = key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight;
+    final isPasteV = key == LogicalKeyboardKey.keyV;
 
     // Enter handling on tablet/desktop: Enter=send, Shift+Enter=newline
     if (isEnter && isTabletOrDesktop) {
@@ -208,6 +210,17 @@ class _ChatInputBarState extends State<ChatInputBar> {
         _handleSend();
       }
       return KeyEventResult.handled;
+    }
+
+    // Paste handling for images on iOS/macOS (tablet/desktop)
+    if (isDown && isPasteV) {
+      final keys = RawKeyboard.instance.keysPressed;
+      final meta = keys.contains(LogicalKeyboardKey.metaLeft) || keys.contains(LogicalKeyboardKey.metaRight);
+      final ctrl = keys.contains(LogicalKeyboardKey.controlLeft) || keys.contains(LogicalKeyboardKey.controlRight);
+      if (meta || ctrl) {
+        _handlePasteFromClipboard();
+        return KeyEventResult.handled;
+      }
     }
 
     // Arrow repeat fix only needed on iOS tablets
@@ -247,6 +260,37 @@ class _ChatInputBarState extends State<ChatInputBar> {
       try { t?.cancel(); } catch (_) {}
       return KeyEventResult.handled;
     }
+  }
+
+  Future<void> _handlePasteFromClipboard() async {
+    // Try image first via platform channel
+    final paths = await ClipboardImages.getImagePaths();
+    if (paths.isNotEmpty) {
+      _addImages(paths);
+      return;
+    }
+    // Fallback: paste text
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text ?? '';
+      if (text.isEmpty) return;
+      final value = _controller.value;
+      final sel = value.selection;
+      if (!sel.isValid) {
+        _controller.text = value.text + text;
+        _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+      } else {
+        final start = sel.start;
+        final end = sel.end;
+        final newText = value.text.replaceRange(start, end, text);
+        _controller.value = value.copyWith(
+          text: newText,
+          selection: TextSelection.collapsed(offset: start + text.length),
+          composing: TextRange.empty,
+        );
+      }
+      setState(() {});
+    } catch (_) {}
   }
 
   void _moveCaret(int dir, {bool extend = false, bool byWord = false}) {

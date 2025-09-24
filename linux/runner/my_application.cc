@@ -60,6 +60,37 @@ static void my_application_activate(GApplication* application) {
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
+
+  // Method channel for clipboard images
+  FlEngine* engine = fl_view_get_engine(view);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  g_autoptr(FlMethodChannel) channel = fl_method_channel_new(fl_engine_get_binary_messenger(engine),
+                                                             "app.clipboard", FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(channel, [](FlMethodChannel* channel, FlMethodCall* method_call, gpointer user_data) {
+    const gchar* name = fl_method_call_get_name(method_call);
+    if (g_strcmp0(name, "getClipboardImages") == 0) {
+      FlValue* list = fl_value_new_list();
+      GtkClipboard* cb = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+      GdkPixbuf* pixbuf = gtk_clipboard_wait_for_image(cb);
+      if (pixbuf != nullptr) {
+        const char* tmp = g_get_tmp_dir();
+        gchar* filename = g_strdup_printf("%s/pasted_%ld.png", tmp, time(nullptr));
+        GError* err = nullptr;
+        gdk_pixbuf_save(pixbuf, filename, "png", &err, NULL);
+        if (err == nullptr) {
+          fl_value_append_take(list, fl_value_new_string(filename));
+        }
+        g_clear_error(&err);
+        g_free(filename);
+        g_object_unref(pixbuf);
+      }
+      g_autoptr(FlMethodResponse) response = FL_METHOD_RESPONSE(fl_method_success_response_new(list));
+      fl_method_call_respond(method_call, response, nullptr);
+    } else {
+      g_autoptr(FlMethodResponse) response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+      fl_method_call_respond(method_call, response, nullptr);
+    }
+  }, nullptr, nullptr);
 }
 
 // Implements GApplication::local_command_line.
