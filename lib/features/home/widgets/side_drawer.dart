@@ -26,6 +26,7 @@ import '../../../shared/widgets/snackbar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
+import 'dart:ui' as ui;
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -36,6 +37,8 @@ class SideDrawer extends StatefulWidget {
     this.onNewConversation,
     this.closePickerTicker,
     this.loadingConversationIds = const <String>{},
+    this.embedded = false,
+    this.embeddedWidth,
   });
 
   final String userName;
@@ -44,6 +47,8 @@ class SideDrawer extends StatefulWidget {
   final VoidCallback? onNewConversation;
   final ValueNotifier<int>? closePickerTicker;
   final Set<String> loadingConversationIds;
+  final bool embedded; // when true, render as a fixed side panel instead of a Drawer
+  final double? embeddedWidth; // optional explicit width for embedded mode
 
   @override
   State<SideDrawer> createState() => _SideDrawerState();
@@ -498,14 +503,9 @@ class _SideDrawerState extends State<SideDrawer> {
       );
     }
 
-    return Drawer(
-      backgroundColor: cs.surface,
-      width: MediaQuery.of(context).size.width,
-      // shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      // elevation: 0, // 可选：去阴影更像全屏层
-      child: SafeArea(
-        child: Stack(
-          children: [
+    final inner = SafeArea(
+      child: Stack(
+        children: [
             // Main column content
             Column(
               children: [
@@ -576,7 +576,7 @@ class _SideDrawerState extends State<SideDrawer> {
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Material(
                       key: _assistantTileKey,
-                      color: cs.surface,
+                      color: widget.embedded ? Colors.transparent : cs.surface,
                       borderRadius: BorderRadius.circular(16),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
@@ -790,7 +790,7 @@ class _SideDrawerState extends State<SideDrawer> {
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               decoration: BoxDecoration(
-                color: cs.surface,
+                color: widget.embedded ? Colors.transparent : cs.surface,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -858,31 +858,52 @@ class _SideDrawerState extends State<SideDrawer> {
             ),
 
             // iOS-style blur/fade effect above user area
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 62, // Approximate height of user area
-              child: IgnorePointer(
-                child: Container(
-                  height: 20,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        cs.surface.withOpacity(0.0),
-                        cs.surface.withOpacity(0.8),
-                        cs.surface.withOpacity(1.0),
-                      ],
-                      stops: const [0.0, 0.6, 1.0],
+            if (!widget.embedded)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 62, // Approximate height of user area
+                child: IgnorePointer(
+                  child: Container(
+                    height: 20,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          cs.surface.withOpacity(0.0),
+                          cs.surface.withOpacity(0.8),
+                          cs.surface.withOpacity(1.0),
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
-      ),
+      );
+
+    if (widget.embedded) {
+      return ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Material(
+            color: cs.surface.withOpacity(0.60),
+            child: SizedBox(
+              width: widget.embeddedWidth ?? 300,
+              child: inner,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Drawer(
+      backgroundColor: cs.surface,
+      width: MediaQuery.of(context).size.width,
+      child: inner,
     );
   }
 
@@ -1684,10 +1705,18 @@ class _ChatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final embedded = context.findAncestorWidgetOfExactType<SideDrawer>()?.embedded ?? false;
+    final Color tileColor;
+    if (embedded) {
+      // In tablet embedded mode, keep selected highlight, others transparent
+      tileColor = selected ? cs.primary.withOpacity(0.16) : Colors.transparent;
+    } else {
+      tileColor = selected ? cs.primary.withOpacity(0.12) : cs.surface;
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: selected ? cs.primary.withOpacity(0.12) : cs.surface,
+        color: tileColor,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),

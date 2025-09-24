@@ -3,6 +3,7 @@ import '../../../l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
+import '../../../shared/responsive/breakpoints.dart';
 
 import '../widgets/chat_input_bar.dart';
 import '../../../core/models/chat_input_data.dart';
@@ -95,6 +96,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   bool _showJumpToBottom = false;
   bool _isUserScrolling = false;
   Timer? _userScrollTimer;
+  // Tablet: whether the left embedded sidebar is visible
+  bool _tabletSidebarOpen = true;
+  bool _learningModeEnabled = false;
+  static const Duration _sidebarAnimDuration = Duration(milliseconds: 260);
+  static const Curve _sidebarAnimCurve = Curves.easeOutCubic;
 
   // Drawer haptics for swipe-open
   DrawerState? _lastDrawerState;
@@ -119,9 +125,125 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _blockDrawerSwipeForHorizontalScroll = false;
     });
   }
+
+  Widget _buildAssistantBackground(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final assistant = context.watch<AssistantProvider>().currentAssistant;
+    final bgRaw = (assistant?.background ?? '').trim();
+    Widget? bg;
+    if (bgRaw.isNotEmpty) {
+      if (bgRaw.startsWith('http')) {
+        bg = Image.network(bgRaw, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink());
+      } else {
+        try {
+          final fixed = SandboxPathResolver.fix(bgRaw);
+          final f = File(fixed);
+          if (f.existsSync()) {
+            bg = Image(image: FileImage(f), fit: BoxFit.cover);
+          }
+        } catch (_) {}
+      }
+    }
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Base fill to avoid black background when no assistant background set
+          ColoredBox(color: cs.background),
+          if (bg != null) Opacity(opacity: 0.9, child: bg),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  cs.background.withOpacity(0.08),
+                  cs.background.withOpacity(0.36),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   void _deactivateHorizontalScrollGuard() {
     _blockDrawerSwipeResetTimer?.cancel();
     _blockDrawerSwipeForHorizontalScroll = false;
+  }
+
+  Future<void> _showLearningPromptSheet() async {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final prompt = await LearningModeStore.getPrompt();
+    final controller = TextEditingController(text: prompt);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(l10n.bottomToolsSheetPrompt, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  maxLines: 10,
+                  decoration: InputDecoration(
+                    hintText: l10n.bottomToolsSheetPromptHint,
+                    filled: true,
+                    fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.5))),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () async {
+                        await LearningModeStore.resetPrompt();
+                        controller.text = await LearningModeStore.getPrompt();
+                      },
+                      child: Text(l10n.bottomToolsSheetResetDefault),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () async {
+                        await LearningModeStore.setPrompt(controller.text.trim());
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                      },
+                      child: Text(l10n.bottomToolsSheetSave),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Anchor for chained "jump to previous question" navigation
@@ -499,6 +621,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _initChat();
     _scrollController.addListener(_onScrollControllerChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputBar());
+    // Load learning mode for button highlight
+    Future.microtask(() async {
+      final v = await LearningModeStore.isEnabled();
+      if (mounted) setState(() => _learningModeEnabled = v);
+    });
 
     // Attach MCP provider listener to auto-join new connected servers
     try {
@@ -533,6 +660,71 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _drawerStateNotifier = notifier;
       _drawerStateNotifier!.addListener(_onDrawerStateChanged);
     }
+  }
+
+  // Toggle tablet sidebar (embedded mode); keep icon and haptics same style as mobile
+  void _toggleTabletSidebar() {
+    _dismissKeyboard();
+    try {
+      if (context.read<SettingsProvider>().hapticsOnDrawer) {
+        HapticFeedback.mediumImpact();
+      }
+    } catch (_) {}
+    setState(() {
+      _tabletSidebarOpen = !_tabletSidebarOpen;
+    });
+  }
+
+  Widget _buildTabletSidebar(BuildContext context) {
+    final sidebar = SideDrawer(
+      embedded: true,
+      embeddedWidth: 300,
+      userName: context.watch<UserProvider>().name,
+      assistantName: (() {
+        final l10n = AppLocalizations.of(context)!;
+        final a = context.watch<AssistantProvider>().currentAssistant;
+        final n = a?.name.trim();
+        return (n == null || n.isEmpty) ? l10n.homePageDefaultAssistant : n;
+      })(),
+      closePickerTicker: _assistantPickerCloseTick,
+      loadingConversationIds: _loadingConversationIds,
+      onSelectConversation: (id) {
+        _chatService.setCurrentConversation(id);
+        final convo = _chatService.getConversation(id);
+        if (convo != null) {
+          final msgs = _chatService.getMessages(id);
+          setState(() {
+            _currentConversation = convo;
+            _messages = List.of(msgs);
+            _loadVersionSelections();
+            _restoreMessageUiState();
+          });
+          _forceScrollToBottomSoon();
+        }
+      },
+      onNewConversation: () async {
+        await _createNewConversation();
+        if (mounted) {
+          _forceScrollToBottomSoon();
+        }
+      },
+    );
+
+    final cs = Theme.of(context).colorScheme;
+    return AnimatedContainer(
+      duration: _sidebarAnimDuration,
+      curve: _sidebarAnimCurve,
+      width: _tabletSidebarOpen ? 300 : 0,
+      color: Colors.transparent,
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.centerLeft,
+          minWidth: 0,
+          maxWidth: 300,
+          child: SizedBox(width: 300, child: sidebar),
+        ),
+      ),
+    );
   }
 
   void _onDrawerStateChanged() {
@@ -2442,6 +2634,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    // Tablet and larger: fixed side panel + constrained content
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= AppBreakpoints.tablet) {
+      final title = ((_currentConversation?.title ?? '').trim().isNotEmpty)
+          ? _currentConversation!.title
+          : _titleForLocale(context);
+      final cs = Theme.of(context).colorScheme;
+      final settings = context.watch<SettingsProvider>();
+      final assistant = context.watch<AssistantProvider>().currentAssistant;
+      final providerKey = assistant?.chatModelProvider ?? settings.currentModelProvider;
+      final modelId = assistant?.chatModelId ?? settings.currentModelId;
+      String? providerName;
+      String? modelDisplay;
+      if (providerKey != null && modelId != null) {
+        final cfg = settings.getProviderConfig(providerKey);
+        providerName = cfg.name.isNotEmpty ? cfg.name : providerKey;
+        final ov = cfg.modelOverrides[modelId] as Map?;
+        modelDisplay = (ov != null && (ov['name'] as String?)?.isNotEmpty == true) ? (ov['name'] as String) : modelId;
+      }
+      return _buildTabletLayout(context, title: title, providerName: providerName, modelDisplay: modelDisplay, cs: cs);
+    }
+
     final title = ((_currentConversation?.title ?? '').trim().isNotEmpty)
         ? _currentConversation!.title
         : _titleForLocale(context);
@@ -3422,6 +3636,669 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       ),
       )
       ));
+  }
+
+  Widget _buildTabletLayout(
+    BuildContext context, {
+    required String title,
+    required String? providerName,
+    required String? modelDisplay,
+    required ColorScheme cs,
+  }) {
+    return Stack(
+      children: [
+        Positioned.fill(child: _buildAssistantBackground(context)),
+        SizedBox.expand(
+      child: Row(
+      children: [
+        _buildTabletSidebar(context),
+        AnimatedContainer(
+          duration: _sidebarAnimDuration,
+          curve: _sidebarAnimCurve,
+          width: _tabletSidebarOpen ? 0.6 : 0,
+          child: const VerticalDivider(width: 0.6, thickness: 0.5),
+        ),
+        Expanded(
+          child: Scaffold(
+            key: _scaffoldKey,
+            resizeToAvoidBottomInset: true,
+            extendBodyBehindAppBar: true,
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              systemOverlayStyle: (Theme.of(context).brightness == Brightness.dark)
+                  ? const SystemUiOverlayStyle(
+                      statusBarColor: Colors.transparent,
+                      statusBarIconBrightness: Brightness.light,
+                      statusBarBrightness: Brightness.dark,
+                    )
+                  : const SystemUiOverlayStyle(
+                      statusBarColor: Colors.transparent,
+                      statusBarIconBrightness: Brightness.dark,
+                      statusBarBrightness: Brightness.light,
+                    ),
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leading: IconButton(
+                onPressed: _toggleTabletSidebar,
+                icon: SvgPicture.asset(
+                  'assets/icons/list.svg',
+                  width: 14,
+                  height: 14,
+                  colorFilter: ColorFilter.mode(
+                    Theme.of(context).iconTheme.color ?? Theme.of(context).colorScheme.onSurface,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+              titleSpacing: 2,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedTextSwap(
+                    text: title,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  if (providerName != null && modelDisplay != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(6),
+                        onTap: () => showModelSelectSheet(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 0),
+                          child: AnimatedTextSwap(
+                            text: '$modelDisplay ($providerName)',
+                            style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () async {
+                    await _createNewConversation();
+                    if (mounted) _forceScrollToBottomSoon();
+                  },
+                  icon: const Icon(Lucide.MessageCirclePlus, size: 22),
+                ),
+                const SizedBox(width: 6),
+              ],
+            ),
+            body: Stack(
+              children: [
+
+                Padding(
+                  padding: EdgeInsets.only(top: kToolbarHeight + MediaQuery.of(context).padding.top),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 860),
+                      child: Column(
+                        children: [
+                          // Message list (copied from mobile branch)
+                          Expanded(
+                            child: FadeTransition(
+                              opacity: _convoFade,
+                              child: KeyedSubtree(
+                                key: ValueKey<String>(_currentConversation?.id ?? 'none'),
+                                child: (() {
+                                  final messages = _collapseVersions(_messages);
+                                  final Map<String, List<ChatMessage>> byGroup = <String, List<ChatMessage>>{};
+                                  for (final m in _messages) {
+                                    final gid = (m.groupId ?? m.id);
+                                    byGroup.putIfAbsent(gid, () => <ChatMessage>[]).add(m);
+                                  }
+                                  return ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.only(bottom: 16, top: 8),
+                                    itemCount: messages.length,
+                                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                    itemBuilder: (context, index) {
+                                      if (index < 0 || index >= messages.length) return const SizedBox.shrink();
+                                      final message = messages[index];
+                                      final r = _reasoning[message.id];
+                                      final t = _translations[message.id];
+                                      final chatScale = context.watch<SettingsProvider>().chatFontScale;
+                                      final assistant = context.watch<AssistantProvider>().currentAssistant;
+                                      final useAssist = assistant?.useAssistantAvatar == true;
+                                      final trunc = _currentConversation?.truncateIndex ?? -1;
+                                      final l10n = AppLocalizations.of(context)!;
+                                      final showDivider = trunc > 0 && index == trunc - 1;
+                                      final cs = Theme.of(context).colorScheme;
+                                      final label = l10n.homePageClearContext;
+                                      final divider = Row(
+                                        children: [
+                                          Expanded(child: Divider(color: cs.outlineVariant.withOpacity(0.6), height: 1, thickness: 1)),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                                            child: Text(label, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
+                                          ),
+                                          Expanded(child: Divider(color: cs.outlineVariant.withOpacity(0.6), height: 1, thickness: 1)),
+                                        ],
+                                      );
+                                      final gid = (message.groupId ?? message.id);
+                                      final vers = (byGroup[gid] ?? const <ChatMessage>[]).toList()..sort((a,b)=>a.version.compareTo(b.version));
+                                      final selectedIdx = _versionSelections[gid] ?? (vers.isNotEmpty ? vers.length - 1 : 0);
+                                      final total = vers.length;
+                                      final showMsgNav = context.watch<SettingsProvider>().showMessageNavButtons;
+                                      final effectiveTotal = showMsgNav ? total : 1;
+                                      final effectiveIndex = showMsgNav ? selectedIdx : 0;
+
+                                      return Column(
+                                        key: _keyForMessage(message.id),
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              if (_selecting && (message.role == 'user' || message.role == 'assistant'))
+                                                Padding(
+                                                  padding: const EdgeInsets.only(left: 10, right: 6),
+                                                  child: Checkbox(
+                                                    value: _selectedItems.contains(message.id),
+                                                    onChanged: (v) {
+                                                      setState(() {
+                                                        if (v == true) {
+                                                          _selectedItems.add(message.id);
+                                                        } else {
+                                                          _selectedItems.remove(message.id);
+                                                        }
+                                                      });
+                                                    },
+                                                  ),
+                                                ),
+                                              Expanded(
+                                                child: MediaQuery(
+                                                  data: MediaQuery.of(context).copyWith(
+                                                    textScaleFactor: MediaQuery.of(context).textScaleFactor * chatScale,
+                                                  ),
+                                                  child: ChatMessageWidget(
+                                                    message: message,
+                                                    versionIndex: effectiveIndex,
+                                                    versionCount: effectiveTotal,
+                                                    onPrevVersion: (showMsgNav && selectedIdx > 0)
+                                                        ? () async {
+                                                            final next = selectedIdx - 1;
+                                                            _versionSelections[gid] = next;
+                                                            await _chatService.setSelectedVersion(_currentConversation!.id, gid, next);
+                                                            if (mounted) setState(() {});
+                                                          }
+                                                        : null,
+                                                    onNextVersion: (showMsgNav && selectedIdx < total - 1)
+                                                        ? () async {
+                                                            final next = selectedIdx + 1;
+                                                            _versionSelections[gid] = next;
+                                                            await _chatService.setSelectedVersion(_currentConversation!.id, gid, next);
+                                                            if (mounted) setState(() {});
+                                                          }
+                                                        : null,
+                                                    modelIcon: (!useAssist && message.role == 'assistant' && message.providerId != null && message.modelId != null)
+                                                        ? _CurrentModelIcon(providerKey: message.providerId, modelId: message.modelId, size: 30)
+                                                        : null,
+                                                    showModelIcon: useAssist ? false : context.watch<SettingsProvider>().showModelIcon,
+                                                    useAssistantAvatar: useAssist && message.role == 'assistant',
+                                                    assistantName: useAssist ? (assistant?.name ?? 'Assistant') : null,
+                                                    assistantAvatar: useAssist ? (assistant?.avatar ?? '') : null,
+                                                    showUserAvatar: context.watch<SettingsProvider>().showUserAvatar,
+                                                    showTokenStats: context.watch<SettingsProvider>().showTokenStats,
+                                                    reasoningText: (message.role == 'assistant') ? (r?.text ?? '') : null,
+                                                    reasoningExpanded: (message.role == 'assistant') ? (r?.expanded ?? false) : false,
+                                                    reasoningLoading: (message.role == 'assistant') ? (r?.finishedAt == null && (r?.text.isNotEmpty == true)) : false,
+                                                    reasoningStartAt: (message.role == 'assistant') ? r?.startAt : null,
+                                                    reasoningFinishedAt: (message.role == 'assistant') ? r?.finishedAt : null,
+                                                    onToggleReasoning: (message.role == 'assistant' && r != null)
+                                                        ? () {
+                                                            setState(() {
+                                                              r.expanded = !r.expanded;
+                                                            });
+                                                          }
+                                                        : null,
+                                                    translationExpanded: t?.expanded ?? true,
+                                                    onToggleTranslation: (message.translation != null && message.translation!.isNotEmpty && t != null)
+                                                        ? () {
+                                                            setState(() {
+                                                              t.expanded = !t.expanded;
+                                                            });
+                                                          }
+                                                        : null,
+                                                    onRegenerate: message.role == 'assistant' ? () { _regenerateAtMessage(message); } : null,
+                                                    onResend: message.role == 'user' ? () { _regenerateAtMessage(message); } : null,
+                                                    onTranslate: message.role == 'assistant' ? () { _translateMessage(message); } : null,
+                                                    onSpeak: message.role == 'assistant'
+                                                        ? () async {
+                                                            final tts = context.read<TtsProvider>();
+                                                            if (!tts.isSpeaking) {
+                                                              await tts.speak(message.content);
+                                                            } else {
+                                                              await tts.stop();
+                                                            }
+                                                          }
+                                                        : null,
+                                                    onEdit: message.role == 'user'
+                                                        ? () async {
+                                                            final edited = await Navigator.of(context).push<String>(
+                                                              MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
+                                                            );
+                                                            if (edited != null) {
+                                                              final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
+                                                              if (!mounted) return;
+                                                              setState(() {
+                                                                if (newMsg != null) {
+                                                                  _messages.add(newMsg);
+                                                                  final gid2 = (newMsg.groupId ?? newMsg.id);
+                                                                  _versionSelections[gid2] = newMsg.version;
+                                                                }
+                                                              });
+                                                              try {
+                                                                if (newMsg != null && _currentConversation != null) {
+                                                                  final gid2 = (newMsg.groupId ?? newMsg.id);
+                                                                  await _chatService.setSelectedVersion(_currentConversation!.id, gid2, newMsg.version);
+                                                                }
+                                                              } catch (_) {}
+                                                            }
+                                                          }
+                                                        : null,
+                                                    onDelete: message.role == 'user'
+                                                        ? () async {
+                                                            final l10n = AppLocalizations.of(context)!;
+                                                            final confirm = await showDialog<bool>(
+                                                              context: context,
+                                                              builder: (ctx) => AlertDialog(
+                                                                title: Text(l10n.homePageDeleteMessage),
+                                                                content: Text(l10n.homePageDeleteMessageConfirm),
+                                                                actions: [
+                                                                  TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.homePageCancel)),
+                                                                  TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.homePageDelete, style: const TextStyle(color: Colors.red))),
+                                                                ],
+                                                              ),
+                                                            );
+                                                            if (confirm == true) {
+                                                              final id = message.id;
+                                                              setState(() {
+                                                                _messages.removeWhere((m) => m.id == id);
+                                                                _reasoning.remove(id);
+                                                                _translations.remove(id);
+                                                                _toolParts.remove(id);
+                                                                _reasoningSegments.remove(id);
+                                                              });
+                                                              await _chatService.deleteMessage(id);
+                                                            }
+                                                          }
+                                                        : null,
+                                                    onMore: () async {
+                                                      final action = await showMessageMoreSheet(context, message);
+                                                      if (!mounted) return;
+                                                      if (action == 'select') {
+                                                        setState(() {
+                                                          _selecting = true;
+                                                          _selectedItems.add(message.id);
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (showDivider)
+                                            Padding(padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12), child: divider),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                })(),
+                              ),
+                            ),
+                          ),
+
+                          // Input bar with max width
+                          NotificationListener<SizeChangedLayoutNotification>(
+                            onNotification: (n) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputBar());
+                              return false;
+                            },
+                            child: SizeChangedLayoutNotifier(
+                              child: Builder(
+                                builder: (context) {
+                                  final settings = context.watch<SettingsProvider>();
+                                  final ap = context.watch<AssistantProvider>();
+                                  final a = ap.currentAssistant;
+                                  final pk = a?.chatModelProvider ?? settings.currentModelProvider;
+                                  final mid = a?.chatModelId ?? settings.currentModelId;
+                                  if (pk != null && mid != null) {
+                                    final supportsTools = _isToolModel(pk, mid);
+                                    if (!supportsTools && (a?.mcpServerIds.isNotEmpty ?? false)) {
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        final aa = ap.currentAssistant;
+                                        if (aa != null && aa.mcpServerIds.isNotEmpty) {
+                                          ap.updateAssistant(aa.copyWith(mcpServerIds: const <String>[]));
+                                        }
+                                      });
+                                    }
+                                    final supportsReasoning = _isReasoningModel(pk, mid);
+                                    if (!supportsReasoning && a != null) {
+                                      final enabledNow = _isReasoningEnabled(a.thinkingBudget ?? settings.thinkingBudget);
+                                      if (enabledNow) {
+                                        WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                          final aa = ap.currentAssistant;
+                                          if (aa != null) {
+                                            await ap.updateAssistant(aa.copyWith(thinkingBudget: 0));
+                                          }
+                                        });
+                                      }
+                                    }
+                                  }
+                                  final currentProvider = a?.chatModelProvider ?? settings.currentModelProvider;
+                                  final currentModelId = a?.chatModelId ?? settings.currentModelId;
+                                  final cfg = (currentProvider != null) ? settings.getProviderConfig(currentProvider) : null;
+                                  bool builtinSearchActive = false;
+                                  if (cfg != null && currentModelId != null) {
+                                    final mid2 = currentModelId;
+                                    final isGeminiOfficial = cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
+                                    final isClaude = cfg.providerType == ProviderKind.claude;
+                                    final isOpenAIResponses = cfg.providerType == ProviderKind.openai && (cfg.useResponseApi == true);
+                                    if (isGeminiOfficial || isClaude || isOpenAIResponses) {
+                                      final ov = cfg.modelOverrides[mid2] as Map?;
+                                      final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
+                                      builtinSearchActive = list.map((e) => e.toString().toLowerCase()).contains('search');
+                                    }
+                                  }
+
+                                  Widget input = ChatInputBar(
+                                    key: _inputBarKey,
+                                    onMore: _toggleTools,
+                                    searchEnabled: context.watch<SettingsProvider>().searchEnabled || builtinSearchActive,
+                                    onToggleSearch: (enabled) {
+                                      context.read<SettingsProvider>().setSearchEnabled(enabled);
+                                    },
+                                    onSelectModel: () => showModelSelectSheet(context),
+                                    onOpenMcp: () {
+                                      final a = context.read<AssistantProvider>().currentAssistant;
+                                      if (a != null) {
+                                        showAssistantMcpSheet(context, assistantId: a.id);
+                                      }
+                                    },
+                                    showMiniMapButton: true,
+                                    onOpenMiniMap: () async {
+                                      final collapsed = _collapseVersions(_messages);
+                                      final selectedId = await showMiniMapSheet(context, collapsed);
+                                      if (selectedId != null) {
+                                        final idx = collapsed.indexWhere((m) => m.id == selectedId);
+                                        if (idx != -1) {
+                                          final key = _keyForMessage(selectedId);
+                                          final ctx = key.currentContext;
+                                          if (ctx != null) {
+                                            Scrollable.ensureVisible(
+                                              ctx,
+                                              duration: const Duration(milliseconds: 220),
+                                              curve: Curves.easeOutCubic,
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                                    onPickCamera: _onPickCamera,
+                                    onPickPhotos: _onPickPhotos,
+                                    onUploadFiles: _onPickFiles,
+                                    onToggleLearningMode: () async {
+                                      final enabled = await LearningModeStore.isEnabled();
+                                      await LearningModeStore.setEnabled(!enabled);
+                                      if (mounted) setState(() => _learningModeEnabled = !enabled);
+                                    },
+                                    onLongPressLearning: _showLearningPromptSheet,
+                                    learningModeActive: _learningModeEnabled,
+                                    showMoreButton: false,
+                                    onClearContext: _onClearContext,
+                                    onStop: _cancelStreaming,
+                                    modelIcon: (settings.showModelIcon && ((a?.chatModelProvider ?? settings.currentModelProvider) != null) && ((a?.chatModelId ?? settings.currentModelId) != null))
+                                        ? _CurrentModelIcon(
+                                            providerKey: a?.chatModelProvider ?? settings.currentModelProvider,
+                                            modelId: a?.chatModelId ?? settings.currentModelId,
+                                            size: 40,
+                                            withBackground: true,
+                                            backgroundColor: Colors.transparent,
+                                          )
+                                        : null,
+                                    focusNode: _inputFocus,
+                                    controller: _inputController,
+                                    mediaController: _mediaController,
+                                    onConfigureReasoning: () async {
+                                      final assistant = context.read<AssistantProvider>().currentAssistant;
+                                      if (assistant != null) {
+                                        if (assistant.thinkingBudget != null) {
+                                          context.read<SettingsProvider>().setThinkingBudget(assistant.thinkingBudget);
+                                        }
+                                        await showReasoningBudgetSheet(context);
+                                        final chosen = context.read<SettingsProvider>().thinkingBudget;
+                                        await context.read<AssistantProvider>().updateAssistant(
+                                          assistant.copyWith(thinkingBudget: chosen),
+                                        );
+                                      }
+                                    },
+                                    reasoningActive: _isReasoningEnabled((context.watch<AssistantProvider>().currentAssistant?.thinkingBudget) ?? settings.thinkingBudget),
+                                    supportsReasoning: (pk != null && mid != null) ? _isReasoningModel(pk, mid) : false,
+                                    onOpenSearch: () => showSearchSettingsSheet(context),
+                                    onSend: (text) {
+                                      _sendMessage(text);
+                                      _inputController.clear();
+                                      _dismissKeyboard();
+                                    },
+                                    loading: _isCurrentConversationLoading,
+                                    showMcpButton: (() {
+                                      final pk2 = a?.chatModelProvider ?? settings.currentModelProvider;
+                                      final mid3 = a?.chatModelId ?? settings.currentModelId;
+                                      if (pk2 == null || mid3 == null) return false;
+                                      return _isToolModel(pk2, mid3) && context.watch<McpProvider>().servers.isNotEmpty;
+                                    })(),
+                                    mcpActive: (() {
+                                      final a = context.watch<AssistantProvider>().currentAssistant;
+                                      final connected = context.watch<McpProvider>().connectedServers;
+                                      final selected = a?.mcpServerIds ?? const <String>[];
+                                      if (selected.isEmpty || connected.isEmpty) return false;
+                                      return connected.any((s) => selected.contains(s.id));
+                                    })(),
+                                  );
+
+                                  input = Center(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 800),
+                                      child: input,
+                                    ),
+                                  );
+                                  return input;
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Selection toolbar overlay
+                if (_selecting)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 72),
+                        child: _SelectionToolbar(
+                          onCancel: () {
+                            setState(() {
+                              _selecting = false;
+                              _selectedItems.clear();
+                            });
+                          },
+                          onConfirm: () async {
+                            final convo = _currentConversation;
+                            if (convo == null) return;
+                            final collapsed = _collapseVersions(_messages);
+                            final selected = <ChatMessage>[];
+                            for (final m in collapsed) {
+                              if (_selectedItems.contains(m.id)) selected.add(m);
+                            }
+                            if (selected.isEmpty) {
+                              final l10n = AppLocalizations.of(context)!;
+                              showAppSnackBar(
+                                context,
+                                message: l10n.homePageSelectMessagesToShare,
+                                type: NotificationType.info,
+                              );
+                              return;
+                            }
+                            setState(() { _selecting = false; });
+                            await showChatExportSheet(context, conversation: convo, selectedMessages: selected);
+                            if (mounted) setState(() { _selectedItems.clear(); });
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Scroll-to-bottom button
+                Builder(builder: (context) {
+                  final showSetting = context.watch<SettingsProvider>().showMessageNavButtons;
+                  if (!showSetting || _messages.isEmpty) return const SizedBox.shrink();
+                  final cs = Theme.of(context).colorScheme;
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final bottomOffset = _inputBarHeight + 12;
+                  return Align(
+                    alignment: Alignment.bottomRight,
+                    child: SafeArea(
+                      top: false,
+                      bottom: false,
+                      child: IgnorePointer(
+                        ignoring: !_showJumpToBottom,
+                        child: AnimatedScale(
+                          scale: _showJumpToBottom ? 1.0 : 0.9,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            opacity: _showJumpToBottom ? 1 : 0,
+                            child: Padding(
+                              padding: EdgeInsets.only(right: 16, bottom: bottomOffset),
+                              child: ClipOval(
+                                child: BackdropFilter(
+                                  filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? Colors.white.withOpacity(0.06)
+                                          : Colors.white.withOpacity(0.07),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isDark
+                                            ? Colors.white.withOpacity(0.10)
+                                            : Theme.of(context).colorScheme.outline.withOpacity(0.20),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Material(
+                                      type: MaterialType.transparency,
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: _forceScrollToBottom,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Icon(
+                                            Lucide.ChevronDown,
+                                            size: 18,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+
+                // Scroll-to-previous-question button
+                Builder(builder: (context) {
+                  final showSetting = context.watch<SettingsProvider>().showMessageNavButtons;
+                  if (!showSetting || _messages.isEmpty) return const SizedBox.shrink();
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final bottomOffset = _inputBarHeight + 12 + 52;
+                  final showUp = _showJumpToBottom;
+                  return Align(
+                    alignment: Alignment.bottomRight,
+                    child: SafeArea(
+                      top: false,
+                      bottom: false,
+                      child: IgnorePointer(
+                        ignoring: !showUp,
+                        child: AnimatedScale(
+                          scale: showUp ? 1.0 : 0.9,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            opacity: showUp ? 1 : 0,
+                            child: Padding(
+                              padding: EdgeInsets.only(right: 16, bottom: bottomOffset),
+                              child: ClipOval(
+                                child: BackdropFilter(
+                                  filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.white12 : Colors.black.withOpacity(0.06),
+                                      border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.20)),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Material(
+                                      type: MaterialType.transparency,
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: _jumpToPreviousQuestion,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Icon(
+                                            Lucide.ChevronUp,
+                                            size: 18,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+    ),
+  ],
+);
   }
 
   @override

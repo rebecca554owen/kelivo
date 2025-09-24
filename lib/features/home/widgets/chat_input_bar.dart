@@ -41,6 +41,16 @@ class ChatInputBar extends StatefulWidget {
     this.showMcpButton = false,
     this.mcpActive = false,
     this.searchEnabled = false,
+    this.showMiniMapButton = false,
+    this.onOpenMiniMap,
+    this.onPickCamera,
+    this.onPickPhotos,
+    this.onUploadFiles,
+    this.onToggleLearningMode,
+    this.onClearContext,
+    this.onLongPressLearning,
+    this.learningModeActive = false,
+    this.showMoreButton = true,
   });
 
   final ValueChanged<ChatInputData>? onSend;
@@ -62,6 +72,16 @@ class ChatInputBar extends StatefulWidget {
   final bool showMcpButton;
   final bool mcpActive;
   final bool searchEnabled;
+  final bool showMiniMapButton;
+  final VoidCallback? onOpenMiniMap;
+  final VoidCallback? onPickCamera;
+  final VoidCallback? onPickPhotos;
+  final VoidCallback? onUploadFiles;
+  final VoidCallback? onToggleLearningMode;
+  final VoidCallback? onClearContext;
+  final VoidCallback? onLongPressLearning;
+  final bool learningModeActive;
+  final bool showMoreButton;
 
   @override
   State<ChatInputBar> createState() => _ChatInputBarState();
@@ -403,32 +423,84 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 // ),
                               ),
                             ],
+                            if (widget.onPickCamera != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.bottomToolsSheetCamera,
+                                icon: Lucide.Camera,
+                                onTap: widget.onPickCamera,
+                              ),
+                            ],
+                            if (widget.onPickPhotos != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.bottomToolsSheetPhotos,
+                                icon: Lucide.Image,
+                                onTap: widget.onPickPhotos,
+                              ),
+                            ],
+                            if (widget.onUploadFiles != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.bottomToolsSheetUpload,
+                                icon: Lucide.Paperclip,
+                                onTap: widget.onUploadFiles,
+                              ),
+                            ],
+                            if (widget.onToggleLearningMode != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.bottomToolsSheetLearningMode,
+                                icon: Lucide.BookOpenText,
+                                active: widget.learningModeActive,
+                                onTap: widget.onToggleLearningMode,
+                                onLongPress: widget.onLongPressLearning,
+                              ),
+                            ],
+                            if (widget.onClearContext != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.bottomToolsSheetClearContext,
+                                icon: Lucide.Eraser,
+                                onTap: widget.onClearContext,
+                              ),
+                            ],
+                            if (widget.showMiniMapButton) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.miniMapTooltip,
+                                icon: Lucide.Map,
+                                onTap: widget.onOpenMiniMap,
+                              ),
+                            ],
                           ],
                         ),
                         Row(
                           children: [
-                            _CompactIconButton(
-                              tooltip: AppLocalizations.of(context)!.chatInputBarMoreTooltip,
-                              icon: Lucide.Plus,
-                              active: widget.moreOpen,
-                              onTap: widget.onMore,
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                transitionBuilder: (child, anim) => RotationTransition(
-                                  turns: Tween<double>(begin: 0.85, end: 1).animate(anim),
-                                  child: FadeTransition(opacity: anim, child: child),
-                                ),
-                                child: Icon(
-                                  widget.moreOpen ? Lucide.X : Lucide.Plus,
-                                  key: ValueKey(widget.moreOpen ? 'close' : 'add'),
-                                  size: 20,
-                                  color: widget.moreOpen
-                                      ? theme.colorScheme.primary
-                                      : (isDark ? Colors.white70 : Colors.black54),
+                            if (widget.showMoreButton) ...[
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.chatInputBarMoreTooltip,
+                                icon: Lucide.Plus,
+                                active: widget.moreOpen,
+                                onTap: widget.onMore,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, anim) => RotationTransition(
+                                    turns: Tween<double>(begin: 0.85, end: 1).animate(anim),
+                                    child: FadeTransition(opacity: anim, child: child),
+                                  ),
+                                  child: Icon(
+                                    widget.moreOpen ? Lucide.X : Lucide.Plus,
+                                    key: ValueKey(widget.moreOpen ? 'close' : 'add'),
+                                    size: 20,
+                                    color: widget.moreOpen
+                                        ? theme.colorScheme.primary
+                                        : (isDark ? Colors.white70 : Colors.black54),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
+                              const SizedBox(width: 8),
+                            ],
                             _CompactSendButton(
                               enabled: (hasText || hasImages || hasDocs) && !widget.loading,
                               loading: widget.loading,
@@ -457,6 +529,7 @@ class _CompactIconButton extends StatelessWidget {
   const _CompactIconButton({
     required this.icon,
     this.onTap,
+    this.onLongPress,
     this.tooltip,
     this.active = false,
     this.child,
@@ -465,6 +538,7 @@ class _CompactIconButton extends StatelessWidget {
 
   final IconData icon;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final String? tooltip;
   final bool active;
   final Widget? child;
@@ -489,6 +563,7 @@ class _CompactIconButton extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: EdgeInsets.all(padding),
           child: child != null 
