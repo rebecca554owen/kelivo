@@ -196,6 +196,7 @@ class SettingsProvider extends ChangeNotifier {
     }
     if (_providerConfigs.isEmpty) {
       getProviderConfig('KelivoIN', defaultName: 'KelivoIN');
+      getProviderConfig('Tensdaq', defaultName: 'Tensdaq');
     }
     
     // kick off a one-time connectivity test for services (exclude local Bing)
@@ -968,6 +969,7 @@ class ProviderConfig {
 
   static String _defaultBase(String key) {
     final k = key.toLowerCase();
+    if (k.contains('tensdaq')) return 'https://tensdaq-api.x-aio.com/v1';
     if (k.contains('kelivoin')) return 'https://text.pollinations.ai/openai';
     if (k.contains('openrouter')) return 'https://openrouter.ai/api/v1';
     if (RegExp(r'qwen|aliyun|dashscope').hasMatch(k)) return 'https://dashscope.aliyuncs.com/compatible-mode/v1';
@@ -984,6 +986,7 @@ class ProviderConfig {
   static ProviderConfig defaultsFor(String key, {String? displayName}) {
     bool _defaultEnabled(String k) {
       final s = k.toLowerCase();
+      if (s.contains('tensdaq')) return true;
       if (s.contains('openai')) return true;
       if (s.contains('gemini') || s.contains('google')) return true;
       if (s.contains('silicon')) return true;

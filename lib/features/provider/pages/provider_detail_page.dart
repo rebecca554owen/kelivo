@@ -98,7 +98,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     bool _isUserAdded(String key) {
       const fixed = {
         'KelivoIN', 'OpenAI', 'Gemini', 'SiliconFlow', 'OpenRouter',
-        'DeepSeek', 'Aliyun', 'Zhipu AI', 'Claude', 'Grok', 'ByteDance',
+        'DeepSeek', 'Tensdaq', 'Aliyun', 'Zhipu AI', 'Claude', 'Grok', 'ByteDance',
       };
       return !fixed.contains(key);
     }
@@ -263,6 +263,51 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
+        if (widget.keyName.toLowerCase() == 'tensdaq') ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: cs.primary.withOpacity(0.35)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '革命性竞价 AI MaaS 平台，价格由市场供需决定，告别高成本固定定价。',
+                  style: TextStyle(color: cs.onSurface.withOpacity(0.8)),
+                ),
+                const SizedBox(height: 6),
+                Text.rich(
+                  TextSpan(
+                    text: '官网：',
+                    style: TextStyle(color: cs.onSurface.withOpacity(0.8)),
+                    children: [
+                      TextSpan(
+                        text: 'https://dashboard.x-aio.com',
+                        style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () async {
+                            final uri = Uri.parse('https://dashboard.x-aio.com');
+                            try {
+                              final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              if (!ok) {
+                                await launchUrl(uri);
+                              }
+                            } catch (_) {
+                              await launchUrl(uri);
+                            }
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         // Provider type selector cards
         if (widget.keyName.toLowerCase() != 'kelivoin') ...[
           _buildProviderTypeSelector(context, cs, l10n),
@@ -313,7 +358,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             context,
             label: l10n.providerDetailPageApiPathLabel,
             controller: _pathCtrl,
-            enabled: widget.keyName.toLowerCase() != 'openai',
+            enabled: widget.keyName.toLowerCase() != 'openai' && widget.keyName.toLowerCase() != 'tensdaq',
             hint: '/chat/completions',
           ),
           const SizedBox(height: 4),

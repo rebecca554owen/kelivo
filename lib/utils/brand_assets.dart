@@ -56,5 +56,6 @@ class BrandAssets {
     MapEntry(RegExp(r'internlm|书生'), 'internlm-color.svg'),
     MapEntry(RegExp(r'cohere|command-.+'), 'cohere-color.svg'),
     MapEntry(RegExp(r'kelivo'), 'kelivo.png'),
+    MapEntry(RegExp(r'tensdaq'), 'tensdaq-color.svg'),
   ];
 }
