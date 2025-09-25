@@ -49,6 +49,8 @@ English | [简体中文](README_ZH_CN.md)
 - ✅ Android
 - ✅ iOS
 - ✅ Harmony ([kelivo-ohos](https://github.com/Chevey339/kelivo-ohos))
+- 🚧 Windows (Planned)
+- 🚧 macOS (Planned)
 
 ## 🤝 Contribution Guide
 
