@@ -3689,7 +3689,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           duration: _sidebarAnimDuration,
           curve: _sidebarAnimCurve,
           width: _tabletSidebarOpen ? 0.6 : 0,
-          child: const VerticalDivider(width: 0.6, thickness: 0.5),
+          child: _tabletSidebarOpen
+              ? const VerticalDivider(width: 0.6, thickness: 0.5)
+              : const SizedBox.shrink(),
         ),
         Expanded(
           child: Scaffold(
