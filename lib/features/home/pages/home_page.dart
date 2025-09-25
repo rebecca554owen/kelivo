@@ -2758,9 +2758,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         },
       ),
       mainScreen: Scaffold(
+        // child: Scaffold(
         key: _scaffoldKey,
         resizeToAvoidBottomInset: true,
         extendBodyBehindAppBar: true,
+        // backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         // centerTitle: true,
         systemOverlayStyle: (Theme.of(context).brightness == Brightness.dark)
@@ -2972,11 +2974,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             children: [
               // Chat messages list (animate when switching topic)
               Expanded(
-                child: FadeTransition(
-                  opacity: _convoFade,
-                  child: KeyedSubtree(
-                    key: ValueKey<String>(_currentConversation?.id ?? 'none'),
-                    child: (() {
+                child: Builder(
+                    builder: (context) {
+                      final __content = KeyedSubtree(
+                        key: ValueKey<String>(_currentConversation?.id ?? 'none'),
+                        child: (() {
                       // Stable snapshot for this build (collapse versions)
                       final messages = _collapseVersions(_messages);
                       final Map<String, List<ChatMessage>> byGroup = <String, List<ChatMessage>>{};
@@ -3313,11 +3315,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         },
                       );
                       return list;
-                    })(),
-                  ).animate(key: ValueKey('mob_body_'+(_currentConversation?.id ?? 'none'))) 
-                   .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic)
-                   .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic),
-                ),
+                        })(),
+                      );
+                      final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+                      Widget w = __content;
+                      if (!isAndroid) {
+                        w = w
+                            .animate(key: ValueKey('mob_body_'+(_currentConversation?.id ?? 'none')))
+                            .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic)
+                            .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic);
+                        w = FadeTransition(opacity: _convoFade, child: w);
+                      }
+                      return w;
+                    },
+                  ),
               ),
               // Input bar
               NotificationListener<SizeChangedLayoutNotification>(
@@ -3656,8 +3667,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ],
         ),
       ),
-      )
-      ));
+      ))
+    );
   }
 
   Widget _buildTabletLayout(
