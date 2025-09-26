@@ -5,6 +5,8 @@ import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../../../shared/responsive/breakpoints.dart';
 import 'dart:async';
 
@@ -266,7 +268,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
     // Try image first via platform channel
     final paths = await ClipboardImages.getImagePaths();
     if (paths.isNotEmpty) {
-      _addImages(paths);
+      final persisted = await _persistClipboardImages(paths);
+      if (persisted.isNotEmpty) {
+        _addImages(persisted);
+      }
       return;
     }
     // Fallback: paste text
@@ -291,6 +296,44 @@ class _ChatInputBarState extends State<ChatInputBar> {
       }
       setState(() {});
     } catch (_) {}
+  }
+
+  Future<List<String>> _persistClipboardImages(List<String> srcPaths) async {
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      final dir = Directory(p.join(docs.path, 'upload'));
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final out = <String>[];
+      int i = 0;
+      for (var raw in srcPaths) {
+        try {
+          // Normalize path (strip file:// if present)
+          final src = raw.startsWith('file://') ? raw.substring(7) : raw;
+          // If already under Documents/upload, just keep it
+          if (src.contains('/Documents/upload/')) {
+            out.add(src);
+            continue;
+          }
+          final ext = p.extension(src).isNotEmpty ? p.extension(src) : '.png';
+          final name = 'paste_${DateTime.now().millisecondsSinceEpoch}_${i++}$ext';
+          final destPath = p.join(dir.path, name);
+          final from = File(src);
+          if (await from.exists()) {
+            await File(destPath).writeAsBytes(await from.readAsBytes());
+            // Best-effort cleanup of the temporary source
+            try { await from.delete(); } catch (_) {}
+            out.add(destPath);
+          }
+        } catch (_) {
+          // skip single file errors
+        }
+      }
+      return out;
+    } catch (_) {
+      return const [];
+    }
   }
 
   void _moveCaret(int dir, {bool extend = false, bool byWord = false}) {
