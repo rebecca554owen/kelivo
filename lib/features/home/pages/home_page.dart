@@ -680,26 +680,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       closePickerTicker: _assistantPickerCloseTick,
       loadingConversationIds: _loadingConversationIds,
         onSelectConversation: (id) {
-          _chatService.setCurrentConversation(id);
-          final convo = _chatService.getConversation(id);
-          if (convo != null) {
-            final msgs = _chatService.getMessages(id);
-            setState(() {
-              _currentConversation = convo;
-              _messages = List.of(msgs);
-              _loadVersionSelections();
-              _restoreMessageUiState();
-            });
-            _triggerConversationFade();
-            _forceScrollToBottomSoon();
-          }
+          _switchConversationAnimated(id);
         },
         onNewConversation: () async {
-          await _createNewConversation();
-          if (mounted) {
-            _triggerConversationFade();
-            _forceScrollToBottomSoon();
-          }
+          await _createNewConversationAnimated();
         },
     );
 
@@ -775,6 +759,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         });
         _scrollToBottomSoon();
       }
+    }
+  }
+
+  Future<void> _switchConversationAnimated(String id) async {
+    if (_currentConversation?.id == id) return;
+    try {
+      await _convoFadeController.reverse();
+    } catch (_) {}
+    _chatService.setCurrentConversation(id);
+    final convo = _chatService.getConversation(id);
+    if (convo != null) {
+      final msgs = _chatService.getMessages(id);
+      if (mounted) {
+        setState(() {
+          _currentConversation = convo;
+          _messages = List.of(msgs);
+          _loadVersionSelections();
+          _restoreMessageUiState();
+        });
+        // Ensure list lays out, then jump to bottom while hidden
+        try { await WidgetsBinding.instance.endOfFrame; } catch (_) {}
+        _scrollToBottom();
+      }
+    }
+    if (mounted) {
+      try { await _convoFadeController.forward(); } catch (_) {}
+    }
+  }
+
+  Future<void> _createNewConversationAnimated() async {
+    try { await _convoFadeController.reverse(); } catch (_) {}
+    await _createNewConversation();
+    if (mounted) {
+      // New conversation typically empty; still forward fade smoothly
+      try { await _convoFadeController.forward(); } catch (_) {}
     }
   }
 
@@ -2753,20 +2772,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         closePickerTicker: _assistantPickerCloseTick,
         loadingConversationIds: _loadingConversationIds,
         onSelectConversation: (id) {
-          // Update current selection for highlight in drawer
-          _chatService.setCurrentConversation(id);
-          final convo = _chatService.getConversation(id);
-          if (convo != null) {
-            final msgs = _chatService.getMessages(id);
-            setState(() {
-              _currentConversation = convo;
-              _messages = List.of(msgs);
-              _loadVersionSelections();
-              _restoreMessageUiState();
-            });
-            _triggerConversationFade();
-            _forceScrollToBottomSoon();
-          }
+          // Update current selection for highlight in drawer and animate switch
+          _switchConversationAnimated(id);
           // Haptic feedback when closing the sidebar
           try {
             if (context.read<SettingsProvider>().hapticsOnDrawer) {
@@ -2776,11 +2783,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           _drawerController.close();
         },
         onNewConversation: () async {
-          await _createNewConversation();
-          if (mounted) {
-            _triggerConversationFade();
-            _forceScrollToBottomSoon();
-          }
+          await _createNewConversationAnimated();
           // Haptic feedback when closing the sidebar
           try {
             if (context.read<SettingsProvider>().hapticsOnDrawer) {
@@ -3239,7 +3242,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       sourceMessages: selected,
                                       versionSelections: sel,
                                     );
-                                    // Switch to the new conversation
+                                    // Switch to the new conversation with fade animation
+                                    if (!mounted) return;
+                                    await _convoFadeController.reverse();
                                     _chatService.setCurrentConversation(newConvo.id);
                                     final msgs = _chatService.getMessages(newConvo.id);
                                     if (!mounted) return;
@@ -3249,8 +3254,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       _loadVersionSelections();
                                       _restoreMessageUiState();
                                     });
-                                    _triggerConversationFade();
-                                    _scrollToBottomSoon();
+                                    try { await WidgetsBinding.instance.endOfFrame; } catch (_) {}
+                                    _scrollToBottom();
+                                    await _convoFadeController.forward();
                                   }
                                 } else if (action == MessageMoreAction.share) {
                                   // Enter selection mode and preselect up to this message (inclusive)
@@ -3309,8 +3315,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       if (!isAndroid) {
                         w = w
                             .animate(key: ValueKey('mob_body_'+(_currentConversation?.id ?? 'none')))
-                            .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic)
-                            .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic);
+                            .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic);
+                            // .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic);
                         w = FadeTransition(opacity: _convoFade, child: w);
                       }
                       return w;
@@ -4032,18 +4038,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                             sourceMessages: selected,
                                                             versionSelections: sel,
                                                           );
-                                                          // Switch to the new conversation
-                                                          _chatService.setCurrentConversation(newConvo.id);
-                                                          final msgs = _chatService.getMessages(newConvo.id);
-                                                          if (!mounted) return;
-                                                          setState(() {
-                                                            _currentConversation = newConvo;
-                                                            _messages = List.of(msgs);
-                                                            _loadVersionSelections();
-                                                            _restoreMessageUiState();
-                                                          });
-                                                          _triggerConversationFade();
-                                                          _scrollToBottomSoon();
+                                    // Switch to the new conversation with fade animation
+                                    if (!mounted) return;
+                                    await _convoFadeController.reverse();
+                                    _chatService.setCurrentConversation(newConvo.id);
+                                    final msgs = _chatService.getMessages(newConvo.id);
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _currentConversation = newConvo;
+                                      _messages = List.of(msgs);
+                                      _loadVersionSelections();
+                                      _restoreMessageUiState();
+                                    });
+                                    try { await WidgetsBinding.instance.endOfFrame; } catch (_) {}
+                                    _scrollToBottom();
+                                    await _convoFadeController.forward();
                                                         }
                                                       } else if (action == MessageMoreAction.share) {
                                                         setState(() {
@@ -4079,8 +4088,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                   );
                                 })(),
                               ).animate(key: ValueKey('tab_body_'+(_currentConversation?.id ?? 'none')))
-                               .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic)
-                               .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic),
+                               .fadeIn(duration: 200.ms, curve: Curves.easeOutCubic),
+                               // .slideY(begin: 0.02, end: 0, duration: 240.ms, curve: Curves.easeOutCubic),
                             ),
                           ),
 
