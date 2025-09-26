@@ -425,7 +425,20 @@ class _BackupPageState extends State<BackupPage> {
     Future<void> doExport() async {
       final file = await _runWithExportingOverlay(context, () => vm.exportToFile());
       if (!mounted) return;
-      await Share.shareXFiles([XFile(file.path)]);
+      // iPad requires a non-zero popover source rect within the source view.
+      final ro = context.findRenderObject();
+      Rect rect;
+      if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
+        final origin = ro.localToGlobal(Offset.zero);
+        rect = origin & ro.size;
+      } else {
+        final size = MediaQuery.of(context).size;
+        rect = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+      }
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        sharePositionOrigin: rect,
+      );
     }
 
     Future<void> doImportLocal() async {

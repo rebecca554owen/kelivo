@@ -180,7 +180,21 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
       final filename = 'mermaid_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(file.path)], text: 'Mermaid diagram');
+      // iPad requires a non-zero popover source rect within the source view.
+      final ro = context.findRenderObject();
+      Rect rect;
+      if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
+        final origin = ro.localToGlobal(Offset.zero);
+        rect = origin & ro.size;
+      } else {
+        final size = MediaQuery.of(context).size;
+        rect = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+      }
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Mermaid diagram',
+        sharePositionOrigin: rect,
+      );
       return true;
     } catch (_) {
       return false;
