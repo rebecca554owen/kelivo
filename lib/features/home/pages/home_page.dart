@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
+// Replaced flutter_zoom_drawer with a custom InteractiveDrawer
+import '../../../shared/widgets/interactive_drawer.dart';
 import '../../../shared/responsive/breakpoints.dart';
 
 import '../widgets/chat_input_bar.dart';
@@ -68,7 +69,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   static const Duration _scrollAnimateDuration = Duration(milliseconds: 300);
   static const Duration _postSwitchScrollDelay = Duration(milliseconds: 220);
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final ZoomDrawerController _drawerController = ZoomDrawerController();
+  final InteractiveDrawerController _drawerController = InteractiveDrawerController();
   final ValueNotifier<int> _assistantPickerCloseTick = ValueNotifier<int>(0);
   final FocusNode _inputFocus = FocusNode();
   final TextEditingController _inputController = TextEditingController();
@@ -104,28 +105,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   static const Curve _sidebarAnimCurve = Curves.easeOutCubic;
 
   // Drawer haptics for swipe-open
-  DrawerState? _lastDrawerState;
+  double _lastDrawerValue = 0.0;
   bool _suppressNextOpenHaptic = false; // set when we already vibrated on programmatic open
-  ValueNotifier<DrawerState>? _drawerStateNotifier;
 
-  // Swipe-to-open anywhere detection (raw pointer based to avoid gesture conflicts)
-  static const double _swipeOpenDistance = 72.0; // px
-  static const double _swipeOpenHorizontalRatio = 1.6; // dx must be > dy * ratio
-  Offset? _swipeStartGlobal;
-  bool _swipeOpenTriggered = false;
-
-  // Guard: suppress drawer swipe-open when user is interacting
-  // with a horizontal scrollable (e.g., wide tables/code blocks)
-  bool _blockDrawerSwipeForHorizontalScroll = false;
-  Timer? _blockDrawerSwipeResetTimer;
-  void _activateHorizontalScrollGuard() {
-    _blockDrawerSwipeForHorizontalScroll = true;
-    _blockDrawerSwipeResetTimer?.cancel();
-    // Safety timeout in case ScrollEnd is missed
-    _blockDrawerSwipeResetTimer = Timer(const Duration(milliseconds: 300), () {
-      _blockDrawerSwipeForHorizontalScroll = false;
-    });
-  }
+  // Removed raw-pointer-based swipe-to-open; rely on drawer's own gestures
 
   Widget _buildAssistantBackground(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -168,10 +151,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       ),
     );
   }
-  void _deactivateHorizontalScrollGuard() {
-    _blockDrawerSwipeResetTimer?.cancel();
-    _blockDrawerSwipeForHorizontalScroll = false;
-  }
+  // no-op placeholders removed
 
   Future<void> _showLearningPromptSheet() async {
     final l10n = AppLocalizations.of(context)!;
@@ -645,22 +625,32 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     });
 
-    // Attach ZoomDrawer state listener after first frame to catch swipe-open
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _attachDrawerStateListener();
-    });
+    // Attach drawer value listener to catch swipe-open and close events
+    _drawerController.addListener(_onDrawerValueChanged);
   }
 
-  void _attachDrawerStateListener() {
-    // Avoid duplicate listeners
-    final notifier = _drawerController.stateNotifier;
-    if (notifier == null) return;
-    if (!identical(_drawerStateNotifier, notifier)) {
-      // Remove old
-      _drawerStateNotifier?.removeListener(_onDrawerStateChanged);
-      _drawerStateNotifier = notifier;
-      _drawerStateNotifier!.addListener(_onDrawerStateChanged);
+  void _onDrawerValueChanged() {
+    final v = _drawerController.value;
+    // Detect start of opening from closed state for haptic
+    final wasClosedLike = _lastDrawerValue <= 0.001;
+    if (wasClosedLike && v > 0.001) {
+      // Swipe or programmatic open started
+      _dismissKeyboard();
+      if (_suppressNextOpenHaptic) {
+        _suppressNextOpenHaptic = false;
+      } else {
+        try {
+          if (context.read<SettingsProvider>().hapticsOnDrawer) {
+            HapticFeedback.mediumImpact();
+          }
+        } catch (_) {}
+      }
     }
+    // When transitioning from open to closing, close assistant picker overlay
+    if (_lastDrawerValue >= 0.95 && v < 0.95) {
+      _assistantPickerCloseTick.value++;
+    }
+    _lastDrawerValue = v;
   }
 
   // Toggle tablet sidebar (embedded mode); keep icon and haptics same style as mobile
@@ -730,32 +720,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  void _onDrawerStateChanged() {
-    final s = _drawerController.stateNotifier?.value;
-    if (s == null) return;
-    // Fire once when transitioning from closed/closing to opening (covers swipe-open)
-    final wasClosedLike = _lastDrawerState == null ||
-        _lastDrawerState == DrawerState.closed ||
-        _lastDrawerState == DrawerState.closing;
-    if (wasClosedLike && s == DrawerState.opening) {
-      _dismissKeyboard();
-      if (_suppressNextOpenHaptic) {
-        // Skip duplicate when we already vibrated on programmatic open
-        _suppressNextOpenHaptic = false;
-      } else {
-        try {
-          if (context.read<SettingsProvider>().hapticsOnDrawer) {
-            HapticFeedback.mediumImpact();
-          }
-        } catch (_) {}
-      }
-    }
-    if ((_lastDrawerState == DrawerState.open || _lastDrawerState == DrawerState.opening) &&
-        (s == DrawerState.closing || s == DrawerState.closed)) {
-      _assistantPickerCloseTick.value++;
-    }
-    _lastDrawerState = s;
-  }
+  // ZoomDrawer state listener removed; handled by _onDrawerValueChanged
 
   void _onScrollControllerChanged() {
     try {
@@ -2694,22 +2659,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     // Chats are seeded via ChatProvider in main.dart
 
-    return ZoomDrawer(
+    return InteractiveDrawer(
       controller: _drawerController,
-      style: DrawerStyle.defaultStyle,
-      mainScreenTapClose: true,
-      borderRadius: 0.0,
-      showShadow: false,
-      angle: 0.0,
-      mainScreenScale: 0.0,
-      menuScreenWidth: MediaQuery.sizeOf(context).width * 0.75,
-      menuBackgroundColor: Theme.of(context).colorScheme.surface,
-      drawerShadowsBackgroundColor: Colors.grey[300] ?? Colors.grey,
-       mainScreenOverlayColor: cs.onSurface.withValues(alpha: 0.1),
-      // mainScreenOverlayColor: Colors.transparent,
-      // drawerShadowsBackgroundColor: Colors.grey[300] ?? Colors.grey,
-      slideWidth: MediaQuery.of(context).size.width * 0.75,
-      menuScreen: SideDrawer(
+      side: DrawerSide.left,
+      drawerWidth: MediaQuery.sizeOf(context).width * 0.75,
+      scrimColor: cs.onSurface,
+      maxScrimOpacity: 0.12,
+      barrierDismissible: true,
+      drawer: SideDrawer(
         userName: context.watch<UserProvider>().name,
         assistantName: (() {
           final l10n = AppLocalizations.of(context)!;
@@ -2740,7 +2697,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               HapticFeedback.mediumImpact();
             }
           } catch (_) {}
-          _drawerController.close?.call();
+          _drawerController.close();
         },
         onNewConversation: () async {
           await _createNewConversation();
@@ -2754,10 +2711,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               HapticFeedback.mediumImpact();
             }
           } catch (_) {}
-          _drawerController.close?.call();
+          _drawerController.close();
         },
       ),
-      mainScreen: Scaffold(
+      child: Scaffold(
         // child: Scaffold(
         key: _scaffoldKey,
         resizeToAvoidBottomInset: true,
@@ -2791,9 +2748,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               }
             } catch (_) {}
             // If the drawer is currently closed, toggling will open -> suppress listener haptic
-            final isOpen = _drawerController.isOpen?.call() == true;
+            final isOpen = _drawerController.isOpen;
             if (!isOpen) _suppressNextOpenHaptic = true;
-            _drawerController.toggle?.call();
+            _drawerController.toggle();
           },
           icon: SvgPicture.asset(
             'assets/icons/list.svg',
@@ -2869,53 +2826,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ],
       ),
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (n) {
-          // Only care about horizontal scrollables (tables, code blocks, etc.)
-          final isHorizontal = axisDirectionToAxis(n.metrics.axisDirection) == Axis.horizontal;
-          if (!isHorizontal) return false;
-          if (n is ScrollStartNotification ||
-              n is ScrollUpdateNotification ||
-              n is OverscrollNotification ||
-              (n is UserScrollNotification && n.direction != ScrollDirection.idle)) {
-            _activateHorizontalScrollGuard();
-          } else if (n is ScrollEndNotification) {
-            _deactivateHorizontalScrollGuard();
-          }
-          return false; // don't stop the notification from bubbling
-        },
-        child: Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: (evt) {
-            _swipeStartGlobal = evt.position;
-            _swipeOpenTriggered = false;
-          },
-          onPointerMove: (evt) {
-          if (_swipeOpenTriggered) return;
-          // If interacting with a horizontal scroller, don't trigger drawer
-          if (_blockDrawerSwipeForHorizontalScroll) return;
-          final start = _swipeStartGlobal;
-          if (start == null) return;
-          // Ignore if drawer is already opening/open
-          final s = _drawerController.stateNotifier?.value;
-          if (s == DrawerState.open || s == DrawerState.opening) return;
-          final dx = evt.position.dx - start.dx;
-          final dy = evt.position.dy - start.dy;
-          // Detect right-swipe: enough horizontal movement and mostly horizontal
-          if (dx > _swipeOpenDistance && dx.abs() > (dy.abs() * _swipeOpenHorizontalRatio)) {
-            _swipeOpenTriggered = true;
-            _dismissKeyboard();
-            _drawerController.open?.call();
-          }
-        },
-        onPointerUp: (_) {
-          _swipeStartGlobal = null;
-          _swipeOpenTriggered = false;
-          // Release guard shortly after finger up to allow quick re-open
-          // while still preventing accidental triggers during fling
-          Future.microtask(() => _deactivateHorizontalScrollGuard());
-        },
-        child: Stack(
+      body: Stack(
           children: [
             // Assistant-specific chat background + gradient overlay to improve readability
             Builder(
@@ -3667,8 +3578,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ],
         ),
       ),
-      ))
-    );
+      );
   }
 
   Widget _buildTabletLayout(
@@ -4443,7 +4353,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void dispose() {
     _convoFadeController.dispose();
     _mcpProvider?.removeListener(_onMcpChanged);
-    _drawerStateNotifier?.removeListener(_onDrawerStateChanged);
+    // Remove drawer value listener
+    _drawerController.removeListener(_onDrawerValueChanged);
     _inputFocus.dispose();
     _inputController.dispose();
     _scrollController.removeListener(_onScrollControllerChanged);
