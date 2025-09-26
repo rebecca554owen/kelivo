@@ -159,6 +159,19 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
   Future<void> _shareCurrent() async {
     final l10n = AppLocalizations.of(context)!;
     try {
+      // iPad requires a non-zero popover source rect
+      Rect _anchorRect() {
+        try {
+          final ro = context.findRenderObject();
+          if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
+            final origin = ro.localToGlobal(Offset.zero);
+            return origin & ro.size;
+          }
+        } catch (_) {}
+        final size = MediaQuery.of(context).size;
+        return Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+      }
+      final anchor = _anchorRect();
       final src = widget.images[_index];
       String? pathToSave;
       File? temp;
@@ -183,7 +196,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
         } else {
           if (!mounted) return;
           // fallback to sharing url as text
-          await Share.share(src);
+          await Share.share(src, sharePositionOrigin: anchor);
           return;
         }
       } else {
@@ -195,11 +208,11 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
       }
       if (pathToSave == null) {
         if (!mounted) return;
-        await Share.share('');
+        await Share.share('', sharePositionOrigin: anchor);
         return;
       }
       try {
-        await Share.shareXFiles([XFile(pathToSave)]);
+        await Share.shareXFiles([XFile(pathToSave)], sharePositionOrigin: anchor);
       } on MissingPluginException catch (_) {
         // Fallback: open system chooser by opening file
         final res = await OpenFilex.open(pathToSave);

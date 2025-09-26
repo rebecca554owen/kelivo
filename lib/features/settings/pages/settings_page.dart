@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -268,7 +269,22 @@ class SettingsPage extends StatelessWidget {
             icon: Lucide.Share2,
             title: l10n.settingsPageShare,
             onTap: () async {
-              await Share.share(l10n.settingsShare);
+              // Provide anchor rect for iPad share sheet
+              Rect anchor;
+              try {
+                final ro = context.findRenderObject();
+                if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
+                  final origin = ro.localToGlobal(Offset.zero);
+                  anchor = origin & ro.size;
+                } else {
+                  final size = MediaQuery.of(context).size;
+                  anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+                }
+              } catch (_) {
+                final size = MediaQuery.of(context).size;
+                anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+              }
+              await Share.share(l10n.settingsShare, sharePositionOrigin: anchor);
             },
           ),
 

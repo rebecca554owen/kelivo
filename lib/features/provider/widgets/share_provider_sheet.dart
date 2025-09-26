@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
@@ -52,6 +53,17 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
     builder: (ctx) {
       final l10n = AppLocalizations.of(ctx)!;
       final controller = TextEditingController(text: code);
+      Rect shareAnchorRect(BuildContext bctx) {
+        try {
+          final ro = bctx.findRenderObject();
+          if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
+            final origin = ro.localToGlobal(Offset.zero);
+            return origin & ro.size;
+          }
+        } catch (_) {}
+        final size = MediaQuery.of(bctx).size;
+        return Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+      }
       return SafeArea(
         top: false,
         child: DraggableScrollableSheet(
@@ -127,7 +139,8 @@ Future<void> showShareProviderSheet(BuildContext context, String providerKey) as
                       child: ElevatedButton.icon(
                         icon: const Icon(Lucide.Share2, size: 18),
                         onPressed: () async {
-                          await Share.share(code, subject: 'AI Provider');
+                          final rect = shareAnchorRect(ctx);
+                          await Share.share(code, subject: 'AI Provider', sharePositionOrigin: rect);
                         },
                         label: Text(l10n.shareProviderSheetShareButton),
                         style: ElevatedButton.styleFrom(

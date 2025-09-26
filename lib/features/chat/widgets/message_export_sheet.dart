@@ -743,6 +743,8 @@ class _ExportSheetState extends State<_ExportSheet> {
 
   Future<void> _onExportImage() async {
     if (_exporting) return;
+    // Compute share anchor before closing sheet (iPad/macOS need it)
+    final anchor = _shareAnchorRect(context);
     
     // Dismiss dialog immediately
     if (mounted) Navigator.of(context).maybePop();
@@ -760,7 +762,10 @@ class _ExportSheetState extends State<_ExportSheet> {
       final file = await _renderAndSaveMessageImage(context, widget.message);
       if (file == null) throw 'render error';
       final filename = file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : 'chat.png';
-      await Share.shareXFiles([XFile(file.path, mimeType: 'image/png', name: filename)]);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png', name: filename)],
+        sharePositionOrigin: anchor,
+      );
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
