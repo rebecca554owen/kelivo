@@ -2204,7 +2204,78 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
         await _conversationStreams.remove(_cid)?.cancel();
       }
-    });
+    },
+    onError: (e) async {
+      // When regenerate fails, persist error text into this assistant bubble
+      final errText = '${AppLocalizations.of(context)!.generationInterrupted}: $e';
+      final displayContent = fullContent.isNotEmpty ? fullContent : errText;
+      await _chatService.updateMessage(
+        assistantMessage.id,
+        content: displayContent,
+        totalTokens: totalTokens,
+        isStreaming: false,
+      );
+
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+          if (index != -1) {
+            _messages[index] = _messages[index].copyWith(
+              content: displayContent,
+              isStreaming: false,
+              totalTokens: totalTokens,
+            );
+          }
+        });
+      }
+      _setConversationLoading(assistantMessage.conversationId, false);
+
+      // End reasoning on error
+      final r = _reasoning[assistantMessage.id];
+      if (r != null) {
+        if (r.finishedAt == null) {
+          r.finishedAt = DateTime.now();
+          try {
+            await _chatService.updateMessage(
+              assistantMessage.id,
+              reasoningText: r.text,
+              reasoningFinishedAt: r.finishedAt,
+            );
+          } catch (_) {}
+        }
+        final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
+        if (autoCollapse) r.expanded = false;
+        _reasoning[assistantMessage.id] = r;
+      }
+
+      // Also finish any unfinished reasoning segments on error
+      final segments = _reasoningSegments[assistantMessage.id];
+      if (segments != null && segments.isNotEmpty && segments.last.finishedAt == null) {
+        segments.last.finishedAt = DateTime.now();
+        final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
+        if (autoCollapse) segments.last.expanded = false;
+        _reasoningSegments[assistantMessage.id] = segments;
+        try {
+          await _chatService.updateMessage(
+            assistantMessage.id,
+            reasoningSegmentsJson: _serializeReasoningSegments(segments),
+          );
+        } catch (_) {}
+      }
+
+      await _conversationStreams.remove(_cid)?.cancel();
+      showAppSnackBar(
+        context,
+        message: '${AppLocalizations.of(context)!.generationInterrupted}: $e',
+        type: NotificationType.error,
+      );
+    },
+    onDone: () async {
+      // Stream ended; ensure subscription cleanup
+      await _conversationStreams.remove(_cid)?.cancel();
+    },
+    cancelOnError: true,
+    );
     _conversationStreams[_cid] = _sub2;
   }
 
