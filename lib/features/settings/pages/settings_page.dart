@@ -269,13 +269,15 @@ class SettingsPage extends StatelessWidget {
             icon: Lucide.Share2,
             title: l10n.settingsPageShare,
             onTap: () async {
-              // Provide anchor rect for iPad share sheet
+              // Provide anchor rect from overlay for iPad share sheet
               Rect anchor;
               try {
-                final ro = context.findRenderObject();
-                if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
-                  final origin = ro.localToGlobal(Offset.zero);
-                  anchor = origin & ro.size;
+                final overlay = Overlay.of(context);
+                final ro = overlay?.context.findRenderObject();
+                if (ro is RenderBox && ro.hasSize) {
+                  final center = ro.size.center(Offset.zero);
+                  final global = ro.localToGlobal(center);
+                  anchor = Rect.fromCenter(center: global, width: 1, height: 1);
                 } else {
                   final size = MediaQuery.of(context).size;
                   anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);

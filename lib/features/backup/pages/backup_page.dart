@@ -426,16 +426,20 @@ class _BackupPageState extends State<BackupPage> {
     Future<void> doExport() async {
       final file = await _runWithExportingOverlay(context, () => vm.exportToFile());
       if (!mounted) return;
-      // iPad requires a non-zero popover source rect within the source view.
-      final ro = context.findRenderObject();
+      // iPad: anchor popover to the overlay's center to ensure valid coordinate space
       Rect rect;
-      if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
-        final origin = ro.localToGlobal(Offset.zero);
-        rect = origin & ro.size;
+      final overlay = Overlay.of(context);
+      final ro = overlay?.context.findRenderObject();
+      if (ro is RenderBox && ro.hasSize) {
+        final center = ro.size.center(Offset.zero);
+        final global = ro.localToGlobal(center);
+        rect = Rect.fromCenter(center: global, width: 1, height: 1);
       } else {
         final size = MediaQuery.of(context).size;
         rect = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
       }
+      // Give a short delay to ensure the exporting overlay is fully dismissed
+      await Future.delayed(const Duration(milliseconds: 50));
       await Share.shareXFiles(
         [XFile(file.path)],
         sharePositionOrigin: rect,

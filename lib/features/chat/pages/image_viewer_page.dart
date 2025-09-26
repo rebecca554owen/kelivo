@@ -159,19 +159,23 @@ class _ImageViewerPageState extends State<ImageViewerPage> with TickerProviderSt
   Future<void> _shareCurrent() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      // iPad requires a non-zero popover source rect
-      Rect _anchorRect() {
-        try {
-          final ro = context.findRenderObject();
-          if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
-            final origin = ro.localToGlobal(Offset.zero);
-            return origin & ro.size;
-          }
-        } catch (_) {}
+      // iPad requires a non-zero popover source rect within overlay coordinates
+      Rect anchor;
+      try {
+        final overlay = Overlay.of(context);
+        final ro = overlay?.context.findRenderObject();
+        if (ro is RenderBox && ro.hasSize) {
+          final center = ro.size.center(Offset.zero);
+          final global = ro.localToGlobal(center);
+          anchor = Rect.fromCenter(center: global, width: 1, height: 1);
+        } else {
+          final size = MediaQuery.of(context).size;
+          anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+        }
+      } catch (_) {
         final size = MediaQuery.of(context).size;
-        return Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+        anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
       }
-      final anchor = _anchorRect();
       final src = widget.images[_index];
       String? pathToSave;
       File? temp;
