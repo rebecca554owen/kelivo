@@ -4,10 +4,11 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, PlatformException, MissingPluginException;
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
 
 class MermaidViewHandle {
   final Widget widget;
@@ -181,22 +182,33 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
       final filename = 'mermaid_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(bytes);
-      // iPad requires a non-zero popover source rect within the source view.
-      final ro = context.findRenderObject();
+      // iPad requires a non-zero popover source rect. Use the Overlay's
+      // coordinate space to avoid issues with platform views (WebView).
       Rect rect;
-      if (ro is RenderBox && ro.hasSize && ro.size.width > 0 && ro.size.height > 0) {
-        final origin = ro.localToGlobal(Offset.zero);
-        rect = origin & ro.size;
+      final overlay = Overlay.of(context);
+      final ro = overlay?.context.findRenderObject();
+      if (ro is RenderBox && ro.hasSize) {
+        final size = ro.size;
+        final centerGlobal = ro.localToGlobal(Offset(size.width / 2, size.height / 2));
+        rect = Rect.fromCenter(center: centerGlobal, width: 1, height: 1);
       } else {
         final size = MediaQuery.of(context).size;
         rect = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
       }
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Mermaid diagram',
-        sharePositionOrigin: rect,
-      );
-      return true;
+      try {
+        await Share.shareXFiles(
+          [XFile(file.path, mimeType: 'image/png', name: filename)],
+          text: 'Mermaid diagram',
+          sharePositionOrigin: rect,
+        );
+        return true;
+      } on MissingPluginException catch (_) {
+        final res = await OpenFilex.open(file.path);
+        return res.type == ResultType.done;
+      } on PlatformException catch (_) {
+        final res = await OpenFilex.open(file.path);
+        return res.type == ResultType.done;
+      }
     } catch (_) {
       return false;
     } finally {
