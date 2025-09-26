@@ -57,5 +57,6 @@ class BrandAssets {
     MapEntry(RegExp(r'cohere|command-.+'), 'cohere-color.svg'),
     MapEntry(RegExp(r'kelivo'), 'kelivo.png'),
     MapEntry(RegExp(r'tensdaq'), 'tensdaq-color.svg'),
+    MapEntry(RegExp(r'longcat'), 'longcat.png'),
   ];
 }
