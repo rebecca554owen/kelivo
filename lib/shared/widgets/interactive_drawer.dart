@@ -96,7 +96,7 @@ class InteractiveDrawer extends StatefulWidget {
     this.scrimColor = Colors.black,
     this.maxScrimOpacity = 0.5,
     this.barrierDismissible = true,
-    this.elevation = 1.5,
+    this.elevation = 0.0,
     this.semanticLabel,
     this.enableDrawerTapToClose = false,
     this.tabletMode = false,
@@ -269,7 +269,7 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
       final double translateX = (_isLeft ? -1 : 1) * (1 - _anim.value) * targetWidth;
       final drawerBody = Material(
         elevation: widget.elevation,
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.none,
         child: Semantics(
           label: widget.semanticLabel,
           container: true,
@@ -301,7 +301,7 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
 
     final drawerBody = Material(
       elevation: widget.elevation,
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.none,
       child: Semantics(
         label: widget.semanticLabel,
         container: true,
@@ -392,4 +392,3 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
     );
   }
 }
-
