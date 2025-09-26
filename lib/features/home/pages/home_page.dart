@@ -1569,10 +1569,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
         },
         onError: (e) async {
-          // Preserve partial content; just finalize state and notify user
+          // Preserve partial content; if empty, write error message into bubble
+          final errText = '${AppLocalizations.of(context)!.generationInterrupted}: $e';
+          final displayContent = fullContent.isNotEmpty ? fullContent : errText;
           await _chatService.updateMessage(
             assistantMessage.id,
-            content: fullContent,
+            content: displayContent,
             totalTokens: totalTokens,
             isStreaming: false,
           );
@@ -1582,7 +1584,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
             if (index != -1) {
               _messages[index] = _messages[index].copyWith(
-                content: fullContent.isNotEmpty ? fullContent : _messages[index].content,
+                content: displayContent,
                 isStreaming: false,
                 totalTokens: totalTokens,
               );
@@ -1644,10 +1646,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       );
       _conversationStreams[_cidForStream] = _sub;
     } catch (e) {
-      // Preserve partial content on outer error as well
+      // Preserve partial content on outer error as well; if empty, show error text in bubble
+      final errText = '${AppLocalizations.of(context)!.generationInterrupted}: $e';
+      final displayContent = fullContent.isNotEmpty ? fullContent : errText;
       await _chatService.updateMessage(
         assistantMessage.id,
-        content: fullContent,
+        content: displayContent,
         totalTokens: totalTokens,
         isStreaming: false,
       );
@@ -1656,7 +1660,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
         if (index != -1) {
           _messages[index] = _messages[index].copyWith(
-            content: fullContent.isNotEmpty ? fullContent : _messages[index].content,
+            content: displayContent,
             isStreaming: false,
             totalTokens: totalTokens,
           );
