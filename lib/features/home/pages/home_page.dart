@@ -2040,7 +2040,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final String _cid = assistantMessage.conversationId;
     await _conversationStreams[_cid]?.cancel();
     final _sub2 = stream.listen((chunk) async {
-      if ((chunk.reasoning ?? '').isNotEmpty && enableReasoning) {
+      // Always capture reasoning if provided by model, even when toggle is off
+      if ((chunk.reasoning ?? '').isNotEmpty) {
         if (streamOutput) {
           final r = _reasoning[assistantMessage.id] ?? _ReasoningData();
           r.text += chunk.reasoning!;
