@@ -38,6 +38,7 @@ class _SearchSettingsSheet extends StatelessWidget {
     if (s is LinkUpOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (s is BraveOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (s is MetasoOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is OllamaOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     return null;
   }
 
@@ -387,6 +388,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is LinkUpOptions) return 'LinkUp';
     if (s is BraveOptions) return 'Brave';
     if (s is MetasoOptions) return 'Metaso';
+    if (s is OllamaOptions) return 'Ollama';
     return 'Search';
   }
 
@@ -403,6 +405,7 @@ class _BrandBadge extends StatelessWidget {
       RegExp(r'exa'): 'exa.png',
       RegExp(r'linkup'): 'linkup.png',
       RegExp(r'brave'): 'brave-color.svg',
+      RegExp(r'ollama'): 'ollama.svg',
       // SearXNG/Metaso fall back to letter
     };
     for (final e in mapping.entries) {
