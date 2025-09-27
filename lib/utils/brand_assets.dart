@@ -58,5 +58,6 @@ class BrandAssets {
     MapEntry(RegExp(r'kelivo'), 'kelivo.png'),
     MapEntry(RegExp(r'tensdaq'), 'tensdaq-color.svg'),
     MapEntry(RegExp(r'longcat'), 'longcat.png'),
+    MapEntry(RegExp(r'iflow|心流'), 'iflow-color.svg'),
   ];
 }
