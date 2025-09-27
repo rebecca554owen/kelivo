@@ -36,12 +36,16 @@ class McpToolService extends ChangeNotifier {
       Map<String, dynamic> arguments = const {},
   }) async {
     final selected = chat.getConversationMcpServers(conversationId).toSet();
+    // debugPrint('[MCP/Call/Select] convo=$conversationId tool=$toolName selectedServers=${selected.join(',')}');
     if (selected.isEmpty) return null;
 
     // Find a server that has this tool enabled
-    for (final s in mcpProvider.connectedServers.where((s) => selected.contains(s.id))) {
+    final connected = mcpProvider.connectedServers.where((s) => selected.contains(s.id)).toList();
+    // debugPrint('[MCP/Call/Select] connectedAndSelected=${connected.map((s)=>s.id).join(',')}');
+    for (final s in connected) {
       final has = s.tools.any((t) => t.enabled && t.name == toolName);
       if (has) {
+        // debugPrint('[MCP/Call/Select] using server=${s.id} name=${s.name} transport=${s.transport.name}');
         return await mcpProvider.callTool(s.id, toolName, arguments);
       }
     }
@@ -56,14 +60,32 @@ class McpToolService extends ChangeNotifier {
       required String toolName,
       Map<String, dynamic> arguments = const {},
   }) async {
-    final res = await callToolForConversation(
-      mcpProvider,
-      chat,
-      conversationId: conversationId,
-      toolName: toolName,
-      arguments: arguments,
-    );
-    if (res == null) return '';
+    // Attempt call via selected server
+    final selected = chat.getConversationMcpServers(conversationId).toSet();
+    final connected = mcpProvider.connectedServers.where((s) => selected.contains(s.id)).toList();
+    mcp.CallToolResult? res;
+    McpServerConfig? usedServer;
+    for (final s in connected) {
+      final has = s.tools.any((t) => t.enabled && t.name == toolName);
+      if (!has) continue;
+      usedServer = s;
+      res = await mcpProvider.callTool(s.id, toolName, arguments);
+      break;
+    }
+    if (res == null) {
+      if (usedServer != null) {
+        final errMsg = mcpProvider.errorFor(usedServer.id) ?? 'Unknown error';
+        final schema = usedServer.tools.firstWhere((t) => t.name == toolName).schema;
+        return _renderToolErrorForModel(
+          serverName: usedServer.name,
+          toolName: toolName,
+          arguments: arguments,
+          errorMessage: errMsg,
+          schema: schema,
+        );
+      }
+      return '';
+    }
     final buf = StringBuffer();
     // Be liberal in what we accept: many servers return different content variants.
     for (final c in res.content) {
@@ -131,12 +153,24 @@ class McpToolService extends ChangeNotifier {
     // try servers selected for the assistant
     final a = (assistantId != null) ? assistants.getById(assistantId) : assistants.currentAssistant;
     final selected = (a?.mcpServerIds ?? const <String>[]).toSet();
+    // debugPrint('[MCP/Call/Select] assistant=${assistantId ?? a?.id ?? '(current)'} tool=$toolName selectedServers=${selected.join(',')}');
     if (selected.isEmpty) return '';
     for (final s in mcpProvider.connectedServers.where((s) => selected.contains(s.id))) {
       final has = s.tools.any((t) => t.enabled && t.name == toolName);
       if (has) {
+        // debugPrint('[MCP/Call/Select] using server=${s.id} name=${s.name} transport=${s.transport.name}');
         final res = await mcpProvider.callTool(s.id, toolName, arguments);
-        if (res == null) continue;
+        if (res == null) {
+          final errMsg = mcpProvider.errorFor(s.id) ?? 'Unknown error';
+          final schema = s.tools.firstWhere((t) => t.name == toolName).schema;
+          return _renderToolErrorForModel(
+            serverName: s.name,
+            toolName: toolName,
+            arguments: arguments,
+            errorMessage: errMsg,
+            schema: schema,
+          );
+        }
         final buf = StringBuffer();
         for (final c in res.content) {
           try {
@@ -182,11 +216,35 @@ class McpToolService extends ChangeNotifier {
             } catch (_) {}
             final s = c.toString();
             if (!s.startsWith('Instance of')) buf.writeln(s);
-          } catch (_) {}
+          } catch (e, st) {
+            // debugPrint('[MCP/Call/TextParseError] server=${s.id} tool=$toolName type=${c.runtimeType} err=$e');
+            // debugPrint(st.toString());
+          }
         }
         return buf.toString().trim();
       }
     }
     return '';
+  }
+
+  String _renderToolErrorForModel({
+    required String serverName,
+    required String toolName,
+    required Map<String, dynamic> arguments,
+    required String errorMessage,
+    Map<String, dynamic>? schema,
+  }) {
+    // Provide a concise JSON for the model to self-correct and retry
+    final map = <String, dynamic>{
+      'type': 'tool_error',
+      'error': 'invalid_arguments',
+      'message': errorMessage,
+      'tool': toolName,
+      'server': serverName,
+      'lastArguments': arguments,
+      if (schema != null && schema.isNotEmpty) 'parametersSchema': schema,
+      'instruction': 'Revise arguments to satisfy parametersSchema, then call the same tool again.'
+    };
+    return const JsonEncoder.withIndent('  ').convert(map);
   }
 }

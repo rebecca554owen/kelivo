@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// import 'dart:async';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
@@ -28,32 +29,17 @@ bool _didEnsureAssistants = false; // ensure defaults after l10n ready
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Debug logging and global error handlers were enabled previously for diagnosis.
+  // They are commented out now per request to reduce log noise.
+  // FlutterError.onError = (FlutterErrorDetails details) { ... };
+  // WidgetsBinding.instance.platformDispatcher.onError = (Object error, StackTrace stack) { ... };
+  // logging.Logger.root.level = logging.Level.ALL;
+  // logging.Logger.root.onRecord.listen((rec) { ... });
   // Cache current Documents directory to fix sandboxed absolute paths on iOS
   await SandboxPathResolver.init();
   // Enable edge-to-edge to allow content under system bars (Android)
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  // // Enable verbose logs for mcp_client and other logging-based libs
-  // logging.Logger.root.level = logging.Level.ALL;
-  // logging.Logger.root.onRecord.listen((rec) {
-  //   final time = rec.time.toIso8601String();
-  //   final msg = StringBuffer()
-  //     ..write('[LOG ${rec.level.name}] ')
-  //     ..write(time)
-  //     ..write(' ')
-  //     ..write(rec.loggerName.isNotEmpty ? rec.loggerName : 'root')
-  //     ..write(': ')
-  //     ..write(rec.message);
-  //   if (rec.error != null) {
-  //     msg.write(' | error: ');
-  //     msg.write(rec.error);
-  //   }
-  //   if (rec.stackTrace != null) {
-  //     msg.write('\n');
-  //     msg.write(rec.stackTrace);
-  //   }
-  //   // Use debugPrint to avoid truncation in Flutter log viewer
-  //   debugPrint(msg.toString());
-  // });
+  // Start app (no extra guarded zone logging)
   runApp(const MyApp());
 }
 

@@ -98,6 +98,73 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   bool _showJumpToBottom = false;
   bool _isUserScrolling = false;
   Timer? _userScrollTimer;
+
+  // Sanitize/translate JSON Schema to each provider's accepted subset
+  static Map<String, dynamic> _sanitizeToolParametersForProvider(Map<String, dynamic> schema, ProviderKind kind) {
+    Map<String, dynamic> clone = _deepCloneMap(schema);
+    clone = _sanitizeNode(clone, kind) as Map<String, dynamic>;
+    return clone;
+  }
+
+  static dynamic _sanitizeNode(dynamic node, ProviderKind kind) {
+    if (node is List) {
+      return node.map((e) => _sanitizeNode(e, kind)).toList();
+    }
+    if (node is! Map) return node;
+
+    final m = Map<String, dynamic>.from(node as Map);
+    m.remove(r'$schema');
+    if (m.containsKey('const')) {
+      final v = m['const'];
+      if (v is String || v is num || v is bool) {
+        m['enum'] = [v];
+      }
+      m.remove('const');
+    }
+    for (final key in ['anyOf', 'oneOf', 'allOf', 'any_of', 'one_of', 'all_of']) {
+      if (m[key] is List && (m[key] as List).isNotEmpty) {
+        final first = (m[key] as List).first;
+        final flattened = _sanitizeNode(first, kind);
+        m.remove(key);
+        if (flattened is Map<String, dynamic>) {
+          m
+            ..remove('type')
+            ..remove('properties')
+            ..remove('items');
+          m.addAll(flattened);
+        }
+      }
+    }
+    final t = m['type'];
+    if (t is List && t.isNotEmpty) m['type'] = t.first.toString();
+    final items = m['items'];
+    if (items is List && items.isNotEmpty) m['items'] = items.first;
+    if (m['items'] is Map) m['items'] = _sanitizeNode(m['items'], kind);
+    if (m['properties'] is Map) {
+      final props = Map<String, dynamic>.from(m['properties']);
+      final norm = <String, dynamic>{};
+      props.forEach((k, v) {
+        norm[k] = _sanitizeNode(v, kind);
+      });
+      m['properties'] = norm;
+    }
+    Set<String> allowed;
+    switch (kind) {
+      case ProviderKind.google:
+        allowed = {'type', 'description', 'properties', 'required', 'items', 'enum'};
+        break;
+      case ProviderKind.openai:
+      case ProviderKind.claude:
+        allowed = {'type', 'description', 'properties', 'required', 'items', 'enum'};
+        break;
+    }
+    m.removeWhere((k, v) => !allowed.contains(k));
+    return m;
+  }
+
+  static Map<String, dynamic> _deepCloneMap(Map<String, dynamic> input) {
+    return jsonDecode(jsonEncode(input)) as Map<String, dynamic>;
+  }
   // Tablet: whether the left embedded sidebar is visible
   bool _tabletSidebarOpen = true;
   bool _learningModeEnabled = false;
@@ -1163,21 +1230,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final toolSvc = context.read<McpToolService>();
       final tools = toolSvc.listAvailableToolsForAssistant(mcp, context.read<AssistantProvider>(), assistant?.id);
       if (supportsTools && tools.isNotEmpty) {
+        final providerCfg = settings.getProviderConfig(providerKey);
+        final providerKind = ProviderConfig.classify(providerCfg.id, explicitType: providerCfg.providerType);
         toolDefs.addAll(tools.map((t) {
-          final props = <String, dynamic>{
-            for (final p in t.params) p.name: {'type': 'string'},
-          };
-          final required = [for (final p in t.params.where((e) => e.required)) p.name];
+          // Base schema from server or fallback
+          Map<String, dynamic> baseSchema;
+          if (t.schema != null && t.schema!.isNotEmpty) {
+            baseSchema = Map<String, dynamic>.from(t.schema!);
+          } else {
+            final props = <String, dynamic>{for (final p in t.params) p.name: {'type': (p.type ?? 'string')}};
+            final required = [for (final p in t.params.where((e) => e.required)) p.name];
+            baseSchema = {'type': 'object', 'properties': props, if (required.isNotEmpty) 'required': required};
+          }
+          final sanitized = _sanitizeToolParametersForProvider(baseSchema, providerKind);
           return {
             'type': 'function',
             'function': {
               'name': t.name,
               if ((t.description ?? '').isNotEmpty) 'description': t.description,
-              'parameters': {
-                'type': 'object',
-                'properties': props,
-                'required': required,
-              },
+              'parameters': sanitized,
             }
           };
         }));
@@ -1956,15 +2027,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final tools = toolSvc.listAvailableToolsForAssistant(mcp, context.read<AssistantProvider>(), assistant?.id);
       final supportsTools = _isToolModel(providerKey, modelId);
       if (supportsTools && tools.isNotEmpty) {
+        final providerCfg = settings.getProviderConfig(providerKey);
+        final providerKind = ProviderConfig.classify(providerCfg.id, explicitType: providerCfg.providerType);
         toolDefs.addAll(tools.map((t) {
-          final props = <String, dynamic>{for (final p in t.params) p.name: {'type': 'string'}};
-          final required = [for (final p in t.params.where((e) => e.required)) p.name];
+          Map<String, dynamic> baseSchema;
+          if (t.schema != null && t.schema!.isNotEmpty) {
+            baseSchema = Map<String, dynamic>.from(t.schema!);
+          } else {
+            final props = <String, dynamic>{for (final p in t.params) p.name: {'type': (p.type ?? 'string')}};
+            final required = [for (final p in t.params.where((e) => e.required)) p.name];
+            baseSchema = {'type': 'object', 'properties': props, if (required.isNotEmpty) 'required': required};
+          }
+          final sanitized = _sanitizeToolParametersForProvider(baseSchema, providerKind);
           return {
             'type': 'function',
             'function': {
               'name': t.name,
               if ((t.description ?? '').isNotEmpty) 'description': t.description,
-              'parameters': {'type': 'object', 'properties': props, 'required': required},
+              'parameters': sanitized,
             }
           };
         }));
