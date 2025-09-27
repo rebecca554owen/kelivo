@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
@@ -211,17 +212,18 @@ class _ModelSelectSheet extends StatefulWidget {
 
 class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   final TextEditingController _search = TextEditingController();
-  final ScrollController _scroll = ScrollController();
-  final Map<String, GlobalKey> _headers = {};
   final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
   static const double _initialSize = 0.8;
   static const double _maxSize = 0.8;
-  ScrollController? _listCtrl; // controller from DraggableScrollableSheet
-  final Map<String, double> _providerOffsets = {}; // Store cumulative offset for each provider
+  // ScrollablePositionedList controllers
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   
-  // Constants for item heights
-  static const double _sectionHeaderHeight = 44.0;
-  static const double _modelTileHeight = 68.0;
+  // Flattened rows + index maps for precise jumps
+  final List<_ListRow> _rows = <_ListRow>[];
+  final Map<String, int> _headerIndexMap = <String, int>{}; // providerKey or '__fav__' -> index
+  final Map<String, int> _modelIndexMap = <String, int>{};  // 'pk::modelId' in provider sections -> index
+  final Map<String, int> _favModelIndexMap = <String, int>{}; // 'pk::modelId' in favorites -> index
   
   // Async loading state
   bool _isLoading = true;
@@ -288,6 +290,18 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       }
     }
   }
+
+  Future<void> _expandSheetIfNeeded(double target, {Duration duration = const Duration(milliseconds: 300)}) async {
+    // Safely attempt to read size and animate; ignore if controller not yet attached
+    try {
+      final current = _sheetCtrl.size;
+      if (current < target) {
+        await _sheetCtrl.animateTo(target, duration: duration, curve: Curves.easeOutCubic);
+        // allow a brief settle time after expansion
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    } catch (_) {}
+  }
   
   void _loadModelsSynchronously() {
     final settings = context.read<SettingsProvider>();
@@ -332,7 +346,6 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _autoScrolled) return;
       await _jumpToCurrentSelection();
-      _autoScrolled = true;
     });
   }
 
@@ -346,71 +359,59 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     if (pk == null || mid == null) return;
 
     // Optionally expand a bit for better context
-    if (_sheetCtrl.size < _initialSize + 0.05) {
-      try {
-        await _sheetCtrl.animateTo(
-          _initialSize.clamp(0.0, _maxSize),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-        );
-      } catch (_) {}
-    }
-
-    // Ensure list controller is ready
-    if (_listCtrl == null || !_listCtrl!.hasClients) {
-      await Future.delayed(const Duration(milliseconds: 60));
-    }
-    if (_listCtrl == null || !_listCtrl!.hasClients) return;
+    await _expandSheetIfNeeded(_initialSize.clamp(0.0, _maxSize), duration: const Duration(milliseconds: 200));
 
     // If current model is pinned and favorites section is visible, jump there first
     final currentKey = '${pk}::${mid}';
     final bool showFavorites = widget.limitProviderKey == null && (_search.text.isEmpty);
     final bool isPinned = settings.pinnedModels.contains(currentKey);
-    double? target;
-    if (showFavorites && isPinned && _providerOffsets.containsKey('__fav__')) {
-      // Compute index of current model within favorites as displayed
-      final favKeysDisplay = <String>[];
-      for (final k in settings.pinnedModels) {
-        final parts = k.split('::');
-        if (parts.length < 2) continue;
-        final p = parts[0];
-        if (_groups[p] == null) continue;
-        favKeysDisplay.add(k);
-      }
-      final favIndex = favKeysDisplay.indexOf(currentKey);
-      if (favIndex >= 0) {
-        final baseFav = _providerOffsets['__fav__'] ?? 0.0;
-        target = baseFav + _sectionHeaderHeight + favIndex * _modelTileHeight;
-      }
+
+    // Ensure the list is attached before attempting to scroll
+    if (!_itemScrollController.isAttached) {
+      // Try again shortly after the list attaches
+      Future.delayed(const Duration(milliseconds: 60), () {
+        if (mounted && !_autoScrolled) {
+          _jumpToCurrentSelection();
+        }
+      });
+      return;
     }
 
-    // Fallback to provider section if not pinned or favorites not available
-    if (target == null) {
-      final group = _groups[pk];
-      if (group == null) return;
-      final index = group.items.indexWhere((e) => e.id == mid);
-      if (index < 0) return;
-      final base = _providerOffsets[pk] ?? 0.0;
-      target = base + _sectionHeaderHeight + index * _modelTileHeight;
+    int? targetIndex;
+    if (showFavorites && isPinned) {
+      targetIndex = _favModelIndexMap[currentKey];
     }
+    targetIndex ??= _modelIndexMap[currentKey];
+    targetIndex ??= _headerIndexMap[pk];
 
-    // Use precomputed section offsets from latest build
-    final maxOff = _listCtrl!.position.maxScrollExtent;
-    final to = target.clamp(0.0, maxOff);
-
-    try {
-      await _listCtrl!.animateTo(
-        to,
-        duration: const Duration(milliseconds: 360),
-        curve: Curves.easeOutCubic,
-      );
-    } catch (_) {}
+    if (targetIndex != null) {
+      try {
+        await _itemScrollController.scrollTo(
+          index: targetIndex,
+          duration: const Duration(milliseconds: 360),
+          curve: Curves.easeOutCubic,
+        );
+        _autoScrolled = true;
+      } catch (_) {
+        // If scroll fails for any reason, try again once.
+        Future.delayed(const Duration(milliseconds: 80), () async {
+          if (!mounted || _autoScrolled) return;
+          try {
+            await _itemScrollController.scrollTo(
+              index: targetIndex!,
+              duration: const Duration(milliseconds: 360),
+              curve: Curves.easeOutCubic,
+            );
+            _autoScrolled = true;
+          } catch (_) {}
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _search.dispose();
-    _scroll.dispose();
     _sheetCtrl.dispose();
     super.dispose();
   }
@@ -448,8 +449,6 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           maxChildSize: _maxSize,
           minChildSize: 0.4,
           builder: (c, controller) {
-            _listCtrl = controller;
-            
             return Column(
               children: [
                 // Fixed header section with rounded corners
@@ -504,7 +503,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
                     color: cs.surface, // Ensure background color continuity
                     child: _isLoading 
                       ? const Center(child: CircularProgressIndicator())
-                      : _buildContent(context, controller),
+                      : _buildContent(context),
                   ),
                 ),
                 // Fixed bottom tabs
@@ -520,17 +519,17 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     );
   }
 
-  Widget _buildContent(BuildContext context, ScrollController controller) {
+  Widget _buildContent(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final query = _search.text.trim();
+    // Build flattened rows and index maps for precise positioning
+    _rows.clear();
+    _headerIndexMap.clear();
+    _modelIndexMap.clear();
+    _favModelIndexMap.clear();
 
-    // Build a flattened list of entries with fixed heights, and compute offsets
-    final List<_Entry> entries = [];
-    _providerOffsets.clear();
-    double cumulative = 0.0;
+    final Set<String> favMatchedKeys = <String>{};
 
-    // Favorites section (reactive; when not limited; supports search)
-    final Set<String> _favMatchedKeys = <String>{};
     if (widget.limitProviderKey == null) {
       final pinned = context.watch<SettingsProvider>().pinnedModels;
       if (pinned.isNotEmpty) {
@@ -555,30 +554,20 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
           );
           if (_matchesSearch(query, found, found.providerName)) {
             favs.add(found.copyWith(pinned: true));
-            _favMatchedKeys.add('$pk::$mid');
+            favMatchedKeys.add('$pk::$mid');
           }
         }
         if (favs.isNotEmpty) {
-          _headers['__fav__'] ??= GlobalKey();
-          _providerOffsets['__fav__'] = cumulative;
-          final favKey = _headers['__fav__']!;
-          entries.add(_Entry(
-            height: _sectionHeaderHeight,
-            builder: () => _sectionHeader(context, l10n.modelSelectSheetFavoritesSection, favKey),
-          ));
-          cumulative += _sectionHeaderHeight;
+          _headerIndexMap['__fav__'] = _rows.length;
+          _rows.add(_HeaderRow(l10n.modelSelectSheetFavoritesSection));
           for (final m in favs) {
-            entries.add(_Entry(
-              height: _modelTileHeight,
-              builder: () => _modelTile(context, m, showProviderLabel: true),
-            ));
-            cumulative += _modelTileHeight;
+            _favModelIndexMap['${m.providerKey}::${m.id}'] = _rows.length;
+            _rows.add(_ModelRow(m, showProviderLabel: true));
           }
         }
       }
     }
 
-    // Provider sections with enhanced search
     for (final pk in _orderedKeys) {
       final g = _groups[pk]!;
       List<_ModelItem> items;
@@ -586,99 +575,35 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
         items = g.items;
       } else {
         final providerMatches = _providerMatchesSearch(query, g.name);
-        items = providerMatches
-            ? g.items
-            : g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
-        // When searching, avoid duplicating favorites already listed in the favorites section
-        if (_favMatchedKeys.isNotEmpty) {
-          items = items.where((e) => !_favMatchedKeys.contains('${e.providerKey}::${e.id}')).toList();
+        items = providerMatches ? g.items : g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
+        if (favMatchedKeys.isNotEmpty) {
+          items = items.where((e) => !favMatchedKeys.contains('${e.providerKey}::${e.id}')).toList();
         }
       }
       if (items.isEmpty) continue;
-
-      _headers[pk] ??= GlobalKey();
-      _providerOffsets[pk] = cumulative;
-      final headerKey = _headers[pk]!;
-      entries.add(_Entry(
-        height: _sectionHeaderHeight,
-        builder: () => _sectionHeader(context, g.name, headerKey),
-      ));
-      cumulative += _sectionHeaderHeight;
-
+      _headerIndexMap[pk] = _rows.length;
+      _rows.add(_HeaderRow(g.name));
       for (final m in items) {
-        entries.add(_Entry(
-          height: _modelTileHeight,
-          builder: () => _modelTile(context, m),
-        ));
-        cumulative += _modelTileHeight;
+        _modelIndexMap['${m.providerKey}::${m.id}'] = _rows.length;
+        _rows.add(_ModelRow(m));
       }
     }
 
-    if (entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (_rows.isEmpty) return const SizedBox.shrink();
 
-    // Precompute prefix heights for O(1) range height queries
-    final int n = entries.length;
-    final List<double> prefix = List<double>.filled(n + 1, 0.0);
-    for (int i = 0; i < n; i++) {
-      prefix[i + 1] = prefix[i] + entries[i].height;
-    }
-
-    int lowerBound(List<double> a, double x) {
-      int l = 0, r = a.length; // [l, r)
-      while (l < r) {
-        final m = (l + r) >> 1;
-        if (a[m] < x) {
-          l = m + 1;
-        } else {
-          r = m;
+    return ScrollablePositionedList.builder(
+      itemCount: _rows.length,
+      itemScrollController: _itemScrollController,
+      itemPositionsListener: _itemPositionsListener,
+      padding: const EdgeInsets.only(bottom: 12),
+      itemBuilder: (context, index) {
+        final row = _rows[index];
+        if (row is _HeaderRow) {
+          return _sectionHeader(context, row.title);
+        } else if (row is _ModelRow) {
+          return _modelTile(context, row.item, showProviderLabel: row.showProviderLabel);
         }
-      }
-      return l;
-    }
-
-    const int bufferItems = 8; // small render buffer around viewport 额外渲染的缓冲条目数量
-
-    return LayoutBuilder(
-      builder: (context, cons) {
-        final viewport = cons.maxHeight;
-        return AnimatedBuilder(
-          animation: controller,
-          builder: (context, _) {
-            final has = controller.hasClients;
-            final double offset = has ? controller.offset.clamp(0.0, (prefix.last - viewport).clamp(0.0, double.infinity)) as double : 0.0;
-
-            // Find visible index range using prefix sums + binary search
-            // startIndex: first entry whose end > offset
-            int startIndex = (lowerBound(prefix, offset) - 1).clamp(0, n - 1);
-            // endIndex: last entry whose start < offset + viewport
-            int endIndex = (lowerBound(prefix, offset + viewport) - 1).clamp(0, n - 1);
-
-            // Expand by buffer
-            startIndex = (startIndex - bufferItems).clamp(0, n - 1);
-            endIndex = (endIndex + bufferItems).clamp(0, n - 1);
-
-            final double topGap = prefix[startIndex];
-            final double bottomGap = prefix.last - prefix[endIndex + 1];
-
-            final visibleChildren = <Widget>[
-              for (int i = startIndex; i <= endIndex; i++) entries[i].builder(),
-            ];
-
-            return SingleChildScrollView(
-              controller: controller,
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                children: [
-                  SizedBox(height: topGap),
-                  ...visibleChildren,
-                  SizedBox(height: bottomGap),
-                ],
-              ),
-            );
-          },
-        );
+        return const SizedBox.shrink();
       },
     );
   }
@@ -707,10 +632,9 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     );
   }
 
-  Widget _sectionHeader(BuildContext context, String title, Key key) {
+  Widget _sectionHeader(BuildContext context, String title) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      key: key,
       alignment: Alignment.centerLeft,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.6))),
@@ -830,15 +754,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
 
   Future<void> _jumpToProvider(String pk) async {
     // Expand sheet first if needed
-    if (_sheetCtrl.size < _maxSize) {
-      await _sheetCtrl.animateTo(
-        _maxSize,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-      // Wait a bit for the animation to complete
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+    await _expandSheetIfNeeded(_maxSize);
 
     // Clear search if needed to ensure provider is visible
     if (_search.text.isNotEmpty) {
@@ -847,33 +763,25 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       await Future.delayed(const Duration(milliseconds: 150));
     }
 
-    // Try to use GlobalKey to scroll to the exact position
-    final targetKey = _headers[pk];
-    if (targetKey != null) {
-      final context = targetKey.currentContext;
-      if (context != null) {
-        // Use Scrollable.ensureVisible for accurate scrolling
-        await Scrollable.ensureVisible(
-          context,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutCubic,
-          alignment: 0.0, // Align to top of viewport
-        );
+    // Use precise index jump via ScrollablePositionedList
+    final idx = _headerIndexMap[pk];
+    if (idx != null) {
+      if (!_itemScrollController.isAttached) {
+        // Retry shortly if list not yet attached
+        Future.delayed(const Duration(milliseconds: 60), () {
+          if (mounted) {
+            _jumpToProvider(pk);
+          }
+        });
         return;
       }
-    }
-    
-    // Fallback: use pre-calculated offset if GlobalKey doesn't work
-    final targetOffset = _providerOffsets[pk];
-    if (targetOffset != null && _listCtrl?.hasClients == true) {
-      // Ensure the offset is within valid bounds
-      final scrollTo = targetOffset.clamp(0.0, _listCtrl!.position.maxScrollExtent);
-      
-      await _listCtrl!.animateTo(
-        scrollTo,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-      );
+      try {
+        await _itemScrollController.scrollTo(
+          index: idx,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      } catch (_) {}
     }
   }
 
@@ -883,16 +791,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
   Future<void> _jumpToFavorites() async {
     if (widget.limitProviderKey != null) return;
     // Expand sheet first to reveal more content
-    if (_sheetCtrl.size < _maxSize) {
-      try {
-        await _sheetCtrl.animateTo(
-          _maxSize,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-        );
-      } catch (_) {}
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
+    await _expandSheetIfNeeded(_maxSize);
 
     // If search text hides favorites section, clear it to ensure favorites are visible
     if (_search.text.isNotEmpty) {
@@ -900,29 +799,18 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
       await Future.delayed(const Duration(milliseconds: 150));
     }
 
-    // Try GlobalKey first
-    final favKey = _headers['__fav__'];
-    if (favKey != null) {
-      final ctx = favKey.currentContext;
-      if (ctx != null) {
-        try {
-          await Scrollable.ensureVisible(
-            ctx,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
-            alignment: 0.0,
-          );
-          return;
-        } catch (_) {}
+    // Jump to favorites header index if present
+    final idx = _headerIndexMap['__fav__'];
+    if (idx != null) {
+      if (!_itemScrollController.isAttached) {
+        Future.delayed(const Duration(milliseconds: 60), () {
+          if (mounted) _jumpToFavorites();
+        });
+        return;
       }
-    }
-    // Fallback to offset scrolling
-    final base = _providerOffsets['__fav__'];
-    if (base != null && _listCtrl?.hasClients == true) {
-      final target = base.clamp(0.0, _listCtrl!.position.maxScrollExtent);
       try {
-        await _listCtrl!.animateTo(
-          target,
+        await _itemScrollController.scrollTo(
+          index: idx,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
         );
@@ -950,10 +838,16 @@ class _ModelItem {
 }
 
 // Virtualization entry: fixed height + lazy builder
-class _Entry {
-  final double height;
-  final Widget Function() builder;
-  const _Entry({required this.height, required this.builder});
+// Rows for flattened list
+abstract class _ListRow {}
+class _HeaderRow extends _ListRow {
+  final String title;
+  _HeaderRow(this.title);
+}
+class _ModelRow extends _ListRow {
+  final _ModelItem item;
+  final bool showProviderLabel;
+  _ModelRow(this.item, {this.showProviderLabel = false});
 }
 
 // Reuse badges and avatars similar to provider detail
