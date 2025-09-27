@@ -8,6 +8,7 @@ import 'providers/searxng_search_service.dart';
 import 'providers/linkup_search_service.dart';
 import 'providers/brave_search_service.dart';
 import 'providers/metaso_search_service.dart';
+import 'providers/ollama_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -40,6 +41,8 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return BraveSearchService() as SearchService;
       case MetasoOptions:
         return MetasoSearchService() as SearchService;
+      case OllamaOptions:
+        return OllamaSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -147,6 +150,8 @@ abstract class SearchServiceOptions {
         return BraveOptions.fromJson(json);
       case 'metaso':
         return MetasoOptions.fromJson(json);
+      case 'ollama':
+        return OllamaOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -342,3 +347,23 @@ class MetasoOptions extends SearchServiceOptions {
   );
 }
 
+class OllamaOptions extends SearchServiceOptions {
+  final String apiKey;
+
+  OllamaOptions({
+    required String id,
+    required this.apiKey,
+  }) : super(id: id);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'ollama',
+    'id': id,
+    'apiKey': apiKey,
+  };
+
+  factory OllamaOptions.fromJson(Map<String, dynamic> json) => OllamaOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+  );
+}

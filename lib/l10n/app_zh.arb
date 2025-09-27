@@ -692,6 +692,7 @@
   "searchProviderSearXNGDescription": "注重隐私的元搜索引擎。需自建实例，无跟踪。",
   "searchProviderTavilyDescription": "为大型语言模型（LLMs）优化的 AI 搜索 API，提供高质量、相关的搜索结果。",
   "searchProviderZhipuDescription": "智谱 AI 旗下中文 AI 搜索服务，针对中文内容与查询进行了优化。",
+  "searchProviderOllamaDescription": "Ollama 网络搜索 API。为模型补充最新信息，减少幻觉并提升准确性。",
   "searchServiceNameBingLocal": "Bing（Local）",
   "searchServiceNameTavily": "Tavily",
   "searchServiceNameExa": "Exa",
@@ -700,6 +701,7 @@
   "searchServiceNameLinkUp": "LinkUp",
   "searchServiceNameBrave": "Brave",
   "searchServiceNameMetaso": "秘塔",
+  "searchServiceNameOllama": "Ollama",
   "generationInterrupted": "生成已中断",
   "titleForLocale": "新对话"
 }

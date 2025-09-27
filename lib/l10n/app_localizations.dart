@@ -4175,6 +4175,12 @@ abstract class AppLocalizations {
   /// **'Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.'**
   String get searchProviderZhipuDescription;
 
+  /// No description provided for @searchProviderOllamaDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Ollama web search API. Augments models with up-to-date information.'**
+  String get searchProviderOllamaDescription;
+
   /// No description provided for @searchServiceNameBingLocal.
   ///
   /// In en, this message translates to:
@@ -4222,6 +4228,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Metaso'**
   String get searchServiceNameMetaso;
+
+  /// No description provided for @searchServiceNameOllama.
+  ///
+  /// In en, this message translates to:
+  /// **'Ollama'**
+  String get searchServiceNameOllama;
 
   /// No description provided for @generationInterrupted.
   ///

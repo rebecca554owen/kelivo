@@ -2128,6 +2128,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '智谱 AI 旗下中文 AI 搜索服务，针对中文内容与查询进行了优化。';
 
   @override
+  String get searchProviderOllamaDescription =>
+      'Ollama 网络搜索 API。为模型补充最新信息，减少幻觉并提升准确性。';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing（Local）';
 
   @override
@@ -2150,6 +2154,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchServiceNameMetaso => '秘塔';
+
+  @override
+  String get searchServiceNameOllama => 'Ollama';
 
   @override
   String get generationInterrupted => '生成已中断';
@@ -4282,6 +4289,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '智谱 AI 旗下中文 AI 搜索服务，针对中文内容与查询进行了优化。';
 
   @override
+  String get searchProviderOllamaDescription =>
+      'Ollama 网络搜索 API。为模型补充最新信息，减少幻觉并提升准确性。';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing（Local）';
 
   @override
@@ -4304,6 +4315,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameMetaso => '秘塔';
+
+  @override
+  String get searchServiceNameOllama => 'Ollama';
 
   @override
   String get generationInterrupted => '生成已中断';
@@ -6435,6 +6449,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '智譜 AI 旗下中文 AI 搜尋服務，針對中文內容與查詢進行優化。';
 
   @override
+  String get searchProviderOllamaDescription =>
+      'Ollama 網路搜尋 API。為模型補充最新資訊，降低幻覺並提升準確性。';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing（本機）';
 
   @override
@@ -6457,6 +6475,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameMetaso => 'Metaso（秘塔）';
+
+  @override
+  String get searchServiceNameOllama => 'Ollama';
 
   @override
   String get generationInterrupted => '生成已中斷';

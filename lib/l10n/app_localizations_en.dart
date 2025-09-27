@@ -2205,6 +2205,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.';
 
   @override
+  String get searchProviderOllamaDescription =>
+      'Ollama web search API. Augments models with up-to-date information.';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing (Local)';
 
   @override
@@ -2227,6 +2231,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServiceNameMetaso => 'Metaso';
+
+  @override
+  String get searchServiceNameOllama => 'Ollama';
 
   @override
   String get generationInterrupted => 'Generation interrupted';

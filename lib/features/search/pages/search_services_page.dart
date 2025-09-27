@@ -405,6 +405,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     if (service is LinkUpOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (service is BraveOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (service is MetasoOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is OllamaOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     return null;
   }
 
@@ -432,6 +433,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is LinkUpOptions) return 'LinkUp';
     if (s is BraveOptions) return 'Brave';
     if (s is MetasoOptions) return 'Metaso';
+    if (s is OllamaOptions) return 'Ollama';
     return 'Search';
   }
 
@@ -448,6 +450,7 @@ class _BrandBadge extends StatelessWidget {
       RegExp(r'exa'): 'exa.png',
       RegExp(r'linkup'): 'linkup.png',
       RegExp(r'brave'): 'brave-color.svg',
+      RegExp(r'ollama'): 'ollama.svg',
       // SearXNG/Metaso fall back to letter
     };
     for (final e in mapping.entries) {
@@ -535,6 +538,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
                   DropdownMenuItem(value: 'linkup', child: Text(l10n.searchServiceNameLinkUp)),
                   DropdownMenuItem(value: 'brave', child: Text(l10n.searchServiceNameBrave)),
                   DropdownMenuItem(value: 'metaso', child: Text(l10n.searchServiceNameMetaso)),
+                  DropdownMenuItem(value: 'ollama', child: Text(l10n.searchServiceNameOllama)),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -580,6 +584,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
       case 'linkup':
       case 'brave':
       case 'metaso':
+      case 'ollama':
         _controllers['apiKey'] ??= TextEditingController();
         return [
           TextFormField(
@@ -703,6 +708,11 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           id: id,
           apiKey: _controllers['apiKey']!.text,
         );
+      case 'ollama':
+        return OllamaOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+        );
       default:
         return BingLocalOptions(id: id);
     }
@@ -752,6 +762,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     } else if (service is BraveOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
     } else if (service is MetasoOptions) {
+      _controllers['apiKey'] = TextEditingController(text: service.apiKey);
+    } else if (service is OllamaOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
     }
   }
@@ -810,7 +822,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
                service is ZhipuOptions ||
                service is LinkUpOptions ||
                service is BraveOptions ||
-               service is MetasoOptions) {
+               service is MetasoOptions ||
+               service is OllamaOptions) {
       return [
         TextFormField(
           controller: _controllers['apiKey'],
@@ -921,6 +934,11 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       );
     } else if (service is MetasoOptions) {
       return MetasoOptions(
+        id: service.id,
+        apiKey: _controllers['apiKey']!.text,
+      );
+    } else if (service is OllamaOptions) {
+      return OllamaOptions(
         id: service.id,
         apiKey: _controllers['apiKey']!.text,
       );
