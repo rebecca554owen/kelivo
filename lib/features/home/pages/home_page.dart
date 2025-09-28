@@ -1382,7 +1382,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final _sub = stream.listen(
             (chunk) async {
           // Capture reasoning deltas only when reasoning is enabled
-          if ((chunk.reasoning ?? '').isNotEmpty && supportsReasoning && _isReasoningEnabled((assistant?.thinkingBudget) ?? settings.thinkingBudget)) {
+          if ((chunk.reasoning ?? '').isNotEmpty && supportsReasoning) {
             if (streamOutput) {
               final r = _reasoning[assistantMessage.id] ?? _ReasoningData();
               r.text += chunk.reasoning!;
