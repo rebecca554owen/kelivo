@@ -421,6 +421,30 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
       out += '```';
     }
 
+    // 8) Fix: when multiple markdown links are placed on separate lines using
+    //    trailing double-spaces (hard line breaks), gpt_markdown may treat them
+    //    as a single paragraph and only render the first link correctly.
+    //    To avoid this, convert such lines into separate paragraphs by
+    //    inserting an extra blank line after lines that end with a markdown
+    //    link and have at least two trailing spaces.
+    //    Example affected pattern:
+    //      Label：[text](url)  \nNext： [text](url)  \n
+    final linkWithTrailingSpaces = RegExp(r"\[[^\]]+\]\([^\)]+\)\s{2,}$");
+    final lines = out.split('\n');
+    if (lines.length > 1) {
+      final buf = StringBuffer();
+      for (int i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        buf.write(line);
+        if (i < lines.length - 1) buf.write('\n');
+        if (linkWithTrailingSpaces.hasMatch(line)) {
+          // Ensure a blank line to break the paragraph for the next line
+          buf.write('\n');
+        }
+      }
+      out = buf.toString();
+    }
+
     return out;
   }
 
