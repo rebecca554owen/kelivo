@@ -566,11 +566,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final l10n = AppLocalizations.of(context)!;
     final assistant = context.read<AssistantProvider>().currentAssistant;
     final configured = (assistant?.limitContextMessages ?? true) ? (assistant?.contextMessageSize ?? 0) : 0;
-    final t = _currentConversation?.truncateIndex ?? -1;
+    // Use collapsed view for counting
+    final collapsed = _collapseVersions(_messages);
+    // Map raw truncate index to collapsed start index
+    final int tRaw = _currentConversation?.truncateIndex ?? -1;
+    int startCollapsed = 0;
+    if (tRaw > 0) {
+      final seen = <String>{};
+      final int limit = tRaw < _messages.length ? tRaw : _messages.length;
+      int count = 0;
+      for (int i = 0; i < limit; i++) {
+        final gid0 = (_messages[i].groupId ?? _messages[i].id);
+        if (seen.add(gid0)) count++;
+      }
+      startCollapsed = count; // inclusive start index in collapsed list
+    }
     int remaining = 0;
-    for (int i = 0; i < _messages.length; i++) {
-      if (i >= (t < 0 ? 0 : t)) {
-        if (_messages[i].content.trim().isNotEmpty) remaining++;
+    for (int i = 0; i < collapsed.length; i++) {
+      if (i >= startCollapsed) {
+        if (collapsed[i].content.trim().isNotEmpty) remaining++;
       }
     }
     if (configured > 0) {
@@ -3056,6 +3070,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         final gid = (m.groupId ?? m.id);
                         byGroup.putIfAbsent(gid, () => <ChatMessage>[]).add(m);
                       }
+                      // Map persisted truncateIndex (raw message count) to collapsed index
+                      final int truncRaw = _currentConversation?.truncateIndex ?? -1;
+                      int truncCollapsed = -1;
+                      if (truncRaw > 0) {
+                        final seen = <String>{};
+                        final int limit = truncRaw < _messages.length ? truncRaw : _messages.length;
+                        int count = 0;
+                        for (int i = 0; i < limit; i++) {
+                          final gid0 = (_messages[i].groupId ?? _messages[i].id);
+                          if (seen.add(gid0)) count++;
+                        }
+                        truncCollapsed = count - 1;
+                      }
                       final list = ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.only(bottom: 16, top: 8),
@@ -3071,9 +3098,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           final chatScale = context.watch<SettingsProvider>().chatFontScale;
                           final assistant = context.watch<AssistantProvider>().currentAssistant;
                           final useAssist = assistant?.useAssistantAvatar == true;
-                          final trunc = _currentConversation?.truncateIndex ?? -1;
                           final l10n = AppLocalizations.of(context)!;
-                          final showDivider = trunc > 0 && index == trunc - 1;
+                          final showDivider = truncCollapsed >= 0 && index == truncCollapsed;
                           final cs = Theme.of(context).colorScheme;
                           final label = l10n.homePageClearContext;
                           final divider = Row(
@@ -3862,6 +3888,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     final gid = (m.groupId ?? m.id);
                                     byGroup.putIfAbsent(gid, () => <ChatMessage>[]).add(m);
                                   }
+                                  // Map persisted truncateIndex (raw) to collapsed index
+                                  final int truncRaw = _currentConversation?.truncateIndex ?? -1;
+                                  int truncCollapsed = -1;
+                                  if (truncRaw > 0) {
+                                    final seen = <String>{};
+                                    final int limit = truncRaw < _messages.length ? truncRaw : _messages.length;
+                                    int count = 0;
+                                    for (int i = 0; i < limit; i++) {
+                                      final gid0 = (_messages[i].groupId ?? _messages[i].id);
+                                      if (seen.add(gid0)) count++;
+                                    }
+                                    truncCollapsed = count - 1;
+                                  }
                                   return ListView.builder(
                                     controller: _scrollController,
                                     padding: const EdgeInsets.only(bottom: 16, top: 8),
@@ -3875,9 +3914,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       final chatScale = context.watch<SettingsProvider>().chatFontScale;
                                       final assistant = context.watch<AssistantProvider>().currentAssistant;
                                       final useAssist = assistant?.useAssistantAvatar == true;
-                                      final trunc = _currentConversation?.truncateIndex ?? -1;
                                       final l10n = AppLocalizations.of(context)!;
-                                      final showDivider = trunc > 0 && index == trunc - 1;
+                                      final showDivider = truncCollapsed >= 0 && index == truncCollapsed;
                                       final cs = Theme.of(context).colorScheme;
                                       final label = l10n.homePageClearContext;
                                       final divider = Row(
