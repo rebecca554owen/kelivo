@@ -944,6 +944,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get displaySettingsPageEnableDollarLatexTitle => '启用 \$...\$ 渲染';
+
+  @override
+  String get displaySettingsPageEnableDollarLatexSubtitle =>
+      '将 \$...\$ 之间的内容按行内数学公式渲染';
+
+  @override
+  String get displaySettingsPageEnableMathTitle => '启用数学公式渲染';
+
+  @override
+  String get displaySettingsPageEnableMathSubtitle => '渲染 LaTeX 数学公式（行内与块级）';
+
+  @override
   String get messageExportSheetFormatTitle => '导出格式';
 
   @override
@@ -3105,6 +3118,19 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get displaySettingsPageEnableDollarLatexTitle => '启用 \$...\$ 渲染';
+
+  @override
+  String get displaySettingsPageEnableDollarLatexSubtitle =>
+      '将 \$...\$ 之间的内容按行内数学公式渲染';
+
+  @override
+  String get displaySettingsPageEnableMathTitle => '启用数学公式渲染';
+
+  @override
+  String get displaySettingsPageEnableMathSubtitle => '渲染 LaTeX 数学公式（行内与块级）';
+
+  @override
   String get messageExportSheetFormatTitle => '导出格式';
 
   @override
@@ -5264,6 +5290,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String messageExportSheetExportedAs(String filename) {
     return '已匯出為 $filename';
   }
+
+  @override
+  String get displaySettingsPageEnableDollarLatexTitle => '啟用 \$...\$ 渲染';
+
+  @override
+  String get displaySettingsPageEnableDollarLatexSubtitle =>
+      '將 \$...\$ 之間的內容以行內數學公式渲染';
+
+  @override
+  String get displaySettingsPageEnableMathTitle => '啟用數學公式渲染';
+
+  @override
+  String get displaySettingsPageEnableMathSubtitle => '渲染 LaTeX 數學公式（行內與區塊）';
 
   @override
   String get messageExportSheetFormatTitle => '匯出格式';

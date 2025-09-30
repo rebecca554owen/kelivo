@@ -31,6 +31,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayNewChatOnLaunchKey = 'display_new_chat_on_launch_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
   static const String _displayAutoScrollIdleSecondsKey = 'display_auto_scroll_idle_seconds_v1';
+  static const String _displayEnableDollarLatexKey = 'display_enable_dollar_latex_v1';
+  static const String _displayEnableMathRenderingKey = 'display_enable_math_rendering_v1';
   static const String _appLocaleKey = 'app_locale_v1';
   static const String _translateModelKey = 'translate_model_v1';
   static const String _translatePromptKey = 'translate_prompt_v1';
@@ -166,6 +168,9 @@ class SettingsProvider extends ChangeNotifier {
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
     _autoScrollIdleSeconds = prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
+    // display: markdown/math rendering
+    _enableDollarLatex = prefs.getBool(_displayEnableDollarLatexKey) ?? true;
+    _enableMathRendering = prefs.getBool(_displayEnableMathRenderingKey) ?? true;
     // Load app locale; default to follow system on first launch
     _appLocaleTag = prefs.getString(_appLocaleKey);
     if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
@@ -691,6 +696,28 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setInt(_displayAutoScrollIdleSecondsKey, _autoScrollIdleSeconds);
   }
 
+  // Display: inline $...$ LaTeX rendering
+  bool _enableDollarLatex = true;
+  bool get enableDollarLatex => _enableDollarLatex;
+  Future<void> setEnableDollarLatex(bool v) async {
+    if (_enableDollarLatex == v) return;
+    _enableDollarLatex = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayEnableDollarLatexKey, v);
+  }
+
+  // Display: LaTeX math rendering (inline/block)
+  bool _enableMathRendering = true;
+  bool get enableMathRendering => _enableMathRendering;
+  Future<void> setEnableMathRendering(bool v) async {
+    if (_enableMathRendering == v) return;
+    _enableMathRendering = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayEnableMathRenderingKey, v);
+  }
+
   // Display: haptics on message generation
   bool _hapticsOnGenerate = false;
   bool get hapticsOnGenerate => _hapticsOnGenerate;
@@ -812,6 +839,8 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._newChatOnLaunch = _newChatOnLaunch;
     copy._chatFontScale = _chatFontScale;
     copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
+    copy._enableDollarLatex = _enableDollarLatex;
+    copy._enableMathRendering = _enableMathRendering;
     return copy;
   }
 }

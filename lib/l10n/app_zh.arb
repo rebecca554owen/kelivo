@@ -703,5 +703,9 @@
   "searchServiceNameMetaso": "秘塔",
   "searchServiceNameOllama": "Ollama",
   "generationInterrupted": "生成已中断",
-  "titleForLocale": "新对话"
+  "titleForLocale": "新对话",
+  "displaySettingsPageEnableDollarLatexTitle": "启用 $...$ 渲染",
+  "displaySettingsPageEnableDollarLatexSubtitle": "将 $...$ 之间的内容按行内数学公式渲染",
+  "displaySettingsPageEnableMathTitle": "启用数学公式渲染",
+  "displaySettingsPageEnableMathSubtitle": "渲染 LaTeX 数学公式（行内与块级）"
 }

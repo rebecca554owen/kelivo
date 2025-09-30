@@ -16,6 +16,8 @@ import 'snackbar.dart';
 import 'mermaid_bridge.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/theme/theme_factory.dart' show kDefaultFontFamilyFallback;
+import 'package:provider/provider.dart';
+import '../../core/providers/settings_provider.dart';
 
 /// gpt_markdown with custom code block highlight and inline code styling.
 class MarkdownWithCodeHighlight extends StatelessWidget {
@@ -30,6 +32,7 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final imageUrls = _extractImageUrls(text);
@@ -56,9 +59,19 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     if (rbIdx != -1) components[rbIdx] = ModernRadioMd();
     // Prepend custom renderers in priority order (fence first)
     components.insert(0, LabelValueLineMd());
-    // Ensure LaTeX formulas scroll instead of overflow
-    components.insert(0, InlineLatexScrollableMd());
-    components.insert(0, LatexBlockScrollableMd());
+    // Conditionally add LaTeX/math renderers
+    if (settings.enableMathRendering) {
+      // Block-level LaTeX (e.g., $$...$$ or \[...\])
+      components.insert(0, LatexBlockScrollableMd());
+      // Inline LaTeX: $...$ and \(...\)
+      if (settings.enableDollarLatex) {
+        components.insert(0, InlineLatexParenScrollableMd());
+        components.insert(0, InlineLatexDollarScrollableMd());
+      } else {
+        // Only \(...\) inline
+        components.insert(0, InlineLatexParenScrollableMd());
+      }
+    }
     components.insert(0, AtxHeadingMd());
     components.insert(0, FencedCodeBlockMd());
     return GptMarkdown(
@@ -1026,6 +1039,84 @@ class InlineLatexScrollableMd extends InlineMd {
       },
     );
 
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: w,
+    );
+  }
+}
+
+/// Inline LaTeX for dollar delimiters only: `$...$`
+class InlineLatexDollarScrollableMd extends InlineMd {
+  @override
+  RegExp get exp => RegExp(r"(?:(?<!\$)\$([^\$\n]+?)\$(?!\$))");
+
+  @override
+  InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text);
+    if (m == null) return TextSpan(text: text, style: config.style);
+    final body = (m.group(1) ?? '').trim();
+    if (body.isEmpty) return TextSpan(text: text, style: config.style);
+    final math = Math.tex(
+      body,
+      mathStyle: MathStyle.text,
+      textStyle: () {
+        final base = (config.style ?? const TextStyle());
+        final baseSize = base.fontSize ?? 15.5;
+        return base.copyWith(fontSize: baseSize * 1.2);
+      }(),
+    );
+    final w = LayoutBuilder(
+      builder: (context, constraints) {
+        return SelectionContainer.disabled(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: math,
+          ),
+        );
+      },
+    );
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: w,
+    );
+  }
+}
+
+/// Inline LaTeX for parenthesis delimiters only: `\(...\)`
+class InlineLatexParenScrollableMd extends InlineMd {
+  @override
+  RegExp get exp => RegExp(r"(?:\\\(([^\n]+?)\\\))");
+
+  @override
+  InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {
+    final m = exp.firstMatch(text);
+    if (m == null) return TextSpan(text: text, style: config.style);
+    final body = (m.group(1) ?? '').trim();
+    if (body.isEmpty) return TextSpan(text: text, style: config.style);
+    final math = Math.tex(
+      body,
+      mathStyle: MathStyle.text,
+      textStyle: () {
+        final base = (config.style ?? const TextStyle());
+        final baseSize = base.fontSize ?? 15.5;
+        return base.copyWith(fontSize: baseSize * 1.2);
+      }(),
+    );
+    final w = LayoutBuilder(
+      builder: (context, constraints) {
+        return SelectionContainer.disabled(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: math,
+          ),
+        );
+      },
+    );
     return WidgetSpan(
       alignment: PlaceholderAlignment.baseline,
       baseline: TextBaseline.alphabetic,

@@ -1889,6 +1889,30 @@ abstract class AppLocalizations {
   /// **'Exported as {filename}'**
   String messageExportSheetExportedAs(String filename);
 
+  /// No description provided for @displaySettingsPageEnableDollarLatexTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inline \$...\$ Rendering'**
+  String get displaySettingsPageEnableDollarLatexTitle;
+
+  /// No description provided for @displaySettingsPageEnableDollarLatexSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Render inline math inside \$...\$'**
+  String get displaySettingsPageEnableDollarLatexSubtitle;
+
+  /// No description provided for @displaySettingsPageEnableMathTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Math Formula Rendering'**
+  String get displaySettingsPageEnableMathTitle;
+
+  /// No description provided for @displaySettingsPageEnableMathSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Render LaTeX math (inline and block)'**
+  String get displaySettingsPageEnableMathSubtitle;
+
   /// No description provided for @messageExportSheetFormatTitle.
   ///
   /// In en, this message translates to:

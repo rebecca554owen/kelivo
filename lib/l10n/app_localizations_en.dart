@@ -970,6 +970,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get displaySettingsPageEnableDollarLatexTitle =>
+      'Inline \$...\$ Rendering';
+
+  @override
+  String get displaySettingsPageEnableDollarLatexSubtitle =>
+      'Render inline math inside \$...\$';
+
+  @override
+  String get displaySettingsPageEnableMathTitle => 'Math Formula Rendering';
+
+  @override
+  String get displaySettingsPageEnableMathSubtitle =>
+      'Render LaTeX math (inline and block)';
+
+  @override
   String get messageExportSheetFormatTitle => 'Export Format';
 
   @override

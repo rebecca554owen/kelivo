@@ -425,6 +425,10 @@
       }
     }
   },
+  "displaySettingsPageEnableDollarLatexTitle": "Inline $...$ Rendering",
+  "displaySettingsPageEnableDollarLatexSubtitle": "Render inline math inside $...$",
+  "displaySettingsPageEnableMathTitle": "Math Formula Rendering",
+  "displaySettingsPageEnableMathSubtitle": "Render LaTeX math (inline and block)",
   "messageExportSheetFormatTitle": "Export Format",
   "messageExportSheetMarkdown": "Markdown",
   "messageExportSheetSingleMarkdownSubtitle": "Export this message as a Markdown file",

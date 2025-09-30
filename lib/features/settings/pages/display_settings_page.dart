@@ -98,6 +98,22 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
             value: context.watch<SettingsProvider>().showTokenStats,
             onChanged: (v) => context.read<SettingsProvider>().setShowTokenStats(v),
           ),
+          const SizedBox(height: 6),
+          _SwitchTile(
+            icon: Lucide.Hash,
+            title: l10n.displaySettingsPageEnableDollarLatexTitle,
+            subtitle: l10n.displaySettingsPageEnableDollarLatexSubtitle,
+            value: context.watch<SettingsProvider>().enableDollarLatex,
+            onChanged: (v) => context.read<SettingsProvider>().setEnableDollarLatex(v),
+          ),
+          const SizedBox(height: 6),
+          _SwitchTile(
+            icon: Lucide.Code,
+            title: l10n.displaySettingsPageEnableMathTitle,
+            subtitle: l10n.displaySettingsPageEnableMathSubtitle,
+            value: context.watch<SettingsProvider>().enableMathRendering,
+            onChanged: (v) => context.read<SettingsProvider>().setEnableMathRendering(v),
+          ),
           _SwitchTile(
             icon: Lucide.Brain,
             title: l10n.displaySettingsPageAutoCollapseThinkingTitle,

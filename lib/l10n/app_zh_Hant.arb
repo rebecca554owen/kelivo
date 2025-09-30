@@ -703,5 +703,9 @@
   "generationInterrupted": "生成已中斷",
   "titleForLocale": "新對話"
   ,"miniMapTitle": "迷你地圖",
-  "miniMapTooltip": "迷你地圖"
+  "miniMapTooltip": "迷你地圖",
+  "displaySettingsPageEnableDollarLatexTitle": "啟用 $...$ 渲染",
+  "displaySettingsPageEnableDollarLatexSubtitle": "將 $...$ 之間的內容以行內數學公式渲染",
+  "displaySettingsPageEnableMathTitle": "啟用數學公式渲染",
+  "displaySettingsPageEnableMathSubtitle": "渲染 LaTeX 數學公式（行內與區塊）"
 }
