@@ -1156,13 +1156,14 @@ class LabelValueLineMd extends InlineMd {
 
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
-
-    final labelStyle = (t.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
-      fontWeight: FontWeight.w700,
+    // Inherit base markdown style (letterSpacing/height) to keep visual consistency
+    final base = (config.style ?? t.bodyMedium ?? const TextStyle(fontSize: 14));
+    final labelStyle = base.copyWith(
+      fontWeight: FontWeight.w500,
       color: cs.onSurface,
     );
-    final valueStyle = (t.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
-      fontWeight: FontWeight.w500,
+    final valueStyle = base.copyWith(
+      fontWeight: FontWeight.w400,
       color: cs.onSurface.withOpacity(0.92),
     );
        // Split into label/value while preserving the rest of the line
