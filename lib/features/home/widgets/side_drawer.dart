@@ -617,10 +617,15 @@ class _SideDrawerState extends State<SideDrawer> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Icon(
-                                _assistantPickerEntry != null ? Lucide.ChevronUp : Lucide.ChevronDown,
-                                size: 18,
-                                color: textBase.withOpacity(0.7),
+                              AnimatedRotation(
+                                turns: _assistantPickerEntry != null ? 0.5 : 0.0,
+                                duration: const Duration(milliseconds: 350),
+                                curve: Curves.easeOutCubic,
+                                child: Icon(
+                                  Lucide.ChevronDown,
+                                  size: 18,
+                                  color: textBase.withOpacity(0.7),
+                                ),
                               ),
                             ],
                           ),
