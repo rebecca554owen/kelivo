@@ -1535,8 +1535,8 @@ class ChatApiService {
               buf2 = lines2.last;
               for (int j = 0; j < lines2.length - 1; j++) {
                 final l = lines2[j].trim();
-                if (l.isEmpty || !l.startsWith('data: ')) continue;
-                final d = l.substring(6);
+                if (l.isEmpty || !l.startsWith('data:')) continue;
+                final d = l.substring(5).trimLeft();
                 if (d == '[DONE]') {
                   yield ChatStreamChunk(content: '', isDone: true, totalTokens: usage?.totalTokens ?? 0, usage: usage);
                   return;
@@ -1744,9 +1744,9 @@ class ChatApiService {
 
       for (int i = 0; i < lines.length - 1; i++) {
         final line = lines[i].trim();
-        if (line.isEmpty || !line.startsWith('data: ')) continue;
+        if (line.isEmpty || !line.startsWith('data:')) continue;
 
-        final data = line.substring(6);
+        final data = line.substring(5).trimLeft();
         try {
           final json = jsonDecode(data);
           final type = json['type'];
