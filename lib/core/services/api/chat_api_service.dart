@@ -321,12 +321,12 @@ class ChatApiService {
           };
         } else {
           body = {
-                'model': modelId,
-                'messages': [
-                  {'role': 'user', 'content': prompt}
-                ],
-                'temperature': 0.3,
-              };
+            'model': modelId,
+            'messages': [
+              {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.3,
+          };
         }
         final headers = <String, String>{
           'Authorization': 'Bearer ${config.apiKey}',
@@ -455,25 +455,25 @@ class ChatApiService {
             (body as Map<String, dynamic>)['tools'] = toolsArr;
           }
         }
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    // Add Bearer for Vertex via service account JSON
-    if (config.vertexAI == true) {
-      final token = await _maybeVertexAccessToken(config);
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-      final proj = (config.projectId ?? '').trim();
-      if (proj.isNotEmpty) headers['X-Goog-User-Project'] = proj;
-    }
-    headers.addAll(_customHeaders(config, modelId));
-    if (extraHeaders != null && extraHeaders.isNotEmpty) headers.addAll(extraHeaders);
-    final extra = _customBody(config, modelId);
-    if (extra.isNotEmpty) (body as Map<String, dynamic>).addAll(extra);
-    if (extraBody != null && extraBody.isNotEmpty) {
-      (extraBody).forEach((k, v) {
-        (body as Map<String, dynamic>)[k] = (v is String) ? _parseOverrideValue(v) : v;
-      });
-    }
+        final headers = <String, String>{'Content-Type': 'application/json'};
+        // Add Bearer for Vertex via service account JSON
+        if (config.vertexAI == true) {
+          final token = await _maybeVertexAccessToken(config);
+          if (token != null && token.isNotEmpty) {
+            headers['Authorization'] = 'Bearer $token';
+          }
+          final proj = (config.projectId ?? '').trim();
+          if (proj.isNotEmpty) headers['X-Goog-User-Project'] = proj;
+        }
+        headers.addAll(_customHeaders(config, modelId));
+        if (extraHeaders != null && extraHeaders.isNotEmpty) headers.addAll(extraHeaders);
+        final extra = _customBody(config, modelId);
+        if (extra.isNotEmpty) (body as Map<String, dynamic>).addAll(extra);
+        if (extraBody != null && extraBody.isNotEmpty) {
+          (extraBody).forEach((k, v) {
+            (body as Map<String, dynamic>)[k] = (v is String) ? _parseOverrideValue(v) : v;
+          });
+        }
         final resp = await client.post(Uri.parse(url), headers: headers, body: jsonEncode(body));
         if (resp.statusCode < 200 || resp.statusCode >= 300) {
           throw HttpException('HTTP ${resp.statusCode}: ${resp.body}');
@@ -513,8 +513,10 @@ class ChatApiService {
       props.forEach((key, value) {
         if (value is Map) {
           final propMap = Map<String, dynamic>.from(value as Map);
+          // print('[ChatApi/Schema] Property $key: type=${propMap['type']}, hasItems=${propMap.containsKey('items')}');
           // If type is array but items is missing, add a permissive items schema
           if (propMap['type'] == 'array' && !propMap.containsKey('items')) {
+            // print('[ChatApi/Schema] Adding items to array property: $key');
             propMap['items'] = {'type': 'string'}; // Default to string array
           }
           // Recursively clean nested objects
@@ -535,18 +537,37 @@ class ChatApiService {
     return result;
   }
 
+  // Clean OpenAI-format tools for compatibility with strict backends (like Gemini via NewAPI)
+  static List<Map<String, dynamic>> _cleanToolsForCompatibility(List<Map<String, dynamic>> tools) {
+    final cleaned = tools.map((tool) {
+      final result = Map<String, dynamic>.from(tool);
+      final fn = result['function'];
+      if (fn is Map) {
+        final fnMap = Map<String, dynamic>.from(fn as Map);
+        final params = fnMap['parameters'];
+        if (params is Map) {
+          fnMap['parameters'] = _cleanSchemaForGemini(params as Map<String, dynamic>);
+        }
+        result['function'] = fnMap;
+      }
+      return result;
+    }).toList();
+    // print('[ChatApi/Tools] Cleaned ${cleaned.length} tools: ${jsonEncode(cleaned)}');
+    return cleaned;
+  }
+
   static Stream<ChatStreamChunk> _sendOpenAIStream(
-    http.Client client,
-    ProviderConfig config,
-    String modelId,
-    List<Map<String, dynamic>> messages,
-    {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
-  ) async* {
-    final base = config.baseUrl.endsWith('/') 
-        ? config.baseUrl.substring(0, config.baseUrl.length - 1) 
+      http.Client client,
+      ProviderConfig config,
+      String modelId,
+      List<Map<String, dynamic>> messages,
+      {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
+      ) async* {
+    final base = config.baseUrl.endsWith('/')
+        ? config.baseUrl.substring(0, config.baseUrl.length - 1)
         : config.baseUrl;
-    final path = (config.useResponseApi == true) 
-        ? '/responses' 
+    final path = (config.useResponseApi == true)
+        ? '/responses'
         : (config.chatPath ?? '/chat/completions');
     final url = Uri.parse('$base$path');
 
@@ -556,7 +577,7 @@ class ChatApiService {
 
     final effort = _effortForBudget(thinkingBudget);
     final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase() ?? '';
-        Map<String, dynamic> body;
+    Map<String, dynamic> body;
     if (config.useResponseApi == true) {
       final input = <Map<String, dynamic>>[];
       // Extract system messages into `instructions` (Responses API best practice)
@@ -628,12 +649,12 @@ class ChatApiService {
           }
           continue;
         }
-        
+
         // Only parse images if there are images to process
         final hasMarkdownImages = raw.contains('![') && raw.contains('](');
         final hasCustomImages = raw.contains('[image:');
         final hasAttachedImages = isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user');
-        
+
         if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
           final parsed = _parseTextAndImages(raw);
           final parts = <Map<String, dynamic>>[];
@@ -695,12 +716,12 @@ class ChatApiService {
         final m = messages[i];
         final isLast = i == messages.length - 1;
         final raw = (m['content'] ?? '').toString();
-        
+
         // Only parse images if there are images to process
         final hasMarkdownImages = raw.contains('![') && raw.contains('](');
         final hasCustomImages = raw.contains('[image:');
         final hasAttachedImages = isLast && (userImagePaths?.isNotEmpty == true) && (m['role'] == 'user');
-        
+
         if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
           final parsed = _parseTextAndImages(raw);
           final parts = <Map<String, dynamic>>[];
@@ -738,7 +759,7 @@ class ChatApiService {
         if (topP != null) 'top_p': topP,
         if (maxTokens != null) 'max_tokens': maxTokens,
         if (isReasoning && effort != 'off' && effort != 'auto') 'reasoning_effort': effort,
-        if (tools != null && tools.isNotEmpty) 'tools': tools,
+        if (tools != null && tools.isNotEmpty) 'tools': _cleanToolsForCompatibility(tools),
         if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
       };
     }
@@ -951,10 +972,10 @@ class ChatApiService {
                 if (topP != null) 'top_p': topP,
                 if (maxTokens != null) 'max_tokens': maxTokens,
                 if (isReasoning && effort != 'off' && effort != 'auto') 'reasoning_effort': effort,
-                if (tools != null && tools.isNotEmpty) 'tools': tools,
+                if (tools != null && tools.isNotEmpty) 'tools': _cleanToolsForCompatibility(tools),
                 if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
               };
-              
+
               // Apply the same vendor-specific reasoning settings as the original request
               final off = _isOff(thinkingBudget);
               if (host.contains('openrouter.ai')) {
@@ -1027,19 +1048,19 @@ class ChatApiService {
                   body2.remove('reasoning_budget');
                 }
               }
-              
+
               // Ask for usage in streaming (when supported)
               if (!host.contains('mistral.ai')) {
                 body2['stream_options'] = {'include_usage': true};
               }
-              
+
               // Apply custom body overrides
               if (extraBody != null && extraBody.isNotEmpty) {
                 extraBody.forEach((k, v) {
                   body2[k] = (v is String) ? _parseOverrideValue(v) : v;
                 });
               }
-              
+
               final req2 = http.Request('POST', url);
               final headers2 = <String, String>{
                 'Authorization': 'Bearer ${config.apiKey}',
@@ -1558,7 +1579,7 @@ class ChatApiService {
                 if (topP != null) 'top_p': topP,
                 if (maxTokens != null) 'max_tokens': maxTokens,
                 if (isReasoning && effort != 'off' && effort != 'auto') 'reasoning_effort': effort,
-                if (tools != null && tools.isNotEmpty) 'tools': tools,
+                if (tools != null && tools.isNotEmpty) 'tools': _cleanToolsForCompatibility(tools),
                 if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
               };
               final off = _isOff(thinkingBudget);
@@ -1890,7 +1911,7 @@ class ChatApiService {
                     if (topP != null) 'top_p': topP,
                     if (maxTokens != null) 'max_tokens': maxTokens,
                     if (isReasoning && effort != 'off' && effort != 'auto') 'reasoning_effort': effort,
-                    if (tools != null && tools.isNotEmpty) 'tools': tools,
+                    if (tools != null && tools.isNotEmpty) 'tools': _cleanToolsForCompatibility(tools),
                     if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
                   };
                   final off = _isOff(thinkingBudget);
@@ -2235,7 +2256,7 @@ class ChatApiService {
               'model': modelId,
               'messages': mm2,
               'stream': true,
-              if (tools != null && tools.isNotEmpty) 'tools': tools,
+              if (tools != null && tools.isNotEmpty) 'tools': _cleanToolsForCompatibility(tools),
               if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
             };
 
@@ -2291,14 +2312,14 @@ class ChatApiService {
   }
 
   static Stream<ChatStreamChunk> _sendClaudeStream(
-    http.Client client,
-    ProviderConfig config,
-    String modelId,
-    List<Map<String, dynamic>> messages,
-    {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
-  ) async* {
-    final base = config.baseUrl.endsWith('/') 
-        ? config.baseUrl.substring(0, config.baseUrl.length - 1) 
+      http.Client client,
+      ProviderConfig config,
+      String modelId,
+      List<Map<String, dynamic>> messages,
+      {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
+      ) async* {
+    final base = config.baseUrl.endsWith('/')
+        ? config.baseUrl.substring(0, config.baseUrl.length - 1)
         : config.baseUrl;
     final url = Uri.parse('$base/messages');
 
@@ -2474,7 +2495,7 @@ class ChatApiService {
         try {
           final json = jsonDecode(data);
           final type = json['type'];
-          
+
           if (type == 'content_block_delta') {
             final delta = json['delta'];
             if (delta != null) {
@@ -2629,12 +2650,12 @@ class ChatApiService {
   }
 
   static Stream<ChatStreamChunk> _sendGoogleStream(
-    http.Client client,
-    ProviderConfig config,
-    String modelId,
-    List<Map<String, dynamic>> messages,
-    {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
-  ) async* {
+      http.Client client,
+      ProviderConfig config,
+      String modelId,
+      List<Map<String, dynamic>> messages,
+      {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
+      ) async* {
     // Implement SSE streaming via :streamGenerateContent with alt=sse
     // Build endpoint per Vertex vs Gemini
     String baseUrl;
@@ -2666,12 +2687,12 @@ class ChatApiService {
       final isLast = i == messages.length - 1;
       final parts = <Map<String, dynamic>>[];
       final raw = (msg['content'] ?? '').toString();
-      
+
       // Only parse images if there are images to process
       final hasMarkdownImages = raw.contains('![') && raw.contains('](');
       final hasCustomImages = raw.contains('[image:');
       final hasAttachedImages = isLast && role == 'user' && (userImagePaths?.isNotEmpty == true);
-      
+
       if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
         final parsed = _parseTextAndImages(raw);
         if (parsed.text.isNotEmpty) parts.add({'text': parsed.text});
