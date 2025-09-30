@@ -376,9 +376,10 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
           margin: const EdgeInsets.only(bottom: 8),
           constraints: const BoxConstraints(maxWidth: 400),
           decoration: BoxDecoration(
-            color: isDark 
+            color: isDark
               ? const Color(0xFF1C1C1E).withValues(alpha: 0.98)
               : Colors.white.withValues(alpha: 0.98),
+            // color: cs.surface.withValues(alpha: 0.98),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
@@ -411,7 +412,7 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
                         style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white : const Color(0xFF1C1C1E),
+                          color: cs.onSurface,
                           height: 1.3,
                           decoration: TextDecoration.none,
                         ),
