@@ -49,8 +49,10 @@ class DefaultModelPage extends StatelessWidget {
             icon: Lucide.NotebookTabs,
             title: l10n.defaultModelPageTitleModelTitle,
             subtitle: l10n.defaultModelPageTitleModelSubtitle,
-            modelProvider: settings.titleModelProvider ?? settings.currentModelProvider,
-            modelId: settings.titleModelId ?? settings.currentModelId,
+            modelProvider: settings.titleModelProvider,
+            modelId: settings.titleModelId,
+            fallbackProvider: settings.currentModelProvider,
+            fallbackModelId: settings.currentModelId,
             onPick: () async {
               final sel = await showModelSelector(context);
               if (sel != null) {
@@ -64,8 +66,10 @@ class DefaultModelPage extends StatelessWidget {
             icon: Lucide.Languages,
             title: l10n.defaultModelPageTranslateModelTitle,
             subtitle: l10n.defaultModelPageTranslateModelSubtitle,
-            modelProvider: settings.translateModelProvider ?? settings.currentModelProvider,
-            modelId: settings.translateModelId ?? settings.currentModelId,
+            modelProvider: settings.translateModelProvider,
+            modelId: settings.translateModelId,
+            fallbackProvider: settings.currentModelProvider,
+            fallbackModelId: settings.currentModelId,
             onPick: () async {
               final sel = await showModelSelector(context);
               if (sel != null) {
@@ -240,6 +244,8 @@ class _ModelCard extends StatelessWidget {
     required this.modelProvider,
     required this.modelId,
     required this.onPick,
+    this.fallbackProvider,
+    this.fallbackModelId,
     this.configAction,
   });
 
@@ -248,6 +254,8 @@ class _ModelCard extends StatelessWidget {
   final String subtitle;
   final String? modelProvider;
   final String? modelId;
+  final String? fallbackProvider;
+  final String? fallbackModelId;
   final VoidCallback onPick;
   final VoidCallback? configAction;
 
@@ -256,13 +264,27 @@ class _ModelCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final settings = context.read<SettingsProvider>();
+    final l10n = AppLocalizations.of(context)!;
+
+    // Check if using fallback (not explicitly set)
+    final usingFallback = modelProvider == null || modelId == null;
+
+    // Use fallback values if needed
+    final effectiveProvider = modelProvider ?? fallbackProvider;
+    final effectiveModelId = modelId ?? fallbackModelId;
+
     String? providerName;
     String? modelDisplay;
-    if (modelProvider != null && modelId != null) {
-      final cfg = settings.getProviderConfig(modelProvider!);
-      providerName = cfg.name.isNotEmpty ? cfg.name : modelProvider;
-      final ov = cfg.modelOverrides[modelId] as Map?;
-      modelDisplay = (ov != null && (ov['name'] as String?)?.isNotEmpty == true) ? (ov['name'] as String) : modelId;
+    if (effectiveProvider != null && effectiveModelId != null) {
+      final cfg = settings.getProviderConfig(effectiveProvider);
+      providerName = cfg.name.isNotEmpty ? cfg.name : effectiveProvider;
+      final ov = cfg.modelOverrides[effectiveModelId] as Map?;
+      modelDisplay = (ov != null && (ov['name'] as String?)?.isNotEmpty == true) ? (ov['name'] as String) : effectiveModelId;
+    }
+
+    // Override display text if using fallback
+    if (usingFallback) {
+      modelDisplay = l10n.defaultModelPageUseCurrentModel;
     }
     return Material(
       color: cs.surface,

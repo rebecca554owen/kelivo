@@ -1343,6 +1343,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get defaultModelPageUseCurrentModel => '使用当前对话模型';
+
+  @override
   String get modelDetailSheetAddModel => '添加模型';
 
   @override
@@ -3517,6 +3520,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get defaultModelPageUseCurrentModel => '使用当前对话模型';
+
+  @override
   String get modelDetailSheetAddModel => '添加模型';
 
   @override
@@ -5689,6 +5695,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String defaultModelPageTranslateVars(String sourceVar, String targetVar) {
     return '變數：原始文本：$sourceVar，目標語言：$targetVar';
   }
+
+  @override
+  String get defaultModelPageUseCurrentModel => '使用目前對話模型';
 
   @override
   String get modelDetailSheetAddModel => '新增模型';

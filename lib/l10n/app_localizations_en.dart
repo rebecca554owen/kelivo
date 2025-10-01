@@ -1383,6 +1383,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get defaultModelPageUseCurrentModel => 'Use current chat model';
+
+  @override
   String get modelDetailSheetAddModel => 'Add Model';
 
   @override

@@ -594,6 +594,7 @@
       "targetVar": { "type": "String" }
     }
   },
+  "defaultModelPageUseCurrentModel": "Use current chat model",
   "modelDetailSheetAddModel": "Add Model",
   "modelDetailSheetEditModel": "Edit Model",
   "modelDetailSheetBasicTab": "Basic",

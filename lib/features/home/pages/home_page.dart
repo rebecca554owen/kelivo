@@ -2435,9 +2435,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (!force && convo.title.isNotEmpty && convo.title != _titleForLocale(context)) return;
 
     final settings = context.read<SettingsProvider>();
-    // Decide model: prefer title model, else fall back to current chat model
-    final provKey = settings.titleModelProvider ?? settings.currentModelProvider;
-    final mdlId = settings.titleModelId ?? settings.currentModelId;
+    final assistantProvider = context.read<AssistantProvider>();
+
+    // Get assistant for this conversation
+    final assistant = convo.assistantId != null
+        ? assistantProvider.getById(convo.assistantId!)
+        : assistantProvider.currentAssistant;
+
+    // Decide model: prefer title model, else fall back to assistant's model, then to global default
+    final provKey = settings.titleModelProvider
+        ?? assistant?.chatModelProvider
+        ?? settings.currentModelProvider;
+    final mdlId = settings.titleModelId
+        ?? assistant?.chatModelId
+        ?? settings.currentModelId;
     if (provKey == null || mdlId == null) return;
     final cfg = settings.getProviderConfig(provKey);
 
@@ -2718,10 +2729,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
 
     final settings = context.read<SettingsProvider>();
+    final assistant = context.read<AssistantProvider>().currentAssistant;
 
-    // Check if translation model is set
-    final translateProvider = settings.translateModelProvider ?? settings.currentModelProvider;
-    final translateModelId = settings.translateModelId ?? settings.currentModelId;
+    // Check if translation model is set, fallback to assistant's model, then to global default
+    final translateProvider = settings.translateModelProvider
+        ?? assistant?.chatModelProvider
+        ?? settings.currentModelProvider;
+    final translateModelId = settings.translateModelId
+        ?? assistant?.chatModelId
+        ?? settings.currentModelId;
 
     if (translateProvider == null || translateModelId == null) {
       showAppSnackBar(

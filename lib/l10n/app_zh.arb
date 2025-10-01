@@ -434,6 +434,7 @@
   "defaultModelPageSave": "保存",
   "defaultModelPageTitleVars": "变量: 对话内容: {contentVar}, 语言: {localeVar}",
   "defaultModelPageTranslateVars": "变量：原始文本：{sourceVar}，目标语言：{targetVar}",
+  "defaultModelPageUseCurrentModel": "使用当前对话模型",
   "modelDetailSheetAddModel": "添加模型",
   "modelDetailSheetEditModel": "编辑模型",
   "modelDetailSheetBasicTab": "基本设置",

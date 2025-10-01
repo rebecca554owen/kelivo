@@ -2651,6 +2651,12 @@ abstract class AppLocalizations {
   /// **'Variables: source text: {sourceVar}, target language: {targetVar}'**
   String defaultModelPageTranslateVars(String sourceVar, String targetVar);
 
+  /// No description provided for @defaultModelPageUseCurrentModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Use current chat model'**
+  String get defaultModelPageUseCurrentModel;
+
   /// No description provided for @modelDetailSheetAddModel.
   ///
   /// In en, this message translates to:
