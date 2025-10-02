@@ -564,16 +564,22 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header layout: language + copy + expand/collapse icon
+          // Header layout: language (left) + copy action (icon + label) + expand/collapse icon
           Material(
             color: headerBg,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
             child: InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.25), width: 0.8),
+                    // Show divider only when expanded
+                    bottom: _expanded
+                        ? BorderSide(color: cs.outlineVariant.withOpacity(0.28), width: 1.0)
+                        : BorderSide.none,
                   ),
                 ),
                 child: Row(
@@ -584,14 +590,14 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: cs.secondary,
+                        color: cs.onSurface,
                         height: 1.0,
                       ),
                     ),
                     const Spacer(),
-                    // Copy button stays functional; tapping it won't toggle parent
-                    IconButton(
-                      onPressed: () async {
+                    // Copy action: icon + label ("复制"/localized)
+                    InkWell(
+                      onTap: () async {
                         await Clipboard.setData(ClipboardData(text: widget.code));
                         if (mounted) {
                           showAppSnackBar(
@@ -601,18 +607,30 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                           );
                         }
                       },
-                      icon: Icon(
-                        Lucide.Copy,
-                        size: 16,
-                        color: cs.onSurface.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Lucide.Copy,
+                              size: 14,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              AppLocalizations.of(context)!.shareProviderSheetCopyButton,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurface.withOpacity(0.6),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      tooltip: AppLocalizations.of(context)!.shareProviderSheetCopyButton,
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 16,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      padding: EdgeInsets.zero,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Icon(
                       _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
                       size: 16,
@@ -726,7 +744,7 @@ class _MermaidBlockState extends State<_MermaidBlock> {
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
       ),
       clipBehavior: Clip.antiAlias,
@@ -734,32 +752,40 @@ class _MermaidBlockState extends State<_MermaidBlock> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
+          // Header: left label (mermaid), right actions (copy label + export + chevron)
           Material(
             color: headerBg,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
             child: InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(color: cs.outlineVariant.withOpacity(0.25), width: 0.8),
+                    // Show divider only when expanded
+                    bottom: _expanded
+                        ? BorderSide(color: cs.outlineVariant.withOpacity(0.28), width: 1.0)
+                        : BorderSide.none,
                   ),
                 ),
                 child: Row(
                   children: [
+                    const SizedBox(width: 2),
                     Text(
                       'mermaid',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: cs.secondary,
+                        color: cs.onSurface,
                         height: 1.0,
                       ),
                     ),
                     const Spacer(),
-                    IconButton(
-                      onPressed: () async {
+                    // Copy action: icon + label ("复制"/localized) — match code block style
+                    InkWell(
+                      onTap: () async {
                         await Clipboard.setData(ClipboardData(text: widget.code));
                         if (mounted) {
                           showAppSnackBar(
@@ -769,21 +795,33 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                           );
                         }
                       },
-                      icon: Icon(
-                        Lucide.Copy,
-                        size: 16,
-                        color: cs.onSurface.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Lucide.Copy,
+                              size: 14,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              AppLocalizations.of(context)!.shareProviderSheetCopyButton,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurface.withOpacity(0.6),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      tooltip: AppLocalizations.of(context)!.shareProviderSheetCopyButton,
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 16,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      padding: EdgeInsets.zero,
                     ),
                     if (handle != null) ...[
-                      const SizedBox(width: 2),
-                      IconButton(
-                        onPressed: () async {
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () async {
                           final ok = await handle.exportPng();
                           if (!mounted) return;
                           if (!ok) {
@@ -795,19 +833,18 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                             );
                           }
                         },
-                        icon: Icon(
-                          Lucide.Download,
-                          size: 16,
-                          color: cs.onSurface.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Lucide.Download,
+                            size: 14,
+                            color: cs.onSurface.withOpacity(0.6),
+                          ),
                         ),
-                        tooltip: AppLocalizations.of(context)!.mermaidExportPng,
-                        visualDensity: VisualDensity.compact,
-                        iconSize: 16,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        padding: EdgeInsets.zero,
                       ),
                     ],
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Icon(
                       _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
                       size: 16,
