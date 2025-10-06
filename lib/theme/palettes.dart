@@ -27,6 +27,7 @@ class ThemePalettes {
   static const String yellowId = 'yellow';
   static const String smokyRoseId = 'smoky_rose';
   static const String terracottaId = 'terracotta';
+  static const String monochromeId = 'monochrome';
 
   static const ThemePalette defaultPalette = ThemePalette(
     id: defaultId,
@@ -496,6 +497,72 @@ class ThemePalettes {
     ),
   );
 
+  static const ThemePalette monochrome = ThemePalette(
+    id: monochromeId,
+    zhName: '纸墨灰',
+    enName: 'Frost Gray',
+    light: ColorScheme(
+      brightness: Brightness.light,
+      primary: Color(0xFF000000),
+      onPrimary: Color(0xFFFFFFFF),
+      primaryContainer: Color(0xFFEFEFEF),
+      onPrimaryContainer: Color(0xFF000000),
+      secondary: Color(0xFF1A1A1A),
+      onSecondary: Color(0xFFFFFFFF),
+      secondaryContainer: Color(0xFFF4F4F4),
+      onSecondaryContainer: Color(0xFF000000),
+      tertiary: Color(0xFF2E2E2E),
+      onTertiary: Color(0xFFFFFFFF),
+      tertiaryContainer: Color(0xFFF7F7F7),
+      onTertiaryContainer: Color(0xFF000000),
+      error: Color(0xFF000000),
+      onError: Color(0xFFFFFFFF),
+      errorContainer: Color(0xFFEAEAEA),
+      onErrorContainer: Color(0xFF000000),
+      surface: Color(0xFFFFFFFF),
+      onSurface: Color(0xFF000000),
+      onSurfaceVariant: Color(0xFF4D4D4D),
+      outline: Color(0xFFBDBDBD),
+      outlineVariant: Color(0xFFE0E0E0),
+      shadow: Color(0xFF000000),
+      scrim: Color(0xFF000000),
+      inverseSurface: Color(0xFF000000),
+      onInverseSurface: Color(0xFFFFFFFF),
+      inversePrimary: Color(0xFFFFFFFF),
+      surfaceTint: Color(0xFF000000),
+    ),
+    dark: ColorScheme(
+      brightness: Brightness.dark,
+      primary: Color(0xFFFFFFFF),
+      onPrimary: Color(0xFF000000),
+      primaryContainer: Color(0xFF2B2B2B),
+      onPrimaryContainer: Color(0xFFFFFFFF),
+      secondary: Color(0xFFE0E0E0),
+      onSecondary: Color(0xFF000000),
+      secondaryContainer: Color(0xFF242424),
+      onSecondaryContainer: Color(0xFFE0E0E0),
+      tertiary: Color(0xFFCCCCCC),
+      onTertiary: Color(0xFF000000),
+      tertiaryContainer: Color(0xFF1F1F1F),
+      onTertiaryContainer: Color(0xFFFFFFFF),
+      error: Color(0xFFFFFFFF),
+      onError: Color(0xFF000000),
+      errorContainer: Color(0xFF333333),
+      onErrorContainer: Color(0xFFFFFFFF),
+      surface: Color(0xFF000000),
+      onSurface: Color(0xFFFFFFFF),
+      onSurfaceVariant: Color(0xFFBDBDBD),
+      outline: Color(0xFF757575),
+      outlineVariant: Color(0xFF3D3D3D),
+      shadow: Color(0xFF000000),
+      scrim: Color(0xFF000000),
+      inverseSurface: Color(0xFFFFFFFF),
+      onInverseSurface: Color(0xFF000000),
+      inversePrimary: Color(0xFF000000),
+      surfaceTint: Color(0xFFFFFFFF),
+    ),
+  );
+
   static const List<ThemePalette> all = <ThemePalette>[
     defaultPalette,
     blue,
@@ -504,6 +571,7 @@ class ThemePalettes {
     yellow,
     smokyRose,
     terracotta,
+    monochrome,
   ];
 
   static ThemePalette byId(String id) {
