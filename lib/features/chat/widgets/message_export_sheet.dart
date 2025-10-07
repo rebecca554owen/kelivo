@@ -88,29 +88,36 @@ String _getRoleName(BuildContext context, ChatMessage msg) {
 }
 
 _Parsed _parseContent(String raw) {
-  final imgRe = RegExp(r"\\[image:(.+?)\\]");
-  final fileRe = RegExp(r"\\[file:(.+?)\\|(.+?)\\|(.+?)\\]");
+  // Robustly parse inline attachments in the form [image:...] and [file:path|name|mime]
+  // without requiring escaping backslashes, and guard against malformed tokens.
   final images = <String>[];
   final docs = <_DocRef>[];
   final buffer = StringBuffer();
   int idx = 0;
   while (idx < raw.length) {
-    final m1 = imgRe.matchAsPrefix(raw, idx);
-    final m2 = fileRe.matchAsPrefix(raw, idx);
-    if (m1 != null) {
-      final p = m1.group(1)?.trim();
-      if (p != null && p.isNotEmpty) images.add(p);
-      idx = m1.end;
-      continue;
+    // Fast path: only try to parse when current char is '['
+    if (raw.codeUnitAt(idx) == 0x5B /* '[' */) {
+      final sub = raw.substring(idx);
+      // [image:...]
+      final mImg = RegExp(r"^\[image:([^\]]+)\]").firstMatch(sub);
+      if (mImg != null) {
+        final p = (mImg.groupCount >= 1 ? mImg.group(1) : null)?.trim();
+        if (p != null && p.isNotEmpty) images.add(p);
+        idx += mImg.group(0)!.length;
+        continue;
+      }
+      // [file:path|name|mime]
+      final mFile = RegExp(r"^\[file:([^|\]]+)\|([^|\]]+)\|([^\]]+)\]").firstMatch(sub);
+      if (mFile != null) {
+        final path = (mFile.groupCount >= 1 ? mFile.group(1) : null)?.trim() ?? '';
+        final name = (mFile.groupCount >= 2 ? mFile.group(2) : null)?.trim() ?? 'file';
+        final mime = (mFile.groupCount >= 3 ? mFile.group(3) : null)?.trim() ?? 'text/plain';
+        docs.add(_DocRef(path: path, fileName: name, mime: mime));
+        idx += mFile.group(0)!.length;
+        continue;
+      }
     }
-    if (m2 != null) {
-      final path = m2.group(1)?.trim() ?? '';
-      final name = m2.group(2)?.trim() ?? 'file';
-      final mime = m2.group(3)?.trim() ?? 'text/plain';
-      docs.add(_DocRef(path: path, fileName: name, mime: mime));
-      idx = m2.end;
-      continue;
-    }
+    // Fallback: normal character
     buffer.write(raw[idx]);
     idx++;
   }
@@ -243,7 +250,7 @@ Future<File?> _renderWidgetDirectly(
     
     final boundary = boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return null;
-    
+
     // Try to capture the image with retries
     ui.Image? image;
     for (int retry = 0; retry < 10; retry++) {
