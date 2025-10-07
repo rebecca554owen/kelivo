@@ -7,6 +7,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../pages/search_services_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/brand_assets.dart';
 
 Future<void> showSearchSettingsSheet(BuildContext context) async {
   await showModalBottomSheet(
@@ -380,37 +381,24 @@ class _BrandBadge extends StatelessWidget {
   }
 
   static String _nameForService(SearchServiceOptions s) {
-    if (s is BingLocalOptions) return 'Bing';
-    if (s is TavilyOptions) return 'Tavily';
-    if (s is ExaOptions) return 'Exa';
-    if (s is ZhipuOptions) return '智谱';
-    if (s is SearXNGOptions) return 'SearXNG';
-    if (s is LinkUpOptions) return 'LinkUp';
-    if (s is BraveOptions) return 'Brave';
-    if (s is MetasoOptions) return 'Metaso';
-    if (s is OllamaOptions) return 'Ollama';
-    return 'Search';
+    if (s is BingLocalOptions) return 'bing';
+    if (s is TavilyOptions) return 'tavily';
+    if (s is ExaOptions) return 'exa';
+    if (s is ZhipuOptions) return 'zhipu';
+    if (s is SearXNGOptions) return 'searxng';
+    if (s is LinkUpOptions) return 'linkup';
+    if (s is BraveOptions) return 'brave';
+    if (s is MetasoOptions) return 'metaso';
+    if (s is OllamaOptions) return 'ollama';
+    return 'search';
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final lower = name.toLowerCase();
-    String? asset;
-    final mapping = <RegExp, String>{
-      RegExp(r'bing'): 'bing.png',
-      RegExp(r'zhipu|glm|智谱'): 'zhipu-color.svg',
-      RegExp(r'tavily'): 'tavily.png',
-      RegExp(r'exa'): 'exa.png',
-      RegExp(r'linkup'): 'linkup.png',
-      RegExp(r'brave'): 'brave-color.svg',
-      RegExp(r'ollama'): 'ollama.svg',
-      // SearXNG/Metaso fall back to letter
-    };
-    for (final e in mapping.entries) {
-      if (e.key.hasMatch(lower)) { asset = 'assets/icons/${e.value}'; break; }
-    }
+    // Use BrandAssets to get the icon path
+    final asset = BrandAssets.assetForName(name);
     final bg = isDark ? Colors.white10 : cs.primary.withOpacity(0.1);
     if (asset != null) {
       if (asset!.endsWith('.svg')) {
