@@ -101,4 +101,5 @@ class Lucide {
   static const IconData ChevronUp = lucide.LucideIcons.chevronUp;
   static const IconData Map = lucide.LucideIcons.map;
   static const IconData SquarePen = lucide.LucideIcons.squarePen;
+  static const IconData info = lucide.LucideIcons.info;
 }

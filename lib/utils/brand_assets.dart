@@ -36,6 +36,7 @@ class BrandAssets {
     MapEntry(RegExp(r'openrouter'), 'openrouter.svg'),
     MapEntry(RegExp(r'zhipu|智谱|glm'), 'zhipu-color.svg'),
     MapEntry(RegExp(r'mistral'), 'mistral-color.svg'),
+    MapEntry(RegExp(r'metaso|秘塔'), 'metaso-color.svg'),
     MapEntry(RegExp(r'(?<!o)llama|meta'), 'meta-color.svg'),
     MapEntry(RegExp(r'hunyuan|tencent'), 'hunyuan-color.svg'),
     MapEntry(RegExp(r'gemma'), 'gemma-color.svg'),
@@ -60,5 +61,10 @@ class BrandAssets {
     MapEntry(RegExp(r'longcat'), 'longcat.png'),
     MapEntry(RegExp(r'iflow|心流'), 'iflow-color.svg'),
     MapEntry(RegExp(r'sora'), 'sora.png'),
+    MapEntry(RegExp(r'bing|必应'), 'bing-color.svg'),
+    MapEntry(RegExp(r'tavily'), 'tavily.png'),
+    MapEntry(RegExp(r'exa'), 'exa-color.svg'),
+    MapEntry(RegExp(r'linkup'), 'linkup.png'),
+    MapEntry(RegExp(r'brave'), 'brave-color.svg'),
   ];
 }

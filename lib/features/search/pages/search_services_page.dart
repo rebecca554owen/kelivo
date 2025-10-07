@@ -7,6 +7,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../utils/brand_assets.dart';
 
 class SearchServicesPage extends StatefulWidget {
   const SearchServicesPage({super.key});
@@ -32,9 +33,11 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
   }
 
   void _addService() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => _AddServiceDialog(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AddServiceBottomSheet(
         onAdd: (service) {
           setState(() {
             _services.add(service);
@@ -488,18 +491,18 @@ class _BrandBadge extends StatelessWidget {
   }
 }
 
-// Add Service Dialog
-class _AddServiceDialog extends StatefulWidget {
+// Add Service Bottom Sheet - iOS Style
+class _AddServiceBottomSheet extends StatefulWidget {
   final Function(SearchServiceOptions) onAdd;
 
-  const _AddServiceDialog({required this.onAdd});
+  const _AddServiceBottomSheet({required this.onAdd});
 
   @override
-  State<_AddServiceDialog> createState() => _AddServiceDialogState();
+  State<_AddServiceBottomSheet> createState() => _AddServiceBottomSheetState();
 }
 
-class _AddServiceDialogState extends State<_AddServiceDialog> {
-  String _selectedType = 'bing_local';
+class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
+  String? _selectedType;
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {};
 
@@ -514,70 +517,265 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return AlertDialog(
-      title: Text(l10n.searchServicesAddDialogTitle),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                value: _selectedType,
-                decoration: InputDecoration(
-                  labelText: l10n.searchServicesAddDialogServiceType,
-                  border: const OutlineInputBorder(),
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.onSurface.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                items: [
-                  DropdownMenuItem(value: 'bing_local', child: Text(l10n.searchServiceNameBingLocal)),
-                  DropdownMenuItem(value: 'tavily', child: Text(l10n.searchServiceNameTavily)),
-                  DropdownMenuItem(value: 'exa', child: Text(l10n.searchServiceNameExa)),
-                  DropdownMenuItem(value: 'zhipu', child: Text(l10n.searchServiceNameZhipu)),
-                  DropdownMenuItem(value: 'searxng', child: Text(l10n.searchServiceNameSearXNG)),
-                  DropdownMenuItem(value: 'linkup', child: Text(l10n.searchServiceNameLinkUp)),
-                  DropdownMenuItem(value: 'brave', child: Text(l10n.searchServiceNameBrave)),
-                  DropdownMenuItem(value: 'metaso', child: Text(l10n.searchServiceNameMetaso)),
-                  DropdownMenuItem(value: 'ollama', child: Text(l10n.searchServiceNameOllama)),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedType = value!;
-                    _controllers.clear();
-                  });
-                },
               ),
-              const SizedBox(height: 16),
-              ..._buildFieldsForType(_selectedType),
+              // Title with animation
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+                child: Padding(
+                  key: ValueKey<String?>(_selectedType),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: Text(
+                    _selectedType == null ? l10n.searchServicesAddDialogTitle : _getServiceName(_selectedType!),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              
+              // Service type selection or form with fade animation
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                  child: _selectedType == null
+                      ? _buildServiceTypeList()
+                      : _buildFormView(),
+                ),
+              ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.searchServicesAddDialogCancel),
+    );
+  }
+
+  Widget _buildServiceTypeList() {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final services = [
+      {'type': 'bing_local', 'name': l10n.searchServiceNameBingLocal},
+      {'type': 'tavily', 'name': l10n.searchServiceNameTavily},
+      {'type': 'exa', 'name': l10n.searchServiceNameExa},
+      {'type': 'zhipu', 'name': l10n.searchServiceNameZhipu},
+      {'type': 'searxng', 'name': l10n.searchServiceNameSearXNG},
+      {'type': 'linkup', 'name': l10n.searchServiceNameLinkUp},
+      {'type': 'brave', 'name': l10n.searchServiceNameBrave},
+      {'type': 'metaso', 'name': l10n.searchServiceNameMetaso},
+      {'type': 'ollama', 'name': l10n.searchServiceNameOllama},
+    ];
+    
+    return ListView.builder(
+      key: const ValueKey('service_list'),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      shrinkWrap: true,
+      itemCount: services.length,
+      itemBuilder: (context, index) {
+          final service = services[index];
+          final isLast = index == services.length - 1;
+          
+          return Column(
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    setState(() {
+                      _selectedType = service['type'] as String;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceVariant.withOpacity(isDark ? 0.18 : 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        _ServiceIcon(
+                          type: service['type'] as String,
+                          name: service['name'] as String,
+                          size: 40,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            service['name'] as String,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Icon(
+                          Lucide.ChevronRight,
+                          size: 20,
+                          color: cs.onSurface.withOpacity(0.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (!isLast) const SizedBox(height: 10),
+            ],
+          );
+      },
+    );
+  }
+
+  String _getServiceName(String type) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (type) {
+      case 'bing_local': return l10n.searchServiceNameBingLocal;
+      case 'tavily': return l10n.searchServiceNameTavily;
+      case 'exa': return l10n.searchServiceNameExa;
+      case 'zhipu': return l10n.searchServiceNameZhipu;
+      case 'searxng': return l10n.searchServiceNameSearXNG;
+      case 'linkup': return l10n.searchServiceNameLinkUp;
+      case 'brave': return l10n.searchServiceNameBrave;
+      case 'metaso': return l10n.searchServiceNameMetaso;
+      case 'ollama': return l10n.searchServiceNameOllama;
+      default: return '';
+    }
+  }
+
+  Widget _buildFormView() {
+    final l10n = AppLocalizations.of(context)!;
+    
+    return SingleChildScrollView(
+      key: const ValueKey('form_view'),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            ..._buildFieldsForType(_selectedType!),
+            const SizedBox(height: 20),
+            // Add button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    final service = _createService();
+                    widget.onAdd(service);
+                    Navigator.pop(context);
+                  }
+                },
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  l10n.searchServicesAddDialogAdd,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
         ),
-        FilledButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              final service = _createService();
-              widget.onAdd(service);
-              Navigator.pop(context);
-            }
-          },
-          child: Text(l10n.searchServicesAddDialogAdd),
-        ),
-      ],
+      ),
     );
   }
 
   List<Widget> _buildFieldsForType(String type) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    Widget _buildTextField({
+      required String key,
+      required String label,
+      String? hint,
+      bool obscureText = false,
+      String? Function(String?)? validator,
+    }) {
+      _controllers[key] ??= TextEditingController();
+      return Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceVariant.withOpacity(isDark ? 0.18 : 0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: TextFormField(
+          controller: _controllers[key],
+          obscureText: obscureText,
+          style: const TextStyle(fontSize: 16),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          validator: validator,
+        ),
+      );
+    }
     
     switch (type) {
       case 'bing_local':
-        return [];
+        return [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cs.surfaceVariant.withOpacity(isDark ? 0.18 : 0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Lucide.Search, size: 20, color: cs.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.searchServiceNameBingLocal,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: cs.onSurface.withOpacity(0.8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ];
       case 'tavily':
       case 'exa':
       case 'zhipu':
@@ -585,14 +783,10 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
       case 'brave':
       case 'metaso':
       case 'ollama':
-        _controllers['apiKey'] ??= TextEditingController();
         return [
-          TextFormField(
-            controller: _controllers['apiKey'],
-            decoration: const InputDecoration(
-              labelText: 'API Key',
-              border: OutlineInputBorder(),
-            ),
+          _buildTextField(
+            key: 'apiKey',
+            label: 'API Key',
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return l10n.searchServicesAddDialogApiKeyRequired;
@@ -602,18 +796,10 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           ),
         ];
       case 'searxng':
-        _controllers['url'] ??= TextEditingController();
-        _controllers['engines'] ??= TextEditingController();
-        _controllers['language'] ??= TextEditingController();
-        _controllers['username'] ??= TextEditingController();
-        _controllers['password'] ??= TextEditingController();
         return [
-          TextFormField(
-            controller: _controllers['url'],
-            decoration: InputDecoration(
-              labelText: l10n.searchServicesAddDialogInstanceUrl,
-              border: const OutlineInputBorder(),
-            ),
+          _buildTextField(
+            key: 'url',
+            label: l10n.searchServicesAddDialogInstanceUrl,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return l10n.searchServicesAddDialogUrlRequired;
@@ -622,39 +808,27 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
             },
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _controllers['engines'],
-            decoration: InputDecoration(
-              labelText: l10n.searchServicesAddDialogEnginesOptional,
-              hintText: 'google,duckduckgo',
-              border: const OutlineInputBorder(),
-            ),
+          _buildTextField(
+            key: 'engines',
+            label: l10n.searchServicesAddDialogEnginesOptional,
+            hint: 'google,duckduckgo',
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _controllers['language'],
-            decoration: InputDecoration(
-              labelText: l10n.searchServicesAddDialogLanguageOptional,
-              hintText: 'en-US',
-              border: const OutlineInputBorder(),
-            ),
+          _buildTextField(
+            key: 'language',
+            label: l10n.searchServicesAddDialogLanguageOptional,
+            hint: 'en-US',
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _controllers['username'],
-            decoration: InputDecoration(
-              labelText: l10n.searchServicesAddDialogUsernameOptional,
-              border: const OutlineInputBorder(),
-            ),
+          _buildTextField(
+            key: 'username',
+            label: l10n.searchServicesAddDialogUsernameOptional,
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _controllers['password'],
+          _buildTextField(
+            key: 'password',
+            label: l10n.searchServicesAddDialogPasswordOptional,
             obscureText: true,
-            decoration: InputDecoration(
-              labelText: l10n.searchServicesAddDialogPasswordOptional,
-              border: const OutlineInputBorder(),
-            ),
           ),
         ];
       default:
@@ -945,5 +1119,101 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     }
     
     return service;
+  }
+}
+
+// Service Icon Widget - Uses BrandAssets
+class _ServiceIcon extends StatelessWidget {
+  const _ServiceIcon({
+    required this.type,
+    required this.name,
+    this.size = 40,
+  });
+
+  final String type;  // Service type like 'bing_local', 'tavily', etc.
+  final String name;  // Display name for fallback
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use type for matching, not the localized name
+    final matchName = _getMatchName(type);
+    final asset = BrandAssets.assetForName(matchName);
+    final bg = isDark ? Colors.white10 : cs.primary.withOpacity(0.1);
+    
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      alignment: Alignment.center,
+      child: asset != null
+          ? _buildAssetIcon(asset, size, isDark)
+          : _buildLetterIcon(name, size, cs),
+    );
+  }
+
+  Widget _buildAssetIcon(String asset, double size, bool isDark) {
+    final iconSize = size * 0.62;
+    if (asset.endsWith('.svg')) {
+      final isColorful = asset.contains('color');
+      final ColorFilter? tint = (isDark && !isColorful) 
+          ? const ColorFilter.mode(Colors.white, BlendMode.srcIn) 
+          : null;
+      return SvgPicture.asset(
+        asset,
+        width: iconSize,
+        height: iconSize,
+        colorFilter: tint,
+      );
+    } else {
+      return Image.asset(
+        asset,
+        width: iconSize,
+        height: iconSize,
+        fit: BoxFit.contain,
+      );
+    }
+  }
+
+  Widget _buildLetterIcon(String name, double size, ColorScheme cs) {
+    return Text(
+      name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
+      style: TextStyle(
+        color: cs.primary,
+        fontWeight: FontWeight.w700,
+        fontSize: size * 0.42,
+      ),
+    );
+  }
+
+  // Map service type to name for BrandAssets matching
+  String _getMatchName(String type) {
+    switch (type) {
+      case 'bing_local':
+        return 'bing';
+      case 'tavily':
+        return 'tavily';
+      case 'exa':
+        return 'exa';
+      case 'zhipu':
+        return 'zhipu';
+      case 'searxng':
+        return 'searxng';
+      case 'linkup':
+        return 'linkup';
+      case 'brave':
+        return 'brave';
+      case 'metaso':
+        return 'metaso';
+      case 'ollama':
+        return 'ollama';
+      default:
+        return type;
+    }
   }
 }
