@@ -548,8 +548,15 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final Color bodyBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
-    final Color headerBg = isDark ? Colors.white12 : const Color(0xFFE9ECF1);
+    // Use theme-tinted surfaces so headers follow the current theme color.
+    final Color bodyBg = Color.alphaBlend(
+      cs.primary.withOpacity(isDark ? 0.06 : 0.03),
+      cs.surface,
+    );
+    final Color headerBg = Color.alphaBlend(
+      cs.primary.withOpacity(isDark ? 0.16 : 0.10),
+      cs.surface,
+    );
 
     return Container(
       width: double.infinity,
@@ -690,8 +697,15 @@ class _MermaidBlockState extends State<_MermaidBlock> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final Color bodyBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
-    final Color headerBg = isDark ? Colors.white12 : const Color(0xFFE9ECF1);
+    // Use theme-tinted surfaces so headers follow the current theme color.
+    final Color bodyBg = Color.alphaBlend(
+      cs.primary.withOpacity(isDark ? 0.06 : 0.03),
+      cs.surface,
+    );
+    final Color headerBg = Color.alphaBlend(
+      cs.primary.withOpacity(isDark ? 0.16 : 0.10),
+      cs.surface,
+    );
 
     // Build theme variables mapping for Mermaid from Material ColorScheme
     String hex(Color c) {
