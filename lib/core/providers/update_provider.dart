@@ -75,9 +75,9 @@ class UpdateProvider extends ChangeNotifier {
 
       final pkg = await PackageInfo.fromPlatform();
       final currentVer = pkg.version; // e.g., 1.0.0
-      final currentBuild = int.tryParse(pkg.buildNumber);
 
-      final hasNew = _isRemoteNewer(remoteVersion: info.version, remoteBuild: info.build, currentVersion: currentVer, currentBuild: currentBuild);
+      // Compare by version only; ignore build numbers
+      final hasNew = _isRemoteNewer(remoteVersion: info.version, currentVersion: currentVer);
       _available = hasNew ? info : null;
     } catch (e) {
       _error = e.toString();
@@ -87,11 +87,11 @@ class UpdateProvider extends ChangeNotifier {
     }
   }
 
-  bool _isRemoteNewer({required String remoteVersion, int? remoteBuild, required String currentVersion, int? currentBuild}) {
-    if (remoteBuild != null && currentBuild != null) {
-      if (remoteBuild != currentBuild) return remoteBuild > currentBuild;
-    }
-    // Fallback to semver compare
+  bool _isRemoteNewer({
+    required String remoteVersion,
+    required String currentVersion,
+  }) {
+    // Compare semantic versions only (ignore internal build numbers)
     List<int> parseVer(String v) {
       final parts = v.split('.');
       final nums = <int>[];
