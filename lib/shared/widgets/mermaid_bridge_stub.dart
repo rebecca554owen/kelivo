@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle, PlatformException, MissingPluginException;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'mermaid_cache.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
@@ -18,10 +19,19 @@ class MermaidViewHandle {
 
 /// Mobile/desktop (non-web) Mermaid renderer using webview_flutter.
 /// Returns a handle with the widget and an export-to-PNG action.
-MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String>? themeVars}) {
-  final key = GlobalKey<_MermaidInlineWebViewState>();
-  final widget = _MermaidInlineWebView(key: key, code: code, dark: dark, themeVars: themeVars);
-  Future<bool> doExport() async => await key.currentState?.exportPng() ?? false;
+MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String>? themeVars, GlobalKey? viewKey}) {
+  // Use stable key from caller if provided to avoid frequent WebView recreation.
+  final usedKey = viewKey ?? GlobalKey<_MermaidInlineWebViewState>();
+  final widget = _MermaidInlineWebView(key: usedKey, code: code, dark: dark, themeVars: themeVars);
+  Future<bool> doExport() async {
+    try {
+      final state = usedKey.currentState;
+      if (state is _MermaidInlineWebViewState) {
+        return await state.exportPng();
+      }
+    } catch (_) {}
+    return false;
+  }
   return MermaidViewHandle(widget: widget, exportPng: doExport);
 }
 
@@ -39,17 +49,30 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
   late final WebViewController _controller;
   double _height = 160;
   Completer<String?>? _exportCompleter;
+  String? _lastThemeVarsSig;
+  Timer? _heightDebounce;
 
   @override
   void initState() {
     super.initState();
+    // Seed initial height from cache to reduce layout jumps
+    try {
+      final cached = MermaidHeightCache.get(widget.code);
+      if (cached != null) _height = cached;
+    } catch (_) {}
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..addJavaScriptChannel('HeightChannel', onMessageReceived: (JavaScriptMessage msg) {
         final v = double.tryParse(msg.message);
         if (v != null && mounted) {
-          setState(() {
-            _height = max(120, v + 16);
+          // Debounce rapid height updates to avoid jank
+          _heightDebounce?.cancel();
+          _heightDebounce = Timer(const Duration(milliseconds: 60), () {
+            if (!mounted) return;
+            setState(() {
+              _height = max(120, v + 16);
+            });
+            try { MermaidHeightCache.put(widget.code, _height); } catch (_) {}
           });
         }
       })
@@ -65,8 +88,15 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
   @override
   void didUpdateWidget(covariant _MermaidInlineWebView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.code != widget.code || oldWidget.dark != widget.dark) {
+    final themeSig = _themeVarsSignature(widget.themeVars);
+    final themeChanged = _lastThemeVarsSig != themeSig;
+    final codeChanged = oldWidget.code != widget.code;
+    final darkChanged = oldWidget.dark != widget.dark;
+    if (codeChanged || darkChanged || themeChanged) {
       _loadHtml();
+    } else {
+      // No content change; still re-measure to keep height in sync after rebuilds
+      _safePostHeight();
     }
   }
 
@@ -89,6 +119,8 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
     final mermaidJs = await rootBundle.loadString('assets/mermaid.min.js');
     final html = _buildHtml(widget.code, widget.dark, mermaidJs, widget.themeVars);
     await _controller.loadHtmlString(html);
+    // Store latest theme signature for change detection
+    _lastThemeVarsSig = _themeVarsSignature(widget.themeVars);
   }
 
   String _buildHtml(String code, bool dark, String mermaidJs, Map<String, String>? themeVars) {
@@ -168,7 +200,20 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
     </script>
   </body>
 </html>
-''';
+  ''';
+  }
+
+  void _safePostHeight() {
+    try {
+      _controller.runJavaScript('postHeight();');
+    } catch (_) {}
+  }
+
+  String _themeVarsSignature(Map<String, String>? vars) {
+    if (vars == null || vars.isEmpty) return '';
+    final entries = vars.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return entries.map((e) => '${e.key}=${e.value}').join('&');
   }
 
   Future<bool> exportPng() async {
@@ -214,5 +259,12 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
     } finally {
       _exportCompleter = null;
     }
+  }
+
+  @override
+  void dispose() {
+    try { _heightDebounce?.cancel(); } catch (_) {}
+    _heightDebounce = null;
+    super.dispose();
   }
 }

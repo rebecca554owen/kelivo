@@ -682,6 +682,8 @@ class _MermaidBlock extends StatefulWidget {
 
 class _MermaidBlockState extends State<_MermaidBlock> {
   bool _expanded = true;
+  // Stable key to avoid frequent WebView recreation across rebuilds
+  final GlobalKey _mermaidViewKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -736,7 +738,7 @@ class _MermaidBlockState extends State<_MermaidBlock> {
       'errorTextColor': hex(cs.onError),
     };
 
-    final handle = createMermaidView(widget.code, isDark, themeVars: themeVars);
+    final handle = createMermaidView(widget.code, isDark, themeVars: themeVars, viewKey: _mermaidViewKey);
     final mermaidView = handle?.widget;
 
     return Container(

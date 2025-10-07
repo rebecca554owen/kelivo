@@ -4,6 +4,7 @@ import 'dart:html' as html;
 import 'dart:js_util' as js_util;
 import 'dart:ui' as ui; // ignore: uri_does_not_exist
 import 'package:flutter/widgets.dart';
+import 'mermaid_cache.dart';
 
 class MermaidViewHandle {
   final Widget widget;
@@ -15,10 +16,14 @@ final Map<String, html.DivElement> _containers = {};
 
 /// Web-only Mermaid renderer using JS injection (no extra Dart packages).
 /// Returns a handle with the widget and an export-to-PNG action.
-MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String>? themeVars}) {
+MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String>? themeVars, GlobalKey? viewKey}) {
   final container = html.DivElement()
     ..style.width = '100%'
-    ..style.height = '120px' // initial minimal height to avoid zero-sized box
+    ..style.height = (() {
+      final cached = MermaidHeightCache.get(code);
+      if (cached != null) return '${cached.ceil()}px';
+      return '120px';
+    })() // initial height from cache if available
     ..style.display = 'block';
 
   final mermaidDiv = html.DivElement()
@@ -67,6 +72,7 @@ MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String
         final rect = svg.getBoundingClientRect();
         final h = rect.height.ceil();
         container.style.height = '${h + 16}px';
+        try { MermaidHeightCache.put(code, (h + 16).toDouble()); } catch (_) {}
       }
     } catch (_) {
       // ignore; caller will still see the code content
