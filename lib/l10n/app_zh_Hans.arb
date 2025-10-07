@@ -169,6 +169,14 @@
       "error": { "type": "String" }
     }
   },
+  "imagePreviewSheetSaveImage": "保存图片",
+  "imagePreviewSheetSaveSuccess": "已保存到相册",
+  "imagePreviewSheetSaveFailed": "保存失败: {error}",
+  "@imagePreviewSheetSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "chatServiceDefaultConversationTitle": "新对话",
   "userProviderDefaultUserName": "用户",
   "mcpAssistantSheetTitle": "MCP服务器",

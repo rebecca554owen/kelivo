@@ -53,6 +53,7 @@ class Lucide {
   static const IconData Copy = lucide.LucideIcons.copy;
   static const IconData RefreshCw = lucide.LucideIcons.refreshCw;
   static const IconData Ellipsis = lucide.LucideIcons.ellipsis;
+  static const IconData MoreVertical = lucide.LucideIcons.ellipsis;
   static const IconData Languages = lucide.LucideIcons.languages;
   static const IconData User = lucide.LucideIcons.user;
   static const IconData Hammer = lucide.LucideIcons.hammer;

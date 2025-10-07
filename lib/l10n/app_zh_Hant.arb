@@ -109,6 +109,14 @@
   "assistantEditQQAvatarDialogSave": "儲存",
   "assistantEditGalleryErrorMessage": "無法開啟相簿，試試輸入圖片連結",
   "assistantEditGeneralErrorMessage": "發生錯誤，試試輸入圖片連結",
+  "imagePreviewSheetSaveImage": "保存圖片",
+  "imagePreviewSheetSaveSuccess": "已儲存到相簿",
+  "imagePreviewSheetSaveFailed": "保存失敗: {error}",
+  "@imagePreviewSheetSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "assistantEditSystemPromptTitle": "系統提示詞",
   "assistantEditSystemPromptHint": "輸入系統提示詞…",
   "assistantEditAvailableVariables": "可用變數：",

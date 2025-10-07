@@ -985,6 +985,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportDisclaimerAiGenerated => '内容由 AI 生成，请仔细甄别';
 
   @override
+  String get imagePreviewSheetSaveImage => '保存图片';
+
+  @override
+  String get imagePreviewSheetSaveSuccess => '已保存到相册';
+
+  @override
+  String imagePreviewSheetSaveFailed(String error) {
+    return '保存失败: $error';
+  }
+
+  @override
   String get sideDrawerMenuRename => '重命名';
 
   @override
@@ -3165,6 +3176,17 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get exportDisclaimerAiGenerated => '内容由 AI 生成，请仔细甄别';
 
   @override
+  String get imagePreviewSheetSaveImage => '保存图片';
+
+  @override
+  String get imagePreviewSheetSaveSuccess => '已保存到相册';
+
+  @override
+  String imagePreviewSheetSaveFailed(String error) {
+    return '保存失败: $error';
+  }
+
+  @override
   String get sideDrawerMenuRename => '重命名';
 
   @override
@@ -5343,6 +5365,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get exportDisclaimerAiGenerated => '內容由 AI 生成，請仔細甄別';
+
+  @override
+  String get imagePreviewSheetSaveImage => '保存圖片';
+
+  @override
+  String get imagePreviewSheetSaveSuccess => '已儲存到相簿';
+
+  @override
+  String imagePreviewSheetSaveFailed(String error) {
+    return '保存失敗: $error';
+  }
 
   @override
   String get sideDrawerMenuRename => '重新命名';

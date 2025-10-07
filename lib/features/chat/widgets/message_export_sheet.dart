@@ -13,6 +13,7 @@ import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'image_preview_sheet.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/chat_message.dart';
@@ -424,7 +425,7 @@ Future<void> showMessageExportSheet(BuildContext context, ChatMessage message) a
     builder: (ctx) {
       return SafeArea(
         top: false,
-        child: _ExportSheet(message: message),
+        child: _ExportSheet(message: message, parentContext: context),
       );
     },
   );
@@ -446,24 +447,26 @@ Future<void> showChatExportSheet(
     builder: (ctx) {
       return SafeArea(
         top: false,
-        child: _BatchExportSheet(conversation: conversation, messages: selectedMessages),
+        child: _BatchExportSheet(conversation: conversation, messages: selectedMessages, parentContext: context),
       );
     },
   );
 }
 
 class _ExportSheet extends StatefulWidget {
-  const _ExportSheet({required this.message});
+  const _ExportSheet({required this.message, required this.parentContext});
   final ChatMessage message;
+  final BuildContext parentContext;
 
   @override
   State<_ExportSheet> createState() => _ExportSheetState();
 }
 
 class _BatchExportSheet extends StatefulWidget {
-  const _BatchExportSheet({required this.conversation, required this.messages});
+  const _BatchExportSheet({required this.conversation, required this.messages, required this.parentContext});
   final Conversation conversation;
   final List<ChatMessage> messages;
+  final BuildContext parentContext;
 
   @override
   State<_BatchExportSheet> createState() => _BatchExportSheetState();
@@ -565,32 +568,24 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
 
   Future<void> _onExportImage() async {
     if (_exporting) return;
-    // Compute share anchor before closing sheet (iPad/macOS need it)
-    final anchor = _shareAnchorRect(context);
-    // Dismiss dialog immediately
-    if (mounted) Navigator.of(context).maybePop();
-    
     setState(() => _exporting = true);
     try {
       File? file;
-      await _runWithExportingOverlay(context, () async {
-        file = await _renderAndSaveChatImage(context, widget.conversation, widget.messages);
+      await _runWithExportingOverlay(widget.parentContext, () async {
+        file = await _renderAndSaveChatImage(widget.parentContext, widget.conversation, widget.messages);
       });
       if (file == null) throw 'render error';
-      final filename = file!.uri.pathSegments.isNotEmpty ? file!.uri.pathSegments.last : 'chat.png';
-      await Share.shareXFiles(
-        [XFile(file!.path, mimeType: 'image/png', name: filename)],
-        sharePositionOrigin: anchor,
-      );
+      // After generation, close current sheet then open preview
+      if (mounted) await Navigator.of(context).maybePop();
+      await showImagePreviewSheet(widget.parentContext, file: file!);
+      return; // do not fall through to setState after pop
     } catch (e) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExportFailed('$e'),
-          type: NotificationType.error,
-        );
-      }
+      final l10n = AppLocalizations.of(widget.parentContext)!;
+      showAppSnackBar(
+        widget.parentContext,
+        message: l10n.messageExportSheetExportFailed('$e'),
+        type: NotificationType.error,
+      );
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -744,33 +739,23 @@ class _ExportSheetState extends State<_ExportSheet> {
 
   Future<void> _onExportImage() async {
     if (_exporting) return;
-    // Compute share anchor before closing sheet (iPad/macOS need it)
-    final anchor = _shareAnchorRect(context);
-    
-    // Dismiss dialog immediately
-    if (mounted) Navigator.of(context).maybePop();
-    
     setState(() => _exporting = true);
     try {
       File? file;
-      await _runWithExportingOverlay(context, () async {
-        file = await _renderAndSaveMessageImage(context, widget.message);
+      await _runWithExportingOverlay(widget.parentContext, () async {
+        file = await _renderAndSaveMessageImage(widget.parentContext, widget.message);
       });
       if (file == null) throw 'render error';
-      final filename = file!.uri.pathSegments.isNotEmpty ? file!.uri.pathSegments.last : 'chat.png';
-      await Share.shareXFiles(
-        [XFile(file!.path, mimeType: 'image/png', name: filename)],
-        sharePositionOrigin: anchor,
-      );
+      if (mounted) await Navigator.of(context).maybePop();
+      await showImagePreviewSheet(widget.parentContext, file: file!);
+      return;
     } catch (e) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExportFailed('$e'),
-          type: NotificationType.error,
-        );
-      }
+      final l10n = AppLocalizations.of(widget.parentContext)!;
+      showAppSnackBar(
+        widget.parentContext,
+        message: l10n.messageExportSheetExportFailed('$e'),
+        type: NotificationType.error,
+      );
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

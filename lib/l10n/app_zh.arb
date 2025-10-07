@@ -320,6 +320,14 @@
   "messageExportSheetBatchExportImageSubtitle": "将选中的消息渲染为 PNG 图片",
   "messageExportSheetDateTimeWithSecondsPattern": "yyyy年M月d日 HH:mm:ss",
   "exportDisclaimerAiGenerated": "内容由 AI 生成，请仔细甄别",
+  "imagePreviewSheetSaveImage": "保存图片",
+  "imagePreviewSheetSaveSuccess": "已保存到相册",
+  "imagePreviewSheetSaveFailed": "保存失败: {error}",
+  "@imagePreviewSheetSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "sideDrawerMenuRename": "重命名",
   "sideDrawerMenuPin": "置顶",
   "sideDrawerMenuUnpin": "取消置顶",
