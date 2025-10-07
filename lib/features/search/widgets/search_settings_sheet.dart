@@ -246,8 +246,8 @@ class _SearchSettingsSheet extends StatelessWidget {
                       crossAxisCount: 2,
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
-                      // Give tiles a bit more height to fit label + tag
-                      childAspectRatio: 2.7,
+                      // Give tiles more height to fit label + tag (especially for Chinese text)
+                      childAspectRatio: 2.5,
                     ),
                     itemCount: services.length,
                     itemBuilder: (ctx, i) {
@@ -341,14 +341,15 @@ class _ServiceTileLarge extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: fg)),
                     if ((status?.text ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(6)),
-                        child: Text(status!.text, style: TextStyle(fontSize: 11, color: statusFg)),
+                        child: Text(status!.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: statusFg)),
                       ),
                     ],
                   ],
