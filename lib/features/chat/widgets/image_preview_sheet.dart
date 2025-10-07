@@ -150,24 +150,24 @@ class _ImagePreviewSheetState extends State<_ImagePreviewSheet> {
                         return SingleChildScrollView(
                           controller: sc,
                           child: Center(
-                            child: Card(
-                              elevation: 0,
-                              color: cs.surface,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: cs.outline.withOpacity(0.08)),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Column(
-                                children: [
-                                  // Image preview
-                                  Image.file(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Card(
+                                  elevation: 0,
+                                  color: cs.surface,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    side: BorderSide(color: cs.outline.withOpacity(0.08)),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.file(
                                     widget.file,
                                     fit: BoxFit.contain,
                                   ),
-                                  const SizedBox(height: 80), // leave space for action bar overlap
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 80), // leave space for action bar overlap, outside the card
+                              ],
                             ),
                           ),
                         );
@@ -223,6 +223,9 @@ class _ImagePreviewSheetState extends State<_ImagePreviewSheet> {
                               backgroundColor: cs.primary,
                               foregroundColor: cs.onPrimary,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              surfaceTintColor: Colors.transparent,
                             ),
                             onPressed: _saving ? null : _onSave,
                             icon: _saving
