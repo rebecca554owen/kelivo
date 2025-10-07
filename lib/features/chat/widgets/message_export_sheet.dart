@@ -6,6 +6,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,11 +21,14 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/models/assistant.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/brand_assets.dart';
+import '../../../utils/avatar_cache.dart';
 
 // Shared helpers
 String _guessImageMime(String path) {
@@ -175,6 +180,7 @@ Future<File?> _renderAndSaveChatImage(BuildContext context, Conversation convers
     cs: cs,
     chatFontScale: settings.chatFontScale,
     messages: messages,
+    timestamp: conversation.updatedAt,
   );
   return _renderWidgetDirectly(context, content);
 }
@@ -566,19 +572,14 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     
     setState(() => _exporting = true);
     try {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExporting,
-          type: NotificationType.info,
-        );
-      }
-      final file = await _renderAndSaveChatImage(context, widget.conversation, widget.messages);
+      File? file;
+      await _runWithExportingOverlay(context, () async {
+        file = await _renderAndSaveChatImage(context, widget.conversation, widget.messages);
+      });
       if (file == null) throw 'render error';
-      final filename = file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : 'chat.png';
+      final filename = file!.uri.pathSegments.isNotEmpty ? file!.uri.pathSegments.last : 'chat.png';
       await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'image/png', name: filename)],
+        [XFile(file!.path, mimeType: 'image/png', name: filename)],
         sharePositionOrigin: anchor,
       );
     } catch (e) {
@@ -751,19 +752,14 @@ class _ExportSheetState extends State<_ExportSheet> {
     
     setState(() => _exporting = true);
     try {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        showAppSnackBar(
-          context,
-          message: l10n.messageExportSheetExporting,
-          type: NotificationType.info,
-        );
-      }
-      final file = await _renderAndSaveMessageImage(context, widget.message);
+      File? file;
+      await _runWithExportingOverlay(context, () async {
+        file = await _renderAndSaveMessageImage(context, widget.message);
+      });
       if (file == null) throw 'render error';
-      final filename = file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : 'chat.png';
+      final filename = file!.uri.pathSegments.isNotEmpty ? file!.uri.pathSegments.last : 'chat.png';
       await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'image/png', name: filename)],
+        [XFile(file!.path, mimeType: 'image/png', name: filename)],
         sharePositionOrigin: anchor,
       );
     } catch (e) {
@@ -850,7 +846,7 @@ class _ExportedMessageCard extends StatelessWidget {
     final isAssistant = message.role == 'assistant';
     final headerFg = cs.onSurface;
     final headerBg = cs.surface;
-    final bubbleBg = isAssistant ? cs.surfaceVariant.withOpacity(0.6) : cs.primary.withOpacity(0.08);
+    final bubbleBg = cs.primary.withOpacity(0.08);
     final bubbleFg = cs.onSurface;
     final time = DateFormat('yyyy-MM-dd HH:mm').format(message.timestamp);
 
@@ -865,7 +861,10 @@ class _ExportedMessageCard extends StatelessWidget {
     }
 
     final Widget contentWidget = (mdText.toString().trim().isNotEmpty)
-        ? MarkdownWithCodeHighlight(text: mdText.toString())
+        ? DefaultTextStyle.merge(
+            style: const TextStyle(fontSize: 15.7, height: 1.5),
+            child: MarkdownWithCodeHighlight(text: mdText.toString()),
+          )
         : Text('—', style: TextStyle(color: bubbleFg.withOpacity(0.5)));
 
     return MediaQuery(
@@ -885,66 +884,40 @@ class _ExportedMessageCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: headerBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withOpacity(0.35)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Lucide.MessageSquare, size: 18, color: headerFg.withOpacity(0.85)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: headerFg.withOpacity(0.95)),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(time, style: TextStyle(fontSize: 12, color: headerFg.withOpacity(0.6))),
-                ],
-              ),
+            // Title (no icon, no bordered container)
+            Text(
+              title,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: headerFg.withOpacity(0.95)),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
+            const SizedBox(height: 2),
+            // Timestamp under title, aligned with title
+            Text(time, style: TextStyle(fontSize: 12, color: headerFg.withOpacity(0.6))),
             const SizedBox(height: 12),
-            Align(
-              alignment: isAssistant ? Alignment.centerLeft : Alignment.centerRight,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 680),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
+            // Message body styled like chat
+            if (isAssistant) ...[
+              _AssistantHeader(message: message),
+              const SizedBox(height: 8),
+              contentWidget,
+            ] else ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 680),
                   child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: bubbleBg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: cs.outlineVariant.withOpacity(0.30)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _getRoleName(context, message),
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: bubbleFg.withOpacity(0.8)),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(time, style: TextStyle(fontSize: 12, color: bubbleFg.withOpacity(0.6))),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      contentWidget,
-                    ],
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: bubbleBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: contentWidget,
                   ),
                 ),
               ),
-            ),
-            ),
+            ],
+            const SizedBox(height: 16),
+            _ExportDisclaimer(),
           ],
         ),
       ),
@@ -988,11 +961,13 @@ class _ExportedChatImage extends StatelessWidget {
     required this.cs,
     required this.chatFontScale,
     required this.messages,
+    required this.timestamp,
   });
   final String conversationTitle;
   final ColorScheme cs;
   final double chatFontScale;
   final List<ChatMessage> messages;
+  final DateTime timestamp;
 
   @override
   Widget build(BuildContext context) {
@@ -1013,33 +988,26 @@ class _ExportedChatImage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withOpacity(0.35)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Lucide.MessageSquare, size: 18, color: cs.onSurface.withOpacity(0.85)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      conversationTitle,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface.withOpacity(0.95)),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
-              ),
+            // Title (no icon, no bordered container)
+            Text(
+              conversationTitle,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface.withOpacity(0.95)),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            const SizedBox(height: 2),
+            // Timestamp under title, aligned with title
+            Text(
+              DateFormat('yyyy-MM-dd HH:mm').format(timestamp),
+              style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 12),
             for (final m in messages) ...[
               _ExportedBubble(message: m, cs: cs),
               const SizedBox(height: 8),
             ],
+            const SizedBox(height: 12),
+            _ExportDisclaimer(),
             ],
           ),
         ),
@@ -1056,9 +1024,8 @@ class _ExportedBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAssistant = message.role == 'assistant';
-    final bubbleBg = isAssistant ? cs.surfaceVariant.withOpacity(0.6) : cs.primary.withOpacity(0.08);
+    final bubbleBg = cs.primary.withOpacity(0.08);
     final bubbleFg = cs.onSurface;
-    final time = DateFormat('yyyy-MM-dd HH:mm').format(message.timestamp);
     final parsed = _parseContent(message.content);
     final mdText = StringBuffer();
     if (parsed.text.isNotEmpty) mdText.writeln(_softBreakMd(parsed.text));
@@ -1069,44 +1036,232 @@ class _ExportedBubble extends StatelessWidget {
       mdText.writeln('\n- ${d.fileName}  `(${d.mime})`');
     }
     final Widget contentWidget = (mdText.toString().trim().isNotEmpty)
-        ? MarkdownWithCodeHighlight(text: mdText.toString())
+        ? DefaultTextStyle.merge(
+            style: const TextStyle(fontSize: 15.7, height: 1.5),
+            child: MarkdownWithCodeHighlight(text: mdText.toString()),
+          )
         : Text('—', style: TextStyle(color: bubbleFg.withOpacity(0.5)));
 
+    if (isAssistant) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 780),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AssistantHeader(message: message),
+              const SizedBox(height: 8),
+              contentWidget,
+            ],
+          ),
+        ),
+      );
+    }
     return Align(
-      alignment: isAssistant ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: Alignment.centerRight,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: bubbleBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: cs.outlineVariant.withOpacity(0.30)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _getRoleName(context, message),
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: bubbleFg.withOpacity(0.8)),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(time, style: TextStyle(fontSize: 12, color: bubbleFg.withOpacity(0.6))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                contentWidget,
-              ],
-            ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: bubbleBg,
+            borderRadius: BorderRadius.circular(16),
           ),
+          child: contentWidget,
         ),
       ),
     );
+  }
+}
+
+// Assistant header (icon + name), mirroring chat style
+class _AssistantHeader extends StatelessWidget {
+  const _AssistantHeader({required this.message});
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    final useAssist = (assistant?.useAssistantAvatar == true);
+    final name = () {
+      if (useAssist && (assistant?.name.trim().isNotEmpty ?? false)) {
+        return assistant!.name.trim();
+      }
+      return _modelDisplayName(context, message) ?? AppLocalizations.of(context)!.messageExportSheetAssistant;
+    }();
+
+    final Widget leading = useAssist
+        ? _AssistantAvatarSmall(assistant: assistant)
+        : _ModelIconSmall(providerKey: message.providerId, modelId: message.modelId);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        leading,
+        const SizedBox(width: 8),
+        Text(
+          name,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: cs.onSurface.withOpacity(0.7)),
+        ),
+      ],
+    );
+  }
+}
+
+class _ModelIconSmall extends StatelessWidget {
+  const _ModelIconSmall({required this.providerKey, required this.modelId});
+  final String? providerKey;
+  final String? modelId;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    const double size = 28;
+    if (providerKey == null || modelId == null) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: cs.secondary.withOpacity(0.1), shape: BoxShape.circle),
+        child: Icon(Lucide.Bot, size: 18, color: cs.secondary),
+      );
+    }
+    String? asset = BrandAssets.assetForName(modelId!);
+    asset ??= BrandAssets.assetForName(providerKey!);
+    Widget inner;
+    if (asset != null) {
+      if (asset.endsWith('.svg')) {
+        final isColorful = asset.contains('color');
+        final ColorFilter? tint = (Theme.of(context).brightness == Brightness.dark && !isColorful)
+            ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+            : null;
+        inner = SvgPicture.asset(asset, width: size * 0.5, height: size * 0.5, colorFilter: tint);
+      } else {
+        inner = Image.asset(asset, width: size * 0.5, height: size * 0.5, fit: BoxFit.contain);
+      }
+    } else {
+      inner = Text(
+        modelId!.isNotEmpty ? modelId!.characters.first.toUpperCase() : '?',
+        style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700, fontSize: size * 0.43),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : cs.primary.withOpacity(0.1), shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: SizedBox(width: size * 0.64, height: size * 0.64, child: Center(child: inner is SvgPicture || inner is Image ? inner : FittedBox(child: inner))),
+    );
+  }
+}
+
+class _AssistantAvatarSmall extends StatelessWidget {
+  const _AssistantAvatarSmall({required this.assistant});
+  final Assistant? assistant;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final av = (assistant?.avatar ?? '').trim();
+    const double size = 28;
+    if (av.isNotEmpty) {
+      if (av.startsWith('http')) {
+        return FutureBuilder<String?>(
+          future: AvatarCache.getPath(av),
+          builder: (ctx, snap) {
+            final p = snap.data;
+            if (p != null && File(p).existsSync()) {
+              return ClipOval(child: Image.file(File(p), width: size, height: size, fit: BoxFit.cover));
+            }
+            return ClipOval(
+              child: Image.network(av, width: size, height: size, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _assistantInitial(cs, assistant?.name ?? '')),
+            );
+          },
+        );
+      }
+      if (av.startsWith('/') || av.contains(':')) {
+        final fixed = SandboxPathResolver.fix(av);
+        return ClipOval(child: Image.file(File(fixed), width: size, height: size, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _assistantInitial(cs, assistant?.name ?? '')));
+      }
+      // treat as emoji or single char label
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: cs.primary.withOpacity(0.1), shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: Text(av.characters.take(1).toString(), style: const TextStyle(fontSize: 16)),
+      );
+    }
+    return _assistantInitial(cs, assistant?.name ?? '');
+  }
+
+  Widget _assistantInitial(ColorScheme cs, String name) {
+    final ch = name.trim().isNotEmpty ? name.characters.first.toUpperCase() : 'A';
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(color: cs.primary.withOpacity(0.1), shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: Text(ch, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700, fontSize: 14)),
+    );
+  }
+}
+
+class _ExportDisclaimer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final text = AppLocalizations.of(context)!.exportDisclaimerAiGenerated;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 6),
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5)),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _runWithExportingOverlay(BuildContext context, Future<void> Function() task) async {
+  final cs = Theme.of(context).colorScheme;
+  final l10n = AppLocalizations.of(context)!;
+  // Show overlay first
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => Center(
+      child: Material(
+        color: cs.surface,
+        elevation: 6,
+        shadowColor: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CupertinoActivityIndicator(radius: 16),
+              const SizedBox(height: 12),
+              Text(
+                l10n.messageExportSheetExporting,
+                style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.8)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  try {
+    await task();
+  } finally {
+    Navigator.of(context, rootNavigator: true).pop();
   }
 }
 

@@ -982,6 +982,9 @@ class AppLocalizationsZh extends AppLocalizations {
       'yyyy年M月d日 HH:mm:ss';
 
   @override
+  String get exportDisclaimerAiGenerated => '内容由 AI 生成，请仔细甄别';
+
+  @override
   String get sideDrawerMenuRename => '重命名';
 
   @override
@@ -3159,6 +3162,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       'yyyy年M月d日 HH:mm:ss';
 
   @override
+  String get exportDisclaimerAiGenerated => '内容由 AI 生成，请仔细甄别';
+
+  @override
   String get sideDrawerMenuRename => '重命名';
 
   @override
@@ -5334,6 +5340,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get messageExportSheetDateTimeWithSecondsPattern =>
       'yyyy年M月d日 HH:mm:ss';
+
+  @override
+  String get exportDisclaimerAiGenerated => '內容由 AI 生成，請仔細甄別';
 
   @override
   String get sideDrawerMenuRename => '重新命名';

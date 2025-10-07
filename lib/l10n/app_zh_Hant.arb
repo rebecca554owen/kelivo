@@ -319,6 +319,7 @@
   "messageExportSheetSingleExportImageSubtitle": "將該訊息渲染為 PNG 圖片",
   "messageExportSheetBatchExportImageSubtitle": "將選中的訊息渲染為 PNG 圖片",
   "messageExportSheetDateTimeWithSecondsPattern": "yyyy年M月d日 HH:mm:ss",
+  "exportDisclaimerAiGenerated": "內容由 AI 生成，請仔細甄別",
   "sideDrawerMenuRename": "重新命名",
   "sideDrawerMenuPin": "置頂",
   "sideDrawerMenuUnpin": "取消置頂",
