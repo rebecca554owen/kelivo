@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:html' as html;
 import 'dart:js_util' as js_util;
 import 'dart:ui' as ui; // ignore: uri_does_not_exist
@@ -9,7 +10,8 @@ import 'mermaid_cache.dart';
 class MermaidViewHandle {
   final Widget widget;
   final Future<bool> Function() exportPng;
-  MermaidViewHandle({required this.widget, required this.exportPng});
+  final Future<Uint8List?> Function()? exportPngBytes;
+  MermaidViewHandle({required this.widget, required this.exportPng, this.exportPngBytes});
 }
 
 final Map<String, html.DivElement> _containers = {};
@@ -116,7 +118,11 @@ MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String
     }
   }
 
-  return MermaidViewHandle(widget: HtmlElementView(viewType: viewType), exportPng: export);
+  Future<Uint8List?> exportBytes() async {
+    // Not implemented for web currently (Flutter web capture path likely not used)
+    return null;
+  }
+  return MermaidViewHandle(widget: HtmlElementView(viewType: viewType), exportPng: export, exportPngBytes: exportBytes);
 }
 
 int _viewSeq = 0;

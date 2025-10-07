@@ -14,6 +14,8 @@ import '../../utils/sandbox_path_resolver.dart';
 import '../../features/chat/pages/image_viewer_page.dart';
 import 'snackbar.dart';
 import 'mermaid_bridge.dart';
+import 'export_capture_scope.dart';
+import 'mermaid_image_cache.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/theme/theme_factory.dart' show kDefaultFontFamilyFallback;
 import 'package:provider/provider.dart';
@@ -752,8 +754,19 @@ class _MermaidBlockState extends State<_MermaidBlock> {
       'errorTextColor': hex(cs.onError),
     };
 
-    final handle = createMermaidView(widget.code, isDark, themeVars: themeVars, viewKey: _mermaidViewKey);
-    final mermaidView = handle?.widget;
+    final exporting = ExportCaptureScope.of(context);
+    final handle = exporting ? null : createMermaidView(widget.code, isDark, themeVars: themeVars, viewKey: _mermaidViewKey);
+    final Widget? mermaidView = () {
+      if (exporting) {
+        final bytes = MermaidImageCache.get(widget.code);
+        if (bytes != null && bytes.isNotEmpty) {
+          return Image.memory(bytes, fit: BoxFit.contain);
+        }
+        return null;
+      } else {
+        return handle?.widget;
+      }
+    }();
 
     return Container(
       width: double.infinity,
@@ -799,73 +812,75 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                       ),
                     ),
                     const Spacer(),
-                    // Copy action: icon + label ("复制"/localized) — match code block style
-                    InkWell(
-                      onTap: () async {
-                        await Clipboard.setData(ClipboardData(text: widget.code));
-                        if (mounted) {
-                          showAppSnackBar(
-                            context,
-                            message: AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard,
-                            type: NotificationType.success,
-                          );
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(6),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Lucide.Copy,
-                              size: 14,
-                              color: cs.onSurface.withOpacity(0.6),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              AppLocalizations.of(context)!.shareProviderSheetCopyButton,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: cs.onSurface.withOpacity(0.6),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (handle != null) ...[
-                      const SizedBox(width: 6),
+                    if (!ExportCaptureScope.of(context)) ...[
+                      // Copy action
                       InkWell(
                         onTap: () async {
-                          final ok = await handle.exportPng();
-                          if (!mounted) return;
-                          if (!ok) {
-                            final l10n = AppLocalizations.of(context)!;
+                          await Clipboard.setData(ClipboardData(text: widget.code));
+                          if (mounted) {
                             showAppSnackBar(
                               context,
-                              message: l10n.mermaidExportFailed,
-                              type: NotificationType.error,
+                              message: AppLocalizations.of(context)!.chatMessageWidgetCopiedToClipboard,
+                              type: NotificationType.success,
                             );
                           }
                         },
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Icon(
-                            Lucide.Download,
-                            size: 14,
-                            color: cs.onSurface.withOpacity(0.6),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Lucide.Copy,
+                                size: 14,
+                                color: cs.onSurface.withOpacity(0.6),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppLocalizations.of(context)!.shareProviderSheetCopyButton,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: cs.onSurface.withOpacity(0.6),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+                      if (handle != null) ...[
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () async {
+                            final ok = await handle.exportPng();
+                            if (!mounted) return;
+                            if (!ok) {
+                              final l10n = AppLocalizations.of(context)!;
+                              showAppSnackBar(
+                                context,
+                                message: l10n.mermaidExportFailed,
+                                type: NotificationType.error,
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              Lucide.Download,
+                              size: 14,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 6),
+                      Icon(
+                        _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
+                        size: 16,
+                        color: cs.onSurface.withOpacity(0.7),
+                      ),
                     ],
-                    const SizedBox(width: 6),
-                    Icon(
-                      _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
-                      size: 16,
-                      color: cs.onSurface.withOpacity(0.7),
-                    ),
                   ],
                 ),
               ),
@@ -906,16 +921,18 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () => _openMermaidPreviewInBrowser(context, widget.code,
-                            Theme.of(context).brightness == Brightness.dark),
-                        icon: Icon(Lucide.Eye, size: 16),
-                        label: Text(AppLocalizations.of(context)!.mermaidPreviewOpen),
+                    if (!ExportCaptureScope.of(context)) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => _openMermaidPreviewInBrowser(context, widget.code,
+                              Theme.of(context).brightness == Brightness.dark),
+                          icon: Icon(Lucide.Eye, size: 16),
+                          label: Text(AppLocalizations.of(context)!.mermaidPreviewOpen),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ],
               ),

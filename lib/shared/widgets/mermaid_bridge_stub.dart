@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle, PlatformException, MissingPluginException;
@@ -14,7 +15,8 @@ import 'package:open_filex/open_filex.dart';
 class MermaidViewHandle {
   final Widget widget;
   final Future<bool> Function() exportPng;
-  MermaidViewHandle({required this.widget, required this.exportPng});
+  final Future<Uint8List?> Function()? exportPngBytes;
+  MermaidViewHandle({required this.widget, required this.exportPng, this.exportPngBytes});
 }
 
 /// Mobile/desktop (non-web) Mermaid renderer using webview_flutter.
@@ -32,7 +34,16 @@ MermaidViewHandle? createMermaidView(String code, bool dark, {Map<String, String
     } catch (_) {}
     return false;
   }
-  return MermaidViewHandle(widget: widget, exportPng: doExport);
+  Future<Uint8List?> doExportBytes() async {
+    try {
+      final state = usedKey.currentState;
+      if (state is _MermaidInlineWebViewState) {
+        return await state.exportPngBytes();
+      }
+    } catch (_) {}
+    return null;
+  }
+  return MermaidViewHandle(widget: widget, exportPng: doExport, exportPngBytes: doExportBytes);
 }
 
 class _MermaidInlineWebView extends StatefulWidget {
@@ -168,9 +179,25 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
         try{
           const svg = document.querySelector('.mermaid svg');
           if(!svg){ ExportChannel.postMessage(''); return; }
-          const rect = svg.getBoundingClientRect();
-          const w = Math.ceil(rect.width);
-          const h = Math.ceil(rect.height);
+          let w = 0, h = 0;
+          try {
+            if (svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width && svg.viewBox.baseVal.height) {
+              w = Math.ceil(svg.viewBox.baseVal.width);
+              h = Math.ceil(svg.viewBox.baseVal.height);
+            } else if (svg.width && svg.height && svg.width.baseVal && svg.height.baseVal) {
+              w = Math.ceil(svg.width.baseVal.value);
+              h = Math.ceil(svg.height.baseVal.value);
+            } else if (svg.getBBox) {
+              const bb = svg.getBBox();
+              w = Math.ceil(bb.width);
+              h = Math.ceil(bb.height);
+            }
+          } catch(_) {}
+          if (!w || !h) {
+            const rect = svg.getBoundingClientRect();
+            w = Math.ceil(rect.width);
+            h = Math.ceil(rect.height);
+          }
           const scale = (window.devicePixelRatio || 1) * 2;
           const canvas = document.createElement('canvas');
           canvas.width = Math.max(1, Math.floor(w * scale));
@@ -266,5 +293,20 @@ class _MermaidInlineWebViewState extends State<_MermaidInlineWebView> {
     try { _heightDebounce?.cancel(); } catch (_) {}
     _heightDebounce = null;
     super.dispose();
+  }
+
+  Future<Uint8List?> exportPngBytes() async {
+    try {
+      _exportCompleter = Completer<String?>();
+      await _controller.runJavaScript('exportSvgToPng();');
+      final b64 = await _exportCompleter!.future.timeout(const Duration(seconds: 8));
+      if (b64 == null || b64.isEmpty) return null;
+      final bytes = base64Decode(b64);
+      return bytes;
+    } catch (_) {
+      return null;
+    } finally {
+      _exportCompleter = null;
+    }
   }
 }

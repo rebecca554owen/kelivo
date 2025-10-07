@@ -26,6 +26,8 @@ import '../../../core/models/assistant.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
+import '../../../shared/widgets/export_capture_scope.dart';
+import '../../../shared/widgets/mermaid_exporter.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/brand_assets.dart';
@@ -157,11 +159,20 @@ Future<File?> _renderAndSaveMessageImage(BuildContext context, ChatMessage messa
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
   final l10n = AppLocalizations.of(context)!;
-  final content = _ExportedMessageCard(
+  // Pre-render mermaid diagrams to images for export
+  try {
+    final codes = extractMermaidCodes(message.content);
+    await preRenderMermaidCodesForExport(context, codes);
+  } catch (_) {}
+
+  final content = ExportCaptureScope(
+    enabled: true,
+    child: _ExportedMessageCard(
     message: message,
     title: context.read<ChatService>().getConversation(message.conversationId)?.title ?? l10n.messageExportSheetDefaultTitle,
     cs: cs,
     chatFontScale: settings.chatFontScale,
+    ),
   );
   return _renderWidgetDirectly(context, content);
 }
@@ -183,12 +194,24 @@ Future<File?> _renderAndSaveChatImage(BuildContext context, Conversation convers
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
   final l10n = AppLocalizations.of(context)!;
-  final content = _ExportedChatImage(
+  // Pre-render all mermaid diagrams found in selected messages
+  try {
+    final codes = messages
+        .map((m) => extractMermaidCodes(m.content))
+        .expand((e) => e)
+        .toList();
+    await preRenderMermaidCodesForExport(context, codes);
+  } catch (_) {}
+
+  final content = ExportCaptureScope(
+    enabled: true,
+    child: _ExportedChatImage(
     conversationTitle: (conversation.title.trim().isNotEmpty) ? conversation.title : l10n.messageExportSheetDefaultTitle,
     cs: cs,
     chatFontScale: settings.chatFontScale,
     messages: messages,
     timestamp: conversation.updatedAt,
+    ),
   );
   return _renderWidgetDirectly(context, content);
 }
