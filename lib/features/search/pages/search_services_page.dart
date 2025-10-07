@@ -507,18 +507,20 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // Handle bar
               Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 4),
@@ -543,7 +545,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   child: Text(
                     _selectedType == null ? l10n.searchServicesAddDialogTitle : _getServiceName(_selectedType!),
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -566,6 +568,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
