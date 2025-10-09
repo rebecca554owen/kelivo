@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   logging: ^1.2.0
+  vibration: ^3.1.4
 
   # Localizations for Chinese/English UI strings
   flutter_localizations:

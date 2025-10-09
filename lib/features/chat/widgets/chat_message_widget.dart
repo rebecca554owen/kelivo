@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
+import '../../../core/services/haptics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -238,7 +239,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
 
   void _showUserContextMenu() {
     // Haptic feedback (optional)
-    try { HapticFeedback.lightImpact(); } catch (_) {}
+    try { Haptics.light(); } catch (_) {}
 
     final box = _userBubbleKey.currentContext?.findRenderObject() as RenderBox?;
     final overlay = Overlay.of(context);
@@ -1405,7 +1406,7 @@ class _MenuItem extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          try { HapticFeedback.selectionClick(); } catch (_) {}
+          try { Haptics.light(); } catch (_) {}
           onTap?.call();
         },
         overlayColor: MaterialStatePropertyAll(cs.primary.withOpacity(0.06)),

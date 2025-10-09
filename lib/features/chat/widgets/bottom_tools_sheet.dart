@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/services/haptics.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/services/learning_mode_store.dart';
 import '../../../l10n/app_localizations.dart';
@@ -41,7 +42,7 @@ class BottomToolsSheet extends StatelessWidget {
               }),
               splashColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
               onTap: () {
-                HapticFeedback.selectionClick();
+                Haptics.light();
                 onTap?.call();
               },
               child: Center(
@@ -195,7 +196,7 @@ class _LearningAndClearSectionState extends State<_LearningAndClearSection> {
                   label: l10n.bottomToolsSheetLearningMode,
                   selected: _enabled,
                   onTap: () async {
-                    HapticFeedback.selectionClick();
+                    Haptics.light();
                     final next = !_enabled;
                     await LearningModeStore.setEnabled(next);
                     if (!mounted) return;
@@ -214,7 +215,7 @@ class _LearningAndClearSectionState extends State<_LearningAndClearSection> {
             icon: Lucide.Eraser,
             label: widget.clearLabel ?? l10n.bottomToolsSheetClearContext,
             onTap: () {
-              HapticFeedback.selectionClick();
+              Haptics.light();
               widget.onClear?.call();
             },
           ),

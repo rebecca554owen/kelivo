@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../core/services/haptics.dart';
 
 enum NotificationType {
   success,
@@ -363,7 +363,7 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
       onVerticalDragEnd: _handleDragEnd,
       onTap: () {
         if (!_isDismissing) {
-          HapticFeedback.lightImpact();
+          Haptics.light();
           widget.notification.onTap?.call();
           widget.onDismiss();
         }
@@ -422,7 +422,7 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
                       const SizedBox(width: 12),
                       TextButton(
                         onPressed: () {
-                          HapticFeedback.lightImpact();
+                          Haptics.light();
                           widget.notification.onAction?.call();
                           widget.onDismiss();
                         },
@@ -445,7 +445,7 @@ class _NotificationWidgetState extends State<NotificationWidget> with SingleTick
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: widget.isTop ? () {
-                        HapticFeedback.lightImpact();
+                        Haptics.light();
                         widget.onDismiss();
                       } : null,
                       child: Icon(

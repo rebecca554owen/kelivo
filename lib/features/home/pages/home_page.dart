@@ -54,6 +54,7 @@ import '../../../core/services/learning_mode_store.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../core/services/haptics.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -722,7 +723,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       } else {
         try {
           if (context.read<SettingsProvider>().hapticsOnDrawer) {
-            HapticFeedback.mediumImpact();
+            Haptics.drawerPulse();
           }
         } catch (_) {}
       }
@@ -739,7 +740,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _dismissKeyboard();
     try {
       if (context.read<SettingsProvider>().hapticsOnDrawer) {
-        HapticFeedback.mediumImpact();
+        Haptics.drawerPulse();
       }
     } catch (_) {}
     setState(() {
@@ -1057,7 +1058,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // Haptics on generate (if enabled)
     try {
       if (context.read<SettingsProvider>().hapticsOnGenerate) {
-        HapticFeedback.lightImpact();
+        Haptics.light();
       }
     } catch (_) {}
 
@@ -1949,7 +1950,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // Haptics on regenerate
     try {
       if (context.read<SettingsProvider>().hapticsOnGenerate) {
-        HapticFeedback.lightImpact();
+        Haptics.light();
       }
     } catch (_) {}
 
@@ -2887,7 +2888,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           // Haptic feedback when closing the sidebar
           try {
             if (context.read<SettingsProvider>().hapticsOnDrawer) {
-              HapticFeedback.mediumImpact();
+              Haptics.drawerPulse();
             }
           } catch (_) {}
           _drawerController.close();
@@ -2897,7 +2898,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           // Haptic feedback when closing the sidebar
           try {
             if (context.read<SettingsProvider>().hapticsOnDrawer) {
-              HapticFeedback.mediumImpact();
+              Haptics.drawerPulse();
             }
           } catch (_) {}
           _drawerController.close();
@@ -2933,7 +2934,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             // Haptic feedback on opening/closing the sidebar
             try {
               if (context.read<SettingsProvider>().hapticsOnDrawer) {
-                HapticFeedback.mediumImpact();
+                Haptics.drawerPulse();
               }
             } catch (_) {}
             // If the drawer is currently closed, toggling will open -> suppress listener haptic
