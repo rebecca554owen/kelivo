@@ -62,10 +62,14 @@ class _ImagePreviewSheetState extends State<_ImagePreviewSheet> {
         ? widget.file.uri.pathSegments.last
         : 'image.png';
     try {
-      await Share.shareXFiles(
+      final result = await Share.shareXFiles(
         [XFile(widget.file.path, mimeType: 'image/png', name: filename)],
         sharePositionOrigin: _shareAnchorRect(context),
       );
+      // Close only if sharing succeeds (when the platform reports it)
+      if (result.status == ShareResultStatus.success && mounted) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       final l10n = AppLocalizations.of(context)!;
       showAppSnackBar(
