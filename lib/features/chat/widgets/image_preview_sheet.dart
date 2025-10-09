@@ -96,6 +96,10 @@ class _ImagePreviewSheetState extends State<_ImagePreviewSheet> {
           message: l10n.imagePreviewSheetSaveSuccess,
           type: NotificationType.success,
         );
+        // Auto-close the preview sheet after successful save
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       } else {
         showAppSnackBar(
           context,
