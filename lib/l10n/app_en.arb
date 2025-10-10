@@ -903,6 +903,7 @@
   "searchProviderTavilyDescription": "AI search API optimized for LLMs. Provides high-quality, relevant results.",
   "searchProviderZhipuDescription": "Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.",
   "searchProviderOllamaDescription": "Ollama web search API. Augments models with up-to-date information.",
+  "searchProviderJinaDescription": "AI search foundation with embeddings, rerankers, web reader, deepsearch, and small language models. Multilingual and multimodal.",
   "searchServiceNameBingLocal": "Bing (Local)",
   "searchServiceNameTavily": "Tavily",
   "searchServiceNameExa": "Exa",
@@ -912,6 +913,7 @@
   "searchServiceNameBrave": "Brave Search",
   "searchServiceNameMetaso": "Metaso",
   "searchServiceNameOllama": "Ollama",
+  "searchServiceNameJina": "Jina",
   "generationInterrupted": "Generation interrupted",
   "titleForLocale": "New Chat"
 }

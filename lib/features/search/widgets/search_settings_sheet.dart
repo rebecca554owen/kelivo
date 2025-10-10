@@ -40,6 +40,7 @@ class _SearchSettingsSheet extends StatelessWidget {
     if (s is BraveOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (s is MetasoOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (s is OllamaOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (s is JinaOptions) return s.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     return null;
   }
 
@@ -391,6 +392,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is BraveOptions) return 'brave';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
+    if (s is JinaOptions) return 'jina';
     return 'search';
   }
 

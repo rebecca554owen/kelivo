@@ -9,6 +9,7 @@ import 'providers/linkup_search_service.dart';
 import 'providers/brave_search_service.dart';
 import 'providers/metaso_search_service.dart';
 import 'providers/ollama_search_service.dart';
+import 'providers/jina_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -43,6 +44,8 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return MetasoSearchService() as SearchService;
       case OllamaOptions:
         return OllamaSearchService() as SearchService;
+      case JinaOptions:
+        return JinaSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -152,6 +155,8 @@ abstract class SearchServiceOptions {
         return MetasoOptions.fromJson(json);
       case 'ollama':
         return OllamaOptions.fromJson(json);
+      case 'jina':
+        return JinaOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -366,4 +371,25 @@ class OllamaOptions extends SearchServiceOptions {
     id: json['id'],
     apiKey: json['apiKey'],
   );
+}
+
+class JinaOptions extends SearchServiceOptions {
+  final String apiKey;
+
+  JinaOptions({
+    required String id,
+    required this.apiKey,
+  }) : super(id: id);
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'jina',
+        'id': id,
+        'apiKey': apiKey,
+      };
+
+  factory JinaOptions.fromJson(Map<String, dynamic> json) => JinaOptions(
+        id: json['id'],
+        apiKey: json['apiKey'],
+      );
 }

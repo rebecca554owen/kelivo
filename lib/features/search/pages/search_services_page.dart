@@ -398,6 +398,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     if (service is LinkUpOptions) return Lucide.Link2;
     if (service is BraveOptions) return Lucide.Shield;
     if (service is MetasoOptions) return Lucide.Compass;
+    if (service is JinaOptions) return Lucide.Sparkles;
     return Lucide.Search;
   }
 
@@ -412,6 +413,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     if (service is BraveOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (service is MetasoOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     if (service is OllamaOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
+    if (service is JinaOptions) return service.apiKey.isNotEmpty ? l10n.searchServicesPageConfiguredStatus : l10n.searchServicesPageApiKeyRequiredStatus;
     return null;
   }
 
@@ -440,6 +442,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is BraveOptions) return 'brave';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
+    if (s is JinaOptions) return 'jina';
     return 'search';
   }
 
@@ -590,6 +593,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
       {'type': 'linkup', 'name': l10n.searchServiceNameLinkUp},
       {'type': 'brave', 'name': l10n.searchServiceNameBrave},
       {'type': 'metaso', 'name': l10n.searchServiceNameMetaso},
+      {'type': 'jina', 'name': l10n.searchServiceNameJina},
       {'type': 'ollama', 'name': l10n.searchServiceNameOllama},
     ];
     
@@ -661,6 +665,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
       case 'linkup': return l10n.searchServiceNameLinkUp;
       case 'brave': return l10n.searchServiceNameBrave;
       case 'metaso': return l10n.searchServiceNameMetaso;
+      case 'jina': return l10n.searchServiceNameJina;
       case 'ollama': return l10n.searchServiceNameOllama;
       default: return '';
     }
@@ -775,6 +780,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
       case 'linkup':
       case 'brave':
       case 'metaso':
+      case 'jina':
       case 'ollama':
         return [
           _buildTextField(
@@ -875,6 +881,11 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
           id: id,
           apiKey: _controllers['apiKey']!.text,
         );
+      case 'jina':
+        return JinaOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+        );
       case 'ollama':
         return OllamaOptions(
           id: id,
@@ -931,6 +942,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     } else if (service is MetasoOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
     } else if (service is OllamaOptions) {
+      _controllers['apiKey'] = TextEditingController(text: service.apiKey);
+    } else if (service is JinaOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
     }
   }
@@ -990,7 +1003,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
                service is LinkUpOptions ||
                service is BraveOptions ||
                service is MetasoOptions ||
-               service is OllamaOptions) {
+               service is OllamaOptions ||
+               service is JinaOptions) {
       return [
         TextFormField(
           controller: _controllers['apiKey'],
@@ -1109,6 +1123,11 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         id: service.id,
         apiKey: _controllers['apiKey']!.text,
       );
+    } else if (service is JinaOptions) {
+      return JinaOptions(
+        id: service.id,
+        apiKey: _controllers['apiKey']!.text,
+      );
     }
     
     return service;
@@ -1203,6 +1222,8 @@ class _ServiceIcon extends StatelessWidget {
         return 'brave';
       case 'metaso':
         return 'metaso';
+      case 'jina':
+        return 'jina';
       case 'ollama':
         return 'ollama';
       default:

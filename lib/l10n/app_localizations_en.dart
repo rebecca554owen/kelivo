@@ -2242,6 +2242,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ollama web search API. Augments models with up-to-date information.';
 
   @override
+  String get searchProviderJinaDescription =>
+      'AI search foundation with embeddings, rerankers, web reader, deepsearch, and small language models. Multilingual and multimodal.';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing (Local)';
 
   @override
@@ -2267,6 +2271,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServiceNameOllama => 'Ollama';
+
+  @override
+  String get searchServiceNameJina => 'Jina';
 
   @override
   String get generationInterrupted => 'Generation interrupted';

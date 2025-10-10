@@ -4235,6 +4235,12 @@ abstract class AppLocalizations {
   /// **'Ollama web search API. Augments models with up-to-date information.'**
   String get searchProviderOllamaDescription;
 
+  /// No description provided for @searchProviderJinaDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AI search foundation with embeddings, rerankers, web reader, deepsearch, and small language models. Multilingual and multimodal.'**
+  String get searchProviderJinaDescription;
+
   /// No description provided for @searchServiceNameBingLocal.
   ///
   /// In en, this message translates to:
@@ -4288,6 +4294,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ollama'**
   String get searchServiceNameOllama;
+
+  /// No description provided for @searchServiceNameJina.
+  ///
+  /// In en, this message translates to:
+  /// **'Jina'**
+  String get searchServiceNameJina;
 
   /// No description provided for @generationInterrupted.
   ///

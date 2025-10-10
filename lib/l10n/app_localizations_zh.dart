@@ -2162,6 +2162,9 @@ class AppLocalizationsZh extends AppLocalizations {
       'Ollama 网络搜索 API。为模型补充最新信息，减少幻觉并提升准确性。';
 
   @override
+  String get searchProviderJinaDescription => '适合开发者和企业用于 AI 搜索应用。支持多语言与多模态。';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing（Local）';
 
   @override
@@ -2187,6 +2190,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchServiceNameOllama => 'Ollama';
+
+  @override
+  String get searchServiceNameJina => 'Jina';
 
   @override
   String get generationInterrupted => '生成已中断';
@@ -4353,6 +4359,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       'Ollama 网络搜索 API。为模型补充最新信息，减少幻觉并提升准确性。';
 
   @override
+  String get searchProviderJinaDescription => '适合开发者和企业用于 AI 搜索应用。支持多语言与多模态。';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing（Local）';
 
   @override
@@ -4378,6 +4387,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameOllama => 'Ollama';
+
+  @override
+  String get searchServiceNameJina => 'Jina';
 
   @override
   String get generationInterrupted => '生成已中断';
@@ -6543,6 +6555,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       'Ollama 網路搜尋 API。為模型補充最新資訊，降低幻覺並提升準確性。';
 
   @override
+  String get searchProviderJinaDescription =>
+      'AI 搜尋基礎設施：提供 Embeddings、重排序、Web Reader、DeepSearch 與小語言模型。支援多語言與多模態。';
+
+  @override
   String get searchServiceNameBingLocal => 'Bing（本機）';
 
   @override
@@ -6568,6 +6584,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameOllama => 'Ollama';
+
+  @override
+  String get searchServiceNameJina => 'Jina';
 
   @override
   String get generationInterrupted => '生成已中斷';
