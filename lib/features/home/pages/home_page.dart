@@ -4210,6 +4210,29 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                         });
                                                       }
                                                     },
+                                                    // Ensure tool call/search/citation cards render on tablets too
+                                                    toolParts: message.role == 'assistant' ? _toolParts[message.id] : null,
+                                                    reasoningSegments: message.role == 'assistant'
+                                                        ? (() {
+                                                            final segments = _reasoningSegments[message.id];
+                                                            if (segments == null || segments.isEmpty) return null;
+                                                            return segments
+                                                                .map((s) => ReasoningSegment(
+                                                                      text: s.text,
+                                                                      expanded: s.expanded,
+                                                                      loading: s.finishedAt == null && s.text.isNotEmpty,
+                                                                      startAt: s.startAt,
+                                                                      finishedAt: s.finishedAt,
+                                                                      onToggle: () {
+                                                                        setState(() {
+                                                                          s.expanded = !s.expanded;
+                                                                        });
+                                                                      },
+                                                                      toolStartIndex: s.toolStartIndex,
+                                                                    ))
+                                                                .toList();
+                                                          })()
+                                                        : null,
                                                   ),
                                                 ),
                                               ),
