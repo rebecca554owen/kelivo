@@ -172,6 +172,10 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
           ),
           textAlign: TextAlign.start,
           textScaler: MediaQuery.of(ctx).textScaler,
+          textHeightBehavior: const TextHeightBehavior(
+            applyHeightToFirstAscent: false,
+            applyHeightToLastDescent: false,
+          ),
         );
       },
       orderedListBuilder: (ctx, no, child, cfg) {
