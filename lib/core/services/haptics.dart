@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:vibration/vibration.dart';
+import 'package:haptic_feedback/haptic_feedback.dart' as HFP;
 
-/// Centralized gentle haptics/vibration using the `vibration` plugin.
+/// Centralized gentle haptics using the `haptic_feedback` plugin.
 ///
 /// These helpers intentionally keep calls fire-and-forget (no await) and
 /// are safe on platforms without plugin support (errors are swallowed).
@@ -10,39 +10,16 @@ class Haptics {
   Haptics._();
 
   /// Very light tap feedback (e.g., small UI taps or success tick).
-  static void light() {
-    _safe(() => Vibration.vibrate(
-          // Single crisp-soft pulse
-          duration: 12,
-          amplitude: 80,
-          sharpness: 0.40,
-        ));
-  }
+  static void light() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft)); }
 
   /// Medium tap feedback (e.g., opening/closing drawer, toggles).
-  static void medium() {
-    _safe(() => Vibration.vibrate(
-          // Single pulse: a bit longer/stronger but not harsh
-          duration: 16,
-          amplitude: 110,
-          sharpness: 0.36,
-        ));
-  }
+  static void medium() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.medium)); }
 
   /// Drawer-specific pulse; tuned to feel present but not harsh.
-  static void drawerPulse() {
-    _safe(() => Vibration.vibrate(
-          // Single pulse for drawer
-          duration: 18,
-          amplitude: 125,
-          sharpness: 0.34,
-        ));
-  }
+  static void drawerPulse() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.light)); }
 
   /// Cancel any ongoing vibration (rarely needed in our use cases).
-  static void cancel() {
-    _safe(() => Vibration.cancel());
-  }
+  static void cancel() { /* no-op */ }
 
   // Fire-and-forget wrapper to avoid exceptions on unsupported platforms.
   static void _safe(Future<void> Function() action) {

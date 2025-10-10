@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../icons/lucide_adapter.dart';
+import 'package:haptic_feedback/haptic_feedback.dart' as HF;
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 
@@ -240,6 +241,74 @@ class _AboutPageState extends State<AboutPage> {
                                     color: cs.error,
                                     onTap: () {
                                       AppSnackBarManager().dismissAll();
+                                    },
+                                  ),
+                                ],
+                              ),
+                              // Removed vibration/flutter_vibrate sections.
+                              const SizedBox(height: 24),
+                              const Divider(),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Haptic Feedback (Plugin) Test',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  for (final e in [
+                                    ['success', HF.HapticsType.success],
+                                    ['warning', HF.HapticsType.warning],
+                                    ['error', HF.HapticsType.error],
+                                    ['light', HF.HapticsType.light],
+                                    ['medium', HF.HapticsType.medium],
+                                    ['heavy', HF.HapticsType.heavy],
+                                    ['rigid', HF.HapticsType.rigid],
+                                    ['soft', HF.HapticsType.soft],
+                                    ['selection', HF.HapticsType.selection],
+                                  ])
+                                    _TestButton(
+                                      label: e[0] as String,
+                                      color: cs.primary,
+                                      onTap: () async {
+                                        try {
+                                          final can = await HF.Haptics.canVibrate();
+                                          if (can) {
+                                            await HF.Haptics.vibrate(e[1] as HF.HapticsType);
+                                          }
+                                        } catch (_) {}
+                                      },
+                                    ),
+                                  _TestButton(
+                                    label: 'Play All',
+                                    color: cs.secondary,
+                                    onTap: () async {
+                                      try {
+                                        final can = await HF.Haptics.canVibrate();
+                                        if (!can) return;
+                                        final types = <HF.HapticsType>[
+                                          HF.HapticsType.success,
+                                          HF.HapticsType.warning,
+                                          HF.HapticsType.error,
+                                          HF.HapticsType.light,
+                                          HF.HapticsType.medium,
+                                          HF.HapticsType.heavy,
+                                          HF.HapticsType.rigid,
+                                          HF.HapticsType.soft,
+                                          HF.HapticsType.selection,
+                                        ];
+                                        for (final t in types) {
+                                          await HF.Haptics.vibrate(t);
+                                          await Future.delayed(const Duration(milliseconds: 180));
+                                        }
+                                      } catch (_) {}
                                     },
                                   ),
                                 ],
