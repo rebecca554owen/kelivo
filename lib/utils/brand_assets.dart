@@ -62,9 +62,11 @@ class BrandAssets {
     MapEntry(RegExp(r'iflow|心流'), 'iflow-color.svg'),
     MapEntry(RegExp(r'sora'), 'sora.png'),
     MapEntry(RegExp(r'bing|必应'), 'bing-color.svg'),
-    MapEntry(RegExp(r'tavily'), 'tavily.png'),
+    MapEntry(RegExp(r'tavily'), 'tavily-color.svg'),
     MapEntry(RegExp(r'exa'), 'exa-color.svg'),
     MapEntry(RegExp(r'linkup'), 'linkup.png'),
     MapEntry(RegExp(r'brave'), 'brave-color.svg'),
+    MapEntry(RegExp(r'jina'), 'jina-color.svg'),
+    MapEntry(RegExp(r'searxng'), 'searxng-color.svg'),
   ];
 }

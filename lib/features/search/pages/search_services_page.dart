@@ -36,6 +36,9 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       backgroundColor: Colors.transparent,
       builder: (context) => _AddServiceBottomSheet(
         onAdd: (service) {
