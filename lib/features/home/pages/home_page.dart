@@ -174,7 +174,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   // Drawer haptics for swipe-open
   double _lastDrawerValue = 0.0;
-  bool _suppressNextOpenHaptic = false; // set when we already vibrated on programmatic open
+  // Removed early-open haptic; vibrate on open completion instead
 
   // Removed raw-pointer-based swipe-to-open; rely on drawer's own gestures
 
@@ -713,20 +713,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   void _onDrawerValueChanged() {
     final v = _drawerController.value;
-    // Detect start of opening from closed state for haptic
-    final wasClosedLike = _lastDrawerValue <= 0.001;
-    if (wasClosedLike && v > 0.001) {
-      // Swipe or programmatic open started
-      _dismissKeyboard();
-      if (_suppressNextOpenHaptic) {
-        _suppressNextOpenHaptic = false;
-      } else {
-        try {
-          if (context.read<SettingsProvider>().hapticsOnDrawer) {
-            Haptics.drawerPulse();
-          }
-        } catch (_) {}
-      }
+    // Fire haptic when drawer becomes sufficiently open (completion)
+    if (_lastDrawerValue < 0.95 && v >= 0.95) {
+      try {
+        if (context.read<SettingsProvider>().hapticsOnDrawer) {
+          Haptics.drawerPulse();
+        }
+      } catch (_) {}
     }
     // When transitioning from open to closing, close assistant picker overlay
     if (_lastDrawerValue >= 0.95 && v < 0.95) {
@@ -2872,6 +2865,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       scrimColor: cs.onSurface,
       maxScrimOpacity: 0.12,
       barrierDismissible: true,
+      onScrimTap: () {
+        // Vibrate when tapping right-side scrim to close
+        try {
+          if (context.read<SettingsProvider>().hapticsOnDrawer) {
+            Haptics.drawerPulse();
+          }
+        } catch (_) {}
+      },
       drawer: SideDrawer(
         userName: context.watch<UserProvider>().name,
         assistantName: (() {
@@ -2931,15 +2932,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           onPressed: () {
             // Always dismiss keyboard when toggling the sidebar
             _dismissKeyboard();
-            // Haptic feedback on opening/closing the sidebar
-            try {
-              if (context.read<SettingsProvider>().hapticsOnDrawer) {
-                Haptics.drawerPulse();
-              }
-            } catch (_) {}
-            // If the drawer is currently closed, toggling will open -> suppress listener haptic
-            final isOpen = _drawerController.isOpen;
-            if (!isOpen) _suppressNextOpenHaptic = true;
             _drawerController.toggle();
           },
           icon: SvgPicture.asset(

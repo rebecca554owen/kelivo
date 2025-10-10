@@ -100,6 +100,7 @@ class InteractiveDrawer extends StatefulWidget {
     this.semanticLabel,
     this.enableDrawerTapToClose = false,
     this.tabletMode = false,
+    this.onScrimTap,
   });
 
   /// The main content; it will translate horizontally with the drawer progress.
@@ -143,6 +144,10 @@ class InteractiveDrawer extends StatefulWidget {
 
   /// A11y label.
   final String? semanticLabel;
+
+  /// Optional callback fired when the user taps the right-side scrim
+  /// to dismiss the drawer (only when [barrierDismissible] and drawer is open).
+  final VoidCallback? onScrimTap;
 
   @override
   State<InteractiveDrawer> createState() => _InteractiveDrawerState();
@@ -244,7 +249,11 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
         onHorizontalDragUpdate: _onDragUpdate,
         onHorizontalDragEnd: _onDragEnd,
         onTap: widget.barrierDismissible && _controllerProxy.isOpen
-            ? _controllerProxy.close
+            ? () {
+                // Haptic or other side effects can be hooked by parent.
+                widget.onScrimTap?.call();
+                _controllerProxy.close();
+              }
             : null,
         child: Stack(
           fit: StackFit.expand,
