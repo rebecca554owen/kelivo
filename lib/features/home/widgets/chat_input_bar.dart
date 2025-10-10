@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import '../../../theme/design_tokens.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,10 @@ import 'dart:async';
 import 'dart:io';
 import '../../../core/models/chat_input_data.dart';
 import '../../../utils/clipboard_images.dart';
+import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/assistant_provider.dart';
+import '../../../core/services/search/search_service.dart';
+import '../../../utils/brand_assets.dart';
 
 class ChatInputBarController {
   _ChatInputBarState? _state;
@@ -575,12 +580,103 @@ class _ChatInputBarState extends State<ChatInputBar> {
                               onTap: widget.onSelectModel,
                             ),
                             const SizedBox(width: 8),
-                            _CompactIconButton(
-                              tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
-                              icon: Lucide.Globe,
-                              active: _searchEnabled,
-                              onTap: widget.onOpenSearch,
-                            ),
+                            (() {
+                              // Determine current search state to render icon
+                              final settings = context.watch<SettingsProvider>();
+                              final ap = context.watch<AssistantProvider>();
+                              final a = ap.currentAssistant;
+                              final currentProviderKey = a?.chatModelProvider ?? settings.currentModelProvider;
+                              final currentModelId = a?.chatModelId ?? settings.currentModelId;
+                              final cfg = (currentProviderKey != null)
+                                  ? settings.getProviderConfig(currentProviderKey)
+                                  : null;
+                              bool builtinSearchActive = false;
+                              if (cfg != null && currentModelId != null) {
+                                final isGeminiOfficial = cfg.providerType == ProviderKind.google && (cfg.vertexAI != true);
+                                final isClaude = cfg.providerType == ProviderKind.claude;
+                                final isOpenAIResponses = cfg.providerType == ProviderKind.openai && (cfg.useResponseApi == true);
+                                if (isGeminiOfficial || isClaude || isOpenAIResponses) {
+                                  final ov = cfg.modelOverrides[currentModelId] as Map?;
+                                  final list = (ov?['builtInTools'] as List?) ?? const <dynamic>[];
+                                  builtinSearchActive = list
+                                      .map((e) => e.toString().toLowerCase())
+                                      .contains('search');
+                                }
+                              }
+                              final appSearchEnabled = settings.searchEnabled;
+                              final theme = Theme.of(context);
+                              final isDark = theme.brightness == Brightness.dark;
+
+                              // Not enabled at all -> default globe (not themed)
+                              if (!appSearchEnabled && !builtinSearchActive) {
+                                return _CompactIconButton(
+                                  tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
+                                  icon: Lucide.Globe,
+                                  active: false,
+                                  onTap: widget.onOpenSearch,
+                                );
+                              }
+
+                              // Built-in search -> show magnifier icon in theme color
+                              if (builtinSearchActive) {
+                                return _CompactIconButton(
+                                  tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
+                                  icon: Lucide.Search,
+                                  active: true,
+                                  onTap: widget.onOpenSearch,
+                                );
+                              }
+
+                              // External provider search -> brand icon tinted to theme color
+                              // Resolve selected service and its brand asset
+                              final services = settings.searchServices;
+                              final sel = settings.searchServiceSelected
+                                  .clamp(0, services.isNotEmpty ? services.length - 1 : 0);
+                              final options = services.isNotEmpty
+                                  ? services[sel]
+                                  : SearchServiceOptions.defaultOption;
+                              final svc = SearchService.getService(options);
+                              final asset = BrandAssets.assetForName(svc.name);
+
+                              Widget child;
+                              if (asset != null) {
+                                if (asset.endsWith('.svg')) {
+                                  child = SvgPicture.asset(
+                                    asset,
+                                    width: 20,
+                                    height: 20,
+                                    colorFilter: ColorFilter.mode(
+                                      theme.colorScheme.primary,
+                                      BlendMode.srcIn,
+                                    ),
+                                  );
+                                } else {
+                                  // Fallback for raster images: apply tint
+                                  child = Image.asset(
+                                    asset,
+                                    width: 20,
+                                    height: 20,
+                                    color: theme.colorScheme.primary,
+                                    colorBlendMode: BlendMode.srcIn,
+                                  );
+                                }
+                              } else {
+                                // Fallback to globe but themed
+                                child = Icon(
+                                  Lucide.Globe,
+                                  size: 20,
+                                  color: theme.colorScheme.primary,
+                                );
+                              }
+
+                              return _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.chatInputBarOnlineSearchTooltip,
+                                icon: Lucide.Globe,
+                                active: true,
+                                onTap: widget.onOpenSearch,
+                                child: child,
+                              );
+                            })(),
                             if (widget.supportsReasoning) ...[
                               const SizedBox(width: 8),
                               _CompactIconButton(
