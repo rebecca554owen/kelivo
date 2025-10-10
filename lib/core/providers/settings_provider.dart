@@ -1076,17 +1076,17 @@ class ProviderConfig {
             chatPath: null, // keep empty in UI; code uses default '/chat/completions'
             useResponseApi: false,
             models: const [
-              'openai-fast',
+              // 'openai-fast',
               'mistral',
               'qwen-coder',
             ],
             modelOverrides: const {
-              'openai-fast': {
-                'type': 'chat',
-                'input': ['text'],
-                'output': ['text'],
-                'abilities': ['tool'],
-              },
+              // 'openai-fast': {
+              //   'type': 'chat',
+              //   'input': ['text'],
+              //   'output': ['text'],
+              //   'abilities': ['tool'],
+              // },
               'mistral': {
                 'type': 'chat',
                 'input': ['text'],
