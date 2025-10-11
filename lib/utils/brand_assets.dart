@@ -60,7 +60,7 @@ class BrandAssets {
     MapEntry(RegExp(r'tensdaq'), 'tensdaq-color.svg'),
     MapEntry(RegExp(r'longcat'), 'longcat.png'),
     MapEntry(RegExp(r'iflow|心流'), 'iflow-color.svg'),
-    MapEntry(RegExp(r'sora'), 'sora.png'),
+    MapEntry(RegExp(r'sora'), 'sora-color.svg'),
     MapEntry(RegExp(r'bing|必应'), 'bing-color.svg'),
     MapEntry(RegExp(r'tavily'), 'tavily-color.svg'),
     MapEntry(RegExp(r'exa'), 'exa-color.svg'),
