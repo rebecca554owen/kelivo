@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
+import '../../../core/providers/assistant_provider.dart';
 import '../../model/widgets/model_detail_sheet.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/share_provider_sheet.dart';
@@ -151,6 +152,17 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   ),
                 );
                 if (confirm == true) {
+                  // Clear assistant-level model selections that reference this provider
+                  try {
+                    final ap = context.read<AssistantProvider>();
+                    for (final a in ap.assistants) {
+                      if (a.chatModelProvider == widget.keyName) {
+                        await ap.updateAssistant(a.copyWith(clearChatModel: true));
+                      }
+                    }
+                  } catch (_) {}
+
+                  // Remove provider config and related selections/pins
                   await context.read<SettingsProvider>().removeProviderConfig(widget.keyName);
                   if (!mounted) return;
                   Navigator.of(context).maybePop();

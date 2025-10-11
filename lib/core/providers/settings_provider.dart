@@ -60,7 +60,18 @@ class SettingsProvider extends ChangeNotifier {
   Map<String, ProviderConfig> _providerConfigs = {};
   Map<String, ProviderConfig> get providerConfigs => Map.unmodifiable(_providerConfigs);
   bool get hasAnyActiveModel => _providerConfigs.values.any((c) => c.enabled && c.models.isNotEmpty);
+  // Returns a config for the given key without mutating internal state when missing.
+  // This avoids implicitly creating providers during read paths (e.g., rendering old chats).
   ProviderConfig getProviderConfig(String key, {String? defaultName}) {
+    final existed = _providerConfigs[key];
+    if (existed != null) return existed;
+    // Return a non-persisted, default-constructed config for read-only scenarios.
+    return ProviderConfig.defaultsFor(key, displayName: defaultName);
+  }
+
+  // Explicitly ensure a provider config exists in memory (without persisting to storage).
+  // Useful for seeding first-run defaults.
+  ProviderConfig ensureProviderConfig(String key, {String? defaultName}) {
     final existed = _providerConfigs[key];
     if (existed != null) return existed;
     final cfg = ProviderConfig.defaultsFor(key, displayName: defaultName);
@@ -200,8 +211,10 @@ class SettingsProvider extends ChangeNotifier {
       try { _webDavConfig = WebDavConfig.fromJson(jsonDecode(webdavStr) as Map<String, dynamic>); } catch (_) {}
     }
     if (_providerConfigs.isEmpty) {
-      getProviderConfig('KelivoIN', defaultName: 'KelivoIN');
-      getProviderConfig('Tensdaq', defaultName: 'Tensdaq');
+      // Seed a couple of sensible defaults on first launch, but do not recreate
+      // providers implicitly during later reads (e.g., when switching chats).
+      ensureProviderConfig('KelivoIN', defaultName: 'KelivoIN');
+      ensureProviderConfig('Tensdaq', defaultName: 'Tensdaq');
     }
     
     // kick off a one-time connectivity test for services (exclude local Bing)
@@ -384,6 +397,13 @@ class SettingsProvider extends ChangeNotifier {
       _translateModelProvider = null;
       _translateModelId = null;
       await prefs.remove(_translateModelKey);
+    }
+
+    // Remove pinned models for this provider
+    final beforePinned = _pinnedModels.length;
+    _pinnedModels.removeWhere((entry) => entry.startsWith('$key::'));
+    if (_pinnedModels.length != beforePinned) {
+      await prefs.setStringList(_pinnedModelsKey, _pinnedModels.toList());
     }
 
     // Persist updates
