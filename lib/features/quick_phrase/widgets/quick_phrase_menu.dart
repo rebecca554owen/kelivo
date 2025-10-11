@@ -36,7 +36,7 @@ class QuickPhraseMenu extends StatelessWidget {
 
     // Position menu at bottom left, with margin from edges
     double left = 16; // Fixed left margin
-    double bottom = anchorPosition.dy + bottomPadding; // flush to input bar
+    double bottom = 72 + 12 + 38; // flush to input bar
 
     // Adjust if off-screen horizontally
     if (left + menuWidth > size.width - 16) left = size.width - menuWidth - 16;
