@@ -58,6 +58,7 @@ import '../../../core/services/haptics.dart';
 import '../../../core/models/quick_phrase.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import '../../quick_phrase/widgets/quick_phrase_menu.dart';
+import '../../quick_phrase/pages/quick_phrases_page.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -3645,6 +3646,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           return (globalCount + assistantCount) > 0;
                         })(),
                         onQuickPhrase: _showQuickPhraseMenu,
+                        onLongPressQuickPhrase: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const QuickPhrasesPage()),
+                          );
+                        },
                       );
                     },
                   ),
