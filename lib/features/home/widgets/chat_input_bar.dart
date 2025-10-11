@@ -36,6 +36,7 @@ class ChatInputBar extends StatefulWidget {
     this.onSend,
     this.onStop,
     this.onSelectModel,
+    this.onLongPressSelectModel,
     this.onOpenMcp,
     this.onLongPressMcp,
     this.onToggleSearch,
@@ -71,6 +72,7 @@ class ChatInputBar extends StatefulWidget {
   final ValueChanged<ChatInputData>? onSend;
   final VoidCallback? onStop;
   final VoidCallback? onSelectModel;
+  final VoidCallback? onLongPressSelectModel;
   final VoidCallback? onOpenMcp;
   final VoidCallback? onLongPressMcp;
   final ValueChanged<bool>? onToggleSearch;
@@ -586,6 +588,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                               child: widget.modelIcon,
                               modelIcon: true,
                               onTap: widget.onSelectModel,
+                              onLongPress: widget.onLongPressSelectModel,
                             ),
                             const SizedBox(width: 8),
                             (() {
