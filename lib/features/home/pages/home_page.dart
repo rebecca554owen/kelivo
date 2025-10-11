@@ -723,6 +723,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   void _onDrawerValueChanged() {
     final v = _drawerController.value;
+    // If user starts opening the drawer via swipe, dismiss the keyboard once
+    if (_lastDrawerValue <= 0.01 && v > 0.01) {
+      _dismissKeyboard();
+    }
     // Fire haptic when drawer becomes sufficiently open (completion)
     if (_lastDrawerValue < 0.95 && v >= 0.95) {
       try {
@@ -2571,11 +2575,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final inputBarHeight = inputBox.size.height;
     final position = Offset(0, inputBarHeight); // Pass height as dy
     
-    // Keep keyboard open by immediately requesting focus after showing dialog
-    // Schedule focus request for after dialog is shown
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (mounted) _inputFocus.requestFocus();
-    // });
+    // Dismiss keyboard before showing menu to prevent flickering
+    _dismissKeyboard();
     
     final selected = await showQuickPhraseMenu(
       context: context,
@@ -2603,8 +2604,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       
       setState(() {});
       
-      // Refocus on input
-      _inputFocus.requestFocus();
+      // Don't auto-refocus to prevent keyboard flickering on Android
+      // User can tap input field if they want to continue typing
     }
   }
 
