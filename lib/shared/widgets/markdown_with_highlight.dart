@@ -1317,7 +1317,10 @@ class LabelValueLineMd extends InlineMd {
     final match = exp.firstMatch(text);
     if (match == null) return TextSpan(text: text, style: config.style);
     final label = (match.group(1) ?? '').trim();
-    final rest = text.substring(match.end - (text.endsWith('\n') ? 1 : 0)).trim();
+    // Note: list item markers are stripped by the list renderer before
+    // this runs, so a list line like "- **Label**: value [citation](1:abc)"
+    // becomes "**Label**: value [citation](1:abc)", which we intentionally
+    // match here.
 
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
@@ -1335,6 +1338,13 @@ class LabelValueLineMd extends InlineMd {
     final colonIndex = text.indexOf(':');
     final prefix = text.substring(0, colonIndex + 1);
     final value = text.substring(colonIndex + 1).trim();
+    // Parse the value part as markdown so links/citations render correctly
+    final valueChildren = MarkdownComponent.generate(
+      context,
+      value,
+      config.copyWith(style: valueStyle),
+      true,
+    );
 
     return WidgetSpan(
       alignment: PlaceholderAlignment.baseline,
@@ -1345,7 +1355,7 @@ class LabelValueLineMd extends InlineMd {
           text: TextSpan(children: [
             TextSpan(text: prefix.replaceAll('**', ''), style: labelStyle),
             const TextSpan(text: ' '),
-            TextSpan(text: value, style: valueStyle),
+            ...valueChildren,
           ]),
           textScaler: MediaQuery.of(context).textScaler,
         ),
