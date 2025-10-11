@@ -721,6 +721,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
       } catch (_) {}
     }
+    // Fire haptic when drawer becomes sufficiently closed (cancellation)
+    if (_lastDrawerValue > 0.05 && v <= 0.05) {
+      try {
+        if (context.read<SettingsProvider>().hapticsOnDrawer) {
+          Haptics.drawerPulse();
+        }
+      } catch (_) {}
+    }
     // When transitioning from open to closing, close assistant picker overlay
     if (_lastDrawerValue >= 0.95 && v < 0.95) {
       _assistantPickerCloseTick.value++;
