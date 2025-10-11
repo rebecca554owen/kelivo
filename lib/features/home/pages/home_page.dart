@@ -2873,14 +2873,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       scrimColor: cs.onSurface,
       maxScrimOpacity: 0.12,
       barrierDismissible: true,
-      onScrimTap: () {
-        // Vibrate when tapping right-side scrim to close
-        try {
-          if (context.read<SettingsProvider>().hapticsOnDrawer) {
-            Haptics.drawerPulse();
-          }
-        } catch (_) {}
-      },
+      // onScrimTap: () {
+      //   // Vibrate when tapping right-side scrim to close
+      //   try {
+      //     if (context.read<SettingsProvider>().hapticsOnDrawer) {
+      //       Haptics.drawerPulse();
+      //     }
+      //   } catch (_) {}
+      // },
       drawer: SideDrawer(
         userName: context.watch<UserProvider>().name,
         assistantName: (() {
@@ -2894,22 +2894,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         onSelectConversation: (id) {
           // Update current selection for highlight in drawer and animate switch
           _switchConversationAnimated(id);
-          // Haptic feedback when closing the sidebar
-          try {
-            if (context.read<SettingsProvider>().hapticsOnDrawer) {
-              Haptics.drawerPulse();
-            }
-          } catch (_) {}
+          // // Haptic feedback when closing the sidebar
+          // try {
+          //   if (context.read<SettingsProvider>().hapticsOnDrawer) {
+          //     Haptics.drawerPulse();
+          //   }
+          // } catch (_) {}
           _drawerController.close();
         },
         onNewConversation: () async {
           await _createNewConversationAnimated();
-          // Haptic feedback when closing the sidebar
-          try {
-            if (context.read<SettingsProvider>().hapticsOnDrawer) {
-              Haptics.drawerPulse();
-            }
-          } catch (_) {}
+          // // Haptic feedback when closing the sidebar
+          // try {
+          //   if (context.read<SettingsProvider>().hapticsOnDrawer) {
+          //     Haptics.drawerPulse();
+          //   }
+          // } catch (_) {}
           _drawerController.close();
         },
       ),
