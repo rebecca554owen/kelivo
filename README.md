@@ -38,7 +38,7 @@ English | [简体中文](README_ZH_CN.md)
 - 📝 **Markdown Rendering** - Full support for code highlighting, LaTeX formulas, tables, and more.
 - 🎙️ **Voice Functionality** - Built-in system TTS (Text-to-Speech) functionality.
 - 🛠️ **MCP Support** - Model Context Protocol tool integration.
-- 🔍 **Web Search** - Integrated with multiple search engines (Exa, Tavily, Zhipu, LinkUp, Brave, Bing, Metaso, SearXNG).
+- 🔍 **Web Search** - Integrated with multiple search engines (Exa, Tavily, Zhipu, LinkUp, Brave, Bing, Metaso, SearXNG, Ollama, Jina).
 - 🧩 **Prompt Variables** - Supports dynamic variables like model name, time, etc.
 - 📤 **QR Code Sharing** - Export and import provider configurations via QR codes.
 - 💾 **Data Backup** - Supports chat history backup and restoration.
