@@ -180,58 +180,58 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
                       _tile(Lucide.Brain, l10n.reasoningBudgetSheetLight, 1024, subtitle: l10n.reasoningBudgetSheetLightSubtitle, deepthink: true),
                       _tile(Lucide.Brain, l10n.reasoningBudgetSheetMedium, 16000, subtitle: l10n.reasoningBudgetSheetMediumSubtitle, deepthink: true),
                       _tile(Lucide.Brain, l10n.reasoningBudgetSheetHeavy, 32000, subtitle: l10n.reasoningBudgetSheetHeavySubtitle, deepthink: true),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(l10n.reasoningBudgetSheetCustomLabel, style: Theme.of(context).textTheme.labelMedium),
-                            const SizedBox(height: 8),
-                            Builder(builder: (context) {
-                              final isDark = Theme.of(context).brightness == Brightness.dark;
-                              final cs2 = Theme.of(context).colorScheme;
-                              return TextField(
-                                controller: _controller,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  hintText: l10n.reasoningBudgetSheetCustomHint,
-                                  filled: true,
-                                  fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Colors.transparent),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Colors.transparent),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: cs2.primary.withOpacity(0.4)),
-                                  ),
-                                ),
-                                onChanged: (v) {
-                                  final n = int.tryParse(v.trim());
-                                  if (n != null) {
-                                    // Real-time save and update highlighting
-                                    _select(n);
-                                  } else {
-                                    setState(() {}); // Only refresh "Current Level"
-                                  }
-                                },
-                                onSubmitted: (v) {
-                                  final n = int.tryParse(v.trim());
-                                  if (n != null) {
-                                    _select(n);
-                                  }
-                                  Navigator.of(context).maybePop();
-                                },
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
+                      // const SizedBox(height: 8),
+                      // Padding(
+                      //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                      //     children: [
+                      //       Text(l10n.reasoningBudgetSheetCustomLabel, style: Theme.of(context).textTheme.labelMedium),
+                      //       const SizedBox(height: 8),
+                      //       Builder(builder: (context) {
+                      //         final isDark = Theme.of(context).brightness == Brightness.dark;
+                      //         final cs2 = Theme.of(context).colorScheme;
+                      //         return TextField(
+                      //           controller: _controller,
+                      //           keyboardType: TextInputType.number,
+                      //           decoration: InputDecoration(
+                      //             hintText: l10n.reasoningBudgetSheetCustomHint,
+                      //             filled: true,
+                      //             fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                      //             border: OutlineInputBorder(
+                      //               borderRadius: BorderRadius.circular(12),
+                      //               borderSide: const BorderSide(color: Colors.transparent),
+                      //             ),
+                      //             enabledBorder: OutlineInputBorder(
+                      //               borderRadius: BorderRadius.circular(12),
+                      //               borderSide: const BorderSide(color: Colors.transparent),
+                      //             ),
+                      //             focusedBorder: OutlineInputBorder(
+                      //               borderRadius: BorderRadius.circular(12),
+                      //               borderSide: BorderSide(color: cs2.primary.withOpacity(0.4)),
+                      //             ),
+                      //           ),
+                      //           onChanged: (v) {
+                      //             final n = int.tryParse(v.trim());
+                      //             if (n != null) {
+                      //               // Real-time save and update highlighting
+                      //               _select(n);
+                      //             } else {
+                      //               setState(() {}); // Only refresh "Current Level"
+                      //             }
+                      //           },
+                      //           onSubmitted: (v) {
+                      //             final n = int.tryParse(v.trim());
+                      //             if (n != null) {
+                      //               _select(n);
+                      //             }
+                      //             Navigator.of(context).maybePop();
+                      //           },
+                      //         );
+                      //       }),
+                      //     ],
+                      //   ),
+                      // ),
                       const SizedBox(height: 12),
                     ],
                   ),
