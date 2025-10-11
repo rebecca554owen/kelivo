@@ -2660,111 +2660,141 @@ class _QuickPhraseTab extends StatelessWidget {
 
     return Stack(
       children: [
-        ListView.separated(
+        ReorderableListView.builder(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
           itemCount: phrases.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          buildDefaultDragHandles: false,
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                final t = Curves.easeOut.transform(animation.value);
+                return Transform.scale(
+                  scale: 0.98 + 0.02 * t,
+                  child: child,
+                );
+              },
+            );
+          },
+          onReorder: (oldIndex, newIndex) {
+            if (newIndex > oldIndex) newIndex -= 1;
+            // Update immediately for smooth drop animation
+            context.read<QuickPhraseProvider>().reorderPhrases(
+                  oldIndex: oldIndex,
+                  newIndex: newIndex,
+                  assistantId: assistantId,
+                );
+          },
           itemBuilder: (context, index) {
             final phrase = phrases[index];
-            return Slidable(
-              key: ValueKey(phrase.id),
-              endActionPane: ActionPane(
-                motion: const StretchMotion(),
-                extentRatio: 0.35,
-                children: [
-                  CustomSlidableAction(
-                    autoClose: true,
-                    backgroundColor: Colors.transparent,
-                    child: Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? cs.error.withOpacity(0.22)
-                            : cs.error.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: cs.error.withOpacity(0.35)),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      alignment: Alignment.center,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Lucide.Trash2, color: cs.error, size: 18),
-                            const SizedBox(width: 6),
-                            Text(
-                              l10n.quickPhraseDeleteButton,
-                              style: TextStyle(
-                                color: cs.error,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    onPressed: (_) => _deletePhrase(context, phrase),
-                  ),
-                ],
-              ),
-              child: GestureDetector(
-                onTap: () => _showAddEditSheet(context, phrase: phrase),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : cs.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: cs.outlineVariant.withOpacity(0.25),
-                    ),
-                    boxShadow: isDark ? [] : AppShadows.soft,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            return KeyedSubtree(
+              key: ValueKey('reorder-assistant-quick-phrase-${phrase.id}'),
+              child: ReorderableDelayedDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Slidable(
+                    key: ValueKey(phrase.id),
+                    endActionPane: ActionPane(
+                      motion: const StretchMotion(),
+                      extentRatio: 0.35,
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Lucide.botMessageSquare,
-                              size: 18,
-                              color: cs.primary,
+                        CustomSlidableAction(
+                          autoClose: true,
+                          backgroundColor: Colors.transparent,
+                          child: Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? cs.error.withOpacity(0.22)
+                                  : cs.error.withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: cs.error.withOpacity(0.35)),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                phrase.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            alignment: Alignment.center,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Lucide.Trash2, color: cs.error, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    l10n.quickPhraseDeleteButton,
+                                    style: TextStyle(
+                                      color: cs.error,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Icon(
-                              Lucide.ChevronRight,
-                              size: 18,
-                              color: cs.onSurface.withOpacity(0.4),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          phrase.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: cs.onSurface.withOpacity(0.7),
                           ),
+                          onPressed: (_) => _deletePhrase(context, phrase),
                         ),
                       ],
+                    ),
+                    child: GestureDetector(
+                      onTap: () => _showAddEditSheet(context, phrase: phrase),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : cs.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: cs.outlineVariant.withOpacity(0.25),
+                          ),
+                          boxShadow: isDark ? [] : AppShadows.soft,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Lucide.botMessageSquare,
+                                    size: 18,
+                                    color: cs.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      phrase.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Lucide.ChevronRight,
+                                    size: 18,
+                                    color: cs.onSurface.withOpacity(0.4),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                phrase.content,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: cs.onSurface.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
