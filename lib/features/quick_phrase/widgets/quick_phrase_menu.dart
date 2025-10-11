@@ -52,28 +52,21 @@ class QuickPhraseMenu extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                 child: Container(
                   width: menuWidth,
                   constraints: BoxConstraints(maxHeight: maxMenuHeight),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.black.withOpacity(0.7)
-                        : Colors.white.withOpacity(0.85),
+                        ? const Color(0xFF1C1C1E).withOpacity(0.66)
+                        : Colors.white.withOpacity(0.66),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? Colors.white.withOpacity(0.08)
+                          : cs.outlineVariant.withOpacity(0.2),
                       width: 1,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -190,6 +183,7 @@ Future<QuickPhrase?> showQuickPhraseMenu({
   return await showDialog<QuickPhrase>(
     context: context,
     barrierColor: Colors.transparent,
+    // barrierColor: Colors.black.withOpacity(0.08),
     barrierDismissible: true,
     builder: (ctx) {
       return GestureDetector(

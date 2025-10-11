@@ -314,7 +314,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               width: menuWidth,
               child: _AnimatedPopup(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   child: BackdropFilter(
                     filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                     child: DecoratedBox(
