@@ -35,6 +35,7 @@ import '../../chat/widgets/message_more_sheet.dart';
 import '../../chat/pages/message_edit_page.dart';
 import '../../chat/widgets/message_export_sheet.dart';
 import '../../assistant/widgets/mcp_assistant_sheet.dart';
+import '../../mcp/pages/mcp_page.dart';
 import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../search/widgets/search_settings_sheet.dart';
 import '../widgets/mini_map_sheet.dart';
@@ -3585,6 +3586,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             showAssistantMcpSheet(context, assistantId: a.id);
                           }
                         },
+                        onLongPressMcp: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const McpPage()),
+                          );
+                        },
                         onStop: _cancelStreaming,
                         modelIcon: (settings.showModelIcon && ((a?.chatModelProvider ?? settings.currentModelProvider) != null) && ((a?.chatModelId ?? settings.currentModelId) != null))
                             ? _CurrentModelIcon(
@@ -4399,6 +4405,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       if (a != null) {
                                         showAssistantMcpSheet(context, assistantId: a.id);
                                       }
+                                    },
+                                    onLongPressMcp: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const McpPage()),
+                                      );
                                     },
                                     showMiniMapButton: true,
                                     onOpenMiniMap: () async {

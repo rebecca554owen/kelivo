@@ -37,6 +37,7 @@ class ChatInputBar extends StatefulWidget {
     this.onStop,
     this.onSelectModel,
     this.onOpenMcp,
+    this.onLongPressMcp,
     this.onToggleSearch,
     this.onOpenSearch,
     this.onMore,
@@ -71,6 +72,7 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback? onStop;
   final VoidCallback? onSelectModel;
   final VoidCallback? onOpenMcp;
+  final VoidCallback? onLongPressMcp;
   final ValueChanged<bool>? onToggleSearch;
   final VoidCallback? onOpenSearch;
   final VoidCallback? onMore;
@@ -710,6 +712,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 icon: Lucide.Hammer,
                                 active: widget.mcpActive,
                                 onTap: widget.onOpenMcp,
+                                onLongPress: widget.onLongPressMcp,
                                 // child: SvgPicture.asset(
                                 //   'assets/icons/codex.svg',
                                 //   width: 20,
