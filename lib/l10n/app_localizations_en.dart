@@ -67,6 +67,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageQuickPhrase => 'Quick Phrase';
+
+  @override
   String get settingsPageDataSection => 'Data';
 
   @override
@@ -259,6 +262,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantEditPageMcpTab => 'MCP';
+
+  @override
+  String get assistantEditPageQuickPhraseTab => 'Quick Phrase';
 
   @override
   String get assistantEditPageCustomTab => 'Custom';
@@ -2280,4 +2286,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get titleForLocale => 'New Chat';
+
+  @override
+  String get quickPhraseBackTooltip => 'Back';
+
+  @override
+  String get quickPhraseGlobalTitle => 'Quick Phrase';
+
+  @override
+  String get quickPhraseAssistantTitle => 'Assistant Quick Phrase';
+
+  @override
+  String get quickPhraseAddTooltip => 'Add Quick Phrase';
+
+  @override
+  String get quickPhraseEmptyMessage => 'No quick phrases yet';
+
+  @override
+  String get quickPhraseAddTitle => 'Add Quick Phrase';
+
+  @override
+  String get quickPhraseEditTitle => 'Edit Quick Phrase';
+
+  @override
+  String get quickPhraseTitleLabel => 'Title';
+
+  @override
+  String get quickPhraseContentLabel => 'Content';
+
+  @override
+  String get quickPhraseCancelButton => 'Cancel';
+
+  @override
+  String get quickPhraseSaveButton => 'Save';
+
+  @override
+  String get quickPhraseEditButton => 'Edit';
+
+  @override
+  String get quickPhraseDeleteButton => 'Delete';
+
+  @override
+  String get quickPhraseMenuTitle => 'Quick Phrase';
+
+  @override
+  String get chatInputBarQuickPhraseTooltip => 'Quick Phrase';
+
+  @override
+  String get assistantEditQuickPhraseDescription =>
+      'Manage quick phrases for this assistant. Click the button below to add phrases.';
+
+  @override
+  String get assistantEditManageQuickPhraseButton => 'Manage Quick Phrases';
+
+  @override
+  String get assistantEditAddQuickPhraseButton => 'Add Quick Phrase';
 }

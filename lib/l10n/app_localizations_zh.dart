@@ -66,6 +66,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageQuickPhrase => '快捷短语';
+
+  @override
   String get settingsPageDataSection => '数据设置';
 
   @override
@@ -256,6 +259,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantEditPageMcpTab => 'MCP';
+
+  @override
+  String get assistantEditPageQuickPhraseTab => '快捷短语';
 
   @override
   String get assistantEditPageCustomTab => '自定义请求';
@@ -2199,6 +2205,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get titleForLocale => '新对话';
+
+  @override
+  String get quickPhraseBackTooltip => '返回';
+
+  @override
+  String get quickPhraseGlobalTitle => '快捷短语';
+
+  @override
+  String get quickPhraseAssistantTitle => '助手快捷短语';
+
+  @override
+  String get quickPhraseAddTooltip => '添加快捷短语';
+
+  @override
+  String get quickPhraseEmptyMessage => '暂无快捷短语';
+
+  @override
+  String get quickPhraseAddTitle => '添加快捷短语';
+
+  @override
+  String get quickPhraseEditTitle => '编辑快捷短语';
+
+  @override
+  String get quickPhraseTitleLabel => '标题';
+
+  @override
+  String get quickPhraseContentLabel => '内容';
+
+  @override
+  String get quickPhraseCancelButton => '取消';
+
+  @override
+  String get quickPhraseSaveButton => '保存';
+
+  @override
+  String get quickPhraseEditButton => '编辑';
+
+  @override
+  String get quickPhraseDeleteButton => '删除';
+
+  @override
+  String get quickPhraseMenuTitle => '快捷短语';
+
+  @override
+  String get chatInputBarQuickPhraseTooltip => '快捷短语';
+
+  @override
+  String get assistantEditQuickPhraseDescription => '管理该助手的快捷短语。点击下方按钮添加短语。';
+
+  @override
+  String get assistantEditManageQuickPhraseButton => '管理快捷短语';
+
+  @override
+  String get assistantEditAddQuickPhraseButton => '添加快捷短语';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -2455,6 +2515,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditPageMcpTab => 'MCP';
 
   @override
+  String get assistantEditPageQuickPhraseTab => '快捷短语';
+
+  @override
   String get assistantEditPageCustomTab => '自定义请求';
 
   @override
@@ -4396,6 +4459,60 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get titleForLocale => '新对话';
+
+  @override
+  String get quickPhraseBackTooltip => '返回';
+
+  @override
+  String get quickPhraseGlobalTitle => '快捷短语';
+
+  @override
+  String get quickPhraseAssistantTitle => '助手快捷短语';
+
+  @override
+  String get quickPhraseAddTooltip => '添加快捷短语';
+
+  @override
+  String get quickPhraseEmptyMessage => '暂无快捷短语';
+
+  @override
+  String get quickPhraseAddTitle => '添加快捷短语';
+
+  @override
+  String get quickPhraseEditTitle => '编辑快捷短语';
+
+  @override
+  String get quickPhraseTitleLabel => '标题';
+
+  @override
+  String get quickPhraseContentLabel => '内容';
+
+  @override
+  String get quickPhraseCancelButton => '取消';
+
+  @override
+  String get quickPhraseSaveButton => '保存';
+
+  @override
+  String get quickPhraseEditButton => '编辑';
+
+  @override
+  String get quickPhraseDeleteButton => '删除';
+
+  @override
+  String get quickPhraseMenuTitle => '快捷短语';
+
+  @override
+  String get chatInputBarQuickPhraseTooltip => '快捷短语';
+
+  @override
+  String get assistantEditQuickPhraseDescription => '管理该助手的快捷短语。点击下方按钮添加或编辑短语。';
+
+  @override
+  String get assistantEditManageQuickPhraseButton => '管理快捷短语';
+
+  @override
+  String get assistantEditAddQuickPhraseButton => '添加快捷短语';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4650,6 +4767,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditPageMcpTab => 'MCP';
+
+  @override
+  String get assistantEditPageQuickPhraseTab => '快捷片語';
 
   @override
   String get assistantEditPageCustomTab => '自訂請求';
@@ -6593,4 +6713,59 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get titleForLocale => '新對話';
+
+  @override
+  String get quickPhraseBackTooltip => '返回';
+
+  @override
+  String get quickPhraseGlobalTitle => '快捷片語';
+
+  @override
+  String get quickPhraseAssistantTitle => '助理快捷片語';
+
+  @override
+  String get quickPhraseAddTooltip => '新增快捷片語';
+
+  @override
+  String get quickPhraseEmptyMessage => '暫無快捷片語';
+
+  @override
+  String get quickPhraseAddTitle => '新增快捷片語';
+
+  @override
+  String get quickPhraseEditTitle => '編輯快捷片語';
+
+  @override
+  String get quickPhraseTitleLabel => '標題';
+
+  @override
+  String get quickPhraseContentLabel => '內容';
+
+  @override
+  String get quickPhraseCancelButton => '取消';
+
+  @override
+  String get quickPhraseSaveButton => '儲存';
+
+  @override
+  String get quickPhraseEditButton => '編輯';
+
+  @override
+  String get quickPhraseDeleteButton => '刪除';
+
+  @override
+  String get quickPhraseMenuTitle => '快捷片語';
+
+  @override
+  String get chatInputBarQuickPhraseTooltip => '快捷片語';
+
+  @override
+  String get assistantEditQuickPhraseDescription =>
+      '管理此助理的快捷片語。點擊下方按鈕以新增或編輯片語。';
+
+  @override
+  String get assistantEditManageQuickPhraseButton => '管理快捷片語';
+
+  @override
+  String get assistantEditAddQuickPhraseButton => '新增快捷片語';
 }

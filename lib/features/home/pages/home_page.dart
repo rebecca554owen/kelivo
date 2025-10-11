@@ -55,6 +55,9 @@ import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../core/services/haptics.dart';
+import '../../../core/models/quick_phrase.dart';
+import '../../../core/providers/quick_phrase_provider.dart';
+import '../../quick_phrase/widgets/quick_phrase_menu.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -688,6 +691,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     Future.microtask(() async {
       final v = await LearningModeStore.isEnabled();
       if (mounted) setState(() => _learningModeEnabled = v);
+    });
+
+    // Initialize quick phrases provider
+    Future.microtask(() async {
+      try {
+        await context.read<QuickPhraseProvider>().initialize();
+      } catch (_) {}
     });
 
     // Attach MCP provider listener to auto-join new connected servers
@@ -2543,6 +2553,61 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     Future.delayed(const Duration(milliseconds: 120), _scrollToBottom);
   }
 
+  Future<void> _showQuickPhraseMenu() async {
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    final quickPhraseProvider = context.read<QuickPhraseProvider>();
+    final globalPhrases = quickPhraseProvider.globalPhrases;
+    final assistantPhrases = assistant != null
+        ? quickPhraseProvider.getForAssistant(assistant.id)
+        : <QuickPhrase>[];
+    
+    final allAvailable = [...globalPhrases, ...assistantPhrases];
+    if (allAvailable.isEmpty) return;
+
+    // Get input bar height for positioning menu above it
+    final RenderBox? inputBox = _inputBarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (inputBox == null) return;
+    
+    final inputBarHeight = inputBox.size.height;
+    final position = Offset(0, inputBarHeight); // Pass height as dy
+    
+    // Keep keyboard open by immediately requesting focus after showing dialog
+    // Schedule focus request for after dialog is shown
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (mounted) _inputFocus.requestFocus();
+    // });
+    
+    final selected = await showQuickPhraseMenu(
+      context: context,
+      phrases: allAvailable,
+      position: position,
+    );
+
+    if (selected != null && mounted) {
+      // Insert content at cursor position
+      final text = _inputController.text;
+      final selection = _inputController.selection;
+      final start = (selection.start >= 0 && selection.start <= text.length) 
+          ? selection.start 
+          : text.length;
+      final end = (selection.end >= 0 && selection.end <= text.length && selection.end >= start) 
+          ? selection.end 
+          : start;
+      
+      final newText = text.replaceRange(start, end, selected.content);
+      _inputController.value = _inputController.value.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + selected.content.length),
+        composing: TextRange.empty,
+      );
+      
+      setState(() {});
+      
+      // Refocus on input
+      _inputFocus.requestFocus();
+    }
+  }
+
   // Scroll to a specific message id (from mini map selection)
   Future<void> _scrollToMessageId(String targetId) async {
     try {
@@ -3569,6 +3634,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           if (selected.isEmpty || connected.isEmpty) return false;
                           return connected.any((s) => selected.contains(s.id));
                         })(),
+                        showQuickPhraseButton: (() {
+                          final assistant = context.watch<AssistantProvider>().currentAssistant;
+                          final quickPhraseProvider = context.watch<QuickPhraseProvider>();
+                          final globalCount = quickPhraseProvider.globalPhrases.length;
+                          final assistantCount = assistant != null
+                              ? quickPhraseProvider.getForAssistant(assistant.id).length
+                              : 0;
+                          return (globalCount + assistantCount) > 0;
+                        })(),
+                        onQuickPhrase: _showQuickPhraseMenu,
                       );
                     },
                   ),

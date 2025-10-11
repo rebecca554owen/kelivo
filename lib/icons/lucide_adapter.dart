@@ -103,4 +103,5 @@ class Lucide {
   static const IconData SquarePen = lucide.LucideIcons.squarePen;
   static const IconData info = lucide.LucideIcons.info;
   static const IconData Zap = lucide.LucideIcons.zap;
+  static const IconData botMessageSquare = lucide.LucideIcons.botMessageSquare;
 }

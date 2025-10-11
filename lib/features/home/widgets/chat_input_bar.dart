@@ -62,6 +62,8 @@ class ChatInputBar extends StatefulWidget {
     this.onLongPressLearning,
     this.learningModeActive = false,
     this.showMoreButton = true,
+    this.showQuickPhraseButton = false,
+    this.onQuickPhrase,
   });
 
   final ValueChanged<ChatInputData>? onSend;
@@ -93,6 +95,8 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback? onLongPressLearning;
   final bool learningModeActive;
   final bool showMoreButton;
+  final bool showQuickPhraseButton;
+  final VoidCallback? onQuickPhrase;
 
   @override
   State<ChatInputBar> createState() => _ChatInputBarState();
@@ -757,6 +761,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 tooltip: AppLocalizations.of(context)!.bottomToolsSheetClearContext,
                                 icon: Lucide.Eraser,
                                 onTap: widget.onClearContext,
+                              ),
+                            ],
+                            if (widget.showQuickPhraseButton && widget.onQuickPhrase != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.chatInputBarQuickPhraseTooltip,
+                                icon: Lucide.Zap,
+                                onTap: widget.onQuickPhrase,
                               ),
                             ],
                             if (widget.showMiniMapButton) ...[

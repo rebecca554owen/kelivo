@@ -214,6 +214,12 @@ abstract class AppLocalizations {
   /// **'MCP'**
   String get settingsPageMcp;
 
+  /// No description provided for @settingsPageQuickPhrase.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Phrase'**
+  String get settingsPageQuickPhrase;
+
   /// No description provided for @settingsPageDataSection.
   ///
   /// In en, this message translates to:
@@ -574,6 +580,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'MCP'**
   String get assistantEditPageMcpTab;
+
+  /// No description provided for @assistantEditPageQuickPhraseTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Phrase'**
+  String get assistantEditPageQuickPhraseTab;
 
   /// No description provided for @assistantEditPageCustomTab.
   ///
@@ -4312,6 +4324,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New Chat'**
   String get titleForLocale;
+
+  /// No description provided for @quickPhraseBackTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get quickPhraseBackTooltip;
+
+  /// No description provided for @quickPhraseGlobalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Phrase'**
+  String get quickPhraseGlobalTitle;
+
+  /// No description provided for @quickPhraseAssistantTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant Quick Phrase'**
+  String get quickPhraseAssistantTitle;
+
+  /// No description provided for @quickPhraseAddTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Quick Phrase'**
+  String get quickPhraseAddTooltip;
+
+  /// No description provided for @quickPhraseEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No quick phrases yet'**
+  String get quickPhraseEmptyMessage;
+
+  /// No description provided for @quickPhraseAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Quick Phrase'**
+  String get quickPhraseAddTitle;
+
+  /// No description provided for @quickPhraseEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Quick Phrase'**
+  String get quickPhraseEditTitle;
+
+  /// No description provided for @quickPhraseTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get quickPhraseTitleLabel;
+
+  /// No description provided for @quickPhraseContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get quickPhraseContentLabel;
+
+  /// No description provided for @quickPhraseCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get quickPhraseCancelButton;
+
+  /// No description provided for @quickPhraseSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get quickPhraseSaveButton;
+
+  /// No description provided for @quickPhraseEditButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get quickPhraseEditButton;
+
+  /// No description provided for @quickPhraseDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get quickPhraseDeleteButton;
+
+  /// No description provided for @quickPhraseMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Phrase'**
+  String get quickPhraseMenuTitle;
+
+  /// No description provided for @chatInputBarQuickPhraseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Phrase'**
+  String get chatInputBarQuickPhraseTooltip;
+
+  /// No description provided for @assistantEditQuickPhraseDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage quick phrases for this assistant. Click the button below to add phrases.'**
+  String get assistantEditQuickPhraseDescription;
+
+  /// No description provided for @assistantEditManageQuickPhraseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Quick Phrases'**
+  String get assistantEditManageQuickPhraseButton;
+
+  /// No description provided for @assistantEditAddQuickPhraseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Quick Phrase'**
+  String get assistantEditAddQuickPhraseButton;
 }
 
 class _AppLocalizationsDelegate
