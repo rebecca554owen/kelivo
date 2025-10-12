@@ -17,6 +17,7 @@ import '../widgets/share_provider_sheet.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../shared/widgets/ios_checkbox.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -373,12 +374,22 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             enabled: widget.keyName.toLowerCase() != 'openai' && widget.keyName.toLowerCase() != 'tensdaq',
             hint: '/chat/completions',
           ),
-          const SizedBox(height: 4),
-          _checkboxRow(context, title: l10n.providerDetailPageResponseApiTitle, value: _useResp, onChanged: (v) => setState(() => _useResp = v)),
+          const SizedBox(height: 12),
+          _switchRow(
+            icon: Icons.swap_horiz,
+            title: l10n.providerDetailPageResponseApiTitle,
+            value: _useResp,
+            onChanged: (v) => setState(() => _useResp = v),
+          ),
         ],
         if (_kind == ProviderKind.google) ...[
           const SizedBox(height: 12),
-          _checkboxRow(context, title: l10n.providerDetailPageVertexAiTitle, value: _vertexAI, onChanged: (v) => setState(() => _vertexAI = v)),
+          _switchRow(
+            icon: Icons.auto_graph,
+            title: l10n.providerDetailPageVertexAiTitle,
+            value: _vertexAI,
+            onChanged: (v) => setState(() => _vertexAI = v),
+          ),
           if (_vertexAI) ...[
             const SizedBox(height: 12),
             _inputRow(context, label: l10n.providerDetailPageLocationLabel, controller: _locationCtrl, hint: 'us-central1'),
@@ -754,7 +765,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       onTap: () => onChanged(!value),
       child: Row(
         children: [
-          Checkbox(value: value, onChanged: (v) => onChanged(v ?? false)),
+          // iOS-style circular checkbox
+          IosCheckbox(value: value, onChanged: onChanged),
           Text(title, style: TextStyle(fontSize: 14, color: cs.onSurface)),
         ],
       ),
