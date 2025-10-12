@@ -61,6 +61,7 @@ import '../../../core/models/quick_phrase.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import '../../quick_phrase/widgets/quick_phrase_menu.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
+import '../../../shared/widgets/ios_checkbox.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -3217,11 +3218,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                   if (_selecting && (message.role == 'user' || message.role == 'assistant'))
                                     Padding(
                                       padding: const EdgeInsets.only(left: 10, right: 6),
-                                      child: Checkbox(
+                                      child: IosCheckbox(
                                         value: _selectedItems.contains(message.id),
                                         onChanged: (v) {
                                           setState(() {
-                                            if (v == true) {
+                                            if (v) {
                                               _selectedItems.add(message.id);
                                             } else {
                                               _selectedItems.remove(message.id);
@@ -4058,11 +4059,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                               if (_selecting && (message.role == 'user' || message.role == 'assistant'))
                                                 Padding(
                                                   padding: const EdgeInsets.only(left: 10, right: 6),
-                                                  child: Checkbox(
+                                                  child: IosCheckbox(
                                                     value: _selectedItems.contains(message.id),
                                                     onChanged: (v) {
                                                       setState(() {
-                                                        if (v == true) {
+                                                        if (v) {
                                                           _selectedItems.add(message.id);
                                                         } else {
                                                           _selectedItems.remove(message.id);
