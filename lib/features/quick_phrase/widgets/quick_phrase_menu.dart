@@ -25,21 +25,20 @@ class QuickPhraseMenu extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
-    // Calculate menu position - fixed at bottom above input bar
+    // Calculate menu position anchored to the input bar's global left and bottom inset
     final double menuWidth = 250;
-    final double maxMenuHeight = size.height * 0.5; // Reduced from 400
+    final double maxMenuHeight = size.height * 0.5;
 
+    // Use provided anchor; dx is global left of input bar, dy is input bar height
+    final double margin = 16;
+    double left = anchorPosition.dx;
+    // Clamp within screen margins
+    if (left.isNaN || !left.isFinite) left = margin;
+    if (left < margin) left = margin;
+    if (left + menuWidth > size.width - margin) left = size.width - menuWidth - margin;
 
-    // double left = (size.width - menuWidth) / 2;
-    // if (left < 16) left = 16;
-    // if (left + menuWidth > size.width - 16) left = size.width - menuWidth - 16;
-
-    // Position menu at bottom left, with margin from edges
-    double left = 16; // Fixed left margin
-    double bottom = 72 + 12 + 38; // flush to input bar
-
-    // Adjust if off-screen horizontally
-    if (left + menuWidth > size.width - 16) left = size.width - menuWidth - 16;
+    // Place menu above input bar + keyboard with a small gap
+    final double bottom = 72 + 12 + 38;
 
     return Stack(
       children: [

@@ -729,6 +729,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 // ),
                               ),
                             ],
+                            // Quick Phrase button placed immediately to the right of MCP
+                            if (widget.showQuickPhraseButton && widget.onQuickPhrase != null) ...[
+                              const SizedBox(width: 8),
+                              _CompactIconButton(
+                                tooltip: AppLocalizations.of(context)!.chatInputBarQuickPhraseTooltip,
+                                icon: Lucide.Zap,
+                                onTap: widget.onQuickPhrase,
+                                onLongPress: widget.onLongPressQuickPhrase,
+                              ),
+                            ],
                             if (widget.onPickCamera != null) ...[
                               const SizedBox(width: 8),
                               _CompactIconButton(
@@ -769,15 +779,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 tooltip: AppLocalizations.of(context)!.bottomToolsSheetClearContext,
                                 icon: Lucide.Eraser,
                                 onTap: widget.onClearContext,
-                              ),
-                            ],
-                            if (widget.showQuickPhraseButton && widget.onQuickPhrase != null) ...[
-                              const SizedBox(width: 8),
-                              _CompactIconButton(
-                                tooltip: AppLocalizations.of(context)!.chatInputBarQuickPhraseTooltip,
-                                icon: Lucide.Zap,
-                                onTap: widget.onQuickPhrase,
-                                onLongPress: widget.onLongPressQuickPhrase,
                               ),
                             ],
                             if (widget.showMiniMapButton) ...[
