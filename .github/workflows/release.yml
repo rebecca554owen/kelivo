@@ -1,0 +1,118 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      flutter_version:
+        description: 'Flutter 版本选择'
+        required: true
+        default: '3.35.6'
+        type: choice
+        options:
+          - '3.35.6'  # 当前最新稳定版 (支持 Dart 3.8.1+)
+          - 'latest'   # 使用最新可用版本
+
+env:
+  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.35.6' }}
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Extract version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $VERSION"
+
+      - name: Set up Flutter
+        id: flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          if [ "${{ env.FLUTTER_VERSION }}" = "latest" ]; then
+            echo "cache_key=flutter-latest-${{ hashFiles('**/pubspec.yaml', '**/pubspec.lock') }}" >> $GITHUB_OUTPUT
+            echo "restore_key=flutter-latest-" >> $GITHUB_OUTPUT
+          else
+            echo "cache_key=${{ runner.os }}-flutter-v${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.yaml', '**/pubspec.lock') }}" >> $GITHUB_OUTPUT
+            echo "restore_key=${{ runner.os }}-flutter-v${{ env.FLUTTER_VERSION }}-" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            android/.gradle
+            android/app/build
+          key: ${{ steps.cache-key.outputs.cache_key }}
+          restore-keys: |
+            ${{ steps.cache-key.outputs.restore_key }}
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: flutter packages pub run build_runner build --delete-conflicting-outputs
+
+      - name: Prepare keystore
+        run: |
+          cd android
+          # 创建目录
+          mkdir -p app/src/main/kotlin/com/example/kelivo
+
+          # 解码base64编码的keystore文件
+          echo "${{ secrets.KEY_BASE64 }}" | base64 -d > app/app.key
+
+          # 写入签名配置到key.properties
+          echo "${{ secrets.SIGNING_CONFIG }}" > key.properties
+
+      - name: Build ARM64 APK (Release)
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi --build-name=${{ steps.version.outputs.version }}
+
+      - name: Rename APK for consistency
+        run: |
+          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/kelivo-${{ steps.version.outputs.version }}-arm64.apk
+
+      - name: Get build time
+        id: build-time
+        run: |
+          BUILD_TIME=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S (UTC+8)")
+          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
+          echo "Build time: $BUILD_TIME"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "Kelivo v${{ steps.version.outputs.version }}"
+          body: |
+            ## Kelivo v${{ steps.version.outputs.version }}
+
+            📱 **Android ARM64 APK**
+            - 版本: `${{ steps.version.outputs.version }}`
+            - Flutter 版本: `${{ steps.flutter.outputs.version }}`
+            - 构建时间: `${{ steps.build-time.outputs.build_time }}`
+            - 架构: ARM64 (arm64-v8a)
+          files: |
+            build/app/outputs/flutter-apk/kelivo-${{ steps.version.outputs.version }}-arm64.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
