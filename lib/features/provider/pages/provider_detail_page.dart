@@ -472,7 +472,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             onChanged: (_) => _save(),
           ),
         ],
-        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin') ...[
+        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin' && !_useResp) ...[
           const SizedBox(height: 12),
           _inputRow(
             context,
