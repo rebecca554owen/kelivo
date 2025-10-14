@@ -444,6 +444,102 @@ class AppLocalizationsEn extends AppLocalizations {
       'Something went wrong. Try entering an image URL.';
 
   @override
+  String get providerDetailPageMultiKeyModeTitle => 'Multi-Key Mode';
+
+  @override
+  String get providerDetailPageManageKeysButton => 'Manage Keys';
+
+  @override
+  String get multiKeyPageTitle => 'Multi-Key Manager';
+
+  @override
+  String get multiKeyPageDetect => 'Detect';
+
+  @override
+  String get multiKeyPageAdd => 'Add';
+
+  @override
+  String get multiKeyPageAddHint =>
+      'Enter API keys, separated by comma or space';
+
+  @override
+  String multiKeyPageImportedSnackbar(int n) {
+    return 'Imported $n keys';
+  }
+
+  @override
+  String get multiKeyPagePleaseAddModel => 'Please add a model first';
+
+  @override
+  String get multiKeyPageTotal => 'Total';
+
+  @override
+  String get multiKeyPageNormal => 'Normal';
+
+  @override
+  String get multiKeyPageError => 'Error';
+
+  @override
+  String get multiKeyPageAccuracy => 'Accuracy';
+
+  @override
+  String get multiKeyPageStrategyTitle => 'Load Balancing Strategy';
+
+  @override
+  String get multiKeyPageStrategyRoundRobin => 'Round Robin';
+
+  @override
+  String get multiKeyPageStrategyPriority => 'Priority';
+
+  @override
+  String get multiKeyPageStrategyLeastUsed => 'Least Used';
+
+  @override
+  String get multiKeyPageStrategyRandom => 'Random';
+
+  @override
+  String get multiKeyPageNoKeys => 'No API keys';
+
+  @override
+  String get multiKeyPageStatusActive => 'Active';
+
+  @override
+  String get multiKeyPageStatusDisabled => 'Disabled';
+
+  @override
+  String get multiKeyPageStatusError => 'Error';
+
+  @override
+  String get multiKeyPageStatusRateLimited => 'Rate Limited';
+
+  @override
+  String get multiKeyPageEditAlias => 'Edit Alias';
+
+  @override
+  String get multiKeyPageEdit => 'Edit';
+
+  @override
+  String get multiKeyPageKey => 'API Key';
+
+  @override
+  String get multiKeyPagePriority => 'Priority (1–10)';
+
+  @override
+  String get multiKeyPageDuplicateKeyWarning => 'This key already exists';
+
+  @override
+  String get multiKeyPageAlias => 'Alias';
+
+  @override
+  String get multiKeyPageCancel => 'Cancel';
+
+  @override
+  String get multiKeyPageSave => 'Save';
+
+  @override
+  String get multiKeyPageDelete => 'Delete';
+
+  @override
   String get assistantEditSystemPromptTitle => 'System Prompt';
 
   @override
@@ -1578,6 +1674,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageEnabledTitle => 'Enabled';
 
   @override
+  String get providerDetailPageManageSectionTitle => 'Manage';
+
+  @override
   String get providerDetailPageNameLabel => 'Name';
 
   @override
@@ -2341,4 +2440,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantEditAddQuickPhraseButton => 'Add Quick Phrase';
+
+  @override
+  String get multiKeyPageDeleteSnackbarDeletedOne => 'Deleted 1 key';
+
+  @override
+  String get multiKeyPageUndo => 'Undo';
+
+  @override
+  String get multiKeyPageUndoRestored => 'Restored';
+
+  @override
+  String get multiKeyPageDeleteErrorsTooltip => 'Delete errors';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmTitle => 'Delete all error keys?';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmContent =>
+      'This will remove all keys marked as error.';
+
+  @override
+  String multiKeyPageDeletedErrorsSnackbar(int n) {
+    return 'Deleted $n error keys';
+  }
 }

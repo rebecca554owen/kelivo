@@ -18,6 +18,10 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
+import '../../../shared/widgets/ios_switch.dart';
+import 'multi_key_manager_page.dart';
+import 'provider_network_page.dart';
+import '../../../core/services/haptics.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -45,6 +49,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   bool _useResp = false; // openai
   bool _vertexAI = false; // google
   bool _showApiKey = false; // toggle visibility
+  bool _multiKeyEnabled = false; // single/multi key mode
   // network proxy (per provider)
   bool _proxyEnabled = false;
   final _proxyHostCtrl = TextEditingController();
@@ -74,6 +79,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     _proxyPortCtrl.text = _cfg.proxyPort ?? '8080';
     _proxyUserCtrl.text = _cfg.proxyUsername ?? '';
     _proxyPassCtrl.text = _cfg.proxyPassword ?? '';
+    _multiKeyEnabled = _cfg.multiKeyEnabled ?? false;
   }
 
   @override
@@ -107,9 +113,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            semanticLabel: l10n.settingsPageBackButton,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Row(
           children: [
@@ -129,52 +141,73 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: l10n.providerDetailPageShareTooltip,
-            icon: Icon(Lucide.Share2, color: cs.onSurface),
-            onPressed: () async {
-              await showShareProviderSheet(context, widget.keyName);
-            },
+          Tooltip(
+            message: l10n.providerDetailPageTestButton,
+            child: _TactileIconButton(
+              icon: Lucide.HeartPulse,
+              color: cs.onSurface,
+              semanticLabel: l10n.providerDetailPageTestButton,
+              size: 22,
+              onTap: _openTestDialog,
+            ),
+          ),
+          Tooltip(
+            message: l10n.providerDetailPageShareTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Share2,
+              color: cs.onSurface,
+              semanticLabel: l10n.providerDetailPageShareTooltip,
+              size: 22,
+              onTap: () async {
+                await showShareProviderSheet(context, widget.keyName);
+              },
+            ),
           ),
           if (_isUserAdded(widget.keyName))
-            IconButton(
-              tooltip: l10n.providerDetailPageDeleteProviderTooltip,
-              icon: Icon(Lucide.Trash2, color: cs.error),
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Text(l10n.providerDetailPageDeleteProviderTitle),
-                    content: Text(l10n.providerDetailPageDeleteProviderContent),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton, style: const TextStyle(color: Colors.red))),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  // Clear assistant-level model selections that reference this provider
-                  try {
-                    final ap = context.read<AssistantProvider>();
-                    for (final a in ap.assistants) {
-                      if (a.chatModelProvider == widget.keyName) {
-                        await ap.updateAssistant(a.copyWith(clearChatModel: true));
-                      }
-                    }
-                  } catch (_) {}
-
-                  // Remove provider config and related selections/pins
-                  await context.read<SettingsProvider>().removeProviderConfig(widget.keyName);
-                  if (!mounted) return;
-                  Navigator.of(context).maybePop();
-                  showAppSnackBar(
-                    context,
-                    message: l10n.providerDetailPageProviderDeletedSnackbar,
-                    type: NotificationType.success,
+            Tooltip(
+              message: l10n.providerDetailPageDeleteProviderTooltip,
+              child: _TactileIconButton(
+                icon: Lucide.Trash2,
+                color: cs.error,
+                semanticLabel: l10n.providerDetailPageDeleteProviderTooltip,
+                size: 22,
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(l10n.providerDetailPageDeleteProviderTitle),
+                      content: Text(l10n.providerDetailPageDeleteProviderContent),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton, style: const TextStyle(color: Colors.red))),
+                      ],
+                    ),
                   );
+                  if (confirm == true) {
+                    // Clear assistant-level model selections that reference this provider
+                    try {
+                      final ap = context.read<AssistantProvider>();
+                      for (final a in ap.assistants) {
+                        if (a.chatModelProvider == widget.keyName) {
+                          await ap.updateAssistant(a.copyWith(clearChatModel: true));
+                        }
+                      }
+                    } catch (_) {}
+
+                    // Remove provider config and related selections/pins
+                    await context.read<SettingsProvider>().removeProviderConfig(widget.keyName);
+                    if (!mounted) return;
+                    Navigator.of(context).maybePop();
+                    showAppSnackBar(
+                      context,
+                      message: l10n.providerDetailPageProviderDeletedSnackbar,
+                      type: NotificationType.success,
+                    );
                 }
               },
             ),
+          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: PageView(
@@ -183,53 +216,28 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         children: [
           _buildConfigTab(context, cs, l10n),
           _buildModelsTab(context, cs, l10n),
-          _buildNetworkTab(context, cs, l10n),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        selectedIconTheme: const IconThemeData(size: 20),
-        unselectedIconTheme: const IconThemeData(size: 20),
-        backgroundColor: cs.surface,
-        selectedItemColor: cs.primary,
-        unselectedItemColor: cs.onSurface.withOpacity(0.7),
-        currentIndex: _index,
-        onTap: (i) {
-          setState(() => _index = i);
-          _pc.animateToPage(
-            i,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-          );
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Icon(Lucide.Settings2),
-            ),
-            label: l10n.providerDetailPageConfigTab,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+          child: _BottomTabs(
+            index: _index,
+            leftIcon: Lucide.Settings2,
+            leftLabel: l10n.providerDetailPageConfigTab,
+            rightIcon: Lucide.Boxes,
+            rightLabel: l10n.providerDetailPageModelsTab,
+            onSelect: (i) {
+              setState(() => _index = i);
+              _pc.animateToPage(
+                i,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+              );
+            },
           ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Icon(Lucide.Boxes),
-            ),
-            label: l10n.providerDetailPageModelsTab,
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Icon(Lucide.Network),
-            ),
-            label: l10n.providerDetailPageNetworkTab,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -321,17 +329,113 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
-        // Provider type selector cards
-        if (widget.keyName.toLowerCase() != 'kelivoin') ...[
-          _buildProviderTypeSelector(context, cs, l10n),
-          const SizedBox(height: 12),
-        ],
-        _switchRow(
-          icon: Icons.check_circle_outline,
-          title: l10n.providerDetailPageEnabledTitle,
-          value: _enabled,
-          onChanged: (v) => setState(() => _enabled = v),
-        ),
+        // 顶部管理分组标题
+        Text(l10n.providerDetailPageManageSectionTitle, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8))),
+        const SizedBox(height: 6),
+        // Top iOS-style section card for key settings
+        _iosSectionCard(children: [
+          if (widget.keyName.toLowerCase() != 'kelivoin') _providerKindRow(context),
+          _iosRow(
+            context,
+            label: l10n.providerDetailPageEnabledTitle,
+            trailing: IosSwitch(value: _enabled, onChanged: (v) { setState(() => _enabled = v); _save(); }),
+          ),
+          _iosRow(
+            context,
+            label: l10n.providerDetailPageMultiKeyModeTitle,
+            trailing: IosSwitch(value: _multiKeyEnabled, onChanged: (v) { setState(() => _multiKeyEnabled = v); _save(); }),
+          ),
+          if (_multiKeyEnabled)
+          _TactileRow(
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MultiKeyManagerPage(
+                    providerKey: widget.keyName,
+                    providerDisplayName: widget.displayName,
+                  ),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+            builder: (pressed) {
+              final base = Theme.of(context).colorScheme.onSurface;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+              return TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: target),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                builder: (context, color, _) {
+                  final c = color ?? base;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(l10n.providerDetailPageManageKeysButton, style: TextStyle(fontSize: 15, color: c))),
+                        Icon(Lucide.ChevronRight, size: 16, color: c),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          if (_kind == ProviderKind.openai)
+            _iosRow(
+              context,
+              label: l10n.providerDetailPageResponseApiTitle,
+              trailing: IosSwitch(value: _useResp, onChanged: (v) { setState(() => _useResp = v); _save(); }),
+            ),
+          if (_kind == ProviderKind.google)
+            _iosRow(
+              context,
+              label: l10n.providerDetailPageVertexAiTitle,
+              trailing: IosSwitch(value: _vertexAI, onChanged: (v) { setState(() => _vertexAI = v); _save(); }),
+            ),
+          _TactileRow(
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProviderNetworkPage(
+                    providerKey: widget.keyName,
+                    providerDisplayName: widget.displayName,
+                  ),
+                ),
+              );
+              final settings = context.read<SettingsProvider>();
+              final latest = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+              setState(() {
+                _proxyEnabled = latest.proxyEnabled ?? false;
+                _proxyHostCtrl.text = latest.proxyHost ?? '';
+                _proxyPortCtrl.text = latest.proxyPort ?? '8080';
+              });
+            },
+            builder: (pressed) {
+              final cs2 = Theme.of(context).colorScheme;
+              final base = cs2.onSurface;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+              return TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: target),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                builder: (context, color, _) {
+                  final c = color ?? base;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(l10n.providerDetailPageNetworkTab, style: TextStyle(fontSize: 15, color: c))),
+                        Icon(Lucide.ChevronRight, size: 16, color: c),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ]),
         const SizedBox(height: 12),
         _inputRow(
           context,
@@ -339,10 +443,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           controller: _nameCtrl,
           hint: widget.displayName,
           enabled: widget.keyName.toLowerCase() != 'kelivoin',
+          onChanged: (_) => _save(),
         ),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
-          if (widget.keyName.toLowerCase() != 'kelivoin') ...[
+          if (widget.keyName.toLowerCase() != 'kelivoin' && !_multiKeyEnabled) ...[
             _inputRow(
               context,
               label: 'API Key',
@@ -354,6 +459,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 icon: Icon(_showApiKey ? Lucide.EyeOff : Lucide.Eye, color: cs.onSurface.withOpacity(0.7), size: 18),
                 onPressed: () => setState(() => _showApiKey = !_showApiKey),
               ),
+              onChanged: (_) => _save(),
             ),
             const SizedBox(height: 12),
           ],
@@ -363,9 +469,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             controller: _baseCtrl,
             hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
             enabled: widget.keyName.toLowerCase() != 'kelivoin',
+            onChanged: (_) => _save(),
           ),
         ],
-        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin') ...[
+        if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin' && !_useResp) ...[
           const SizedBox(height: 12),
           _inputRow(
             context,
@@ -373,28 +480,16 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             controller: _pathCtrl,
             enabled: widget.keyName.toLowerCase() != 'openai' && widget.keyName.toLowerCase() != 'tensdaq',
             hint: '/chat/completions',
-          ),
-          const SizedBox(height: 12),
-          _switchRow(
-            icon: Icons.swap_horiz,
-            title: l10n.providerDetailPageResponseApiTitle,
-            value: _useResp,
-            onChanged: (v) => setState(() => _useResp = v),
+            onChanged: (_) => _save(),
           ),
         ],
         if (_kind == ProviderKind.google) ...[
           const SizedBox(height: 12),
-          _switchRow(
-            icon: Icons.auto_graph,
-            title: l10n.providerDetailPageVertexAiTitle,
-            value: _vertexAI,
-            onChanged: (v) => setState(() => _vertexAI = v),
-          ),
           if (_vertexAI) ...[
             const SizedBox(height: 12),
-            _inputRow(context, label: l10n.providerDetailPageLocationLabel, controller: _locationCtrl, hint: 'us-central1'),
+            _inputRow(context, label: l10n.providerDetailPageLocationLabel, controller: _locationCtrl, hint: 'us-central1', onChanged: (_) => _save()),
             const SizedBox(height: 12),
-            _inputRow(context, label: l10n.providerDetailPageProjectIdLabel, controller: _projectCtrl, hint: 'my-project-id'),
+            _inputRow(context, label: l10n.providerDetailPageProjectIdLabel, controller: _projectCtrl, hint: 'my-project-id', onChanged: (_) => _save()),
             const SizedBox(height: 12),
             _multilineRow(
               context,
@@ -408,35 +503,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   label: Text(l10n.providerDetailPageImportJsonButton),
                 ),
               ],
+              onChanged: (_) => _save(),
             ),
           ],
         ],
-        const SizedBox(height: 16),
-          Row(
-            children: [
-              OutlinedButton.icon(
-              onPressed: _openTestDialog,
-              icon: Icon(Lucide.Cable, size: 18, color: cs.primary),
-              label: Text(l10n.providerDetailPageTestButton, style: TextStyle(color: cs.primary)),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: cs.primary.withOpacity(0.5)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: Text(l10n.providerDetailPageSaveButton),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -613,13 +684,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Material(
-                    color: Colors.transparent,
-                    shape: const StadiumBorder(),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () => _showModelPicker(context),
-                      child: Ink(
+                  _TactileRow(
+                    pressedScale: 0.97,
+                    haptics: false,
+                    onTap: () => _showModelPicker(context),
+                    builder: (pressed) {
+                      return Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(color: cs.primary.withOpacity(0.35)),
@@ -633,19 +703,18 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             Text(l10n.providerDetailPageFetchModelsButton, style: TextStyle(color: cs.primary, fontSize: 14, fontWeight: FontWeight.w600)),
                           ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 10),
-                  Material(
-                    color: Colors.transparent,
-                    shape: const StadiumBorder(),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () async {
-                        await showCreateModelSheet(context, providerKey: widget.keyName);
-                      },
-                      child: Ink(
+                  _TactileRow(
+                    pressedScale: 0.97,
+                    haptics: false,
+                    onTap: () async {
+                      await showCreateModelSheet(context, providerKey: widget.keyName);
+                    },
+                    builder: (pressed) {
+                      return Container(
                         decoration: BoxDecoration(
                           color: cs.primary.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(999),
@@ -659,8 +728,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             Text(l10n.providerDetailPageAddNewModelButton, style: TextStyle(color: cs.primary, fontSize: 14)),
                           ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -671,49 +740,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Widget _buildNetworkTab(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            children: [
-              _switchRow(
-                icon: Icons.lan_outlined,
-                title: l10n.providerDetailPageEnableProxyTitle,
-                value: _proxyEnabled,
-                onChanged: (v) => setState(() => _proxyEnabled = v),
-              ),
-              if (_proxyEnabled) ...[
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPageHostLabel, controller: _proxyHostCtrl, hint: '127.0.0.1'),
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPagePortLabel, controller: _proxyPortCtrl, hint: '8080'),
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPageUsernameOptionalLabel, controller: _proxyUserCtrl),
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPagePasswordOptionalLabel, controller: _proxyPassCtrl, obscure: true),
-              ],
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: _saveNetwork,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: cs.primary,
-                    foregroundColor: cs.onPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: Text(l10n.providerDetailPageSaveButton),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  // Legacy network tab removed (replaced by ProviderNetworkPage)
 
   Widget _switchRow({required IconData icon, required String title, required bool value, required ValueChanged<bool> onChanged}) {
     final cs = Theme.of(context).colorScheme;
@@ -728,12 +755,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           child: Icon(icon, size: 20, color: cs.primary),
         ),
         Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
-        Switch(value: value, onChanged: onChanged),
+        IosSwitch(value: value, onChanged: onChanged),
       ],
     );
   }
 
-  Widget _inputRow(BuildContext context, {required String label, required TextEditingController controller, String? hint, bool obscure = false, bool enabled = true, Widget? suffix}) {
+  Widget _inputRow(BuildContext context, {required String label, required TextEditingController controller, String? hint, bool obscure = false, bool enabled = true, Widget? suffix, ValueChanged<String>? onChanged}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
@@ -745,6 +772,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           controller: controller,
           obscureText: obscure,
           enabled: enabled,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
@@ -773,7 +801,173 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
+  // --- iOS style helpers (consistent with MultiKeyManagerPage) ---
+
+  Widget _iosSectionCard({required List<Widget> children}) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final Color base = cs.surface;
+    final Color bg = isDark ? Color.lerp(base, Colors.white, 0.06)! : Color.lerp(base, Colors.white, 0.92)!;
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06), width: 0.6),
+        boxShadow: [
+          if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 1)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: children),
+    );
+  }
+
+  Widget _iosRow(
+    BuildContext context, {
+    required String label,
+    Widget? trailing,
+    GestureTapCallback? onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return _TactileRow(
+      onTap: onTap,
+      builder: (pressed) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final base = cs.onSurface;
+        final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
+                  if (trailing != null) trailing,
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   
+
+  Widget _providerKindRow(BuildContext context) {
+    String labelFor(ProviderKind k) {
+      switch (k) {
+        case ProviderKind.google:
+          return 'Gemini';
+        case ProviderKind.claude:
+          return 'Claude';
+        case ProviderKind.openai:
+        default:
+          return 'OpenAI';
+      }
+    }
+    return _TactileRow(
+      onTap: _showProviderKindSheet,
+      builder: (pressed) {
+        final cs = Theme.of(context).colorScheme;
+        final base = cs.onSurface;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Text(AppLocalizations.of(context)!.settingsPageProviders, style: TextStyle(fontSize: 15, color: c))),
+                  Text(labelFor(_kind), style: TextStyle(fontSize: 15, color: c)),
+                  const SizedBox(width: 6),
+                  Icon(Lucide.ChevronRight, size: 16, color: c),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showProviderKindSheet() async {
+    final cs = Theme.of(context).colorScheme;
+    final selected = await showModalBottomSheet<ProviderKind>(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)),
+                ),
+                const SizedBox(height: 12),
+                _providerKindTile(ctx, ProviderKind.openai, label: 'OpenAI'),
+                _providerKindTile(ctx, ProviderKind.google, label: 'Gemini'),
+                _providerKindTile(ctx, ProviderKind.claude, label: 'Claude'),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (selected != null) {
+      setState(() => _kind = selected);
+      await _save();
+    }
+  }
+
+  Widget _providerKindTile(BuildContext ctx, ProviderKind k, {required String label}) {
+    final cs = Theme.of(ctx).colorScheme;
+    final selected = _kind == k;
+    return _TactileRow(
+      pressedScale: 1.00,
+      haptics: false,
+      onTap: () => Navigator.of(ctx).pop(k),
+      builder: (pressed) {
+        final base = cs.onSurface;
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
+                  if (selected) Icon(Icons.check, color: cs.primary),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   Future<void> _save() async {
     final settings = context.read<SettingsProvider>();
@@ -797,17 +991,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       location: _kind == ProviderKind.google ? _locationCtrl.text.trim() : old.location,
       projectId: _kind == ProviderKind.google ? projectId : old.projectId,
       serviceAccountJson: _kind == ProviderKind.google ? _saJsonCtrl.text.trim() : old.serviceAccountJson,
+      multiKeyEnabled: _multiKeyEnabled,
       // preserve models and modelOverrides and proxy fields implicitly via copyWith
     );
     await settings.setProviderConfig(widget.keyName, updated);
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    showAppSnackBar(
-      context,
-      message: l10n.providerDetailPageSavedSnackbar,
-      type: NotificationType.success,
-    );
-    setState(() {});
+    // Silent auto-save (no snackbar) for immediate-save UX
   }
 
   Widget _multilineRow(
@@ -816,6 +1005,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     required TextEditingController controller,
     String? hint,
     List<Widget>? actions,
+    ValueChanged<String>? onChanged,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
@@ -833,6 +1023,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           controller: controller,
           maxLines: 8,
           minLines: 4,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
@@ -865,7 +1056,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           _projectCtrl.text = pid!;
         }
       } catch (_) {}
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        await _save();
+      }
     } catch (e) {
       if (!mounted) return;
       showAppSnackBar(
@@ -902,25 +1096,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Future<void> _saveNetwork() async {
-    final settings = context.read<SettingsProvider>();
-    final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
-    final cfg = old.copyWith(
-      proxyEnabled: _proxyEnabled,
-      proxyHost: _proxyHostCtrl.text.trim(),
-      proxyPort: _proxyPortCtrl.text.trim(),
-      proxyUsername: _proxyUserCtrl.text.trim(),
-      proxyPassword: _proxyPassCtrl.text.trim(),
-    );
-    await settings.setProviderConfig(widget.keyName, cfg);
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    showAppSnackBar(
-      context,
-      message: l10n.providerDetailPageSavedSnackbar,
-      type: NotificationType.success,
-    );
-  }
+  // _saveNetwork moved to ProviderNetworkPage
 
   Widget _buildProviderTypeSelector(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return Row(
@@ -1180,27 +1356,36 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                       // Group header with actions
                                       Padding(
                                         padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                                        child: Material(
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? Colors.white10
-                                              : const Color(0xFFF2F3F5),
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: InkWell(
-                                            borderRadius: BorderRadius.circular(12),
-                                            onTap: () => setLocal(() {
-                                              collapsed[g] = !(collapsed[g] == true);
-                                            }),
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                              child: Row(
-                                                children: [
+                                        child: _TactileRow(
+                                          pressedScale: 0.98,
+                                          haptics: false,
+                                          onTap: () => setLocal(() {
+                                            collapsed[g] = !(collapsed[g] == true);
+                                          }),
+                                          builder: (_) {
+                                            return Container(
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white10
+                                                    : const Color(0xFFF2F3F5),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                                child: Row(
+                                                  children: [
                                                   SizedBox(
                                                     width: 28,
                                                     child: Center(
-                                                      child: Icon(
-                                                        (collapsed[g] == true) ? Lucide.ChevronRight : Lucide.ChevronDown,
-                                                        size: 20,
-                                                        color: cs.onSurface.withOpacity(0.7),
+                                                      child: AnimatedRotation(
+                                                        turns: (collapsed[g] == true) ? 0.0 : 0.25,
+                                                        duration: const Duration(milliseconds: 220),
+                                                        curve: Curves.easeOutCubic,
+                                                        child: Icon(
+                                                          Lucide.ChevronRight,
+                                                          size: 20,
+                                                          color: cs.onSurface.withOpacity(0.7),
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
@@ -1239,67 +1424,79 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                   }),
                                                 ],
                                               ),
-                                            ),
-                                          ),
+                                              ));
+
+                                          },
                                         ),
                                       ),
-                                      if (!(collapsed[g] == true))
-                                        for (final m in grouped[g]!)
-                                          Builder(builder: (c2) {
+                                      AnimatedSize(
+                                        duration: const Duration(milliseconds: 220),
+                                        curve: Curves.easeOutCubic,
+                                        child: (collapsed[g] == true)
+                                            ? const SizedBox.shrink()
+                                            : Column(
+                                                children: [
+                                                  for (final m in grouped[g]!)
+                                                    Builder(builder: (c2) {
                                             final added = selected.contains(m.id);
                                             return Padding(
                                               padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                                              child: Material(
-                                                // color: Theme.of(context).brightness == Brightness.dark
-                                                //     ? Colors.white10
-                                                //     : const Color(0xFFF2F3F5),
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: InkWell(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  onTap: () {},
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                                    child: Row(
-                                                      children: [
-                    SizedBox(
-                      width: 28,
-                      child: Center(child: _BrandAvatar(name: m.id, size: 28)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(m.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          _modelTagWrap(context, m),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
-                      onPressed: () async {
-                        final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
-                        final list = old.models.toList();
-                        if (added) {
-                          list.removeWhere((e) => e == m.id);
-                        } else {
-                          list.add(m.id);
-                        }
-                        await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
-                        setLocal(() {});
-                      },
-                      icon: Icon(added ? Lucide.Minus : Lucide.Plus, size: 24, color: added ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
-                    ),
-                                                      ],
+                                              child: _TactileRow(
+                                                pressedScale: 0.98,
+                                                haptics: false,
+                                                onTap: () {},
+                                                builder: (_) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(12),
                                                     ),
-                                                  ),
-                                                ),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                                      child: Row(
+                                                        children: [
+                                                          SizedBox(
+                                                            width: 28,
+                                                            child: Center(child: _BrandAvatar(name: m.id, size: 28)),
+                                                          ),
+                                                          const SizedBox(width: 16),
+                                                          Expanded(
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text(m.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                                const SizedBox(height: 4),
+                                                                _modelTagWrap(context, m),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          IconButton(
+                                                            padding: EdgeInsets.zero,
+                                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
+                                                            onPressed: () async {
+                                                              final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+                                                              final list = old.models.toList();
+                                                              if (added) {
+                                                                list.removeWhere((e) => e == m.id);
+                                                              } else {
+                                                                list.add(m.id);
+                                                              }
+                                                              await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
+                                                              setLocal(() {});
+                                                            },
+                                                            icon: Icon(added ? Lucide.Minus : Lucide.Plus, size: 24, color: added ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             );
                                           }),
+                                                ],
+                                              ),
+                                      ),
                                     ],
                                   ],
                                 ),
@@ -1362,40 +1559,47 @@ class _ModelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.surface,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              _BrandAvatar(name: modelId, size: 28),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_displayName(context), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    _modelTagWrap(context, _effective(context)),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: l10n.providerDetailPageEditTooltip,
-                icon: Icon(Lucide.Settings2, size: 18, color: cs.onSurface.withOpacity(0.7)),
-                onPressed: () async {
-                  await showModelDetailSheet(context, providerKey: providerKey, modelId: modelId);
-                  // Force refresh by getting provider and doing nothing; outer ListView watches provider changes
-                },
-              ),
-            ],
+    return _TactileRow(
+      pressedScale: 0.98,
+      haptics: false,
+      onTap: () {},
+      builder: (pressed) {
+        return Container(
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                _BrandAvatar(name: modelId, size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_displayName(context), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      _modelTagWrap(context, _effective(context)),
+                    ],
+                  ),
+                ),
+                _TactileIconButton(
+                  icon: Lucide.Settings2,
+                  color: cs.onSurface.withOpacity(0.7),
+                  size: 18,
+                  semanticLabel: l10n.providerDetailPageEditTooltip,
+                  haptics: false,
+                  onTap: () async {
+                    await showModelDetailSheet(context, providerKey: providerKey, modelId: modelId);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1603,31 +1807,34 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (_selectedModelId != null)
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
+          _TactileRow(
+            pressedScale: 0.98,
+            haptics: false,
             onTap: _pickModel,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  _BrandAvatar(name: _selectedModelId!, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _selectedModelId!,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
+            builder: (_) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    _BrandAvatar(name: _selectedModelId!, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _selectedModelId!,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Lucide.ChevronDown, size: 16, color: cs.onSurface.withOpacity(0.7)),
-                ],
-              ),
-            ),
+                    const SizedBox(width: 8),
+                    Icon(Lucide.ChevronDown, size: 16, color: cs.onSurface.withOpacity(0.7)),
+                  ],
+                ),
+              );
+            },
           ),
         const SizedBox(height: 14),
         Text(message, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600)),
@@ -1820,6 +2027,211 @@ class _BrandAvatar extends StatelessWidget {
                   color: _mono ? Colors.white : null,
                   colorBlendMode: _mono ? BlendMode.srcIn : null,
                 )),
+    );
+  }
+}
+
+// Top-level tactile row used by iOS-style lists here
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00, this.haptics = true});
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final double pressedScale;
+  final bool haptics;
+  @override
+  State<_TactileRow> createState() => _TactileRowState();
+}
+
+// Icon-only tactile button for AppBar (no ripple, slight press scale)
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.onLongPress,
+    this.semanticLabel,
+    this.size = 22,
+    this.haptics = true,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? semanticLabel;
+  final double size;
+  final bool haptics;
+
+  @override
+  State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color;
+    final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          if (widget.haptics) Haptics.light();
+          widget.onTap();
+        },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                if (widget.haptics) Haptics.medium();
+                widget.onLongPress!.call();
+              },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: icon,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false;
+  void _setPressed(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
+      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
+      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              if (widget.haptics) Haptics.soft();
+              widget.onTap!.call();
+            },
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed),
+      ),
+    );
+  }
+}
+
+// Bottom tactile tabs (two items) without ripple
+class _BottomTabs extends StatelessWidget {
+  const _BottomTabs({
+    required this.index,
+    required this.leftIcon,
+    required this.leftLabel,
+    required this.rightIcon,
+    required this.rightLabel,
+    required this.onSelect,
+  });
+  final int index;
+  final IconData leftIcon;
+  final String leftLabel;
+  final IconData rightIcon;
+  final String rightLabel;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.transparent : cs.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.18 : 0.12), width: 0.8),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Row(
+        children: [
+          Expanded(child: _BottomTabItem(icon: leftIcon, label: leftLabel, selected: index == 0, onTap: () => onSelect(0))),
+          Expanded(child: _BottomTabItem(icon: rightIcon, label: rightLabel, selected: index == 1, onTap: () => onSelect(1))),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomTabItem extends StatefulWidget {
+  const _BottomTabItem({required this.icon, required this.label, required this.selected, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_BottomTabItem> createState() => _BottomTabItemState();
+}
+
+class _BottomTabItemState extends State<_BottomTabItem> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final baseColor = cs.onSurface.withOpacity(0.7);
+    final selColor = cs.primary;
+    final target = widget.selected ? selColor : baseColor;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        Haptics.soft();
+        widget.onTap();
+      },
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: target),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        builder: (context, color, _) {
+          final c = color ?? baseColor;
+          return AnimatedScale(
+            scale: _pressed ? 0.95 : 1.0,
+            duration: const Duration(milliseconds: 110),
+            curve: Curves.easeOutCubic,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(widget.icon, size: 20, color: c),
+                  const SizedBox(height: 4),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c),
+                    child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

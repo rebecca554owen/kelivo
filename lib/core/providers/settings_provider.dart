@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:convert';
 import '../services/search/search_service.dart';
+import '../models/api_keys.dart';
 import '../models/backup.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -891,6 +892,10 @@ class ProviderConfig {
   final String? proxyPort;
   final String? proxyUsername;
   final String? proxyPassword;
+  // Multi-key mode
+  final bool? multiKeyEnabled; // default false
+  final List<ApiKeyConfig>? apiKeys; // when enabled
+  final KeyManagementConfig? keyManagement;
 
   ProviderConfig({
     required this.id,
@@ -912,6 +917,9 @@ class ProviderConfig {
     this.proxyPort,
     this.proxyUsername,
     this.proxyPassword,
+    this.multiKeyEnabled,
+    this.apiKeys,
+    this.keyManagement,
   });
 
   ProviderConfig copyWith({
@@ -934,6 +942,9 @@ class ProviderConfig {
     String? proxyPort,
     String? proxyUsername,
     String? proxyPassword,
+    bool? multiKeyEnabled,
+    List<ApiKeyConfig>? apiKeys,
+    KeyManagementConfig? keyManagement,
   }) => ProviderConfig(
         id: id ?? this.id,
         enabled: enabled ?? this.enabled,
@@ -954,6 +965,9 @@ class ProviderConfig {
         proxyPort: proxyPort ?? this.proxyPort,
         proxyUsername: proxyUsername ?? this.proxyUsername,
         proxyPassword: proxyPassword ?? this.proxyPassword,
+        multiKeyEnabled: multiKeyEnabled ?? this.multiKeyEnabled,
+        apiKeys: apiKeys ?? this.apiKeys,
+        keyManagement: keyManagement ?? this.keyManagement,
       );
 
   Map<String, dynamic> toJson() => {
@@ -976,6 +990,9 @@ class ProviderConfig {
         'proxyPort': proxyPort,
         'proxyUsername': proxyUsername,
         'proxyPassword': proxyPassword,
+        'multiKeyEnabled': multiKeyEnabled,
+        'apiKeys': apiKeys?.map((e) => e.toJson()).toList(),
+        'keyManagement': keyManagement?.toJson(),
       };
 
   factory ProviderConfig.fromJson(Map<String, dynamic> json) => ProviderConfig(
@@ -1003,6 +1020,14 @@ class ProviderConfig {
         proxyPort: json['proxyPort'] as String?,
         proxyUsername: json['proxyUsername'] as String?,
         proxyPassword: json['proxyPassword'] as String?,
+        multiKeyEnabled: json['multiKeyEnabled'] as bool?,
+        apiKeys: (json['apiKeys'] as List?)
+            ?.whereType<Map>()
+            .map((e) => ApiKeyConfig.fromJson(e.cast<String, dynamic>()))
+            .toList(),
+        keyManagement: KeyManagementConfig.fromJson(
+          (json['keyManagement'] as Map?)?.cast<String, dynamic>(),
+        ),
       );
 
   static ProviderKind classify(String key, {ProviderKind? explicitType}) {
@@ -1065,6 +1090,9 @@ class ProviderConfig {
           proxyPort: '8080',
           proxyUsername: '',
           proxyPassword: '',
+          multiKeyEnabled: false,
+          apiKeys: const [],
+          keyManagement: const KeyManagementConfig(),
         );
       case ProviderKind.claude:
         return ProviderConfig(
@@ -1081,6 +1109,9 @@ class ProviderConfig {
           proxyPort: '8080',
           proxyUsername: '',
           proxyPassword: '',
+          multiKeyEnabled: false,
+          apiKeys: const [],
+          keyManagement: const KeyManagementConfig(),
         );
       case ProviderKind.openai:
       default:
@@ -1125,6 +1156,9 @@ class ProviderConfig {
             proxyPort: '8080',
             proxyUsername: '',
             proxyPassword: '',
+            multiKeyEnabled: false,
+            apiKeys: const [],
+            keyManagement: const KeyManagementConfig(),
           );
         }
         return ProviderConfig(
@@ -1143,6 +1177,9 @@ class ProviderConfig {
           proxyPort: '8080',
           proxyUsername: '',
           proxyPassword: '',
+          multiKeyEnabled: false,
+          apiKeys: const [],
+          keyManagement: const KeyManagementConfig(),
         );
     }
   }

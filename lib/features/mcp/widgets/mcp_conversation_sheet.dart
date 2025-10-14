@@ -5,6 +5,7 @@ import '../../../core/providers/mcp_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 Future<void> showConversationMcpSheet(BuildContext context, {required String conversationId}) async {
   final cs = Theme.of(context).colorScheme;
@@ -179,7 +180,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                                             ),
                                           ),
                                       const SizedBox(width: 10),
-                                      Switch(
+                                      IosSwitch(
                                         value: isSelected,
                                         onChanged: (v) {
                                           context.read<ChatService>().toggleConversationMcpServer(conversationId, s.id, v);

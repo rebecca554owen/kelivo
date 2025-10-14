@@ -9,6 +9,7 @@ import '../../../icons/lucide_adapter.dart';
 import 'package:haptic_feedback/haptic_feedback.dart' as HF;
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -93,6 +94,8 @@ class _AboutPageState extends State<AboutPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
+        // Local state for preview controls inside the sheet
+        bool iosSwitchValue = false;
         return StatefulBuilder(
           builder: (dialogContext, dialogSetState) {
             int testCounter = 0;
@@ -285,11 +288,11 @@ class _AboutPageState extends State<AboutPage> {
                                           }
                                         } catch (_) {}
                                       },
-                                    ),
-                                  _TestButton(
-                                    label: 'Play All',
-                                    color: cs.secondary,
-                                    onTap: () async {
+                              ),
+                              _TestButton(
+                                label: 'Play All',
+                                color: cs.secondary,
+                                onTap: () async {
                                       try {
                                         final can = await HF.Haptics.canVibrate();
                                         if (!can) return;
@@ -312,6 +315,37 @@ class _AboutPageState extends State<AboutPage> {
                                     },
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 24),
+                              const Divider(),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Custom Switch Preview',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Material(
+                                color: Colors.transparent,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'iOS‑style switch',
+                                        style: TextStyle(color: cs.onSurface.withValues(alpha: 0.9)),
+                                      ),
+                                      const Spacer(),
+                                      IosSwitch(
+                                        value: iosSwitchValue,
+                                        onChanged: (v) => dialogSetState(() => iosSwitchValue = v),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),

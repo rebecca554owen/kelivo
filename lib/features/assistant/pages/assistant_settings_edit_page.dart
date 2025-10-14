@@ -33,6 +33,7 @@ import '../../../core/models/quick_phrase.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 class AssistantSettingsEditPage extends StatefulWidget {
   const AssistantSettingsEditPage({super.key, required this.assistantId});
@@ -744,7 +745,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   l10n.assistantEditUseAssistantAvatarSubtitle,
                 ),
               ),
-              Switch(
+              IosSwitch(
                 value: a.useAssistantAvatar,
                 onChanged: (v) => context
                     .read<AssistantProvider>()
@@ -794,7 +795,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                       l10n.assistantEditTemperatureDescription,
                     ),
                   ),
-                  Switch(
+                  IosSwitch(
                     value: a.temperature != null,
                     onChanged: (v) async {
                       if (v) {
@@ -850,7 +851,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                       l10n.assistantEditTopPDescription,
                     ),
                   ),
-                  Switch(
+                  IosSwitch(
                     value: a.topP != null,
                     onChanged: (v) async {
                       if (v) {
@@ -906,7 +907,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                       l10n.assistantEditContextMessagesDescription,
                     ),
                   ),
-                  Switch(
+                  IosSwitch(
                     value: a.limitContextMessages,
                     onChanged: (v) async {
                       await context.read<AssistantProvider>().updateAssistant(
@@ -954,7 +955,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   l10n.assistantEditStreamOutputDescription,
                 ),
               ),
-              Switch(
+              IosSwitch(
                 value: a.streamOutput,
                 onChanged: (v) => context
                     .read<AssistantProvider>()
@@ -2536,7 +2537,7 @@ class _McpTab extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Switch(
+                    IosSwitch(
                       value: isSelected,
                       onChanged: (v) async {
                         final set = a.mcpServerIds.toSet();

@@ -8,8 +8,18 @@ import '../../providers/model_provider.dart';
 import '../../models/token_usage.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import 'google_service_account_auth.dart';
+import '../../services/api_key_manager.dart';
 
 class ChatApiService {
+  static String _effectiveApiKey(ProviderConfig cfg) {
+    try {
+      if (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) {
+        final sel = ApiKeyManager().selectForProvider(cfg);
+        if (sel.key != null) return sel.key!.key;
+      }
+    } catch (_) {}
+    return cfg.apiKey;
+  }
   // Read built-in tools configured per model (e.g., ['search', 'url_context']).
   // Stored under ProviderConfig.modelOverrides[modelId].builtInTools.
   static Set<String> _builtInTools(ProviderConfig cfg, String modelId) {
@@ -329,7 +339,7 @@ class ChatApiService {
           };
         }
         final headers = <String, String>{
-          'Authorization': 'Bearer ${config.apiKey}',
+          'Authorization': 'Bearer ${_effectiveApiKey(config)}',
           'Content-Type': 'application/json',
         };
         headers.addAll(_customHeaders(config, modelId));
@@ -391,7 +401,7 @@ class ChatApiService {
           ],
         };
         final headers = <String, String>{
-          'x-api-key': config.apiKey,
+          'x-api-key': _effectiveApiKey(config),
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         };
@@ -426,7 +436,7 @@ class ChatApiService {
           final base = config.baseUrl.endsWith('/')
               ? config.baseUrl.substring(0, config.baseUrl.length - 1)
               : config.baseUrl;
-          url = '$base/models/$modelId:generateContent?key=${Uri.encodeComponent(config.apiKey)}';
+          url = '$base/models/$modelId:generateContent?key=${Uri.encodeComponent(_effectiveApiKey(config))}';
         }
         final body = {
           'contents': [
@@ -846,7 +856,7 @@ class ChatApiService {
 
     final request = http.Request('POST', url);
     final headers = <String, String>{
-      'Authorization': 'Bearer ${config.apiKey}',
+      'Authorization': 'Bearer ${_effectiveApiKey(config)}',
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     };
@@ -1063,7 +1073,7 @@ class ChatApiService {
 
               final req2 = http.Request('POST', url);
               final headers2 = <String, String>{
-                'Authorization': 'Bearer ${config.apiKey}',
+                'Authorization': 'Bearer ${_effectiveApiKey(config)}',
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
               };
@@ -1663,7 +1673,7 @@ class ChatApiService {
               }
               final req2 = http.Request('POST', url);
               final headers2 = <String, String>{
-                'Authorization': 'Bearer ${config.apiKey}',
+                'Authorization': 'Bearer ${_effectiveApiKey(config)}',
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
               };
@@ -1995,7 +2005,7 @@ class ChatApiService {
                   }
                   final req2 = http.Request('POST', url);
                   final headers2 = <String, String>{
-                    'Authorization': 'Bearer ${config.apiKey}',
+                    'Authorization': 'Bearer ${_effectiveApiKey(config)}',
                     'Content-Type': 'application/json',
                     'Accept': 'text/event-stream',
                   };
@@ -2262,7 +2272,7 @@ class ChatApiService {
 
             final request2 = http.Request('POST', url);
             request2.headers.addAll({
-              'Authorization': 'Bearer ${config.apiKey}',
+              'Authorization': 'Bearer ${_effectiveApiKey(config)}',
               'Content-Type': 'application/json',
               'Accept': 'text/event-stream',
             });
@@ -2447,7 +2457,7 @@ class ChatApiService {
 
     final request = http.Request('POST', url);
     final headers = <String, String>{
-      'x-api-key': config.apiKey,
+      'x-api-key': _effectiveApiKey(config),
       'anthropic-version': '2023-06-01',
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
@@ -2674,7 +2684,8 @@ class ChatApiService {
     final uriBase = Uri.parse(baseUrl);
     final qp = Map<String, String>.from(uriBase.queryParameters);
     if (!(config.vertexAI == true)) {
-      if (config.apiKey.isNotEmpty) qp['key'] = config.apiKey;
+      final eff = _effectiveApiKey(config);
+      if (eff.isNotEmpty) qp['key'] = eff;
     }
     qp['alt'] = 'sse';
     final uri = uriBase.replace(queryParameters: qp);

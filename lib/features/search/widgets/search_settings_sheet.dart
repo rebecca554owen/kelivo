@@ -8,6 +8,7 @@ import '../pages/search_services_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/brand_assets.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 Future<void> showSearchSettingsSheet(BuildContext context) async {
   await showModalBottomSheet(
@@ -154,7 +155,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Switch(
+                          IosSwitch(
                             value: hasBuiltInSearch,
                             onChanged: (v) async {
                               if (providerKey == null || (modelId ?? '').isEmpty) return;
@@ -228,7 +229,7 @@ class _SearchSettingsSheet extends StatelessWidget {
                           },
                         ),
                         const SizedBox(width: 4),
-                        Switch(
+                        IosSwitch(
                           value: enabled,
                           onChanged: (v) => context.read<SettingsProvider>().setSearchEnabled(v),
                         ),

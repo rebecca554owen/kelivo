@@ -5,6 +5,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../theme/palettes.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 class ThemeSettingsPage extends StatelessWidget {
   const ThemeSettingsPage({super.key});
@@ -118,7 +119,7 @@ class _SwitchTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(value: value, onChanged: onChanged),
+              IosSwitch(value: value, onChanged: onChanged),
             ],
           ),
         ),
