@@ -684,13 +684,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Material(
-                    color: Colors.transparent,
-                    shape: const StadiumBorder(),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () => _showModelPicker(context),
-                      child: Ink(
+                  _TactileRow(
+                    pressedScale: 0.97,
+                    haptics: false,
+                    onTap: () => _showModelPicker(context),
+                    builder: (pressed) {
+                      return Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(color: cs.primary.withOpacity(0.35)),
@@ -704,19 +703,18 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             Text(l10n.providerDetailPageFetchModelsButton, style: TextStyle(color: cs.primary, fontSize: 14, fontWeight: FontWeight.w600)),
                           ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 10),
-                  Material(
-                    color: Colors.transparent,
-                    shape: const StadiumBorder(),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () async {
-                        await showCreateModelSheet(context, providerKey: widget.keyName);
-                      },
-                      child: Ink(
+                  _TactileRow(
+                    pressedScale: 0.97,
+                    haptics: false,
+                    onTap: () async {
+                      await showCreateModelSheet(context, providerKey: widget.keyName);
+                    },
+                    builder: (pressed) {
+                      return Container(
                         decoration: BoxDecoration(
                           color: cs.primary.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(999),
@@ -730,8 +728,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             Text(l10n.providerDetailPageAddNewModelButton, style: TextStyle(color: cs.primary, fontSize: 14)),
                           ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -1517,40 +1515,46 @@ class _ModelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.surface,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              _BrandAvatar(name: modelId, size: 28),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_displayName(context), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    _modelTagWrap(context, _effective(context)),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: l10n.providerDetailPageEditTooltip,
-                icon: Icon(Lucide.Settings2, size: 18, color: cs.onSurface.withOpacity(0.7)),
-                onPressed: () async {
-                  await showModelDetailSheet(context, providerKey: providerKey, modelId: modelId);
-                  // Force refresh by getting provider and doing nothing; outer ListView watches provider changes
-                },
-              ),
-            ],
+    return _TactileRow(
+      pressedScale: 0.98,
+      haptics: false,
+      builder: (pressed) {
+        return Container(
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                _BrandAvatar(name: modelId, size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_displayName(context), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      _modelTagWrap(context, _effective(context)),
+                    ],
+                  ),
+                ),
+                _TactileIconButton(
+                  icon: Lucide.Settings2,
+                  color: cs.onSurface.withOpacity(0.7),
+                  size: 18,
+                  semanticLabel: l10n.providerDetailPageEditTooltip,
+                  haptics: false,
+                  onTap: () async {
+                    await showModelDetailSheet(context, providerKey: providerKey, modelId: modelId);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1981,10 +1985,11 @@ class _BrandAvatar extends StatelessWidget {
 
 // Top-level tactile row used by iOS-style lists here
 class _TactileRow extends StatefulWidget {
-  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00});
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00, this.haptics = true});
   final Widget Function(bool pressed) builder;
   final VoidCallback? onTap;
   final double pressedScale;
+  final bool haptics;
   @override
   State<_TactileRow> createState() => _TactileRowState();
 }
@@ -1998,6 +2003,7 @@ class _TactileIconButton extends StatefulWidget {
     this.onLongPress,
     this.semanticLabel,
     this.size = 22,
+    this.haptics = true,
   });
 
   final IconData icon;
@@ -2006,6 +2012,7 @@ class _TactileIconButton extends StatefulWidget {
   final VoidCallback? onLongPress;
   final String? semanticLabel;
   final double size;
+  final bool haptics;
 
   @override
   State<_TactileIconButton> createState() => _TactileIconButtonState();
@@ -2029,13 +2036,13 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
         onTap: () {
-          Haptics.light();
+          if (widget.haptics) Haptics.light();
           widget.onTap();
         },
         onLongPress: widget.onLongPress == null
             ? null
             : () {
-                Haptics.medium();
+                if (widget.haptics) Haptics.medium();
                 widget.onLongPress!.call();
               },
         child: AnimatedScale(
@@ -2067,7 +2074,7 @@ class _TactileRowState extends State<_TactileRow> {
       onTap: widget.onTap == null
           ? null
           : () {
-              Haptics.soft();
+              if (widget.haptics) Haptics.soft();
               widget.onTap!.call();
             },
       child: AnimatedScale(
