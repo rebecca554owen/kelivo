@@ -4618,6 +4618,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add Quick Phrase'**
   String get assistantEditAddQuickPhraseButton;
+
+  /// No description provided for @multiKeyPageDeleteSnackbarDeletedOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted 1 key'**
+  String get multiKeyPageDeleteSnackbarDeletedOne;
+
+  /// No description provided for @multiKeyPageUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get multiKeyPageUndo;
+
+  /// No description provided for @multiKeyPageUndoRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored'**
+  String get multiKeyPageUndoRestored;
 }
 
 class _AppLocalizationsDelegate

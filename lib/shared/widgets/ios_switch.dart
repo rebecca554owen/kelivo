@@ -59,10 +59,14 @@ class _IosSwitchState extends State<IosSwitch> {
     final primary = widget.activeColor ??
         (Theme.of(context).colorScheme.primary);
 
+    final bool isDark = brightness == Brightness.dark;
+    final bool isOn = widget.value;
+
+    // Track color when OFF; dark mode uses a deeper fill
     final Color offTrack = widget.inactiveColor ??
-        (brightness == Brightness.dark
-            ? const Color(0x1FFFFFFF) // subtle white overlay
-            : const Color(0x14_000000)); // subtle black overlay
+        (isDark
+            ? CupertinoDynamicColor.resolve(CupertinoColors.systemGrey6, context)
+            : const Color(0x14_000000)); // subtle black overlay on light
 
     final bool enabled = widget.onChanged != null;
     final double radius = widget.height / 2;
@@ -89,7 +93,17 @@ class _IosSwitchState extends State<IosSwitch> {
       ),
     );
 
-    final Color thumb = widget.thumbColor ?? CupertinoColors.white;
+    // Thumb color:
+    // - Dark + OFF: medium grey for thumb
+    // - Dark + ON: keep prior non-white thumb to match design
+    // - Light: white thumb
+    final Color thumb = widget.thumbColor ?? (
+      isDark
+          ? (isOn
+              ? CupertinoDynamicColor.resolve(CupertinoColors.systemGrey6, context)
+              : CupertinoDynamicColor.resolve(CupertinoColors.systemGrey2, context))
+          : CupertinoColors.white
+    );
 
     return Semantics(
       label: widget.semanticLabel,

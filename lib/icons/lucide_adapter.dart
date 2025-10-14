@@ -106,4 +106,5 @@ class Lucide {
   static const IconData botMessageSquare = lucide.LucideIcons.botMessageSquare;
   static const IconData KeyRound = lucide.LucideIcons.keyRound;
   static const IconData Shuffle = lucide.LucideIcons.shuffle;
+  static const IconData HeartPulse = lucide.LucideIcons.heartPulse;
 }

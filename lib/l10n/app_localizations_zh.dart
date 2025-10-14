@@ -2354,6 +2354,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantEditAddQuickPhraseButton => '添加快捷短语';
+
+  @override
+  String get multiKeyPageDeleteSnackbarDeletedOne => '已删除 1 个 Key';
+
+  @override
+  String get multiKeyPageUndo => '撤回';
+
+  @override
+  String get multiKeyPageUndoRestored => '已撤回删除';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4706,6 +4715,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantEditAddQuickPhraseButton => '添加快捷短语';
+
+  @override
+  String get multiKeyPageDeleteSnackbarDeletedOne => '已删除 1 个 Key';
+
+  @override
+  String get multiKeyPageUndo => '撤回';
+
+  @override
+  String get multiKeyPageUndoRestored => '已撤回删除';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7059,4 +7077,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditAddQuickPhraseButton => '新增快捷片語';
+
+  @override
+  String get multiKeyPageDeleteSnackbarDeletedOne => '已刪除 1 個 Key';
+
+  @override
+  String get multiKeyPageUndo => '撤銷';
+
+  @override
+  String get multiKeyPageUndoRestored => '已撤銷刪除';
 }

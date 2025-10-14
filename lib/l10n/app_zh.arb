@@ -771,5 +771,8 @@
   "chatInputBarQuickPhraseTooltip": "快捷短语",
   "assistantEditQuickPhraseDescription": "管理该助手的快捷短语。点击下方按钮添加短语。",
   "assistantEditManageQuickPhraseButton": "管理快捷短语",
-  "assistantEditAddQuickPhraseButton": "添加快捷短语"
+  "assistantEditAddQuickPhraseButton": "添加快捷短语",
+  "multiKeyPageDeleteSnackbarDeletedOne": "已删除 1 个 Key",
+  "multiKeyPageUndo": "撤回",
+  "multiKeyPageUndoRestored": "已撤回删除"
 }

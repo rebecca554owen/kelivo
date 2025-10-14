@@ -771,5 +771,8 @@
   "multiKeyPageAlias": "別名",
   "multiKeyPageCancel": "取消",
   "multiKeyPageSave": "儲存",
-  "multiKeyPageDelete": "刪除"
+  "multiKeyPageDelete": "刪除",
+  "multiKeyPageDeleteSnackbarDeletedOne": "已刪除 1 個 Key",
+  "multiKeyPageUndo": "撤銷",
+  "multiKeyPageUndoRestored": "已撤銷刪除"
 }

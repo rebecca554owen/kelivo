@@ -967,5 +967,8 @@
   "chatInputBarQuickPhraseTooltip": "Quick Phrase",
   "assistantEditQuickPhraseDescription": "Manage quick phrases for this assistant. Click the button below to add phrases.",
   "assistantEditManageQuickPhraseButton": "Manage Quick Phrases",
-  "assistantEditAddQuickPhraseButton": "Add Quick Phrase"
+  "assistantEditAddQuickPhraseButton": "Add Quick Phrase",
+  "multiKeyPageDeleteSnackbarDeletedOne": "Deleted 1 key",
+  "multiKeyPageUndo": "Undo",
+  "multiKeyPageUndoRestored": "Restored"
 }

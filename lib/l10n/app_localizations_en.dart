@@ -2437,4 +2437,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantEditAddQuickPhraseButton => 'Add Quick Phrase';
+
+  @override
+  String get multiKeyPageDeleteSnackbarDeletedOne => 'Deleted 1 key';
+
+  @override
+  String get multiKeyPageUndo => 'Undo';
+
+  @override
+  String get multiKeyPageUndoRestored => 'Restored';
 }
