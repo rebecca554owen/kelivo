@@ -18,6 +18,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -728,7 +729,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           child: Icon(icon, size: 20, color: cs.primary),
         ),
         Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
-        Switch(value: value, onChanged: onChanged),
+        IosSwitch(value: value, onChanged: onChanged),
       ],
     );
   }

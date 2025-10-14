@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/ios_switch.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -92,7 +93,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
       child: Row(
         children: [
           Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-          Switch(value: value, onChanged: onChanged),
+          IosSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );

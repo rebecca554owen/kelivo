@@ -5,6 +5,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../theme/design_tokens.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 Future<void> showAssistantMcpSheet(BuildContext context, {required String assistantId}) async {
   final cs = Theme.of(context).colorScheme;
@@ -193,7 +194,7 @@ class _AssistantMcpSheet extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 10),
-                                      Switch(
+                                      IosSwitch(
                                         value: isSelected,
                                         onChanged: (v) async {
                                           final set = a.mcpServerIds.toSet();

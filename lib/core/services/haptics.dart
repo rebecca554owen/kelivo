@@ -15,6 +15,8 @@ class Haptics {
   /// Medium tap feedback (e.g., opening/closing drawer, toggles).
   static void medium() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.medium)); }
 
+  static void soft() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft)); }
+
   /// Drawer-specific pulse; tuned to feel present but not harsh.
   static void drawerPulse() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft)); }
 

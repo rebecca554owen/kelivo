@@ -6,6 +6,7 @@ import '../../../core/providers/model_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 Future<bool?> showModelDetailSheet(BuildContext context, {required String providerKey, required String modelId}) {
   final cs = Theme.of(context).colorScheme;
@@ -881,7 +882,7 @@ class _ToolTile extends StatelessWidget {
                 ],
               ),
             ),
-            Switch(value: value, onChanged: onChanged),
+            IosSwitch(value: value, onChanged: onChanged),
           ],
         ),
       ),

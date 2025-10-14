@@ -4,6 +4,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../shared/widgets/ios_switch.dart';
 
 class _HeaderEntry {
   final TextEditingController key;
@@ -85,7 +86,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
       child: Row(
         children: [
           Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-          Switch(value: value, onChanged: onChanged),
+          IosSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -412,7 +413,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                                               ],
                                             ),
                                           ),
-                                          Switch(
+                                          IosSwitch(
                                             value: tool.enabled,
                                             onChanged: (v) => context.read<McpProvider>().setToolEnabled(server!.id, tool.name, v),
                                           ),
