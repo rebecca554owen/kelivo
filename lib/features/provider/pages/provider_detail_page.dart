@@ -1333,20 +1333,24 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                       // Group header with actions
                                       Padding(
                                         padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                                        child: Material(
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? Colors.white10
-                                              : const Color(0xFFF2F3F5),
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: InkWell(
-                                            borderRadius: BorderRadius.circular(12),
-                                            onTap: () => setLocal(() {
-                                              collapsed[g] = !(collapsed[g] == true);
-                                            }),
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                              child: Row(
-                                                children: [
+                                        child: _TactileRow(
+                                          pressedScale: 0.98,
+                                          haptics: false,
+                                          onTap: () => setLocal(() {
+                                            collapsed[g] = !(collapsed[g] == true);
+                                          }),
+                                          builder: (_) {
+                                            return Container(
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white10
+                                                    : const Color(0xFFF2F3F5),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                                child: Row(
+                                                  children: [
                                                   SizedBox(
                                                     width: 28,
                                                     child: Center(
@@ -1392,8 +1396,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                   }),
                                                 ],
                                               ),
-                                            ),
-                                          ),
+                                              ));
+
+                                          },
                                         ),
                                       ),
                                       if (!(collapsed[g] == true))
@@ -1402,57 +1407,59 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                             final added = selected.contains(m.id);
                                             return Padding(
                                               padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                                              child: Material(
-                                                // color: Theme.of(context).brightness == Brightness.dark
-                                                //     ? Colors.white10
-                                                //     : const Color(0xFFF2F3F5),
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: InkWell(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  onTap: () {},
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                                    child: Row(
-                                                      children: [
-                    SizedBox(
-                      width: 28,
-                      child: Center(child: _BrandAvatar(name: m.id, size: 28)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(m.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          _modelTagWrap(context, m),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
-                      onPressed: () async {
-                        final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
-                        final list = old.models.toList();
-                        if (added) {
-                          list.removeWhere((e) => e == m.id);
-                        } else {
-                          list.add(m.id);
-                        }
-                        await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
-                        setLocal(() {});
-                      },
-                      icon: Icon(added ? Lucide.Minus : Lucide.Plus, size: 24, color: added ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
-                    ),
-                                                      ],
+                                              child: _TactileRow(
+                                                pressedScale: 0.98,
+                                                haptics: false,
+                                                onTap: () {},
+                                                builder: (_) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(12),
                                                     ),
-                                                  ),
-                                                ),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                                      child: Row(
+                                                        children: [
+                                                          SizedBox(
+                                                            width: 28,
+                                                            child: Center(child: _BrandAvatar(name: m.id, size: 28)),
+                                                          ),
+                                                          const SizedBox(width: 16),
+                                                          Expanded(
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text(m.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                                const SizedBox(height: 4),
+                                                                _modelTagWrap(context, m),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          IconButton(
+                                                            padding: EdgeInsets.zero,
+                                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 40),
+                                                            onPressed: () async {
+                                                              final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+                                                              final list = old.models.toList();
+                                                              if (added) {
+                                                                list.removeWhere((e) => e == m.id);
+                                                              } else {
+                                                                list.add(m.id);
+                                                              }
+                                                              await settings.setProviderConfig(widget.keyName, old.copyWith(models: list));
+                                                              setLocal(() {});
+                                                            },
+                                                            icon: Icon(added ? Lucide.Minus : Lucide.Plus, size: 24, color: added ? cs.onSurface.withValues(alpha: 0.7) : cs.onSurface.withValues(alpha: 0.7)),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
-                                            );
-                                          }),
+                                              );
+                                            }),
                                     ],
                                   ],
                                 ),
@@ -1518,6 +1525,7 @@ class _ModelCard extends StatelessWidget {
     return _TactileRow(
       pressedScale: 0.98,
       haptics: false,
+      onTap: () {},
       builder: (pressed) {
         return Container(
           decoration: BoxDecoration(
@@ -1762,31 +1770,34 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (_selectedModelId != null)
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
+          _TactileRow(
+            pressedScale: 0.98,
+            haptics: false,
             onTap: _pickModel,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  _BrandAvatar(name: _selectedModelId!, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _selectedModelId!,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
+            builder: (_) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    _BrandAvatar(name: _selectedModelId!, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _selectedModelId!,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Lucide.ChevronDown, size: 16, color: cs.onSurface.withOpacity(0.7)),
-                ],
-              ),
-            ),
+                    const SizedBox(width: 8),
+                    Icon(Lucide.ChevronDown, size: 16, color: cs.onSurface.withOpacity(0.7)),
+                  ],
+                ),
+              );
+            },
           ),
         const SizedBox(height: 14),
         Text(message, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600)),
