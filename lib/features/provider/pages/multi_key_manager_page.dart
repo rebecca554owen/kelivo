@@ -41,6 +41,11 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
         title: Text(l10n.multiKeyPageTitle),
         actions: [
           IconButton(
+            onPressed: _onDeleteAllErrorKeys,
+            tooltip: l10n.multiKeyPageDeleteErrorsTooltip,
+            icon: Icon(Lucide.Trash2, color: cs.onSurface),
+          ),
+          IconButton(
             onPressed: _detecting ? null : _onDetect,
             onLongPress: _onPickDetectModel,
             tooltip: l10n.multiKeyPageDetect,
@@ -443,6 +448,47 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     if (sel != null) {
       setState(() => _detectModelId = sel.modelId);
     }
+  }
+
+  Future<void> _onDeleteAllErrorKeys() async {
+    final settings = context.read<SettingsProvider>();
+    final cfg = settings.getProviderConfig(widget.providerKey, defaultName: widget.providerDisplayName);
+    final keys = List<ApiKeyConfig>.from(cfg.apiKeys ?? const <ApiKeyConfig>[]);
+    final errorKeys = keys.where((e) => e.status == ApiKeyStatus.error).toList();
+    if (errorKeys.isEmpty) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(l10n.multiKeyPageDeleteErrorsConfirmTitle),
+          content: Text(l10n.multiKeyPageDeleteErrorsConfirmContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.multiKeyPageCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: TextButton.styleFrom(foregroundColor: cs.error),
+              child: Text(l10n.multiKeyPageDelete),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true) return;
+    final remain = keys.where((e) => e.status != ApiKeyStatus.error).toList();
+    await settings.setProviderConfig(widget.providerKey, cfg.copyWith(apiKeys: remain));
+    if (!mounted) return;
+    showAppSnackBar(
+      context,
+      message: AppLocalizations.of(context)!.multiKeyPageDeletedErrorsSnackbar(errorKeys.length),
+      type: NotificationType.success,
+    );
   }
 
   Future<void> _chooseDetectModel() async {

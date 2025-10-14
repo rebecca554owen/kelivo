@@ -774,5 +774,10 @@
   "multiKeyPageDelete": "刪除",
   "multiKeyPageDeleteSnackbarDeletedOne": "已刪除 1 個 Key",
   "multiKeyPageUndo": "撤銷",
-  "multiKeyPageUndoRestored": "已撤銷刪除"
+  "multiKeyPageUndoRestored": "已撤銷刪除",
+  "multiKeyPageDeleteErrorsTooltip": "刪除錯誤",
+  "multiKeyPageDeleteErrorsConfirmTitle": "刪除所有錯誤的 Key？",
+  "multiKeyPageDeleteErrorsConfirmContent": "這將移除所有狀態為錯誤的 Key。",
+  "multiKeyPageDeletedErrorsSnackbar": "已刪除 {n} 個錯誤 Key",
+  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}}
 }

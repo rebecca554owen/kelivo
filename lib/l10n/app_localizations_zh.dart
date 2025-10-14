@@ -2363,6 +2363,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get multiKeyPageUndoRestored => '已撤回删除';
+
+  @override
+  String get multiKeyPageDeleteErrorsTooltip => '删除错误';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmTitle => '删除所有错误的 Key？';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmContent => '这将移除所有状态为错误的 Key。';
+
+  @override
+  String multiKeyPageDeletedErrorsSnackbar(int n) {
+    return '已删除 $n 个错误 Key';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4724,6 +4738,20 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get multiKeyPageUndoRestored => '已撤回删除';
+
+  @override
+  String get multiKeyPageDeleteErrorsTooltip => '删除错误';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmTitle => '删除所有错误的 Key？';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmContent => '这将移除所有状态为错误的 Key。';
+
+  @override
+  String multiKeyPageDeletedErrorsSnackbar(int n) {
+    return '已删除 $n 个错误 Key';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7086,4 +7114,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get multiKeyPageUndoRestored => '已撤銷刪除';
+
+  @override
+  String get multiKeyPageDeleteErrorsTooltip => '刪除錯誤';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmTitle => '刪除所有錯誤的 Key？';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmContent => '這將移除所有狀態為錯誤的 Key。';
+
+  @override
+  String multiKeyPageDeletedErrorsSnackbar(int n) {
+    return '已刪除 $n 個錯誤 Key';
+  }
 }

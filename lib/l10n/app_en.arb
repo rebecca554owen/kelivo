@@ -970,5 +970,10 @@
   "assistantEditAddQuickPhraseButton": "Add Quick Phrase",
   "multiKeyPageDeleteSnackbarDeletedOne": "Deleted 1 key",
   "multiKeyPageUndo": "Undo",
-  "multiKeyPageUndoRestored": "Restored"
+  "multiKeyPageUndoRestored": "Restored",
+  "multiKeyPageDeleteErrorsTooltip": "Delete errors",
+  "multiKeyPageDeleteErrorsConfirmTitle": "Delete all error keys?",
+  "multiKeyPageDeleteErrorsConfirmContent": "This will remove all keys marked as error.",
+  "multiKeyPageDeletedErrorsSnackbar": "Deleted {n} error keys",
+  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}}
 }

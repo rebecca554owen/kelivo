@@ -2446,4 +2446,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get multiKeyPageUndoRestored => 'Restored';
+
+  @override
+  String get multiKeyPageDeleteErrorsTooltip => 'Delete errors';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmTitle => 'Delete all error keys?';
+
+  @override
+  String get multiKeyPageDeleteErrorsConfirmContent =>
+      'This will remove all keys marked as error.';
+
+  @override
+  String multiKeyPageDeletedErrorsSnackbar(int n) {
+    return 'Deleted $n error keys';
+  }
 }

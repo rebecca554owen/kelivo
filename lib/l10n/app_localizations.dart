@@ -4636,6 +4636,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restored'**
   String get multiKeyPageUndoRestored;
+
+  /// No description provided for @multiKeyPageDeleteErrorsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete errors'**
+  String get multiKeyPageDeleteErrorsTooltip;
+
+  /// No description provided for @multiKeyPageDeleteErrorsConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all error keys?'**
+  String get multiKeyPageDeleteErrorsConfirmTitle;
+
+  /// No description provided for @multiKeyPageDeleteErrorsConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove all keys marked as error.'**
+  String get multiKeyPageDeleteErrorsConfirmContent;
+
+  /// No description provided for @multiKeyPageDeletedErrorsSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {n} error keys'**
+  String multiKeyPageDeletedErrorsSnackbar(int n);
 }
 
 class _AppLocalizationsDelegate

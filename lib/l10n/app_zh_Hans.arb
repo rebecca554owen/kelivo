@@ -774,5 +774,10 @@
   "assistantEditAddQuickPhraseButton": "添加快捷短语",
   "multiKeyPageDeleteSnackbarDeletedOne": "已删除 1 个 Key",
   "multiKeyPageUndo": "撤回",
-  "multiKeyPageUndoRestored": "已撤回删除"
+  "multiKeyPageUndoRestored": "已撤回删除",
+  "multiKeyPageDeleteErrorsTooltip": "删除错误",
+  "multiKeyPageDeleteErrorsConfirmTitle": "删除所有错误的 Key？",
+  "multiKeyPageDeleteErrorsConfirmContent": "这将移除所有状态为错误的 Key。",
+  "multiKeyPageDeletedErrorsSnackbar": "已删除 {n} 个错误 Key",
+  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}}
 }
