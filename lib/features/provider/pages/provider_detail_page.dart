@@ -1354,10 +1354,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                   SizedBox(
                                                     width: 28,
                                                     child: Center(
-                                                      child: Icon(
-                                                        (collapsed[g] == true) ? Lucide.ChevronRight : Lucide.ChevronDown,
-                                                        size: 20,
-                                                        color: cs.onSurface.withOpacity(0.7),
+                                                      child: AnimatedRotation(
+                                                        turns: (collapsed[g] == true) ? 0.0 : 0.25,
+                                                        duration: const Duration(milliseconds: 220),
+                                                        curve: Curves.easeOutCubic,
+                                                        child: Icon(
+                                                          Lucide.ChevronRight,
+                                                          size: 20,
+                                                          color: cs.onSurface.withOpacity(0.7),
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
@@ -1401,9 +1406,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                           },
                                         ),
                                       ),
-                                      if (!(collapsed[g] == true))
-                                        for (final m in grouped[g]!)
-                                          Builder(builder: (c2) {
+                                      AnimatedSize(
+                                        duration: const Duration(milliseconds: 220),
+                                        curve: Curves.easeOutCubic,
+                                        child: (collapsed[g] == true)
+                                            ? const SizedBox.shrink()
+                                            : Column(
+                                                children: [
+                                                  for (final m in grouped[g]!)
+                                                    Builder(builder: (c2) {
                                             final added = selected.contains(m.id);
                                             return Padding(
                                               padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
@@ -1458,8 +1469,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                   );
                                                 },
                                               ),
-                                              );
-                                            }),
+                                            );
+                                          }),
+                                                ],
+                                              ),
+                                      ),
                                     ],
                                   ],
                                 ),
