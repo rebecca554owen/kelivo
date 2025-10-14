@@ -113,9 +113,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            semanticLabel: l10n.settingsPageBackButton,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Row(
           children: [
@@ -135,58 +141,73 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ],
         ),
         actions: [
-          // Icon-only test button (no text, no border)
-          IconButton(
-            tooltip: l10n.providerDetailPageTestButton,
-            icon: Icon(Lucide.Cable, color: cs.onSurface),
-            onPressed: _openTestDialog,
+          Tooltip(
+            message: l10n.providerDetailPageTestButton,
+            child: _TactileIconButton(
+              icon: Lucide.Cable,
+              color: cs.onSurface,
+              semanticLabel: l10n.providerDetailPageTestButton,
+              size: 22,
+              onTap: _openTestDialog,
+            ),
           ),
-          IconButton(
-            tooltip: l10n.providerDetailPageShareTooltip,
-            icon: Icon(Lucide.Share2, color: cs.onSurface),
-            onPressed: () async {
-              await showShareProviderSheet(context, widget.keyName);
-            },
+          Tooltip(
+            message: l10n.providerDetailPageShareTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Share2,
+              color: cs.onSurface,
+              semanticLabel: l10n.providerDetailPageShareTooltip,
+              size: 22,
+              onTap: () async {
+                await showShareProviderSheet(context, widget.keyName);
+              },
+            ),
           ),
           if (_isUserAdded(widget.keyName))
-            IconButton(
-              tooltip: l10n.providerDetailPageDeleteProviderTooltip,
-              icon: Icon(Lucide.Trash2, color: cs.error),
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Text(l10n.providerDetailPageDeleteProviderTitle),
-                    content: Text(l10n.providerDetailPageDeleteProviderContent),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton, style: const TextStyle(color: Colors.red))),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  // Clear assistant-level model selections that reference this provider
-                  try {
-                    final ap = context.read<AssistantProvider>();
-                    for (final a in ap.assistants) {
-                      if (a.chatModelProvider == widget.keyName) {
-                        await ap.updateAssistant(a.copyWith(clearChatModel: true));
-                      }
-                    }
-                  } catch (_) {}
-
-                  // Remove provider config and related selections/pins
-                  await context.read<SettingsProvider>().removeProviderConfig(widget.keyName);
-                  if (!mounted) return;
-                  Navigator.of(context).maybePop();
-                  showAppSnackBar(
-                    context,
-                    message: l10n.providerDetailPageProviderDeletedSnackbar,
-                    type: NotificationType.success,
+            Tooltip(
+              message: l10n.providerDetailPageDeleteProviderTooltip,
+              child: _TactileIconButton(
+                icon: Lucide.Trash2,
+                color: cs.error,
+                semanticLabel: l10n.providerDetailPageDeleteProviderTooltip,
+                size: 22,
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(l10n.providerDetailPageDeleteProviderTitle),
+                      content: Text(l10n.providerDetailPageDeleteProviderContent),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton, style: const TextStyle(color: Colors.red))),
+                      ],
+                    ),
                   );
+                  if (confirm == true) {
+                    // Clear assistant-level model selections that reference this provider
+                    try {
+                      final ap = context.read<AssistantProvider>();
+                      for (final a in ap.assistants) {
+                        if (a.chatModelProvider == widget.keyName) {
+                          await ap.updateAssistant(a.copyWith(clearChatModel: true));
+                        }
+                      }
+                    } catch (_) {}
+
+                    // Remove provider config and related selections/pins
+                    await context.read<SettingsProvider>().removeProviderConfig(widget.keyName);
+                    if (!mounted) return;
+                    Navigator.of(context).maybePop();
+                    showAppSnackBar(
+                      context,
+                      message: l10n.providerDetailPageProviderDeletedSnackbar,
+                      type: NotificationType.success,
+                    );
                 }
               },
             ),
+          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: PageView(
@@ -1983,6 +2004,69 @@ class _TactileRow extends StatefulWidget {
   final double pressedScale;
   @override
   State<_TactileRow> createState() => _TactileRowState();
+}
+
+// Icon-only tactile button for AppBar (no ripple, slight press scale)
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.onLongPress,
+    this.semanticLabel,
+    this.size = 22,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? semanticLabel;
+  final double size;
+
+  @override
+  State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color;
+    final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          Haptics.light();
+          widget.onTap();
+        },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                Haptics.medium();
+                widget.onLongPress!.call();
+              },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: icon,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TactileRowState extends State<_TactileRow> {
