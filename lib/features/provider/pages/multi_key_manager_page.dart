@@ -173,7 +173,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
                         style: TextStyle(fontSize: 15, color: c),
                       ),
                       const SizedBox(width: 6),
-                      const Icon(Lucide.ChevronRight, size: 16),
+                      Icon(Lucide.ChevronRight, size: 16, color: c),
                     ],
                   ),
                 ],
