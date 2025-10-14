@@ -19,6 +19,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_switch.dart';
+import 'multi_key_manager_page.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -46,6 +47,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   bool _useResp = false; // openai
   bool _vertexAI = false; // google
   bool _showApiKey = false; // toggle visibility
+  bool _multiKeyEnabled = false; // single/multi key mode
   // network proxy (per provider)
   bool _proxyEnabled = false;
   final _proxyHostCtrl = TextEditingController();
@@ -75,6 +77,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     _proxyPortCtrl.text = _cfg.proxyPort ?? '8080';
     _proxyUserCtrl.text = _cfg.proxyUsername ?? '';
     _proxyPassCtrl.text = _cfg.proxyPassword ?? '';
+    _multiKeyEnabled = _cfg.multiKeyEnabled ?? false;
   }
 
   @override
@@ -334,6 +337,37 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           onChanged: (v) => setState(() => _enabled = v),
         ),
         const SizedBox(height: 12),
+        _switchRow(
+          icon: Icons.vpn_key,
+          title: l10n.providerDetailPageMultiKeyModeTitle,
+          value: _multiKeyEnabled,
+          onChanged: (v) => setState(() => _multiKeyEnabled = v),
+        ),
+        if (_multiKeyEnabled) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MultiKeyManagerPage(
+                      providerKey: widget.keyName,
+                      providerDisplayName: widget.displayName,
+                    ),
+                  ),
+                );
+                if (mounted) setState(() {});
+              },
+              icon: Icon(Lucide.KeyRound, size: 18),
+              label: Text(l10n.providerDetailPageManageKeysButton),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         _inputRow(
           context,
           label: l10n.providerDetailPageNameLabel,
@@ -343,7 +377,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         ),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
-          if (widget.keyName.toLowerCase() != 'kelivoin') ...[
+          if (widget.keyName.toLowerCase() != 'kelivoin' && !_multiKeyEnabled) ...[
             _inputRow(
               context,
               label: 'API Key',
@@ -798,6 +832,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       location: _kind == ProviderKind.google ? _locationCtrl.text.trim() : old.location,
       projectId: _kind == ProviderKind.google ? projectId : old.projectId,
       serviceAccountJson: _kind == ProviderKind.google ? _saJsonCtrl.text.trim() : old.serviceAccountJson,
+      multiKeyEnabled: _multiKeyEnabled,
       // preserve models and modelOverrides and proxy fields implicitly via copyWith
     );
     await settings.setProviderConfig(widget.keyName, updated);

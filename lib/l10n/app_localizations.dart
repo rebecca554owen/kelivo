@@ -917,6 +917,192 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Try entering an image URL.'**
   String get assistantEditGeneralErrorMessage;
 
+  /// No description provided for @providerDetailPageMultiKeyModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-Key Mode'**
+  String get providerDetailPageMultiKeyModeTitle;
+
+  /// No description provided for @providerDetailPageManageKeysButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Keys'**
+  String get providerDetailPageManageKeysButton;
+
+  /// No description provided for @multiKeyPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-Key Manager'**
+  String get multiKeyPageTitle;
+
+  /// No description provided for @multiKeyPageDetect.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect'**
+  String get multiKeyPageDetect;
+
+  /// No description provided for @multiKeyPageAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get multiKeyPageAdd;
+
+  /// No description provided for @multiKeyPageAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter API keys, separated by comma or space'**
+  String get multiKeyPageAddHint;
+
+  /// No description provided for @multiKeyPageImportedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {n} keys'**
+  String multiKeyPageImportedSnackbar(int n);
+
+  /// No description provided for @multiKeyPagePleaseAddModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add a model first'**
+  String get multiKeyPagePleaseAddModel;
+
+  /// No description provided for @multiKeyPageTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get multiKeyPageTotal;
+
+  /// No description provided for @multiKeyPageNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get multiKeyPageNormal;
+
+  /// No description provided for @multiKeyPageError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get multiKeyPageError;
+
+  /// No description provided for @multiKeyPageAccuracy.
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy'**
+  String get multiKeyPageAccuracy;
+
+  /// No description provided for @multiKeyPageStrategyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load Balancing Strategy'**
+  String get multiKeyPageStrategyTitle;
+
+  /// No description provided for @multiKeyPageStrategyRoundRobin.
+  ///
+  /// In en, this message translates to:
+  /// **'Round Robin'**
+  String get multiKeyPageStrategyRoundRobin;
+
+  /// No description provided for @multiKeyPageStrategyPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get multiKeyPageStrategyPriority;
+
+  /// No description provided for @multiKeyPageStrategyLeastUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Least Used'**
+  String get multiKeyPageStrategyLeastUsed;
+
+  /// No description provided for @multiKeyPageStrategyRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get multiKeyPageStrategyRandom;
+
+  /// No description provided for @multiKeyPageNoKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'No API keys'**
+  String get multiKeyPageNoKeys;
+
+  /// No description provided for @multiKeyPageStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get multiKeyPageStatusActive;
+
+  /// No description provided for @multiKeyPageStatusDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get multiKeyPageStatusDisabled;
+
+  /// No description provided for @multiKeyPageStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get multiKeyPageStatusError;
+
+  /// No description provided for @multiKeyPageStatusRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate Limited'**
+  String get multiKeyPageStatusRateLimited;
+
+  /// No description provided for @multiKeyPageEditAlias.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Alias'**
+  String get multiKeyPageEditAlias;
+
+  /// No description provided for @multiKeyPageEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get multiKeyPageEdit;
+
+  /// No description provided for @multiKeyPageKey.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get multiKeyPageKey;
+
+  /// No description provided for @multiKeyPagePriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority (1–10)'**
+  String get multiKeyPagePriority;
+
+  /// No description provided for @multiKeyPageDuplicateKeyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This key already exists'**
+  String get multiKeyPageDuplicateKeyWarning;
+
+  /// No description provided for @multiKeyPageAlias.
+  ///
+  /// In en, this message translates to:
+  /// **'Alias'**
+  String get multiKeyPageAlias;
+
+  /// No description provided for @multiKeyPageCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get multiKeyPageCancel;
+
+  /// No description provided for @multiKeyPageSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get multiKeyPageSave;
+
+  /// No description provided for @multiKeyPageDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get multiKeyPageDelete;
+
   /// No description provided for @assistantEditSystemPromptTitle.
   ///
   /// In en, this message translates to:

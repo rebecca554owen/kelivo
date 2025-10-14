@@ -432,6 +432,101 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditGeneralErrorMessage => '发生错误，试试输入图片链接';
 
   @override
+  String get providerDetailPageMultiKeyModeTitle => '多Key模式';
+
+  @override
+  String get providerDetailPageManageKeysButton => '多Key管理';
+
+  @override
+  String get multiKeyPageTitle => '多Key管理';
+
+  @override
+  String get multiKeyPageDetect => '检测';
+
+  @override
+  String get multiKeyPageAdd => '添加';
+
+  @override
+  String get multiKeyPageAddHint => '请输入API Key（多个用逗号或空格分隔）';
+
+  @override
+  String multiKeyPageImportedSnackbar(int n) {
+    return '已导入$n个key';
+  }
+
+  @override
+  String get multiKeyPagePleaseAddModel => '请先添加模型';
+
+  @override
+  String get multiKeyPageTotal => '总数';
+
+  @override
+  String get multiKeyPageNormal => '正常';
+
+  @override
+  String get multiKeyPageError => '错误';
+
+  @override
+  String get multiKeyPageAccuracy => '正确率';
+
+  @override
+  String get multiKeyPageStrategyTitle => '负载均衡策略';
+
+  @override
+  String get multiKeyPageStrategyRoundRobin => '轮询';
+
+  @override
+  String get multiKeyPageStrategyPriority => '优先级';
+
+  @override
+  String get multiKeyPageStrategyLeastUsed => '最少使用';
+
+  @override
+  String get multiKeyPageStrategyRandom => '随机';
+
+  @override
+  String get multiKeyPageNoKeys => '暂无Key';
+
+  @override
+  String get multiKeyPageStatusActive => '正常';
+
+  @override
+  String get multiKeyPageStatusDisabled => '已关闭';
+
+  @override
+  String get multiKeyPageStatusError => '错误';
+
+  @override
+  String get multiKeyPageStatusRateLimited => '限速';
+
+  @override
+  String get multiKeyPageEditAlias => '编辑别名';
+
+  @override
+  String get multiKeyPageEdit => '编辑';
+
+  @override
+  String get multiKeyPageKey => 'API Key';
+
+  @override
+  String get multiKeyPagePriority => '优先级（1–10）';
+
+  @override
+  String get multiKeyPageDuplicateKeyWarning => '该 Key 已存在';
+
+  @override
+  String get multiKeyPageAlias => '别名';
+
+  @override
+  String get multiKeyPageCancel => '取消';
+
+  @override
+  String get multiKeyPageSave => '保存';
+
+  @override
+  String get multiKeyPageDelete => '删除';
+
+  @override
   String get assistantEditSystemPromptTitle => '系统提示词';
 
   @override
@@ -2323,6 +2418,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageQuickPhrase => '快捷短语';
+
+  @override
   String get settingsPageDataSection => '数据设置';
 
   @override
@@ -2684,6 +2782,101 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantEditGeneralErrorMessage => '发生错误，试试输入图片链接';
+
+  @override
+  String get providerDetailPageMultiKeyModeTitle => '多Key模式';
+
+  @override
+  String get providerDetailPageManageKeysButton => '多Key管理';
+
+  @override
+  String get multiKeyPageTitle => '多Key管理';
+
+  @override
+  String get multiKeyPageDetect => '检测';
+
+  @override
+  String get multiKeyPageAdd => '添加';
+
+  @override
+  String get multiKeyPageAddHint => '请输入API Key（多个用逗号或空格分隔）';
+
+  @override
+  String multiKeyPageImportedSnackbar(int n) {
+    return '已导入$n个key';
+  }
+
+  @override
+  String get multiKeyPagePleaseAddModel => '请先添加模型';
+
+  @override
+  String get multiKeyPageTotal => '总数';
+
+  @override
+  String get multiKeyPageNormal => '正常';
+
+  @override
+  String get multiKeyPageError => '错误';
+
+  @override
+  String get multiKeyPageAccuracy => '正确率';
+
+  @override
+  String get multiKeyPageStrategyTitle => '负载均衡策略';
+
+  @override
+  String get multiKeyPageStrategyRoundRobin => '轮询';
+
+  @override
+  String get multiKeyPageStrategyPriority => '优先级';
+
+  @override
+  String get multiKeyPageStrategyLeastUsed => '最少使用';
+
+  @override
+  String get multiKeyPageStrategyRandom => '随机';
+
+  @override
+  String get multiKeyPageNoKeys => '暂无Key';
+
+  @override
+  String get multiKeyPageStatusActive => '正常';
+
+  @override
+  String get multiKeyPageStatusDisabled => '已关闭';
+
+  @override
+  String get multiKeyPageStatusError => '错误';
+
+  @override
+  String get multiKeyPageStatusRateLimited => '限速';
+
+  @override
+  String get multiKeyPageEditAlias => '编辑别名';
+
+  @override
+  String get multiKeyPageEdit => '编辑';
+
+  @override
+  String get multiKeyPageKey => 'API Key';
+
+  @override
+  String get multiKeyPagePriority => '优先级（1–10）';
+
+  @override
+  String get multiKeyPageDuplicateKeyWarning => '该 Key 已存在';
+
+  @override
+  String get multiKeyPageAlias => '别名';
+
+  @override
+  String get multiKeyPageCancel => '取消';
+
+  @override
+  String get multiKeyPageSave => '保存';
+
+  @override
+  String get multiKeyPageDelete => '删除';
 
   @override
   String get assistantEditSystemPromptTitle => '系统提示词';
@@ -4577,6 +4770,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsPageMcp => 'MCP';
 
   @override
+  String get settingsPageQuickPhrase => '快捷短语';
+
+  @override
   String get settingsPageDataSection => '資料設定';
 
   @override
@@ -4938,6 +5134,101 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditGeneralErrorMessage => '發生錯誤，試試輸入圖片連結';
+
+  @override
+  String get providerDetailPageMultiKeyModeTitle => '多Key模式';
+
+  @override
+  String get providerDetailPageManageKeysButton => '多Key管理';
+
+  @override
+  String get multiKeyPageTitle => '多Key管理';
+
+  @override
+  String get multiKeyPageDetect => '檢測';
+
+  @override
+  String get multiKeyPageAdd => '新增';
+
+  @override
+  String get multiKeyPageAddHint => '請輸入 API Key（多個以逗號或空格分隔）';
+
+  @override
+  String multiKeyPageImportedSnackbar(int n) {
+    return '已匯入 $n 個 key';
+  }
+
+  @override
+  String get multiKeyPagePleaseAddModel => '請先新增模型';
+
+  @override
+  String get multiKeyPageTotal => '總數';
+
+  @override
+  String get multiKeyPageNormal => '正常';
+
+  @override
+  String get multiKeyPageError => '錯誤';
+
+  @override
+  String get multiKeyPageAccuracy => '正確率';
+
+  @override
+  String get multiKeyPageStrategyTitle => '負載平衡策略';
+
+  @override
+  String get multiKeyPageStrategyRoundRobin => '輪詢';
+
+  @override
+  String get multiKeyPageStrategyPriority => '優先級';
+
+  @override
+  String get multiKeyPageStrategyLeastUsed => '最少使用';
+
+  @override
+  String get multiKeyPageStrategyRandom => '隨機';
+
+  @override
+  String get multiKeyPageNoKeys => '暫無 Key';
+
+  @override
+  String get multiKeyPageStatusActive => '正常';
+
+  @override
+  String get multiKeyPageStatusDisabled => '已關閉';
+
+  @override
+  String get multiKeyPageStatusError => '錯誤';
+
+  @override
+  String get multiKeyPageStatusRateLimited => '限速';
+
+  @override
+  String get multiKeyPageEditAlias => '編輯別名';
+
+  @override
+  String get multiKeyPageEdit => '編輯';
+
+  @override
+  String get multiKeyPageKey => 'API Key';
+
+  @override
+  String get multiKeyPagePriority => '優先級（1–10）';
+
+  @override
+  String get multiKeyPageDuplicateKeyWarning => '該 Key 已存在';
+
+  @override
+  String get multiKeyPageAlias => '別名';
+
+  @override
+  String get multiKeyPageCancel => '取消';
+
+  @override
+  String get multiKeyPageSave => '儲存';
+
+  @override
+  String get multiKeyPageDelete => '刪除';
 
   @override
   String get assistantEditSystemPromptTitle => '系統提示詞';
