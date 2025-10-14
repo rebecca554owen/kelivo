@@ -20,6 +20,8 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import 'multi_key_manager_page.dart';
+import 'provider_network_page.dart';
+import '../../../core/services/haptics.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({super.key, required this.keyName, required this.displayName});
@@ -133,6 +135,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ],
         ),
         actions: [
+          // Icon-only test button (no text, no border)
+          IconButton(
+            tooltip: l10n.providerDetailPageTestButton,
+            icon: Icon(Lucide.Cable, color: cs.onSurface),
+            onPressed: _openTestDialog,
+          ),
           IconButton(
             tooltip: l10n.providerDetailPageShareTooltip,
             icon: Icon(Lucide.Share2, color: cs.onSurface),
@@ -187,7 +195,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         children: [
           _buildConfigTab(context, cs, l10n),
           _buildModelsTab(context, cs, l10n),
-          _buildNetworkTab(context, cs, l10n),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -225,13 +232,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               child: Icon(Lucide.Boxes),
             ),
             label: l10n.providerDetailPageModelsTab,
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Icon(Lucide.Network),
-            ),
-            label: l10n.providerDetailPageNetworkTab,
           ),
         ],
       ),
@@ -325,55 +325,102 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
-        // Provider type selector cards
-        if (widget.keyName.toLowerCase() != 'kelivoin') ...[
-          _buildProviderTypeSelector(context, cs, l10n),
-          const SizedBox(height: 12),
-        ],
-        _switchRow(
-          icon: Icons.check_circle_outline,
-          title: l10n.providerDetailPageEnabledTitle,
-          value: _enabled,
-          onChanged: (v) => setState(() => _enabled = v),
-        ),
-        const SizedBox(height: 12),
-        _switchRow(
-          icon: Icons.vpn_key,
-          title: l10n.providerDetailPageMultiKeyModeTitle,
-          value: _multiKeyEnabled,
-          onChanged: (v) => setState(() => _multiKeyEnabled = v),
-        ),
-        if (_multiKeyEnabled) ...[
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MultiKeyManagerPage(
-                      providerKey: widget.keyName,
-                      providerDisplayName: widget.displayName,
-                    ),
-                  ),
-                );
-                if (mounted) setState(() {});
-              },
-              icon: Icon(Lucide.KeyRound, size: 18),
-              label: Text(l10n.providerDetailPageManageKeysButton),
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
+        // Top iOS-style section card for key settings
+        _iosSectionCard(children: [
+          if (widget.keyName.toLowerCase() != 'kelivoin') _providerKindRow(context),
+          _iosRow(
+            context,
+            label: l10n.providerDetailPageEnabledTitle,
+            trailing: IosSwitch(value: _enabled, onChanged: (v) { setState(() => _enabled = v); _save(); }),
           ),
-          const SizedBox(height: 12),
-        ],
+          _iosRow(
+            context,
+            label: l10n.providerDetailPageMultiKeyModeTitle,
+            trailing: IosSwitch(value: _multiKeyEnabled, onChanged: (v) { setState(() => _multiKeyEnabled = v); _save(); }),
+          ),
+          if (_multiKeyEnabled)
+          _TactileRow(
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MultiKeyManagerPage(
+                    providerKey: widget.keyName,
+                    providerDisplayName: widget.displayName,
+                  ),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+            builder: (pressed) {
+              final base = Theme.of(context).colorScheme.onSurface;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final color = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(l10n.providerDetailPageManageKeysButton, style: TextStyle(fontSize: 15, color: color))),
+                    Icon(Lucide.ChevronRight, size: 16, color: color),
+                  ],
+                ),
+              );
+            },
+          ),
+          if (_kind == ProviderKind.openai)
+            _iosRow(
+              context,
+              label: l10n.providerDetailPageResponseApiTitle,
+              trailing: IosSwitch(value: _useResp, onChanged: (v) { setState(() => _useResp = v); _save(); }),
+            ),
+          if (_kind == ProviderKind.google)
+            _iosRow(
+              context,
+              label: l10n.providerDetailPageVertexAiTitle,
+              trailing: IosSwitch(value: _vertexAI, onChanged: (v) { setState(() => _vertexAI = v); _save(); }),
+            ),
+          _TactileRow(
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProviderNetworkPage(
+                    providerKey: widget.keyName,
+                    providerDisplayName: widget.displayName,
+                  ),
+                ),
+              );
+              final settings = context.read<SettingsProvider>();
+              final latest = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+              setState(() {
+                _proxyEnabled = latest.proxyEnabled ?? false;
+                _proxyHostCtrl.text = latest.proxyHost ?? '';
+                _proxyPortCtrl.text = latest.proxyPort ?? '8080';
+              });
+            },
+            builder: (pressed) {
+              final cs2 = Theme.of(context).colorScheme;
+              final base = cs2.onSurface;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final color = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(l10n.providerDetailPageNetworkTab, style: TextStyle(fontSize: 15, color: color))),
+                    Icon(Lucide.ChevronRight, size: 16, color: color),
+                  ],
+                ),
+              );
+            },
+          ),
+        ]),
+        const SizedBox(height: 12),
         _inputRow(
           context,
           label: l10n.providerDetailPageNameLabel,
           controller: _nameCtrl,
           hint: widget.displayName,
           enabled: widget.keyName.toLowerCase() != 'kelivoin',
+          onChanged: (_) => _save(),
         ),
         const SizedBox(height: 12),
         if (!(_kind == ProviderKind.google && _vertexAI)) ...[
@@ -389,6 +436,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 icon: Icon(_showApiKey ? Lucide.EyeOff : Lucide.Eye, color: cs.onSurface.withOpacity(0.7), size: 18),
                 onPressed: () => setState(() => _showApiKey = !_showApiKey),
               ),
+              onChanged: (_) => _save(),
             ),
             const SizedBox(height: 12),
           ],
@@ -398,6 +446,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             controller: _baseCtrl,
             hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
             enabled: widget.keyName.toLowerCase() != 'kelivoin',
+            onChanged: (_) => _save(),
           ),
         ],
         if (_kind == ProviderKind.openai && widget.keyName.toLowerCase() != 'kelivoin') ...[
@@ -408,28 +457,16 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             controller: _pathCtrl,
             enabled: widget.keyName.toLowerCase() != 'openai' && widget.keyName.toLowerCase() != 'tensdaq',
             hint: '/chat/completions',
-          ),
-          const SizedBox(height: 12),
-          _switchRow(
-            icon: Icons.swap_horiz,
-            title: l10n.providerDetailPageResponseApiTitle,
-            value: _useResp,
-            onChanged: (v) => setState(() => _useResp = v),
+            onChanged: (_) => _save(),
           ),
         ],
         if (_kind == ProviderKind.google) ...[
           const SizedBox(height: 12),
-          _switchRow(
-            icon: Icons.auto_graph,
-            title: l10n.providerDetailPageVertexAiTitle,
-            value: _vertexAI,
-            onChanged: (v) => setState(() => _vertexAI = v),
-          ),
           if (_vertexAI) ...[
             const SizedBox(height: 12),
-            _inputRow(context, label: l10n.providerDetailPageLocationLabel, controller: _locationCtrl, hint: 'us-central1'),
+            _inputRow(context, label: l10n.providerDetailPageLocationLabel, controller: _locationCtrl, hint: 'us-central1', onChanged: (_) => _save()),
             const SizedBox(height: 12),
-            _inputRow(context, label: l10n.providerDetailPageProjectIdLabel, controller: _projectCtrl, hint: 'my-project-id'),
+            _inputRow(context, label: l10n.providerDetailPageProjectIdLabel, controller: _projectCtrl, hint: 'my-project-id', onChanged: (_) => _save()),
             const SizedBox(height: 12),
             _multilineRow(
               context,
@@ -443,35 +480,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   label: Text(l10n.providerDetailPageImportJsonButton),
                 ),
               ],
+              onChanged: (_) => _save(),
             ),
           ],
         ],
-        const SizedBox(height: 16),
-          Row(
-            children: [
-              OutlinedButton.icon(
-              onPressed: _openTestDialog,
-              icon: Icon(Lucide.Cable, size: 18, color: cs.primary),
-              label: Text(l10n.providerDetailPageTestButton, style: TextStyle(color: cs.primary)),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: cs.primary.withOpacity(0.5)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: Text(l10n.providerDetailPageSaveButton),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -706,49 +719,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Widget _buildNetworkTab(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            children: [
-              _switchRow(
-                icon: Icons.lan_outlined,
-                title: l10n.providerDetailPageEnableProxyTitle,
-                value: _proxyEnabled,
-                onChanged: (v) => setState(() => _proxyEnabled = v),
-              ),
-              if (_proxyEnabled) ...[
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPageHostLabel, controller: _proxyHostCtrl, hint: '127.0.0.1'),
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPagePortLabel, controller: _proxyPortCtrl, hint: '8080'),
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPageUsernameOptionalLabel, controller: _proxyUserCtrl),
-                const SizedBox(height: 12),
-                _inputRow(context, label: l10n.providerDetailPagePasswordOptionalLabel, controller: _proxyPassCtrl, obscure: true),
-              ],
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: _saveNetwork,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: cs.primary,
-                    foregroundColor: cs.onPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: Text(l10n.providerDetailPageSaveButton),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  // Legacy network tab removed (replaced by ProviderNetworkPage)
 
   Widget _switchRow({required IconData icon, required String title, required bool value, required ValueChanged<bool> onChanged}) {
     final cs = Theme.of(context).colorScheme;
@@ -768,7 +739,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Widget _inputRow(BuildContext context, {required String label, required TextEditingController controller, String? hint, bool obscure = false, bool enabled = true, Widget? suffix}) {
+  Widget _inputRow(BuildContext context, {required String label, required TextEditingController controller, String? hint, bool obscure = false, bool enabled = true, Widget? suffix, ValueChanged<String>? onChanged}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
@@ -780,6 +751,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           controller: controller,
           obscureText: obscure,
           enabled: enabled,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
@@ -808,7 +780,142 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
+  // --- iOS style helpers (consistent with MultiKeyManagerPage) ---
+
+  Widget _iosSectionCard({required List<Widget> children}) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final Color base = cs.surface;
+    final Color bg = isDark ? Color.lerp(base, Colors.white, 0.06)! : Color.lerp(base, Colors.white, 0.92)!;
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06), width: 0.6),
+        boxShadow: [
+          if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 1)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: children),
+    );
+  }
+
+  Widget _iosRow(
+    BuildContext context, {
+    required String label,
+    Widget? trailing,
+    GestureTapCallback? onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return _TactileRow(
+      onTap: onTap,
+      builder: (pressed) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final base = cs.onSurface;
+        final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
+                  if (trailing != null) trailing,
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   
+
+  Widget _providerKindRow(BuildContext context) {
+    String labelFor(ProviderKind k) {
+      switch (k) {
+        case ProviderKind.google:
+          return 'Gemini';
+        case ProviderKind.claude:
+          return 'Claude';
+        case ProviderKind.openai:
+        default:
+          return 'OpenAI';
+      }
+    }
+    return _TactileRow(
+      onTap: _showProviderKindSheet,
+      builder: (pressed) {
+        final cs = Theme.of(context).colorScheme;
+        final base = cs.onSurface;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final color = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(child: Text(AppLocalizations.of(context)!.settingsPageProviders, style: TextStyle(fontSize: 15, color: color))),
+              Text(labelFor(_kind), style: TextStyle(fontSize: 15, color: color)),
+              const SizedBox(width: 6),
+              Icon(Lucide.ChevronRight, size: 16, color: color),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showProviderKindSheet() async {
+    final cs = Theme.of(context).colorScheme;
+    final selected = await showModalBottomSheet<ProviderKind>(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)),
+                ),
+                const SizedBox(height: 12),
+                _providerKindTile(ctx, ProviderKind.openai, label: 'OpenAI'),
+                _providerKindTile(ctx, ProviderKind.google, label: 'Gemini'),
+                _providerKindTile(ctx, ProviderKind.claude, label: 'Claude'),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (selected != null) {
+      setState(() => _kind = selected);
+      await _save();
+    }
+  }
+
+  Widget _providerKindTile(BuildContext ctx, ProviderKind k, {required String label}) {
+    final cs = Theme.of(ctx).colorScheme;
+    return ListTile(
+      title: Text(label),
+      trailing: _kind == k ? Icon(Icons.check, color: cs.primary) : null,
+      onTap: () => Navigator.of(ctx).pop(k),
+    );
+  }
+
 
   Future<void> _save() async {
     final settings = context.read<SettingsProvider>();
@@ -837,13 +944,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
     await settings.setProviderConfig(widget.keyName, updated);
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    showAppSnackBar(
-      context,
-      message: l10n.providerDetailPageSavedSnackbar,
-      type: NotificationType.success,
-    );
-    setState(() {});
+    // Silent auto-save (no snackbar) for immediate-save UX
   }
 
   Widget _multilineRow(
@@ -852,6 +953,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     required TextEditingController controller,
     String? hint,
     List<Widget>? actions,
+    ValueChanged<String>? onChanged,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
@@ -869,6 +971,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           controller: controller,
           maxLines: 8,
           minLines: 4,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
@@ -901,7 +1004,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           _projectCtrl.text = pid!;
         }
       } catch (_) {}
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        await _save();
+      }
     } catch (e) {
       if (!mounted) return;
       showAppSnackBar(
@@ -938,25 +1044,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
-  Future<void> _saveNetwork() async {
-    final settings = context.read<SettingsProvider>();
-    final old = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
-    final cfg = old.copyWith(
-      proxyEnabled: _proxyEnabled,
-      proxyHost: _proxyHostCtrl.text.trim(),
-      proxyPort: _proxyPortCtrl.text.trim(),
-      proxyUsername: _proxyUserCtrl.text.trim(),
-      proxyPassword: _proxyPassCtrl.text.trim(),
-    );
-    await settings.setProviderConfig(widget.keyName, cfg);
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    showAppSnackBar(
-      context,
-      message: l10n.providerDetailPageSavedSnackbar,
-      type: NotificationType.success,
-    );
-  }
+  // _saveNetwork moved to ProviderNetworkPage
 
   Widget _buildProviderTypeSelector(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
     return Row(
@@ -1856,6 +1944,44 @@ class _BrandAvatar extends StatelessWidget {
                   color: _mono ? Colors.white : null,
                   colorBlendMode: _mono ? BlendMode.srcIn : null,
                 )),
+    );
+  }
+}
+
+// Top-level tactile row used by iOS-style lists here
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 0.98});
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final double pressedScale;
+  @override
+  State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false;
+  void _setPressed(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
+      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
+      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              Haptics.soft();
+              widget.onTap!.call();
+            },
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed),
+      ),
     );
   }
 }
