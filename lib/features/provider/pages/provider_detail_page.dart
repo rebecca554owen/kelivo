@@ -325,6 +325,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
+        // 顶部管理分组标题
+        Text(l10n.providerDetailPageManageSectionTitle, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8))),
+        const SizedBox(height: 6),
         // Top iOS-style section card for key settings
         _iosSectionCard(children: [
           if (widget.keyName.toLowerCase() != 'kelivoin') _providerKindRow(context),
@@ -354,15 +357,23 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             builder: (pressed) {
               final base = Theme.of(context).colorScheme.onSurface;
               final isDark = Theme.of(context).brightness == Brightness.dark;
-              final color = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(l10n.providerDetailPageManageKeysButton, style: TextStyle(fontSize: 15, color: color))),
-                    Icon(Lucide.ChevronRight, size: 16, color: color),
-                  ],
-                ),
+              final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+              return TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: target),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                builder: (context, color, _) {
+                  final c = color ?? base;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(l10n.providerDetailPageManageKeysButton, style: TextStyle(fontSize: 15, color: c))),
+                        Icon(Lucide.ChevronRight, size: 16, color: c),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -400,15 +411,23 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               final cs2 = Theme.of(context).colorScheme;
               final base = cs2.onSurface;
               final isDark = Theme.of(context).brightness == Brightness.dark;
-              final color = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(l10n.providerDetailPageNetworkTab, style: TextStyle(fontSize: 15, color: color))),
-                    Icon(Lucide.ChevronRight, size: 16, color: color),
-                  ],
-                ),
+              final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+              return TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: target),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                builder: (context, color, _) {
+                  final c = color ?? base;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(l10n.providerDetailPageNetworkTab, style: TextStyle(fontSize: 15, color: c))),
+                        Icon(Lucide.ChevronRight, size: 16, color: c),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -856,17 +875,25 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         final cs = Theme.of(context).colorScheme;
         final base = cs.onSurface;
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        final color = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            children: [
-              Expanded(child: Text(AppLocalizations.of(context)!.settingsPageProviders, style: TextStyle(fontSize: 15, color: color))),
-              Text(labelFor(_kind), style: TextStyle(fontSize: 15, color: color)),
-              const SizedBox(width: 6),
-              Icon(Lucide.ChevronRight, size: 16, color: color),
-            ],
-          ),
+        final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Text(AppLocalizations.of(context)!.settingsPageProviders, style: TextStyle(fontSize: 15, color: c))),
+                  Text(labelFor(_kind), style: TextStyle(fontSize: 15, color: c)),
+                  const SizedBox(width: 6),
+                  Icon(Lucide.ChevronRight, size: 16, color: c),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -1950,7 +1977,7 @@ class _BrandAvatar extends StatelessWidget {
 
 // Top-level tactile row used by iOS-style lists here
 class _TactileRow extends StatefulWidget {
-  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 0.98});
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00});
   final Widget Function(bool pressed) builder;
   final VoidCallback? onTap;
   final double pressedScale;

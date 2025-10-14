@@ -3203,6 +3203,12 @@ abstract class AppLocalizations {
   /// **'Enabled'**
   String get providerDetailPageEnabledTitle;
 
+  /// No description provided for @providerDetailPageManageSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get providerDetailPageManageSectionTitle;
+
   /// No description provided for @providerDetailPageNameLabel.
   ///
   /// In en, this message translates to:

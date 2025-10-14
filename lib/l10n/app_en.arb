@@ -697,6 +697,7 @@
   "providerDetailPageModelsTab": "Models",
   "providerDetailPageNetworkTab": "Network",
   "providerDetailPageEnabledTitle": "Enabled",
+  "providerDetailPageManageSectionTitle": "Manage",
   "providerDetailPageNameLabel": "Name",
   "providerDetailPageApiKeyHint": "Leave empty to use default",
   "providerDetailPageHideTooltip": "Hide",

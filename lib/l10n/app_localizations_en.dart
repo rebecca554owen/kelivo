@@ -1674,6 +1674,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageEnabledTitle => 'Enabled';
 
   @override
+  String get providerDetailPageManageSectionTitle => 'Manage';
+
+  @override
   String get providerDetailPageNameLabel => 'Name';
 
   @override

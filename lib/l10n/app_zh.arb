@@ -532,6 +532,7 @@
   "providerDetailPageModelsTab": "模型",
   "providerDetailPageNetworkTab": "网络代理",
   "providerDetailPageEnabledTitle": "是否启用",
+  "providerDetailPageManageSectionTitle": "管理",
   "providerDetailPageNameLabel": "名称",
   "providerDetailPageApiKeyHint": "留空则使用上层默认",
   "providerDetailPageHideTooltip": "隐藏",

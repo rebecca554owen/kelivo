@@ -146,7 +146,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     final cs = Theme.of(context).colorScheme;
     final strategy = cfg.keyManagement?.strategy ?? LoadBalanceStrategy.roundRobin;
     return _TactileRow(
-      pressedScale: 0.99,
+      pressedScale: 1.00,
       onTap: _showStrategySheet,
       builder: (pressed) {
         final isDark = Theme.of(context).brightness == Brightness.dark;

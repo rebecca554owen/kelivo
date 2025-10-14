@@ -500,6 +500,7 @@
   "providerDetailPageModelsTab": "模型",
   "providerDetailPageNetworkTab": "網路代理",
   "providerDetailPageEnabledTitle": "是否啟用",
+  "providerDetailPageManageSectionTitle": "管理",
   "providerDetailPageNameLabel": "名稱",
   "providerDetailPageApiKeyHint": "留空則使用上層預設",
   "providerDetailPageHideTooltip": "隱藏",

@@ -1627,6 +1627,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageEnabledTitle => '是否启用';
 
   @override
+  String get providerDetailPageManageSectionTitle => '管理';
+
+  @override
   String get providerDetailPageNameLabel => '名称';
 
   @override
@@ -4002,6 +4005,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageEnabledTitle => '是否启用';
 
   @override
+  String get providerDetailPageManageSectionTitle => '管理';
+
+  @override
   String get providerDetailPageNameLabel => '名称';
 
   @override
@@ -6375,6 +6381,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageEnabledTitle => '是否啟用';
+
+  @override
+  String get providerDetailPageManageSectionTitle => '管理';
 
   @override
   String get providerDetailPageNameLabel => '名稱';
