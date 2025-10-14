@@ -40,24 +40,45 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
       appBar: AppBar(
         title: Text(l10n.multiKeyPageTitle),
         actions: [
-          IconButton(
-            onPressed: _onDeleteAllErrorKeys,
-            tooltip: l10n.multiKeyPageDeleteErrorsTooltip,
-            icon: Icon(Lucide.Trash2, color: cs.onSurface),
+          Tooltip(
+            message: l10n.multiKeyPageDeleteErrorsTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Trash2,
+              color: cs.onSurface,
+              semanticLabel: l10n.multiKeyPageDeleteErrorsTooltip,
+              onTap: _onDeleteAllErrorKeys,
+            ),
           ),
-          IconButton(
-            onPressed: _detecting ? null : _onDetect,
-            onLongPress: _onPickDetectModel,
-            tooltip: l10n.multiKeyPageDetect,
-            icon: _detecting
-                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary))
-                : Icon(Lucide.HeartPulse, color: cs.onSurface),
+          if (_detecting)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+              ),
+            )
+          else
+            Tooltip(
+              message: l10n.multiKeyPageDetect,
+              child: _TactileIconButton(
+                icon: Lucide.HeartPulse,
+                color: cs.onSurface,
+                semanticLabel: l10n.multiKeyPageDetect,
+                onTap: _onDetect,
+                onLongPress: _onPickDetectModel,
+              ),
+            ),
+          Tooltip(
+            message: l10n.multiKeyPageAdd,
+            child: _TactileIconButton(
+              icon: Lucide.Plus,
+              color: cs.onSurface,
+              semanticLabel: l10n.multiKeyPageAdd,
+              onTap: _onAddKeys,
+            ),
           ),
-          IconButton(
-            onPressed: _onAddKeys,
-            tooltip: l10n.multiKeyPageAdd,
-            icon: Icon(Lucide.Plus, color: cs.onSurface),
-          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: ListView(
@@ -914,6 +935,7 @@ class _TactileIconButton extends StatefulWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.onLongPress,
     this.semanticLabel,
     this.size = 22,
   });
@@ -921,6 +943,7 @@ class _TactileIconButton extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final String? semanticLabel;
   final double size;
 
@@ -949,6 +972,12 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
           Haptics.light();
           widget.onTap();
         },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                Haptics.medium();
+                widget.onLongPress!.call();
+              },
         child: AnimatedScale(
           scale: _pressed ? 0.95 : 1.0,
           duration: const Duration(milliseconds: 100),
