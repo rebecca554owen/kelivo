@@ -38,6 +38,15 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            semanticLabel: l10n.settingsPageBackButton,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
+        ),
         title: Text(l10n.multiKeyPageTitle),
         actions: [
           Tooltip(
@@ -957,7 +966,7 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
   @override
   Widget build(BuildContext context) {
     final base = widget.color;
-    final pressColor = base.withOpacity(0.8);
+    final pressColor = base.withOpacity(0.7);
     final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
 
     return Semantics(
