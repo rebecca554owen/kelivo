@@ -144,7 +144,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           Tooltip(
             message: l10n.providerDetailPageTestButton,
             child: _TactileIconButton(
-              icon: Lucide.Cable,
+              icon: Lucide.HeartPulse,
               color: cs.onSurface,
               semanticLabel: l10n.providerDetailPageTestButton,
               size: 22,
@@ -218,43 +218,26 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           _buildModelsTab(context, cs, l10n),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        selectedIconTheme: const IconThemeData(size: 20),
-        unselectedIconTheme: const IconThemeData(size: 20),
-        backgroundColor: cs.surface,
-        selectedItemColor: cs.primary,
-        unselectedItemColor: cs.onSurface.withOpacity(0.7),
-        currentIndex: _index,
-        onTap: (i) {
-          setState(() => _index = i);
-          _pc.animateToPage(
-            i,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-          );
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Icon(Lucide.Settings2),
-            ),
-            label: l10n.providerDetailPageConfigTab,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+          child: _BottomTabs(
+            index: _index,
+            leftIcon: Lucide.Settings2,
+            leftLabel: l10n.providerDetailPageConfigTab,
+            rightIcon: Lucide.Boxes,
+            rightLabel: l10n.providerDetailPageModelsTab,
+            onSelect: (i) {
+              setState(() => _index = i);
+              _pc.animateToPage(
+                i,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+              );
+            },
           ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Icon(Lucide.Boxes),
-            ),
-            label: l10n.providerDetailPageModelsTab,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -2092,6 +2075,107 @@ class _TactileRowState extends State<_TactileRow> {
         duration: const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
         child: widget.builder(_pressed),
+      ),
+    );
+  }
+}
+
+// Bottom tactile tabs (two items) without ripple
+class _BottomTabs extends StatelessWidget {
+  const _BottomTabs({
+    required this.index,
+    required this.leftIcon,
+    required this.leftLabel,
+    required this.rightIcon,
+    required this.rightLabel,
+    required this.onSelect,
+  });
+  final int index;
+  final IconData leftIcon;
+  final String leftLabel;
+  final IconData rightIcon;
+  final String rightLabel;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.transparent : cs.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.18 : 0.12), width: 0.8),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Row(
+        children: [
+          Expanded(child: _BottomTabItem(icon: leftIcon, label: leftLabel, selected: index == 0, onTap: () => onSelect(0))),
+          Expanded(child: _BottomTabItem(icon: rightIcon, label: rightLabel, selected: index == 1, onTap: () => onSelect(1))),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomTabItem extends StatefulWidget {
+  const _BottomTabItem({required this.icon, required this.label, required this.selected, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_BottomTabItem> createState() => _BottomTabItemState();
+}
+
+class _BottomTabItemState extends State<_BottomTabItem> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final baseColor = cs.onSurface.withOpacity(0.7);
+    final selColor = cs.primary;
+    final target = widget.selected ? selColor : baseColor;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        Haptics.soft();
+        widget.onTap();
+      },
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: target),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        builder: (context, color, _) {
+          final c = color ?? baseColor;
+          return AnimatedScale(
+            scale: _pressed ? 0.95 : 1.0,
+            duration: const Duration(milliseconds: 110),
+            curve: Curves.easeOutCubic,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(widget.icon, size: 20, color: c),
+                  const SizedBox(height: 4),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c),
+                    child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
