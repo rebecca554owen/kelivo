@@ -938,10 +938,33 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
 
   Widget _providerKindTile(BuildContext ctx, ProviderKind k, {required String label}) {
     final cs = Theme.of(ctx).colorScheme;
-    return ListTile(
-      title: Text(label),
-      trailing: _kind == k ? Icon(Icons.check, color: cs.primary) : null,
+    final selected = _kind == k;
+    return _TactileRow(
+      pressedScale: 0.98,
+      haptics: false,
       onTap: () => Navigator.of(ctx).pop(k),
+      builder: (pressed) {
+        final base = cs.onSurface;
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
+                  if (selected) Icon(Icons.check, color: cs.primary),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
