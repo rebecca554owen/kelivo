@@ -940,7 +940,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     final cs = Theme.of(ctx).colorScheme;
     final selected = _kind == k;
     return _TactileRow(
-      pressedScale: 0.98,
+      pressedScale: 1.00,
       haptics: false,
       onTap: () => Navigator.of(ctx).pop(k),
       builder: (pressed) {
