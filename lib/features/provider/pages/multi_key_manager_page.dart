@@ -309,18 +309,28 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
 
   // iOS-style section container
   Widget _iosSectionCard({required List<Widget> children}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1C1C1E) : Colors.white; // iOS group color
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    // Blend with surface to better match page background while retaining a card feel
+    final Color base = cs.surface;
+    final Color bg = isDark
+        ? Color.lerp(base, Colors.white, 0.06)!
+        : Color.lerp(base, Colors.white, 0.92)!;
     return Container(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+          width: 0.6,
+        ),
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
             ),
         ],
       ),
