@@ -278,7 +278,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
           IosSwitch(
             value: k.isEnabled,
             onChanged: (v) async {
-              Haptics.soft();
+              // Haptics.soft();
               await _updateKey(k.copyWith(isEnabled: v));
             },
             width: 46,
@@ -988,13 +988,13 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
         onTap: () {
-          Haptics.light();
+          // Haptics.light();
           widget.onTap();
         },
         onLongPress: widget.onLongPress == null
             ? null
             : () {
-                Haptics.medium();
+                 Haptics.light();
                 widget.onLongPress!.call();
               },
         child: AnimatedScale(
