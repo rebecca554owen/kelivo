@@ -180,15 +180,22 @@ class _ProvidersPageState extends State<ProvidersPage> {
       _Provider(name: name, keyName: key, enabled: enabled, modelCount: models);
 }
 
-class _ProviderCard extends StatelessWidget {
+class _ProviderCard extends StatefulWidget {
   const _ProviderCard({required this.provider, this.compact = false});
   final _Provider provider;
   final bool compact;
 
   @override
+  State<_ProviderCard> createState() => _ProviderCardState();
+}
+
+class _ProviderCardState extends State<_ProviderCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    final cfg = settings.getProviderConfig(provider.keyName, defaultName: provider.name);
+    final cfg = settings.getProviderConfig(widget.provider.keyName, defaultName: widget.provider.name);
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
@@ -202,35 +209,51 @@ class _ProviderCard extends StatelessWidget {
     final modelsBg = cs.primary.withOpacity(0.12);
     final modelsFg = cs.primary;
 
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
+    final pressOverlay = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOutCubic,
+      scale: _pressed ? 0.98 : 1.0,
+      child: Material(
+        color: bg,
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ProviderDetailPage(
-                keyName: provider.keyName,
-                displayName: provider.name,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          enableFeedback: false, // no system haptic/sound feedback on tap
+          splashFactory: NoSplash.splashFactory, // remove Material ripple
+          splashColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          overlayColor: MaterialStateProperty.resolveWith<Color?>(
+            (states) => states.contains(MaterialState.pressed) ? pressOverlay : null,
+          ),
+          onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ProviderDetailPage(
+                  keyName: widget.provider.keyName,
+                  displayName: widget.provider.name,
+                ),
               ),
-            ),
-          );
-        },
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(10, compact ? 10 : 12, 10, compact ? 8 : 12),
+            );
+          },
+          child: Stack(
+            children: [
+              Padding(
+              padding: EdgeInsets.fromLTRB(10, widget.compact ? 10 : 12, 10, widget.compact ? 8 : 12),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _BrandAvatar(
-                    name: (cfg.name.isNotEmpty ? cfg.name : provider.keyName),
-                    size: compact ? 40 : 44,
+                    name: (cfg.name.isNotEmpty ? cfg.name : widget.provider.keyName),
+                    size: widget.compact ? 40 : 44,
                   ),
                   Text(
-                    (cfg.name.isNotEmpty ? cfg.name : provider.name),
+                    (cfg.name.isNotEmpty ? cfg.name : widget.provider.name),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -261,6 +284,7 @@ class _ProviderCard extends StatelessWidget {
           ],
         ),
       ),
+      )
     );
   }
 }
