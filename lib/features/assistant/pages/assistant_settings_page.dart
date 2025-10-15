@@ -240,10 +240,11 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
 }
 
 class _TactileCard extends StatefulWidget {
-  const _TactileCard({required this.builder, this.onTap, this.haptics = true});
+  const _TactileCard({required this.builder, this.onTap, this.haptics = true, this.pressedScale = 0.98});
   final Widget Function(bool pressed, Color overlay) builder;
   final VoidCallback? onTap;
   final bool haptics;
+  final double pressedScale;
   @override
   State<_TactileCard> createState() => _TactileCardState();
 }
@@ -263,10 +264,15 @@ class _TactileCardState extends State<_TactileCard> {
       onTapUp: widget.onTap==null?null:(_)=>_set(false),
       onTapCancel: widget.onTap==null?null:()=>_set(false),
       onTap: widget.onTap==null?null:(){ if(widget.haptics) Haptics.soft(); widget.onTap!.call(); },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
-        child: widget.builder(_pressed, overlay),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          child: widget.builder(_pressed, overlay),
+        ),
       ),
     );
   }
