@@ -18,6 +18,7 @@ import '../../backup/pages/backup_page.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../core/services/haptics.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -49,23 +50,33 @@ class SettingsPage extends StatelessWidget {
         ),
         builder: (ctx) {
           return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  title: Text(modeLabel(ThemeMode.system)),
-                  onTap: () => Navigator.of(ctx).pop(ThemeMode.system),
-                ),
-                ListTile(
-                  title: Text(modeLabel(ThemeMode.light)),
-                  onTap: () => Navigator.of(ctx).pop(ThemeMode.light),
-                ),
-                ListTile(
-                  title: Text(modeLabel(ThemeMode.dark)),
-                  onTap: () => Navigator.of(ctx).pop(ThemeMode.dark),
-                ),
-                const SizedBox(height: 8),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _sheetOption(
+                    ctx,
+                    icon: Lucide.Monitor,
+                    label: modeLabel(ThemeMode.system),
+                    onTap: () => Navigator.of(ctx).pop(ThemeMode.system),
+                  ),
+                  _sheetDivider(ctx),
+                  _sheetOption(
+                    ctx,
+                    icon: Lucide.Sun,
+                    label: modeLabel(ThemeMode.light),
+                    onTap: () => Navigator.of(ctx).pop(ThemeMode.light),
+                  ),
+                  _sheetDivider(ctx),
+                  _sheetOption(
+                    ctx,
+                    icon: Lucide.Moon,
+                    label: modeLabel(ThemeMode.dark),
+                    onTap: () => Navigator.of(ctx).pop(ThemeMode.dark),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -75,149 +86,173 @@ class SettingsPage extends StatelessWidget {
       }
     }
 
+    // iOS-style section header (neutral color, not theme color)
     Widget header(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: cs.primary,
-        ),
-      ),
-    );
+          padding: const EdgeInsets.fromLTRB(12, 18, 12, 6),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface.withOpacity(0.8),
+            ),
+          ),
+        );
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: l10n.settingsPageBackButton,
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(l10n.settingsPageTitle),
       ),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
           if (!settings.hasAnyActiveModel)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Material(
-                color: cs.errorContainer.withOpacity(0.30),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(Lucide.MessageCircleWarning, size: 18, color: cs.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l10n.settingsPageWarningMessage,
-                          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.8)),
-                        ),
+            Material(
+              color: cs.errorContainer.withOpacity(0.30),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Lucide.MessageCircleWarning, size: 18, color: cs.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.settingsPageWarningMessage,
+                        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.8)),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
+          // 通用设置：使用iOS风格分组卡片，黑色（中性）图标与标题，无描述
           header(l10n.settingsPageGeneralSection),
-          SettingRow(
-            icon: Lucide.SunMoon,
-            title: l10n.settingsPageColorMode,
-            trailing: _ModePill(
-              label: modeLabel(settings.themeMode),
+          _iosSectionCard(children: [
+            _iosNavRow(
+              context,
+              icon: Lucide.SunMoon,
+              label: l10n.settingsPageColorMode,
+              detailText: modeLabel(settings.themeMode),
               onTap: pickThemeMode,
             ),
-          ),
-          SettingRow(
-            icon: Lucide.Monitor,
-            title: l10n.settingsPageDisplay,
-            subtitle: l10n.settingsPageDisplaySubtitle,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DisplaySettingsPage()),
-              );
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Bot,
-            title: l10n.settingsPageAssistant,
-            subtitle: l10n.settingsPageAssistantSubtitle,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AssistantSettingsPage()),
-              );
-            },
-          ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Monitor,
+              label: l10n.settingsPageDisplay,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DisplaySettingsPage()),
+                );
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Bot,
+              label: l10n.settingsPageAssistant,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AssistantSettingsPage()),
+                );
+              },
+            ),
+          ]),
 
+          const SizedBox(height: 12),
           header(l10n.settingsPageModelsServicesSection),
-          SettingRow(
-            icon: Lucide.Heart,
-            title: l10n.settingsPageDefaultModel,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DefaultModelPage()),
-              );
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Boxes,
-            title: l10n.settingsPageProviders,
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProvidersPage()));
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Earth,
-            title: l10n.settingsPageSearch,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SearchServicesPage()),
-              );
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Volume2,
-            title: l10n.settingsPageTts,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const TtsServicesPage()),
-              );
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Terminal,
-            title: l10n.settingsPageMcp,
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const McpPage()));
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Zap,
-            title: l10n.settingsPageQuickPhrase,
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuickPhrasesPage()));
-            },
-          ),
+          _iosSectionCard(children: [
+            _iosNavRow(
+              context,
+              icon: Lucide.Heart,
+              label: l10n.settingsPageDefaultModel,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DefaultModelPage()),
+                );
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Boxes,
+              label: l10n.settingsPageProviders,
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProvidersPage()));
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Earth,
+              label: l10n.settingsPageSearch,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SearchServicesPage()),
+                );
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Volume2,
+              label: l10n.settingsPageTts,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TtsServicesPage()),
+                );
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Terminal,
+              label: l10n.settingsPageMcp,
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const McpPage()));
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Zap,
+              label: l10n.settingsPageQuickPhrase,
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuickPhrasesPage()));
+              },
+            ),
+          ]),
 
+          const SizedBox(height: 12),
           header(l10n.settingsPageDataSection),
-          SettingRow(
-            icon: Lucide.Database,
-            title: l10n.settingsPageBackup,
-            // subtitle: Localizations.localeOf(context).languageCode == 'zh' ? 'WebDAV · 导入导出' : 'WebDAV · Import/Export',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BackupPage()),
-              );
-            },
-          ),
-          SettingRow(
-            icon: Lucide.HardDrive,
-            title: l10n.settingsPageChatStorage,
-            subtitleWidget: Builder(
-              builder: (ctx) {
+          _iosSectionCard(children: [
+            _iosNavRow(
+              context,
+              icon: Lucide.Database,
+              label: l10n.settingsPageBackup,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BackupPage()),
+                );
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.HardDrive,
+              label: l10n.settingsPageChatStorage,
+              detailBuilder: (ctx) {
                 String fmtBytes(int bytes) {
                   const kb = 1024;
                   const mb = kb * 1024;
@@ -234,69 +269,79 @@ class SettingsPage extends StatelessWidget {
                   builder: (context, snapshot) {
                     final data = snapshot.data;
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return Text(l10n.settingsPageCalculating);
+                      return Text(l10n.settingsPageCalculating, style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6), fontSize: 13));
                     }
                     final count = data?.fileCount ?? 0;
                     final size = fmtBytes(data?.totalBytes ?? 0);
-                    return Text(l10n.settingsPageFilesCount(count, size));
+                    return Text(l10n.settingsPageFilesCount(count, size), style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6), fontSize: 13));
                   },
                 );
               },
+              onTap: null, // disabled: no tap, no chevron, no press feedback
             ),
-            onTap: () {},
-          ),
+          ]),
 
+          const SizedBox(height: 12),
           header(l10n.settingsPageAboutSection),
-          SettingRow(
-            icon: Lucide.BadgeInfo,
-            title: l10n.settingsPageAbout,
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutPage()));
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Library,
-            title: l10n.settingsPageDocs,
-            onTap: () async {
-              final uri = Uri.parse('https://kelivo.psycheas.top/');
-              if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Heart,
-            title: l10n.settingsPageSponsor,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SponsorPage()),
-              );
-            },
-          ),
-          SettingRow(
-            icon: Lucide.Share2,
-            title: l10n.settingsPageShare,
-            onTap: () async {
-              // Provide anchor rect from overlay for iPad share sheet
-              Rect anchor;
-              try {
-                final overlay = Overlay.of(context);
-                final ro = overlay?.context.findRenderObject();
-                if (ro is RenderBox && ro.hasSize) {
-                  final center = ro.size.center(Offset.zero);
-                  final global = ro.localToGlobal(center);
-                  anchor = Rect.fromCenter(center: global, width: 1, height: 1);
-                } else {
+          _iosSectionCard(children: [
+            _iosNavRow(
+              context,
+              icon: Lucide.BadgeInfo,
+              label: l10n.settingsPageAbout,
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutPage()));
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Library,
+              label: l10n.settingsPageDocs,
+              onTap: () async {
+                final uri = Uri.parse('https://kelivo.psycheas.top/');
+                if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Heart,
+              label: l10n.settingsPageSponsor,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SponsorPage()),
+                );
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Share2,
+              label: l10n.settingsPageShare,
+              onTap: () async {
+                // Provide anchor rect from overlay for iPad share sheet
+                Rect anchor;
+                try {
+                  final overlay = Overlay.of(context);
+                  final ro = overlay?.context.findRenderObject();
+                  if (ro is RenderBox && ro.hasSize) {
+                    final center = ro.size.center(Offset.zero);
+                    final global = ro.localToGlobal(center);
+                    anchor = Rect.fromCenter(center: global, width: 1, height: 1);
+                  } else {
+                    final size = MediaQuery.of(context).size;
+                    anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
+                  }
+                } catch (_) {
                   final size = MediaQuery.of(context).size;
                   anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
                 }
-              } catch (_) {
-                final size = MediaQuery.of(context).size;
-                anchor = Rect.fromCenter(center: Offset(size.width / 2, size.height / 2), width: 1, height: 1);
-              }
-              await Share.share(l10n.settingsShare, sharePositionOrigin: anchor);
-            },
-          ),
+                await Share.share(l10n.settingsShare, sharePositionOrigin: anchor);
+              },
+            ),
+          ]),
 
           const SizedBox(height: 24),
         ],
@@ -305,78 +350,192 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class SettingRow extends StatelessWidget {
-  const SettingRow({
-    super.key,
+// --- iOS-style widgets for Settings page ---
+
+Widget _iosSectionCard({required List<Widget> children}) {
+  return Builder(builder: (context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    // Light: white with slight transparency; Dark: subtle translucent dark
+    final Color bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06), width: 0.6),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(children: children),
+      ),
+    );
+  });
+}
+
+Widget _iosDivider(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  // Slightly reduce spacing between items; keep aligned with icon area
+  return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
+}
+
+Widget _iosNavRow(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  VoidCallback? onTap,
+  String? detailText,
+  Widget Function(BuildContext ctx)? detailBuilder,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final interactive = onTap != null;
+  return _TactileRow(
+    onTap: onTap,
+    pressedScale: 0.99,
+    haptics: false,
+    builder: (pressed) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      // Match icon + label color to section header color
+      final base = cs.onSurface.withOpacity(0.9);
+      final c = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+      return Padding(
+        // Increase left padding to move icon further from card edge; tighten vertical spacing
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 36,
+              child: Icon(icon, size: 20, color: c),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 15, color: c),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (detailBuilder != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: DefaultTextStyle(
+                  style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                  child: detailBuilder(context),
+                ),
+              )
+            else if (detailText != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+              ),
+            if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00, this.haptics = true});
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final double pressedScale;
+  final bool haptics;
+  @override
+  State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false;
+  void _setPressed(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
+      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
+      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              if (widget.haptics) {
+                Haptics.soft();
+              }
+              widget.onTap!.call();
+            },
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed),
+      ),
+    );
+  }
+}
+
+// Icon-only tactile button for AppBar: no ripple, slight press scale
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({
     required this.icon,
-    required this.title,
-    this.subtitle,
-    this.subtitleWidget,
-    this.trailing,
-    this.onTap,
+    required this.color,
+    required this.onTap,
+    this.onLongPress,
+    this.semanticLabel,
+    this.size = 22,
+    this.haptics = true,
   });
 
   final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Widget? subtitleWidget;
-  final Widget? trailing;
-  final VoidCallback? onTap;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? semanticLabel;
+  final double size;
+  final bool haptics;
+
+  @override
+  State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: cs.surface,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                margin: const EdgeInsets.only(right: 12),
-                child: Icon(icon, size: 20, color: cs.primary),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                    ),
-                    if (subtitleWidget != null) ...[
-                      const SizedBox(height: 2),
-                      DefaultTextStyle(
-                        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
-                        child: subtitleWidget!,
-                      ),
-                    ] else if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 12),
-                trailing!,
-              ],
-            ],
+    final base = widget.color;
+    final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          if (widget.haptics) Haptics.light();
+          widget.onTap();
+        },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                if (widget.haptics) Haptics.light();
+                widget.onLongPress!.call();
+              },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: icon,
           ),
         ),
       ),
@@ -384,32 +543,46 @@ class SettingRow extends StatelessWidget {
   }
 }
 
-class _ModePill extends StatelessWidget {
-  const _ModePill({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.primary.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label, style: TextStyle(color: cs.primary, fontSize: 13)),
-              const SizedBox(width: 6),
-              Icon(Lucide.ChevronDown, size: 16, color: cs.primary),
-            ],
-          ),
+// Bottom sheet iOS-style option with tactile feedback (no ripple)
+Widget _sheetOption(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return _TactileRow(
+    pressedScale: 0.98,
+    haptics: true,
+    onTap: onTap,
+    builder: (pressed) {
+      final Color bg = pressed
+          ? (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05))
+          : Colors.transparent;
+      final base = cs.onSurface;
+      final c = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+      return Container(
+        decoration: BoxDecoration(color: bg),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            SizedBox(width: 24, child: Icon(icon, size: 20, color: c)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 15, color: c),
+              ),
+            ),
+          ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
+
+Widget _sheetDivider(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  return Divider(height: 1, thickness: 0.6, indent: 52, endIndent: 16, color: cs.outlineVariant.withOpacity(0.18));
 }
