@@ -116,7 +116,9 @@
   "imagePreviewSheetSaveFailed": "保存失敗: {error}",
   "@imagePreviewSheetSaveFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "assistantEditSystemPromptTitle": "系統提示詞",
@@ -162,12 +164,24 @@
   "assistantProviderSampleAssistantSystemPrompt": "你是{model_name}, 一個人工智慧助理，樂意為使用者提供準確，有益的幫助。現在時間是{cur_datetime}，使用者裝置語言為{locale}，時區為{timezone}，使用者正在使用{device_info}，版本{system_version}。如果使用者沒有明確說明，請使用使用者裝置語言進行回覆。",
   "@assistantProviderSampleAssistantSystemPrompt": {
     "placeholders": {
-      "model_name": {"type": "String"},
-      "cur_datetime": {"type": "String"},
-      "locale": {"type": "String"},
-      "timezone": {"type": "String"},
-      "device_info": {"type": "String"},
-      "system_version": {"type": "String"}
+      "model_name": {
+        "type": "String"
+      },
+      "cur_datetime": {
+        "type": "String"
+      },
+      "locale": {
+        "type": "String"
+      },
+      "timezone": {
+        "type": "String"
+      },
+      "device_info": {
+        "type": "String"
+      },
+      "system_version": {
+        "type": "String"
+      }
     }
   },
   "displaySettingsPageLanguageTitle": "應用程式語言",
@@ -180,7 +194,9 @@
   "homePageTranslateFailed": "翻譯失敗: {error}",
   "@homePageTranslateFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "chatServiceDefaultConversationTitle": "新對話",
@@ -716,8 +732,8 @@
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
   "generationInterrupted": "生成已中斷",
-  "titleForLocale": "新對話"
-  ,"miniMapTitle": "迷你地圖",
+  "titleForLocale": "新對話",
+  "miniMapTitle": "迷你地圖",
   "miniMapTooltip": "迷你地圖",
   "displaySettingsPageEnableDollarLatexTitle": "啟用 $...$ 渲染",
   "displaySettingsPageEnableDollarLatexSubtitle": "將 $...$ 之間的內容以行內數學公式渲染",
@@ -748,7 +764,13 @@
   "multiKeyPageAdd": "新增",
   "multiKeyPageAddHint": "請輸入 API Key（多個以逗號或空格分隔）",
   "multiKeyPageImportedSnackbar": "已匯入 {n} 個 key",
-  "@multiKeyPageImportedSnackbar": {"placeholders": {"n": {"type": "int"}}},
+  "@multiKeyPageImportedSnackbar": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "multiKeyPagePleaseAddModel": "請先新增模型",
   "multiKeyPageTotal": "總數",
   "multiKeyPageNormal": "正常",
@@ -780,6 +802,16 @@
   "multiKeyPageDeleteErrorsConfirmTitle": "刪除所有錯誤的 Key？",
   "multiKeyPageDeleteErrorsConfirmContent": "這將移除所有狀態為錯誤的 Key。",
   "multiKeyPageDeletedErrorsSnackbar": "已刪除 {n} 個錯誤 Key",
-  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}},
-  "providerDetailPageProviderTypeTitle": "供應商類型"
+  "@multiKeyPageDeletedErrorsSnackbar": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "providerDetailPageProviderTypeTitle": "供應商類型",
+  "displaySettingsPageChatItemDisplayTitle": "聊天項顯示",
+  "displaySettingsPageRenderingSettingsTitle": "渲染設定",
+  "displaySettingsPageBehaviorStartupTitle": "行為與啟動",
+  "displaySettingsPageHapticsSettingsTitle": "觸覺回饋"
 }

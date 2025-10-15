@@ -2383,6 +2383,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get providerDetailPageProviderTypeTitle => '供应商类型';
+
+  @override
+  String get displaySettingsPageChatItemDisplayTitle => '聊天项显示';
+
+  @override
+  String get displaySettingsPageRenderingSettingsTitle => '渲染设置';
+
+  @override
+  String get displaySettingsPageBehaviorStartupTitle => '行为与启动';
+
+  @override
+  String get displaySettingsPageHapticsSettingsTitle => '触觉反馈';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4764,6 +4776,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageProviderTypeTitle => '供应商类型';
+
+  @override
+  String get displaySettingsPageChatItemDisplayTitle => '聊天项显示';
+
+  @override
+  String get displaySettingsPageRenderingSettingsTitle => '渲染设置';
+
+  @override
+  String get displaySettingsPageBehaviorStartupTitle => '行为与启动';
+
+  @override
+  String get displaySettingsPageHapticsSettingsTitle => '触觉反馈';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7146,4 +7170,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageProviderTypeTitle => '供應商類型';
+
+  @override
+  String get displaySettingsPageChatItemDisplayTitle => '聊天項顯示';
+
+  @override
+  String get displaySettingsPageRenderingSettingsTitle => '渲染設定';
+
+  @override
+  String get displaySettingsPageBehaviorStartupTitle => '行為與啟動';
+
+  @override
+  String get displaySettingsPageHapticsSettingsTitle => '觸覺回饋';
 }

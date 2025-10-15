@@ -4672,6 +4672,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Provider Type'**
   String get providerDetailPageProviderTypeTitle;
+
+  /// No description provided for @displaySettingsPageChatItemDisplayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat item display'**
+  String get displaySettingsPageChatItemDisplayTitle;
+
+  /// No description provided for @displaySettingsPageRenderingSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rendering settings'**
+  String get displaySettingsPageRenderingSettingsTitle;
+
+  /// No description provided for @displaySettingsPageBehaviorStartupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Behavior & startup'**
+  String get displaySettingsPageBehaviorStartupTitle;
+
+  /// No description provided for @displaySettingsPageHapticsSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptics'**
+  String get displaySettingsPageHapticsSettingsTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -2467,4 +2467,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providerDetailPageProviderTypeTitle => 'Provider Type';
+
+  @override
+  String get displaySettingsPageChatItemDisplayTitle => 'Chat item display';
+
+  @override
+  String get displaySettingsPageRenderingSettingsTitle => 'Rendering settings';
+
+  @override
+  String get displaySettingsPageBehaviorStartupTitle => 'Behavior & startup';
+
+  @override
+  String get displaySettingsPageHapticsSettingsTitle => 'Haptics';
 }

@@ -79,12 +79,24 @@
   "assistantProviderSampleAssistantSystemPrompt": "You are {model_name}, an AI assistant who gladly provides accurate and helpful assistance. The current time is {cur_datetime}, the device language is {locale}, timezone is {timezone}, the user is using {device_info}, version {system_version}. If the user does not explicitly specify otherwise, please use the user's device language when replying.",
   "@assistantProviderSampleAssistantSystemPrompt": {
     "placeholders": {
-      "model_name": {"type": "String"},
-      "cur_datetime": {"type": "String"},
-      "locale": {"type": "String"},
-      "timezone": {"type": "String"},
-      "device_info": {"type": "String"},
-      "system_version": {"type": "String"}
+      "model_name": {
+        "type": "String"
+      },
+      "cur_datetime": {
+        "type": "String"
+      },
+      "locale": {
+        "type": "String"
+      },
+      "timezone": {
+        "type": "String"
+      },
+      "device_info": {
+        "type": "String"
+      },
+      "system_version": {
+        "type": "String"
+      }
     }
   },
   "displaySettingsPageLanguageTitle": "App Language",
@@ -97,7 +109,9 @@
   "homePageTranslateFailed": "Translation failed: {error}",
   "@homePageTranslateFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "chatServiceDefaultConversationTitle": "New Chat",
@@ -176,7 +190,13 @@
   "multiKeyPageAdd": "Add",
   "multiKeyPageAddHint": "Enter API keys, separated by comma or space",
   "multiKeyPageImportedSnackbar": "Imported {n} keys",
-  "@multiKeyPageImportedSnackbar": {"placeholders": {"n": {"type": "int"}}},
+  "@multiKeyPageImportedSnackbar": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "multiKeyPagePleaseAddModel": "Please add a model first",
   "multiKeyPageTotal": "Total",
   "multiKeyPageNormal": "Normal",
@@ -477,7 +497,9 @@
   "imagePreviewSheetSaveFailed": "Save failed: {error}",
   "@imagePreviewSheetSaveFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "sideDrawerMenuRename": "Rename",
@@ -488,7 +510,9 @@
   "sideDrawerDeleteSnackbar": "Deleted \"{title}\"",
   "@sideDrawerDeleteSnackbar": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "sideDrawerRenameHint": "Enter new name",
@@ -507,14 +531,20 @@
   "sideDrawerUpdateTitle": "New version: {version}",
   "@sideDrawerUpdateTitle": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "sideDrawerUpdateTitleWithBuild": "New version: {version} ({build})",
   "@sideDrawerUpdateTitleWithBuild": {
     "placeholders": {
-      "version": { "type": "String" },
-      "build": { "type": "int" }
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "int"
+      }
     }
   },
   "sideDrawerLinkCopied": "Link copied",
@@ -562,8 +592,12 @@
   "mcpPageToolsCount": "Tools: {enabled}/{total}",
   "@mcpPageToolsCount": {
     "placeholders": {
-      "enabled": { "type": "int" },
-      "total": { "type": "int" }
+      "enabled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "mcpPageConnectionFailed": "Connection failed",
@@ -583,11 +617,14 @@
   "mcpConversationSheetToolsCount": "Tools: {enabled}/{total}",
   "@mcpConversationSheetToolsCount": {
     "placeholders": {
-      "enabled": { "type": "int" },
-      "total": { "type": "int" }
+      "enabled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
-  }
-  ,
+  },
   "mcpServerEditSheetEnabledLabel": "Enabled",
   "mcpServerEditSheetNameLabel": "Name",
   "mcpServerEditSheetTransportLabel": "Transport",
@@ -608,8 +645,7 @@
   "mcpServerEditSheetNoToolsHint": "No tools, tap refresh to sync",
   "mcpServerEditSheetCancel": "Cancel",
   "mcpServerEditSheetSave": "Save",
-  "mcpServerEditSheetUrlRequired": "Please enter server URL"
-  ,
+  "mcpServerEditSheetUrlRequired": "Please enter server URL",
   "defaultModelPageBackTooltip": "Back",
   "defaultModelPageTitle": "Default Model",
   "defaultModelPageChatModelTitle": "Chat Model",
@@ -626,15 +662,23 @@
   "defaultModelPageTitleVars": "Vars: content: {contentVar}, locale: {localeVar}",
   "@defaultModelPageTitleVars": {
     "placeholders": {
-      "contentVar": { "type": "String" },
-      "localeVar": { "type": "String" }
+      "contentVar": {
+        "type": "String"
+      },
+      "localeVar": {
+        "type": "String"
+      }
     }
   },
   "defaultModelPageTranslateVars": "Variables: source text: {sourceVar}, target language: {targetVar}",
   "@defaultModelPageTranslateVars": {
     "placeholders": {
-      "sourceVar": { "type": "String" },
-      "targetVar": { "type": "String" }
+      "sourceVar": {
+        "type": "String"
+      },
+      "targetVar": {
+        "type": "String"
+      }
     }
   },
   "defaultModelPageUseCurrentModel": "Use current chat model",
@@ -647,7 +691,9 @@
   "modelDetailSheetModelIdDisabledHint": "{modelId}",
   "@modelDetailSheetModelIdDisabledHint": {
     "placeholders": {
-      "modelId": { "type": "String" }
+      "modelId": {
+        "type": "String"
+      }
     }
   },
   "modelDetailSheetModelNameLabel": "Model Name",
@@ -976,6 +1022,16 @@
   "multiKeyPageDeleteErrorsConfirmTitle": "Delete all error keys?",
   "multiKeyPageDeleteErrorsConfirmContent": "This will remove all keys marked as error.",
   "multiKeyPageDeletedErrorsSnackbar": "Deleted {n} error keys",
-  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}},
-  "providerDetailPageProviderTypeTitle": "Provider Type"
+  "@multiKeyPageDeletedErrorsSnackbar": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "providerDetailPageProviderTypeTitle": "Provider Type",
+  "displaySettingsPageChatItemDisplayTitle": "Chat item display",
+  "displaySettingsPageRenderingSettingsTitle": "Rendering settings",
+  "displaySettingsPageBehaviorStartupTitle": "Behavior & startup",
+  "displaySettingsPageHapticsSettingsTitle": "Haptics"
 }
