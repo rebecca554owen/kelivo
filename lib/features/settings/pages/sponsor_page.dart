@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/services/haptics.dart';
 
 class SponsorPage extends StatefulWidget {
   const SponsorPage({super.key});
@@ -46,76 +47,12 @@ class _SponsorPageState extends State<SponsorPage> {
     return const _SponsorData(updatedAt: '', sponsors: <_Sponsor>[]);
   }
 
-  Widget _sectionHeader(BuildContext context, String text) {
+  // iOS-style header (neutral color)
+  Widget _header(BuildContext context, String text, {bool first = false}) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.primary),
-      ),
-    );
-  }
-
-  Widget _sponsorMethodCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Expanded(
-      child: Material(
-        color: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            height: 76,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: cs.outlineVariant.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: cs.primary.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(icon, size: 22, color: cs.primary),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      if (subtitle != null && subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      padding: EdgeInsets.fromLTRB(12, first ? 2 : 18, 12, 6),
+      child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.8))),
     );
   }
 
@@ -136,56 +73,50 @@ class _SponsorPageState extends State<SponsorPage> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(l10n.settingsPageSponsor),
+        actions: const [SizedBox(width: 12)],
       ),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
-          _sectionHeader(context, l10n.sponsorPageMethodsSectionTitle),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                _sponsorMethodCard(
-                  context: context,
-                  icon: Lucide.Heart,
-                  title: l10n.sponsorPageAfdianTitle,
-                  subtitle: l10n.sponsorPageAfdianSubtitle,
-                  // onTap: () => _openUrl('https://afdian.com/a/kelivo'),
-                  onTap: () async {
-                    final uri = Uri.parse('https://afdian.com/a/kelivo');
-                    if (!await launchUrl(
-                        uri, mode: LaunchMode.platformDefault)) {
-                      await launchUrl(
-                          uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                ),
-                const SizedBox(width: 10),
-                _sponsorMethodCard(
-                  context: context,
-                  icon: Lucide.Link,
-                  title: l10n.sponsorPageWeChatTitle,
-                  subtitle: l10n.sponsorPageWeChatSubtitle,
-                  onTap: () async {
-                    final uri = Uri.parse('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg');
-                    if (!await launchUrl(
-                        uri, mode: LaunchMode.platformDefault)) {
-                      await launchUrl(
-                          uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                ),
-              ],
+          _header(context, l10n.sponsorPageMethodsSectionTitle, first: true),
+          _iosSectionCard(children: [
+            _iosNavRow(
+              context,
+              icon: Lucide.Heart,
+              label: l10n.sponsorPageAfdianTitle,
+              onTap: () async {
+                final uri = Uri.parse('https://afdian.com/a/kelivo');
+                if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
             ),
-          ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Link,
+              label: l10n.sponsorPageWeChatTitle,
+              onTap: () async {
+                final uri = Uri.parse('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg');
+                if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+          ]),
 
-          const SizedBox(height: 8),
-          _sectionHeader(context, l10n.sponsorPageSponsorsSectionTitle),
+          const SizedBox(height: 12),
+          _header(context, l10n.sponsorPageSponsorsSectionTitle),
           FutureBuilder<_SponsorData>(
             future: _future,
             builder: (context, snapshot) {
@@ -301,6 +232,160 @@ class _SponsorTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// --- iOS-style helpers (mirroring Settings/Display/About) ---
+
+Widget _iosSectionCard({required List<Widget> children}) {
+  return Builder(builder: (context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final Color bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06), width: 0.6),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(children: children),
+      ),
+    );
+  });
+}
+
+Widget _iosDivider(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
+}
+
+class _AnimatedPressColor extends StatelessWidget {
+  const _AnimatedPressColor({required this.pressed, required this.base, required this.builder});
+  final bool pressed;
+  final Color base;
+  final Widget Function(Color color) builder;
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: target),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      builder: (context, color, _) => builder(color ?? base),
+    );
+  }
+}
+
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00, this.haptics = false});
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final double pressedScale;
+  final bool haptics;
+  @override
+  State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false;
+  void _setPressed(bool v) { if (_pressed != v) setState(() => _pressed = v); }
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.builder(_pressed);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
+      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
+      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
+      onTap: widget.onTap == null ? null : () { if (widget.haptics) Haptics.soft(); widget.onTap!.call(); },
+      child: widget.pressedScale == 1.0
+          ? child
+          : AnimatedScale(scale: _pressed ? widget.pressedScale : 1.0, duration: const Duration(milliseconds: 120), curve: Curves.easeOutCubic, child: child),
+    );
+  }
+}
+
+Widget _iosNavRow(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  VoidCallback? onTap,
+  String? detailText,
+  Widget Function(BuildContext ctx)? detailBuilder,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final interactive = onTap != null;
+  return _TactileRow(
+    onTap: onTap,
+    pressedScale: 1.00,
+    haptics: false,
+    builder: (pressed) {
+      final baseColor = cs.onSurface.withOpacity(0.9);
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: baseColor,
+        builder: (c) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                if (detailBuilder != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: DefaultTextStyle(style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)), child: detailBuilder(context)),
+                  )
+                else if (detailText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+                  ),
+                if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({required this.icon, required this.color, required this.onTap, this.onLongPress, this.semanticLabel, this.size = 22, this.haptics = true});
+  final IconData icon; final Color color; final VoidCallback onTap; final VoidCallback? onLongPress; final String? semanticLabel; final double size; final bool haptics;
+  @override State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color; final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+    return Semantics(
+      button: true, label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () { /* no haptics on tap to match provider */ widget.onTap(); },
+        onLongPress: widget.onLongPress == null ? null : () { if (widget.haptics) Haptics.light(); widget.onLongPress!.call(); },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), child: icon),
+        ),
+      ),
     );
   }
 }
