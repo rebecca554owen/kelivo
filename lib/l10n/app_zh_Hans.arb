@@ -780,5 +780,6 @@
   "multiKeyPageDeleteErrorsConfirmTitle": "删除所有错误的 Key？",
   "multiKeyPageDeleteErrorsConfirmContent": "这将移除所有状态为错误的 Key。",
   "multiKeyPageDeletedErrorsSnackbar": "已删除 {n} 个错误 Key",
-  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}}
+  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}},
+  "providerDetailPageProviderTypeTitle": "供应商类型"
 }

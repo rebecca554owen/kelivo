@@ -329,8 +329,14 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
-        // 顶部管理分组标题
-        Text(l10n.providerDetailPageManageSectionTitle, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8))),
+        // 顶部管理分组标题（左侧缩进以对齐卡片内容）
+        Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Text(
+            l10n.providerDetailPageManageSectionTitle,
+            style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8)),
+          ),
+        ),
         const SizedBox(height: 6),
         // Top iOS-style section card for key settings
         _iosSectionCard(children: [
@@ -766,7 +772,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8))),
+        Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8))),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -888,7 +897,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
                 children: [
-                  Expanded(child: Text(AppLocalizations.of(context)!.settingsPageProviders, style: TextStyle(fontSize: 15, color: c))),
+                  Expanded(child: Text(AppLocalizations.of(context)!.providerDetailPageProviderTypeTitle, style: TextStyle(fontSize: 15, color: c))),
                   Text(labelFor(_kind), style: TextStyle(fontSize: 15, color: c)),
                   const SizedBox(width: 6),
                   Icon(Lucide.ChevronRight, size: 16, color: c),
@@ -1014,7 +1023,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8)))),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.8))),
+              ),
+            ),
             if (actions != null) ...actions,
           ],
         ),
@@ -2084,13 +2098,13 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
         onTap: () {
-          if (widget.haptics) Haptics.light();
+          // if (widget.haptics) Haptics.light();
           widget.onTap();
         },
         onLongPress: widget.onLongPress == null
             ? null
             : () {
-                if (widget.haptics) Haptics.medium();
+                if (widget.haptics) Haptics.light();
                 widget.onLongPress!.call();
               },
         child: AnimatedScale(

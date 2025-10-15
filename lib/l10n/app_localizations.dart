@@ -4666,6 +4666,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deleted {n} error keys'**
   String multiKeyPageDeletedErrorsSnackbar(int n);
+
+  /// No description provided for @providerDetailPageProviderTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider Type'**
+  String get providerDetailPageProviderTypeTitle;
 }
 
 class _AppLocalizationsDelegate

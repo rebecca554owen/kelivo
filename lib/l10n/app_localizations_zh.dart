@@ -2380,6 +2380,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String multiKeyPageDeletedErrorsSnackbar(int n) {
     return '已删除 $n 个错误 Key';
   }
+
+  @override
+  String get providerDetailPageProviderTypeTitle => '供应商类型';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4758,6 +4761,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String multiKeyPageDeletedErrorsSnackbar(int n) {
     return '已删除 $n 个错误 Key';
   }
+
+  @override
+  String get providerDetailPageProviderTypeTitle => '供应商类型';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7137,4 +7143,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String multiKeyPageDeletedErrorsSnackbar(int n) {
     return '已刪除 $n 個錯誤 Key';
   }
+
+  @override
+  String get providerDetailPageProviderTypeTitle => '供應商類型';
 }

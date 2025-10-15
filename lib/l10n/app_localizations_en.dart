@@ -2464,4 +2464,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String multiKeyPageDeletedErrorsSnackbar(int n) {
     return 'Deleted $n error keys';
   }
+
+  @override
+  String get providerDetailPageProviderTypeTitle => 'Provider Type';
 }

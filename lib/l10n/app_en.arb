@@ -976,5 +976,6 @@
   "multiKeyPageDeleteErrorsConfirmTitle": "Delete all error keys?",
   "multiKeyPageDeleteErrorsConfirmContent": "This will remove all keys marked as error.",
   "multiKeyPageDeletedErrorsSnackbar": "Deleted {n} error keys",
-  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}}
+  "@multiKeyPageDeletedErrorsSnackbar": {"placeholders": {"n": {"type": "int"}}},
+  "providerDetailPageProviderTypeTitle": "Provider Type"
 }
