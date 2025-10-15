@@ -506,7 +506,7 @@ Widget _iosSwitchRow(BuildContext context, {IconData? icon, required String labe
         pressed: pressed, base: baseColor,
         builder: (c) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
             child: Row(children: [
               if (icon != null) ...[
                 SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
