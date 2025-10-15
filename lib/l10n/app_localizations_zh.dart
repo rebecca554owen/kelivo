@@ -2050,6 +2050,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutPageLicense => '许可证';
 
   @override
+  String get aboutPageJoinDiscord => '在 Discord 中加入我们';
+
+  @override
   String get displaySettingsPageShowUserAvatarTitle => '显示用户头像';
 
   @override
@@ -4446,6 +4449,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get aboutPageLicense => '许可证';
 
   @override
+  String get aboutPageJoinDiscord => '在 Discord 中加入我们';
+
+  @override
   String get displaySettingsPageShowUserAvatarTitle => '显示用户头像';
 
   @override
@@ -6839,6 +6845,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aboutPageLicense => '授權';
+
+  @override
+  String get aboutPageJoinDiscord => '加入我們的 Discord';
 
   @override
   String get displaySettingsPageShowUserAvatarTitle => '顯示使用者頭像';

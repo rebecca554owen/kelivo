@@ -4037,6 +4037,12 @@ abstract class AppLocalizations {
   /// **'License'**
   String get aboutPageLicense;
 
+  /// No description provided for @aboutPageJoinDiscord.
+  ///
+  /// In en, this message translates to:
+  /// **'Join us on Discord'**
+  String get aboutPageJoinDiscord;
+
   /// No description provided for @displaySettingsPageShowUserAvatarTitle.
   ///
   /// In en, this message translates to:

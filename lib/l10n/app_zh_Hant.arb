@@ -653,6 +653,7 @@
   "aboutPageSystem": "系統",
   "aboutPageWebsite": "官網",
   "aboutPageLicense": "授權",
+  "aboutPageJoinDiscord": "加入我們的 Discord",
   "displaySettingsPageShowUserAvatarTitle": "顯示使用者頭像",
   "displaySettingsPageShowUserAvatarSubtitle": "是否在聊天訊息中顯示使用者頭像",
   "displaySettingsPageShowUserNameTimestampTitle": "顯示使用者名稱與時間戳",

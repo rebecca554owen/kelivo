@@ -8,8 +8,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:haptic_feedback/haptic_feedback.dart' as HF;
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_switch.dart';
+import '../../../shared/widgets/snackbar.dart';
+import '../../../core/services/haptics.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -374,204 +375,390 @@ class _AboutPageState extends State<AboutPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: l10n.settingsPageBackButton,
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(l10n.settingsPageAbout),
+        actions: const [SizedBox(width: 12)],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+        children: [
+          // Header card: left icon + right title/description
+          _iosSectionCard(children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(12),
                     child: SizedBox(
-                      width: 120,
-                      height: 120,
-                      child: Image.asset(
-                        'assets/app_icon.png',
-                        fit: BoxFit.cover,
-                      ),
+                      width: 54,
+                      height: 54,
+                      child: Image.asset('assets/app_icon.png', fit: BoxFit.cover),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text('Kelivo', style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.aboutPageAppDescription,
-                    style: TextStyle(color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _SvgChipButton(
-                        assetPath: 'assets/icons/tencent-qq.svg',
-                        label: 'Tencent',
-                        onTap: () => showAppSnackBar(
-                          context,
-                          message: l10n.aboutPageNoQQGroup,
-                          type: NotificationType.info,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Kelivo',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      _SvgChipButton(
-                        assetPath: 'assets/icons/discord.svg',
-                        label: 'Discord',
-                        onTap: () => _openUrl('https://discord.gg/Tb8DyvvV5T'),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.aboutPageAppDescription,
+                          style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.65), height: 1.2),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+          ]),
 
-          SliverList.list(
-            children: [
-              const SizedBox(height: 8),
-              _AboutItem(
-                icon: Lucide.Code,
-                title: l10n.aboutPageVersion,
-                subtitle: _version.isEmpty ? '...' : '$_version / $_buildNumber',
-                onTap: _onVersionTap,
-              ),
-              _AboutItem(
-                icon: Lucide.Phone,
-                title: l10n.aboutPageSystem,
-                subtitle: _systemInfo.isEmpty ? '...' : _systemInfo,
-              ),
-              _AboutItem(
-                icon: Lucide.Earth,
-                title: l10n.aboutPageWebsite,
-                subtitle: 'https://kelivo.psycheas.top/',
-                onTap: () async {
-                  final uri = Uri.parse('https://kelivo.psycheas.top/');
-                  if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-              ),
-              _AboutItem(
-                icon: Lucide.Github,
-                title: 'GitHub',
-                subtitle: 'https://github.com/Chevey339/kelivo',
-                onTap: () => _openUrl('https://github.com/Chevey339/kelivo'),
-              ),
-              _AboutItem(
-                icon: Lucide.FileText,
-                title: l10n.aboutPageLicense,
-                subtitle: 'https://github.com/Chevey339/kelivo/blob/master/LICENSE',
-                onTap: () => _openUrl('https://github.com/Chevey339/kelivo/blob/master/LICENSE'),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
+          const SizedBox(height: 12),
+
+          // iOS-style list card
+          _iosSectionCard(children: [
+            // Version (tap 7x to unlock easter egg) — logic unchanged
+            _iosNavRow(
+              context,
+              icon: Lucide.Code,
+              label: l10n.aboutPageVersion,
+              detailBuilder: (_) => Text(_version.isEmpty ? '...' : '$_version / $_buildNumber'),
+              onTap: _onVersionTap,
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Phone,
+              label: l10n.aboutPageSystem,
+              detailBuilder: (_) => Text(_systemInfo.isEmpty ? '...' : _systemInfo),
+              onTap: null, // informational only
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Earth,
+              label: l10n.aboutPageWebsite,
+              onTap: () async {
+                final uri = Uri.parse('https://kelivo.psycheas.top/');
+                if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Github,
+              label: 'GitHub',
+              onTap: () => _openUrl('https://github.com/Chevey339/kelivo'),
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.FileText,
+              label: l10n.aboutPageLicense,
+              onTap: () => _openUrl('https://github.com/Chevey339/kelivo/blob/master/LICENSE'),
+            ),
+            _iosDivider(context),
+            _iosNavRowSvgLeading(
+              context,
+              svgAsset: 'assets/icons/discord.svg',
+              label: l10n.aboutPageJoinDiscord,
+              onTap: () => _openUrl('https://discord.gg/Tb8DyvvV5T'),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
 
-class _AboutItem extends StatelessWidget {
-  const _AboutItem({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.onTap,
+// --- iOS-style helpers (mirroring Settings/Display pages) ---
+
+Widget _iosSectionCard({required List<Widget> children}) {
+  return Builder(builder: (context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final Color bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06), width: 0.6),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(children: children),
+      ),
+    );
   });
+}
 
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final VoidCallback? onTap;
+Widget _iosDivider(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
+}
 
+class _AnimatedPressColor extends StatelessWidget {
+  const _AnimatedPressColor({required this.pressed, required this.base, required this.builder});
+  final bool pressed;
+  final Color base;
+  final Widget Function(Color color) builder;
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-      child: Material(
-        color: cs.surfaceContainerHighest.withValues(alpha: isDark ? 0.18 : 0.5),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 12),
-                  child: Icon(icon, size: 20, color: cs.primary),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle!,
-                          style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.7)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: target),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      builder: (context, color, _) => builder(color ?? base),
     );
   }
 }
 
-class _SvgChipButton extends StatelessWidget {
-  const _SvgChipButton({required this.assetPath, required this.label, required this.onTap});
-  final String assetPath;
-  final String label;
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00, this.haptics = false});
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final double pressedScale;
+  final bool haptics;
+  @override
+  State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false;
+  void _setPressed(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.builder(_pressed);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
+      onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
+      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              if (widget.haptics) Haptics.soft();
+              widget.onTap!.call();
+            },
+      child: widget.pressedScale == 1.0
+          ? child
+          : AnimatedScale(
+              scale: _pressed ? widget.pressedScale : 1.0,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOutCubic,
+              child: child,
+            ),
+    );
+  }
+}
+
+Widget _iosNavRow(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  VoidCallback? onTap,
+  String? detailText,
+  Widget Function(BuildContext ctx)? detailBuilder,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final interactive = onTap != null;
+  return _TactileRow(
+    onTap: onTap,
+    pressedScale: 1.00, // list rows: color shift only, no scale
+    haptics: false,
+    builder: (pressed) {
+      final baseColor = cs.onSurface.withOpacity(0.9);
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: baseColor,
+        builder: (c) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 15, color: c),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (detailBuilder != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: DefaultTextStyle(
+                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                      child: detailBuilder(context),
+                    ),
+                  )
+                else if (detailText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+                  ),
+                if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget _iosNavRowSvgLeading(
+  BuildContext context, {
+  required String svgAsset,
+  required String label,
+  VoidCallback? onTap,
+  String? detailText,
+  Widget Function(BuildContext ctx)? detailBuilder,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final interactive = onTap != null;
+  return _TactileRow(
+    onTap: onTap,
+    pressedScale: 1.00,
+    haptics: false,
+    builder: (pressed) {
+      final baseColor = cs.onSurface.withOpacity(0.9);
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: baseColor,
+        builder: (c) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 36,
+                  child: SvgPicture.asset(
+                    svgAsset,
+                    width: 20,
+                    height: 20,
+                    colorFilter: ColorFilter.mode(c, BlendMode.srcIn),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 15, color: c),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (detailBuilder != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: DefaultTextStyle(
+                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                      child: detailBuilder(context),
+                    ),
+                  )
+                else if (detailText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+                  ),
+                if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+// AppBar tactile icon button copied from provider detail page (with slight press scale)
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.onLongPress,
+    this.semanticLabel,
+    this.size = 22,
+    this.haptics = true,
+  });
+
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? semanticLabel;
+  final double size;
+  final bool haptics;
+
+  @override
+  State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SvgPicture.asset(
-                assetPath,
-                width: 16,
-                height: 16,
-                colorFilter: ColorFilter.mode(cs.primary, BlendMode.srcIn),
-              ),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: cs.primary)),
-            ],
+    final base = widget.color;
+    final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          // Follow provider detail: no haptics on tap
+          widget.onTap();
+        },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                if (widget.haptics) Haptics.light();
+                widget.onLongPress!.call();
+              },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: icon,
           ),
         ),
       ),

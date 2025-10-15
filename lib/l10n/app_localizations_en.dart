@@ -2107,6 +2107,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPageLicense => 'License';
 
   @override
+  String get aboutPageJoinDiscord => 'Join us on Discord';
+
+  @override
   String get displaySettingsPageShowUserAvatarTitle => 'Show User Avatar';
 
   @override

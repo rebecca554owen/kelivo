@@ -896,6 +896,7 @@
   "aboutPageSystem": "System",
   "aboutPageWebsite": "Website",
   "aboutPageLicense": "License",
+  "aboutPageJoinDiscord": "Join us on Discord",
   "displaySettingsPageShowUserAvatarTitle": "Show User Avatar",
   "displaySettingsPageShowUserAvatarSubtitle": "Display user avatar in chat messages",
   "displaySettingsPageShowUserNameTimestampTitle": "Show User Name & Timestamp",
