@@ -7,6 +7,7 @@ import '../../../theme/design_tokens.dart';
 import '../widgets/mcp_server_edit_sheet.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../core/services/haptics.dart';
 
 class McpPage extends StatelessWidget {
   const McpPage({super.key});
@@ -121,20 +122,27 @@ class McpPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: l10n.mcpPageBackTooltip,
+        leading: Tooltip(
+          message: l10n.mcpPageBackTooltip,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: const Text('MCP'),
         actions: [
-          IconButton(
-            icon: Icon(Lucide.Plus, color: cs.onSurface),
-            tooltip: l10n.mcpPageAddMcpTooltip,
-            onPressed: () async {
-              await showMcpServerEditSheet(context);
-            },
+          Tooltip(
+            message: l10n.mcpPageAddMcpTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Plus,
+              color: cs.onSurface,
+              size: 22,
+              onTap: () async { await showMcpServerEditSheet(context); },
+            ),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       body: servers.isEmpty
@@ -145,7 +153,7 @@ class McpPage extends StatelessWidget {
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               itemCount: servers.length,
               itemBuilder: (context, index) {
                 final s = servers[index];
@@ -162,34 +170,37 @@ class McpPage extends StatelessWidget {
                       child: Text(text, style: TextStyle(fontSize: 11, color: color ?? cs.primary, fontWeight: FontWeight.w700)),
                     );
 
-                final card = Material(
-                  color: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    onTap: () async {
-                      await showMcpServerEditSheet(context, serverId: s.id);
-                    },
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : cs.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
-                        boxShadow: Theme.of(context).brightness == Brightness.dark ? [] : AppShadows.soft,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                final row = _TactileRow(
+                  pressedScale: 1.00,
+                  haptics: false,
+                  onTap: () async { await showMcpServerEditSheet(context, serverId: s.id); },
+                  builder: (pressed) {
+                    final base = cs.onSurface.withOpacity(0.9);
+                    return _AnimatedPressColor(
+                      pressed: pressed,
+                      base: base,
+                      builder: (c) {
+                        final overlay = pressed ? (isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.05)) : Colors.transparent;
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.1 : 0.08), width: 0.6),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                            child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Stack(
+                              clipBehavior: Clip.none,
                               children: [
                                 Container(
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                                    color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   alignment: Alignment.center,
@@ -217,6 +228,12 @@ class McpPage extends StatelessWidget {
                                           ),
                                         ),
                                 ),
+                                if (overlay != Colors.transparent)
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(color: overlay, borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(width: 12),
@@ -224,18 +241,11 @@ class McpPage extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          s.name,
-                                          style: const TextStyle(fontWeight: FontWeight.w700),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Icon(Lucide.Settings, size: 18, color: cs.onSurface.withOpacity(0.6)),
-                                    ],
+                                  Text(
+                                    s.name,
+                                    style: TextStyle(fontWeight: FontWeight.w700, color: c),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(
@@ -269,17 +279,21 @@ class McpPage extends StatelessWidget {
                                           onPressed: () => _showErrorDetails(s.id, err, s.name),
                                           child: Text(l10n.mcpPageDetails),
                                         ),
-                                      ],
-                                    ),
+                          ],
+                          ),
                                   ],
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            Icon(Lucide.ChevronRight, size: 16, color: c),
                           ],
-                        ),
-                      ),
-                    ),
-                  ),
+                          ),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 );
 
                 return Padding(
@@ -357,11 +371,75 @@ class McpPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: card,
+                    child: row,
                   ),
                 );
               },
             ),
+    );
+  }
+}
+
+// --- iOS-style tactile helpers ---
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({required this.icon, required this.color, required this.onTap, this.onLongPress, this.semanticLabel, this.size = 22, this.haptics = true});
+  final IconData icon; final Color color; final VoidCallback onTap; final VoidCallback? onLongPress; final String? semanticLabel; final double size; final bool haptics;
+  @override State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color; final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+    return Semantics(
+      button: true, label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () { if (widget.haptics) Haptics.light(); widget.onTap(); },
+        onLongPress: widget.onLongPress == null ? null : () { if (widget.haptics) Haptics.light(); widget.onLongPress!.call(); },
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), child: icon),
+      ),
+    );
+  }
+}
+
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.00, this.haptics = true});
+  final Widget Function(bool pressed) builder; final VoidCallback? onTap; final double pressedScale; final bool haptics;
+  @override State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false; void _set(bool v){ if(_pressed!=v) setState(()=>_pressed=v);} 
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap==null?null:(_)=>_set(true),
+      onTapUp: widget.onTap==null?null:(_)=>_set(false),
+      onTapCancel: widget.onTap==null?null:()=>_set(false),
+      onTap: widget.onTap==null?null:(){ if(widget.haptics) Haptics.soft(); widget.onTap!.call(); },
+      child: widget.builder(_pressed),
+    );
+  }
+}
+
+class _AnimatedPressColor extends StatelessWidget {
+  const _AnimatedPressColor({required this.pressed, required this.base, required this.builder});
+  final bool pressed; final Color base; final Widget Function(Color c) builder;
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: target), duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic,
+      builder: (context, color, _) => builder(color ?? base),
     );
   }
 }

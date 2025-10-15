@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/services/haptics.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -137,19 +138,28 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
   Widget _segButton({required String label, required bool selected, required VoidCallback onTap}) {
     final cs = Theme.of(context).colorScheme;
     return Expanded(
-      child: InkWell(
+      child: _TactileRow(
+        pressedScale: 0.98,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: selected ? cs.primary.withOpacity(0.12) : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: selected ? cs.primary : cs.outlineVariant.withOpacity(0.3)),
-          ),
-          alignment: Alignment.center,
-          child: Text(label, style: TextStyle(color: selected ? cs.primary : cs.onSurface.withOpacity(0.8), fontWeight: FontWeight.w600)),
-        ),
+        builder: (pressed) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final baseBg = selected ? cs.primary.withOpacity(0.12) : Colors.transparent;
+          // Use darker overlay in light mode to ensure visible press, lighter overlay in dark mode
+          final overlay = pressed ? (isDark ? Colors.white.withOpacity(0.07) : Colors.black.withOpacity(0.07)) : Colors.transparent;
+          final textColor = selected ? cs.primary : cs.onSurface.withOpacity(0.8);
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(overlay, baseBg),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? cs.primary : cs.outlineVariant.withOpacity(0.3)),
+            ),
+            alignment: Alignment.center,
+            child: Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+          );
+        },
       ),
     );
   }
@@ -206,10 +216,11 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                 _inputRow(label: l10n.mcpServerEditSheetHeaderValueLabel, controller: _headers[i].value, hint: l10n.mcpServerEditSheetHeaderValueHint),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: IconButton(
-                    tooltip: l10n.mcpServerEditSheetRemoveHeaderTooltip,
-                    icon: Icon(Lucide.Trash, color: cs.error),
-                    onPressed: () => setState(() => _headers.removeAt(i)),
+                  child: _TactileIconButton(
+                    icon: Lucide.Trash,
+                    color: cs.error,
+                    semanticLabel: l10n.mcpServerEditSheetRemoveHeaderTooltip,
+                    onTap: () => setState(() => _headers.removeAt(i)),
                   ),
                 ),
               ],
@@ -218,28 +229,26 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
         ],
         Align(
           alignment: Alignment.centerLeft,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => setState(() => _headers.add(_HeaderEntry(TextEditingController(), TextEditingController()))),
-              child: Ink(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: cs.outlineVariant.withOpacity(0.3)),
-                ),
+          child: _TactileRow(
+            pressedScale: 0.98,
+            onTap: () => setState(() => _headers.add(_HeaderEntry(TextEditingController(), TextEditingController()))),
+            builder: (pressed) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final bg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+              final border = cs.outlineVariant.withOpacity(0.3);
+              final overlay = pressed ? (isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.05)) : Colors.transparent;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(color: Color.alphaBlend(overlay, bg), borderRadius: BorderRadius.circular(999), border: Border.all(color: border)),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Lucide.Plus, size: 16, color: cs.primary),
-                    const SizedBox(width: 6),
-                    Text(l10n.mcpServerEditSheetAddHeader, style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-            ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Lucide.Plus, size: 16, color: cs.primary),
+                  const SizedBox(width: 6),
+                  Text(l10n.mcpServerEditSheetAddHeader, style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w600)),
+                ]),
+              );
+            },
           ),
         ),
       ],
@@ -306,10 +315,11 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                   children: [
                     Expanded(child: Text(isEdit ? l10n.mcpServerEditSheetTitleEdit : l10n.mcpServerEditSheetTitleAdd, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
                     if (isEdit)
-                      IconButton(
-                        onPressed: () => mcp.refreshTools(widget.serverId!),
-                        tooltip: l10n.mcpServerEditSheetSyncToolsTooltip,
-                        icon: Icon(Lucide.RefreshCw, color: cs.primary),
+                      _TactileIconButton(
+                        icon: Lucide.RefreshCw,
+                        color: cs.primary,
+                        semanticLabel: l10n.mcpServerEditSheetSyncToolsTooltip,
+                        onTap: () => mcp.refreshTools(widget.serverId!),
                       ),
                   ],
                 ),
@@ -438,27 +448,17 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
                 child: Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: cs.primary.withOpacity(0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: Text(l10n.mcpServerEditSheetCancel, style: TextStyle(color: cs.primary)),
+                      child: _IosOutlineButton(
+                        label: l10n.mcpServerEditSheetCancel,
+                        onTap: () => Navigator.of(context).maybePop(),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        icon: Icon(isEdit ? Lucide.Check : Lucide.Plus, size: 18),
-                        onPressed: _onSave,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: cs.primary,
-                          foregroundColor: cs.onPrimary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 0,
-                        ),
-                        label: Text(l10n.mcpServerEditSheetSave),
+                      child: _IosFilledButton(
+                        label: l10n.mcpServerEditSheetSave,
+                        icon: isEdit ? Lucide.Check : Lucide.Plus,
+                        onTap: _onSave,
                       ),
                     ),
                   ],
@@ -468,6 +468,124 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet> with SingleTic
           ),
         ),
       ),
+    );
+  }
+}
+
+// --- iOS tactile helpers (no ripple) ---
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({required this.icon, required this.color, required this.onTap, this.semanticLabel, this.size = 20});
+  final IconData icon; final Color color; final VoidCallback onTap; final String? semanticLabel; final double size;
+  @override State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color; final press = base.withOpacity(0.7);
+    return Semantics(
+      button: true, label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(()=>_pressed=true),
+        onTapUp: (_) => setState(()=>_pressed=false),
+        onTapCancel: () => setState(()=>_pressed=false),
+        onTap: () { Haptics.light(); widget.onTap(); },
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(widget.icon, size: widget.size, color: _pressed ? press : base),
+        ),
+      ),
+    );
+  }
+}
+
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.0});
+  final Widget Function(bool pressed) builder; final VoidCallback? onTap; final double pressedScale;
+  @override State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false; void _set(bool v){ if(_pressed!=v) setState(()=>_pressed=v);} 
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap==null?null:(_)=>_set(true),
+      onTapUp: widget.onTap==null?null:(_){ /* keep pressed a bit for better feel */ },
+      onTapCancel: widget.onTap==null?null:()=>_set(false),
+      onTap: widget.onTap==null?null:(){
+        Haptics.soft();
+        widget.onTap!.call();
+        Future.delayed(const Duration(milliseconds: 120), () { if (mounted) _set(false); });
+      },
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed),
+      ),
+    );
+  }
+}
+
+class _IosOutlineButton extends StatelessWidget {
+  const _IosOutlineButton({required this.label, required this.onTap});
+  final String label; final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return _TactileRow(
+      pressedScale: 0.98,
+      onTap: onTap,
+      builder: (pressed) {
+        final overlay = pressed ? (Theme.of(context).brightness==Brightness.dark ? Colors.black.withOpacity(0.04) : Colors.white.withOpacity(0.04)) : Colors.transparent;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: overlay,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cs.primary.withOpacity(0.5)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          alignment: Alignment.center,
+          child: Text(label, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600)),
+        );
+      },
+    );
+  }
+}
+
+class _IosFilledButton extends StatelessWidget {
+  const _IosFilledButton({required this.label, required this.onTap, this.icon});
+  final String label; final VoidCallback onTap; final IconData? icon;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return _TactileRow(
+      pressedScale: 0.98,
+      onTap: onTap,
+      builder: (pressed) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: cs.onPrimary),
+                const SizedBox(width: 6),
+              ],
+              Text(label, style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        );
+      },
     );
   }
 }
