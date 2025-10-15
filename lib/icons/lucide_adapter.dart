@@ -113,4 +113,5 @@ class Lucide {
   static const IconData CaseSensitive = lucide.LucideIcons.caseSensitive;
   static const IconData TextInitial = lucide.LucideIcons.textInitial;
   static const IconData eclipse = lucide.LucideIcons.eclipse;
+  static const IconData ListOrdered = lucide.LucideIcons.listOrdered;
 }
