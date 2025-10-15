@@ -87,8 +87,8 @@ class SettingsPage extends StatelessWidget {
     }
 
     // iOS-style section header (neutral color, not theme color)
-    Widget header(String text) => Padding(
-          padding: const EdgeInsets.fromLTRB(12, 18, 12, 6),
+    Widget header(String text, {bool first = false}) => Padding(
+          padding: EdgeInsets.fromLTRB(12, first ? 2 : 18, 12, 6),
           child: Text(
             text,
             style: TextStyle(
@@ -137,7 +137,7 @@ class SettingsPage extends StatelessWidget {
             ),
 
           // 通用设置：使用iOS风格分组卡片，黑色（中性）图标与标题，无描述
-          header(l10n.settingsPageGeneralSection),
+          header(l10n.settingsPageGeneralSection, first: true),
           _iosSectionCard(children: [
             _iosNavRow(
               context,
