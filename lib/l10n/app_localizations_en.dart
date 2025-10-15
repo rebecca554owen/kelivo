@@ -2479,4 +2479,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageHapticsSettingsTitle => 'Haptics';
+
+  @override
+  String get assistantSettingsNoPromptPlaceholder => 'No prompt yet';
 }

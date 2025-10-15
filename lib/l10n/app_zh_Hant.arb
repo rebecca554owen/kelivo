@@ -813,5 +813,6 @@
   "displaySettingsPageChatItemDisplayTitle": "聊天項顯示",
   "displaySettingsPageRenderingSettingsTitle": "渲染設定",
   "displaySettingsPageBehaviorStartupTitle": "行為與啟動",
-  "displaySettingsPageHapticsSettingsTitle": "觸覺回饋"
+  "displaySettingsPageHapticsSettingsTitle": "觸覺回饋",
+  "assistantSettingsNoPromptPlaceholder": "暫無提示詞"
 }

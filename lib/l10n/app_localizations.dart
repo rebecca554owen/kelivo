@@ -4696,6 +4696,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Haptics'**
   String get displaySettingsPageHapticsSettingsTitle;
+
+  /// No description provided for @assistantSettingsNoPromptPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'No prompt yet'**
+  String get assistantSettingsNoPromptPlaceholder;
 }
 
 class _AppLocalizationsDelegate

@@ -1033,5 +1033,6 @@
   "displaySettingsPageChatItemDisplayTitle": "Chat item display",
   "displaySettingsPageRenderingSettingsTitle": "Rendering settings",
   "displaySettingsPageBehaviorStartupTitle": "Behavior & startup",
-  "displaySettingsPageHapticsSettingsTitle": "Haptics"
+  "displaySettingsPageHapticsSettingsTitle": "Haptics",
+  "assistantSettingsNoPromptPlaceholder": "No prompt yet"
 }

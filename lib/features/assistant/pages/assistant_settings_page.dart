@@ -11,6 +11,8 @@ import 'package:characters/characters.dart';
 import 'assistant_settings_edit_page.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/sandbox_path_resolver.dart';
+import '../../../core/services/haptics.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 class AssistantSettingsPage extends StatelessWidget {
   const AssistantSettingsPage({super.key});
@@ -24,24 +26,35 @@ class AssistantSettingsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(l10n.assistantSettingsPageTitle),
         actions: [
-          IconButton(
-            icon: Icon(Lucide.Plus, size: 22, color: cs.onSurface),
-            onPressed: () async {
-              final name = await _showAddAssistantSheet(context);
-              if (name == null) return;
-              final id = await context.read<AssistantProvider>().addAssistant(name: name.trim(), context: context);
-              if (!context.mounted) return;
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-              );
-            },
+          Tooltip(
+            message: l10n.assistantSettingsAddSheetSave,
+            child: _TactileIconButton(
+              icon: Lucide.Plus,
+              color: cs.onSurface,
+              size: 22,
+              onTap: () async {
+                final name = await _showAddAssistantSheet(context);
+                if (name == null) return;
+                final id = await context.read<AssistantProvider>().addAssistant(name: name.trim(), context: context);
+                if (!context.mounted) return;
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                );
+              },
+            ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ReorderableListView.builder(
@@ -61,7 +74,8 @@ class AssistantSettingsPage extends StatelessWidget {
               return Transform.scale(
                 scale: 0.98 + 0.02 * t,
                 child: Material(
-                  elevation: 8 * t,
+                  elevation: 0, // remove drag shadow
+                  shadowColor: Colors.transparent,
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   child: child,
@@ -98,23 +112,19 @@ class _AssistantCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: item.id)),
-          );
-        },
-        child: Ink(
+    final baseBg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+    final content = _TactileCard(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: item.id)),
+        );
+      },
+      builder: (pressed, overlay) {
+        return Container(
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : cs.surface,
+            color: Color.alphaBlend(overlay, baseBg),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
-            boxShadow: isDark ? [] : AppShadows.soft,
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(isDark ? 0.12 : 0.08), width: 0.8),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -147,8 +157,10 @@ class _AssistantCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            item.systemPrompt,
-                            maxLines: 3,
+                            (item.systemPrompt.trim().isEmpty
+                                ? l10n.assistantSettingsNoPromptPlaceholder
+                                : item.systemPrompt),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.7), height: 1.25),
                           ),
@@ -157,47 +169,36 @@ class _AssistantCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: item.deletable
-                          ? () async {
-                              final ok = await _confirmDelete(context, l10n);
-                              if (ok == true) {
-                                await context.read<AssistantProvider>().deleteAssistant(item.id);
-                              }
-                            }
-                          : null,
-                      style: TextButton.styleFrom(foregroundColor: cs.error),
-                      icon: Icon(Lucide.Trash2, size: 16),
-                      label: Text(l10n.assistantSettingsDeleteButton),
-                    ),
-                    const SizedBox(width: 6),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: item.id)),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: cs.primary,
-                        foregroundColor: cs.onPrimary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Lucide.Pencil, size: 16),
-                      label: Text(l10n.assistantSettingsEditButton),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-        ),
+        );
+      },
+    );
+
+    if (!item.deletable) return content;
+    return Slidable(
+      key: ValueKey('slidable-assistant-${item.id}'),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.24,
+        children: [
+          SlidableAction(
+            onPressed: (_) async {
+              final ok = await _confirmDelete(context, l10n);
+              if (ok == true) {
+                await context.read<AssistantProvider>().deleteAssistant(item.id);
+              }
+            },
+            backgroundColor: cs.error,
+            foregroundColor: Colors.white,
+            icon: Lucide.Trash2,
+            label: l10n.assistantSettingsDeleteButton,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ],
       ),
+      child: content,
     );
   }
 
@@ -206,6 +207,68 @@ class _AssistantCard extends StatelessWidget {
     if (trimmed.isEmpty) return '?';
     final first = String.fromCharCode(trimmed.runes.first);
     return first.toUpperCase();
+  }
+}
+
+// --- iOS-style tactile helpers ---
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({required this.icon, required this.color, required this.onTap, this.onLongPress, this.semanticLabel, this.size = 22, this.haptics = true});
+  final IconData icon; final Color color; final VoidCallback onTap; final VoidCallback? onLongPress; final String? semanticLabel; final double size; final bool haptics;
+  @override State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color; final pressColor = base.withOpacity(0.7);
+    final icon = Icon(widget.icon, size: widget.size, color: _pressed ? pressColor : base, semanticLabel: widget.semanticLabel);
+    return Semantics(
+      button: true, label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () { if (widget.haptics) Haptics.light(); widget.onTap(); },
+        onLongPress: widget.onLongPress == null ? null : () { if (widget.haptics) Haptics.light(); widget.onLongPress!.call(); },
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), child: icon),
+      ),
+    );
+  }
+}
+
+class _TactileCard extends StatefulWidget {
+  const _TactileCard({required this.builder, this.onTap, this.haptics = true});
+  final Widget Function(bool pressed, Color overlay) builder;
+  final VoidCallback? onTap;
+  final bool haptics;
+  @override
+  State<_TactileCard> createState() => _TactileCardState();
+}
+
+class _TactileCardState extends State<_TactileCard> {
+  bool _pressed = false;
+  void _set(bool v){ if (_pressed!=v) setState(()=>_pressed=v);} 
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final overlay = _pressed
+        ? (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04))
+        : Colors.transparent;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap==null?null:(_)=>_set(true),
+      onTapUp: widget.onTap==null?null:(_)=>_set(false),
+      onTapCancel: widget.onTap==null?null:()=>_set(false),
+      onTap: widget.onTap==null?null:(){ if(widget.haptics) Haptics.soft(); widget.onTap!.call(); },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed, overlay),
+      ),
+    );
   }
 }
 
