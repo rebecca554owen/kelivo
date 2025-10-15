@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' as System;
 import 'package:haptic_feedback/haptic_feedback.dart' as HFP;
 
 /// Centralized gentle haptics using the `haptic_feedback` plugin.
@@ -10,15 +11,40 @@ class Haptics {
   Haptics._();
 
   /// Very light tap feedback (e.g., small UI taps or success tick).
-  static void light() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.light)); }
+  static void light() {
+    if (_isIOS) {
+      _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.light));
+    } else if (_isAndroid) {
+      _safe(() => System.HapticFeedback.lightImpact());
+    }
+  }
 
   /// Medium tap feedback (e.g., opening/closing drawer, toggles).
-  static void medium() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.medium)); }
+  static void medium() {
+    if (_isIOS) {
+      _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.medium));
+    } else if (_isAndroid) {
+      _safe(() => System.HapticFeedback.mediumImpact());
+    }
+  }
 
-  static void soft() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft)); }
+  static void soft() {
+    if (_isIOS) {
+      _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft));
+    } else if (_isAndroid) {
+      // Closest built-in equivalent to a very gentle tap
+      _safe(() => System.HapticFeedback.selectionClick());
+    }
+  }
 
   /// Drawer-specific pulse; tuned to feel present but not harsh.
-  static void drawerPulse() { _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft)); }
+  static void drawerPulse() {
+    if (_isIOS) {
+      _safe(() => HFP.Haptics.vibrate(HFP.HapticsType.soft));
+    } else if (_isAndroid) {
+      _safe(() => System.HapticFeedback.selectionClick());
+    }
+  }
 
   /// Cancel any ongoing vibration (rarely needed in our use cases).
   static void cancel() { /* no-op */ }
@@ -34,4 +60,7 @@ class Haptics {
       // Swallow any MissingPluginException or platform channel errors.
     }
   }
+
+  static bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 }
