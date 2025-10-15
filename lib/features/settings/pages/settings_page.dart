@@ -380,6 +380,25 @@ Widget _iosDivider(BuildContext context) {
   return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
 }
 
+// Shared color tween wrapper to mimic iOS gentle press color transition
+class _AnimatedPressColor extends StatelessWidget {
+  const _AnimatedPressColor({required this.pressed, required this.base, required this.builder});
+  final bool pressed;
+  final Color base;
+  final Widget Function(Color color) builder;
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: target),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      builder: (context, color, _) => builder(color ?? base),
+    );
+  }
+}
+
 Widget _iosNavRow(
   BuildContext context, {
   required IconData icon,
@@ -392,47 +411,50 @@ Widget _iosNavRow(
   final interactive = onTap != null;
   return _TactileRow(
     onTap: onTap,
-    pressedScale: 0.99,
+    pressedScale: 1.00,
     haptics: false,
     builder: (pressed) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      // Match icon + label color to section header color
-      final base = cs.onSurface.withOpacity(0.9);
-      final c = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
-      return Padding(
-        // Increase left padding to move icon further from card edge; tighten vertical spacing
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 36,
-              child: Icon(icon, size: 20, color: c),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 15, color: c),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (detailBuilder != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: DefaultTextStyle(
-                  style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
-                  child: detailBuilder(context),
+      final baseColor = cs.onSurface.withOpacity(0.9);
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: baseColor,
+        builder: (c) {
+          return Padding(
+            // Increase left padding to move icon further from card edge; tighten vertical spacing
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 36,
+                  child: Icon(icon, size: 20, color: c),
                 ),
-              )
-            else if (detailText != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
-              ),
-            if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
-          ],
-        ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 15, color: c),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (detailBuilder != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: DefaultTextStyle(
+                      style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                      child: detailBuilder(context),
+                    ),
+                  )
+                else if (detailText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+                  ),
+                if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
+              ],
+            ),
+          );
+        },
       );
     },
   );
@@ -468,12 +490,7 @@ class _TactileRowState extends State<_TactileRow> {
               }
               widget.onTap!.call();
             },
-      child: AnimatedScale(
-        scale: _pressed ? widget.pressedScale : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: widget.builder(_pressed),
-      ),
+      child: widget.builder(_pressed),
     );
   }
 }
@@ -529,14 +546,9 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
                 if (widget.haptics) Haptics.light();
                 widget.onLongPress!.call();
               },
-        child: AnimatedScale(
-          scale: _pressed ? 0.95 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            child: icon,
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: icon,
         ),
       ),
     );
@@ -553,30 +565,38 @@ Widget _sheetOption(
   final cs = Theme.of(context).colorScheme;
   final isDark = Theme.of(context).brightness == Brightness.dark;
   return _TactileRow(
-    pressedScale: 0.98,
+    pressedScale: 1.00,
     haptics: true,
     onTap: onTap,
     builder: (pressed) {
-      final Color bg = pressed
+      final base = cs.onSurface;
+      final target = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
+      final bgTarget = pressed
           ? (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05))
           : Colors.transparent;
-      final base = cs.onSurface;
-      final c = pressed ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base) : base;
-      return Container(
-        decoration: BoxDecoration(color: bg),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            SizedBox(width: 24, child: Icon(icon, size: 20, color: c)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 15, color: c),
-              ),
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: base,
+        builder: (c) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            color: bgTarget,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                SizedBox(width: 24, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 15, color: c),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
     },
   );
