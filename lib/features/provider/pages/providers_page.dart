@@ -61,38 +61,52 @@ class _ProvidersPageState extends State<ProvidersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(l10n.providersPageTitle),
         actions: [
-          IconButton(
-            tooltip: l10n.providersPageImportTooltip,
-            icon: Icon(Lucide.Import, color: cs.onSurface),
-            onPressed: () async {
-              await showImportProviderSheet(context);
-              if (!mounted) return;
-              setState(() {});
-            },
-          ),
-          IconButton(
-            tooltip: l10n.providersPageAddTooltip,
-            icon: Icon(Lucide.Plus, color: cs.onSurface),
-            onPressed: () async {
-              final createdKey = await showAddProviderSheet(context);
-              if (!mounted) return;
-              if (createdKey != null && createdKey.isNotEmpty) {
+          Tooltip(
+            message: l10n.providersPageImportTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Import,
+              color: cs.onSurface,
+              size: 22,
+              onTap: () async {
+                await showImportProviderSheet(context);
+                if (!mounted) return;
                 setState(() {});
-                final msg = l10n.providersPageProviderAddedSnackbar;
-                showAppSnackBar(
-                  context,
-                  message: msg,
-                  type: NotificationType.success,
-                );
-              }
-            },
+              },
+            ),
           ),
+          Tooltip(
+            message: l10n.providersPageAddTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Plus,
+              color: cs.onSurface,
+              size: 22,
+              onTap: () async {
+                final createdKey = await showAddProviderSheet(context);
+                if (!mounted) return;
+                if (createdKey != null && createdKey.isNotEmpty) {
+                  setState(() {});
+                  final msg = l10n.providersPageProviderAddedSnackbar;
+                  showAppSnackBar(
+                    context,
+                    message: msg,
+                    type: NotificationType.success,
+                  );
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: Padding(
@@ -446,6 +460,66 @@ class _DragHandle extends StatelessWidget {
         child: Icon(Lucide.GripHorizontal, size: 24, color: cs.onSurface.withOpacity(0.7)),
       ),
       childWhenDragging: const SizedBox(width: 40, height: 40),
+    );
+  }
+}
+
+// Icon-only tactile icon button for AppBar: no ripple, scale + color on press, no haptics
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.onLongPress,
+    this.semanticLabel,
+    this.size = 22,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? semanticLabel;
+  final double size;
+
+  @override
+  State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color;
+    final pressColor = base.withOpacity(0.7);
+    final icon = Icon(
+      widget.icon,
+      size: widget.size,
+      color: _pressed ? pressColor : base,
+      semanticLabel: widget.semanticLabel,
+    );
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: icon,
+          ),
+        ),
+      ),
     );
   }
 }
