@@ -12,10 +12,22 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../shared/animations/widgets.dart';
+import '../../../core/services/haptics.dart';
 import '../../../core/models/backup.dart';
 import '../../../core/providers/backup_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+
+// File size formatter (B, KB, MB, GB)
+String _fmtBytes(int bytes) {
+  const kb = 1024;
+  const mb = kb * 1024;
+  const gb = mb * 1024;
+  if (bytes >= gb) return (bytes / gb).toStringAsFixed(2) + ' GB';
+  if (bytes >= mb) return (bytes / mb).toStringAsFixed(2) + ' MB';
+  if (bytes >= kb) return (bytes / kb).toStringAsFixed(2) + ' KB';
+  return '$bytes B';
+}
 
 class BackupPage extends StatefulWidget {
   const BackupPage({super.key});
@@ -87,11 +99,12 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Center(
-        child: Material(
-          color: cs.surface,
-          elevation: 6,
-          shadowColor: Colors.black.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             child: Column(
@@ -123,11 +136,12 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Center(
-        child: Material(
-          color: cs.surface,
-          elevation: 6,
-          shadowColor: Colors.black.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+          ),
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: CupertinoActivityIndicator(radius: 14),
@@ -175,9 +189,14 @@ class _BackupPageState extends State<BackupPage> {
         }
         return Scaffold(
           appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Lucide.ArrowLeft),
-              onPressed: () => Navigator.of(context).maybePop(),
+            leading: Tooltip(
+              message: l10n.settingsPageBackButton,
+              child: _TactileIconButton(
+                icon: Lucide.ArrowLeft,
+                color: cs.onSurface,
+                size: 22,
+                onTap: () => Navigator.of(context).maybePop(),
+              ),
             ),
             title: Text(l10n.backupPageTitle),
           ),
@@ -189,37 +208,27 @@ class _BackupPageState extends State<BackupPage> {
               _buildImportExportTab(context, cs, vm, l10n),
             ],
           ),
-          bottomNavigationBar: Builder(builder: (context) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (i) {
-                setState(() => _currentIndex = i);
-                _pageCtrl.animateToPage(
-                  i,
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                );
-              },
-              backgroundColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-              elevation: 0,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              indicatorColor: cs.primary.withOpacity(0.12),
-              height: 80, // 底部tab高度
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Lucide.databaseBackup),
-                  selectedIcon: Icon(Lucide.databaseBackup, color: cs.primary),
-                  label: l10n.backupPageWebDavTab,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Lucide.Import2),
-                  selectedIcon: Icon(Lucide.Import2, color: cs.primary),
-                  label: l10n.backupPageImportExportTab,
-                ),
-              ],
-            );
-          }),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+              child: _BottomTabs(
+                index: _currentIndex,
+                leftIcon: Lucide.databaseBackup,
+                leftLabel: l10n.backupPageWebDavTab,
+                rightIcon: Lucide.Import2,
+                rightLabel: l10n.backupPageImportExportTab,
+                onSelect: (i) {
+                  setState(() => _currentIndex = i);
+                  _pageCtrl.animateToPage(
+                    i,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                  );
+                },
+              ),
+            ),
+          ),
         );
       }),
     );
@@ -246,10 +255,13 @@ class _BackupPageState extends State<BackupPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       children: [
-        // Form card
-        Material(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(14),
+        // Form card (no ripple, iOS style)
+        Container(
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant.withOpacity(0.18)),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -321,7 +333,8 @@ class _BackupPageState extends State<BackupPage> {
         const SizedBox(height: 12),
 
         // Actions (each on its own row)
-        OutlinedButton.icon(
+        _IosOutlineButton(
+          icon: Lucide.Cable,
           onPressed: vm.busy ? null : () async {
             await vm.test();
             if (!mounted) return;
@@ -335,15 +348,11 @@ class _BackupPageState extends State<BackupPage> {
                   : NotificationType.success,
             );
           },
-          icon: Icon(Lucide.Cable, size: 18, color: cs.primary),
-          label: Text(l10n.backupPageTestConnection, style: TextStyle(color: cs.primary)),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: cs.primary.withOpacity(0.5)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
+          label: l10n.backupPageTestConnection,
         ),
         const SizedBox(height: 8),
-        OutlinedButton.icon(
+        _IosOutlineButton(
+          icon: Lucide.Import,
           onPressed: vm.busy ? null : () async {
             await reloadRemote();
             if (!mounted) return;
@@ -386,15 +395,10 @@ class _BackupPageState extends State<BackupPage> {
               ),
             );
           },
-          icon: Icon(Lucide.Import, size: 18, color: cs.primary),
-          label: Text(l10n.backupPageRestore, style: TextStyle(color: cs.primary)),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: cs.primary.withOpacity(0.5)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
+          label: l10n.backupPageRestore,
         ),
         const SizedBox(height: 8),
-        ElevatedButton.icon(
+        _IosFilledButton(
           onPressed: vm.busy ? null : () async {
             await _runWithExportingOverlay(context, () => vm.backup());
             if (!mounted) return;
@@ -406,15 +410,8 @@ class _BackupPageState extends State<BackupPage> {
               type: NotificationType.info,
             );
           },
-          icon: const Icon(Lucide.Upload, size: 18),
-          label: Text(l10n.backupPageBackup),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: cs.primary,
-            foregroundColor: cs.onPrimary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 0,
-            minimumSize: const Size.fromHeight(44),
-          ),
+          icon: Lucide.Upload,
+          label: l10n.backupPageBackup,
         ),
       ],
     );
@@ -558,6 +555,196 @@ class _InputRow extends StatelessWidget {
   }
 }
 
+// --- iOS tactile widgets: buttons, rows, bottom tabs ---
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({required this.icon, required this.color, required this.onTap, this.size = 22});
+  final IconData icon; final Color color; final VoidCallback onTap; final double size;
+  @override State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color; final press = base.withOpacity(0.7);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(()=>_pressed=true),
+      onTapUp: (_) => setState(()=>_pressed=false),
+      onTapCancel: () => setState(()=>_pressed=false),
+      onTap: () { Haptics.light(); widget.onTap(); },
+      child: Padding(padding: const EdgeInsets.all(6), child: Icon(widget.icon, size: widget.size, color: _pressed ? press : base)),
+    );
+  }
+}
+
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({required this.builder, this.onTap, this.pressedScale = 1.0});
+  final Widget Function(bool pressed) builder; final VoidCallback? onTap; final double pressedScale;
+  @override State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false; void _set(bool v){ if(_pressed!=v) setState(()=>_pressed=v);} 
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap==null?null:(_)=>_set(true),
+      onTapUp: widget.onTap==null?null:(_)=>Future.delayed(const Duration(milliseconds: 120), ()=>_set(false)),
+      onTapCancel: widget.onTap==null?null:()=>_set(false),
+      onTap: widget.onTap==null?null:(){ Haptics.soft(); widget.onTap!.call(); },
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed),
+      ),
+    );
+  }
+}
+
+class _IosOutlineButton extends StatelessWidget {
+  const _IosOutlineButton({required this.onPressed, required this.label, this.icon});
+  final VoidCallback? onPressed; final String label; final IconData? icon;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme; final enabled = onPressed != null;
+    final textColor = enabled ? cs.primary : cs.onSurface.withOpacity(0.35);
+    return _TactileRow(
+      pressedScale: 0.98,
+      onTap: enabled ? onPressed : null,
+      builder: (pressed) {
+        final overlay = pressed ? (Theme.of(context).brightness==Brightness.dark ? Colors.black.withOpacity(0.04) : Colors.white.withOpacity(0.04)) : Colors.transparent;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: overlay,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: (enabled ? cs.primary.withOpacity(0.5) : cs.outlineVariant.withOpacity(0.35))),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          alignment: Alignment.center,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon != null) ...[Icon(icon, size: 16, color: textColor), const SizedBox(width: 6)],
+            Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+class _IosFilledButton extends StatelessWidget {
+  const _IosFilledButton({required this.onPressed, required this.label, this.icon});
+  final VoidCallback? onPressed; final String label; final IconData? icon;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme; final enabled = onPressed != null;
+    final bg = enabled ? cs.primary : cs.onSurface.withOpacity(0.12);
+    final fg = enabled ? cs.onPrimary : cs.onSurface.withOpacity(0.5);
+    return _TactileRow(
+      pressedScale: 0.98,
+      onTap: enabled ? onPressed : null,
+      builder: (pressed) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          alignment: Alignment.center,
+          child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
+            if (icon != null) ...[Icon(icon, size: 18, color: fg), const SizedBox(width: 6)],
+            Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+class _SmallTactileIcon extends StatefulWidget {
+  const _SmallTactileIcon({required this.icon, required this.onTap, this.baseColor});
+  final IconData icon; final VoidCallback onTap; final Color? baseColor;
+  @override State<_SmallTactileIcon> createState() => _SmallTactileIconState();
+}
+
+class _SmallTactileIconState extends State<_SmallTactileIcon> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.baseColor ?? Theme.of(context).colorScheme.onSurface;
+    final c = _pressed ? base.withOpacity(0.7) : base;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(()=>_pressed=true),
+      onTapUp: (_) => setState(()=>_pressed=false),
+      onTapCancel: () => setState(()=>_pressed=false),
+      onTap: () { Haptics.soft(); widget.onTap(); },
+      child: Padding(padding: const EdgeInsets.all(6), child: Icon(widget.icon, size: 18, color: c)),
+    );
+  }
+}
+
+class _BottomTabs extends StatelessWidget {
+  const _BottomTabs({required this.index, required this.leftIcon, required this.leftLabel, required this.rightIcon, required this.rightLabel, required this.onSelect});
+  final int index; final IconData leftIcon; final String leftLabel; final IconData rightIcon; final String rightLabel; final ValueChanged<int> onSelect;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme; final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.transparent : cs.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.18 : 0.12), width: 0.8),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Row(children: [
+        Expanded(child: _BottomTabItem(icon: leftIcon, label: leftLabel, selected: index==0, onTap: ()=>onSelect(0))),
+        Expanded(child: _BottomTabItem(icon: rightIcon, label: rightLabel, selected: index==1, onTap: ()=>onSelect(1))),
+      ]),
+    );
+  }
+}
+
+class _BottomTabItem extends StatefulWidget {
+  const _BottomTabItem({required this.icon, required this.label, required this.selected, required this.onTap});
+  final IconData icon; final String label; final bool selected; final VoidCallback onTap;
+  @override State<_BottomTabItem> createState() => _BottomTabItemState();
+}
+
+class _BottomTabItemState extends State<_BottomTabItem> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme; final base = cs.onSurface.withOpacity(0.7); final sel = cs.primary; final target = widget.selected ? sel : base;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(()=>_pressed=true),
+      onTapUp: (_) => setState(()=>_pressed=false),
+      onTapCancel: () => setState(()=>_pressed=false),
+      onTap: () { Haptics.soft(); widget.onTap(); },
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: target), duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic,
+        builder: (context, color, _) {
+          final c = color ?? base;
+          return AnimatedScale(
+            scale: _pressed ? 0.95 : 1.0,
+            duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(widget.icon, size: 20, color: c),
+                const SizedBox(height: 4),
+                AnimatedDefaultTextStyle(duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c), child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _ToggleCard extends StatelessWidget {
   const _ToggleCard({required this.label, required this.selected, required this.onTap});
   final String label;
@@ -567,17 +754,18 @@ class _ToggleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = selected ? cs.primary.withOpacity(0.12) : (isDark ? Colors.white10 : const Color(0xFFF7F7F9));
+    final baseBg = selected ? cs.primary.withOpacity(0.12) : (isDark ? Colors.white10 : const Color(0xFFF7F7F9));
     final border = selected ? cs.primary.withOpacity(0.50) : cs.outlineVariant.withOpacity(0.16);
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
+    return _TactileRow(
+      pressedScale: 0.98,
+      onTap: onTap,
+      builder: (pressed) {
+        final overlay = pressed ? (isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.05)) : Colors.transparent;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
+            color: Color.alphaBlend(overlay, baseBg),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: border, width: 1),
           ),
@@ -591,8 +779,8 @@ class _ToggleCard extends StatelessWidget {
               Text(label, style: TextStyle(color: selected ? cs.primary : cs.onSurface.withOpacity(0.8))),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -619,7 +807,7 @@ class _RemoteListSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
           child: Column(
             children: [
-              Container(width: 42, height: 4, decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2))),
+              Container(width: 42, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -642,27 +830,30 @@ class _RemoteListSheet extends StatelessWidget {
                           final it = items[i];
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Material(
-                              color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF7F7F9),
-                              borderRadius: BorderRadius.circular(12),
-                              child: ListTile(
-                                title: Text(it.displayName, maxLines: 3, overflow: TextOverflow.ellipsis),
-                                subtitle: Text('${it.size} bytes'),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Lucide.Import, size: 18),
-                                      tooltip: l10n.backupPageRestoreTooltip,
-                                      onPressed: () => onRestore(it),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF7F7F9),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: cs.outlineVariant.withOpacity(0.18)),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(it.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Text(_fmtBytes(it.size), style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
+                                      ],
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Lucide.Trash2, size: 18),
-                                      tooltip: l10n.backupPageDeleteTooltip,
-                                      onPressed: () => onDelete(it),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  _SmallTactileIcon(icon: Lucide.Import, onTap: () => onRestore(it)),
+                                  const SizedBox(width: 6),
+                                  _SmallTactileIcon(icon: Lucide.Trash2, onTap: () => onDelete(it), baseColor: cs.error),
+                                ],
                               ),
                             ),
                           );
@@ -687,13 +878,19 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
+    return _TactileRow(
+      pressedScale: 0.98,
+      onTap: onTap,
+      builder: (pressed) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final overlay = pressed ? (isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.05)) : Colors.transparent;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: Color.alphaBlend(overlay, color),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant.withOpacity(0.18)),
+          ),
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
@@ -718,8 +915,8 @@ class _ActionCard extends StatelessWidget {
               const Icon(Lucide.ChevronRight, size: 18),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
