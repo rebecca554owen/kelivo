@@ -175,7 +175,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          _sectionHeader(l10n.searchServicesPageSearchProviders, cs),
+          _sectionHeader(l10n.searchServicesPageSearchProviders, cs, first: true),
           _iosSectionCard(children: [
             for (int i = 0; i < _services.length; i++) ...[
               _iosProviderRow(context, index: i),
@@ -190,8 +190,8 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     );
   }
 
-  Widget _sectionHeader(String text, ColorScheme cs) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 18, 12, 6),
+  Widget _sectionHeader(String text, ColorScheme cs, {bool first = false}) => Padding(
+        padding: EdgeInsets.fromLTRB(12, first ? 2 : 18, 12, 6),
         child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.8))),
       );
 
@@ -350,6 +350,37 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Future<void> _showServiceActions(BuildContext context, int index) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _sheetOption(ctx, icon: Lucide.Activity, label: l10n.searchServicesPageTestConnectionTooltip, onTap: () {
+                  Navigator.of(ctx).pop();
+                  _testConnection(index);
+                }),
+                _sheetDivider(ctx),
+                _sheetOption(ctx, icon: Lucide.Trash2, label: l10n.providerDetailPageDeleteButton, onTap: () {
+                  Navigator.of(ctx).pop();
+                  _deleteService(index);
+                }),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -910,9 +941,16 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
                 decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)),
               ),
             ),
-            const SizedBox(height: 12),
-            Text('${l10n.searchServicesEditDialogEdit} ${searchService.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 10),
+            // Title (match Add sheet style: centered name)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Center(
+                child: Text(
+                  searchService.name,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
             Form(
               key: _formKey,
               child: SingleChildScrollView(
@@ -923,21 +961,22 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.searchServicesEditDialogCancel)),
-                const Spacer(),
-                FilledButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      final updated = _updateService();
-                      widget.onSave(updated);
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: Text(l10n.searchServicesEditDialogSave),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    final updated = _updateService();
+                    widget.onSave(updated);
+                    Navigator.of(context).pop();
+                  }
+                },
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-              ],
+                child: Text(l10n.searchServicesEditDialogSave, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
             ),
           ],
         ),
@@ -948,24 +987,54 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
   List<Widget> _buildFields() {
     final l10n = AppLocalizations.of(context)!;
     final service = widget.service;
-    
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Widget _buildTextField({
+      required String key,
+      required String label,
+      String? hint,
+      bool obscureText = false,
+      String? Function(String?)? validator,
+    }) {
+      _controllers[key] = _controllers[key] ?? TextEditingController();
+      return Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceVariant.withOpacity(isDark ? 0.18 : 0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: TextFormField(
+          controller: _controllers[key],
+          obscureText: obscureText,
+          style: const TextStyle(fontSize: 16),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          validator: validator,
+        ),
+      );
+    }
+
     if (service is BingLocalOptions) {
       return [Text(l10n.searchServicesEditDialogBingLocalNoConfig)];
-    } else if (service is TavilyOptions || 
-               service is ExaOptions || 
-               service is ZhipuOptions ||
-               service is LinkUpOptions ||
-               service is BraveOptions ||
-               service is MetasoOptions ||
-               service is OllamaOptions ||
-               service is JinaOptions) {
+    } else if (service is TavilyOptions ||
+        service is ExaOptions ||
+        service is ZhipuOptions ||
+        service is LinkUpOptions ||
+        service is BraveOptions ||
+        service is MetasoOptions ||
+        service is OllamaOptions ||
+        service is JinaOptions) {
       return [
-        TextFormField(
-          controller: _controllers['apiKey'],
-          decoration: const InputDecoration(
-            labelText: 'API Key',
-            border: OutlineInputBorder(),
-          ),
+        _buildTextField(
+          key: 'apiKey',
+          label: 'API Key',
           validator: (value) {
             if (value == null || value.isEmpty) {
               return l10n.searchServicesEditDialogApiKeyRequired;
@@ -976,12 +1045,9 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       ];
     } else if (service is SearXNGOptions) {
       return [
-        TextFormField(
-          controller: _controllers['url'],
-          decoration: InputDecoration(
-            labelText: l10n.searchServicesEditDialogInstanceUrl,
-            border: const OutlineInputBorder(),
-          ),
+        _buildTextField(
+          key: 'url',
+          label: l10n.searchServicesEditDialogInstanceUrl,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return l10n.searchServicesEditDialogUrlRequired;
@@ -990,43 +1056,31 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
           },
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _controllers['engines'],
-          decoration: InputDecoration(
-            labelText: l10n.searchServicesEditDialogEnginesOptional,
-            hintText: 'google,duckduckgo',
-            border: const OutlineInputBorder(),
-          ),
+        _buildTextField(
+          key: 'engines',
+          label: l10n.searchServicesEditDialogEnginesOptional,
+          hint: 'google,duckduckgo',
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _controllers['language'],
-          decoration: InputDecoration(
-            labelText: l10n.searchServicesEditDialogLanguageOptional,
-            hintText: 'en-US',
-            border: const OutlineInputBorder(),
-          ),
+        _buildTextField(
+          key: 'language',
+          label: l10n.searchServicesEditDialogLanguageOptional,
+          hint: 'en-US',
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _controllers['username'],
-          decoration: InputDecoration(
-            labelText: l10n.searchServicesEditDialogUsernameOptional,
-            border: const OutlineInputBorder(),
-          ),
+        _buildTextField(
+          key: 'username',
+          label: l10n.searchServicesEditDialogUsernameOptional,
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _controllers['password'],
+        _buildTextField(
+          key: 'password',
+          label: l10n.searchServicesEditDialogPasswordOptional,
           obscureText: true,
-          decoration: InputDecoration(
-            labelText: l10n.searchServicesEditDialogPasswordOptional,
-            border: const OutlineInputBorder(),
-          ),
         ),
       ];
     }
-    
+
     return [];
   }
 
@@ -1387,35 +1441,4 @@ class _SmallTactileIconState extends State<_SmallTactileIcon> {
   }
 }
 
-Future<void> _showServiceActions(BuildContext context, int index) async {
-  final cs = Theme.of(context).colorScheme;
-  final l10n = AppLocalizations.of(context)!;
-  await showModalBottomSheet(
-    context: context,
-    backgroundColor: cs.surface,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-    builder: (ctx) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _sheetOption(ctx, icon: Lucide.Activity, label: l10n.searchServicesPageTestConnectionTooltip, onTap: () {
-                Navigator.of(ctx).pop();
-                final state = context.findAncestorStateOfType<_SearchServicesPageState>();
-                state?._testConnection(index);
-              }),
-              _sheetDivider(ctx),
-              _sheetOption(ctx, icon: Lucide.Trash2, label: l10n.providerDetailPageDeleteButton, onTap: () {
-                Navigator.of(ctx).pop();
-                final state = context.findAncestorStateOfType<_SearchServicesPageState>();
-                state?._deleteService(index);
-              }),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
+// (removed: now implemented as instance method on state)
