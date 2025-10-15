@@ -314,6 +314,30 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     final cs = Theme.of(context).colorScheme;
     final name = SearchService.getService(s).name;
     final selected = index == _selectedIndex;
+    // Connection/testing status for capsule
+    final l10n = AppLocalizations.of(context)!;
+    final testing = _testing[s.id] == true;
+    final conn = context.watch<SettingsProvider>().searchConnection[s.id];
+    String statusText;
+    Color statusBg;
+    Color statusFg;
+    if (testing) {
+      statusText = l10n.searchServicesPageTestingStatus;
+      statusBg = cs.primary.withOpacity(0.12);
+      statusFg = cs.primary;
+    } else if (conn == true) {
+      statusText = l10n.searchServicesPageConnectedStatus;
+      statusBg = Colors.green.withOpacity(0.12);
+      statusFg = Colors.green;
+    } else if (conn == false) {
+      statusText = l10n.searchServicesPageFailedStatus;
+      statusBg = Colors.orange.withOpacity(0.12);
+      statusFg = Colors.orange;
+    } else {
+      statusText = l10n.searchServicesPageNotTestedStatus;
+      statusBg = cs.onSurface.withOpacity(0.06);
+      statusFg = cs.onSurface.withOpacity(0.7);
+    }
     return _TactileRow(
       onTap: () {
         // Tap to edit (bottom sheet)
@@ -344,6 +368,23 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
                         style: TextStyle(fontSize: 15, color: c, fontWeight: FontWeight.w600),
                       ),
                     ),
+                    if (s is! BingLocalOptions && statusText.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          statusText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: statusFg),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 8),
                     Icon(Lucide.ChevronRight, size: 16, color: c),
                   ],
                 ),
