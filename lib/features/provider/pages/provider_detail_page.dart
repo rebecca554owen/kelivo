@@ -814,9 +814,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         color: bg,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06), width: 0.6),
-        boxShadow: [
-          if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 1)),
-        ],
+        // boxShadow: [
+        //   if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 1)),
+        // ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),

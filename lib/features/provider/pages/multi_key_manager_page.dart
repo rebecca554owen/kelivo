@@ -325,14 +325,14 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
           color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
           width: 0.6,
         ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 1),
-            ),
-        ],
+        // boxShadow: [
+        //   if (!isDark)
+        //     BoxShadow(
+        //       color: Colors.black.withOpacity(0.02),
+        //       blurRadius: 6,
+        //       offset: const Offset(0, 1),
+        //     ),
+        // ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
