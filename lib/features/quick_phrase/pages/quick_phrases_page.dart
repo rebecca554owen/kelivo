@@ -7,6 +7,7 @@ import '../../../theme/design_tokens.dart';
 import '../../../core/models/quick_phrase.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/services/haptics.dart';
 
 class QuickPhrasesPage extends StatefulWidget {
   const QuickPhrasesPage({super.key, this.assistantId});
@@ -87,10 +88,14 @@ class _QuickPhrasesPageState extends State<QuickPhrasesPage> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: l10n.quickPhraseBackTooltip,
+        leading: Tooltip(
+          message: l10n.quickPhraseBackTooltip,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(
           widget.assistantId == null
@@ -98,11 +103,16 @@ class _QuickPhrasesPageState extends State<QuickPhrasesPage> {
               : l10n.quickPhraseAssistantTitle,
         ),
         actions: [
-          IconButton(
-            icon: Icon(Lucide.Plus, size: 22),
-            onPressed: () => _showAddEditSheet(),
-            tooltip: l10n.quickPhraseAddTooltip,
+          Tooltip(
+            message: l10n.quickPhraseAddTooltip,
+            child: _TactileIconButton(
+              icon: Lucide.Plus,
+              color: Theme.of(context).colorScheme.onSurface,
+              size: 22,
+              onTap: () => _showAddEditSheet(),
+            ),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       body: phrases.isEmpty
@@ -212,58 +222,58 @@ class _QuickPhrasesPageState extends State<QuickPhrasesPage> {
                             ),
                           ],
                         ),
-                        child: GestureDetector(
+                        child: _TactileCard(
+                          pressedScale: 0.98,
                           onTap: () => _showAddEditSheet(phrase: phrase),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white10 : cs.surface,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: cs.outlineVariant.withOpacity(0.25),
+                          builder: (pressed, overlay) {
+                            final baseBg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Color.alphaBlend(overlay, baseBg),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.1 : 0.08), width: 0.6),
                               ),
-                              boxShadow: isDark ? [] : AppShadows.soft,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Lucide.Zap, size: 18, color: cs.primary),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          phrase.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(Lucide.Zap, size: 18, color: cs.primary),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  phrase.title,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            phrase.content,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                                          ),
+                                        ],
                                       ),
-                                      Icon(
-                                        Lucide.ChevronRight,
-                                        size: 18,
-                                        color: cs.onSurface.withOpacity(0.4),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    phrase.content,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: cs.onSurface.withOpacity(0.7),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 8),
+                                    Icon(Lucide.ChevronRight, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -401,44 +411,125 @@ class _QuickPhraseEditSheetState extends State<_QuickPhraseEditSheet> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      side: BorderSide(
-                        color: cs.outlineVariant.withOpacity(0.35),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(l10n.quickPhraseCancelButton),
+                  child: _IosOutlineButton(
+                    label: l10n.quickPhraseCancelButton,
+                    onTap: () => Navigator.of(context).pop(),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
-                    onPressed: () {
+                  child: _IosFilledButton(
+                    label: l10n.quickPhraseSaveButton,
+                    onTap: () {
                       Navigator.of(context).pop({
                         'title': _titleController.text,
                         'content': _contentController.text,
                       });
                     },
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      backgroundColor: cs.primary,
-                      foregroundColor: cs.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(l10n.quickPhraseSaveButton),
                   ),
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// --- iOS tactile helpers (no ripple) ---
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({required this.icon, required this.color, required this.onTap, this.size = 22});
+  final IconData icon; final Color color; final VoidCallback onTap; final double size;
+  @override State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color; final press = base.withOpacity(0.7);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(()=>_pressed=true),
+      onTapUp: (_) => setState(()=>_pressed=false),
+      onTapCancel: () => setState(()=>_pressed=false),
+      onTap: () { Haptics.light(); widget.onTap(); },
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(widget.icon, size: widget.size, color: _pressed ? press : base),
+      ),
+    );
+  }
+}
+
+class _TactileCard extends StatefulWidget {
+  const _TactileCard({required this.builder, this.onTap, this.pressedScale = 0.98});
+  final Widget Function(bool pressed, Color overlay) builder; final VoidCallback? onTap; final double pressedScale;
+  @override State<_TactileCard> createState() => _TactileCardState();
+}
+
+class _TactileCardState extends State<_TactileCard> {
+  bool _pressed = false;
+  void _set(bool v){ if(_pressed!=v) setState(()=>_pressed=v);} 
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final overlay = _pressed ? (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05)) : Colors.transparent;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap==null?null:(_)=>_set(true),
+      onTapUp: widget.onTap==null?null:(_)=>Future.delayed(const Duration(milliseconds: 120), ()=>_set(false)),
+      onTapCancel: widget.onTap==null?null:()=>_set(false),
+      onTap: widget.onTap==null?null:(){ Haptics.soft(); widget.onTap!.call(); },
+      child: AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic,
+        child: widget.builder(_pressed, overlay),
+      ),
+    );
+  }
+}
+
+class _IosOutlineButton extends StatelessWidget {
+  const _IosOutlineButton({required this.label, required this.onTap});
+  final String label; final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final overlayBase = isDark ? Colors.black : Colors.white;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () { Haptics.soft(); onTap(); },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.primary.withOpacity(0.5)),
+        ),
+        child: Text(label, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+class _IosFilledButton extends StatelessWidget {
+  const _IosFilledButton({required this.label, required this.onTap});
+  final String label; final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () { Haptics.soft(); onTap(); },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(12)),
+        child: Text(label, style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600)),
       ),
     );
   }
