@@ -55,7 +55,7 @@ class ThemeSettingsPage extends StatelessWidget {
             ]),
             const SizedBox(height: 12),
           ],
-
+          // header(l10n.themeSettingsPageColorPalettesSection),
           _iosSectionCard(children: [
             for (int i = 0; i < ThemePalettes.all.length; i++) ...[
               _paletteRow(context, palette: ThemePalettes.all[i], selected: settings.themePaletteId == ThemePalettes.all[i].id, onTap: () => context.read<SettingsProvider>().setThemePalette(ThemePalettes.all[i].id)),

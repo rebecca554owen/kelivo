@@ -109,4 +109,8 @@ class Lucide {
   static const IconData HeartPulse = lucide.LucideIcons.heartPulse;
   static const IconData Sun = lucide.LucideIcons.sun;
   static const IconData Moon = lucide.LucideIcons.moon;
+  static const IconData MessageCircleMore = lucide.LucideIcons.messageCircleMore;
+  static const IconData CaseSensitive = lucide.LucideIcons.caseSensitive;
+  static const IconData TextInitial = lucide.LucideIcons.textInitial;
+  static const IconData eclipse = lucide.LucideIcons.eclipse;
 }

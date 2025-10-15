@@ -54,7 +54,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
-          header(l10n.displaySettingsPageThemeSettingsTitle),
+          // header(l10n.displaySettingsPageThemeSettingsTitle),
           _iosSectionCard(children: [
             _iosNavRow(
               context,
@@ -90,21 +90,21 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
             _iosDivider(context),
             _iosNavRow(
               context,
-              icon: Lucide.ListTree,
+              icon: Lucide.MessageCircleMore,
               label: l10n.displaySettingsPageChatItemDisplayTitle,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatItemDisplaySettingsPage())),
             ),
             _iosDivider(context),
             _iosNavRow(
               context,
-              icon: Lucide.Code,
+              icon: Lucide.TextInitial,
               label: l10n.displaySettingsPageRenderingSettingsTitle,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RenderingSettingsPage())),
             ),
             _iosDivider(context),
             _iosNavRow(
               context,
-              icon: Lucide.Settings2,
+              icon: Lucide.eclipse,
               label: l10n.displaySettingsPageBehaviorStartupTitle,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BehaviorStartupSettingsPage())),
             ),
@@ -115,161 +115,30 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
               label: l10n.displaySettingsPageHapticsSettingsTitle,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HapticsSettingsPage())),
             ),
-          ]),
-
-          const SizedBox(height: 12),
-          header(l10n.displaySettingsPageChatFontSizeTitle),
-          _iosSectionCard(children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Builder(builder: (context) {
-                final theme = Theme.of(context);
-                final cs = theme.colorScheme;
-                final isDark = theme.brightness == Brightness.dark;
-                final scale = context.watch<SettingsProvider>().chatFontScale;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Text('80%', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 12)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SfSliderTheme(
-                          data: SfSliderThemeData(
-                            activeTrackHeight: 8,
-                            inactiveTrackHeight: 8,
-                            overlayRadius: 14,
-                            activeTrackColor: cs.primary,
-                            inactiveTrackColor: cs.onSurface.withOpacity(isDark ? 0.25 : 0.20),
-                            tooltipBackgroundColor: cs.primary,
-                            tooltipTextStyle: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600),
-                            activeTickColor: cs.onSurface.withOpacity(isDark ? 0.45 : 0.35),
-                            inactiveTickColor: cs.onSurface.withOpacity(isDark ? 0.30 : 0.25),
-                            activeMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.34 : 0.28),
-                            inactiveMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.24 : 0.20),
-                          ),
-                          child: SfSlider(
-                            value: scale,
-                            min: 0.8,
-                            max: 1.50001,
-                            stepSize: 0.05,
-                            showTicks: true,
-                            showLabels: true,
-                            interval: 0.1,
-                            minorTicksPerInterval: 1,
-                            enableTooltip: true,
-                            shouldAlwaysShowTooltip: false,
-                            tooltipShape: const SfPaddleTooltipShape(),
-                            labelFormatterCallback: (value, text) => (value as double).toStringAsFixed(1),
-                            thumbIcon: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: cs.primary,
-                                shape: BoxShape.circle,
-                                boxShadow: isDark ? [] : [
-                                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2)),
-                                ],
-                              ),
-                            ),
-                            onChanged: (v) => context.read<SettingsProvider>().setChatFontScale((v as double).clamp(0.8, 1.5)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('${(scale * 100).round()}%', style: TextStyle(color: cs.onSurface, fontSize: 12)),
-                    ]),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : const Color(0xFFF2F3F5),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        l10n.displaySettingsPageChatFontSampleText,
-                        style: TextStyle(fontSize: 16 * context.watch<SettingsProvider>().chatFontScale),
-                      ),
-                    ),
-                  ],
-                );
-              }),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.CaseSensitive,
+              label: l10n.displaySettingsPageChatFontSizeTitle,
+              detailBuilder: (ctx) {
+                final scale = ctx.watch<SettingsProvider>().chatFontScale;
+                return Text('${(scale * 100).round()}%', style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 13));
+              },
+              onTap: () => _showChatFontSizeSheet(context),
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.ArrowDown,
+              label: l10n.displaySettingsPageAutoScrollIdleTitle,
+              detailBuilder: (ctx) {
+                final seconds = ctx.watch<SettingsProvider>().autoScrollIdleSeconds;
+                return Text('${seconds.round()}s', style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 13));
+              },
+              onTap: () => _showAutoScrollIdleSheet(context),
             ),
           ]),
-
-          const SizedBox(height: 12),
-          header(l10n.displaySettingsPageAutoScrollIdleTitle),
-          _iosSectionCard(children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Builder(builder: (context) {
-                final theme = Theme.of(context);
-                final cs = theme.colorScheme;
-                final isDark = theme.brightness == Brightness.dark;
-                final seconds = context.watch<SettingsProvider>().autoScrollIdleSeconds;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Text('2s', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 12)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SfSliderTheme(
-                          data: SfSliderThemeData(
-                            activeTrackHeight: 8,
-                            inactiveTrackHeight: 8,
-                            overlayRadius: 14,
-                            activeTrackColor: cs.primary,
-                            inactiveTrackColor: cs.onSurface.withOpacity(isDark ? 0.25 : 0.20),
-                            tooltipBackgroundColor: cs.primary,
-                            tooltipTextStyle: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600),
-                            activeTickColor: cs.onSurface.withOpacity(isDark ? 0.45 : 0.35),
-                            inactiveTickColor: cs.onSurface.withOpacity(isDark ? 0.30 : 0.25),
-                            activeMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.34 : 0.28),
-                            inactiveMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.24 : 0.20),
-                          ),
-                          child: SfSlider(
-                            value: seconds.toDouble(),
-                            min: 2.0,
-                            max: 64.0,
-                            stepSize: 2.0,
-                            showTicks: true,
-                            showLabels: true,
-                            interval: 10.0,
-                            minorTicksPerInterval: 1,
-                            enableTooltip: true,
-                            shouldAlwaysShowTooltip: false,
-                            tooltipShape: const SfPaddleTooltipShape(),
-                            labelFormatterCallback: (value, text) => value.toInt().toString(),
-                            thumbIcon: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: cs.primary,
-                                shape: BoxShape.circle,
-                                boxShadow: isDark ? [] : [
-                                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2)),
-                                ],
-                              ),
-                            ),
-                            onChanged: (v) => context.read<SettingsProvider>().setAutoScrollIdleSeconds((v as double).round()),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('${seconds.round()}s', style: TextStyle(color: cs.onSurface, fontSize: 12)),
-                    ]),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.displaySettingsPageAutoScrollIdleSubtitle,
-                      style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ]),
+          // Inline cards replaced by sheet-triggering rows above.
         ],
       ),
     );
@@ -317,6 +186,182 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
       default:
         await context.read<SettingsProvider>().setAppLocale(const Locale('en', 'US'));
     }
+  }
+
+  Future<void> _showChatFontSizeSheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Builder(builder: (context) {
+              final theme = Theme.of(context);
+              final cs = theme.colorScheme;
+              final isDark = theme.brightness == Brightness.dark;
+              final scale = context.watch<SettingsProvider>().chatFontScale;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text('80%', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 12)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SfSliderTheme(
+                        data: SfSliderThemeData(
+                          activeTrackHeight: 8,
+                          inactiveTrackHeight: 8,
+                          overlayRadius: 14,
+                          activeTrackColor: cs.primary,
+                          inactiveTrackColor: cs.onSurface.withOpacity(isDark ? 0.25 : 0.20),
+                          tooltipBackgroundColor: cs.primary,
+                          tooltipTextStyle: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600),
+                          activeTickColor: cs.onSurface.withOpacity(isDark ? 0.45 : 0.35),
+                          inactiveTickColor: cs.onSurface.withOpacity(isDark ? 0.30 : 0.25),
+                          activeMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.34 : 0.28),
+                          inactiveMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.24 : 0.20),
+                        ),
+                        child: SfSlider(
+                          value: scale,
+                          min: 0.8,
+                          max: 1.50001,
+                          stepSize: 0.05,
+                          showTicks: true,
+                          showLabels: true,
+                          interval: 0.1,
+                          minorTicksPerInterval: 1,
+                          enableTooltip: true,
+                          shouldAlwaysShowTooltip: false,
+                          tooltipShape: const SfPaddleTooltipShape(),
+                          labelFormatterCallback: (value, text) => (value as double).toStringAsFixed(1),
+                          thumbIcon: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: isDark ? [] : [
+                                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2)),
+                              ],
+                            ),
+                          ),
+                          onChanged: (v) => context.read<SettingsProvider>().setChatFontScale((v as double).clamp(0.8, 1.5)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('${(scale * 100).round()}%', style: TextStyle(color: cs.onSurface, fontSize: 12)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : const Color(0xFFF2F3F5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      l10n.displaySettingsPageChatFontSampleText,
+                      style: TextStyle(fontSize: 16 * context.watch<SettingsProvider>().chatFontScale),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAutoScrollIdleSheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Builder(builder: (context) {
+              final theme = Theme.of(context);
+              final cs = theme.colorScheme;
+              final isDark = theme.brightness == Brightness.dark;
+              final seconds = context.watch<SettingsProvider>().autoScrollIdleSeconds;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text('2s', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 12)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SfSliderTheme(
+                        data: SfSliderThemeData(
+                          activeTrackHeight: 8,
+                          inactiveTrackHeight: 8,
+                          overlayRadius: 14,
+                          activeTrackColor: cs.primary,
+                          inactiveTrackColor: cs.onSurface.withOpacity(isDark ? 0.25 : 0.20),
+                          tooltipBackgroundColor: cs.primary,
+                          tooltipTextStyle: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600),
+                          activeTickColor: cs.onSurface.withOpacity(isDark ? 0.45 : 0.35),
+                          inactiveTickColor: cs.onSurface.withOpacity(isDark ? 0.30 : 0.25),
+                          activeMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.34 : 0.28),
+                          inactiveMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.24 : 0.20),
+                        ),
+                        child: SfSlider(
+                          value: seconds.toDouble(),
+                          min: 2.0,
+                          max: 64.0,
+                          stepSize: 2.0,
+                          showTicks: true,
+                          showLabels: true,
+                          interval: 10.0,
+                          minorTicksPerInterval: 1,
+                          enableTooltip: true,
+                          shouldAlwaysShowTooltip: false,
+                          tooltipShape: const SfPaddleTooltipShape(),
+                          labelFormatterCallback: (value, text) => value.toInt().toString(),
+                          thumbIcon: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: isDark ? [] : [
+                                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2)),
+                              ],
+                            ),
+                          ),
+                          onChanged: (v) => context.read<SettingsProvider>().setAutoScrollIdleSeconds((v as double).round()),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('${seconds.round()}s', style: TextStyle(color: cs.onSurface, fontSize: 12)),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.displaySettingsPageAutoScrollIdleSubtitle,
+                    style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                  ),
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
   }
 }
 
