@@ -3281,38 +3281,32 @@ class _QuickPhraseEditSheetState extends State<_QuickPhraseEditSheet> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      side: BorderSide(
-                        color: cs.outlineVariant.withOpacity(0.35),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: _IosButton(
+                      label: l10n.quickPhraseCancelButton,
+                      onTap: () => Navigator.of(context).pop(),
+                      filled: false,
+                      neutral: true,
                     ),
-                    child: Text(l10n.quickPhraseCancelButton),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
-                    onPressed: () {
-                      Navigator.of(context).pop({
-                        'title': _titleController.text,
-                        'content': _contentController.text,
-                      });
-                    },
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      backgroundColor: cs.primary,
-                      foregroundColor: cs.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: _IosButton(
+                      label: l10n.quickPhraseSaveButton,
+                      onTap: () {
+                        Navigator.of(context).pop({
+                          'title': _titleController.text,
+                          'content': _contentController.text,
+                        });
+                      },
+                      icon: Lucide.Check,
+                      filled: true,
+                      neutral: false,
                     ),
-                    child: Text(l10n.quickPhraseSaveButton),
                   ),
                 ),
               ],
@@ -3341,7 +3335,7 @@ class _SegTabBar extends StatelessWidget {
     const double minSegWidth = 88; // ensure readability; scroll if not enough
     final double pillRadius = 18;
     final double innerRadius =
-    (pillRadius - innerPadding).clamp(0, pillRadius);
+        ((pillRadius - innerPadding).clamp(0.0, pillRadius)).toDouble();
 
     return LayoutBuilder(
       builder: (context, constraints) {
