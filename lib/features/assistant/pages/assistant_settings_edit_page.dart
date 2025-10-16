@@ -34,6 +34,7 @@ import '../../../core/providers/quick_phrase_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../shared/widgets/ios_switch.dart';
+import '../../../core/services/haptics.dart';
 
 class AssistantSettingsEditPage extends StatefulWidget {
   const AssistantSettingsEditPage({super.key, required this.assistantId});
@@ -73,11 +74,17 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage>
     if (assistant == null) {
       return Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: Icon(Lucide.ArrowLeft, size: 22),
-            onPressed: () => Navigator.of(context).maybePop(),
+          leading: Tooltip(
+            message: l10n.settingsPageBackButton,
+            child: _TactileIconButton(
+              icon: Lucide.ArrowLeft,
+              color: cs.onSurface,
+              size: 22,
+              onTap: () => Navigator.of(context).maybePop(),
+            ),
           ),
           title: Text(l10n.assistantEditPageTitle),
+          actions: const [SizedBox(width: 12)],
         ),
         body: Center(child: Text(l10n.assistantEditPageNotFound)),
       );
@@ -85,15 +92,21 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage>
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Lucide.ArrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         ),
         title: Text(
           assistant.name.isNotEmpty
               ? assistant.name
               : l10n.assistantEditPageTitle,
         ),
+        actions: const [SizedBox(width: 12)],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
           child: Padding(
@@ -144,7 +157,7 @@ class _CustomRequestTab extends StatelessWidget {
     final a = ap.getById(assistantId)!;
 
     Widget card({required Widget child}) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 20, 8), // Increased right padding
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? Colors.white10 : cs.surface,
@@ -219,7 +232,7 @@ class _CustomRequestTab extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16), // Added top padding
       children: [
         // Headers
         card(
@@ -237,12 +250,25 @@ class _CustomRequestTab extends StatelessWidget {
                       ),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: addHeader,
-                    icon: Icon(Lucide.Plus, size: 16, color: cs.primary),
-                    label: Text(
-                      l10n.assistantEditCustomHeadersAdd,
-                      style: TextStyle(color: cs.primary),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: _TactileRow(
+                      onTap: addHeader,
+                      pressedScale: 0.97,
+                      builder: (pressed) {
+                        final color = pressed ? cs.primary.withOpacity(0.7) : cs.primary;
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Lucide.Plus, size: 16, color: color),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.assistantEditCustomHeadersAdd,
+                              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -286,12 +312,25 @@ class _CustomRequestTab extends StatelessWidget {
                       ),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: addBody,
-                    icon: Icon(Lucide.Plus, size: 16, color: cs.primary),
-                    label: Text(
-                      l10n.assistantEditCustomBodyAdd,
-                      style: TextStyle(color: cs.primary),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: _TactileRow(
+                      onTap: addBody,
+                      pressedScale: 0.97,
+                      builder: (pressed) {
+                        final color = pressed ? cs.primary.withOpacity(0.7) : cs.primary;
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Lucide.Plus, size: 16, color: color),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.assistantEditCustomBodyAdd,
+                              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -405,10 +444,11 @@ class _HeaderRowState extends State<_HeaderRow> {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              onPressed: widget.onDelete,
-              icon: Icon(Lucide.Trash2, size: 18, color: cs.error),
-              tooltip: l10n.assistantEditDeleteTooltip,
+            _TactileIconButton(
+              icon: Lucide.Trash2,
+              color: cs.error,
+              size: 20,
+              onTap: widget.onDelete,
             ),
           ],
         ),
@@ -506,10 +546,11 @@ class _BodyRowState extends State<_BodyRow> {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              onPressed: widget.onDelete,
-              icon: Icon(Lucide.Trash2, size: 18, color: cs.error),
-              tooltip: l10n.assistantEditDeleteTooltip,
+            _TactileIconButton(
+              icon: Lucide.Trash2,
+              color: cs.error,
+              size: 20,
+              onTap: widget.onDelete,
             ),
           ],
         ),
@@ -582,31 +623,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(widget.assistantId)!;
-
-    Widget sectionTitle(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: cs.primary,
-        ),
-      ),
-    );
-
-    Widget card({required Widget child}) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white10 : cs.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
-          boxShadow: isDark ? [] : AppShadows.soft,
-        ),
-        child: Padding(padding: const EdgeInsets.all(12), child: child),
-      ),
-    );
 
     Widget titleDesc(String title, String? desc) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,419 +718,333 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     }
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        // Identity card (avatar + name)
+        // Identity card (avatar + name) - iOS style
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+              width: 0.6,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                avatarWidget(size: 64),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _InputRow(
+                    label: l10n.assistantEditAssistantNameLabel,
+                    controller: _nameCtrl,
+                    onChanged: (v) => context
+                        .read<AssistantProvider>()
+                        .updateAssistant(a.copyWith(name: v)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // iOS section card with all settings (without Use Assistant Avatar and Stream Output)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Container(
-            decoration: BoxDecoration(
-              color: cs.primaryContainer.withOpacity(isDark ? 0.22 : 0.30),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
-              boxShadow: isDark ? [] : AppShadows.soft,
+          padding: const EdgeInsets.symmetric(horizontal: 0),
+          child: _iosSectionCard(children: [
+            // Temperature
+            _iosNavRow(
+              context,
+              icon: Lucide.Thermometer,
+              label: 'Temperature',
+              detailText: a.temperature != null ? a.temperature!.toStringAsFixed(2) : l10n.assistantEditParameterDisabled,
+              onTap: () => _showTemperatureSheet(context, a),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  avatarWidget(size: 64),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _InputRow(
-                      label: l10n.assistantEditAssistantNameLabel,
-                      controller: _nameCtrl,
-                      onChanged: (v) => context
-                          .read<AssistantProvider>()
-                          .updateAssistant(a.copyWith(name: v)),
-                    ),
-                  ),
-                ],
-              ),
+            _iosDivider(context),
+            // Top P
+            _iosNavRow(
+              context,
+              icon: Lucide.Wand2,
+              label: 'Top P',
+              detailText: a.topP != null ? a.topP!.toStringAsFixed(2) : l10n.assistantEditParameterDisabled,
+              onTap: () => _showTopPSheet(context, a),
             ),
-          ),
-        ),
-
-        // Use assistant avatar
-        card(
-          child: Row(
-            children: [
-              Expanded(
-                child: titleDesc(
-                  l10n.assistantEditUseAssistantAvatarTitle,
-                  l10n.assistantEditUseAssistantAvatarSubtitle,
-                ),
-              ),
-              IosSwitch(
-                value: a.useAssistantAvatar,
-                onChanged: (v) => context
-                    .read<AssistantProvider>()
-                    .updateAssistant(a.copyWith(useAssistantAvatar: v)),
-              ),
-            ],
-          ),
-        ),
-
-        // Chat model card (styled like DefaultModelPage)
-        card(
-          child: _AssistantModelCard(
-            title: l10n.assistantEditChatModelTitle,
-            subtitle: l10n.assistantEditChatModelSubtitle,
-            providerKey: a.chatModelProvider,
-            modelId: a.chatModelId,
-            onPick: () async {
-              final sel = await showModelSelector(context);
-              if (sel != null) {
+            _iosDivider(context),
+            // Context messages
+            _iosNavRow(
+              context,
+              icon: Lucide.MessagesSquare,
+              label: l10n.assistantEditContextMessagesTitle,
+              detailText: a.limitContextMessages ? a.contextMessageSize.toString() : l10n.assistantEditParameterDisabled2,
+              onTap: () => _showContextMessagesSheet(context, a),
+            ),
+            _iosDivider(context),
+            // Thinking budget
+            _iosNavRow(
+              context,
+              icon: Lucide.Brain,
+              label: l10n.assistantEditThinkingBudgetTitle,
+              detailText: a.thinkingBudget?.toString() ?? '-',
+              onTap: () async {
+                final currentBudget = a.thinkingBudget;
+                if (currentBudget != null) {
+                  context.read<SettingsProvider>().setThinkingBudget(currentBudget);
+                }
+                await showReasoningBudgetSheet(context);
+                final chosen = context.read<SettingsProvider>().thinkingBudget;
                 await context.read<AssistantProvider>().updateAssistant(
-                  a.copyWith(
-                    chatModelProvider: sel.providerKey,
-                    chatModelId: sel.modelId,
-                  ),
+                  a.copyWith(thinkingBudget: chosen),
                 );
-              }
-            },
-            onLongPress: () async {
-              // Reset to use global default model
-              await context.read<AssistantProvider>().updateAssistant(
-                a.copyWith(clearChatModel: true),
-              );
-            },
-          ),
+              },
+            ),
+            _iosDivider(context),
+            // Max tokens
+            _iosNavRow(
+              context,
+              icon: Lucide.Hash,
+              label: l10n.assistantEditMaxTokensTitle,
+              detailText: a.maxTokens?.toString() ?? l10n.assistantEditMaxTokensHint,
+              onTap: () => _showMaxTokensSheet(context, a),
+            ),
+            _iosDivider(context),
+            // Use assistant avatar
+            _iosSwitchRow(
+              context,
+              icon: Lucide.User,
+              label: l10n.assistantEditUseAssistantAvatarTitle,
+              value: a.useAssistantAvatar,
+              onChanged: (v) => context
+                  .read<AssistantProvider>()
+                  .updateAssistant(a.copyWith(useAssistantAvatar: v)),
+            ),
+            _iosDivider(context),
+            // Stream output
+            _iosSwitchRow(
+              context,
+              icon: Lucide.Zap,
+              label: l10n.assistantEditStreamOutputTitle,
+              value: a.streamOutput,
+              onChanged: (v) => context
+                  .read<AssistantProvider>()
+                  .updateAssistant(a.copyWith(streamOutput: v)),
+            ),
+          ]),
         ),
+        const SizedBox(height: 16),
 
-        // Temperature
-        card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: titleDesc(
-                      'Temperature',
-                      l10n.assistantEditTemperatureDescription,
-                    ),
-                  ),
-                  IosSwitch(
-                    value: a.temperature != null,
-                    onChanged: (v) async {
-                      if (v) {
-                        await context.read<AssistantProvider>().updateAssistant(
-                          a.copyWith(temperature: (a.temperature ?? 0.6)),
-                        );
-                      } else {
-                        await context.read<AssistantProvider>().updateAssistant(
-                          a.copyWith(clearTemperature: true),
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-              if (a.temperature != null) ...[
-                _SliderTileNew(
-                  value: a.temperature!.clamp(0.0, 2.0),
-                  min: 0.0,
-                  max: 2.0,
-                  divisions: 20,
-                  label: a.temperature!.toStringAsFixed(2),
-                  onChanged: (v) => context
-                      .read<AssistantProvider>()
-                      .updateAssistant(a.copyWith(temperature: v)),
-                ),
-              ] else ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-                  child: Text(
-                    l10n.assistantEditParameterDisabled,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+        // Chat model card (moved down, styled like DefaultModelPage)
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+              width: 0.6,
+            ),
           ),
-        ),
-
-        // Top P
-        card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: titleDesc(
-                      'Top P',
-                      l10n.assistantEditTopPDescription,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Lucide.MessageCircle, size: 18, color: cs.onSurface),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.assistantEditChatModelTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
-                  IosSwitch(
-                    value: a.topP != null,
-                    onChanged: (v) async {
-                      if (v) {
-                        await context.read<AssistantProvider>().updateAssistant(
-                          a.copyWith(topP: (a.topP ?? 1.0)),
-                        );
-                      } else {
-                        await context.read<AssistantProvider>().updateAssistant(
-                          a.copyWith(clearTopP: true),
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-              if (a.topP != null) ...[
-                _SliderTileNew(
-                  value: a.topP!.clamp(0.0, 1.0),
-                  min: 0.0,
-                  max: 1.0,
-                  divisions: 20,
-                  label: a.topP!.toStringAsFixed(2),
-                  onChanged: (v) => context
-                      .read<AssistantProvider>()
-                      .updateAssistant(a.copyWith(topP: v)),
+                  ],
                 ),
-              ] else ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-                  child: Text(
-                    l10n.assistantEditParameterDisabled,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withOpacity(0.7),
-                    ),
-                  ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.assistantEditChatModelSubtitle,
+                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
                 ),
-              ],
-            ],
-          ),
-        ),
-
-        // Context messages
-        card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: titleDesc(
-                      l10n.assistantEditContextMessagesTitle,
-                      l10n.assistantEditContextMessagesDescription,
-                    ),
-                  ),
-                  IosSwitch(
-                    value: a.limitContextMessages,
-                    onChanged: (v) async {
+                const SizedBox(height: 8),
+                _TactileRow(
+                  onTap: () async {
+                    final sel = await showModelSelector(context);
+                    if (sel != null) {
                       await context.read<AssistantProvider>().updateAssistant(
-                        a.copyWith(limitContextMessages: v),
+                        a.copyWith(
+                          chatModelProvider: sel.providerKey,
+                          chatModelId: sel.modelId,
+                        ),
+                      );
+                    }
+                  },
+                  pressedScale: 0.98,
+                  builder: (pressed) {
+                    final bg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+                    final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+                    final pressedBg = Color.alphaBlend(overlay, bg);
+                    final l10n = AppLocalizations.of(context)!;
+                    final settings = context.read<SettingsProvider>();
+                    String display = l10n.assistantEditModelUseGlobalDefault;
+                    String brandName = display;
+                    if (a.chatModelProvider != null && a.chatModelId != null) {
+                      try {
+                        final cfg = settings.getProviderConfig(a.chatModelProvider!);
+                        final ov = cfg.modelOverrides[a.chatModelId] as Map?;
+                        brandName = cfg.name.isNotEmpty ? cfg.name : a.chatModelProvider!;
+                        final mdl = (ov != null && (ov['name'] as String?)?.isNotEmpty == true)
+                            ? (ov['name'] as String)
+                            : a.chatModelId!;
+                        display = mdl;
+                      } catch (_) {
+                        brandName = a.chatModelProvider ?? '';
+                        display = a.chatModelId ?? '';
+                      }
+                    }
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      curve: Curves.easeOutCubic,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: pressed ? pressedBg : bg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          _BrandAvatarLike(name: display, size: 24),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              display,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Chat background (separate iOS card)
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+              width: 0.6,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Lucide.Image, size: 18, color: cs.onSurface),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.assistantEditChatBackgroundTitle,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.assistantEditChatBackgroundDescription,
+                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                ),
+                const SizedBox(height: 8),
+                if ((a.background ?? '').isEmpty) ...[
+                  // Single button when no background (full width)
+                  _TactileRow(
+                    onTap: () => _pickBackground(context, a),
+                    pressedScale: 0.98,
+                    builder: (pressed) {
+                      final bg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+                      final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+                      final pressedBg = Color.alphaBlend(overlay, bg);
+                      final iconColor = cs.onSurface.withOpacity(0.75);
+                      final textColor = cs.onSurface.withOpacity(0.9);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: pressed ? pressedBg : bg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: cs.outlineVariant.withOpacity(0.35),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 2.0), // Material icon spacing
+                              child: Icon(Icons.image, size: 18, color: iconColor),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.assistantEditChooseImageButton,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: textColor,
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
+                ] else ...[
+                  // Two buttons when background exists
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _IosButton(
+                          label: l10n.assistantEditChooseImageButton,
+                          icon: Icons.image,
+                          onTap: () => _pickBackground(context, a),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _IosButton(
+                          label: l10n.assistantEditClearButton,
+                          icon: Lucide.X,
+                          onTap: () => context
+                              .read<AssistantProvider>()
+                              .updateAssistant(a.copyWith(clearBackground: true)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
-              if (a.limitContextMessages) ...[
-                _SliderTileNew(
-                  value: a.contextMessageSize.toDouble().clamp(0, 256),
-                  min: 0,
-                  max: 256,
-                  divisions: 64, // step=4: every 4 messages per tick
-                  label: a.contextMessageSize.toString(),
-                  onChanged: (v) =>
-                      context.read<AssistantProvider>().updateAssistant(
-                        a.copyWith(contextMessageSize: v.round()),
-                      ),
-                ),
-              ] else ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-                  child: Text(
-                    l10n.assistantEditParameterDisabled2,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withOpacity(0.7),
-                    ),
+                if ((a.background ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: _BackgroundPreview(path: a.background!),
                   ),
-                ),
-              ],
-            ],
-          ),
-        ),
-
-        // Stream output
-        card(
-          child: Row(
-            children: [
-              Expanded(
-                child: titleDesc(
-                  l10n.assistantEditStreamOutputTitle,
-                  l10n.assistantEditStreamOutputDescription,
-                ),
-              ),
-              IosSwitch(
-                value: a.streamOutput,
-                onChanged: (v) => context
-                    .read<AssistantProvider>()
-                    .updateAssistant(a.copyWith(streamOutput: v)),
-              ),
-            ],
-          ),
-        ),
-
-        // Thinking budget (card with icon and button)
-        card(
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 2, right: 8),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: SvgPicture.asset(
-                    'assets/icons/deepthink.svg',
-                    colorFilter: ColorFilter.mode(cs.primary, BlendMode.srcIn),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  l10n.assistantEditThinkingBudgetTitle,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final currentBudget = a.thinkingBudget;
-                  if (currentBudget != null) {
-                    context.read<SettingsProvider>().setThinkingBudget(
-                      currentBudget,
-                    );
-                  }
-                  await showReasoningBudgetSheet(context);
-                  final chosen = context
-                      .read<SettingsProvider>()
-                      .thinkingBudget;
-                  await context.read<AssistantProvider>().updateAssistant(
-                    a.copyWith(thinkingBudget: chosen),
-                  );
-                },
-                child: Text(l10n.assistantEditConfigureButton),
-              ),
-            ],
-          ),
-        ),
-
-        // Max tokens
-        card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              titleDesc(
-                l10n.assistantEditMaxTokensTitle,
-                l10n.assistantEditMaxTokensDescription,
-              ),
-              const SizedBox(height: 10),
-              _InputRow(
-                label: l10n.assistantEditMaxTokensTitle,
-                hideLabel: true,
-                controller: _maxTokensCtrl,
-                hint: l10n.assistantEditMaxTokensHint,
-                keyboardType: TextInputType.number,
-                onChanged: (v) {
-                  final val = int.tryParse(v.trim());
-                  context.read<AssistantProvider>().updateAssistant(
-                    a.copyWith(
-                      maxTokens: val,
-                      clearMaxTokens: v.trim().isEmpty,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-
-        // Chat background
-        card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              titleDesc(
-                l10n.assistantEditChatBackgroundTitle,
-                l10n.assistantEditChatBackgroundDescription,
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickBackground(context, a),
-                      icon: Icon(Lucide.Image, size: 18, color: cs.primary),
-                      label: Text(
-                        l10n.assistantEditChooseImageButton,
-                        style: TextStyle(color: cs.primary),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 12,
-                        ),
-                        side: BorderSide(color: cs.primary.withOpacity(0.45)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor:
-                            Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF2F3F5),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  if ((a.background ?? '').isNotEmpty)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => context
-                            .read<AssistantProvider>()
-                            .updateAssistant(a.copyWith(clearBackground: true)),
-                        icon: Icon(Lucide.X, size: 16, color: cs.primary),
-                        label: Text(
-                          l10n.assistantEditClearButton,
-                          style: TextStyle(color: cs.primary),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 12,
-                          ),
-                          side: BorderSide(color: cs.primary.withOpacity(0.45)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          backgroundColor:
-                              Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white10
-                              : const Color(0xFFF2F3F5),
-                        ),
-                      ),
-                    ),
                 ],
-              ),
-              if ((a.background ?? '').isNotEmpty) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: _BackgroundPreview(path: a.background!),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ],
@@ -1198,6 +1128,381 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         );
       }
     } catch (_) {}
+  }
+
+  Future<void> _showTemperatureSheet(BuildContext context, Assistant a) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+            child: Builder(builder: (context) {
+              final theme = Theme.of(context);
+              final cs = theme.colorScheme;
+              final isDark = theme.brightness == Brightness.dark;
+              final value = context.watch<AssistantProvider>().getById(widget.assistantId)?.temperature ?? 0.6;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: cs.onSurface.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Temperature',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      IosSwitch(
+                        value: a.temperature != null,
+                        onChanged: (v) async {
+                          if (v) {
+                            await context.read<AssistantProvider>().updateAssistant(
+                              a.copyWith(temperature: 0.6),
+                            );
+                          } else {
+                            await context.read<AssistantProvider>().updateAssistant(
+                              a.copyWith(clearTemperature: true),
+                            );
+                          }
+                          // Close the bottom sheet after toggle
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (a.temperature != null) ...[
+                    _SliderTileNew(
+                      value: value.clamp(0.0, 2.0),
+                      min: 0.0,
+                      max: 2.0,
+                      divisions: 20,
+                      label: value.toStringAsFixed(2),
+                      onChanged: (v) => context
+                          .read<AssistantProvider>()
+                          .updateAssistant(a.copyWith(temperature: v)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.assistantEditTemperatureDescription,
+                      style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                    ),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        l10n.assistantEditParameterDisabled,
+                        style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showTopPSheet(BuildContext context, Assistant a) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+            child: Builder(builder: (context) {
+              final theme = Theme.of(context);
+              final cs = theme.colorScheme;
+              final isDark = theme.brightness == Brightness.dark;
+              final value = context.watch<AssistantProvider>().getById(widget.assistantId)?.topP ?? 1.0;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: cs.onSurface.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Top P',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      IosSwitch(
+                        value: a.topP != null,
+                        onChanged: (v) async {
+                          if (v) {
+                            await context.read<AssistantProvider>().updateAssistant(
+                              a.copyWith(topP: 1.0),
+                            );
+                          } else {
+                            await context.read<AssistantProvider>().updateAssistant(
+                              a.copyWith(clearTopP: true),
+                            );
+                          }
+                          // Close the bottom sheet after toggle
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (a.topP != null) ...[
+                    _SliderTileNew(
+                      value: value.clamp(0.0, 1.0),
+                      min: 0.0,
+                      max: 1.0,
+                      divisions: 20,
+                      label: value.toStringAsFixed(2),
+                      onChanged: (v) => context
+                          .read<AssistantProvider>()
+                          .updateAssistant(a.copyWith(topP: v)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.assistantEditTopPDescription,
+                      style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                    ),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        l10n.assistantEditParameterDisabled,
+                        style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showContextMessagesSheet(BuildContext context, Assistant a) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+            child: Builder(builder: (context) {
+              final theme = Theme.of(context);
+              final cs = theme.colorScheme;
+              final isDark = theme.brightness == Brightness.dark;
+              final value = context.watch<AssistantProvider>().getById(widget.assistantId)?.contextMessageSize ?? 20;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: cs.onSurface.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.assistantEditContextMessagesTitle,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      IosSwitch(
+                        value: a.limitContextMessages,
+                        onChanged: (v) async {
+                          await context.read<AssistantProvider>().updateAssistant(
+                            a.copyWith(limitContextMessages: v),
+                          );
+                          // Close the bottom sheet after toggle
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (a.limitContextMessages) ...[
+                    _SliderTileNew(
+                      value: value.toDouble().clamp(0, 256),
+                      min: 0,
+                      max: 256,
+                      divisions: 64,
+                      label: value.toString(),
+                      onChanged: (v) => context.read<AssistantProvider>().updateAssistant(
+                        a.copyWith(contextMessageSize: v.round()),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.assistantEditContextMessagesDescription,
+                      style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                    ),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        l10n.assistantEditParameterDisabled2,
+                        style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showMaxTokensSheet(BuildContext context, Assistant a) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(text: a.maxTokens?.toString() ?? '');
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Header with Close (X) and Save buttons
+                Row(
+                  children: [
+                    _TactileIconButton(
+                      icon: Lucide.X,
+                      color: cs.onSurface,
+                      size: 20,
+                      onTap: () => Navigator.of(ctx).pop(),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          l10n.assistantEditMaxTokensTitle,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    _TactileRow(
+                      onTap: () {
+                        final val = int.tryParse(controller.text.trim());
+                        context.read<AssistantProvider>().updateAssistant(
+                          a.copyWith(
+                            maxTokens: val,
+                            clearMaxTokens: controller.text.trim().isEmpty,
+                          ),
+                        );
+                        Navigator.of(ctx).pop();
+                      },
+                      pressedScale: 0.95,
+                      builder: (pressed) {
+                        final color = pressed ? cs.primary.withOpacity(0.7) : cs.primary;
+                        return Text(
+                          l10n.assistantSettingsAddSheetSave, // "Save"
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: l10n.assistantEditMaxTokensHint,
+                    filled: true,
+                    fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : const Color(0xFFF2F3F5),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.5))),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(l10n.assistantEditMaxTokensDescription, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -2155,14 +2460,12 @@ class _PromptTabState extends State<_PromptTab> {
           .replaceAll('{{ date }}', dateStr);
     }
 
-    // System Prompt Card
+    // System Prompt Card (no border, iOS style)
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sysCard = Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white10
-            : cs.surface,
+        color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -2233,14 +2536,11 @@ class _PromptTabState extends State<_PromptTab> {
       ),
     );
 
-    // Template Card with preview
+    // Template Card with preview (no border, iOS style)
     final tmplCard = Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white10
-            : cs.surface,
+        color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -2451,32 +2751,29 @@ class _McpTab extends StatelessWidget {
             ? cs.primary.withOpacity(0.45)
             : cs.outlineVariant.withOpacity(0.25);
 
-        return Material(
-          color: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            customBorder: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            onTap: () async {
-              final set = a.mcpServerIds.toSet();
-              if (isSelected)
-                set.remove(s.id);
-              else
-                set.add(s.id);
-              await context.read<AssistantProvider>().updateAssistant(
-                a.copyWith(mcpServerIds: set.toList()),
-              );
-            },
-            child: Ink(
+        return _TactileRow(
+          onTap: () async {
+            final set = a.mcpServerIds.toSet();
+            if (isSelected)
+              set.remove(s.id);
+            else
+              set.add(s.id);
+            await context.read<AssistantProvider>().updateAssistant(
+              a.copyWith(mcpServerIds: set.toList()),
+            );
+          },
+          pressedScale: 1.0, // No scale on press
+          builder: (pressed) {
+            final overlayBg = pressed
+                ? (isDark
+                    ? Color.alphaBlend(Colors.white.withOpacity(0.06), bg)
+                    : Color.alphaBlend(Colors.black.withOpacity(0.05), bg))
+                : bg;
+            return Container(
               decoration: BoxDecoration(
-                color: bg,
+                color: overlayBg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: borderColor),
-                boxShadow: isDark ? [] : AppShadows.soft,
+                border: Border.all(color: borderColor, width: 0.6),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -2553,8 +2850,8 @@ class _McpTab extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -2740,23 +3037,29 @@ class _QuickPhraseTab extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: GestureDetector(
+                    child: _TactileRow(
                       onTap: () => _showAddEditSheet(context, phrase: phrase),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : cs.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: cs.outlineVariant.withOpacity(0.25),
+                      pressedScale: 0.98,
+                      builder: (pressed) {
+                        final bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+                        final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+                        final pressedBg = Color.alphaBlend(overlay, bg);
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: pressed ? pressedBg : bg,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+                              width: 0.6,
+                            ),
                           ),
-                          boxShadow: isDark ? [] : AppShadows.soft,
-                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Icon(
                                     Lucide.botMessageSquare,
@@ -2795,7 +3098,8 @@ class _QuickPhraseTab extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -2803,14 +3107,49 @@ class _QuickPhraseTab extends StatelessWidget {
             );
           },
         ),
+        // Capsule-style add button (iOS style with border)
         Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton(
-            onPressed: () => _showAddEditSheet(context),
-            backgroundColor: cs.primary,
-            foregroundColor: cs.onPrimary,
-            child: Icon(Lucide.Plus, size: 24),
+          left: 0,
+          right: 0,
+          bottom: 60,
+          child: Center(
+            child: _TactileRow(
+              onTap: () => _showAddEditSheet(context),
+              pressedScale: 0.97,
+              builder: (pressed) {
+                final bgColor = isDark
+                    ? const Color(0xFF1C1C1E)
+                    : const Color(0xFFF2F3F5);
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 110),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: cs.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Lucide.Plus, size: 20, color: cs.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.assistantEditAddQuickPhraseButton,
+                        style: TextStyle(
+                          color: cs.primary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -3334,6 +3673,373 @@ class _BrandAvatarLike extends StatelessWidget {
           color: cs.primary,
           fontWeight: FontWeight.w700,
           fontSize: size * 0.42,
+        ),
+      ),
+    );
+  }
+}
+
+// --- iOS-style helpers ---
+
+class _TactileIconButton extends StatefulWidget {
+  const _TactileIconButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.onLongPress,
+    this.semanticLabel,
+    this.size = 22,
+    this.haptics = true,
+  });
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? semanticLabel;
+  final double size;
+  final bool haptics;
+
+  @override
+  State<_TactileIconButton> createState() => _TactileIconButtonState();
+}
+
+class _TactileIconButtonState extends State<_TactileIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.color;
+    final pressColor = base.withOpacity(0.7);
+    final icon = Icon(
+      widget.icon,
+      size: widget.size,
+      color: _pressed ? pressColor : base,
+      semanticLabel: widget.semanticLabel,
+    );
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          if (widget.haptics) Haptics.light();
+          widget.onTap();
+        },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                if (widget.haptics) Haptics.light();
+                widget.onLongPress!.call();
+              },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: icon,
+        ),
+      ),
+    );
+  }
+}
+
+Widget _iosSectionCard({required List<Widget> children}) {
+  return Builder(builder: (context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final Color bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+          width: 0.6,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(children: children),
+      ),
+    );
+  });
+}
+
+Widget _iosDivider(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  return Divider(
+    height: 6,
+    thickness: 0.6,
+    indent: 54,
+    endIndent: 12,
+    color: cs.outlineVariant.withOpacity(0.18),
+  );
+}
+
+class _AnimatedPressColor extends StatelessWidget {
+  const _AnimatedPressColor({
+    required this.pressed,
+    required this.base,
+    required this.builder,
+  });
+  final bool pressed;
+  final Color base;
+  final Widget Function(Color color) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final target = pressed
+        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        : base;
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(end: target),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      builder: (context, color, _) => builder(color ?? base),
+    );
+  }
+}
+
+class _TactileRow extends StatefulWidget {
+  const _TactileRow({
+    required this.builder,
+    this.onTap,
+    this.haptics = true,
+    this.pressedScale = 1.0,
+  });
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final bool haptics;
+  final double pressedScale;
+
+  @override
+  State<_TactileRow> createState() => _TactileRowState();
+}
+
+class _TactileRowState extends State<_TactileRow> {
+  bool _pressed = false;
+
+  void _setPressed(bool v) {
+    if (_pressed != v) setState(() => _pressed = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget child = widget.builder(_pressed);
+    if (widget.pressedScale != 1.0) {
+      child = AnimatedScale(
+        scale: _pressed ? widget.pressedScale : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: child,
+      );
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
+      onTapUp: widget.onTap == null
+          ? null
+          : (_) async {
+              await Future.delayed(const Duration(milliseconds: 60));
+              if (mounted) _setPressed(false);
+            },
+      onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              if (widget.haptics) Haptics.soft();
+              widget.onTap!.call();
+            },
+      child: child,
+    );
+  }
+}
+
+Widget _iosNavRow(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  String? detailText,
+  Widget? accessory,
+  VoidCallback? onTap,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final interactive = onTap != null;
+  return _TactileRow(
+    onTap: onTap,
+    haptics: true,
+    builder: (pressed) {
+      final baseColor = cs.onSurface.withOpacity(0.9);
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: baseColor,
+        builder: (c) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 15, color: c),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (detailText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(
+                      detailText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withOpacity(0.6),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (accessory != null) accessory,
+                if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget _iosSwitchRow(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required bool value,
+  required ValueChanged<bool> onChanged,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return _TactileRow(
+    onTap: () => onChanged(!value),
+    builder: (pressed) {
+      final baseColor = cs.onSurface.withOpacity(0.9);
+      return _AnimatedPressColor(
+        pressed: pressed,
+        base: baseColor,
+        builder: (c) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(label, style: TextStyle(fontSize: 15, color: c)),
+                ),
+                IosSwitch(value: value, onChanged: onChanged),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _IosButton extends StatefulWidget {
+  const _IosButton({
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.filled = false,
+    this.neutral = true, // Use neutral colors by default for chat background
+  });
+  final String label;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final bool filled;
+  final bool neutral; // If true, use neutral colors instead of primary
+
+  @override
+  State<_IosButton> createState() => _IosButtonState();
+}
+
+class _IosButtonState extends State<_IosButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Determine if this is a Material icon (needs more spacing)
+    final isMaterialIcon = widget.icon != null && 
+        (widget.icon == Icons.image || widget.icon.runtimeType.toString().contains('MaterialIcons'));
+
+    final iconColor = widget.filled 
+        ? cs.onPrimary 
+        : (widget.neutral ? cs.onSurface.withOpacity(0.75) : cs.primary);
+    
+    final textColor = widget.filled
+        ? cs.onPrimary
+        : (widget.neutral ? cs.onSurface.withOpacity(0.9) : cs.primary);
+    
+    final borderColor = widget.neutral 
+        ? cs.outlineVariant.withOpacity(0.35)
+        : cs.primary.withOpacity(0.45);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        Haptics.soft();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color: widget.filled
+                ? cs.primary
+                : (isDark ? Colors.white10 : const Color(0xFFF2F3F5)),
+            borderRadius: BorderRadius.circular(12),
+            border: widget.filled
+                ? null
+                : Border.all(color: borderColor),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (widget.icon != null) ...[
+                Padding(
+                  padding: EdgeInsets.only(left: isMaterialIcon ? 2.0 : 0.0),
+                  child: Icon(
+                    widget.icon,
+                    size: 18,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                widget.label,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

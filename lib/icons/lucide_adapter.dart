@@ -116,4 +116,7 @@ class Lucide {
   static const IconData ListOrdered = lucide.LucideIcons.listOrdered;
   static const IconData circleDot = lucide.LucideIcons.circleCheck;
   static const IconData cloudDownload = lucide.LucideIcons.cloudDownload;
+  static const IconData Thermometer = lucide.LucideIcons.thermometer;
+  static const IconData Wand2 = lucide.LucideIcons.wand;
+  static const IconData MessagesSquare = lucide.LucideIcons.messageSquare;
 }
