@@ -110,11 +110,11 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage>
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _SegTabBar(
+            padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _SegTabBar(
                     controller: _tabController,
                     tabs: [
                       l10n.assistantEditPageBasicTab,
@@ -232,7 +232,7 @@ class _CustomRequestTab extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16), // Added top padding
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 16), // Reduced top padding
       children: [
         // Headers
         card(
@@ -718,7 +718,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         // Identity card (avatar + name) - iOS style
         Container(
@@ -2646,7 +2646,7 @@ class _PromptTabState extends State<_PromptTab> {
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       children: [sysCard, const SizedBox(height: 12), tmplCard],
     );
   }
@@ -2736,7 +2736,7 @@ class _McpTab extends StatelessWidget {
     );
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       itemCount: servers.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -2960,7 +2960,7 @@ class _QuickPhraseTab extends StatelessWidget {
     return Stack(
       children: [
         ReorderableListView.builder(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
           itemCount: phrases.length,
           buildDefaultDragHandles: false,
           proxyDecorator: (child, index, animation) {
