@@ -184,15 +184,30 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
   Future<void> _onAdd() async {
     final settings = context.read<SettingsProvider>();
     String uniqueKey(String prefix, String display) {
+      // Ensure the generated key is truly unique among existing keys
       final existing = context.read<SettingsProvider>().providerConfigs.keys.toSet();
-      String base = (display.toLowerCase() == prefix.toLowerCase()) ? '$prefix - 1' : '$prefix - $display';
+
+      // Case 1: display equals prefix (user used default name), use: "<prefix> - <n>"
+      if (display.toLowerCase() == prefix.toLowerCase()) {
+        // Start from 1, bump until free
+        int i = 1;
+        String candidate = '$prefix - $i';
+        while (existing.contains(candidate)) {
+          i++;
+          candidate = '$prefix - $i';
+        }
+        return candidate;
+      }
+
+      // Case 2: custom display name. Prefer "<prefix> - <display>", then suffix (n)
+      String base = '$prefix - $display';
       if (!existing.contains(base)) return base;
       int i = 2;
-      while (existing.contains('$base ($i)') || existing.contains('$prefix - $display ($i)')) {
+      String candidate = '$base ($i)';
+      while (existing.contains(candidate)) {
         i++;
+        candidate = '$base ($i)';
       }
-      // Prefer appending numeric suffix for clarity
-      final candidate = (display.toLowerCase() == prefix.toLowerCase()) ? '$prefix - $i' : '$prefix - $display ($i)';
       return candidate;
     }
     final idx = _tab.index;

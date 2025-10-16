@@ -22,11 +22,26 @@ List<_ImportResult> _decodeChatBoxJson(BuildContext context, String s) {
   final out = <_ImportResult>[];
   String uniqueKey(String prefix, String display) {
     final existing = settings.providerConfigs.keys.toSet();
+    // If display equals prefix, generate '<prefix> - <n>' starting at 1
+    if (display.toLowerCase() == prefix.toLowerCase()) {
+      int i = 1;
+      String candidate = '$prefix - $i';
+      while (existing.contains(candidate)) {
+        i++;
+        candidate = '$prefix - $i';
+      }
+      return candidate;
+    }
+    // Otherwise prefer '<prefix> - <display>', then add ' (n)'
     String base = '$prefix - $display';
     if (!existing.contains(base)) return base;
     int i = 2;
-    while (existing.contains('$base ($i)')) i++;
-    return '$base ($i)';
+    String candidate = '$base ($i)';
+    while (existing.contains(candidate)) {
+      i++;
+      candidate = '$base ($i)';
+    }
+    return candidate;
   }
   // OpenAI
   final openai = providers['openai'] as Map?;
@@ -131,11 +146,24 @@ _ImportResult _decodeSingle(BuildContext context, String s) {
   final settings = context.read<SettingsProvider>();
   String uniqueKey(String prefix, String display) {
     final existing = settings.providerConfigs.keys.toSet();
+    if (display.toLowerCase() == prefix.toLowerCase()) {
+      int i = 1;
+      String candidate = '$prefix - $i';
+      while (existing.contains(candidate)) {
+        i++;
+        candidate = '$prefix - $i';
+      }
+      return candidate;
+    }
     String base = '$prefix - $display';
     if (!existing.contains(base)) return base;
     int i = 2;
-    while (existing.contains('$base ($i)')) i++;
-    return '$base ($i)';
+    String candidate = '$base ($i)';
+    while (existing.contains(candidate)) {
+      i++;
+      candidate = '$base ($i)';
+    }
+    return candidate;
   }
 
   if (type == 'openai-compat') {
