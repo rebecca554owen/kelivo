@@ -269,10 +269,17 @@ class _BackupPageState extends State<BackupPage> {
                       final list = await vm.listRemote();
                       // 按时间倒序排列（最新的在前）
                       list.sort((a, b) {
-                        if (a.lastModified == null && b.lastModified == null) return 0;
+                        // 优先使用 lastModified
+                        if (a.lastModified != null && b.lastModified != null) {
+                          return b.lastModified!.compareTo(a.lastModified!);
+                        }
+                        // 如果都没有 lastModified，按文件名倒序（文件名通常包含时间戳）
+                        if (a.lastModified == null && b.lastModified == null) {
+                          return b.displayName.compareTo(a.displayName);
+                        }
+                        // 有 lastModified 的排在前面
                         if (a.lastModified == null) return 1;
-                        if (b.lastModified == null) return -1;
-                        return b.lastModified!.compareTo(a.lastModified!);
+                        return -1;
                       });
                       setState(() => _remote = list);
                     } finally {
@@ -292,6 +299,20 @@ class _BackupPageState extends State<BackupPage> {
                         loading: _loadingRemote,
                         onDelete: (item) async {
                           final list = await vm.deleteAndReload(item);
+                          // 按时间倒序排列（最新的在前）
+                          list.sort((a, b) {
+                            // 优先使用 lastModified
+                            if (a.lastModified != null && b.lastModified != null) {
+                              return b.lastModified!.compareTo(a.lastModified!);
+                            }
+                            // 如果都没有 lastModified，按文件名倒序（文件名通常包含时间戳）
+                            if (a.lastModified == null && b.lastModified == null) {
+                              return b.displayName.compareTo(a.displayName);
+                            }
+                            // 有 lastModified 的排在前面
+                            if (a.lastModified == null) return 1;
+                            return -1;
+                          });
                           setState(() => _remote = list);
                         },
                         onRestore: (item) async {
@@ -779,15 +800,17 @@ class _RemoteListSheet extends StatelessWidget {
             children: [
               Container(width: 42, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 10),
-              Row(
+              Stack(
+                alignment: Alignment.center,
                 children: [
-                  Expanded(
-                    child: Center(
-                      child: Text(l10n.backupPageRemoteBackups, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ),
+                  Center(
+                    child: Text(l10n.backupPageRemoteBackups, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
-                  if (loading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  else const SizedBox(width: 16, height: 16),
+                  if (loading)
+                    Positioned(
+                      right: 0,
+                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
                 ],
               ),
               const SizedBox(height: 10),
