@@ -2506,4 +2506,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantSettingsNoPromptPlaceholder => 'No prompt yet';
+
+  @override
+  String get providersPageMultiSelectTooltip => 'Multi-select';
+
+  @override
+  String get providersPageDeleteSelectedConfirmContent =>
+      'Delete selected providers? This cannot be undone.';
+
+  @override
+  String get providersPageDeleteSelectedSnackbar =>
+      'Deleted selected providers';
+
+  @override
+  String providersPageExportSelectedTitle(int count) {
+    return 'Export $count providers';
+  }
+
+  @override
+  String get providersPageExportCopyButton => 'Copy';
+
+  @override
+  String get providersPageExportShareButton => 'Share';
+
+  @override
+  String get providersPageExportCopiedSnackbar => 'Copied export code';
+
+  @override
+  String get providersPageDeleteAction => 'Delete';
+
+  @override
+  String get providersPageExportAction => 'Export';
 }

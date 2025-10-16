@@ -114,5 +114,6 @@ class Lucide {
   static const IconData TextInitial = lucide.LucideIcons.textInitial;
   static const IconData eclipse = lucide.LucideIcons.eclipse;
   static const IconData ListOrdered = lucide.LucideIcons.listOrdered;
-  static const IconData circleDot = lucide.LucideIcons.circleCheckBig;
+  static const IconData circleDot = lucide.LucideIcons.circleCheck;
+  static const IconData cloudDownload = lucide.LucideIcons.cloudDownload;
 }

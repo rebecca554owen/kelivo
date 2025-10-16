@@ -2422,6 +2422,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantSettingsNoPromptPlaceholder => '暂无提示词';
+
+  @override
+  String get providersPageMultiSelectTooltip => '多选';
+
+  @override
+  String get providersPageDeleteSelectedConfirmContent =>
+      '确定要删除选中的供应商吗？该操作不可撤销。';
+
+  @override
+  String get providersPageDeleteSelectedSnackbar => '已删除选中的供应商';
+
+  @override
+  String providersPageExportSelectedTitle(int count) {
+    return '导出 $count 个供应商';
+  }
+
+  @override
+  String get providersPageExportCopyButton => '复制';
+
+  @override
+  String get providersPageExportShareButton => '分享';
+
+  @override
+  String get providersPageExportCopiedSnackbar => '已复制导出代码';
+
+  @override
+  String get providersPageDeleteAction => '删除';
+
+  @override
+  String get providersPageExportAction => '导出';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4842,6 +4872,36 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantSettingsNoPromptPlaceholder => '暂无提示词';
+
+  @override
+  String get providersPageMultiSelectTooltip => '多选';
+
+  @override
+  String get providersPageDeleteSelectedConfirmContent =>
+      '确定要删除选中的供应商吗？该操作不可撤销。';
+
+  @override
+  String get providersPageDeleteSelectedSnackbar => '已删除选中的供应商';
+
+  @override
+  String providersPageExportSelectedTitle(int count) {
+    return '导出 $count 个供应商';
+  }
+
+  @override
+  String get providersPageExportCopyButton => '复制';
+
+  @override
+  String get providersPageExportShareButton => '分享';
+
+  @override
+  String get providersPageExportCopiedSnackbar => '已复制导出代码';
+
+  @override
+  String get providersPageDeleteAction => '删除';
+
+  @override
+  String get providersPageExportAction => '导出';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7263,4 +7323,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantSettingsNoPromptPlaceholder => '暫無提示詞';
+
+  @override
+  String get providersPageMultiSelectTooltip => '多選';
+
+  @override
+  String get providersPageDeleteSelectedConfirmContent =>
+      '確定要刪除選中的供應商嗎？此操作不可撤銷。';
+
+  @override
+  String get providersPageDeleteSelectedSnackbar => '已刪除選中的供應商';
+
+  @override
+  String providersPageExportSelectedTitle(int count) {
+    return '匯出 $count 個供應商';
+  }
+
+  @override
+  String get providersPageExportCopyButton => '複製';
+
+  @override
+  String get providersPageExportShareButton => '分享';
+
+  @override
+  String get providersPageExportCopiedSnackbar => '已複製匯出代碼';
+
+  @override
+  String get providersPageDeleteAction => '刪除';
+
+  @override
+  String get providersPageExportAction => '匯出';
 }

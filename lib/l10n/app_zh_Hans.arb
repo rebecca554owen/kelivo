@@ -105,6 +105,20 @@
   "assistantEditQQAvatarFailedMessage": "获取随机QQ头像失败，请重试",
   "assistantEditQQAvatarDialogCancel": "取消",
   "assistantEditQQAvatarDialogSave": "保存",
+  "providersPageMultiSelectTooltip": "多选",
+  "providersPageDeleteSelectedConfirmContent": "确定要删除选中的供应商吗？该操作不可撤销。",
+  "providersPageDeleteSelectedSnackbar": "已删除选中的供应商",
+  "providersPageExportSelectedTitle": "导出 {count} 个供应商",
+  "@providersPageExportSelectedTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "providersPageExportCopyButton": "复制",
+  "providersPageExportShareButton": "分享",
+  "providersPageExportCopiedSnackbar": "已复制导出代码",
+  "providersPageDeleteAction": "删除",
+  "providersPageExportAction": "导出",
   "assistantEditGalleryErrorMessage": "无法打开相册，试试输入图片链接",
   "assistantEditGeneralErrorMessage": "发生错误，试试输入图片链接",
   "assistantEditSystemPromptTitle": "系统提示词",

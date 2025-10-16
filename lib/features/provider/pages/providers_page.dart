@@ -81,7 +81,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
         title: Text(l10n.providersPageTitle),
         actions: [
           Tooltip(
-            message: _selectMode ? '完成' : '多选',
+            message: _selectMode ? l10n.searchServicesPageDone : l10n.providersPageMultiSelectTooltip,
             child: _TactileIconButton(
               icon: _selectMode ? Lucide.Check : Lucide.circleDot,
               color: cs.onSurface,
@@ -99,7 +99,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
           Tooltip(
             message: l10n.providersPageImportTooltip,
             child: _TactileIconButton(
-              icon: Lucide.Import,
+              icon: Lucide.cloudDownload,
               color: cs.onSurface,
               size: 22,
               onTap: () async {
@@ -234,7 +234,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('${l10n.providerDetailPageDeleteProviderTitle} (${_selected.length})'),
-        content: Text('确定要删除选中的供应商吗？该操作不可撤销。'),
+        content: Text(l10n.providersPageDeleteSelectedConfirmContent),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
           TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.providerDetailPageDeleteButton, style: const TextStyle(color: Colors.red))),
@@ -261,7 +261,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
         _selected.clear();
         _selectMode = false;
       });
-      showAppSnackBar(context, message: '已删除选中的供应商', type: NotificationType.success);
+      showAppSnackBar(context, message: l10n.providersPageDeleteSelectedSnackbar, type: NotificationType.success);
     } catch (_) {}
   }
 }
@@ -496,6 +496,7 @@ class _SelectionBar extends StatelessWidget {
   final VoidCallback onDelete;
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return AnimatedSlide(
       offset: visible ? Offset.zero : const Offset(0, 1),
@@ -516,7 +517,7 @@ class _SelectionBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _CapsuleButton(
-                      label: '删除',
+                      label: l10n.providersPageDeleteAction,
                       icon: Lucide.Trash2,
                       color: const Color(0xFFFF3B30),
                       onTap: onDelete,
@@ -524,7 +525,7 @@ class _SelectionBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     _CapsuleButton(
-                      label: '导出',
+                      label: l10n.providersPageExportAction,
                       icon: Lucide.Export,
                       color: cs.primary,
                       onTap: onExport,
@@ -598,6 +599,7 @@ class _CapsuleButtonState extends State<_CapsuleButton> {
 Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) async {
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
+  final l10n = AppLocalizations.of(context)!;
   final entries = [
     for (final k in keys)
       () {
@@ -635,7 +637,7 @@ Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) asyn
             children: [
               Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)))),
               const SizedBox(height: 12),
-              Center(child: Text('导出 ${keys.length} 个供应商', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
+              Center(child: Text(l10n.providersPageExportSelectedTitle(keys.length), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
               const SizedBox(height: 12),
               // Single combined QR for all selected providers
               Center(
@@ -675,9 +677,9 @@ Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) asyn
                       icon: const Icon(Lucide.Copy, size: 18),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: text));
-                        showAppSnackBar(context, message: '已复制导出代码', type: NotificationType.success);
+                        showAppSnackBar(context, message: l10n.providersPageExportCopiedSnackbar, type: NotificationType.success);
                       },
-                      label: const Text('复制'),
+                      label: Text(l10n.providersPageExportCopyButton),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: cs.primary.withOpacity(0.5)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -692,7 +694,7 @@ Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) asyn
                         final rect = shareAnchorRect(ctx);
                         await Share.share(text, subject: 'AI Providers', sharePositionOrigin: rect);
                       },
-                      label: const Text('分享'),
+                      label: Text(l10n.providersPageExportShareButton),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: cs.primary,
                         foregroundColor: cs.onPrimary,

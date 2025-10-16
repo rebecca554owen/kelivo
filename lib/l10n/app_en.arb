@@ -1042,5 +1042,20 @@
   "displaySettingsPageRenderingSettingsTitle": "Rendering settings",
   "displaySettingsPageBehaviorStartupTitle": "Behavior & startup",
   "displaySettingsPageHapticsSettingsTitle": "Haptics",
-  "assistantSettingsNoPromptPlaceholder": "No prompt yet"
+  "assistantSettingsNoPromptPlaceholder": "No prompt yet",
+  "providersPageMultiSelectTooltip": "Multi-select"
+  ,
+  "providersPageDeleteSelectedConfirmContent": "Delete selected providers? This cannot be undone.",
+  "providersPageDeleteSelectedSnackbar": "Deleted selected providers",
+  "providersPageExportSelectedTitle": "Export {count} providers",
+  "@providersPageExportSelectedTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "providersPageExportCopyButton": "Copy",
+  "providersPageExportShareButton": "Share",
+  "providersPageExportCopiedSnackbar": "Copied export code",
+  "providersPageDeleteAction": "Delete",
+  "providersPageExportAction": "Export"
 }

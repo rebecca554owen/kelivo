@@ -4750,6 +4750,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No prompt yet'**
   String get assistantSettingsNoPromptPlaceholder;
+
+  /// No description provided for @providersPageMultiSelectTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-select'**
+  String get providersPageMultiSelectTooltip;
+
+  /// No description provided for @providersPageDeleteSelectedConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected providers? This cannot be undone.'**
+  String get providersPageDeleteSelectedConfirmContent;
+
+  /// No description provided for @providersPageDeleteSelectedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted selected providers'**
+  String get providersPageDeleteSelectedSnackbar;
+
+  /// No description provided for @providersPageExportSelectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export {count} providers'**
+  String providersPageExportSelectedTitle(int count);
+
+  /// No description provided for @providersPageExportCopyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get providersPageExportCopyButton;
+
+  /// No description provided for @providersPageExportShareButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get providersPageExportShareButton;
+
+  /// No description provided for @providersPageExportCopiedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied export code'**
+  String get providersPageExportCopiedSnackbar;
+
+  /// No description provided for @providersPageDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get providersPageDeleteAction;
+
+  /// No description provided for @providersPageExportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get providersPageExportAction;
 }
 
 class _AppLocalizationsDelegate
