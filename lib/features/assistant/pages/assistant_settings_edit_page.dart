@@ -1607,6 +1607,7 @@ class _SliderTileNew extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    
     final active = cs.primary;
     final inactive = cs.onSurface.withOpacity(isDark ? 0.25 : 0.20);
     final double clamped = value.clamp(min, max);
@@ -3333,45 +3334,116 @@ class _SegTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: tabs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final selected = controller.index == index;
-          return GestureDetector(
-            onTap: () => controller.animateTo(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? cs.primary.withOpacity(0.12)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: selected
-                      ? cs.primary
-                      : cs.outlineVariant.withOpacity(0.3),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                tabs[index],
-                style: TextStyle(
-                  color: selected ? cs.primary : cs.onSurface.withOpacity(0.8),
-                  fontWeight: FontWeight.w600,
-                ),
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    const double outerHeight = 44;
+    const double innerPadding = 4; // gap between shell and selected block
+    const double gap = 6; // spacing between segments
+    const double minSegWidth = 88; // ensure readability; scroll if not enough
+    final double pillRadius = 18;
+    final double innerRadius =
+    (pillRadius - innerPadding).clamp(0, pillRadius);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double availWidth = constraints.maxWidth;
+        final double innerAvailWidth = availWidth - innerPadding * 2;
+        final double segWidth = math.max(
+          minSegWidth,
+          (innerAvailWidth - gap * (tabs.length - 1)) / tabs.length,
+        );
+        final double rowWidth = segWidth * tabs.length + gap * (tabs.length - 1);
+
+        final Color shellBg = isDark
+            ? Colors.white.withOpacity(0.08)
+            : Colors.white; // 白底胶囊，无边框阴影
+
+        List<Widget> children = [];
+        for (int index = 0; index < tabs.length; index++) {
+          final bool selected = controller.index == index;
+          children.add(
+            SizedBox(
+              width: segWidth,
+              height: double.infinity,
+              child: _TactileRow(
+                onTap: () => controller.animateTo(index),
+                builder: (pressed) {
+                  // 背景不随按压变化：仅选中时有浅主题底色，未选中透明
+                  final Color baseBg = selected
+                      ? cs.primary.withOpacity(0.14)
+                      : Colors.transparent;
+                  final Color bg = baseBg; // 不叠加遮罩，不改变底色
+
+                  // 仅文字在按压时变浅并有渐变
+                  final Color baseTextColor = selected
+                      ? cs.primary // 选中文字：主题色
+                      : cs.onSurface.withOpacity(0.82); // 未选中：深灰
+                  final Color targetTextColor = pressed
+                      ? Color.lerp(baseTextColor, Colors.white, 0.22) ?? baseTextColor
+                      : baseTextColor;
+
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(innerRadius), // 选中块圆角
+                    ),
+                    alignment: Alignment.center,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: TweenAnimationBuilder<Color?>(
+                        tween: ColorTween(end: targetTextColor),
+                        duration: const Duration(milliseconds: 160),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, color, _) {
+                          return Text(
+                            tabs[index],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: color ?? baseTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           );
-        },
-      ),
+          if (index != tabs.length - 1) {
+            children.add(const SizedBox(width: gap));
+          }
+        }
+
+        return Container(
+          height: outerHeight,
+          decoration: BoxDecoration(
+            color: shellBg,
+            borderRadius: BorderRadius.circular(pillRadius),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Padding(
+            padding: const EdgeInsets.all(innerPadding),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: innerAvailWidth),
+                child: SizedBox(
+                  width: rowWidth,
+                  child: Row(children: children),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
