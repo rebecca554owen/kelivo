@@ -240,6 +240,19 @@ class DataSync {
       final name = (disp.isNotEmpty && disp.first.trim().isNotEmpty)
           ? disp.first.trim()
           : Uri.parse(href).pathSegments.last;
+      
+      // If mtime is null, try to extract from filename (format: kelivo_backup_2025-01-19T12-34-56.123456.zip)
+      if (mtime == null) {
+        final match = RegExp(r'kelivo_backup_(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+)\.zip').firstMatch(name);
+        if (match != null) {
+          try {
+            // Replace hyphens in time part back to colons
+            final timestamp = match.group(1)!.replaceAll(RegExp(r'T(\d{2})-(\d{2})-(\d{2})'), 'T\$1:\$2:\$3');
+            mtime = DateTime.parse(timestamp);
+          } catch (_) {}
+        }
+      }
+      
       // Skip directories
       if (abs.endsWith('/')) continue;
       final fullHref = Uri.parse(abs);

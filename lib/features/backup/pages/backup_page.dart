@@ -726,7 +726,7 @@ Widget _iosNavRow(
                 Expanded(
                   child: Text(
                     label,
-                    style: TextStyle(fontSize: 15, color: c, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 15, color: c),  //, fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -765,7 +765,7 @@ Widget _iosSwitchRow(BuildContext context, {IconData? icon, required String labe
                   SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
                   const SizedBox(width: 12),
                 ],
-                Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c, fontWeight: FontWeight.w500))),
+                Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))), //, fontWeight: FontWeight.w500))),
                 IosSwitch(value: value, onChanged: onChanged),
               ],
             ),
