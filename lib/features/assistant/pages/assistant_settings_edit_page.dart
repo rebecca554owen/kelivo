@@ -2938,17 +2938,14 @@ class _QuickPhraseTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => _showAddEditSheet(context),
-                icon: Icon(Lucide.Plus, size: 20),
-                label: Text(l10n.assistantEditAddQuickPhraseButton),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(200, 44),
-                  backgroundColor: cs.primary,
-                  foregroundColor: cs.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 200),
+                child: _IosButton(
+                  label: l10n.assistantEditAddQuickPhraseButton,
+                  icon: Lucide.Plus,
+                  filled: true,
+                  neutral: false,
+                  onTap: () => _showAddEditSheet(context),
                 ),
               ),
             ],
