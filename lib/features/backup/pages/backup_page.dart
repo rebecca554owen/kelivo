@@ -267,6 +267,13 @@ class _BackupPageState extends State<BackupPage> {
                     setState(() => _loadingRemote = true);
                     try {
                       final list = await vm.listRemote();
+                      // 按时间倒序排列（最新的在前）
+                      list.sort((a, b) {
+                        if (a.lastModified == null && b.lastModified == null) return 0;
+                        if (a.lastModified == null) return 1;
+                        if (b.lastModified == null) return -1;
+                        return b.lastModified!.compareTo(a.lastModified!);
+                      });
                       setState(() => _remote = list);
                     } finally {
                       setState(() => _loadingRemote = false);
@@ -774,9 +781,13 @@ class _RemoteListSheet extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Text(l10n.backupPageRemoteBackups, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const Spacer(),
-                  if (loading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  Expanded(
+                    child: Center(
+                      child: Text(l10n.backupPageRemoteBackups, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  if (loading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  else const SizedBox(width: 16, height: 16),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1010,13 +1021,8 @@ class _WebDavSettingsSheetState extends State<_WebDavSettingsSheet> {
                 label: l10n.backupPagePassword,
                 controller: _passCtrl,
                 obscure: !_showPassword,
-                suffix: IconButton(
-                  icon: AnimatedIconSwap(
-                    child: Icon(
-                      _showPassword ? Lucide.EyeOff : Lucide.Eye,
-                      key: ValueKey(_showPassword ? 'hide' : 'show'),
-                    ),
-                  ),
+                suffix: _PasswordToggleButton(
+                  showPassword: _showPassword,
                   onPressed: () => setState(() => _showPassword = !_showPassword),
                 ),
               ),
@@ -1028,6 +1034,52 @@ class _WebDavSettingsSheetState extends State<_WebDavSettingsSheet> {
               ),
               const SizedBox(height: 16),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// iOS-style password toggle button (no ripple)
+class _PasswordToggleButton extends StatefulWidget {
+  const _PasswordToggleButton({
+    required this.showPassword,
+    required this.onPressed,
+  });
+
+  final bool showPassword;
+  final VoidCallback onPressed;
+
+  @override
+  State<_PasswordToggleButton> createState() => _PasswordToggleButtonState();
+}
+
+class _PasswordToggleButtonState extends State<_PasswordToggleButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = _pressed ? cs.onSurface.withOpacity(0.5) : cs.onSurface.withOpacity(0.7);
+    
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        Haptics.light();
+        widget.onPressed();
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: AnimatedIconSwap(
+          child: Icon(
+            widget.showPassword ? Lucide.EyeOff : Lucide.Eye,
+            key: ValueKey(widget.showPassword ? 'hide' : 'show'),
+            size: 20,
+            color: color,
           ),
         ),
       ),
