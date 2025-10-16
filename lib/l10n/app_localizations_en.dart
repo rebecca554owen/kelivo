@@ -778,6 +778,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageDeleteTooltip => 'Delete';
 
   @override
+  String get backupPageBackupManagement => 'Backup Management';
+
+  @override
+  String get backupPageWebDavBackup => 'WebDAV Backup';
+
+  @override
+  String get backupPageWebDavServerSettings => 'WebDAV Server Settings';
+
+  @override
+  String get backupPageSave => 'Save';
+
+  @override
+  String get backupPageBackupNow => 'Backup Now';
+
+  @override
+  String get backupPageLocalBackup => 'Local Backup';
+
+  @override
+  String get backupPageImportFromCherryStudio => 'Import from Cherry Studio';
+
+  @override
   String get chatHistoryPageTitle => 'Chat History';
 
   @override

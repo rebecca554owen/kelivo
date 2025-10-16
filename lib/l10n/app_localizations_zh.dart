@@ -760,6 +760,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageDeleteTooltip => '删除';
 
   @override
+  String get backupPageBackupManagement => '备份管理';
+
+  @override
+  String get backupPageWebDavBackup => 'WebDAV 备份';
+
+  @override
+  String get backupPageWebDavServerSettings => 'WebDAV 服务器设置';
+
+  @override
+  String get backupPageSave => '保存';
+
+  @override
+  String get backupPageBackupNow => '立即备份';
+
+  @override
+  String get backupPageLocalBackup => '本地备份';
+
+  @override
+  String get backupPageImportFromCherryStudio => '从 Cherry Studio 导入';
+
+  @override
   String get chatHistoryPageTitle => '聊天历史';
 
   @override
@@ -3159,6 +3180,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backupPageDeleteTooltip => '删除';
 
   @override
+  String get backupPageBackupManagement => '备份管理';
+
+  @override
+  String get backupPageWebDavBackup => 'WebDAV 备份';
+
+  @override
+  String get backupPageWebDavServerSettings => 'WebDAV 服务器设置';
+
+  @override
+  String get backupPageSave => '保存';
+
+  @override
+  String get backupPageBackupNow => '立即备份';
+
+  @override
+  String get backupPageLocalBackup => '本地备份';
+
+  @override
+  String get backupPageImportFromCherryStudio => '从 Cherry Studio 导入';
+
+  @override
   String get chatHistoryPageTitle => '聊天历史';
 
   @override
@@ -5556,6 +5598,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupPageDeleteTooltip => '刪除';
+
+  @override
+  String get backupPageBackupManagement => '備份管理';
+
+  @override
+  String get backupPageWebDavBackup => 'WebDAV 備份';
+
+  @override
+  String get backupPageWebDavServerSettings => 'WebDAV 伺服器設定';
+
+  @override
+  String get backupPageSave => '儲存';
+
+  @override
+  String get backupPageBackupNow => '立即備份';
+
+  @override
+  String get backupPageLocalBackup => '本機備份';
+
+  @override
+  String get backupPageImportFromCherryStudio => '從 Cherry Studio 匯入';
 
   @override
   String get chatHistoryPageTitle => '聊天歷史';

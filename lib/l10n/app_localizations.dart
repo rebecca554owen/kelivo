@@ -1565,6 +1565,48 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get backupPageDeleteTooltip;
 
+  /// No description provided for @backupPageBackupManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Management'**
+  String get backupPageBackupManagement;
+
+  /// No description provided for @backupPageWebDavBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'WebDAV Backup'**
+  String get backupPageWebDavBackup;
+
+  /// No description provided for @backupPageWebDavServerSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'WebDAV Server Settings'**
+  String get backupPageWebDavServerSettings;
+
+  /// No description provided for @backupPageSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get backupPageSave;
+
+  /// No description provided for @backupPageBackupNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Now'**
+  String get backupPageBackupNow;
+
+  /// No description provided for @backupPageLocalBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Backup'**
+  String get backupPageLocalBackup;
+
+  /// No description provided for @backupPageImportFromCherryStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from Cherry Studio'**
+  String get backupPageImportFromCherryStudio;
+
   /// No description provided for @chatHistoryPageTitle.
   ///
   /// In en, this message translates to:
