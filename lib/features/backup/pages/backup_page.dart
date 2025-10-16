@@ -88,24 +88,27 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Center(
-        child: Container(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CupertinoActivityIndicator(radius: 16),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.backupPageExporting,
-                  style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.8)),
-                ),
-              ],
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CupertinoActivityIndicator(radius: 16),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.backupPageExporting,
+                    style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.8)),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -127,15 +130,18 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Center(
-        child: Container(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
-          ),
-          child: const Padding(
-            padding: EdgeInsets.all(16),
-            child: CupertinoActivityIndicator(radius: 14),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: CupertinoActivityIndicator(radius: 14),
+            ),
           ),
         ),
       ),
