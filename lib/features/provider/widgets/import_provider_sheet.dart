@@ -277,12 +277,30 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                         try {
                           final settings = ctx.read<SettingsProvider>();
                           final results = <_ImportResult>[];
-                          if (code.startsWith('ai-provider:v1:')) {
-                            results.add(_decodeSingle(ctx, code));
-                          } else if (code.startsWith('{')) {
-                            results.addAll(_decodeChatBoxJson(ctx, code));
+                          // Support combined multi-provider QR content: newline-separated share strings or JSON
+                          final parts = code.split(RegExp(r'\r?\n+')).map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
+                          if (parts.length > 1) {
+                            for (final p in parts) {
+                              try {
+                                if (p.startsWith('ai-provider:v1:')) {
+                                  results.add(_decodeSingle(ctx, p));
+                                } else if (p.startsWith('{')) {
+                                  results.addAll(_decodeChatBoxJson(ctx, p));
+                                }
+                              } catch (_) {}
+                            }
+                            if (results.isEmpty) {
+                              throw const FormatException('Unsupported format');
+                            }
                           } else {
-                            throw const FormatException('Unsupported format');
+                            final p = parts.first;
+                            if (p.startsWith('ai-provider:v1:')) {
+                              results.add(_decodeSingle(ctx, p));
+                            } else if (p.startsWith('{')) {
+                              results.addAll(_decodeChatBoxJson(ctx, p));
+                            } else {
+                              throw const FormatException('Unsupported format');
+                            }
                           }
                           for (final r in results) {
                             await settings.setProviderConfig(r.key, r.cfg);
@@ -333,12 +351,27 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                           if (code == null || code!.isEmpty) throw 'QR not detected';
                           final settings = ctx.read<SettingsProvider>();
                           final results = <_ImportResult>[];
-                          if (code!.startsWith('ai-provider:v1:')) {
-                            results.add(_decodeSingle(ctx, code!));
-                          } else if (code!.startsWith('{')) {
-                            results.addAll(_decodeChatBoxJson(ctx, code!));
+                          final parts = code!.split(RegExp(r'\r?\n+')).map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
+                          if (parts.length > 1) {
+                            for (final p in parts) {
+                              try {
+                                if (p.startsWith('ai-provider:v1:')) {
+                                  results.add(_decodeSingle(ctx, p));
+                                } else if (p.startsWith('{')) {
+                                  results.addAll(_decodeChatBoxJson(ctx, p));
+                                }
+                              } catch (_) {}
+                            }
+                            if (results.isEmpty) throw 'Unsupported content';
                           } else {
-                            throw 'Unsupported content';
+                            final p = parts.first;
+                            if (p.startsWith('ai-provider:v1:')) {
+                              results.add(_decodeSingle(ctx, p));
+                            } else if (p.startsWith('{')) {
+                              results.addAll(_decodeChatBoxJson(ctx, p));
+                            } else {
+                              throw 'Unsupported content';
+                            }
                           }
                           for (final r in results) {
                             await settings.setProviderConfig(r.key, r.cfg);
