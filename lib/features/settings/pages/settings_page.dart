@@ -432,7 +432,7 @@ Widget _iosNavRow(
                 Expanded(
                   child: Text(
                     label,
-                    style: TextStyle(fontSize: 15, color: c),
+                    style: TextStyle(fontSize: 15, color: c, fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
