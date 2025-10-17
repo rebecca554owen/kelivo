@@ -1559,7 +1559,7 @@ class _LoadingIndicatorState extends State<_LoadingIndicator>
     super.initState();
     // Smoother, symmetric breathing with reverse to avoid jump cuts
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat(reverse: true);
 
