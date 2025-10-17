@@ -90,10 +90,19 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.transparent)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: cs.primary.withOpacity(0.5)),
+            ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
@@ -216,7 +225,9 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _switchTile(label: l10n.addProviderSheetEnabledLabel, value: _claudeEnabled, onChanged: (v) => setState(() => _claudeEnabled = v)),
+        _iosCard(children: [
+          _switchRow(label: l10n.addProviderSheetEnabledLabel, value: _claudeEnabled, onChanged: (v) => setState(() => _claudeEnabled = v)),
+        ]),
         const SizedBox(height: 10),
         _inputRow(label: l10n.addProviderSheetNameLabel, controller: _claudeName),
         const SizedBox(height: 10),
@@ -457,7 +468,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+            fillColor: Colors.white,
             border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Colors.transparent)),
             enabledBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Colors.transparent)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
