@@ -122,4 +122,5 @@ class Lucide {
   static const IconData CheckSquare = lucide.LucideIcons.squareCheck;
   static const IconData circleArrowUp = lucide.LucideIcons.circleArrowUp;
   static const IconData circleCheckBig = lucide.LucideIcons.circleCheckBig;
+  static const IconData checkCheck = lucide.LucideIcons.checkCheck;
 }

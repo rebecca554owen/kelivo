@@ -180,12 +180,19 @@ class _ProvidersPageState extends State<ProvidersPage> {
               onDelete: _onDeleteSelected,
               onSelectAll: () {
                 setState(() {
-                  if (_selected.length == items.length && items.isNotEmpty) {
-                    _selected.clear();
+                  // Select all deletable (non-built-in) providers
+                  final baseKeys = {for (final p in base) p.keyName};
+                  final deletable = [for (final p in items) if (!baseKeys.contains(p.keyName)) p.keyName];
+                  final allSelected = deletable.isNotEmpty && deletable.every(_selected.contains) && _selected.length == deletable.length;
+                  _selected.removeWhere((k) => !deletable.contains(k));
+                  if (allSelected) {
+                    // Unselect all deletable
+                    for (final k in deletable) { _selected.remove(k); }
                   } else {
+                    // Select all deletable
                     _selected
-                      ..clear()
-                      ..addAll(items.map((e) => e.keyName));
+                      ..removeWhere((k) => !deletable.contains(k))
+                      ..addAll(deletable);
                   }
                 });
               },
@@ -244,10 +251,19 @@ class _ProvidersPageState extends State<ProvidersPage> {
   Future<void> _onDeleteSelected() async {
     if (_selected.isEmpty) return;
     final l10n = AppLocalizations.of(context)!;
+    // Skip built-in providers (default ones)
+    final builtInKeys = {for (final p in _providers(l10n: l10n)) p.keyName};
+    final keysToDelete = _selected.where((k) => !builtInKeys.contains(k)).toList(growable: false);
+
+    if (keysToDelete.isEmpty) {
+      // Nothing deletable selected
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('${l10n.providerDetailPageDeleteProviderTitle} (${_selected.length})'),
+        title: Text('${l10n.providerDetailPageDeleteProviderTitle} (${keysToDelete.length})'),
         content: Text(l10n.providersPageDeleteSelectedConfirmContent),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.providerDetailPageCancelButton)),
@@ -261,13 +277,13 @@ class _ProvidersPageState extends State<ProvidersPage> {
       try {
         final ap = context.read<AssistantProvider>();
         for (final a in ap.assistants) {
-          if (_selected.contains(a.chatModelProvider)) {
+          if (keysToDelete.contains(a.chatModelProvider)) {
             await ap.updateAssistant(a.copyWith(clearChatModel: true));
           }
         }
       } catch (_) {}
       final sp = context.read<SettingsProvider>();
-      for (final k in _selected) {
+      for (final k in keysToDelete) {
         await sp.removeProviderConfig(k);
       }
       if (!mounted) return;
@@ -571,7 +587,7 @@ class _SelectionBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 14),
                     _GlassCircleButton(
-                      icon: Lucide.circleDot,
+                      icon: Lucide.checkCheck,
                       color: cs.primary,
                       semanticLabel: null,
                       onTap: onSelectAll,
