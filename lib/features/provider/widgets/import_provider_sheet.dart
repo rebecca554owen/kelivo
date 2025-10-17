@@ -433,7 +433,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                         decoration: InputDecoration(
                           hintText: l10n.importProviderSheetDescription,
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Theme.of(ctx).brightness == Brightness.dark ? Colors.white10 : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),

@@ -90,7 +90,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? Colors.white10 : Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
@@ -436,7 +436,8 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                     icon: Lucide.Plus,
                     label: l10n.addProviderSheetAddButton,
                     backgroundColor: cs.primary,
-                    foregroundColor: cs.onPrimary,
+                    // No need to set foreground/border; component tints background lightly,
+                    // uses theme color for text, and draws a subtle same-hue border.
                     onTap: _onAdd,
                   ),
                 ),
@@ -468,7 +469,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? Colors.white10 : Colors.white,
             border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Colors.transparent)),
             enabledBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Colors.transparent)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
