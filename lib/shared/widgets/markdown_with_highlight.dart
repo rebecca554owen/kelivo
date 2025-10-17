@@ -589,6 +589,10 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
             surfaceTintColor: Colors.transparent,
             child: InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
+              splashColor: Platform.isIOS ? Colors.transparent : null,
+              highlightColor: Platform.isIOS ? Colors.transparent : null,
+              hoverColor: Platform.isIOS ? Colors.transparent : null,
+              overlayColor: Platform.isIOS ? const MaterialStatePropertyAll(Colors.transparent) : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
@@ -624,6 +628,10 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                           );
                         }
                       },
+                      splashColor: Platform.isIOS ? Colors.transparent : null,
+                      highlightColor: Platform.isIOS ? Colors.transparent : null,
+                      hoverColor: Platform.isIOS ? Colors.transparent : null,
+                      overlayColor: Platform.isIOS ? const MaterialStatePropertyAll(Colors.transparent) : null,
                       borderRadius: BorderRadius.circular(6),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -799,6 +807,10 @@ class _MermaidBlockState extends State<_MermaidBlock> {
             surfaceTintColor: Colors.transparent,
             child: InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
+              splashColor: Platform.isIOS ? Colors.transparent : null,
+              highlightColor: Platform.isIOS ? Colors.transparent : null,
+              hoverColor: Platform.isIOS ? Colors.transparent : null,
+              overlayColor: Platform.isIOS ? const MaterialStatePropertyAll(Colors.transparent) : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
@@ -835,6 +847,10 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                             );
                           }
                         },
+                        splashColor: Platform.isIOS ? Colors.transparent : null,
+                        highlightColor: Platform.isIOS ? Colors.transparent : null,
+                        hoverColor: Platform.isIOS ? Colors.transparent : null,
+                        overlayColor: Platform.isIOS ? const MaterialStatePropertyAll(Colors.transparent) : null,
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -873,6 +889,10 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                               );
                             }
                           },
+                          splashColor: Platform.isIOS ? Colors.transparent : null,
+                          highlightColor: Platform.isIOS ? Colors.transparent : null,
+                          hoverColor: Platform.isIOS ? Colors.transparent : null,
+                          overlayColor: Platform.isIOS ? const MaterialStatePropertyAll(Colors.transparent) : null,
                           borderRadius: BorderRadius.circular(6),
                           child: Padding(
                             padding: const EdgeInsets.all(6),
