@@ -16,6 +16,7 @@ import '../../../core/providers/assistant_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
+import '../../../shared/widgets/ios_tile_button.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -700,34 +701,24 @@ Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) asyn
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Lucide.Copy, size: 18),
-                      onPressed: () {
+                    child: IosTileButton(
+                      icon: Lucide.Copy,
+                      label: l10n.providersPageExportCopyButton,
+                      onTap: () {
                         Clipboard.setData(ClipboardData(text: text));
                         showAppSnackBar(context, message: l10n.providersPageExportCopiedSnackbar, type: NotificationType.success);
                       },
-                      label: Text(l10n.providersPageExportCopyButton),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: cs.primary.withOpacity(0.5)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Lucide.Share2, size: 18),
-                      onPressed: () async {
+                    child: IosTileButton(
+                      icon: Lucide.Share2,
+                      label: l10n.providersPageExportShareButton,
+                      onTap: () async {
                         final rect = shareAnchorRect(ctx);
                         await Share.share(text, subject: 'AI Providers', sharePositionOrigin: rect);
                       },
-                      label: Text(l10n.providersPageExportShareButton),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: cs.primary,
-                        foregroundColor: cs.onPrimary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
                     ),
                   ),
                 ],
