@@ -313,33 +313,39 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               top: y,
               width: menuWidth,
               child: _AnimatedPopup(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
+                child: DecoratedBox(
+                  // Draw border outside the clipped/blurred content to avoid corner clipping
+                  decoration: ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
                         color: isDark
-                            ? const Color(0xFF1C1C1E).withOpacity(0.66)
-                            : Colors.white.withOpacity(0.66),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.08)
-                              : cs.outlineVariant.withOpacity(0.2),
-                          width: 1,
-                        ),
+                            ? Colors.white.withOpacity(0.08)
+                            : cs.outlineVariant.withOpacity(0.2),
+                        width: 1,
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                      _MenuItem(
-                        icon: Lucide.Copy,
-                        label: l10n.shareProviderSheetCopyButton,
-                        onTap: () async {
-                          Navigator.of(ctx).pop();
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1C1C1E).withOpacity(0.66)
+                              : Colors.white.withOpacity(0.66),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                          _MenuItem(
+                            icon: Lucide.Copy,
+                            label: l10n.shareProviderSheetCopyButton,
+                            onTap: () async {
+                              Navigator.of(ctx).pop();
                           if (widget.onCopy != null) {
                             widget.onCopy!.call();
                           } else {
@@ -372,10 +378,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         },
                       ),
                     ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
               ),
             ),
           )],
