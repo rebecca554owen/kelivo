@@ -9,6 +9,8 @@ class IosTileButton extends StatefulWidget {
     required this.onTap,
     this.fontSize = 14,
     this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   final String label;
@@ -16,6 +18,8 @@ class IosTileButton extends StatefulWidget {
   final VoidCallback onTap;
   final double fontSize;
   final EdgeInsets padding;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   State<IosTileButton> createState() => _IosTileButtonState();
@@ -29,11 +33,14 @@ class _IosTileButtonState extends State<IosTileButton> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final baseBg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final baseBg = widget.backgroundColor ?? (isDark ? Colors.white10 : const Color(0xFFF2F3F5));
     final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
     final pressedBg = Color.alphaBlend(overlay, baseBg);
-    final iconColor = cs.onSurface.withOpacity(0.75);
-    final textColor = cs.onSurface.withOpacity(0.9);
+    final defaultFg = widget.backgroundColor == null
+        ? cs.onSurface.withOpacity(0.9)
+        : (widget.foregroundColor ?? cs.onPrimary);
+    final iconColor = defaultFg;
+    final textColor = defaultFg;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -76,4 +83,3 @@ class _IosTileButtonState extends State<IosTileButton> {
     );
   }
 }
-
