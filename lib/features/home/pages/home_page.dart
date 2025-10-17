@@ -58,6 +58,7 @@ import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../core/services/haptics.dart';
 import '../../../core/models/quick_phrase.dart';
+import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import '../../quick_phrase/widgets/quick_phrase_menu.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
@@ -3007,22 +3008,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () {
-            // Always dismiss keyboard when toggling the sidebar
-            _dismissKeyboard();
-            _drawerController.toggle();
-          },
-          icon: SvgPicture.asset(
-            'assets/icons/list.svg',
-            width: 14,
-            height: 14,
-            colorFilter: ColorFilter.mode(
-              Theme.of(context).iconTheme.color ?? Theme.of(context).colorScheme.onSurface,
-              BlendMode.srcIn,
+        leading: Builder(builder: (context) {
+          return IosIconButton(
+            size: 20,
+            padding: const EdgeInsets.all(8),
+            minSize: 40,
+            builder: (color) => SvgPicture.asset(
+              'assets/icons/list.svg',
+              width: 14,
+              height: 14,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
             ),
-          ),
-        ),
+            onTap: () {
+              // Always dismiss keyboard when toggling the sidebar
+              _dismissKeyboard();
+              _drawerController.toggle();
+            },
+          );
+        }),
         titleSpacing: 2,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3054,8 +3057,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ),
         actions: [
           // Mini map button (to the left of new conversation)
-          IconButton(
-            onPressed: () async {
+          IosIconButton(
+            size: 20,
+            minSize: 44,
+            onTap: () async {
               final collapsed = _collapseVersions(_messages);
               final selectedId = await showMiniMapSheet(context, collapsed);
               if (!mounted) return;
@@ -3063,28 +3068,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 await _scrollToMessageId(selectedId);
               }
             },
-            icon: const Icon(Lucide.Map, size: 20),
-            tooltip: AppLocalizations.of(context)!.miniMapTooltip,
+            semanticLabel: AppLocalizations.of(context)!.miniMapTooltip,
+            icon: Lucide.Map,
           ),
-          // Temporarily hidden: More menu button
-          // IconButton(
-          //   onPressed: () {
-          //     Navigator.of(context).push(
-          //       MaterialPageRoute(builder: (_) => const MorePage()),
-          //     );
-          //   },
-          //   icon: const Icon(Lucide.Menu, size: 22),
-          // ),
-          IconButton(
-            onPressed: () async {
+          // const SizedBox(width: 4),
+          IosIconButton(
+            size: 22,
+            minSize: 44,
+            onTap: () async {
               await _createNewConversation();
               if (mounted) {
                 // Close drawer if open and scroll to bottom (fresh convo)
                 _forceScrollToBottomSoon();
               }
             },
-            icon: const Icon(Lucide.MessageCirclePlus, size: 22),
+            icon: Lucide.MessageCirclePlus,
           ),
+          // Move the right spacer between mini map and new-topic per request
         ],
       ),
       body: Stack(

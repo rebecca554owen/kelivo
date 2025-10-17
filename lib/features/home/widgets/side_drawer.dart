@@ -27,6 +27,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
 import 'dart:ui' as ui;
+import '../../../shared/widgets/ios_tactile.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -543,11 +544,16 @@ class _SideDrawerState extends State<SideDrawer> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 历史按钮（圆形，无文字）
-                      ClipOval(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
+                      // 历史按钮（圆形，无水波纹）
+                      SizedBox(
+                        width: 45,
+                        height: 45,
+                        child: Center(
+                          child: IosIconButton(
+                            size: 22,
+                            color: textBase,
+                            icon: Lucide.History,
+                            padding: const EdgeInsets.all(10),
                             onTap: () async {
                               final selectedId = await Navigator.of(context).push<String>(
                                 MaterialPageRoute(builder: (_) => ChatHistoryPage(assistantId: currentAssistantId)),
@@ -556,13 +562,6 @@ class _SideDrawerState extends State<SideDrawer> {
                                 widget.onSelectConversation?.call(selectedId);
                               }
                             },
-                            child: SizedBox(
-                              width: 45,
-                              height: 45,
-                              child: Center(
-                                child: Icon(Lucide.History, size: 22, color: textBase),
-                              ),
-                            ),
                           ),
                         ),
                       ),
@@ -574,11 +573,10 @@ class _SideDrawerState extends State<SideDrawer> {
                   // 当前助手区域（固定）
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Material(
+                    child: KeyedSubtree(
                       key: _assistantTileKey,
-                      color: widget.embedded ? Colors.transparent : cs.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
+                      child: IosCardPress(
+                        baseColor: widget.embedded ? Colors.transparent : cs.surface,
                         borderRadius: BorderRadius.circular(16),
                         onTap: _toggleAssistantPicker,
                         onLongPress: () {
@@ -590,45 +588,35 @@ class _SideDrawerState extends State<SideDrawer> {
                             );
                           }
                         },
-                        child: Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
-                            child: Row(
-                              children: [
-                              _assistantAvatar(
-                                context,
-                                ap.currentAssistant,
-                                size: 32,
-                                // onTap: () {
-                                //   final id = context.read<AssistantProvider>().currentAssistantId;
-                                //   if (id != null) {
-                                //     Navigator.of(context).push(
-                                //       MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-                                //     );
-                                //   }
-                                // },
+                        padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                        child: Row(
+                          children: [
+                            _assistantAvatar(
+                              context,
+                              ap.currentAssistant,
+                              size: 32,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                (ap.currentAssistant?.name ?? widget.assistantName),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textBase),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  (ap.currentAssistant?.name ?? widget.assistantName),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textBase),
-                                ),
+                            ),
+                            const SizedBox(width: 8),
+                            AnimatedRotation(
+                              turns: _assistantPickerEntry != null ? 0.5 : 0.0,
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeOutCubic,
+                              child: Icon(
+                                Lucide.ChevronDown,
+                                size: 18,
+                                color: textBase.withOpacity(0.7),
                               ),
-                              const SizedBox(width: 8),
-                              AnimatedRotation(
-                                turns: _assistantPickerEntry != null ? 0.5 : 0.0,
-                                duration: const Duration(milliseconds: 350),
-                                curve: Curves.easeOutCubic,
-                                child: Icon(
-                                  Lucide.ChevronDown,
-                                  size: 18,
-                                  color: textBase.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -803,9 +791,9 @@ class _SideDrawerState extends State<SideDrawer> {
                   Row(
                     children: [
                       const SizedBox(width: 6),
-                      // 用户头像（可点击更换）
-                      InkWell(
-                        customBorder: const CircleBorder(),
+                      // 用户头像（可点击更换）—移除水波纹
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () => _editAvatar(context),
                         child: avatarWidget(
                           widget.userName,
@@ -816,41 +804,45 @@ class _SideDrawerState extends State<SideDrawer> {
                       const SizedBox(width: 20),
                       // 用户名称（可点击编辑，垂直居中）
                       Expanded(
-                        child: InkWell(
+                        child: IosCardPress(
                           borderRadius: BorderRadius.circular(6),
+                          baseColor: Colors.transparent,
                           onTap: () => _editUserName(context),
-                          child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 0),
+                          child: SizedBox(
                             height: 45,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              widget.userName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: textBase,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                widget.userName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: textBase,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 设置按钮（圆形，无文字）
-                      ClipOval(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
+                      // 设置按钮（圆形，无水波纹）
+                      SizedBox(
+                        width: 45,
+                        height: 45,
+                        child: Center(
+                          child: IosIconButton(
+                            size: 22,
+                            color: textBase,
+                            icon: Lucide.Settings,
+                            padding: const EdgeInsets.all(10),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const SettingsPage()),
                               );
                             },
-                            child: SizedBox(
-                              width: 45,
-                              height: 45,
-                              child: Center(child: Icon(Lucide.Settings, size: 22, color: textBase)),
-                            ),
                           ),
                         ),
                       ),
@@ -1038,10 +1030,11 @@ class _SideDrawerState extends State<SideDrawer> {
                                   style: const TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
-                              IconButton(
-                                tooltip: l10n.assistantProviderNewAssistantName,
-                                icon: Icon(Lucide.Plus, size: 18, color: cs.primary),
-                                onPressed: () async {
+                              IosIconButton(
+                                size: 18,
+                                color: cs.primary,
+                                icon: Lucide.Plus,
+                                onTap: () async {
                                   _closeAssistantPicker();
                                   final id = await context.read<AssistantProvider>().addAssistant(context: context);
                                   if (!mounted) return;
@@ -1082,49 +1075,38 @@ class _SideDrawerState extends State<SideDrawer> {
                                     8,
                                     index == assistants.length - 1 ? 2.0 : 1.5,
                                   ),
-                                  child: Material(
-                                    color: selected ? cs.primary.withOpacity(0.12) : Colors.transparent,
+                                  child: IosCardPress(
+                                    baseColor: selected ? cs.primary.withOpacity(0.12) : Colors.transparent,
                                     borderRadius: BorderRadius.circular(12),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      splashColor: cs.primary.withOpacity(0.16),
-                                      highlightColor: cs.primary.withOpacity(0.10),
-                                      onTap: () => _handleSelectAssistant(assistant),
-                                    child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-                                        child: Row(
-                                          children: [
-                                            _assistantAvatar(
-                                              context,
-                                              assistant,
-                                              size: 28,
-                                              // onTap: () => _openAssistantSettings(assistant.id),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                assistant.name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w500,
-                                                  color: cs.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                            IconButton(
-                                              tooltip: l10n.assistantSettingsEditButton,
-                                              icon: Icon(
-                                                Lucide.Pencil,
-                                                size: 18,
-                                                color: cs.onSurface.withOpacity(0.6),
-                                              ),
-                                              splashRadius: 18,
-                                              onPressed: () => _openAssistantSettings(assistant.id),
-                                            ),
-                                          ],
+                                    onTap: () => _handleSelectAssistant(assistant),
+                                    padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                                    child: Row(
+                                      children: [
+                                        _assistantAvatar(
+                                          context,
+                                          assistant,
+                                          size: 28,
                                         ),
-                                      ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            assistant.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              color: cs.onSurface,
+                                            ),
+                                          ),
+                                        ),
+                                        IosIconButton(
+                                          size: 18,
+                                          color: cs.onSurface.withOpacity(0.6),
+                                          icon: Lucide.Pencil,
+                                          padding: const EdgeInsets.all(8),
+                                          onTap: () => _openAssistantSettings(assistant.id),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ).animate(
@@ -1720,37 +1702,31 @@ class _ChatTile extends StatelessWidget {
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: tileColor,
+      child: IosCardPress(
+        baseColor: tileColor,
         borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    chat.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: textColor,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                chat.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: textColor,
+                  fontWeight: FontWeight.w400,
                 ),
-                if (loading) ...[
-                  const SizedBox(width: 8),
-                  _LoadingDot(),
-                ],
-              ],
+              ),
             ),
-          ),
+            if (loading) ...[
+              const SizedBox(width: 8),
+              _LoadingDot(),
+            ],
+          ],
         ),
       ),
     );
