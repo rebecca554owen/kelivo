@@ -656,41 +656,61 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Icon(
-                      _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
-                      size: 16,
-                      color: cs.onSurface.withOpacity(0.7),
+                    AnimatedRotation(
+                      turns: _expanded ? 0.25 : 0.0, // right -> down
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: Icon(
+                        Lucide.ChevronRight,
+                        size: 16,
+                        color: cs.onSurface.withOpacity(0.7),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          if (_expanded)
-            Container(
-              width: double.infinity,
-              color: bodyBg,
-              padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
-              child: SelectionContainer.disabled(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  primary: false,
-                  child: HighlightView(
-                    widget.code,
-                    language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
-                    theme: MarkdownWithCodeHighlight._transparentBgTheme(
-                      isDark ? atomOneDarkReasonableTheme : githubTheme,
-                    ),
-                    padding: EdgeInsets.zero,
-                    textStyle: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SizeTransition(
+                sizeFactor: anim,
+                axisAlignment: -1.0,
+                child: child,
               ),
             ),
+            child: _expanded
+                ? Container(
+                    key: const ValueKey('code-expanded'),
+                    width: double.infinity,
+                    color: bodyBg,
+                    padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
+                    child: SelectionContainer.disabled(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        primary: false,
+                        child: HighlightView(
+                          widget.code,
+                          language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
+                          theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                            isDark ? atomOneDarkReasonableTheme : githubTheme,
+                          ),
+                          padding: EdgeInsets.zero,
+                          textStyle: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('code-collapsed')),
+          ),
           ],
       ),
     );
@@ -905,10 +925,15 @@ class _MermaidBlockState extends State<_MermaidBlock> {
                         ),
                       ],
                       const SizedBox(width: 6),
-                      Icon(
-                        _expanded ? Lucide.ChevronDown : Lucide.ChevronRight,
-                        size: 16,
-                        color: cs.onSurface.withOpacity(0.7),
+                      AnimatedRotation(
+                        turns: _expanded ? 0.25 : 0.0,
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        child: Icon(
+                          Lucide.ChevronRight,
+                          size: 16,
+                          color: cs.onSurface.withOpacity(0.7),
+                        ),
                       ),
                     ],
                   ],
@@ -916,57 +941,74 @@ class _MermaidBlockState extends State<_MermaidBlock> {
               ),
             ),
           ),
-          if (_expanded)
-            Container(
-              width: double.infinity,
-              color: bodyBg,
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (mermaidView != null) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: mermaidView,
-                    ),
-                  ] else ...[
-                    // Fallback: show raw code and a preview button (opens browser)
-                    SelectionContainer.disabled(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: HighlightView(
-                          widget.code,
-                          language: 'plaintext',
-                          theme: MarkdownWithCodeHighlight._transparentBgTheme(
-                            Theme.of(context).brightness == Brightness.dark
-                                ? atomOneDarkReasonableTheme
-                                : githubTheme,
-                          ),
-                          padding: EdgeInsets.zero,
-                          textStyle: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 13,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (!ExportCaptureScope.of(context)) ...[
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => _openMermaidPreviewInBrowser(context, widget.code,
-                              Theme.of(context).brightness == Brightness.dark),
-                          icon: Icon(Lucide.Eye, size: 16),
-                          label: Text(AppLocalizations.of(context)!.mermaidPreviewOpen),
-                        ),
-                      ),
-                    ],
-                  ],
-                ],
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SizeTransition(
+                sizeFactor: anim,
+                axisAlignment: -1.0,
+                child: child,
               ),
             ),
+            child: _expanded
+                ? Container(
+                    key: const ValueKey('mermaid-expanded'),
+                    width: double.infinity,
+                    color: bodyBg,
+                    padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (mermaidView != null) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: mermaidView,
+                          ),
+                        ] else ...[
+                          // Fallback: show raw code and a preview button (opens browser)
+                          SelectionContainer.disabled(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: HighlightView(
+                                widget.code,
+                                language: 'plaintext',
+                                theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                                  Theme.of(context).brightness == Brightness.dark
+                                      ? atomOneDarkReasonableTheme
+                                      : githubTheme,
+                                ),
+                                padding: EdgeInsets.zero,
+                                textStyle: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (!ExportCaptureScope.of(context)) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => _openMermaidPreviewInBrowser(
+                                    context, widget.code,
+                                    Theme.of(context).brightness == Brightness.dark),
+                                icon: Icon(Lucide.Eye, size: 16),
+                                label:
+                                    Text(AppLocalizations.of(context)!.mermaidPreviewOpen),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('mermaid-collapsed')),
+          ),
         ],
       ),
     );
