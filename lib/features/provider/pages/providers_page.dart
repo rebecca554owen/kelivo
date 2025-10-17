@@ -640,6 +640,7 @@ Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) asyn
     backgroundColor: cs.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
     builder: (ctx) {
+      final bool showQr = keys.length <= 4;
       Rect shareAnchorRect(BuildContext bctx) {
         try {
           final ro = bctx.findRenderObject();
@@ -663,24 +664,26 @@ Future<void> _showMultiExportSheet(BuildContext context, List<String> keys) asyn
               const SizedBox(height: 12),
               Center(child: Text(l10n.providersPageExportSelectedTitle(keys.length), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
               const SizedBox(height: 12),
-              // Single combined QR for all selected providers
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
-                  ),
-                  child: PrettyQr(
-                    data: text,
-                    size: 180,
-                    roundEdges: true,
-                    errorCorrectLevel: QrErrorCorrectLevel.M,
+              // Show QR only when selection is small to avoid overlong input
+              if (showQr) ...[
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
+                    ),
+                    child: PrettyQr(
+                      data: text,
+                      size: 180,
+                      roundEdges: true,
+                      errorCorrectLevel: QrErrorCorrectLevel.M,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
               // Limited preview of codes (6-7 lines), full content still copied/shared
               SizedBox(
                 height: 128,
