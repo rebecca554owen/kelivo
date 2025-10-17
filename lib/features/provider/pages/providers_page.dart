@@ -291,47 +291,64 @@ class _ProvidersList extends StatelessWidget {
     final bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
     final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06);
 
+    // Adapt height: wrap to content if short; flush to bottom if long
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-            bottomLeft: Radius.circular(0),
-            bottomRight: Radius.circular(0),
-          ),
-          border: Border.all(color: borderColor, width: 0.6),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: ReorderableListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          itemCount: items.length,
-          onReorder: onReorder,
-          buildDefaultDragHandles: false,
-          proxyDecorator: (child, index, animation) => Opacity(
-            opacity: 0.95,
-            child: Transform.scale(scale: 0.98, child: child),
-          ),
-          itemBuilder: (context, index) {
-            final p = items[index];
-            return KeyedSubtree(
-              key: ValueKey(p.keyName),
-              child: _SettleAnim(
-                active: settlingKeys.contains(p.keyName),
-                child: _ProviderRow(
-                  provider: p,
-                  index: index,
-                  total: items.length,
-                  selectMode: selectMode,
-                  selected: selectedKeys.contains(p.keyName),
-                  onToggleSelect: onToggleSelect,
-                ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxH = constraints.hasBoundedHeight ? constraints.maxHeight : double.infinity;
+          // Estimate row height: avatar(22) + vertical paddings(11*2) ~= 44
+          const double rowH = 44.0;
+          const double dividerH = 6.0; // _iosDivider height
+          const double listPadV = 8.0; // ReorderableListView vertical padding
+          final int n = items.length;
+          final double contentH = n == 0 ? 0.0 : (n * rowH + (n - 1) * dividerH + listPadV);
+          final bool reachesBottom = maxH.isFinite && contentH >= maxH - 0.5;
+          final double containerH = maxH.isFinite ? (contentH.clamp(0.0, maxH)).toDouble() : contentH;
+
+          return Container(
+            height: containerH.isFinite ? containerH : null,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(12),
+                topRight: const Radius.circular(12),
+                // If not reaching bottom, use rounded corners; if reaching bottom, flush
+                bottomLeft: Radius.circular(reachesBottom ? 0 : 12),
+                bottomRight: Radius.circular(reachesBottom ? 0 : 12),
               ),
-            );
-          },
-        ),
+              border: Border.all(color: borderColor, width: 0.6),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ReorderableListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              itemCount: items.length,
+              onReorder: onReorder,
+              buildDefaultDragHandles: false,
+              proxyDecorator: (child, index, animation) => Opacity(
+                opacity: 0.95,
+                child: Transform.scale(scale: 0.98, child: child),
+              ),
+              itemBuilder: (context, index) {
+                final p = items[index];
+                return KeyedSubtree(
+                  key: ValueKey(p.keyName),
+                  child: _SettleAnim(
+                    active: settlingKeys.contains(p.keyName),
+                    child: _ProviderRow(
+                      provider: p,
+                      index: index,
+                      total: items.length,
+                      selectMode: selectMode,
+                      selected: selectedKeys.contains(p.keyName),
+                      onToggleSelect: onToggleSelect,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
