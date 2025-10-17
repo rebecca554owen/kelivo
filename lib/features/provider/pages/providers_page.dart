@@ -296,15 +296,22 @@ class _ProvidersList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final media = MediaQuery.of(context);
+          final safeBottom = media.padding.bottom;
+          final bottomGapIfFlush = safeBottom + 16.0; // leave room above system bar
+
           final maxH = constraints.hasBoundedHeight ? constraints.maxHeight : double.infinity;
           // Estimate row height: avatar(22) + vertical paddings(11*2) ~= 44
           const double rowH = 44.0;
           const double dividerH = 6.0; // _iosDivider height
           const double listPadV = 8.0; // ReorderableListView vertical padding
           final int n = items.length;
-          final double contentH = n == 0 ? 0.0 : (n * rowH + (n - 1) * dividerH + listPadV);
-          final bool reachesBottom = maxH.isFinite && contentH >= maxH - 0.5;
-          final double containerH = maxH.isFinite ? (contentH.clamp(0.0, maxH)).toDouble() : contentH;
+          final double baseContentH = n == 0 ? 0.0 : (n * rowH + (n - 1) * dividerH + listPadV);
+          // Decide if we should treat it as reaching bottom (considering the bottom gap we will add)
+          final bool reachesBottom = maxH.isFinite &&
+              (baseContentH >= maxH - 0.5 || (baseContentH + bottomGapIfFlush) >= maxH - 0.5);
+          final double effectiveContentH = baseContentH + (reachesBottom ? bottomGapIfFlush : 0.0);
+          final double containerH = maxH.isFinite ? (effectiveContentH.clamp(0.0, maxH)).toDouble() : effectiveContentH;
 
           return Container(
             height: containerH.isFinite ? containerH : null,
@@ -321,7 +328,7 @@ class _ProvidersList extends StatelessWidget {
             ),
             clipBehavior: Clip.antiAlias,
             child: ReorderableListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.only(top: 4, bottom: reachesBottom ? bottomGapIfFlush : 4),
               itemCount: items.length,
               onReorder: onReorder,
               buildDefaultDragHandles: false,
