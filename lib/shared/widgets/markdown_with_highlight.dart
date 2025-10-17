@@ -568,15 +568,19 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      // Clip children to the same radius so they don't overpaint corners
+      clipBehavior: Clip.antiAlias,
+      // Draw the border on top so it remains visible at corners
+      foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
       ),
-      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // Header layout: language (left) + copy action (icon + label) + expand/collapse icon
           Material(
             color: headerBg,
@@ -659,15 +663,15 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
               width: double.infinity,
               color: bodyBg,
               padding: const EdgeInsets.fromLTRB(10, 6, 6, 10),
-            child: SelectionContainer.disabled(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                primary: false,
-                child: HighlightView(
-                  widget.code,
-                  language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
-                  theme: MarkdownWithCodeHighlight._transparentBgTheme(
-                    isDark ? atomOneDarkReasonableTheme : githubTheme,
+              child: SelectionContainer.disabled(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  primary: false,
+                  child: HighlightView(
+                    widget.code,
+                    language: MarkdownWithCodeHighlight._normalizeLanguage(widget.language) ?? 'plaintext',
+                    theme: MarkdownWithCodeHighlight._transparentBgTheme(
+                      isDark ? atomOneDarkReasonableTheme : githubTheme,
                     ),
                     padding: EdgeInsets.zero,
                     textStyle: const TextStyle(
@@ -677,9 +681,9 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                     ),
                   ),
                 ),
+              ),
             ),
-            ),
-        ],
+          ],
       ),
     );
   }
@@ -776,15 +780,17 @@ class _MermaidBlockState extends State<_MermaidBlock> {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant.withOpacity(0.2)),
       ),
-      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
           // Header: left label (mermaid), right actions (copy label + export + chevron)
           Material(
             color: headerBg,
