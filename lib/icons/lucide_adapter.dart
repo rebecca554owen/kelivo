@@ -119,4 +119,7 @@ class Lucide {
   static const IconData Thermometer = lucide.LucideIcons.thermometer;
   static const IconData Wand2 = lucide.LucideIcons.wand;
   static const IconData MessagesSquare = lucide.LucideIcons.messageSquare;
+  static const IconData CheckSquare = lucide.LucideIcons.squareCheck;
+  static const IconData circleArrowUp = lucide.LucideIcons.circleArrowUp;
+  static const IconData circleCheckBig = lucide.LucideIcons.circleCheckBig;
 }

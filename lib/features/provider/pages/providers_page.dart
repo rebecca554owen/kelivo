@@ -16,6 +16,7 @@ import '../../../core/providers/assistant_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'dart:ui' as ui show ImageFilter;
 import '../../../shared/widgets/ios_tile_button.dart';
 
 class ProvidersPage extends StatefulWidget {
@@ -174,8 +175,20 @@ class _ProvidersPageState extends State<ProvidersPage> {
             child: _SelectionBar(
               visible: _selectMode,
               count: _selected.length,
+              total: items.length,
               onExport: _onExportSelected,
               onDelete: _onDeleteSelected,
+              onSelectAll: () {
+                setState(() {
+                  if (_selected.length == items.length && items.isNotEmpty) {
+                    _selected.clear();
+                  } else {
+                    _selected
+                      ..clear()
+                      ..addAll(items.map((e) => e.keyName));
+                  }
+                });
+              },
             ),
           ),
         ],
@@ -514,11 +527,20 @@ class _SelectDot extends StatelessWidget {
 }
 
 class _SelectionBar extends StatelessWidget {
-  const _SelectionBar({required this.visible, required this.count, required this.onExport, required this.onDelete});
+  const _SelectionBar({
+    required this.visible,
+    required this.count,
+    required this.total,
+    required this.onExport,
+    required this.onDelete,
+    required this.onSelectAll,
+  });
   final bool visible;
   final int count;
+  final int total;
   final VoidCallback onExport;
   final VoidCallback onDelete;
+  final VoidCallback onSelectAll;
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -536,25 +558,30 @@ class _SelectionBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 26),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 46),
               child: Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _CapsuleButton(
-                      label: l10n.providersPageDeleteAction,
+                    _GlassCircleButton(
                       icon: Lucide.Trash2,
                       color: const Color(0xFFFF3B30),
+                      semanticLabel: l10n.providersPageDeleteAction,
                       onTap: onDelete,
-                      outlined: true,
                     ),
-                    const SizedBox(width: 12),
-                    _CapsuleButton(
-                      label: l10n.providersPageExportAction,
-                      icon: Lucide.Export,
+                    const SizedBox(width: 14),
+                    _GlassCircleButton(
+                      icon: Lucide.circleDot,
                       color: cs.primary,
+                      semanticLabel: null,
+                      onTap: onSelectAll,
+                    ),
+                    const SizedBox(width: 14),
+                    _GlassCircleButton(
+                      icon: Lucide.Share2,
+                      color: cs.primary,
+                      semanticLabel: l10n.providersPageExportAction,
                       onTap: onExport,
-                      outlined: true,
                     ),
                   ],
                 ),
@@ -582,9 +609,16 @@ class _CapsuleButtonState extends State<_CapsuleButton> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) {
-    final bg = widget.outlined ? widget.color.withOpacity(0.12) : widget.color;
-    final fg = widget.outlined ? widget.color : Colors.white;
-    final border = widget.outlined ? Border.all(color: widget.color, width: 1.2) : null;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    // iOS glass style: grey border + frosted background; keep icon/label tinted by provided color
+    final glassBase = isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.65);
+    final overlay = isDark ? Colors.black.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final tileColor = _pressed ? Color.alphaBlend(overlay, glassBase) : glassBase;
+    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.35 : 0.40); // subtle grey border
+    final fg = widget.color; // use provided color for content only
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => setState(() => _pressed = true),
@@ -598,22 +632,100 @@ class _CapsuleButtonState extends State<_CapsuleButton> {
         scale: _pressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(999),
-            border: border,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: tileColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 1.0),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(widget.icon, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                  Text(widget.label, style: TextStyle(color: fg, fontSize: 14, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon, size: 16, color: fg),
-              const SizedBox(width: 6),
-              Text(widget.label, style: TextStyle(color: fg, fontSize: 14, fontWeight: FontWeight.w600)),
-            ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassCircleButton extends StatefulWidget {
+  const _GlassCircleButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.size = 46,
+    this.semanticLabel,
+  });
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final double size; // diameter
+  final String? semanticLabel;
+
+  @override
+  State<_GlassCircleButton> createState() => _GlassCircleButtonState();
+}
+
+
+class _GlassCircleButtonState extends State<_GlassCircleButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final glassBase = isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.06);
+    final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final tileColor = _pressed ? Color.alphaBlend(overlay, glassBase) : glassBase;
+    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.35 : 0.40);
+
+    final child = SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Center(child: Icon(widget.icon, size: 18, color: widget.color)),
+    );
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          Haptics.light();
+          widget.onTap();
+        },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOutCubic,
+          child: ClipOval(
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: tileColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.0),
+                ),
+                child: child,
+              ),
+            ),
           ),
         ),
       ),
