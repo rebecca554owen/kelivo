@@ -185,7 +185,8 @@ class McpPage extends StatelessWidget {
                         return Container(
                           decoration: BoxDecoration(
                             color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
-                            borderRadius: BorderRadius.circular(12),
+                            // Soften the list card corners a bit
+                            borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.1 : 0.08), width: 0.6),
                           ),
                           child: Padding(
@@ -312,7 +313,8 @@ class McpPage extends StatelessWidget {
                             height: double.infinity,
                             decoration: BoxDecoration(
                               color: Theme.of(context).brightness == Brightness.dark ? cs.error.withOpacity(0.22) : cs.error.withOpacity(0.14),
-                              borderRadius: BorderRadius.circular(12),
+                              // Match list card radius for consistency
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: cs.error.withOpacity(0.35)),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
