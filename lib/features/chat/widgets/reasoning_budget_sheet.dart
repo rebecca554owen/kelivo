@@ -14,7 +14,7 @@ Future<void> showReasoningBudgetSheet(BuildContext context) async {
     isScrollControlled: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (ctx) => const _ReasoningBudgetSheet(),
   );
