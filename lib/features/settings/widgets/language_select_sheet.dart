@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_tactile.dart';
+import '../../../core/services/haptics.dart';
 
 class LanguageOption {
   final String code;
@@ -41,7 +43,7 @@ Future<LanguageOption?> showLanguageSelector(BuildContext context) async {
     isScrollControlled: true,
     backgroundColor: cs.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20 )),
     ),
     builder: (ctx) => const _LanguageSelectSheet(),
   );
@@ -55,15 +57,7 @@ class _LanguageSelectSheet extends StatefulWidget {
 }
 
 class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
-  final DraggableScrollableController _sheetCtrl = DraggableScrollableController();
-  static const double _initialSize = 0.8;
-  static const double _maxSize = 0.8;
-
-  @override
-  void dispose() {
-    _sheetCtrl.dispose();
-    super.dispose();
-  }
+  // Auto height with a max constraint; no draggable sheet.
 
   @override
   Widget build(BuildContext context) {
@@ -71,24 +65,23 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final maxHeight = MediaQuery.of(context).size.height * 0.8;
     return SafeArea(
       top: false,
       child: AnimatedPadding(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: DraggableScrollableSheet(
-          controller: _sheetCtrl,
-          expand: false,
-          initialChildSize: _initialSize,
-          maxChildSize: _maxSize,
-          minChildSize: 0.3,
-          builder: (c, controller) {
-            return Column(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header with drag indicator
-                Container(
-                  padding: const EdgeInsets.only(top: 8, bottom: 8),
+                // Header with drag indicator (reduced spacing)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 6),
                   child: Container(
                     width: 40,
                     height: 4,
@@ -98,67 +91,50 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
                     ),
                   ),
                 ),
-                // Title
+                // No title per iOS style; keep content close to handle
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Text(
-                    l10n.languageSelectSheetTitle,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                // Language list
-                Expanded(
-                  child: ListView(
-                    controller: controller,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       ...supportedLanguages.map((lang) => _languageOption(context, lang)),
-                      const SizedBox(height: 12),
-                      // Clear translation button
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                        child: Material(
-                          color: isDark ? Colors.red.withOpacity(0.12) : Colors.red.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => Navigator.of(context).pop(const LanguageOption(
+                      const SizedBox(height: 8),
+                      // Clear translation row (iOS style)
+                      SizedBox(
+                        height: 48,
+                        child: IosCardPress(
+                          borderRadius: BorderRadius.circular(14),
+                          baseColor: cs.surface,
+                          duration: const Duration(milliseconds: 260),
+                          onTap: () {
+                            Haptics.light();
+                            Navigator.of(context).pop(const LanguageOption(
                               code: '__clear__',
                               displayName: 'Clear Translation',
                               displayNameZh: '清空翻译',
                               flag: '',
-                            )),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Lucide.X,
-                                    size: 20,
-                                    color: Colors.red.shade600,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    l10n.languageSelectSheetClearButton,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.red.shade600,
-                                    ),
-                                  ),
-                                ],
+                            ));
+                          },
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: [
+                              Icon(Lucide.X, size: 20, color: Colors.red.shade600),
+                              const SizedBox(width: 10),
+                              Text(
+                                l10n.languageSelectSheetClearButton,
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.red.shade600),
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
               ],
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -170,41 +146,29 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Material(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => Navigator.of(context).pop(lang),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: cs.outlineVariant.withOpacity(0.3),
-                width: 1,
+      child: SizedBox(
+        height: 48,
+        child: IosCardPress(
+          borderRadius: BorderRadius.circular(14),
+          baseColor: cs.surface,
+          duration: const Duration(milliseconds: 260),
+          onTap: () {
+            Haptics.light();
+            Navigator.of(context).pop(lang);
+          },
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              // Flag only
+              Text(lang.flag, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _getLanguageDisplayName(l10n, lang.code),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                // Flag only (remove globe icon)
-                Text(
-                  lang.flag,
-                  style: const TextStyle(fontSize: 20),
-                ),
-                const SizedBox(width: 12),
-                // Language name
-                Expanded(
-                  child: Text(
-                    _getLanguageDisplayName(l10n, lang.code),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
