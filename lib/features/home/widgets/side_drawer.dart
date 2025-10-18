@@ -28,6 +28,7 @@ import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
 import 'dart:ui' as ui;
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../core/services/haptics.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -1009,55 +1010,75 @@ extension on _SideDrawerState {
     final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final maxH = MediaQuery.of(ctx).size.height * 0.8;
+        Widget row(String text, VoidCallback onTap) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: SizedBox(
+              height: 48,
+              child: IosCardPress(
+                borderRadius: BorderRadius.circular(14),
+                baseColor: cs.surface,
+                duration: const Duration(milliseconds: 260),
+                onTap: () async {
+                  Haptics.light();
+                  Navigator.of(ctx).pop();
+                  await Future<void>.delayed(const Duration(milliseconds: 10));
+                  onTap();
+                },
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                ),
+              ),
+            ),
+          );
+        }
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(l10n.sideDrawerChooseImage),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _pickLocalImage(context);
-                },
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxH),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: cs.onSurface.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    row(l10n.sideDrawerChooseImage, () async { await _pickLocalImage(context); }),
+                    row(l10n.sideDrawerChooseEmoji, () async {
+                      final emoji = await _pickEmoji(context);
+                      if (emoji != null) {
+                        await context.read<UserProvider>().setAvatarEmoji(emoji);
+                      }
+                    }),
+                    row(l10n.sideDrawerEnterLink, () async { await _inputAvatarUrl(context); }),
+                    row(l10n.sideDrawerImportFromQQ, () async { await _inputQQAvatar(context); }),
+                    row(l10n.sideDrawerReset, () async { await context.read<UserProvider>().resetAvatar(); }),
+                    const SizedBox(height: 4),
+                  ],
+                ),
               ),
-              ListTile(
-                title: Text(l10n.sideDrawerChooseEmoji),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  final emoji = await _pickEmoji(context);
-                  if (emoji != null) {
-                    await context.read<UserProvider>().setAvatarEmoji(emoji);
-                  }
-                },
-              ),
-              ListTile(
-                title: Text(l10n.sideDrawerEnterLink),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _inputAvatarUrl(context);
-                },
-              ),
-              ListTile(
-                title: Text(l10n.sideDrawerImportFromQQ),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _inputQQAvatar(context);
-                },
-              ),
-              ListTile(
-                title: Text(l10n.sideDrawerReset),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await context.read<UserProvider>().resetAvatar();
-                },
-              ),
-              const SizedBox(height: 4),
-            ],
+            ),
           ),
         );
       },
