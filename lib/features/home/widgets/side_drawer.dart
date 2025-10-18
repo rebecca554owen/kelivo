@@ -191,62 +191,109 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final isPinned = chatService.getConversation(chat.id)?.isPinned ?? false;
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final maxH = MediaQuery.of(ctx).size.height * 0.8;
+        Widget row({required IconData icon, required String label, Color? color, required Future<void> Function() action}) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: SizedBox(
+              height: 48,
+              child: IosCardPress(
+                borderRadius: BorderRadius.circular(14),
+                baseColor: cs.surface,
+                duration: const Duration(milliseconds: 260),
+                onTap: () async {
+                  Haptics.light();
+                  Navigator.of(ctx).pop();
+                  await Future<void>.delayed(const Duration(milliseconds: 10));
+                  await action();
+                },
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 20, color: color ?? cs.onSurface),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: color ?? cs.onSurface),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Lucide.Edit, size: 20),
-                title: Text(l10n.sideDrawerMenuRename),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _renameChat(context, chat);
-                },
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxH),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: cs.onSurface.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    row(
+                      icon: Lucide.Edit,
+                      label: l10n.sideDrawerMenuRename,
+                      action: () async { _renameChat(context, chat); },
+                    ),
+                    row(
+                      icon: Lucide.Pin,
+                      label: isPinned ? l10n.sideDrawerMenuUnpin : l10n.sideDrawerMenuPin,
+                      action: () async { await chatService.togglePinConversation(chat.id); },
+                    ),
+                    row(
+                      icon: Lucide.RefreshCw,
+                      label: l10n.sideDrawerMenuRegenerateTitle,
+                      action: () async { await _regenerateTitle(context, chat.id); },
+                    ),
+                    row(
+                      icon: Lucide.Trash,
+                      label: l10n.sideDrawerMenuDelete,
+                      color: Colors.redAccent,
+                      action: () async {
+                        final deletingCurrent = chatService.currentConversationId == chat.id;
+                        await chatService.deleteConversation(chat.id);
+                        showAppSnackBar(
+                          context,
+                          message: l10n.sideDrawerDeleteSnackbar(chat.title),
+                          type: NotificationType.success,
+                          duration: const Duration(seconds: 3),
+                        );
+                        if (deletingCurrent || chatService.currentConversationId == null) {
+                          widget.onNewConversation?.call();
+                        }
+                        Navigator.of(context).maybePop();
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                ),
               ),
-              ListTile(
-                leading: Icon(Lucide.Pin, size: 20),
-                title: Text(isPinned ? l10n.sideDrawerMenuUnpin : l10n.sideDrawerMenuPin),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await chatService.togglePinConversation(chat.id);
-                },
-              ),
-              ListTile(
-                leading: Icon(Lucide.RefreshCw, size: 20),
-                title: Text(l10n.sideDrawerMenuRegenerateTitle),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _regenerateTitle(context, chat.id);
-                },
-              ),
-              ListTile(
-                leading: Icon(Lucide.Trash, size: 20, color: Colors.redAccent),
-                title: Text(l10n.sideDrawerMenuDelete, style: const TextStyle(color: Colors.redAccent)),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  final deletingCurrent = chatService.currentConversationId == chat.id;
-                  await chatService.deleteConversation(chat.id);
-                  // Show simple snackbar (no undo)
-                  showAppSnackBar(
-                    context,
-                    message: l10n.sideDrawerDeleteSnackbar(chat.title),
-                    type: NotificationType.success,
-                    duration: const Duration(seconds: 3),
-                  );
-                  // If the deleted one was the current selection, trigger host's new-topic (draft) flow
-                  if (deletingCurrent || chatService.currentConversationId == null) {
-                    widget.onNewConversation?.call();
-                  }
-                  // Close the drawer, return to main page
-                  Navigator.of(context).maybePop();
-                },
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -1013,7 +1060,7 @@ extension on _SideDrawerState {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
