@@ -40,7 +40,15 @@ class _IosIconButtonState extends State<IosIconButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final base = (widget.color ?? theme.colorScheme.onSurface).withOpacity(widget.enabled ? 1 : 0.45);
+    // Respect provided color opacity when enabled; only dim when disabled.
+    final Color base = () {
+      if (widget.color != null) {
+        return widget.enabled
+            ? widget.color!
+            : widget.color!.withOpacity(widget.color!.opacity * 0.45);
+      }
+      return theme.colorScheme.onSurface.withOpacity(widget.enabled ? 1 : 0.45);
+    }();
     // On press, shift icon color toward white (light theme) or black (dark theme)
     // to get a subtle lighter/gray look, unless overridden via pressedColor.
     final bool isDark = theme.brightness == Brightness.dark;
