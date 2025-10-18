@@ -142,7 +142,7 @@ class _ReasoningBudgetSheetState extends State<_ReasoningBudgetSheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 6),
+                const SizedBox(height: 12),
                 Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999))),
                 const SizedBox(height: 6),
                 // No title per iOS style; keep content close to handle
