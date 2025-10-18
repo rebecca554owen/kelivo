@@ -99,6 +99,8 @@ class IosCardPress extends StatefulWidget {
     this.baseColor,
     this.pressedBlendStrength,
     this.padding,
+    this.pressedScale,
+    this.duration,
   });
 
   final Widget child;
@@ -109,6 +111,10 @@ class IosCardPress extends StatefulWidget {
   // 0..1; how much to blend towards surface tint on press
   final double? pressedBlendStrength;
   final EdgeInsetsGeometry? padding;
+  // Optional subtle scale when pressed (e.g., 0.98). Defaults to 1.0 (no scale).
+  final double? pressedScale;
+  // Optional custom animation duration for color/scale tween.
+  final Duration? duration;
 
   @override
   State<IosCardPress> createState() => _IosCardPressState();
@@ -126,6 +132,8 @@ class _IosCardPressState extends State<IosCardPress> {
     final double k = widget.pressedBlendStrength ?? (isDark ? 0.14 : 0.12);
     final Color pressTarget = Color.lerp(base, isDark ? Colors.white : Colors.black, k) ?? base;
     final Color target = _pressed ? pressTarget : base;
+    final double scale = _pressed ? (widget.pressedScale ?? 1.0) : 1.0;
+    final Duration dur = widget.duration ?? const Duration(milliseconds: 200);
 
     final content = widget.padding == null ? widget.child : Padding(padding: widget.padding!, child: widget.child);
 
@@ -136,14 +144,19 @@ class _IosCardPressState extends State<IosCardPress> {
       onTapCancel: (widget.onTap != null || widget.onLongPress != null) ? () => setState(() => _pressed = false) : null,
       onTap: widget.onTap,
       onLongPress: widget.onLongPress,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: AnimatedScale(
+        scale: scale,
+        duration: dur,
         curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: target,
-          borderRadius: widget.borderRadius ?? BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: dur,
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: target,
+            borderRadius: widget.borderRadius ?? BorderRadius.circular(12),
+          ),
+          child: content,
         ),
-        child: content,
       ),
     );
   }
