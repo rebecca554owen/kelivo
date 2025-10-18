@@ -567,78 +567,69 @@ class ThemePalettes {
   // New: Document Theme palette based on provided spec
   static const ThemePalette docTheme = ThemePalette(
     id: docThemeId,
-    zhName: '清泉翠',
+    zhName: '樱桃绿',
     enName: 'Verdant Mint',
     light: ColorScheme(
       brightness: Brightness.light,
-      // Brand color
       primary: Color(0xFF00B96B),
       onPrimary: Color(0xFFFFFFFF),
       primaryContainer: Color(0x3300B96B),
       onPrimaryContainer: Color(0xFF003921),
-      // Accent colors
-      secondary: Color(0xFF6FB1FA), // Blue
+      secondary: Color(0xFF509177),
       onSecondary: Color(0xFFFFFFFF),
-      secondaryContainer: Color(0x336FB1FA),
-      onSecondaryContainer: Color(0xFF0A2F50),
-      tertiary: Color(0xFF9C96F9), // Purple
+      secondaryContainer: Color(0x33509177),
+      onSecondaryContainer: Color(0xFF003823),
+      tertiary: Color(0xFF9C96F9),
       onTertiary: Color(0xFFFFFFFF),
       tertiaryContainer: Color(0x339C96F9),
       onTertiaryContainer: Color(0xFF2C122A),
-      // Error
       error: Color(0xFFFF0000),
       onError: Color(0xFFFFFFFF),
       errorContainer: Color(0x1AFF0000),
       onErrorContainer: Color(0xFFFF0000),
-      // Surfaces & text
-      surface: Color(0xFFF7F7F7), // background-primary
-      onSurface: Color(0xFF202020), // text-primary
-      onSurfaceVariant: Color(0xFF646464), // text-secondary
-      outline: Color(0x1A000000), // default border rgba(0,0,0,0.1)
-      outlineVariant: Color(0xFF000000), // linear border
+      surface: Color(0xFFF7F7F7),
+      onSurface: Color(0xFF202020),
+      onSurfaceVariant: Color(0xFF646464),
+      outline: Color(0x1A000000),
+      outlineVariant: Color(0xFF000000),
       shadow: Color(0xFF000000),
       scrim: Color(0xFF000000),
-      inverseSurface: Color(0xFF121213), // dark background-primary
-      onInverseSurface: Color(0xFFF9F9F9), // dark text-primary
+      inverseSurface: Color(0xFF121213),
+      onInverseSurface: Color(0xFFF9F9F9),
       inversePrimary: Color(0xFF00B96B),
       surfaceTint: Color(0xFF00B96B),
     ),
     dark: ColorScheme(
       brightness: Brightness.dark,
-      // Brand color
       primary: Color(0xFF00B96B),
       onPrimary: Color(0xFFFFFFFF),
       primaryContainer: Color(0x3300B96B),
       onPrimaryContainer: Color(0xFF003921),
-      // Accent colors
-      secondary: Color(0xFF8FC2FF), // Blue (dark)
-      onSecondary: Color(0xFF000000),
-      secondaryContainer: Color(0x338FC2FF),
-      onSecondaryContainer: Color(0xFF0F2B4D),
-      tertiary: Color(0xFFB5AFFD), // Purple (dark)
+      secondary: Color(0xFFB4D7C6),
+      onSecondary: Color(0xFF204D39),
+      secondaryContainer: Color(0x33B4D7C6),
+      onSecondaryContainer: Color(0xFF0B3A27),
+      tertiary: Color(0xFFB5AFFD),
       onTertiary: Color(0xFF000000),
       tertiaryContainer: Color(0x33B5AFFD),
       onTertiaryContainer: Color(0xFF2D0D35),
-      // Error
       error: Color(0xFFFF0000),
       onError: Color(0xFFFFFFFF),
       errorContainer: Color(0x1AFF0000),
       onErrorContainer: Color(0xFFFF0000),
-      // Surfaces & text
-      surface: Color(0xFF121213), // background-primary (dark)
-      onSurface: Color(0xFFF9F9F9), // text-primary (dark)
-      onSurfaceVariant: Color(0xFFCECECE), // text-secondary (dark)
-      outline: Color(0x1A000000), // default border rgba(0,0,0,0.1)
-      outlineVariant: Color(0xFFFFFFFF), // linear border (dark)
+      surface: Color(0xFF121213),
+      onSurface: Color(0xFFF9F9F9),
+      onSurfaceVariant: Color(0xFFCECECE),
+      outline: Color(0x1A000000),
+      outlineVariant: Color(0xFFFFFFFF),
       shadow: Color(0xFF000000),
       scrim: Color(0xFF000000),
-      inverseSurface: Color(0xFFF7F7F7), // light background-primary
-      onInverseSurface: Color(0xFF202020), // light text-primary
+      inverseSurface: Color(0xFFF7F7F7),
+      onInverseSurface: Color(0xFF202020),
       inversePrimary: Color(0xFF00B96B),
       surfaceTint: Color(0xFF00B96B),
     ),
   );
-
   static const List<ThemePalette> all = <ThemePalette>[
     defaultPalette,
     blue,
