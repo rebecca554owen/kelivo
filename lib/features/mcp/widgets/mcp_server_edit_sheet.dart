@@ -24,7 +24,7 @@ Future<void> showMcpServerEditSheet(BuildContext context, {String? serverId}) as
     isScrollControlled: true,
     backgroundColor: cs.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (ctx) => _McpServerEditSheet(serverId: serverId),
   );

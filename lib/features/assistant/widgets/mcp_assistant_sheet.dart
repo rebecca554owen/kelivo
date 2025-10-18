@@ -18,7 +18,7 @@ Future<void> showAssistantMcpSheet(BuildContext context, {required String assist
     isScrollControlled: true,
     backgroundColor: cs.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (_) => _AssistantMcpSheet(assistantId: assistantId),
   );
