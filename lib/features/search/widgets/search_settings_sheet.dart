@@ -91,18 +91,17 @@ class _SearchSettingsSheet extends StatelessWidget {
     }
     final isOpenAIResponsesSupportedModel = isOpenAIResponses && (modelId != null) && _isOpenAIResponsesSupportedModel(modelId!);
 
+    final maxHeight = MediaQuery.of(context).size.height * 0.8;
     return SafeArea(
       top: false,
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.5,
-        minChildSize: 0.4,
-        maxChildSize: 0.8,
-        builder: (ctx, controller) {
-          return Padding(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: ListView(
-              controller: controller,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Drag handle
                 Center(
@@ -295,8 +294,8 @@ class _SearchSettingsSheet extends StatelessWidget {
                 ],
               ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
