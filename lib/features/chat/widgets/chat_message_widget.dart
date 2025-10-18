@@ -709,7 +709,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             ),
           ),
           if (showUserActions || showVersionSwitcher) ...[
-            SizedBox(height: showUserActions ? 12 : 6),
+            SizedBox(height: showUserActions ? 8 : 6),
             Align(
               alignment: Alignment.centerRight,
               child: ConstrainedBox(
@@ -1130,7 +1130,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             ),
           ],
           // Action buttons
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               SizedBox(
