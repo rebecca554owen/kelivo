@@ -1708,49 +1708,42 @@ class _ToolCallItem extends StatelessWidget {
     final bg = cs.primaryContainer.withOpacity(isDark ? 0.25 : 0.30);
     final fg = cs.onPrimaryContainer;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showDetail(context),
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: part.loading
-                    ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-                  ),
-                )
-                    : Icon(_iconFor(part.toolName), size: 18, color: cs.secondary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _titleFor(context, part.toolName, part.arguments, isResult: !part.loading),
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.secondary),
+    return IosCardPress(
+      borderRadius: BorderRadius.circular(16),
+      baseColor: bg,
+      pressedScale: 1.0,
+      duration: const Duration(milliseconds: 260),
+      onTap: () => _showDetail(context),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: part.loading
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
                     ),
-                    // No inline result preview; tap to view details in sheet
-                  ],
-                ),
-              ),
-            ],
+                  )
+                : Icon(_iconFor(part.toolName), size: 18, color: cs.secondary),
           ),
-        ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _titleFor(context, part.toolName, part.arguments, isResult: !part.loading),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.secondary),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1919,29 +1912,22 @@ class _SourcesSummaryCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final label = l10n.chatMessageWidgetCitationsCount(count);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          decoration: BoxDecoration(
-            // Match deep thinking (reasoning) card background
-            color: cs.primaryContainer.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.30,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Lucide.BookOpen, size: 16, color: cs.secondary),
-              const SizedBox(width: 8),
-              Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.secondary)),
-            ],
-          ),
-        ),
+    return IosCardPress(
+      borderRadius: BorderRadius.circular(12),
+      baseColor: cs.primaryContainer.withOpacity(
+        Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.30,
+      ),
+      pressedScale: 1.0,
+      duration: const Duration(milliseconds: 260),
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Lucide.BookOpen, size: 16, color: cs.secondary),
+          const SizedBox(width: 8),
+          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.secondary)),
+        ],
       ),
     );
   }
@@ -2078,9 +2064,13 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
     final curve = const Cubic(0.2, 0.8, 0.2, 1);
 
     // Build a compact header with optional scrolling preview when loading
-    Widget header = InkWell(
+    Widget header = IosCardPress(
       borderRadius: BorderRadius.circular(12),
+      baseColor: Colors.transparent,
+      pressedScale: 1.0,
+      duration: const Duration(milliseconds: 220),
       onTap: widget.onToggle,
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
