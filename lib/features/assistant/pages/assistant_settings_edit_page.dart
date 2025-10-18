@@ -35,6 +35,7 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../core/services/haptics.dart';
+import '../../../shared/widgets/ios_tactile.dart';
 
 class AssistantSettingsEditPage extends StatefulWidget {
   const AssistantSettingsEditPage({super.key, required this.assistantId});
@@ -1055,59 +1056,81 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final maxH = MediaQuery.of(ctx).size.height * 0.8;
+        Widget row(String text, Future<void> Function() action) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: SizedBox(
+              height: 48,
+              child: IosCardPress(
+                borderRadius: BorderRadius.circular(14),
+                baseColor: cs.surface,
+                duration: const Duration(milliseconds: 260),
+                onTap: () async {
+                  Haptics.light();
+                  Navigator.of(ctx).pop();
+                  await Future<void>.delayed(const Duration(milliseconds: 10));
+                  await action();
+                },
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                ),
+              ),
+            ),
+          );
+        }
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(l10n.assistantEditAvatarChooseImage),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _pickLocalImage(context, a);
-                },
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxH),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: cs.onSurface.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    row(l10n.assistantEditAvatarChooseImage, () async => _pickLocalImage(context, a)),
+                    row(l10n.assistantEditAvatarChooseEmoji, () async {
+                      final emoji = await _pickEmoji(context);
+                      if (emoji != null) {
+                        await context.read<AssistantProvider>().updateAssistant(
+                          a.copyWith(avatar: emoji),
+                        );
+                      }
+                    }),
+                    row(l10n.assistantEditAvatarEnterLink, () async => _inputAvatarUrl(context, a)),
+                    row(l10n.assistantEditAvatarImportQQ, () async => _inputQQAvatar(context, a)),
+                    row(l10n.assistantEditAvatarReset, () async {
+                      await context.read<AssistantProvider>().updateAssistant(
+                        a.copyWith(clearAvatar: true),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                  ],
+                ),
               ),
-              ListTile(
-                title: Text(l10n.assistantEditAvatarChooseEmoji),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  final emoji = await _pickEmoji(context);
-                  if (emoji != null) {
-                    await context.read<AssistantProvider>().updateAssistant(
-                      a.copyWith(avatar: emoji),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                title: Text(l10n.assistantEditAvatarEnterLink),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _inputAvatarUrl(context, a);
-                },
-              ),
-              ListTile(
-                title: Text(l10n.assistantEditAvatarImportQQ),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await _inputQQAvatar(context, a);
-                },
-              ),
-              ListTile(
-                title: Text(l10n.assistantEditAvatarReset),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await context.read<AssistantProvider>().updateAssistant(
-                    a.copyWith(clearAvatar: true),
-                  );
-                },
-              ),
-              const SizedBox(height: 4),
-            ],
+            ),
           ),
         );
       },
