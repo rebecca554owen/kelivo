@@ -3084,6 +3084,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             },
             icon: Lucide.MessageCirclePlus,
           ),
+          const SizedBox(width: 4),
           // Move the right spacer between mini map and new-topic per request
         ],
       ),
