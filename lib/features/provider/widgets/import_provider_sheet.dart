@@ -258,11 +258,14 @@ Future<void> showImportProviderSheet(BuildContext context) async {
               10 + mq.padding.bottom + mq.viewInsets.bottom,
             );
           }(),
-          child: FractionallySizedBox(
-            heightFactor: 0.55,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)))),
                 const SizedBox(height: 12),
                 // iOS-style header: centered title with left/right actions
@@ -535,7 +538,8 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                     ),
                   ],
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
