@@ -55,12 +55,13 @@ class SideDrawer extends StatefulWidget {
   State<SideDrawer> createState() => _SideDrawerState();
 }
 
-class _SideDrawerState extends State<SideDrawer> {
+class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   final GlobalKey _assistantTileKey = GlobalKey();
   OverlayEntry? _assistantPickerEntry;
   ValueNotifier<int>? _closeTicker;
+  bool _assistantsExpanded = false;
 
   // Assistant avatar renderer shared across drawer views
   Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28, VoidCallback? onTap}) {
@@ -607,7 +608,7 @@ class _SideDrawerState extends State<SideDrawer> {
                             ),
                             const SizedBox(width: 8),
                             AnimatedRotation(
-                              turns: _assistantPickerEntry != null ? 0.5 : 0.0,
+                              turns: _assistantsExpanded ? 0.5 : 0.0,
                               duration: const Duration(milliseconds: 350),
                               curve: Curves.easeOutCubic,
                               child: Icon(
@@ -621,6 +622,8 @@ class _SideDrawerState extends State<SideDrawer> {
                       ),
                     ),
                   ),
+
+                  // 注意：内联助手列表已移动至下方可滚动区域
                 ],
               ),
             ),
@@ -632,6 +635,72 @@ class _SideDrawerState extends State<SideDrawer> {
                 // keeping text position unchanged (compensated in tile padding)
                 padding: const EdgeInsets.fromLTRB(10, 4, 10, 16),
                 children: [
+                  // 助手列表（内联、与话题一体滚动）
+                  // 要求：助手列表仅淡入/淡出；下方话题区域需要被顺滑推开
+                  // 方案：外层 AnimatedSize 负责高度过渡（推开下方内容），内层 AnimatedSwitcher 仅做淡入淡出
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeInOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                      child: !_assistantsExpanded
+                          ? const SizedBox.shrink()
+                          : Builder(
+                              key: const ValueKey('assistants-inline'),
+                              builder: (context) {
+                                final ap2 = context.watch<AssistantProvider>();
+                                final assistants = ap2.assistants;
+                                final isDark2 = Theme.of(context).brightness == Brightness.dark;
+                                final textBase2 = isDark2 ? Colors.white : Colors.black;
+                                return Padding(
+                                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: assistants.length,
+                                    itemBuilder: (ctx, i) {
+                                      final a = assistants[i];
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                        child: IosCardPress(
+                                          baseColor: widget.embedded ? Colors.transparent : Theme.of(context).colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(16),
+                                          onTap: () => _handleSelectAssistant(a),
+                                          padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                                          child: Row(
+                                            children: [
+                                              _assistantAvatar(context, a, size: 32),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Text(
+                                                  a.name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textBase2),
+                                                ),
+                                              ),
+                                              IosIconButton(
+                                                size: 18,
+                                                color: textBase2.withOpacity(0.7),
+                                                icon: Lucide.Pencil,
+                                                padding: const EdgeInsets.all(8),
+                                                onTap: () => _openAssistantSettings(a.id),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ),
                   // Update banner under search box
                   Builder(builder: (context) {
                     final settings = context.watch<SettingsProvider>();
@@ -905,18 +974,16 @@ class _SideDrawerState extends State<SideDrawer> {
   }
 
   void _toggleAssistantPicker() {
-    if (_assistantPickerEntry != null) {
-      _closeAssistantPicker();
-    } else {
-      _showAssistantPickerOverlay();
-    }
+    setState(() {
+      _assistantsExpanded = !_assistantsExpanded;
+    });
   }
 
   void _closeAssistantPicker() {
-    if (_assistantPickerEntry == null) return;
-    _assistantPickerEntry?.remove();
-    _assistantPickerEntry = null;
-    if (mounted) setState(() {});
+    if (!_assistantsExpanded) return;
+    setState(() {
+      _assistantsExpanded = false;
+    });
   }
 
   Future<void> _handleSelectAssistant(Assistant assistant) async {
@@ -935,209 +1002,6 @@ class _SideDrawerState extends State<SideDrawer> {
     );
   }
 
-  void _showAssistantPickerOverlay() {
-    final overlay = Overlay.of(context);
-    if (overlay == null) return;
-    final tileBox = _assistantTileKey.currentContext?.findRenderObject() as RenderBox?;
-    final overlayBox = overlay.context.findRenderObject() as RenderBox?;
-    if (tileBox == null || overlayBox == null) return;
-
-    final offset = tileBox.localToGlobal(Offset.zero, ancestor: overlayBox);
-    final size = tileBox.size;
-
-    final assistants = List<Assistant>.from(context.read<AssistantProvider>().assistants);
-    final currentId = context.read<AssistantProvider>().currentAssistantId;
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final screenSize = MediaQuery.of(context).size;
-
-    const double headerHeight = 56;
-    const double rowExtent = 58;
-    const double listExtraPadding = 24;
-    final double maxHeight = screenSize.height * 0.6;
-    final double availableBody = math.max(0.0, maxHeight - headerHeight);
-    final double bodyHeight;
-    if (assistants.isEmpty) {
-      if (availableBody <= 0) {
-        bodyHeight = 0;
-      } else if (availableBody < 80.0) {
-        bodyHeight = availableBody;
-      } else {
-        bodyHeight = math.min(availableBody, 140.0);
-      }
-    } else {
-      bodyHeight = math.min(availableBody, assistants.length * rowExtent + listExtraPadding);
-    }
-    final double totalHeight = math.min(maxHeight, headerHeight + bodyHeight);
-
-    double top = offset.dy + size.height + 8;
-    if (top + totalHeight > screenSize.height - 16) {
-      top = math.max(16, screenSize.height - totalHeight - 16);
-    }
-    double left = offset.dx;
-    final double width = size.width;
-    if (left + width > screenSize.width - 16) {
-      left = math.max(16, screenSize.width - width - 16);
-    }
-
-    _assistantPickerEntry = OverlayEntry(
-      builder: (ctx) {
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _closeAssistantPicker,
-              ),
-            ),
-            Positioned(
-              left: left,
-              top: top,
-              width: width,
-              child: Material(
-                color: Colors.transparent,
-                child: Animate(
-                  effects: [
-                    FadeEffect(duration: 180.ms, curve: Curves.easeOutCubic),
-                    SlideEffect(begin: const Offset(0, -0.04), end: Offset.zero, duration: 220.ms, curve: Curves.easeOutCubic),
-                  ],
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cs.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.12),
-                          blurRadius: 18,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: SizedBox(
-                      height: totalHeight,
-                      child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 6, 12, 2),
-                          child: Row(
-                            children: [
-                              Icon(Lucide.Bot, size: 18, color: cs.primary),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  l10n.sideDrawerChooseAssistantTitle,
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                              IosIconButton(
-                                size: 18,
-                                color: cs.primary,
-                                icon: Lucide.Plus,
-                                onTap: () async {
-                                  _closeAssistantPicker();
-                                  final id = await context.read<AssistantProvider>().addAssistant(context: context);
-                                  if (!mounted) return;
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        // const SizedBox(height: 1),
-                        if (assistants.isEmpty)
-                          Expanded(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Text(
-                                  l10n.sideDrawerChooseAssistantTitle,
-                                  style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          Expanded(
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              itemCount: assistants.length,
-                              physics: const ClampingScrollPhysics(),
-                              itemBuilder: (ctx, index) {
-                                final assistant = assistants[index];
-                                final selected = assistant.id == currentId;
-                                final tile = Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    8,
-                                    index == 0 ? 2.0 : 1.5,
-                                    8,
-                                    index == assistants.length - 1 ? 2.0 : 1.5,
-                                  ),
-                                  child: IosCardPress(
-                                    baseColor: selected ? cs.primary.withOpacity(0.12) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: () => _handleSelectAssistant(assistant),
-                                    padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-                                    child: Row(
-                                      children: [
-                                        _assistantAvatar(
-                                          context,
-                                          assistant,
-                                          size: 28,
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            assistant.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              color: cs.onSurface,
-                                            ),
-                                          ),
-                                        ),
-                                        IosIconButton(
-                                          size: 18,
-                                          color: cs.onSurface.withOpacity(0.6),
-                                          icon: Lucide.Pencil,
-                                          padding: const EdgeInsets.all(8),
-                                          onTap: () => _openAssistantSettings(assistant.id),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ).animate(
-                                  delay: (index * 40).ms,
-                                ).fadeIn(
-                                  duration: 200.ms,
-                                  curve: Curves.easeOutCubic,
-                                ).slideY(
-                                  begin: 0.08,
-                                  end: 0,
-                                  duration: 240.ms,
-                                  curve: Curves.easeOutCubic,
-                                );
-                                return tile;
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            )],
-        );
-      },
-    );
-
-    overlay.insert(_assistantPickerEntry!);
-    if (mounted) setState(() {});
-  }
 }
 
 extension on _SideDrawerState {
