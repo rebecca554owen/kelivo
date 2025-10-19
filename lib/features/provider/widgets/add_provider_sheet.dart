@@ -388,11 +388,14 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                     ),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: _TactileIconButton(
-                        icon: Lucide.X,
-                        color: cs.onSurface,
-                        size: 22,
-                        onTap: () => Navigator.of(context).maybePop(),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: _TactileIconButton(
+                          icon: Lucide.X,
+                          color: cs.onSurface,
+                          size: 22,
+                          onTap: () => Navigator.of(context).maybePop(),
+                        ),
                       ),
                     ),
                   ],
