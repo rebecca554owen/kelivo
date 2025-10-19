@@ -355,7 +355,7 @@ class ChatApiService {
           };
         }
         final headers = <String, String>{
-          'Authorization': 'Bearer ${_effectiveApiKey(config)}',
+          'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
           'Content-Type': 'application/json',
         };
         headers.addAll(_customHeaders(config, modelId));
@@ -417,7 +417,7 @@ class ChatApiService {
           ],
         };
         final headers = <String, String>{
-          'x-api-key': _effectiveApiKey(config),
+          'x-api-key': _apiKeyForRequest(config, modelId),
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         };
@@ -452,7 +452,7 @@ class ChatApiService {
           final base = config.baseUrl.endsWith('/')
               ? config.baseUrl.substring(0, config.baseUrl.length - 1)
               : config.baseUrl;
-          url = '$base/models/$modelId:generateContent?key=${Uri.encodeComponent(_effectiveApiKey(config))}';
+          url = '$base/models/$modelId:generateContent?key=${Uri.encodeComponent(_apiKeyForRequest(config, modelId))}';
         }
         final body = {
           'contents': [
