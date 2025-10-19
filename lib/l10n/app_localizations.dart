@@ -2159,6 +2159,12 @@ abstract class AppLocalizations {
   /// **'Render user messages with Markdown'**
   String get displaySettingsPageEnableUserMarkdownTitle;
 
+  /// No description provided for @displaySettingsPageEnableReasoningMarkdownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Render reasoning (thinking) with Markdown'**
+  String get displaySettingsPageEnableReasoningMarkdownTitle;
+
   /// No description provided for @messageExportSheetFormatTitle.
   ///
   /// In en, this message translates to:

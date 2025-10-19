@@ -35,6 +35,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayEnableDollarLatexKey = 'display_enable_dollar_latex_v1';
   static const String _displayEnableMathRenderingKey = 'display_enable_math_rendering_v1';
   static const String _displayEnableUserMarkdownKey = 'display_enable_user_markdown_v1';
+  static const String _displayEnableReasoningMarkdownKey = 'display_enable_reasoning_markdown_v1';
   static const String _appLocaleKey = 'app_locale_v1';
   static const String _translateModelKey = 'translate_model_v1';
   static const String _translatePromptKey = 'translate_prompt_v1';
@@ -185,6 +186,7 @@ class SettingsProvider extends ChangeNotifier {
     _enableDollarLatex = prefs.getBool(_displayEnableDollarLatexKey) ?? true;
     _enableMathRendering = prefs.getBool(_displayEnableMathRenderingKey) ?? true;
     _enableUserMarkdown = prefs.getBool(_displayEnableUserMarkdownKey) ?? true;
+    _enableReasoningMarkdown = prefs.getBool(_displayEnableReasoningMarkdownKey) ?? true;
     // Load app locale; default to follow system on first launch
     _appLocaleTag = prefs.getString(_appLocaleKey);
     if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
@@ -752,6 +754,17 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayEnableUserMarkdownKey, v);
   }
 
+  // Display: render reasoning (thinking) content with Markdown
+  bool _enableReasoningMarkdown = true;
+  bool get enableReasoningMarkdown => _enableReasoningMarkdown;
+  Future<void> setEnableReasoningMarkdown(bool v) async {
+    if (_enableReasoningMarkdown == v) return;
+    _enableReasoningMarkdown = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayEnableReasoningMarkdownKey, v);
+  }
+
   // Display: haptics on message generation
   bool _hapticsOnGenerate = false;
   bool get hapticsOnGenerate => _hapticsOnGenerate;
@@ -876,6 +889,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._enableDollarLatex = _enableDollarLatex;
     copy._enableMathRendering = _enableMathRendering;
     copy._enableUserMarkdown = _enableUserMarkdown;
+    copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     return copy;
   }
 }

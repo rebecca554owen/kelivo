@@ -2059,6 +2059,7 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
     final loading = widget.loading;
 
     // Android-like surface style
@@ -2134,14 +2135,24 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
     final display = _sanitize(widget.text);
 
 // 未加载：不要再指定 color: fg，让它继承和“加载中”相同的颜色
+    Widget _reasoningContent(String text) {
+      if (settings.enableReasoningMarkdown) {
+        return MarkdownWithCodeHighlight(
+          text: text.isNotEmpty ? text : '…',
+          baseStyle: baseStyle,
+        );
+      }
+      return Text(
+        text.isNotEmpty ? text : '…',
+        style: baseStyle,
+        strutStyle: baseStrut,
+        textHeightBehavior: baseTHB,
+      );
+    }
+
     Widget body = Padding(
       padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
-      child: Text(
-        display.isNotEmpty ? display : '…',
-        style: baseStyle,                  // 统一
-        strutStyle: baseStrut,             // 统一
-        textHeightBehavior: baseTHB,       // 统一
-      ),
+      child: _reasoningContent(display),
     );
 
     if (isLoading && !widget.expanded) {
@@ -2178,24 +2189,14 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
               child: SingleChildScrollView(
                 controller: _scroll,
                 physics: const BouncingScrollPhysics(),
-                child: Text(
-                  display.isNotEmpty ? display : '…',
-                  style: baseStyle,            // 统一
-                  strutStyle: baseStrut,       // 统一
-                  textHeightBehavior: baseTHB, // 统一
-                ),
+                child: _reasoningContent(display),
               ),
             ),
           )
               : SingleChildScrollView(
             controller: _scroll,
             physics: const NeverScrollableScrollPhysics(),
-            child: Text(
-              display.isNotEmpty ? display : '…',
-              style: baseStyle,            // 统一（原来是 12）
-              strutStyle: baseStrut,
-              textHeightBehavior: baseTHB,
-            ),
+            child: _reasoningContent(display),
           ),
         ),
       );

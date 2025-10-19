@@ -1082,6 +1082,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageEnableUserMarkdownTitle => '用户消息 Markdown 渲染';
 
   @override
+  String get displaySettingsPageEnableReasoningMarkdownTitle =>
+      '思维链 Markdown 渲染';
+
+  @override
   String get messageExportSheetFormatTitle => '导出格式';
 
   @override
@@ -3535,6 +3539,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageEnableUserMarkdownTitle => '用户消息 Markdown 渲染';
 
   @override
+  String get displaySettingsPageEnableReasoningMarkdownTitle =>
+      '思维链 Markdown 渲染';
+
+  @override
   String get messageExportSheetFormatTitle => '导出格式';
 
   @override
@@ -5986,6 +5994,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageEnableUserMarkdownTitle => '使用者訊息 Markdown 渲染';
+
+  @override
+  String get displaySettingsPageEnableReasoningMarkdownTitle =>
+      '思维鏈 Markdown 渲染';
 
   @override
   String get messageExportSheetFormatTitle => '匯出格式';

@@ -27,10 +27,12 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     super.key,
     required this.text,
     this.onCitationTap,
+    this.baseStyle,
   });
 
   final String text;
   final void Function(String id)? onCitationTap;
+  final TextStyle? baseStyle; // optional override for base markdown text style
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +42,13 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     final imageUrls = _extractImageUrls(text);
 
     final normalized = _preprocessFences(text);
-    // Base text style: increase line-height and slightly adjust letter-spacing for readability
-    final baseTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontSize: 15.5,
-          height: 1.55,
-          letterSpacing: _isZh(context) ? 0.0 : 0.05,
-          color: null, // let components decide foreground where needed
-          // fontWeight: FontWeight.w400, // keep assistant/body text normal weight
-        );
+    // Base text style (can be overridden by caller)
+    final baseTextStyle = (baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
+      fontSize: baseStyle?.fontSize ?? 15.5,
+      height: baseStyle?.height ?? 1.55,
+      letterSpacing: baseStyle?.letterSpacing ?? (_isZh(context) ? 0.0 : 0.05),
+      color: null,
+    );
 
     // Replace default components and add our own where needed
     final components = List<MarkdownComponent>.from(MarkdownComponent.globalComponents);

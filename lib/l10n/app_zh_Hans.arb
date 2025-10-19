@@ -799,6 +799,7 @@
   "displaySettingsPageEnableDollarLatexSubtitle": "将 $...$ 之间的内容按行内数学公式渲染",
   "displaySettingsPageEnableMathTitle": "启用数学公式渲染",
   "displaySettingsPageEnableUserMarkdownTitle": "用户消息 Markdown 渲染",
+  "displaySettingsPageEnableReasoningMarkdownTitle": "思维链 Markdown 渲染",
   "displaySettingsPageEnableMathSubtitle": "渲染 LaTeX 数学公式（行内与块级）",
   "quickPhraseBackTooltip": "返回",
   "quickPhraseGlobalTitle": "快捷短语",

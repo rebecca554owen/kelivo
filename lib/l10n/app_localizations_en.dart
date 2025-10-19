@@ -1112,6 +1112,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Render user messages with Markdown';
 
   @override
+  String get displaySettingsPageEnableReasoningMarkdownTitle =>
+      'Render reasoning (thinking) with Markdown';
+
+  @override
   String get messageExportSheetFormatTitle => 'Export Format';
 
   @override
