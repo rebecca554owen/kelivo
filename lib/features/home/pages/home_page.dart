@@ -3902,7 +3902,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           curve: _sidebarAnimCurve,
           width: _tabletSidebarOpen ? 0.6 : 0,
           child: _tabletSidebarOpen
-              ? const VerticalDivider(width: 0.6, thickness: 0.5)
+              ? VerticalDivider(
+                  width: 0.6,
+                  thickness: 0.5,
+                  color: cs.outlineVariant.withOpacity(0.20),
+                )
               : const SizedBox.shrink(),
         ),
         Expanded(
