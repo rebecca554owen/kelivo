@@ -329,6 +329,47 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
+        if (widget.keyName.toLowerCase() == 'siliconflow') ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: cs.primary.withOpacity(0.35)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '已内置硅基流动的免费模型，无需 API Key。若需更强大的模型，请申请并在此配置你自己的 API Key。',
+                  style: TextStyle(color: cs.onSurface.withOpacity(0.8)),
+                ),
+                const SizedBox(height: 6),
+                Text.rich(
+                  TextSpan(
+                    text: '官网：',
+                    style: TextStyle(color: cs.onSurface.withOpacity(0.8)),
+                    children: [
+                      TextSpan(
+                        text: 'https://siliconflow.cn',
+                        style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () async {
+                            final uri = Uri.parse('https://siliconflow.cn');
+                            try {
+                              final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              if (!ok) { await launchUrl(uri); }
+                            } catch (_) { await launchUrl(uri); }
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         // 顶部管理分组标题（左侧缩进以对齐卡片内容）
         Padding(
           padding: const EdgeInsets.only(left: 12),
@@ -514,6 +555,18 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ],
         ],
         const SizedBox(height: 12),
+        if (widget.keyName.toLowerCase() == 'siliconflow') ...[
+          const SizedBox(height: 6),
+          Center(
+            child: Image.asset(
+              Theme.of(context).brightness == Brightness.dark
+                  ? 'assets/icons/Powered-by-dark.png'
+                  : 'assets/icons/Powered-by-light.png',
+              height: 64,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ],
       ],
     );
   }
