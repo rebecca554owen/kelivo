@@ -1571,7 +1571,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (mounted && _currentConversation?.id == _cidForStream) setState(() {
               _toolParts[assistantMessage.id] = _dedupeToolPartsList(parts);
             });
-            _scrollToBottomSoon();
+            if (!_isUserScrolling) {
+              _scrollToBottomSoon();
+            }
           }
 
           if (chunk.isDone) {
@@ -1687,9 +1689,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 totalTokens: totalTokens,
               );
 
-              // 滚动到底部显示新内容
+              // 滚动到底部显示新内容（仅在未处于用户滚动延迟阶段时）
               Future.delayed(const Duration(milliseconds: 50), () {
-                _scrollToBottom();
+                if (!_isUserScrolling) {
+                  _scrollToBottom();
+                }
               });
             }
           }
@@ -2267,7 +2271,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           try { await _chatService.upsertToolEvent(assistantMessage.id, id: r.id, name: r.name, arguments: r.arguments, content: r.content); } catch (_) {}
         }
         setState(() => _toolParts[assistantMessage.id] = _dedupeToolPartsList(parts));
-        _scrollToBottomSoon();
+        if (!_isUserScrolling) {
+          _scrollToBottomSoon();
+        }
       }
 
       if (chunk.content.isNotEmpty) {
@@ -2508,9 +2514,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void _scrollToBottom() {
     try {
       if (!_scrollController.hasClients) return;
-      
-      // Don't auto-scroll if user is actively scrolling
-      if (_isUserScrolling) return;
       
       // Prevent using controller while it is still attached to old/new list simultaneously
       if (_scrollController.positions.length != 1) {
