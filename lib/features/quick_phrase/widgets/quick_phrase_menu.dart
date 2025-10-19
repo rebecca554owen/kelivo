@@ -174,7 +174,8 @@ Future<QuickPhrase?> showQuickPhraseMenu({
 
   return await showDialog<QuickPhrase>(
     context: context,
-    barrierColor: Colors.black.withOpacity(0.08),
+    barrierColor: Colors.transparent,
+    // barrierColor: Colors.black.withOpacity(0.08),
     barrierDismissible: true,
     builder: (ctx) {
       return GestureDetector(
