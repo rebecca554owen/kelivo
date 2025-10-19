@@ -3128,52 +3128,78 @@ class _QuickPhraseTab extends StatelessWidget {
             );
           },
         ),
-        // Capsule-style add button (iOS style with border)
+        // Glass circular add button (icon-only), matching providers multi-select style
         Positioned(
           left: 0,
           right: 0,
           bottom: 60,
           child: Center(
-            child: _TactileRow(
+            child: _GlassCircleButtonQP(
+              icon: Lucide.Plus,
+              color: cs.primary,
               onTap: () => _showAddEditSheet(context),
-              pressedScale: 0.97,
-              builder: (pressed) {
-                final bgColor = isDark
-                    ? const Color(0xFF1C1C1E)
-                    : const Color(0xFFF2F3F5);
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 110),
-                  curve: Curves.easeOutCubic,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: cs.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Lucide.Plus, size: 20, color: cs.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.assistantEditAddQuickPhraseButton,
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+// Local glass circle button for Quick Phrase (icon-only, frosted background)
+class _GlassCircleButtonQP extends StatefulWidget {
+  const _GlassCircleButtonQP({required this.icon, required this.color, required this.onTap, this.size = 48});
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final double size; // diameter
+
+  @override
+  State<_GlassCircleButtonQP> createState() => _GlassCircleButtonQPState();
+}
+
+class _GlassCircleButtonQPState extends State<_GlassCircleButtonQP> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final glassBase = isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.06);
+    final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final tileColor = _pressed ? Color.alphaBlend(overlay, glassBase) : glassBase;
+    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.10 : 0.10);
+
+    final child = SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Center(child: Icon(widget.icon, size: 18, color: widget.color)),
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () { Haptics.light(); widget.onTap(); },
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+            child: Container(
+              decoration: BoxDecoration(
+                color: tileColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 1.0),
+              ),
+              child: child,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
