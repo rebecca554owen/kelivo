@@ -2611,6 +2611,30 @@ class _PromptTabState extends State<_PromptTab> {
               controller: _tmplCtrl,
               focusNode: _tmplFocus,
               maxLines: 4,
+              keyboardType: TextInputType.multiline,
+              textInputAction: Platform.isIOS ? TextInputAction.done : TextInputAction.newline,
+              onSubmitted: Platform.isIOS ? (_) => FocusScope.of(context).unfocus() : null,
+              contextMenuBuilder: Platform.isIOS
+                  ? (BuildContext context, EditableTextState state) {
+                      return AdaptiveTextSelectionToolbar.buttonItems(
+                        anchors: state.contextMenuAnchors,
+                        buttonItems: <ContextMenuButtonItem>[
+                          ...state.contextMenuButtonItems,
+                          ContextMenuButtonItem(
+                            onPressed: () {
+                              _insertAtCursor(_tmplCtrl, '\n');
+                              context.read<AssistantProvider>().updateAssistant(
+                                a.copyWith(messageTemplate: _tmplCtrl.text),
+                              );
+                              setState(() {});
+                              state.hideToolbar();
+                            },
+                            label: l10n.chatInputBarInsertNewline,
+                          ),
+                        ],
+                      );
+                    }
+                  : null,
               onChanged: (v) => context
                   .read<AssistantProvider>()
                   .updateAssistant(a.copyWith(messageTemplate: v)),
