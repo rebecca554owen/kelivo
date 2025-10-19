@@ -497,7 +497,9 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             filled: true,
-                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.white,
+                            fillColor: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withOpacity(0.10)
+                                : Colors.white.withOpacity(0.64),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
