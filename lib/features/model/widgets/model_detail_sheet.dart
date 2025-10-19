@@ -784,7 +784,14 @@ class _HeaderRow extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(onPressed: onDelete, icon: const Icon(Lucide.Trash2))
+              IosIconButton(
+                icon: Lucide.Trash2,
+                size: 20,
+                color: cs.onSurface.withOpacity(0.8),
+                onTap: onDelete,
+                semanticLabel: 'Delete header',
+                minSize: 40,
+              )
             ],
           ),
           const SizedBox(height: 8),
@@ -813,6 +820,7 @@ class _BodyRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -832,7 +840,14 @@ class _BodyRow extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(onPressed: onDelete, icon: const Icon(Lucide.Trash2))
+              IosIconButton(
+                icon: Lucide.Trash2,
+                size: 20,
+                color: cs.onSurface.withOpacity(0.8),
+                onTap: onDelete,
+                semanticLabel: 'Delete entry',
+                minSize: 40,
+              )
             ],
           ),
           const SizedBox(height: 8),
@@ -896,13 +911,25 @@ class _OutlinedAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(Lucide.Plus, size: 18, color: cs.primary),
-      label: Text(label, style: TextStyle(color: cs.primary)),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: cs.primary.withOpacity(0.5)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    final border = BorderSide(color: cs.primary.withOpacity(0.5));
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.fromBorderSide(border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Lucide.Plus, size: 18, color: cs.primary),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(color: cs.primary)),
+          ],
+        ),
       ),
     );
   }
