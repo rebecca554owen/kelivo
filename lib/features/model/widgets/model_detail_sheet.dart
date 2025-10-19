@@ -946,9 +946,9 @@ class _SegTabBar extends StatelessWidget {
               height: double.infinity,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => controller.animateTo(index),
+                onTap: () => controller.index = index,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
+                  duration: const Duration(milliseconds: 160),
                   curve: Curves.easeOutCubic,
                   decoration: BoxDecoration(
                     color: selected ? cs.primary.withOpacity(0.14) : Colors.transparent,
