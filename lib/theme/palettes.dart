@@ -573,7 +573,7 @@ class ThemePalettes {
       brightness: Brightness.light,
       primary: Color(0xFF00B96B),
       onPrimary: Color(0xFFFFFFFF),
-      primaryContainer: Color(0x3300B96B),
+      primaryContainer: Color(0x3349E6A2),
       onPrimaryContainer: Color(0xFF003921),
       secondary: Color(0xFF509177),
       onSecondary: Color(0xFFFFFFFF),

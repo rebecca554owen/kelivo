@@ -1057,37 +1057,37 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          InkWell(
+                          IosCardPress(
                             onTap: widget.onToggleTranslation,
                             borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Lucide.Languages,
-                                    size: 16,
+                            baseColor: Colors.transparent,
+                            pressedBlendStrength: 0.12,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Lucide.Languages,
+                                  size: 16,
+                                  color: cs.secondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  l10n.chatMessageWidgetTranslation,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
                                     color: cs.secondary,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    l10n.chatMessageWidgetTranslation,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: cs.secondary,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Icon(
-                                    widget.translationExpanded
-                                        ? Lucide.ChevronDown
-                                        : Lucide.ChevronRight,
-                                    size: 18,
-                                    color: cs.secondary,
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const Spacer(),
+                                Icon(
+                                  widget.translationExpanded
+                                      ? Lucide.ChevronDown
+                                      : Lucide.ChevronRight,
+                                  size: 18,
+                                  color: cs.secondary,
+                                ),
+                              ],
                             ),
                           ),
                           if (widget.translationExpanded) ...[
