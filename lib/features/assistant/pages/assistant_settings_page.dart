@@ -180,21 +180,45 @@ class _AssistantCard extends StatelessWidget {
     return Slidable(
       key: ValueKey('slidable-assistant-${item.id}'),
       endActionPane: ActionPane(
-        motion: const DrawerMotion(),
-        extentRatio: 0.24,
+        motion: const StretchMotion(),
+        extentRatio: 0.35,
         children: [
-          SlidableAction(
+          CustomSlidableAction(
+            autoClose: true,
+            backgroundColor: Colors.transparent,
             onPressed: (_) async {
               final ok = await _confirmDelete(context, l10n);
               if (ok == true) {
                 await context.read<AssistantProvider>().deleteAssistant(item.id);
               }
             },
-            backgroundColor: cs.error,
-            foregroundColor: Colors.white,
-            icon: Lucide.Trash2,
-            label: l10n.assistantSettingsDeleteButton,
-            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? cs.error.withOpacity(0.22)
+                    : cs.error.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cs.error.withOpacity(0.35)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              alignment: Alignment.center,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Lucide.Trash2, color: cs.error, size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.assistantSettingsDeleteButton,
+                      style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
