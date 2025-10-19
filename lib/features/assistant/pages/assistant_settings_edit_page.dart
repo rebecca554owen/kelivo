@@ -26,7 +26,7 @@ import 'package:flutter/services.dart';
 import '../../chat/widgets/chat_message_widget.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../utils/sandbox_path_resolver.dart';
-import 'dart:io' show File;
+import 'dart:io' show File, Platform;
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../core/models/quick_phrase.dart';
@@ -2388,6 +2388,14 @@ class _PromptTabState extends State<_PromptTab> {
     );
   }
 
+  void _insertNewlineAtCursor() {
+    _insertAtCursor(_sysCtrl, '\n');
+    final ap = context.read<AssistantProvider>();
+    final a = ap.getById(widget.assistantId)!;
+    ap.updateAssistant(a.copyWith(systemPrompt: _sysCtrl.text));
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -2507,7 +2515,30 @@ class _PromptTabState extends State<_PromptTab> {
               onChanged: (v) => context
                   .read<AssistantProvider>()
                   .updateAssistant(a.copyWith(systemPrompt: v)),
+              // minLines: 1,
               maxLines: 8,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
+              onEditingComplete: () => FocusScope.of(context).unfocus(),
+              contextMenuBuilder: Platform.isIOS
+                  ? (BuildContext context, EditableTextState state) {
+                      return AdaptiveTextSelectionToolbar.buttonItems(
+                        anchors: state.contextMenuAnchors,
+                        buttonItems: <ContextMenuButtonItem>[
+                          ...state.contextMenuButtonItems,
+                          ContextMenuButtonItem(
+                            onPressed: () {
+                              // Insert a newline at current caret or replace selection
+                              _insertNewlineAtCursor();
+                              state.hideToolbar();
+                            },
+                            label: l10n.chatInputBarInsertNewline,
+                          ),
+                        ],
+                      );
+                    }
+                  : null,
               decoration: InputDecoration(
                 hintText: l10n.assistantEditSystemPromptHint,
                 border: OutlineInputBorder(
