@@ -1728,21 +1728,24 @@ class _ToolCallItem extends StatelessWidget {
       onTap: () => _showDetail(context),
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: part.loading
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-                    ),
-                  )
-                : Icon(_iconFor(part.toolName), size: 18, color: cs.secondary),
-          ),
+          part.loading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+                  ),
+                )
+              : SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: Center(
+                    child: Icon(_iconFor(part.toolName), size: 18, color: cs.secondary),
+                  ),
+                ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
