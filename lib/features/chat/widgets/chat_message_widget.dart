@@ -1526,7 +1526,15 @@ class _BranchSelector extends StatelessWidget {
           width: 28,
           height: 28,
           child: Center(
-            child: Text('${index + 1}/$total', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.8), fontWeight: FontWeight.w500)),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${index + 1}/$total',
+                style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.8), fontWeight: FontWeight.w500),
+                maxLines: 1,
+                softWrap: false,
+              ),
+            ),
           ),
         ),
         SizedBox(
