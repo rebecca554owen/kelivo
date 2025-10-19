@@ -186,7 +186,7 @@ class _QuickPhrasesPageState extends State<QuickPhrasesPage> {
                                   color: isDark
                                       ? cs.error.withOpacity(0.22)
                                       : cs.error.withOpacity(0.14),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: cs.error.withOpacity(0.35),
                                   ),
@@ -230,7 +230,7 @@ class _QuickPhrasesPageState extends State<QuickPhrasesPage> {
                             return Container(
                               decoration: BoxDecoration(
                                 color: Color.alphaBlend(overlay, baseBg),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: cs.outlineVariant.withOpacity(isDark ? 0.1 : 0.08), width: 0.6),
                               ),
                               child: Padding(

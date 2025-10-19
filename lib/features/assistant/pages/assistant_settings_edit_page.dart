@@ -3028,7 +3028,7 @@ class _QuickPhraseTab extends StatelessWidget {
                               color: isDark
                                   ? cs.error.withOpacity(0.22)
                                   : cs.error.withOpacity(0.14),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: cs.error.withOpacity(0.35)),
                             ),
                             padding: const EdgeInsets.symmetric(
