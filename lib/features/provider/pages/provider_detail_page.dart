@@ -564,15 +564,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               return AnimatedBuilder(
                 animation: animation,
                 builder: (context, _) {
-                  final t = Curves.easeOutBack.transform(animation.value);
+                  final t = Curves.easeOut.transform(animation.value);
                   return Transform.scale(
                     scale: 0.98 + 0.02 * t,
-                    child: Material(
-                      elevation: 8 * t,
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      child: child,
-                    ),
+                    child: child,
                   );
                 },
                 child: child,
@@ -785,10 +780,20 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
+            fillColor: isDark ? Colors.white10 : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: cs.primary.withOpacity(0.5)),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             suffixIcon: suffix,
           ),
         ),
@@ -1042,10 +1047,20 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             hintText: hint,
             filled: true,
             alignLabelWithHint: true,
-            fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
+            fillColor: isDark ? Colors.white10 : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: cs.primary.withOpacity(0.5)),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
         ),
       ],
