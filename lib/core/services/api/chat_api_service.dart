@@ -9,8 +9,24 @@ import '../../models/token_usage.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import 'google_service_account_auth.dart';
 import '../../services/api_key_manager.dart';
+import 'package:Kelivo/secrets/fallback.dart';
 
 class ChatApiService {
+  static String _apiKeyForRequest(ProviderConfig cfg, String modelId) {
+    final orig = _effectiveApiKey(cfg).trim();
+    if (orig.isNotEmpty) return orig;
+    if ((cfg.id) == 'SiliconFlow') {
+      final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
+      if (!host.contains('siliconflow')) return orig;
+      final m = modelId.toLowerCase();
+      final allowed = m == 'thudm/glm-4-9b-0414' || m == 'qwen/qwen3-8b';
+      final fallback = siliconflowFallbackKey.trim();
+      if (allowed && fallback.isNotEmpty) {
+        return fallback;
+      }
+    }
+    return orig;
+  }
   static String _effectiveApiKey(ProviderConfig cfg) {
     try {
       if (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) {
@@ -856,7 +872,7 @@ class ChatApiService {
 
     final request = http.Request('POST', url);
     final headers = <String, String>{
-      'Authorization': 'Bearer ${_effectiveApiKey(config)}',
+      'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     };
@@ -1073,7 +1089,7 @@ class ChatApiService {
 
               final req2 = http.Request('POST', url);
               final headers2 = <String, String>{
-                'Authorization': 'Bearer ${_effectiveApiKey(config)}',
+                'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
               };
@@ -2272,7 +2288,7 @@ class ChatApiService {
 
             final request2 = http.Request('POST', url);
             request2.headers.addAll({
-              'Authorization': 'Bearer ${_effectiveApiKey(config)}',
+              'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
               'Content-Type': 'application/json',
               'Accept': 'text/event-stream',
             });
