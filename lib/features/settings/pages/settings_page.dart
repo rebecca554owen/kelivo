@@ -88,7 +88,7 @@ class SettingsPage extends StatelessWidget {
 
     // iOS-style section header (neutral color, not theme color)
     Widget header(String text, {bool first = false}) => Padding(
-          padding: EdgeInsets.fromLTRB(12, first ? 2 : 18, 12, 6),
+          padding: EdgeInsets.fromLTRB(12, first ? 2 : 12, 12, 6),
           child: Text(
             text,
             style: TextStyle(
