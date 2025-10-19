@@ -1469,25 +1469,25 @@ class _MenuItem extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fg = danger ? Colors.red.shade600 : cs.onSurface;
     final ic = danger ? Colors.red.shade600 : cs.onSurface.withOpacity(0.9);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          try { Haptics.light(); } catch (_) {}
-          onTap?.call();
-        },
-        overlayColor: MaterialStatePropertyAll(cs.primary.withOpacity(0.06)),
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.centerLeft,
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: ic),
-              const SizedBox(width: 10),
-              Expanded(child: Text(label, style: TextStyle(fontSize: 14.5, color: fg))),
-            ],
-          ),
+    // iOS-style press effect: no ripple. Use transparent base and a subtle
+    // pressed blend inside the blurred/glass menu container.
+    return IosCardPress(
+      borderRadius: BorderRadius.zero,
+      baseColor: Colors.transparent,
+      onTap: () {
+        try { Haptics.light(); } catch (_) {}
+        onTap?.call();
+      },
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.centerLeft,
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: ic),
+            const SizedBox(width: 10),
+            Expanded(child: Text(label, style: TextStyle(fontSize: 14.5, color: fg))),
+          ],
         ),
       ),
     );
