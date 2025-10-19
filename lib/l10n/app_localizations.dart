@@ -2153,6 +2153,12 @@ abstract class AppLocalizations {
   /// **'Render LaTeX math (inline and block)'**
   String get displaySettingsPageEnableMathSubtitle;
 
+  /// No description provided for @displaySettingsPageEnableUserMarkdownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Render user messages with Markdown'**
+  String get displaySettingsPageEnableUserMarkdownTitle;
+
   /// No description provided for @messageExportSheetFormatTitle.
   ///
   /// In en, this message translates to:

@@ -1108,6 +1108,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Render LaTeX math (inline and block)';
 
   @override
+  String get displaySettingsPageEnableUserMarkdownTitle =>
+      'Render user messages with Markdown';
+
+  @override
   String get messageExportSheetFormatTitle => 'Export Format';
 
   @override

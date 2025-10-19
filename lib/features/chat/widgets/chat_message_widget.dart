@@ -563,18 +563,22 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                 if (parsed.text.isNotEmpty)
-                  Text(
-                    parsed.text,
-                    style: TextStyle(
-                      fontSize: 15.5, // ~112% larger default for user text
-                      height: 1.4,
-                      color: cs.onSurface,
-                      // // Keep user text slightly bolder on non‑iOS; normal on iOS
-                      // fontWeight: Theme.of(context).platform == TargetPlatform.iOS
-                      //     ? FontWeight.w400
-                      //     : FontWeight.w500,
-                    ),
-                  ),
+                  Builder(builder: (context) {
+                    if (settings.enableUserMarkdown) {
+                      return DefaultTextStyle.merge(
+                        style: const TextStyle(fontSize: 15.5, height: 1.45),
+                        child: MarkdownWithCodeHighlight(text: parsed.text),
+                      );
+                    }
+                    return Text(
+                      parsed.text,
+                      style: TextStyle(
+                        fontSize: 15.5, // ~112% larger default for user text
+                        height: 1.4,
+                        color: cs.onSurface,
+                      ),
+                    );
+                  }),
                 if (parsed.images.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Builder(builder: (context) {

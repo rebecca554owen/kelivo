@@ -490,6 +490,7 @@
   "displaySettingsPageEnableDollarLatexSubtitle": "Render inline math inside $...$",
   "displaySettingsPageEnableMathTitle": "Math Formula Rendering",
   "displaySettingsPageEnableMathSubtitle": "Render LaTeX math (inline and block)",
+  "displaySettingsPageEnableUserMarkdownTitle": "Render user messages with Markdown",
   "messageExportSheetFormatTitle": "Export Format",
   "messageExportSheetMarkdown": "Markdown",
   "messageExportSheetSingleMarkdownSubtitle": "Export this message as a Markdown file",

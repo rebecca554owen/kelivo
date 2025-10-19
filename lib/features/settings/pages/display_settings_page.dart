@@ -609,6 +609,8 @@ class RenderingSettingsPage extends StatelessWidget {
           _iosSwitchRow(context, icon: Lucide.Hash, label: l10n.displaySettingsPageEnableDollarLatexTitle, value: sp.enableDollarLatex, onChanged: (v) => context.read<SettingsProvider>().setEnableDollarLatex(v)),
           _iosDivider(context),
           _iosSwitchRow(context, icon: Lucide.Code, label: l10n.displaySettingsPageEnableMathTitle, value: sp.enableMathRendering, onChanged: (v) => context.read<SettingsProvider>().setEnableMathRendering(v)),
+          _iosDivider(context),
+          _iosSwitchRow(context, icon: Lucide.TextSelect, label: l10n.displaySettingsPageEnableUserMarkdownTitle, value: sp.enableUserMarkdown, onChanged: (v) => context.read<SettingsProvider>().setEnableUserMarkdown(v)),
         ]),
       ]),
     );

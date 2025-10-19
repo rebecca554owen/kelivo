@@ -1079,6 +1079,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageEnableMathSubtitle => '渲染 LaTeX 数学公式（行内与块级）';
 
   @override
+  String get displaySettingsPageEnableUserMarkdownTitle => '用户消息 Markdown 渲染';
+
+  @override
   String get messageExportSheetFormatTitle => '导出格式';
 
   @override
@@ -3529,6 +3532,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageEnableMathSubtitle => '渲染 LaTeX 数学公式（行内与块级）';
 
   @override
+  String get displaySettingsPageEnableUserMarkdownTitle => '用户消息 Markdown 渲染';
+
+  @override
   String get messageExportSheetFormatTitle => '导出格式';
 
   @override
@@ -5977,6 +5983,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageEnableMathSubtitle => '渲染 LaTeX 數學公式（行內與區塊）';
+
+  @override
+  String get displaySettingsPageEnableUserMarkdownTitle => '使用者訊息 Markdown 渲染';
 
   @override
   String get messageExportSheetFormatTitle => '匯出格式';
