@@ -580,7 +580,8 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                for (final s in LoadBalanceStrategy.values)
+                // Only show Round Robin and Random for now
+                for (final s in <LoadBalanceStrategy>[LoadBalanceStrategy.roundRobin, LoadBalanceStrategy.random])
                   _TactileRow(
                     pressedScale: 1.00,
                     onTap: () => Navigator.of(ctx).pop(s),
