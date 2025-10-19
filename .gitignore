@@ -57,6 +57,3 @@ pubspec.lock
 internationalization.md
 /macos/Podfile.lock
 /desiredFileName.txt
- 
-# Local secrets (do not commit private keys)
-lib/secrets/
