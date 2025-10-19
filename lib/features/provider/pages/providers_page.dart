@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'dart:ui' as ui show ImageFilter;
 import '../../../shared/widgets/ios_tile_button.dart';
+import '../../../shared/widgets/ios_checkbox.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -460,7 +461,18 @@ class _ProviderRow extends StatelessWidget {
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 150),
                       opacity: selectMode ? 1.0 : 0.0,
-                      child: Align(alignment: Alignment.centerLeft, child: _SelectDot(selected: selected)),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: IosCheckbox(
+                          value: selected,
+                          size: 20,
+                          hitTestSize: 22,
+                          borderWidth: 1.6,
+                          activeColor: cs.primary,
+                          borderColor: cs.onSurface.withOpacity(0.35),
+                          onChanged: (_) => onToggleSelect(provider.keyName),
+                        ),
+                      ),
                     ),
                   ),
                   if (selectMode) const SizedBox(width: 4),
@@ -513,32 +525,6 @@ class _ProviderRow extends StatelessWidget {
     // Return row directly; container card background is provided by the wrapper
     // so dragged-out slot shows card color instead of page background.
     return row;
-  }
-}
-
-class _SelectDot extends StatelessWidget {
-  const _SelectDot({required this.selected});
-  final bool selected;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    if (selected) {
-      return Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
-        alignment: Alignment.center,
-        child: Icon(Lucide.Check, size: 13, color: cs.onPrimary),
-      );
-    }
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: cs.onSurface.withOpacity(0.35), width: 1.6),
-      ),
-    );
   }
 }
 
