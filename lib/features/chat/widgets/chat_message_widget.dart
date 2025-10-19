@@ -2094,12 +2094,15 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
               ),
             // No header marquee; content area handles scrolling when loading
             const Spacer(),
-            Icon(
-              widget.expanded
-                  ? Lucide.ChevronDown
-                  : (loading && !widget.expanded ? Lucide.ChevronRight : Lucide.ChevronRight),
-              size: 18,
-              color: cs.secondary,
+            AnimatedRotation(
+              turns: widget.expanded ? 0.25 : 0.0, // right -> down
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOutCubic,
+              child: Icon(
+                Lucide.ChevronRight,
+                size: 18,
+                color: cs.secondary,
+              ),
             ),
           ],
         ),
