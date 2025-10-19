@@ -27,6 +27,10 @@ English | [简体中文](README_ZH_CN.md)
 
 🔗 [TestFlight](https://testflight.apple.com/join/PZZyRMyY) for beta testing.
 
+## 💖 Sponsors
+
+Thanks to [siliconflow.cn](https://siliconflow.cn) for providing free models in cooperation with us.
+
 ## ✨ Features
 
 - 🎨 **Modern Design** - Material You design language with dynamic color theming support (Android 12+).
@@ -62,7 +66,7 @@ Pull Requests and Issues are welcome!
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 💖 Acknowledgements
+## ❤️ Acknowledgements
 
 Special thanks to the [RikkaHub](https://github.com/re-ovo/rikkahub) project for the UI design inspiration. Kelivo's interface design is heavily inspired by RikkaHub's beautiful and practical design.
 

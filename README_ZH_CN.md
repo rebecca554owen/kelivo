@@ -27,6 +27,10 @@
 
 🔗 [TestFlight](https://testflight.apple.com/join/PZZyRMyY) 参与测试版体验。
 
+## 💖 赞助
+
+感谢 [siliconflow.cn](https://siliconflow.cn) 与我们合作提供可免费使用的模型。
+
 ## ✨ 功能特性
 
 - 🎨 **现代化设计** - Material You 设计语言，支持动态主题色(Android12+)
@@ -62,7 +66,7 @@
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启一个 Pull Request
 
-## 💖 致谢
+## ❤️ 致谢
 
 特别感谢 [RikkaHub](https://github.com/re-ovo/rikkahub) 项目提供的 UI 设计灵感。Kelivo 的界面设计深受 RikkaHub 优美且实用的设计启发。
 
