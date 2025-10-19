@@ -706,7 +706,7 @@ class _GlassCircleButtonState extends State<_GlassCircleButton> {
     final glassBase = isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.06);
     final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
     final tileColor = _pressed ? Color.alphaBlend(overlay, glassBase) : glassBase;
-    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.35 : 0.40);
+    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.10 : 0.10);
 
     final child = SizedBox(
       width: widget.size,
