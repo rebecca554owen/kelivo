@@ -348,11 +348,13 @@ class _QuickPhraseEditSheetState extends State<_QuickPhraseEditSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.phrase == null
-                  ? l10n.quickPhraseAddTitle
-                  : l10n.quickPhraseEditTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            Center(
+              child: Text(
+                widget.phrase == null
+                    ? l10n.quickPhraseAddTitle
+                    : l10n.quickPhraseEditTitle,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
