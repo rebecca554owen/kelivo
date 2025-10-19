@@ -3701,14 +3701,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
           // Inline tools sheet removed; replaced by modal bottom sheet
 
-          // Selection toolbar overlay (above input bar)
-          if (_selecting)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 72),
+          // Selection toolbar overlay (above input bar) with iOS glass capsule + animations
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                // Move higher: 72 + 12 + 38
+                padding: const EdgeInsets.only(bottom: 122),
+                child: _AnimatedSelectionBar(
+                  visible: _selecting,
                   child: _SelectionToolbar(
                     onCancel: () {
                       setState(() {
@@ -3741,6 +3743,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 ),
               ),
             ),
+          ),
 
           // Scroll-to-bottom button (bottom-right, above input bar)
           Builder(builder: (context) {
@@ -4532,14 +4535,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ),
                 ),
 
-                // Selection toolbar overlay
-                if (_selecting)
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 72),
+                // Selection toolbar overlay (tablet) with iOS glass capsule + animations
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      // Move higher: 72 + 12 + 38
+                      padding: const EdgeInsets.only(bottom: 122),
+                      child: _AnimatedSelectionBar(
+                        visible: _selecting,
                         child: _SelectionToolbar(
                           onCancel: () {
                             setState(() {
@@ -4572,6 +4577,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       ),
                     ),
                   ),
+                ),
 
                 // Scroll-to-bottom button
                 Builder(builder: (context) {
@@ -4848,44 +4854,191 @@ class _SelectionToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, 6)),
-        ],
-        border: Border.all(color: cs.outlineVariant.withOpacity(0.3)),
+    // Use compact icon-only glass buttons to avoid taking too much width
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _GlassCircleButtonSmall(
+          icon: Lucide.X,
+          color: cs.onSurface,
+          onTap: onCancel,
+          semanticLabel: AppLocalizations.of(context)!.homePageCancel,
+        ),
+        const SizedBox(width: 14),
+        _GlassCircleButtonSmall(
+          icon: Lucide.Check,
+          color: cs.primary,
+          onTap: onConfirm,
+          semanticLabel: AppLocalizations.of(context)!.homePageDone,
+        ),
+      ],
+    );
+  }
+}
+
+// Animated container that slides/fades in/out like provider multi-select bar
+class _AnimatedSelectionBar extends StatelessWidget {
+  const _AnimatedSelectionBar({required this.visible, required this.child});
+  final bool visible;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      offset: visible ? Offset.zero : const Offset(0, 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      child: AnimatedOpacity(
+        opacity: visible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        child: IgnorePointer(ignoring: !visible, child: child),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          OutlinedButton.icon(
-            icon: const Icon(Lucide.X, size: 16),
-            onPressed: onCancel,
-            label: Text(l10n.homePageCancel),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    );
+  }
+}
+
+// iOS-style glass capsule button (no ripple), similar to providers multi-select style
+class _GlassCapsuleButton extends StatefulWidget {
+  const _GlassCapsuleButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_GlassCapsuleButton> createState() => _GlassCapsuleButtonState();
+}
+
+class _GlassCapsuleButtonState extends State<_GlassCapsuleButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    // Glass background, match providers' capsule taste
+    final glassBase = isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.65);
+    final overlay = isDark ? Colors.black.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final tileColor = _pressed ? Color.alphaBlend(overlay, glassBase) : glassBase;
+    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.35 : 0.40);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () {
+        Haptics.light();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: tileColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 1.0),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(widget.icon, size: 16, color: widget.color),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.label,
+                    style: TextStyle(color: widget.color, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            icon: const Icon(Lucide.Check, size: 16),
-            onPressed: onConfirm,
-            label: Text(l10n.homePageDone),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: cs.primary,
-              foregroundColor: cs.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 0,
+        ),
+      ),
+    );
+  }
+}
+
+// Compact icon-only glass button to minimize width (like providers multi-select icons)
+class _GlassCircleButtonSmall extends StatefulWidget {
+  const _GlassCircleButtonSmall({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.semanticLabel,
+    this.size = 40,
+  });
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final String? semanticLabel;
+  final double size; // diameter
+
+  @override
+  State<_GlassCircleButtonSmall> createState() => _GlassCircleButtonSmallState();
+}
+
+class _GlassCircleButtonSmallState extends State<_GlassCircleButtonSmall> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final glassBase = isDark ? Colors.black.withOpacity(0.06) : Colors.white.withOpacity(0.06);
+    final overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final tileColor = _pressed ? Color.alphaBlend(overlay, glassBase) : glassBase;
+    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.10 : 0.10);
+
+    final child = SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Center(child: Icon(widget.icon, size: 18, color: widget.color)),
+    );
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          Haptics.light();
+          widget.onTap();
+        },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1.0,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOutCubic,
+          child: ClipOval(
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: tileColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.0),
+                ),
+                child: child,
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
