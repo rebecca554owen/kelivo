@@ -32,7 +32,8 @@ import '../../../core/models/conversation.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../../settings/widgets/language_select_sheet.dart';
 import '../../chat/widgets/message_more_sheet.dart';
-import '../../chat/pages/message_edit_page.dart';
+// import '../../chat/pages/message_edit_page.dart';
+import '../../chat/widgets/message_edit_sheet.dart';
 import '../../chat/widgets/message_export_sheet.dart';
 import '../../assistant/widgets/mcp_assistant_sheet.dart';
 import '../../mcp/pages/mcp_page.dart';
@@ -3300,9 +3301,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         }
                                       : null,
                                   onEdit: message.role == 'user' ? () async {
-                                    final edited = await Navigator.of(context).push<String>(
-                                      MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
-                                    );
+                                    final edited = await showMessageEditSheet(context, message: message);
                                     if (edited != null) {
                                       final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                       if (!mounted) return;
@@ -3386,9 +3385,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     await _chatService.deleteMessage(id);
                                   }
                                 } else if (action == MessageMoreAction.edit) {
-                                  final edited = await Navigator.of(context).push<String>(
-                                    MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
-                                  );
+                                  final edited = await showMessageEditSheet(context, message: message);
                                   if (edited != null) {
                                     final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                     if (!mounted) return;
@@ -4149,9 +4146,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                         : null,
                                                     onEdit: message.role == 'user'
                                                         ? () async {
-                                                            final edited = await Navigator.of(context).push<String>(
-                                                              MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
-                                                            );
+                                                            final edited = await showMessageEditSheet(context, message: message);
                                                             if (edited != null) {
                                                               final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                                               if (!mounted) return;
@@ -4226,9 +4221,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                           await _chatService.deleteMessage(id);
                                                         }
                                                       } else if (action == MessageMoreAction.edit) {
-                                                        final edited = await Navigator.of(context).push<String>(
-                                                          MaterialPageRoute(builder: (_) => MessageEditPage(message: message)),
-                                                        );
+                                                        final edited = await showMessageEditSheet(context, message: message);
                                                         if (edited != null) {
                                                           final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                                           if (!mounted) return;

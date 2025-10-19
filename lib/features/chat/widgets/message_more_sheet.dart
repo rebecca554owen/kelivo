@@ -5,7 +5,8 @@ import '../../../core/models/chat_message.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
-import '../pages/select_copy_page.dart';
+// import '../pages/select_copy_page.dart';
+import 'select_copy_sheet.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
@@ -22,13 +23,14 @@ Future<MessageMoreAction?> showMessageMoreSheet(BuildContext context, ChatMessag
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => _MessageMoreSheet(message: message),
+    builder: (ctx) => _MessageMoreSheet(message: message, parentContext: context),
   );
 }
 
 class _MessageMoreSheet extends StatefulWidget {
-  const _MessageMoreSheet({required this.message});
+  const _MessageMoreSheet({required this.message, required this.parentContext});
   final ChatMessage message;
+  final BuildContext parentContext;
 
   @override
   State<_MessageMoreSheet> createState() => _MessageMoreSheetState();
@@ -150,13 +152,12 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                       icon: Lucide.TextSelect,
                       label: l10n.messageMoreSheetSelectCopy,
                       onTap: () async {
+                        // Close current sheet, then open iOS-style select-copy sheet
                         Navigator.of(context).pop();
-                        // Push the select copy page
-                        await Future.delayed(const Duration(milliseconds: 50));
-                        if (!mounted) return;
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => SelectCopyPage(message: widget.message)),
-                        );
+                        // Schedule next frame with parent context to avoid stacking sheets
+                        Future.delayed(const Duration(milliseconds: 40), () {
+                          showSelectCopySheet(widget.parentContext, message: widget.message);
+                        });
                       },
                     ),
                     _actionItem(
