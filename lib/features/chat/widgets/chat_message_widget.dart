@@ -125,10 +125,29 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     super.initState();
     _syncTicker();
 
-    // Apply auto-collapse on first mount when inline <think> already finished
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _applyAutoCollapseInlineThinkIfFinished(oldWidget: null);
-    });
+    // Determine initial state for inline <think> card BEFORE first paint to avoid
+    // post-frame size changes that can cause list scroll jitter/snapping.
+    try {
+      // Check whether this message is using inline <think> content
+      final extracted = THINKING_REGEX
+          .allMatches(widget.message.content)
+          .map((m) => (m.group(1) ?? '').trim())
+          .where((s) => s.isNotEmpty)
+          .join('\n\n');
+      final usingInlineThink = (widget.reasoningText == null || widget.reasoningText!.isEmpty) && extracted.isNotEmpty;
+      final loading = usingInlineThink && widget.message.isStreaming && !widget.message.content.contains('</think>');
+
+      // Persist last loading state for later checks
+      _inlineThinkWasLoading = loading;
+
+      if (usingInlineThink && _inlineThinkExpanded == null) {
+        final autoCollapse = context.read<SettingsProvider>().autoCollapseThinking;
+        // While loading we default to expanded; once finished honor auto-collapse.
+        _inlineThinkExpanded = loading ? true : !autoCollapse ? true : false;
+      }
+    } catch (_) {
+      // If anything fails here, fall back to later update logic.
+    }
   }
 
   @override
