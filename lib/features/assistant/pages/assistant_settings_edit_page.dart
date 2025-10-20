@@ -56,7 +56,7 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this); //mcp
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -124,7 +124,7 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage>
                       l10n.assistantEditPageBasicTab,
                       l10n.assistantEditPagePromptsTab,
                       l10n.assistantEditPageMemoryTab,
-                      l10n.assistantEditPageMcpTab,
+                      // l10n.assistantEditPageMcpTab,
                       l10n.assistantEditPageQuickPhraseTab,
                       l10n.assistantEditPageCustomTab,
                     ],
@@ -141,7 +141,7 @@ class _AssistantSettingsEditPageState extends State<AssistantSettingsEditPage>
           _BasicSettingsTab(assistantId: assistant.id),
           _PromptTab(assistantId: assistant.id),
           _MemoryTab(assistantId: assistant.id),
-          _McpTab(assistantId: assistant.id),
+          // _McpTab(assistantId: assistant.id),
           _QuickPhraseTab(assistantId: assistant.id),
           _CustomRequestTab(assistantId: assistant.id),
         ],
