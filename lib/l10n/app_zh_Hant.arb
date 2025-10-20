@@ -703,6 +703,7 @@
   "displaySettingsPageAutoScrollIdleTitle": "自動回到底部延遲",
   "displaySettingsPageAutoScrollIdleSubtitle": "使用者停止捲動後等待多久再自動回到底部",
   "displaySettingsPageChatFontSampleText": "這是一個範例的聊天文本",
+  "displaySettingsPageChatBackgroundMaskTitle": "聊天背景遮罩透明度",
   "displaySettingsPageThemeSettingsTitle": "主題設定",
   "themeSettingsPageDynamicColorSection": "動態顏色",
   "themeSettingsPageUseDynamicColorTitle": "使用動態顏色",

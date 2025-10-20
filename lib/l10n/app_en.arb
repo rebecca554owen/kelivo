@@ -938,6 +938,7 @@
   "displaySettingsPageAutoScrollIdleTitle": "Auto-Scroll Back Delay",
   "displaySettingsPageAutoScrollIdleSubtitle": "Wait time after user scroll before jumping to bottom",
   "displaySettingsPageChatFontSampleText": "This is a sample chat text",
+  "displaySettingsPageChatBackgroundMaskTitle": "Chat Background Overlay Opacity",
   "displaySettingsPageThemeSettingsTitle": "Theme Settings",
   "themeSettingsPageDynamicColorSection": "Dynamic Color",
   "themeSettingsPageUseDynamicColorTitle": "Use Dynamic Color",

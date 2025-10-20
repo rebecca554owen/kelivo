@@ -4289,6 +4289,12 @@ abstract class AppLocalizations {
   /// **'This is a sample chat text'**
   String get displaySettingsPageChatFontSampleText;
 
+  /// No description provided for @displaySettingsPageChatBackgroundMaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Background Overlay Opacity'**
+  String get displaySettingsPageChatBackgroundMaskTitle;
+
   /// No description provided for @displaySettingsPageThemeSettingsTitle.
   ///
   /// In en, this message translates to:

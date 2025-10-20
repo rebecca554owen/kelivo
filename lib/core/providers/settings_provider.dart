@@ -37,6 +37,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayNewChatOnLaunchKey = 'display_new_chat_on_launch_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
   static const String _displayAutoScrollIdleSecondsKey = 'display_auto_scroll_idle_seconds_v1';
+  static const String _displayChatBackgroundMaskStrengthKey = 'display_chat_background_mask_strength_v1';
   static const String _displayEnableDollarLatexKey = 'display_enable_dollar_latex_v1';
   static const String _displayEnableMathRenderingKey = 'display_enable_math_rendering_v1';
   static const String _displayEnableUserMarkdownKey = 'display_enable_user_markdown_v1';
@@ -193,6 +194,7 @@ class SettingsProvider extends ChangeNotifier {
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
     _autoScrollIdleSeconds = prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
+    _chatBackgroundMaskStrength = prefs.getDouble(_displayChatBackgroundMaskStrengthKey) ?? 1.0;
     // display: markdown/math rendering
     _enableDollarLatex = prefs.getBool(_displayEnableDollarLatexKey) ?? true;
     _enableMathRendering = prefs.getBool(_displayEnableMathRenderingKey) ?? true;
@@ -731,6 +733,18 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_displayAutoScrollIdleSecondsKey, _autoScrollIdleSeconds);
+  }
+
+  // Display: chat background mask strength (0.0 - 2.0, default 1.0)
+  double _chatBackgroundMaskStrength = 1.0;
+  double get chatBackgroundMaskStrength => _chatBackgroundMaskStrength;
+  Future<void> setChatBackgroundMaskStrength(double strength) async {
+    final s = strength.clamp(0.0, 2.0);
+    if (_chatBackgroundMaskStrength == s) return;
+    _chatBackgroundMaskStrength = s;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_displayChatBackgroundMaskStrengthKey, _chatBackgroundMaskStrength);
   }
 
   // Display: inline $...$ LaTeX rendering

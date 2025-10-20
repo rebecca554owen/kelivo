@@ -2256,6 +2256,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This is a sample chat text';
 
   @override
+  String get displaySettingsPageChatBackgroundMaskTitle =>
+      'Chat Background Overlay Opacity';
+
+  @override
   String get displaySettingsPageThemeSettingsTitle => 'Theme Settings';
 
   @override

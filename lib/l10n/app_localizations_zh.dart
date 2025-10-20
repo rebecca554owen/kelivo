@@ -2181,6 +2181,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageChatFontSampleText => '这是一个示例的聊天文本';
 
   @override
+  String get displaySettingsPageChatBackgroundMaskTitle => '聊天背景遮罩透明度';
+
+  @override
   String get displaySettingsPageThemeSettingsTitle => '主题设置';
 
   @override
@@ -4650,6 +4653,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageChatFontSampleText => '这是一个示例的聊天文本';
 
   @override
+  String get displaySettingsPageChatBackgroundMaskTitle => '聊天背景遮罩透明度';
+
+  @override
   String get displaySettingsPageThemeSettingsTitle => '主题设置';
 
   @override
@@ -7116,6 +7122,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageChatFontSampleText => '這是一個範例的聊天文本';
+
+  @override
+  String get displaySettingsPageChatBackgroundMaskTitle => '聊天背景遮罩透明度';
 
   @override
   String get displaySettingsPageThemeSettingsTitle => '主題設定';

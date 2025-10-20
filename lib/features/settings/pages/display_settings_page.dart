@@ -137,6 +137,17 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
               },
               onTap: () => _showAutoScrollIdleSheet(context),
             ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Image,
+              label: l10n.displaySettingsPageChatBackgroundMaskTitle,
+              detailBuilder: (ctx) {
+                final v = ctx.watch<SettingsProvider>().chatBackgroundMaskStrength;
+                return Text('${(v * 100).round()}%', style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 13));
+              },
+              onTap: () => _showChatBackgroundMaskSheet(context),
+            ),
           ]),
           // Inline cards replaced by sheet-triggering rows above.
         ],
@@ -355,6 +366,84 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                     l10n.displaySettingsPageAutoScrollIdleSubtitle,
                     style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
                   ),
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showChatBackgroundMaskSheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Builder(builder: (context) {
+              final theme = Theme.of(context);
+              final cs = theme.colorScheme;
+              final isDark = theme.brightness == Brightness.dark;
+              final strength = context.watch<SettingsProvider>().chatBackgroundMaskStrength;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text('0%', style: TextStyle(color: cs.onSurface.withOpacity(0.7), fontSize: 12)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SfSliderTheme(
+                        data: SfSliderThemeData(
+                          activeTrackHeight: 8,
+                          inactiveTrackHeight: 8,
+                          overlayRadius: 14,
+                          activeTrackColor: cs.primary,
+                          inactiveTrackColor: cs.onSurface.withOpacity(isDark ? 0.25 : 0.20),
+                          tooltipBackgroundColor: cs.primary,
+                          tooltipTextStyle: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w600),
+                          activeTickColor: cs.onSurface.withOpacity(isDark ? 0.45 : 0.35),
+                          inactiveTickColor: cs.onSurface.withOpacity(isDark ? 0.30 : 0.25),
+                          activeMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.34 : 0.28),
+                          inactiveMinorTickColor: cs.onSurface.withOpacity(isDark ? 0.24 : 0.20),
+                        ),
+                        child: SfSlider(
+                          value: (strength * 100).roundToDouble(),
+                          min: 0.0,
+                          max: 200.0001,
+                          stepSize: 5.0,
+                          showTicks: true,
+                          showLabels: true,
+                          interval: 50,
+                          minorTicksPerInterval: 1,
+                          enableTooltip: true,
+                          shouldAlwaysShowTooltip: false,
+                          tooltipShape: const SfPaddleTooltipShape(),
+                          labelFormatterCallback: (value, text) => '${(value as double).round()}%',
+                          thumbIcon: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: isDark ? [] : [
+                                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2)),
+                              ],
+                            ),
+                          ),
+                          onChanged: (v) => context.read<SettingsProvider>().setChatBackgroundMaskStrength(((v as double) / 100.0).clamp(0.0, 2.0)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('${(strength * 100).round()}%', style: TextStyle(color: cs.onSurface, fontSize: 12)),
+                  ]),
                 ],
               );
             }),

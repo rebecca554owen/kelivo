@@ -3098,6 +3098,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             Builder(
               builder: (context) {
               final bg = context.watch<AssistantProvider>().currentAssistant?.background;
+              final maskStrength = context.watch<SettingsProvider>().chatBackgroundMaskStrength;
             if (bg == null || bg.trim().isEmpty) return const SizedBox.shrink();
             ImageProvider provider;
             if (bg.startsWith('http')) {
@@ -3131,10 +3132,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [
-                              cs.background.withOpacity(0.20),
-                              cs.background.withOpacity(0.50),
-                            ],
+                            colors: () {
+                              final top = (0.20 * maskStrength).clamp(0.0, 1.0);
+                              final bottom = (0.50 * maskStrength).clamp(0.0, 1.0);
+                              return [
+                                cs.background.withOpacity(top),
+                                cs.background.withOpacity(bottom),
+                              ];
+                            }(),
                           ),
                         ),
                       ),
