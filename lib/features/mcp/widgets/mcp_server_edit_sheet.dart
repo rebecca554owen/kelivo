@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../../../core/services/haptics.dart';
@@ -508,7 +510,7 @@ class _TactileRowState extends State<_TactileRow> {
       onTapUp: widget.onTap==null?null:(_){ /* keep pressed a bit for better feel */ },
       onTapCancel: widget.onTap==null?null:()=>_set(false),
       onTap: widget.onTap==null?null:(){
-        Haptics.soft();
+        if (context.read<SettingsProvider>().hapticsOnListItemTap) Haptics.soft();
         widget.onTap!.call();
         Future.delayed(const Duration(milliseconds: 120), () { if (mounted) _set(false); });
       },

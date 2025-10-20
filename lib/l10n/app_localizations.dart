@@ -4217,6 +4217,30 @@ abstract class AppLocalizations {
   /// **'Enable haptic feedback when opening/closing sidebar'**
   String get displaySettingsPageHapticsOnSidebarSubtitle;
 
+  /// No description provided for @displaySettingsPageHapticsGlobalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Haptics'**
+  String get displaySettingsPageHapticsGlobalTitle;
+
+  /// No description provided for @displaySettingsPageHapticsIosSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptics on Switch'**
+  String get displaySettingsPageHapticsIosSwitchTitle;
+
+  /// No description provided for @displaySettingsPageHapticsOnListItemTapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptics on List Items'**
+  String get displaySettingsPageHapticsOnListItemTapTitle;
+
+  /// No description provided for @displaySettingsPageHapticsOnCardTapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptics on Cards'**
+  String get displaySettingsPageHapticsOnCardTapTitle;
+
   /// No description provided for @displaySettingsPageHapticsOnGenerateTitle.
   ///
   /// In en, this message translates to:

@@ -6,6 +6,7 @@ import '../../../utils/brand_assets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -2204,7 +2205,7 @@ class _TactileRowState extends State<_TactileRow> {
       onTap: widget.onTap == null
           ? null
           : () {
-              if (widget.haptics) Haptics.soft();
+              if (widget.haptics && context.read<SettingsProvider>().hapticsOnListItemTap) Haptics.soft();
               widget.onTap!.call();
             },
       child: AnimatedScale(

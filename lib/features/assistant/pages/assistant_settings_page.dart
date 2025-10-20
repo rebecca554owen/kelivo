@@ -3,6 +3,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../theme/design_tokens.dart';
 import 'package:provider/provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/models/assistant.dart';
 import 'dart:io' show File;
@@ -287,7 +288,10 @@ class _TactileCardState extends State<_TactileCard> {
       onTapDown: widget.onTap==null?null:(_)=>_set(true),
       onTapUp: widget.onTap==null?null:(_)=>_set(false),
       onTapCancel: widget.onTap==null?null:()=>_set(false),
-      onTap: widget.onTap==null?null:(){ if(widget.haptics) Haptics.soft(); widget.onTap!.call(); },
+      onTap: widget.onTap==null?null:(){
+        if(widget.haptics && context.read<SettingsProvider>().hapticsOnCardTap) Haptics.soft();
+        widget.onTap!.call();
+      },
       child: AnimatedScale(
         scale: _pressed ? widget.pressedScale : 1.0,
         duration: const Duration(milliseconds: 110),

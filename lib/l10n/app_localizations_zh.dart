@@ -2145,6 +2145,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageHapticsOnSidebarSubtitle => '打开/关闭侧边栏时启用触觉反馈';
 
   @override
+  String get displaySettingsPageHapticsGlobalTitle => '全局触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsIosSwitchTitle => '开关触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnListItemTapTitle => '列表项触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnCardTapTitle => '卡片触觉反馈';
+
+  @override
   String get displaySettingsPageHapticsOnGenerateTitle => '消息生成触觉反馈';
 
   @override
@@ -4602,6 +4614,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageHapticsOnSidebarSubtitle => '打开/关闭侧边栏时启用触觉反馈';
 
   @override
+  String get displaySettingsPageHapticsGlobalTitle => '全局触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsIosSwitchTitle => '开关触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnListItemTapTitle => '列表项触觉反馈';
+
+  @override
+  String get displaySettingsPageHapticsOnCardTapTitle => '卡片触觉反馈';
+
+  @override
   String get displaySettingsPageHapticsOnGenerateTitle => '消息生成触觉反馈';
 
   @override
@@ -7056,6 +7080,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageHapticsOnSidebarSubtitle => '開啟/關閉側邊欄時啟用觸覺回饋';
+
+  @override
+  String get displaySettingsPageHapticsGlobalTitle => '全域觸覺回饋';
+
+  @override
+  String get displaySettingsPageHapticsIosSwitchTitle => '開關觸覺回饋';
+
+  @override
+  String get displaySettingsPageHapticsOnListItemTapTitle => '列表項點擊觸覺回饋';
+
+  @override
+  String get displaySettingsPageHapticsOnCardTapTitle => '卡片點擊觸覺回饋';
 
   @override
   String get displaySettingsPageHapticsOnGenerateTitle => '訊息生成觸覺回饋';

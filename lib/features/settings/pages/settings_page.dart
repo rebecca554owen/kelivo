@@ -485,7 +485,7 @@ class _TactileRowState extends State<_TactileRow> {
       onTap: widget.onTap == null
           ? null
           : () {
-              if (widget.haptics) {
+              if (widget.haptics && context.read<SettingsProvider>().hapticsOnListItemTap) {
                 Haptics.soft();
               }
               widget.onTap!.call();

@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../services/search/search_service.dart';
 import '../models/api_keys.dart';
 import '../models/backup.dart';
+import '../services/haptics.dart';
 
 class SettingsProvider extends ChangeNotifier {
   static const String _providersOrderKey = 'providers_order_v1';
@@ -28,6 +29,10 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
   static const String _displayHapticsOnGenerateKey = 'display_haptics_on_generate_v1';
   static const String _displayHapticsOnDrawerKey = 'display_haptics_on_drawer_v1';
+  static const String _displayHapticsGlobalEnabledKey = 'display_haptics_global_enabled_v1';
+  static const String _displayHapticsIosSwitchKey = 'display_haptics_ios_switch_v1';
+  static const String _displayHapticsOnListItemTapKey = 'display_haptics_on_list_item_tap_v1';
+  static const String _displayHapticsOnCardTapKey = 'display_haptics_on_card_tap_v1';
   static const String _displayShowAppUpdatesKey = 'display_show_app_updates_v1';
   static const String _displayNewChatOnLaunchKey = 'display_new_chat_on_launch_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
@@ -178,6 +183,12 @@ class SettingsProvider extends ChangeNotifier {
     _showMessageNavButtons = prefs.getBool(_displayShowMessageNavKey) ?? true;
     _hapticsOnGenerate = prefs.getBool(_displayHapticsOnGenerateKey) ?? false;
     _hapticsOnDrawer = prefs.getBool(_displayHapticsOnDrawerKey) ?? true;
+    _hapticsGlobalEnabled = prefs.getBool(_displayHapticsGlobalEnabledKey) ?? true;
+    _hapticsIosSwitch = prefs.getBool(_displayHapticsIosSwitchKey) ?? true;
+    _hapticsOnListItemTap = prefs.getBool(_displayHapticsOnListItemTapKey) ?? true;
+    _hapticsOnCardTap = prefs.getBool(_displayHapticsOnCardTapKey) ?? true;
+    // Apply global haptics to service layer
+    Haptics.setEnabled(_hapticsGlobalEnabled);
     _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _newChatOnLaunch = prefs.getBool(_displayNewChatOnLaunchKey) ?? true;
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
@@ -788,6 +799,52 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayHapticsOnDrawerKey, v);
   }
 
+  // Display: global haptics master switch
+  bool _hapticsGlobalEnabled = true;
+  bool get hapticsGlobalEnabled => _hapticsGlobalEnabled;
+  Future<void> setHapticsGlobalEnabled(bool v) async {
+    if (_hapticsGlobalEnabled == v) return;
+    _hapticsGlobalEnabled = v;
+    // Apply immediately to service
+    Haptics.setEnabled(v);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayHapticsGlobalEnabledKey, v);
+  }
+
+  // Display: iOS-style switch haptics only
+  bool _hapticsIosSwitch = true;
+  bool get hapticsIosSwitch => _hapticsIosSwitch;
+  Future<void> setHapticsIosSwitch(bool v) async {
+    if (_hapticsIosSwitch == v) return;
+    _hapticsIosSwitch = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayHapticsIosSwitchKey, v);
+  }
+
+  // Display: list item tap haptics (e.g., rows in settings pages)
+  bool _hapticsOnListItemTap = true;
+  bool get hapticsOnListItemTap => _hapticsOnListItemTap;
+  Future<void> setHapticsOnListItemTap(bool v) async {
+    if (_hapticsOnListItemTap == v) return;
+    _hapticsOnListItemTap = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayHapticsOnListItemTapKey, v);
+  }
+
+  // Display: card tap haptics (e.g., Assistant cards etc.)
+  bool _hapticsOnCardTap = true;
+  bool get hapticsOnCardTap => _hapticsOnCardTap;
+  Future<void> setHapticsOnCardTap(bool v) async {
+    if (_hapticsOnCardTap == v) return;
+    _hapticsOnCardTap = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayHapticsOnCardTapKey, v);
+  }
+
   // Display: show app updates notification
   bool _showAppUpdates = true;
   bool get showAppUpdates => _showAppUpdates;
@@ -883,6 +940,10 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._showMessageNavButtons = _showMessageNavButtons;
     copy._hapticsOnGenerate = _hapticsOnGenerate;
     copy._hapticsOnDrawer = _hapticsOnDrawer;
+    copy._hapticsGlobalEnabled = _hapticsGlobalEnabled;
+    copy._hapticsIosSwitch = _hapticsIosSwitch;
+    copy._hapticsOnListItemTap = _hapticsOnListItemTap;
+    copy._hapticsOnCardTap = _hapticsOnCardTap;
     copy._showAppUpdates = _showAppUpdates;
     copy._newChatOnLaunch = _newChatOnLaunch;
     copy._chatFontScale = _chatFontScale;

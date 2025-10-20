@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/settings_provider.dart';
+import '../../core/services/haptics.dart';
 
 /// iOS-style icon button: no ripple, color tween on press, no scale.
 class IosIconButton extends StatefulWidget {
@@ -109,6 +112,7 @@ class IosCardPress extends StatefulWidget {
     this.padding,
     this.pressedScale,
     this.duration,
+    this.haptics = true,
   });
 
   final Widget child;
@@ -123,6 +127,8 @@ class IosCardPress extends StatefulWidget {
   final double? pressedScale;
   // Optional custom animation duration for color/scale tween.
   final Duration? duration;
+  // Whether to perform a soft haptic on tap (also gated by settings/global toggles)
+  final bool haptics;
 
   @override
   State<IosCardPress> createState() => _IosCardPressState();
@@ -150,7 +156,13 @@ class _IosCardPressState extends State<IosCardPress> {
       onTapDown: (widget.onTap != null || widget.onLongPress != null) ? (_) => setState(() => _pressed = true) : null,
       onTapUp: (widget.onTap != null || widget.onLongPress != null) ? (_) => setState(() => _pressed = false) : null,
       onTapCancel: (widget.onTap != null || widget.onLongPress != null) ? () => setState(() => _pressed = false) : null,
-      onTap: widget.onTap,
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              final sp = context.read<SettingsProvider>();
+              if (widget.haptics && sp.hapticsOnCardTap) Haptics.soft();
+              widget.onTap!.call();
+            },
       onLongPress: widget.onLongPress,
       child: AnimatedScale(
         scale: scale,

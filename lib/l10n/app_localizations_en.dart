@@ -2215,6 +2215,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enable haptic feedback when opening/closing sidebar';
 
   @override
+  String get displaySettingsPageHapticsGlobalTitle => 'Global Haptics';
+
+  @override
+  String get displaySettingsPageHapticsIosSwitchTitle => 'Haptics on Switch';
+
+  @override
+  String get displaySettingsPageHapticsOnListItemTapTitle =>
+      'Haptics on List Items';
+
+  @override
+  String get displaySettingsPageHapticsOnCardTapTitle => 'Haptics on Cards';
+
+  @override
   String get displaySettingsPageHapticsOnGenerateTitle => 'Haptics on Generate';
 
   @override

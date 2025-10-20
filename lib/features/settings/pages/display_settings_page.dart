@@ -430,7 +430,10 @@ class _TactileRowState extends State<_TactileRow> {
       onTapDown: widget.onTap == null ? null : (_) => _setPressed(true),
       onTapUp: widget.onTap == null ? null : (_) => _setPressed(false),
       onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
-      onTap: widget.onTap == null ? null : () { if (widget.haptics) Haptics.soft(); widget.onTap!.call(); },
+      onTap: widget.onTap == null ? null : () {
+        if (widget.haptics && context.read<SettingsProvider>().hapticsOnListItemTap) Haptics.soft();
+        widget.onTap!.call();
+      },
       child: widget.builder(_pressed),
     );
   }
@@ -656,7 +659,39 @@ class HapticsSettingsPage extends StatelessWidget {
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 16), children: [
         _iosSectionCard(children: [
+          _iosSwitchRow(
+            context,
+            icon: Lucide.Vibrate,
+            label: l10n.displaySettingsPageHapticsGlobalTitle,
+            value: sp.hapticsGlobalEnabled,
+            onChanged: (v) => context.read<SettingsProvider>().setHapticsGlobalEnabled(v),
+          ),
+          _iosDivider(context),
+          _iosSwitchRow(
+            context,
+            icon: Lucide.Sparkles,
+            label: l10n.displaySettingsPageHapticsIosSwitchTitle,
+            value: sp.hapticsIosSwitch,
+            onChanged: (v) => context.read<SettingsProvider>().setHapticsIosSwitch(v),
+          ),
+          _iosDivider(context),
           _iosSwitchRow(context, icon: Lucide.panelRight, label: l10n.displaySettingsPageHapticsOnSidebarTitle, value: sp.hapticsOnDrawer, onChanged: (v) => context.read<SettingsProvider>().setHapticsOnDrawer(v)),
+          _iosDivider(context),
+          _iosSwitchRow(
+            context,
+            icon: Lucide.ListOrdered,
+            label: l10n.displaySettingsPageHapticsOnListItemTapTitle,
+            value: sp.hapticsOnListItemTap,
+            onChanged: (v) => context.read<SettingsProvider>().setHapticsOnListItemTap(v),
+          ),
+          _iosDivider(context),
+          _iosSwitchRow(
+            context,
+            icon: Lucide.Square,
+            label: l10n.displaySettingsPageHapticsOnCardTapTitle,
+            value: sp.hapticsOnCardTap,
+            onChanged: (v) => context.read<SettingsProvider>().setHapticsOnCardTap(v),
+          ),
           _iosDivider(context),
           _iosSwitchRow(context, icon: Lucide.Vibrate, label: l10n.displaySettingsPageHapticsOnGenerateTitle, value: sp.hapticsOnGenerate, onChanged: (v) => context.read<SettingsProvider>().setHapticsOnGenerate(v)),
         ]),
