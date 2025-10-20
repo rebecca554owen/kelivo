@@ -18,6 +18,7 @@ import 'core/providers/tts_provider.dart';
 import 'core/providers/assistant_provider.dart';
 import 'core/providers/update_provider.dart';
 import 'core/providers/quick_phrase_provider.dart';
+import 'core/providers/memory_provider.dart';
 import 'core/services/chat/chat_service.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
 import 'utils/sandbox_path_resolver.dart';
@@ -61,6 +62,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TtsProvider()),
         ChangeNotifierProvider(create: (_) => UpdateProvider()),
         ChangeNotifierProvider(create: (_) => QuickPhraseProvider()),
+        ChangeNotifierProvider(create: (_) => MemoryProvider()),
       ],
       child: Builder(
         builder: (context) {

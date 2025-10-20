@@ -2402,6 +2402,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditManageQuickPhraseButton => '管理快捷短语';
 
   @override
+  String get assistantEditPageMemoryTab => '记忆';
+
+  @override
+  String get assistantEditMemorySwitchTitle => '记忆';
+
+  @override
+  String get assistantEditMemorySwitchDescription => '允许助手主动存储并在对话间引用用户相关信息';
+
+  @override
+  String get assistantEditRecentChatsSwitchTitle => '参考历史聊天记录';
+
+  @override
+  String get assistantEditRecentChatsSwitchDescription =>
+      '在新对话中引用最近的对话标题以增强上下文';
+
+  @override
+  String get assistantEditManageMemoryTitle => '管理记忆';
+
+  @override
+  String get assistantEditAddMemoryButton => '添加记忆';
+
+  @override
+  String get assistantEditMemoryEmpty => '暂无记忆';
+
+  @override
+  String get assistantEditMemoryDialogTitle => '记忆';
+
+  @override
+  String get assistantEditMemoryDialogHint => '输入记忆内容';
+
+  @override
   String get assistantEditAddQuickPhraseButton => '添加快捷短语';
 
   @override
@@ -4872,6 +4903,37 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantEditManageQuickPhraseButton => '管理快捷短语';
+
+  @override
+  String get assistantEditPageMemoryTab => '记忆';
+
+  @override
+  String get assistantEditMemorySwitchTitle => '记忆';
+
+  @override
+  String get assistantEditMemorySwitchDescription => '允许助手主动存储并在对话间引用用户相关信息';
+
+  @override
+  String get assistantEditRecentChatsSwitchTitle => '参考历史聊天记录';
+
+  @override
+  String get assistantEditRecentChatsSwitchDescription =>
+      '在新对话中引用最近的对话标题以增强上下文';
+
+  @override
+  String get assistantEditManageMemoryTitle => '管理记忆';
+
+  @override
+  String get assistantEditAddMemoryButton => '添加记忆';
+
+  @override
+  String get assistantEditMemoryEmpty => '暂无记忆';
+
+  @override
+  String get assistantEditMemoryDialogTitle => '记忆';
+
+  @override
+  String get assistantEditMemoryDialogHint => '输入记忆内容';
 
   @override
   String get assistantEditAddQuickPhraseButton => '添加快捷短语';
@@ -7345,6 +7407,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditManageQuickPhraseButton => '管理快捷片語';
+
+  @override
+  String get assistantEditPageMemoryTab => '記憶';
+
+  @override
+  String get assistantEditMemorySwitchTitle => '記憶';
+
+  @override
+  String get assistantEditMemorySwitchDescription => '允許助理主動儲存並在對話間引用使用者相關資訊';
+
+  @override
+  String get assistantEditRecentChatsSwitchTitle => '參考歷史聊天記錄';
+
+  @override
+  String get assistantEditRecentChatsSwitchDescription =>
+      '在新對話中引用最近的對話標題以增強上下文';
+
+  @override
+  String get assistantEditManageMemoryTitle => '管理記憶';
+
+  @override
+  String get assistantEditAddMemoryButton => '新增記憶';
+
+  @override
+  String get assistantEditMemoryEmpty => '暫無記憶';
+
+  @override
+  String get assistantEditMemoryDialogTitle => '記憶';
+
+  @override
+  String get assistantEditMemoryDialogHint => '輸入記憶內容';
 
   @override
   String get assistantEditAddQuickPhraseButton => '新增快捷片語';

@@ -4709,6 +4709,66 @@ abstract class AppLocalizations {
   /// **'Manage Quick Phrases'**
   String get assistantEditManageQuickPhraseButton;
 
+  /// No description provided for @assistantEditPageMemoryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get assistantEditPageMemoryTab;
+
+  /// No description provided for @assistantEditMemorySwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get assistantEditMemorySwitchTitle;
+
+  /// No description provided for @assistantEditMemorySwitchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the assistant to create and use memories across chats.'**
+  String get assistantEditMemorySwitchDescription;
+
+  /// No description provided for @assistantEditRecentChatsSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Chats Reference'**
+  String get assistantEditRecentChatsSwitchTitle;
+
+  /// No description provided for @assistantEditRecentChatsSwitchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Include recent conversation titles to help with context.'**
+  String get assistantEditRecentChatsSwitchDescription;
+
+  /// No description provided for @assistantEditManageMemoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Memories'**
+  String get assistantEditManageMemoryTitle;
+
+  /// No description provided for @assistantEditAddMemoryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Memory'**
+  String get assistantEditAddMemoryButton;
+
+  /// No description provided for @assistantEditMemoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No memories yet'**
+  String get assistantEditMemoryEmpty;
+
+  /// No description provided for @assistantEditMemoryDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get assistantEditMemoryDialogTitle;
+
+  /// No description provided for @assistantEditMemoryDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter memory content'**
+  String get assistantEditMemoryDialogHint;
+
   /// No description provided for @assistantEditAddQuickPhraseButton.
   ///
   /// In en, this message translates to:

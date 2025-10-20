@@ -2488,6 +2488,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditManageQuickPhraseButton => 'Manage Quick Phrases';
 
   @override
+  String get assistantEditPageMemoryTab => 'Memory';
+
+  @override
+  String get assistantEditMemorySwitchTitle => 'Memory';
+
+  @override
+  String get assistantEditMemorySwitchDescription =>
+      'Allow the assistant to create and use memories across chats.';
+
+  @override
+  String get assistantEditRecentChatsSwitchTitle => 'Recent Chats Reference';
+
+  @override
+  String get assistantEditRecentChatsSwitchDescription =>
+      'Include recent conversation titles to help with context.';
+
+  @override
+  String get assistantEditManageMemoryTitle => 'Manage Memories';
+
+  @override
+  String get assistantEditAddMemoryButton => 'Add Memory';
+
+  @override
+  String get assistantEditMemoryEmpty => 'No memories yet';
+
+  @override
+  String get assistantEditMemoryDialogTitle => 'Memory';
+
+  @override
+  String get assistantEditMemoryDialogHint => 'Enter memory content';
+
+  @override
   String get assistantEditAddQuickPhraseButton => 'Add Quick Phrase';
 
   @override

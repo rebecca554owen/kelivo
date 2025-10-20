@@ -1707,10 +1707,11 @@ class _ToolCallItem extends StatelessWidget {
   IconData _iconFor(String name) {
     switch (name) {
       case 'create_memory':
+        return Lucide.bookHeart;
       case 'edit_memory':
-        return Lucide.Library;
+        return Lucide.bookHeart;
       case 'delete_memory':
-        return Lucide.Trash2;
+        return Lucide.bookDashed;
       case 'search_web':
         return Lucide.Earth;
       case 'builtin_search':

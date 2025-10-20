@@ -18,6 +18,7 @@ import '../../../main.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/providers/memory_provider.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/api/chat_api_service.dart';
@@ -1174,6 +1175,80 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       apiMessages.insert(0, {'role': 'system', 'content': sys});
     }
 
+    // Inject Memories prompt and Recent Chats if enabled
+    try {
+      if (assistant?.enableMemory == true) {
+        final mp = context.read<MemoryProvider>();
+        final mems = mp.getForAssistant(assistant!.id);
+        final buf = StringBuffer();
+        buf.writeln('## Memories');
+        buf.writeln('These are memories that you can reference in the future conversations.');
+        buf.writeln('<memories>');
+        for (final m in mems) {
+          buf.writeln('<record>');
+          buf.writeln('<id>${m.id}</id>');
+          buf.writeln('<content>${m.content}</content>');
+          buf.writeln('</record>');
+        }
+        buf.writeln('</memories>');
+        // Tool usage guidance
+        buf.writeln('''
+## Memory Tool
+你是一个无状态的大模型，你无法存储记忆，因此为了记住信息，你需要使用**记忆工具**。
+你可以使用 `create_memory`, `edit_memory`, `delete_memory` 工具创建、更新或删除记忆。
+- 如果记忆中没有相关信息，请使用 create_memory 创建一条新的记录。
+- 如果已有相关记录，请使用 edit_memory 更新内容。
+- 若记忆过时或无用，请使用 delete_memory 删除。
+这些记忆会自动包含在未来的对话上下文中，在<memories>标签内。
+请勿在记忆中存储敏感信息，敏感信息包括：用户的民族、宗教信仰、性取向、政治观点及党派归属、性生活、犯罪记录等。
+在与用户聊天过程中，你可以像一个私人秘书一样**主动的**记录用户相关的信息到记忆里，包括但不限于：
+- 用户昵称/姓名
+- 年龄/性别/兴趣爱好
+- 计划事项等
+- 聊天风格偏好
+- 工作相关
+- 首次聊天时间
+- ...
+请主动调用工具记录，而不是需要用户要求。     
+记忆如果包含日期信息，请包含在内，请使用绝对时间格式，并且当前时间是 ${DateTime.now().toIso8601String()}。
+无需告知用户你已更改记忆记录，也不要在对话中直接显示记忆内容，除非用户主动要求。
+相似或相关的记忆应合并为一条记录，而不要重复记录，过时记录应删除。         
+你可以在和用户闲聊的时候暗示用户你能记住东西。
+''');
+        if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
+          apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + buf.toString();
+        } else {
+          apiMessages.insert(0, {'role': 'system', 'content': buf.toString()});
+        }
+      }
+      if (assistant?.enableRecentChatsReference == true) {
+        final chats = context.read<ChatService>().getAllConversations();
+        final titles = chats
+            .where((c) => c.assistantId == assistant!.id)
+            .take(10)
+            .map((c) => c.title)
+            .where((t) => t.trim().isNotEmpty)
+            .toList();
+        if (titles.isNotEmpty) {
+          final sb = StringBuffer();
+          sb.writeln('## 最近的对话');
+          sb.writeln('这是用户最近的一些对话，你可以参考这些对话了解用户偏好:');
+          sb.writeln('<recent_chats>');
+          for (final t in titles) {
+            sb.writeln('<conversation>');
+            sb.writeln('  <title>$t</title>');
+            sb.writeln('</conversation>');
+          }
+          sb.writeln('</recent_chats>');
+          if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
+            apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + sb.toString();
+          } else {
+            apiMessages.insert(0, {'role': 'system', 'content': sb.toString()});
+          }
+        }
+      }
+    } catch (_) {}
+
     // Determine tool support and built-in Gemini search status
     final supportsTools = _isToolModel(providerKey, modelId);
     bool _hasBuiltInGeminiSearch() {
@@ -1261,6 +1336,55 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         toolDefs.add(SearchToolService.getToolDefinition());
       }
 
+      // Memory tools
+      if (assistant?.enableMemory == true && supportsTools) {
+        toolDefs.addAll([
+          {
+            'type': 'function',
+            'function': {
+              'name': 'create_memory',
+              'description': 'create a memory record',
+              'parameters': {
+                'type': 'object',
+                'properties': {
+                  'content': {'type': 'string', 'description': 'The content of the memory record'}
+                },
+                'required': ['content']
+              }
+            }
+          },
+          {
+            'type': 'function',
+            'function': {
+              'name': 'edit_memory',
+              'description': 'update a memory record',
+              'parameters': {
+                'type': 'object',
+                'properties': {
+                  'id': {'type': 'integer', 'description': 'The id of the memory record'},
+                  'content': {'type': 'string', 'description': 'The content of the memory record'}
+                },
+                'required': ['id', 'content']
+              }
+            }
+          },
+          {
+            'type': 'function',
+            'function': {
+              'name': 'delete_memory',
+              'description': 'delete a memory record',
+              'parameters': {
+                'type': 'object',
+                'properties': {
+                  'id': {'type': 'integer', 'description': 'The id of the memory record'}
+                },
+                'required': ['id']
+              }
+            }
+          },
+        ]);
+      }
+
       // MCP tools
       final mcp = context.read<McpProvider>();
       final toolSvc = context.read<McpToolService>();
@@ -1295,6 +1419,29 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (name == SearchToolService.toolName && settings.searchEnabled) {
             final q = (args['query'] ?? '').toString();
             return await SearchToolService.executeSearch(q, settings);
+          }
+          // Memory tools
+          if (assistant?.enableMemory == true) {
+            try {
+              final mp = context.read<MemoryProvider>();
+              if (name == 'create_memory') {
+                final content = (args['content'] ?? '').toString();
+                if (content.isEmpty) return '';
+                final m = await mp.add(assistantId: assistant!.id, content: content);
+                return m.content;
+              } else if (name == 'edit_memory') {
+                final id = (args['id'] as num?)?.toInt() ?? -1;
+                final content = (args['content'] ?? '').toString();
+                if (id <= 0 || content.isEmpty) return '';
+                final m = await mp.update(id: id, content: content);
+                return m?.content ?? '';
+              } else if (name == 'delete_memory') {
+                final id = (args['id'] as num?)?.toInt() ?? -1;
+                if (id <= 0) return '';
+                final ok = await mp.delete(id: id);
+                return ok ? 'deleted' : '';
+              }
+            } catch (_) {}
           }
           // Fallback to MCP tools
           final text = await toolSvc.callToolTextForAssistant(
@@ -2011,6 +2158,78 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final sys = PromptTransformer.replacePlaceholders(assistant.systemPrompt, vars);
       apiMessages.insert(0, {'role': 'system', 'content': sys});
     }
+    // Inject Memories + Recent Chats
+    try {
+      if (assistant?.enableMemory == true) {
+        final mp = context.read<MemoryProvider>();
+        final mems = mp.getForAssistant(assistant!.id);
+        final buf = StringBuffer();
+        buf.writeln('## Memories');
+        buf.writeln('These are memories that you can reference in the future conversations.');
+        buf.writeln('<memories>');
+        for (final m in mems) {
+          buf.writeln('<record>');
+          buf.writeln('<id>${m.id}</id>');
+          buf.writeln('<content>${m.content}</content>');
+          buf.writeln('</record>');
+        }
+        buf.writeln('</memories>');
+        buf.writeln('''
+## Memory Tool
+你是一个无状态的大模型，你无法存储记忆，因此为了记住信息，你需要使用**记忆工具**。
+你可以使用 `create_memory`, `edit_memory`, `delete_memory` 工具创建、更新或删除记忆。
+- 如果记忆中没有相关信息，请使用 create_memory 创建一条新的记录。
+- 如果已有相关记录，请使用 edit_memory 更新内容。
+- 若记忆过时或无用，请使用 delete_memory 删除。
+这些记忆会自动包含在未来的对话上下文中，在<memories>标签内。
+请勿在记忆中存储敏感信息，敏感信息包括：用户的民族、宗教信仰、性取向、政治观点及党派归属、性生活、犯罪记录等。
+在与用户聊天过程中，你可以像一个私人秘书一样**主动的**记录用户相关的信息到记忆里，包括但不限于：
+- 用户昵称/姓名
+- 年龄/性别/兴趣爱好
+- 计划事项等
+- 聊天风格偏好
+- 工作相关
+- 首次聊天时间
+- ...
+请主动调用工具记录，而不是需要用户要求。     
+记忆如果包含日期信息，请包含在内，请使用绝对时间格式，并且当前时间是 ${DateTime.now().toIso8601String()}。
+无需告知用户你已更改记忆记录，也不要在对话中直接显示记忆内容，除非用户主动要求。
+相似或相关的记忆应合并为一条记录，而不要重复记录，过时记录应删除。         
+你可以在和用户闲聊的时候暗示用户你能记住东西。
+''');
+        if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
+          apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + buf.toString();
+        } else {
+          apiMessages.insert(0, {'role': 'system', 'content': buf.toString()});
+        }
+      }
+      if (assistant?.enableRecentChatsReference == true) {
+        final chats = context.read<ChatService>().getAllConversations();
+        final titles = chats
+            .where((c) => c.assistantId == assistant!.id)
+            .take(10)
+            .map((c) => c.title)
+            .where((t) => t.trim().isNotEmpty)
+            .toList();
+        if (titles.isNotEmpty) {
+          final sb = StringBuffer();
+          sb.writeln('## 最近的对话');
+          sb.writeln('这是用户最近的一些对话，你可以参考这些对话了解用户偏好:');
+          sb.writeln('<recent_chats>');
+          for (final t in titles) {
+            sb.writeln('<conversation>');
+            sb.writeln('  <title>$t</title>');
+            sb.writeln('</conversation>');
+          }
+          sb.writeln('</recent_chats>');
+          if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
+            apiMessages[0]['content'] = ((apiMessages[0]['content'] ?? '') as String) + '\n\n' + sb.toString();
+          } else {
+            apiMessages.insert(0, {'role': 'system', 'content': sb.toString()});
+          }
+        }
+      }
+    } catch (_) {}
     // Inject search tool usage guide when enabled
     if (settings.searchEnabled) {
       final prompt = SearchToolService.getSystemPrompt();
@@ -2055,10 +2274,57 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     }
 
-    // Prepare tools (Search + MCP)
+    // Prepare tools (Memory + Search + MCP)
     final List<Map<String, dynamic>> toolDefs = <Map<String, dynamic>>[];
     Future<String> Function(String, Map<String, dynamic>)? onToolCall;
     try {
+      if (assistant?.enableMemory == true && _isToolModel(providerKey, modelId)) {
+        toolDefs.addAll([
+          {
+            'type': 'function',
+            'function': {
+              'name': 'create_memory',
+              'description': 'create a memory record',
+              'parameters': {
+                'type': 'object',
+                'properties': {
+                  'content': {'type': 'string', 'description': 'The content of the memory record'}
+                },
+                'required': ['content']
+              }
+            }
+          },
+          {
+            'type': 'function',
+            'function': {
+              'name': 'edit_memory',
+              'description': 'update a memory record',
+              'parameters': {
+                'type': 'object',
+                'properties': {
+                  'id': {'type': 'integer', 'description': 'The id of the memory record'},
+                  'content': {'type': 'string', 'description': 'The content of the memory record'}
+                },
+                'required': ['id', 'content']
+              }
+            }
+          },
+          {
+            'type': 'function',
+            'function': {
+              'name': 'delete_memory',
+              'description': 'delete a memory record',
+              'parameters': {
+                'type': 'object',
+                'properties': {
+                  'id': {'type': 'integer', 'description': 'The id of the memory record'}
+                },
+                'required': ['id']
+              }
+            }
+          },
+        ]);
+      }
       if (settings.searchEnabled) {
         toolDefs.add(SearchToolService.getToolDefinition());
       }
@@ -2094,6 +2360,29 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (name == SearchToolService.toolName && settings.searchEnabled) {
             final q = (args['query'] ?? '').toString();
             return await SearchToolService.executeSearch(q, settings);
+          }
+          // Memory tools
+          if (assistant?.enableMemory == true) {
+            try {
+              final mp = context.read<MemoryProvider>();
+              if (name == 'create_memory') {
+                final content = (args['content'] ?? '').toString();
+                if (content.isEmpty) return '';
+                final m = await mp.add(assistantId: assistant!.id, content: content);
+                return m.content;
+              } else if (name == 'edit_memory') {
+                final id = (args['id'] as num?)?.toInt() ?? -1;
+                final content = (args['content'] ?? '').toString();
+                if (id <= 0 || content.isEmpty) return '';
+                final m = await mp.update(id: id, content: content);
+                return m?.content ?? '';
+              } else if (name == 'delete_memory') {
+                final id = (args['id'] as num?)?.toInt() ?? -1;
+                if (id <= 0) return '';
+                final ok = await mp.delete(id: id);
+                return ok ? 'deleted' : '';
+              }
+            } catch (_) {}
           }
           final text = await toolSvc.callToolTextForAssistant(
             mcp,
