@@ -263,15 +263,20 @@ class _MemoryTab extends StatelessWidget {
     try { WidgetsBinding.instance.addPostFrameCallback((_) { mp.initialize(); }); } catch (_) {}
     final memories = mp.getForAssistant(assistantId);
 
-    Widget sectionCard({required Widget child, EdgeInsets padding = const EdgeInsets.all(12)}) => Padding(
+    // Align the section card visuals with the basic settings page iOS-style list cards
+    Widget sectionCard({required Widget child, EdgeInsets padding = const EdgeInsets.symmetric(vertical: 6)}) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : cs.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
-              boxShadow: isDark ? [] : AppShadows.soft,
+              // Match Settings page: Light uses translucent white; Dark uses subtle white10
+              color: isDark ? Colors.white10 : Colors.white.withOpacity(0.96),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06),
+                width: 0.6,
+              ),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Padding(padding: padding, child: child),
           ),
         );
