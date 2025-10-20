@@ -749,6 +749,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.Copy,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onCopy ?? () {
                       Clipboard.setData(ClipboardData(text: widget.message.content));
                       showAppSnackBar(
@@ -769,6 +770,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.RefreshCw,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onResend,
                   ),
                 ),
@@ -782,6 +784,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.Ellipsis,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onMore,
                   ),
                 ),
@@ -1164,6 +1167,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.Copy,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onCopy ?? () {
                       Clipboard.setData(ClipboardData(text: widget.message.content));
                       showAppSnackBar(
@@ -1184,6 +1188,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.RefreshCw,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onRegenerate,
                   ),
                 ),
@@ -1198,6 +1203,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       size: 16,
                       padding: EdgeInsets.all(4),
                       onTap: widget.onSpeak,
+                      color: cs.onSurface.withOpacity(0.9),
                       builder: (color) => AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: FadeTransition(opacity: anim, child: child)),
@@ -1221,6 +1227,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.Languages,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onTranslate,
                   ),
                 ),
@@ -1234,6 +1241,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     size: 16,
                     padding: EdgeInsets.all(4),
                     icon: Lucide.Ellipsis,
+                    color: cs.onSurface.withOpacity(0.9),
                     onTap: widget.onMore,
                   ),
                 ),
