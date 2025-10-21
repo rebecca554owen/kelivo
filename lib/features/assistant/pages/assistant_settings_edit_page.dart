@@ -290,7 +290,7 @@ class _MemoryTab extends StatelessWidget {
             children: [
               _iosSwitchRow(
                 context,
-                icon: Lucide.Brain,
+                icon: Lucide.bookHeart,
                 label: l10n.assistantEditMemorySwitchTitle,
                 value: a.enableMemory,
                 onChanged: (v) async {
