@@ -2204,17 +2204,15 @@ class ChatApiService {
                 }
               }
             } else if (host.contains('openrouter.ai')) {
-              // print('[ChatApi/OpenAI] suppress early finish due to OpenRouter host; wait for [DONE]');
             } else {
-              final approxTotal = approxPromptTokens + _approxTokensFromChars(approxCompletionChars);
-              yield ChatStreamChunk(
-                content: '',
-                reasoning: null,
-                isDone: true,
-                totalTokens: usage?.totalTokens ?? approxTotal,
-                usage: usage,
-              );
-              return;
+              // final approxTotal = approxPromptTokens + _approxTokensFromChars(approxCompletionChars);
+              // yield ChatStreamChunk(
+              //   content: '',
+              //   isDone: false,
+              //   totalTokens: usage?.totalTokens ?? approxTotal,
+              //   usage: usage,
+              // );
+              // return;
             }
           }
 
@@ -2335,6 +2333,10 @@ class ChatApiService {
         }
       }
     }
+
+    // Fallback: provider closed SSE without sending [DONE]
+    final approxTotal = usage?.totalTokens ?? (approxPromptTokens + _approxTokensFromChars(approxCompletionChars));
+    yield ChatStreamChunk(content: '', isDone: true, totalTokens: approxTotal, usage: usage);
   }
 
   static Stream<ChatStreamChunk> _sendClaudeStream(
