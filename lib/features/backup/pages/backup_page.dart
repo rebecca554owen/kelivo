@@ -18,6 +18,7 @@ import '../../../core/providers/backup_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../shared/widgets/ios_switch.dart';
+import '../../../core/services/backup/cherry_importer.dart';
 
 // File size formatter (B, KB, MB, GB)
 String _fmtBytes(int bytes) {
@@ -382,11 +383,57 @@ class _BackupPageState extends State<BackupPage> {
                   label: l10n.backupPageImportFromCherryStudio,
                   onTap: () async {
                     if (!mounted) return;
-                    showAppSnackBar(
-                      context,
-                      message: l10n.backupPageNotSupportedYet,
-                      type: NotificationType.warning,
-                    );
+                    // Pick Cherry Studio backup (.zip or .bak)
+                    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'bak']);
+                    final path = result?.files.single.path;
+                    if (path == null) return;
+
+                    final mode = await _chooseImportModeDialog(context);
+                    if (mode == null) return;
+
+                    await _runWithImportingOverlay(context, () async {
+                      try {
+                        final settings = context.read<SettingsProvider>();
+                        final cs = context.read<ChatService>();
+                        final file = File(path);
+                        // Defer import to service
+                        final res = await CherryImporter.importFromCherryStudio(
+                          file: file,
+                          mode: mode,
+                          settings: settings,
+                          chatService: cs,
+                        );
+                        if (!mounted) return;
+                        await showDialog(
+                          context: context,
+                          builder: (dctx) => AlertDialog(
+                            title: Text(l10n.backupPageRestartRequired),
+                            content: Text(
+                              '${l10n.backupPageImportFromCherryStudio}:\n'
+                              ' • Providers: ${res.providers}\n'
+                              ' • Assistants: ${res.assistants}\n'
+                              ' • Conversations: ${res.conversations}\n'
+                              ' • Messages: ${res.messages}\n'
+                              ' • Files: ${res.files}\n\n'
+                              '${l10n.backupPageRestartContent}',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dctx).pop(),
+                                child: Text(l10n.backupPageOK),
+                              ),
+                            ],
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        showAppSnackBar(
+                          context,
+                          message: e.toString(),
+                          type: NotificationType.error,
+                        );
+                      }
+                    });
                   },
                 ),
               ]),
