@@ -2116,7 +2116,7 @@ class _ReasoningSectionState extends State<_ReasoningSection> with SingleTickerP
       onTap: widget.onToggle,
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           children: [
             SvgPicture.asset(
