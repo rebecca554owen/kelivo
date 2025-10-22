@@ -33,6 +33,10 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../utils/avatar_cache.dart';
+import 'chat_message_widget.dart' show ToolUIPart;
+
+// Regular expression to extract thinking content from message
+final RegExp thinkingRegex = RegExp(r"<think>([\s\S]*?)(?:</think>|$)", dotAll: true);
 
 // Shared helpers
 String _guessImageMime(String path) {
@@ -156,7 +160,12 @@ String _softBreakMd(String input) {
   return out.toString();
 }
 
-Future<File?> _renderAndSaveMessageImage(BuildContext context, ChatMessage message) async {
+Future<File?> _renderAndSaveMessageImage(
+  BuildContext context,
+  ChatMessage message, {
+  bool showThinkingAndToolCards = false,
+  bool expandThinkingContent = false,
+}) async {
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
   final l10n = AppLocalizations.of(context)!;
@@ -173,6 +182,8 @@ Future<File?> _renderAndSaveMessageImage(BuildContext context, ChatMessage messa
     title: context.read<ChatService>().getConversation(message.conversationId)?.title ?? l10n.messageExportSheetDefaultTitle,
     cs: cs,
     chatFontScale: settings.chatFontScale,
+    showThinkingAndToolCards: showThinkingAndToolCards,
+    expandThinkingContent: expandThinkingContent,
     ),
   );
   return _renderWidgetDirectly(context, content);
@@ -191,7 +202,13 @@ Rect _shareAnchorRect(BuildContext context) {
   return Rect.fromCenter(center: center, width: 1, height: 1);
 }
 
-Future<File?> _renderAndSaveChatImage(BuildContext context, Conversation conversation, List<ChatMessage> messages) async {
+Future<File?> _renderAndSaveChatImage(
+  BuildContext context,
+  Conversation conversation,
+  List<ChatMessage> messages, {
+  bool showThinkingAndToolCards = false,
+  bool expandThinkingContent = false,
+}) async {
   final cs = Theme.of(context).colorScheme;
   final settings = context.read<SettingsProvider>();
   final l10n = AppLocalizations.of(context)!;
@@ -212,6 +229,8 @@ Future<File?> _renderAndSaveChatImage(BuildContext context, Conversation convers
     chatFontScale: settings.chatFontScale,
     messages: messages,
     timestamp: conversation.updatedAt,
+    showThinkingAndToolCards: showThinkingAndToolCards,
+    expandThinkingContent: expandThinkingContent,
     ),
   );
   return _renderWidgetDirectly(context, content);
@@ -506,6 +525,8 @@ class _BatchExportSheet extends StatefulWidget {
 class _BatchExportSheetState extends State<_BatchExportSheet> {
   final DraggableScrollableController _ctrl = DraggableScrollableController();
   bool _exporting = false;
+  bool _showThinkingAndToolCards = false;
+  bool _expandThinkingContent = false;
 
   @override
   void dispose() {
@@ -603,7 +624,13 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     try {
       File? file;
       await _runWithExportingOverlay(widget.parentContext, () async {
-        file = await _renderAndSaveChatImage(widget.parentContext, widget.conversation, widget.messages);
+        file = await _renderAndSaveChatImage(
+          widget.parentContext,
+          widget.conversation,
+          widget.messages,
+          showThinkingAndToolCards: _showThinkingAndToolCards,
+          expandThinkingContent: _expandThinkingContent,
+        );
       });
       if (file == null) throw 'render error';
       // After generation, close current sheet then open preview
@@ -629,8 +656,8 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
     return DraggableScrollableSheet(
       controller: _ctrl,
       expand: false,
-      initialChildSize: 0.42,
-      maxChildSize: 0.42,
+      initialChildSize: 0.55,
+      maxChildSize: 0.70,
       minChildSize: 0.3,
       builder: (c, sc) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -663,6 +690,38 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
                       _onExportImage();
                     },
                   ),
+                  const SizedBox(height: 8),
+                  // Image export options
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      children: [
+                        _buildSwitchRow(
+                          context,
+                          title: '显示深度思考卡片和工具卡片',
+                          value: _showThinkingAndToolCards,
+                          onChanged: (v) {
+                            setState(() {
+                              _showThinkingAndToolCards = v;
+                              if (!v) {
+                                _expandThinkingContent = false;
+                              }
+                            });
+                          },
+                        ),
+                        _buildSwitchRow(
+                          context,
+                          title: '显示思考内容',
+                          value: _expandThinkingContent,
+                          onChanged: _showThinkingAndToolCards ? (v) {
+                            setState(() {
+                              _expandThinkingContent = v;
+                            });
+                          } : null,
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -671,11 +730,43 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
       ),
     );
   }
+
+  Widget _buildSwitchRow(BuildContext context, {
+    required String title,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final isEnabled = onChanged != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: isEnabled ? cs.onSurface : cs.onSurface.withOpacity(0.4),
+              ),
+            ),
+          ),
+          CupertinoSwitch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: cs.primary,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ExportSheetState extends State<_ExportSheet> {
   final DraggableScrollableController _ctrl = DraggableScrollableController();
   bool _exporting = false;
+  bool _showThinkingAndToolCards = false;
+  bool _expandThinkingContent = false;
 
   @override
   void dispose() {
@@ -774,7 +865,12 @@ class _ExportSheetState extends State<_ExportSheet> {
     try {
       File? file;
       await _runWithExportingOverlay(widget.parentContext, () async {
-        file = await _renderAndSaveMessageImage(widget.parentContext, widget.message);
+        file = await _renderAndSaveMessageImage(
+          widget.parentContext,
+          widget.message,
+          showThinkingAndToolCards: _showThinkingAndToolCards,
+          expandThinkingContent: _expandThinkingContent,
+        );
       });
       if (file == null) throw 'render error';
       if (mounted) await Navigator.of(context).maybePop();
@@ -799,8 +895,8 @@ class _ExportSheetState extends State<_ExportSheet> {
     return DraggableScrollableSheet(
       controller: _ctrl,
       expand: false,
-      initialChildSize: 0.42,
-      maxChildSize: 0.42,
+      initialChildSize: 0.55,
+      maxChildSize: 0.70,
       minChildSize: 0.3,
       builder: (c, sc) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -833,11 +929,73 @@ class _ExportSheetState extends State<_ExportSheet> {
                       _onExportImage();
                     },
                   ),
+                  const SizedBox(height: 8),
+                  // Image export options
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      children: [
+                        _buildSwitchRow(
+                          context,
+                          title: '显示深度思考卡片和工具卡片',
+                          value: _showThinkingAndToolCards,
+                          onChanged: (v) {
+                            setState(() {
+                              _showThinkingAndToolCards = v;
+                              if (!v) {
+                                _expandThinkingContent = false;
+                              }
+                            });
+                          },
+                        ),
+                        _buildSwitchRow(
+                          context,
+                          title: '显示思考内容',
+                          value: _expandThinkingContent,
+                          onChanged: _showThinkingAndToolCards ? (v) {
+                            setState(() {
+                              _expandThinkingContent = v;
+                            });
+                          } : null,
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchRow(BuildContext context, {
+    required String title,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final isEnabled = onChanged != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: isEnabled ? cs.onSurface : cs.onSurface.withOpacity(0.4),
+              ),
+            ),
+          ),
+          CupertinoSwitch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: cs.primary,
+          ),
+        ],
       ),
     );
   }
@@ -851,11 +1009,15 @@ class _ExportedMessageCard extends StatelessWidget {
     required this.title,
     required this.cs,
     required this.chatFontScale,
+    this.showThinkingAndToolCards = false,
+    this.expandThinkingContent = false,
   });
   final ChatMessage message;
   final String title;
   final ColorScheme cs;
   final double chatFontScale;
+  final bool showThinkingAndToolCards;
+  final bool expandThinkingContent;
 
   @override
   Widget build(BuildContext context) {
@@ -866,7 +1028,47 @@ class _ExportedMessageCard extends StatelessWidget {
     final bubbleFg = cs.onSurface;
     final time = DateFormat('yyyy-MM-dd HH:mm').format(message.timestamp);
 
-    final parsed = _parseContent(message.content);
+    // Extract thinking content if enabled
+    String? thinkingText;
+    String messageContent = message.content;
+    List<ToolUIPart> toolParts = [];
+
+    if (showThinkingAndToolCards && isAssistant) {
+      // Extract thinking content
+      final thinkingMatches = thinkingRegex.allMatches(message.content);
+      if (thinkingMatches.isNotEmpty) {
+        thinkingText = thinkingMatches
+            .map((m) => (m.group(1) ?? '').trim())
+            .where((s) => s.isNotEmpty)
+            .join('\n\n');
+        // Remove thinking tags from message content
+        messageContent = message.content.replaceAll(thinkingRegex, '').trim();
+      }
+      // Also check reasoningText field
+      if ((thinkingText == null || thinkingText.isEmpty) &&
+          message.reasoningText != null && message.reasoningText!.isNotEmpty) {
+        thinkingText = message.reasoningText;
+      }
+
+      // Get tool events
+      try {
+        final chatService = context.read<ChatService>();
+        final events = chatService.getToolEvents(message.id);
+        if (events.isNotEmpty) {
+          toolParts = events
+              .map((e) => ToolUIPart(
+                    id: (e['id'] ?? '').toString(),
+                    toolName: (e['name'] ?? '').toString(),
+                    arguments: (e['arguments'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{},
+                    content: (e['content']?.toString().isNotEmpty == true) ? e['content'].toString() : null,
+                    loading: !(e['content']?.toString().isNotEmpty == true),
+                  ))
+              .toList();
+        }
+      } catch (_) {}
+    }
+
+    final parsed = _parseContent(messageContent);
     final mdText = StringBuffer();
     if (parsed.text.isNotEmpty) mdText.writeln(_softBreakMd(parsed.text));
     for (final p in parsed.images) {
@@ -915,6 +1117,22 @@ class _ExportedMessageCard extends StatelessWidget {
             if (isAssistant) ...[
               _AssistantHeader(message: message),
               const SizedBox(height: 8),
+              // Show thinking card if enabled and has thinking content
+              if (thinkingText != null && thinkingText.isNotEmpty) ...[
+                _ExportThinkingCard(
+                  thinkingText: thinkingText,
+                  cs: cs,
+                  expanded: expandThinkingContent,
+                ),
+                const SizedBox(height: 8),
+              ],
+              // Show tool cards if enabled
+              if (toolParts.isNotEmpty) ...[
+                for (final toolPart in toolParts) ...[
+                  _ExportToolCard(part: toolPart, cs: cs),
+                  const SizedBox(height: 8),
+                ],
+              ],
               contentWidget,
             ] else ...[
               Align(
@@ -978,12 +1196,16 @@ class _ExportedChatImage extends StatelessWidget {
     required this.chatFontScale,
     required this.messages,
     required this.timestamp,
+    this.showThinkingAndToolCards = false,
+    this.expandThinkingContent = false,
   });
   final String conversationTitle;
   final ColorScheme cs;
   final double chatFontScale;
   final List<ChatMessage> messages;
   final DateTime timestamp;
+  final bool showThinkingAndToolCards;
+  final bool expandThinkingContent;
 
   @override
   Widget build(BuildContext context) {
@@ -1019,7 +1241,12 @@ class _ExportedChatImage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             for (final m in messages) ...[
-              _ExportedBubble(message: m, cs: cs),
+              _ExportedBubble(
+                message: m,
+                cs: cs,
+                showThinkingAndToolCards: showThinkingAndToolCards,
+                expandThinkingContent: expandThinkingContent,
+              ),
               const SizedBox(height: 8),
             ],
             const SizedBox(height: 12),
@@ -1033,16 +1260,64 @@ class _ExportedChatImage extends StatelessWidget {
 }
 
 class _ExportedBubble extends StatelessWidget {
-  const _ExportedBubble({required this.message, required this.cs});
+  const _ExportedBubble({
+    required this.message,
+    required this.cs,
+    this.showThinkingAndToolCards = false,
+    this.expandThinkingContent = false,
+  });
   final ChatMessage message;
   final ColorScheme cs;
+  final bool showThinkingAndToolCards;
+  final bool expandThinkingContent;
 
   @override
   Widget build(BuildContext context) {
     final isAssistant = message.role == 'assistant';
     final bubbleBg = cs.primary.withOpacity(0.08);
     final bubbleFg = cs.onSurface;
-    final parsed = _parseContent(message.content);
+
+    // Extract thinking content if enabled
+    String? thinkingText;
+    String messageContent = message.content;
+    List<ToolUIPart> toolParts = [];
+
+    if (showThinkingAndToolCards && isAssistant) {
+      // Extract thinking content
+      final thinkingMatches = thinkingRegex.allMatches(message.content);
+      if (thinkingMatches.isNotEmpty) {
+        thinkingText = thinkingMatches
+            .map((m) => (m.group(1) ?? '').trim())
+            .where((s) => s.isNotEmpty)
+            .join('\n\n');
+        // Remove thinking tags from message content
+        messageContent = message.content.replaceAll(thinkingRegex, '').trim();
+      }
+      // Also check reasoningText field
+      if ((thinkingText == null || thinkingText.isEmpty) &&
+          message.reasoningText != null && message.reasoningText!.isNotEmpty) {
+        thinkingText = message.reasoningText;
+      }
+
+      // Get tool events
+      try {
+        final chatService = context.read<ChatService>();
+        final events = chatService.getToolEvents(message.id);
+        if (events.isNotEmpty) {
+          toolParts = events
+              .map((e) => ToolUIPart(
+                    id: (e['id'] ?? '').toString(),
+                    toolName: (e['name'] ?? '').toString(),
+                    arguments: (e['arguments'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{},
+                    content: (e['content']?.toString().isNotEmpty == true) ? e['content'].toString() : null,
+                    loading: !(e['content']?.toString().isNotEmpty == true),
+                  ))
+              .toList();
+        }
+      } catch (_) {}
+    }
+
+    final parsed = _parseContent(messageContent);
     final mdText = StringBuffer();
     if (parsed.text.isNotEmpty) mdText.writeln(_softBreakMd(parsed.text));
     for (final p in parsed.images) {
@@ -1068,6 +1343,22 @@ class _ExportedBubble extends StatelessWidget {
             children: [
               _AssistantHeader(message: message),
               const SizedBox(height: 8),
+              // Show thinking card if enabled and has thinking content
+              if (thinkingText != null && thinkingText.isNotEmpty) ...[
+                _ExportThinkingCard(
+                  thinkingText: thinkingText,
+                  cs: cs,
+                  expanded: expandThinkingContent,
+                ),
+                const SizedBox(height: 8),
+              ],
+              // Show tool cards if enabled
+              if (toolParts.isNotEmpty) ...[
+                for (final toolPart in toolParts) ...[
+                  _ExportToolCard(part: toolPart, cs: cs),
+                  const SizedBox(height: 8),
+                ],
+              ],
               contentWidget,
             ],
           ),
@@ -1343,6 +1634,159 @@ class _ExportOptionTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Simple thinking card widget for export
+class _ExportThinkingCard extends StatelessWidget {
+  const _ExportThinkingCard({
+    required this.thinkingText,
+    required this.cs,
+    required this.expanded,
+  });
+  final String thinkingText;
+  final ColorScheme cs;
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = cs.primaryContainer.withOpacity(isDark ? 0.25 : 0.30);
+    final fg = cs.onPrimaryContainer;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/deepthink.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: ColorFilter.mode(cs.secondary, BlendMode.srcIn),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.chatMessageWidgetDeepThinking,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: cs.secondary,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Lucide.ChevronRight,
+                  size: 18,
+                  color: cs.secondary,
+                ),
+              ],
+            ),
+          ),
+          // Content (if expanded)
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
+              child: Text(
+                thinkingText,
+                style: const TextStyle(fontSize: 12.5, height: 1.32),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// Tool card widget for export
+class _ExportToolCard extends StatelessWidget {
+  const _ExportToolCard({required this.part, required this.cs});
+  final ToolUIPart part;
+  final ColorScheme cs;
+
+  IconData _iconFor(String name) {
+    switch (name) {
+      case 'create_memory':
+        return Lucide.bookHeart;
+      case 'edit_memory':
+        return Lucide.bookHeart;
+      case 'delete_memory':
+        return Lucide.bookDashed;
+      case 'search_web':
+        return Lucide.Earth;
+      case 'builtin_search':
+        return Lucide.Search;
+      default:
+        return Lucide.Wrench;
+    }
+  }
+
+  String _titleFor(BuildContext context, String name, Map<String, dynamic> args) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (name) {
+      case 'create_memory':
+        return l10n.chatMessageWidgetCreateMemory;
+      case 'edit_memory':
+        return l10n.chatMessageWidgetEditMemory;
+      case 'delete_memory':
+        return l10n.chatMessageWidgetDeleteMemory;
+      case 'search_web':
+        final q = (args['query'] ?? '').toString();
+        return l10n.chatMessageWidgetWebSearch(q);
+      case 'builtin_search':
+        return l10n.chatMessageWidgetBuiltinSearch;
+      default:
+        return l10n.chatMessageWidgetToolCall(name);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = cs.primaryContainer.withOpacity(isDark ? 0.25 : 0.30);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: Center(
+              child: Icon(_iconFor(part.toolName), size: 18, color: cs.secondary),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _titleFor(context, part.toolName, part.arguments),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: cs.secondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
