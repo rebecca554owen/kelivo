@@ -1689,7 +1689,7 @@ class _ExportThinkingCard extends StatelessWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
                 SvgPicture.asset(
@@ -1707,12 +1707,12 @@ class _ExportThinkingCard extends StatelessWidget {
                     color: cs.secondary,
                   ),
                 ),
-                const Spacer(),
-                Icon(
-                  Lucide.ChevronRight,
-                  size: 18,
-                  color: cs.secondary,
-                ),
+                // const Spacer(),
+                // Icon(
+                //   Lucide.ChevronRight,
+                //   size: 18,
+                //   color: cs.secondary,
+                // ),
               ],
             ),
           ),
