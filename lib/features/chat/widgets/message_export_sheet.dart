@@ -1028,29 +1028,13 @@ class _ExportedMessageCard extends StatelessWidget {
     final bubbleFg = cs.onSurface;
     final time = DateFormat('yyyy-MM-dd HH:mm').format(message.timestamp);
 
-    // Extract thinking content if enabled
-    String? thinkingText;
+    // Extract thinking content and tool parts if enabled
+    List<Map<String, dynamic>> reasoningSegments = [];
     String messageContent = message.content;
     List<ToolUIPart> toolParts = [];
 
     if (showThinkingAndToolCards && isAssistant) {
-      // Extract thinking content
-      final thinkingMatches = thinkingRegex.allMatches(message.content);
-      if (thinkingMatches.isNotEmpty) {
-        thinkingText = thinkingMatches
-            .map((m) => (m.group(1) ?? '').trim())
-            .where((s) => s.isNotEmpty)
-            .join('\n\n');
-        // Remove thinking tags from message content
-        messageContent = message.content.replaceAll(thinkingRegex, '').trim();
-      }
-      // Also check reasoningText field
-      if ((thinkingText == null || thinkingText.isEmpty) &&
-          message.reasoningText != null && message.reasoningText!.isNotEmpty) {
-        thinkingText = message.reasoningText;
-      }
-
-      // Get tool events
+      // Get tool events first
       try {
         final chatService = context.read<ChatService>();
         final events = chatService.getToolEvents(message.id);
@@ -1066,6 +1050,42 @@ class _ExportedMessageCard extends StatelessWidget {
               .toList();
         }
       } catch (_) {}
+
+      // Check if message has reasoningSegmentsJson (multiple thinking segments with toolStartIndex)
+      if (message.reasoningSegmentsJson != null && message.reasoningSegmentsJson!.isNotEmpty) {
+        try {
+          final segments = _deserializeReasoningSegments(message.reasoningSegmentsJson!);
+          reasoningSegments = segments;
+        } catch (_) {}
+      }
+
+      // If no segments, fall back to extracting from content or reasoningText
+      if (reasoningSegments.isEmpty) {
+        // Extract thinking content from <think> tags
+        final thinkingMatches = thinkingRegex.allMatches(message.content);
+        if (thinkingMatches.isNotEmpty) {
+          final texts = thinkingMatches
+              .map((m) => (m.group(1) ?? '').trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+          // Create segments with sequential toolStartIndex
+          for (int i = 0; i < texts.length; i++) {
+            reasoningSegments.add({
+              'text': texts[i],
+              'toolStartIndex': 0, // All tools at the end for inline think
+            });
+          }
+          // Remove thinking tags from message content
+          messageContent = message.content.replaceAll(thinkingRegex, '').trim();
+        }
+        // Also check reasoningText field
+        else if (message.reasoningText != null && message.reasoningText!.isNotEmpty) {
+          reasoningSegments.add({
+            'text': message.reasoningText!,
+            'toolStartIndex': 0,
+          });
+        }
+      }
     }
 
     final parsed = _parseContent(messageContent);
@@ -1117,22 +1137,45 @@ class _ExportedMessageCard extends StatelessWidget {
             if (isAssistant) ...[
               _AssistantHeader(message: message),
               const SizedBox(height: 8),
-              // Show thinking card if enabled and has thinking content
-              if (thinkingText != null && thinkingText.isNotEmpty) ...[
-                _ExportThinkingCard(
-                  thinkingText: thinkingText,
-                  cs: cs,
-                  expanded: expandThinkingContent,
-                ),
-                const SizedBox(height: 8),
-              ],
-              // Show tool cards if enabled
-              if (toolParts.isNotEmpty) ...[
-                for (final toolPart in toolParts) ...[
-                  _ExportToolCard(part: toolPart, cs: cs),
-                  const SizedBox(height: 8),
-                ],
-              ],
+              // Build mixed content: reasoning segments and tool cards按 toolStartIndex 混合显示
+              ...() {
+                final List<Widget> mixedContent = [];
+                if (reasoningSegments.isNotEmpty) {
+                  for (int i = 0; i < reasoningSegments.length; i++) {
+                    final seg = reasoningSegments[i];
+                    final text = seg['text'] as String? ?? '';
+
+                    // Add the reasoning segment (if any text)
+                    if (text.isNotEmpty) {
+                      mixedContent.add(_ExportThinkingCard(
+                        thinkingText: text,
+                        cs: cs,
+                        expanded: expandThinkingContent,
+                      ));
+                      mixedContent.add(const SizedBox(height: 8));
+                    }
+
+                    // Determine tool range mapped to this segment: [start, end)
+                    int start = (seg['toolStartIndex'] as int?) ?? 0;
+                    final int end = (i < reasoningSegments.length - 1)
+                        ? (reasoningSegments[i + 1]['toolStartIndex'] as int?) ?? toolParts.length
+                        : toolParts.length;
+
+                    // Clamp to bounds and ensure non-decreasing
+                    if (start < 0) start = 0;
+                    if (start > toolParts.length) start = toolParts.length;
+                    final int clampedEnd = end.clamp(start, toolParts.length);
+
+                    for (int k = start; k < clampedEnd; k++) {
+                      // Hide builtin_search tool cards
+                      if (toolParts[k].toolName == 'builtin_search') continue;
+                      mixedContent.add(_ExportToolCard(part: toolParts[k], cs: cs));
+                      mixedContent.add(const SizedBox(height: 8));
+                    }
+                  }
+                }
+                return mixedContent;
+              }(),
               contentWidget,
             ] else ...[
               Align(
@@ -1158,34 +1201,15 @@ class _ExportedMessageCard extends StatelessWidget {
     );
   }
 
-  _Parsed _parseContent(String raw) {
-    final imgRe = RegExp(r"\[image:(.+?)\]");
-    final fileRe = RegExp(r"\[file:(.+?)\|(.+?)\|(.+?)\]");
-    final images = <String>[];
-    final docs = <_DocRef>[];
-    final buffer = StringBuffer();
-    int idx = 0;
-    while (idx < raw.length) {
-      final m1 = imgRe.matchAsPrefix(raw, idx);
-      final m2 = fileRe.matchAsPrefix(raw, idx);
-      if (m1 != null) {
-        final p = m1.group(1)?.trim();
-        if (p != null && p.isNotEmpty) images.add(p);
-        idx = m1.end;
-        continue;
+  // Helper to deserialize reasoning segments
+  List<Map<String, dynamic>> _deserializeReasoningSegments(String json) {
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is List) {
+        return decoded.cast<Map<String, dynamic>>();
       }
-      if (m2 != null) {
-        final path = m2.group(1)?.trim() ?? '';
-        final name = m2.group(2)?.trim() ?? 'file';
-        final mime = m2.group(3)?.trim() ?? 'text/plain';
-        docs.add(_DocRef(path: path, fileName: name, mime: mime));
-        idx = m2.end;
-        continue;
-      }
-      buffer.write(raw[idx]);
-      idx++;
-    }
-    return _Parsed(buffer.toString().trim(), images, docs);
+    } catch (_) {}
+    return [];
   }
 }
 
@@ -1277,29 +1301,13 @@ class _ExportedBubble extends StatelessWidget {
     final bubbleBg = cs.primary.withOpacity(0.08);
     final bubbleFg = cs.onSurface;
 
-    // Extract thinking content if enabled
-    String? thinkingText;
+    // Extract thinking content and tool parts if enabled
+    List<Map<String, dynamic>> reasoningSegments = [];
     String messageContent = message.content;
     List<ToolUIPart> toolParts = [];
 
     if (showThinkingAndToolCards && isAssistant) {
-      // Extract thinking content
-      final thinkingMatches = thinkingRegex.allMatches(message.content);
-      if (thinkingMatches.isNotEmpty) {
-        thinkingText = thinkingMatches
-            .map((m) => (m.group(1) ?? '').trim())
-            .where((s) => s.isNotEmpty)
-            .join('\n\n');
-        // Remove thinking tags from message content
-        messageContent = message.content.replaceAll(thinkingRegex, '').trim();
-      }
-      // Also check reasoningText field
-      if ((thinkingText == null || thinkingText.isEmpty) &&
-          message.reasoningText != null && message.reasoningText!.isNotEmpty) {
-        thinkingText = message.reasoningText;
-      }
-
-      // Get tool events
+      // Get tool events first
       try {
         final chatService = context.read<ChatService>();
         final events = chatService.getToolEvents(message.id);
@@ -1315,6 +1323,42 @@ class _ExportedBubble extends StatelessWidget {
               .toList();
         }
       } catch (_) {}
+
+      // Check if message has reasoningSegmentsJson (multiple thinking segments with toolStartIndex)
+      if (message.reasoningSegmentsJson != null && message.reasoningSegmentsJson!.isNotEmpty) {
+        try {
+          final segments = _deserializeReasoningSegments(message.reasoningSegmentsJson!);
+          reasoningSegments = segments;
+        } catch (_) {}
+      }
+
+      // If no segments, fall back to extracting from content or reasoningText
+      if (reasoningSegments.isEmpty) {
+        // Extract thinking content from <think> tags
+        final thinkingMatches = thinkingRegex.allMatches(message.content);
+        if (thinkingMatches.isNotEmpty) {
+          final texts = thinkingMatches
+              .map((m) => (m.group(1) ?? '').trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+          // Create segments with sequential toolStartIndex
+          for (int i = 0; i < texts.length; i++) {
+            reasoningSegments.add({
+              'text': texts[i],
+              'toolStartIndex': 0, // All tools at the end for inline think
+            });
+          }
+          // Remove thinking tags from message content
+          messageContent = message.content.replaceAll(thinkingRegex, '').trim();
+        }
+        // Also check reasoningText field
+        else if (message.reasoningText != null && message.reasoningText!.isNotEmpty) {
+          reasoningSegments.add({
+            'text': message.reasoningText!,
+            'toolStartIndex': 0,
+          });
+        }
+      }
     }
 
     final parsed = _parseContent(messageContent);
@@ -1334,6 +1378,44 @@ class _ExportedBubble extends StatelessWidget {
         : Text('—', style: TextStyle(color: bubbleFg.withOpacity(0.5)));
 
     if (isAssistant) {
+      // Build mixed content: reasoning segments and tool cards按 toolStartIndex 混合显示
+      final List<Widget> mixedContent = [];
+
+      if (reasoningSegments.isNotEmpty) {
+        for (int i = 0; i < reasoningSegments.length; i++) {
+          final seg = reasoningSegments[i];
+          final text = seg['text'] as String? ?? '';
+
+          // Add the reasoning segment (if any text)
+          if (text.isNotEmpty) {
+            mixedContent.add(_ExportThinkingCard(
+              thinkingText: text,
+              cs: cs,
+              expanded: expandThinkingContent,
+            ));
+            mixedContent.add(const SizedBox(height: 8));
+          }
+
+          // Determine tool range mapped to this segment: [start, end)
+          int start = (seg['toolStartIndex'] as int?) ?? 0;
+          final int end = (i < reasoningSegments.length - 1)
+              ? (reasoningSegments[i + 1]['toolStartIndex'] as int?) ?? toolParts.length
+              : toolParts.length;
+
+          // Clamp to bounds and ensure non-decreasing
+          if (start < 0) start = 0;
+          if (start > toolParts.length) start = toolParts.length;
+          final int clampedEnd = end.clamp(start, toolParts.length);
+
+          for (int k = start; k < clampedEnd; k++) {
+            // Hide builtin_search tool cards
+            if (toolParts[k].toolName == 'builtin_search') continue;
+            mixedContent.add(_ExportToolCard(part: toolParts[k], cs: cs));
+            mixedContent.add(const SizedBox(height: 8));
+          }
+        }
+      }
+
       return Align(
         alignment: Alignment.centerLeft,
         child: ConstrainedBox(
@@ -1343,22 +1425,7 @@ class _ExportedBubble extends StatelessWidget {
             children: [
               _AssistantHeader(message: message),
               const SizedBox(height: 8),
-              // Show thinking card if enabled and has thinking content
-              if (thinkingText != null && thinkingText.isNotEmpty) ...[
-                _ExportThinkingCard(
-                  thinkingText: thinkingText,
-                  cs: cs,
-                  expanded: expandThinkingContent,
-                ),
-                const SizedBox(height: 8),
-              ],
-              // Show tool cards if enabled
-              if (toolParts.isNotEmpty) ...[
-                for (final toolPart in toolParts) ...[
-                  _ExportToolCard(part: toolPart, cs: cs),
-                  const SizedBox(height: 8),
-                ],
-              ],
+              ...mixedContent,
               contentWidget,
             ],
           ),
@@ -1379,6 +1446,17 @@ class _ExportedBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper to deserialize reasoning segments
+  List<Map<String, dynamic>> _deserializeReasoningSegments(String json) {
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is List) {
+        return decoded.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return [];
   }
 }
 
