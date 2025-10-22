@@ -1433,9 +1433,9 @@ Widget _sheetOption(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                SizedBox(
-                  width: 40,
-                  child: leading ?? Icon(icon ?? Lucide.ChevronRight, size: 20, color: c),
+                SizedBox.square(
+                  dimension: 36,
+                  child: Center(child: leading ?? Icon(icon ?? Lucide.ChevronRight, size: 20, color: c)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
