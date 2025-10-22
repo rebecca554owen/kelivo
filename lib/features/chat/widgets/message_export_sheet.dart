@@ -1650,12 +1650,32 @@ class _ExportThinkingCard extends StatelessWidget {
   final ColorScheme cs;
   final bool expanded;
 
+  String _sanitizeThinkingText(String s) {
+    // 统一换行
+    s = s.replaceAll('\r\n', '\n');
+    s = s.replaceAll('\r', '');
+
+    // 去掉首尾零宽字符（模型有时会插入）
+    s = s
+        .replaceAll(RegExp(r'^[\u200B\u200C\u200D\uFEFF]+'), '')
+        .replaceAll(RegExp(r'[\u200B\u200C\u200D\uFEFF]+$'), '');
+
+    // 去掉**开头**的纯空白行
+    s = s.replaceFirst(RegExp(r'^\s*\n+'), '');
+
+    // 去掉**结尾**的纯空白行
+    s = s.replaceFirst(RegExp(r'\n+\s*$'), '');
+
+    return s.trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = cs.primaryContainer.withOpacity(isDark ? 0.25 : 0.30);
     final fg = cs.onPrimaryContainer;
     final l10n = AppLocalizations.of(context)!;
+    final cleanedText = _sanitizeThinkingText(thinkingText);
 
     return Container(
       width: double.infinity,
@@ -1701,8 +1721,23 @@ class _ExportThinkingCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
               child: Text(
-                thinkingText,
-                style: const TextStyle(fontSize: 12.5, height: 1.32),
+                cleanedText,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.32,
+                  leadingDistribution: TextLeadingDistribution.proportional,
+                ),
+                strutStyle: const StrutStyle(
+                  forceStrutHeight: true,
+                  fontSize: 12.5,
+                  height: 1.32,
+                  leading: 0,
+                ),
+                textHeightBehavior: const TextHeightBehavior(
+                  applyHeightToFirstAscent: false,
+                  applyHeightToLastDescent: false,
+                  leadingDistribution: TextLeadingDistribution.proportional,
+                ),
               ),
             ),
         ],
