@@ -720,6 +720,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                         child: IosCardPress(
                                           baseColor: widget.embedded ? Colors.transparent : Theme.of(context).colorScheme.surface,
                                           borderRadius: BorderRadius.circular(16),
+                                          haptics: false,
                                           onTap: () => _handleSelectAssistant(a),
                                           padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
                                           child: Row(
@@ -1655,6 +1656,7 @@ class _ChatTile extends StatelessWidget {
       child: IosCardPress(
         baseColor: tileColor,
         borderRadius: BorderRadius.circular(16),
+        haptics: false,
         onTap: onTap,
         onLongPress: onLongPress,
         padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
