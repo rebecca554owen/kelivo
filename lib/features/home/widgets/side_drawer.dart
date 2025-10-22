@@ -63,6 +63,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   OverlayEntry? _assistantPickerEntry;
   ValueNotifier<int>? _closeTicker;
   bool _assistantsExpanded = false;
+  final ScrollController _listController = ScrollController();
 
   // Assistant avatar renderer shared across drawer views
   Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28, VoidCallback? onTap}) {
@@ -364,6 +365,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     _assistantPickerEntry = null;
     _closeTicker?.removeListener(_handleCloseTick);
     _searchController.dispose();
+    _listController.dispose();
     super.dispose();
   }
 
@@ -679,6 +681,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             // Scrollable conversation list below fixed header
             Expanded(
               child: ListView(
+                controller: _listController,
                 // Reduce side paddings to extend tile backgrounds while
                 // keeping text position unchanged (compensated in tile padding)
                 padding: const EdgeInsets.fromLTRB(10, 4, 10, 16),
@@ -1022,9 +1025,24 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   }
 
   void _toggleAssistantPicker() {
+    final goingToExpand = !_assistantsExpanded;
     setState(() {
-      _assistantsExpanded = !_assistantsExpanded;
+      _assistantsExpanded = goingToExpand;
     });
+    if (goingToExpand) {
+      // Smoothly reveal the assistant list at the top
+      if (_listController.hasClients) {
+        // Slight delay to ensure layout is ready before animating
+        Future<void>.delayed(const Duration(milliseconds: 10), () {
+          if (!_listController.hasClients) return;
+          _listController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeOutCubic,
+          );
+        });
+      }
+    }
   }
 
   void _closeAssistantPicker() {
