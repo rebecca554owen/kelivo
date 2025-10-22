@@ -758,7 +758,7 @@ class HapticsSettingsPage extends StatelessWidget {
           _iosDivider(context),
           _iosSwitchRow(
             context,
-            icon: Lucide.Sparkles,
+            icon: Lucide.toggleRight,
             label: l10n.displaySettingsPageHapticsIosSwitchTitle,
             value: sp.hapticsIosSwitch,
             onChanged: (v) => context.read<SettingsProvider>().setHapticsIosSwitch(v),

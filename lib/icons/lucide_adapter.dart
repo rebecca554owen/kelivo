@@ -125,4 +125,5 @@ class Lucide {
   static const IconData checkCheck = lucide.LucideIcons.checkCheck;
   static const IconData bookHeart = lucide.LucideIcons.bookHeart;
   static const IconData bookDashed = lucide.LucideIcons.bookDashed;
+  static const IconData toggleRight = lucide.LucideIcons.toggleRight;
 }
