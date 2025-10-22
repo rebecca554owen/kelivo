@@ -1174,6 +1174,13 @@ class _ExportedMessageCard extends StatelessWidget {
                       mixedContent.add(const SizedBox(height: 8));
                     }
                   }
+                } else if (toolParts.isNotEmpty) {
+                  // No reasoning segments but have tool cards - show all tool cards
+                  for (final toolPart in toolParts) {
+                    if (toolPart.toolName == 'builtin_search') continue;
+                    mixedContent.add(_ExportToolCard(part: toolPart, cs: cs));
+                    mixedContent.add(const SizedBox(height: 8));
+                  }
                 }
                 return mixedContent;
               }(),
@@ -1414,6 +1421,13 @@ class _ExportedBubble extends StatelessWidget {
             mixedContent.add(_ExportToolCard(part: toolParts[k], cs: cs));
             mixedContent.add(const SizedBox(height: 8));
           }
+        }
+      } else if (toolParts.isNotEmpty) {
+        // No reasoning segments but have tool cards - show all tool cards
+        for (final toolPart in toolParts) {
+          if (toolPart.toolName == 'builtin_search') continue;
+          mixedContent.add(_ExportToolCard(part: toolPart, cs: cs));
+          mixedContent.add(const SizedBox(height: 8));
         }
       }
 
