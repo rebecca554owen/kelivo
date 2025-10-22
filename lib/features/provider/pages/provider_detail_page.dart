@@ -1308,6 +1308,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     final cs = Theme.of(context).colorScheme;
     final settings = context.read<SettingsProvider>();
     final cfg = settings.getProviderConfig(widget.keyName, defaultName: widget.displayName);
+    final bool _isDefaultSilicon = widget.keyName.toLowerCase() == 'siliconflow';
+    final bool _hasUserKey = (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) || cfg.apiKey.trim().isNotEmpty;
+    final bool _restrictToFree = _isDefaultSilicon && !_hasUserKey;
     final controller = TextEditingController();
     List<dynamic> items = const [];
     bool loading = true;
@@ -1327,11 +1330,22 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           final l10n = AppLocalizations.of(ctx)!;
           Future<void> _load() async {
             try {
-              final list = await ProviderManager.listModels(cfg);
-              setLocal(() {
-                items = list;
-                loading = false;
-              });
+              if (_restrictToFree) {
+                final list = <ModelInfo>[
+                  ModelRegistry.infer(ModelInfo(id: 'THUDM/GLM-4-9B-0414', displayName: 'THUDM/GLM-4-9B-0414')),
+                  ModelRegistry.infer(ModelInfo(id: 'Qwen/Qwen3-8B', displayName: 'Qwen/Qwen3-8B')),
+                ];
+                setLocal(() {
+                  items = list;
+                  loading = false;
+                });
+              } else {
+                final list = await ProviderManager.listModels(cfg);
+                setLocal(() {
+                  items = list;
+                  loading = false;
+                });
+              }
             } catch (e) {
               setLocal(() {
                 items = const [];
