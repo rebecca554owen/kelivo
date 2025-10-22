@@ -30,6 +30,7 @@ import '../../../shared/widgets/export_capture_scope.dart';
 import '../../../shared/widgets/mermaid_exporter.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/ios_switch.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../utils/avatar_cache.dart';
@@ -751,7 +752,7 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
               ),
             ),
           ),
-          CupertinoSwitch(
+          IosSwitch(
             value: value,
             onChanged: onChanged,
             activeColor: cs.primary,
@@ -990,7 +991,7 @@ class _ExportSheetState extends State<_ExportSheet> {
               ),
             ),
           ),
-          CupertinoSwitch(
+          IosSwitch(
             value: value,
             onChanged: onChanged,
             activeColor: cs.primary,
