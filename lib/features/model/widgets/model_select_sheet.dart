@@ -757,7 +757,7 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: _ProviderChip(
-        avatar: _BrandAvatar(name: name, size: 16),
+        avatar: _BrandAvatar(name: name, size: 18),
         label: name,
         borderColor: cs.outlineVariant.withOpacity(0.25),
         onTap: () async { await _jumpToProvider(key); },
@@ -869,7 +869,7 @@ class _ProviderChipState extends State<_ProviderChip> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(14),
