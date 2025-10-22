@@ -167,6 +167,14 @@ class CherryImporter {
     // 6) Import assistants (persist to SharedPreferences, restart recommended)
     final importedAssistants = await _importAssistants(cherryAssistants, mode);
 
+    // If overwrite, clear chats/files BEFORE writing any uploads to avoid deletion later
+    if (!chatService.initialized) {
+      await chatService.init();
+    }
+    if (mode == RestoreMode.overwrite) {
+      await chatService.clearAllData();
+    }
+
     // 7) Prepare files (only if referenced by messages)
     final filesById = <String, Map<String, dynamic>>{
       for (final f in cherryFiles)
@@ -184,8 +192,40 @@ class CherryImporter {
       }
     }
 
+    // Also include files referenced by message_blocks when a 'file' object is present
+    for (final b in cherryMessageBlocks) {
+      if (b is! Map) continue;
+      final fileObj = (b['file'] as Map?)?.map((k, v) => MapEntry(k.toString(), v));
+      final fid = (fileObj?['id'] ?? '').toString();
+      if (fid.isNotEmpty) usedFileIds.add(fid);
+    }
+
     // Write referenced files into Documents/upload and build path map
-    final pathsByFileId = await _materializeFiles(filesById, usedFileIds);
+    final pathsByFileId = await _materializeFiles(filesById, usedFileIds, backupArchive: file);
+
+    // Build mapping of extra attachments (images/files) in message_blocks (not represented in message.files)
+    final Map<String, List<_PendingAttachmentRef>> pendingAttachmentsByMessage = <String, List<_PendingAttachmentRef>>{};
+    for (final b in cherryMessageBlocks) {
+      if (b is! Map) continue;
+      final type = (b['type'] ?? '').toString();
+      final messageId = (b['messageId'] ?? '').toString();
+      if (messageId.isEmpty) continue;
+      final fileObj = (b['file'] as Map?)?.map((k, v) => MapEntry(k.toString(), v));
+      final url = (b['url'] ?? '').toString();
+      final isImageType = type.toLowerCase().contains('image') || (fileObj?['type']?.toString().toLowerCase().startsWith('image') ?? false);
+      if (fileObj != null && (fileObj['id'] ?? '').toString().isNotEmpty) {
+        (pendingAttachmentsByMessage[messageId] ??= <_PendingAttachmentRef>[])
+            .add(_PendingAttachmentRef(fileId: (fileObj['id'] ?? '').toString(), name: (fileObj['origin_name'] ?? fileObj['name'] ?? '').toString(), mime: (fileObj['type'] ?? '').toString(), isImage: isImageType));
+      } else if (url.isNotEmpty) {
+        if (url.startsWith('data:image')) {
+          (pendingAttachmentsByMessage[messageId] ??= <_PendingAttachmentRef>[])
+              .add(_PendingAttachmentRef(dataUrl: url, isImage: true));
+        } else {
+          (pendingAttachmentsByMessage[messageId] ??= <_PendingAttachmentRef>[])
+              .add(_PendingAttachmentRef(url: url, isImage: isImageType));
+        }
+      }
+    }
 
     // 8) Import topics & messages into ChatService
     final convCountAndMsgCount = await _importConversations(
@@ -195,6 +235,7 @@ class CherryImporter {
       chatService: chatService,
       mode: mode,
       blockTexts: blockTextByMessageId,
+      pendingAttachmentsByMessage: pendingAttachmentsByMessage,
     );
 
     return CherryImportResult(
@@ -202,7 +243,7 @@ class CherryImporter {
       assistants: importedAssistants,
       conversations: convCountAndMsgCount.$1,
       messages: convCountAndMsgCount.$2,
-      files: pathsByFileId.length,
+      files: pathsByFileId.length + convCountAndMsgCount.$3,
     );
   }
 
@@ -465,11 +506,99 @@ class CherryImporter {
 
   static Future<Map<String, String>> _materializeFiles(
     Map<String, Map<String, dynamic>> filesById,
-    Set<String> usedIds,
-  ) async {
+    Set<String> usedIds, {
+    File? backupArchive,
+  }) async {
     final docs = await getApplicationDocumentsDirectory();
     final uploadDir = Directory(p.join(docs.path, 'upload'));
     if (!await uploadDir.exists()) await uploadDir.create(recursive: true);
+
+    // If a ZIP is provided, index entries under common folders for quick lookup
+    Map<String, ArchiveFile>? filesIndexByBase;
+    Map<String, ArchiveFile>? filesIndexByRel;  // normalized rel path like files/x.pdf or data/files/uuid.png
+    Map<String, ArchiveFile>? filesIndexById;   // id (without ext) -> entry
+    Map<String, String>? diskFilesIndexByBase;  // basename -> absolute path (if importing from extracted folder)
+    Map<String, String>? diskFilesIndexByRel;   // normalized rel path -> absolute path
+    Map<String, String>? diskFilesIndexById;    // id (without ext) -> absolute path
+    if (backupArchive != null) {
+      try {
+        final bytes = await backupArchive.readAsBytes();
+        final archive = ZipDecoder().decodeBytes(bytes, verify: false);
+        final byBase = <String, ArchiveFile>{};
+        final byRel  = <String, ArchiveFile>{};
+        final byId   = <String, ArchiveFile>{};
+        final uuidLike = RegExp(r'^[0-9a-fA-F-]{10,}$');
+        for (final e in archive) {
+          if (!e.isFile) continue;
+          final norm = e.name.replaceAll('\\\\', '/');
+          final base = p.basename(norm);
+          // by basename
+          byBase[base] = e;
+          // by normalized rel under common roots
+          final l = norm.toLowerCase();
+          int idx = l.indexOf('/data/files/');
+          if (idx != -1) {
+            final rel = l.substring(idx + 1);
+            byRel[rel] = e;
+          }
+          idx = l.indexOf('/files/');
+          if (idx != -1) {
+            final rel = l.substring(idx + 1);
+            byRel[rel] = e;
+          }
+          // by id without ext
+          final noExt = base.contains('.') ? base.substring(0, base.lastIndexOf('.')) : base;
+          if (uuidLike.hasMatch(noExt)) {
+            byId[noExt] = e;
+          }
+        }
+        if (byBase.isNotEmpty) filesIndexByBase = byBase;
+        if (byRel.isNotEmpty)  filesIndexByRel  = byRel;
+        if (byId.isNotEmpty)   filesIndexById   = byId;
+      } catch (_) {
+        // not a zip, ignore
+      }
+      // Also try sibling directories when importing from an extracted folder
+      try {
+        final parent = Directory(p.dirname(backupArchive.path));
+        final candidates = <Directory>[
+          Directory(p.join(parent.path, 'Data', 'Files')),
+          Directory(p.join(parent.path, 'Files')),
+          Directory(p.join(parent.path, 'files')),
+        ];
+        final byBase = <String, String>{};
+        final byRel  = <String, String>{};
+        final byId   = <String, String>{};
+        final uuidLike = RegExp(r'^[0-9a-fA-F-]{10,}$');
+        for (final dir in candidates) {
+          if (!await dir.exists()) continue;
+          for (final ent in dir.listSync(recursive: true, followLinks: false)) {
+            if (ent is! File) continue;
+            final abs = ent.path;
+            final base = p.basename(abs);
+            byBase[base] = abs;
+            final l = abs.replaceAll('\\\\', '/').toLowerCase();
+            int idx = l.indexOf('/data/files/');
+            if (idx != -1) {
+              final rel = l.substring(idx + 1);
+              byRel[rel] = abs;
+            }
+            idx = l.indexOf('/files/');
+            if (idx != -1) {
+              final rel = l.substring(idx + 1);
+              byRel[rel] = abs;
+            }
+            final noExt = base.contains('.') ? base.substring(0, base.lastIndexOf('.')) : base;
+            if (uuidLike.hasMatch(noExt)) {
+              byId[noExt] = abs;
+            }
+          }
+        }
+        if (byBase.isNotEmpty) diskFilesIndexByBase = byBase;
+        if (byRel.isNotEmpty)  diskFilesIndexByRel  = byRel;
+        if (byId.isNotEmpty)   diskFilesIndexById   = byId;
+      } catch (_) {}
+    }
 
     final result = <String, String>{};
     for (final id in usedIds) {
@@ -489,7 +618,7 @@ class CherryImporter {
         continue;
       }
 
-      // Prefer base64 -> content -> url (url not downloaded)
+      // Prefer base64 -> content -> archive(Data/Files) -> url (url not downloaded)
       final base64Str = (meta['base64'] ?? '') as String;
       final contentStr = (meta['content'] ?? '') as String;
       try {
@@ -513,25 +642,118 @@ class CherryImporter {
         }
       } catch (_) {}
 
+      // Try from archive/disk using multiple strategies
+      // 1) by normalized rel path from meta.path
+      try {
+        final mp = (meta['path'] ?? '').toString();
+        if (mp.isNotEmpty) {
+          String rel = mp.replaceAll('\\\\', '/').trim();
+          if (rel.startsWith('file://')) rel = rel.substring('file://'.length);
+          if (rel.startsWith('/')) rel = rel.substring(1);
+          final lowerRel = rel.toLowerCase();
+          final relKeys = <String>{
+            lowerRel,
+            lowerRel.startsWith('files/') ? lowerRel : 'files/$lowerRel',
+            lowerRel.startsWith('data/files/') ? lowerRel : 'data/files/$lowerRel',
+          };
+          bool done = false;
+          for (final key in relKeys) {
+            if (!done && filesIndexByRel != null && filesIndexByRel.containsKey(key)) {
+              final entry = filesIndexByRel[key]!;
+              final bytes = entry.content as List<int>;
+              await File(outPath).writeAsBytes(bytes);
+              result[id] = outPath; done = true;
+            }
+            if (!done && diskFilesIndexByRel != null && diskFilesIndexByRel.containsKey(key)) {
+              final src = diskFilesIndexByRel[key]!;
+              final bytes = await File(src).readAsBytes();
+              await File(outPath).writeAsBytes(bytes);
+              result[id] = outPath; done = true;
+            }
+            if (done) break;
+          }
+          if (done) continue;
+        }
+      } catch (_) {}
+
+      // 2) by filename candidates: name, origin_name, basename(path)
+      try {
+        final candidates = <String>{};
+        void add(String? s) { if (s != null && s.trim().isNotEmpty) candidates.add(p.basename(s)); }
+        add(meta['name']?.toString());
+        add(meta['origin_name']?.toString());
+        add(meta['path']?.toString());
+        bool done = false;
+        for (final base in candidates) {
+          if (!done && filesIndexByBase != null && filesIndexByBase.containsKey(base)) {
+            final entry = filesIndexByBase[base]!;
+            final bytes = entry.content as List<int>;
+            await File(outPath).writeAsBytes(bytes);
+            result[id] = outPath; done = true;
+          }
+          if (!done && diskFilesIndexByBase != null && diskFilesIndexByBase.containsKey(base)) {
+            final src = diskFilesIndexByBase[base]!;
+            final bytes = await File(src).readAsBytes();
+            await File(outPath).writeAsBytes(bytes);
+            result[id] = outPath; done = true;
+          }
+          if (done) break;
+        }
+        if (done) continue;
+      } catch (_) {}
+
+      // 3) by id + ext
+      try {
+        String ext = (meta['ext'] ?? '').toString().trim();
+        if (ext.isEmpty) {
+          final n = (meta['name'] ?? '').toString();
+          final b = p.basename(n);
+          if (b.contains('.')) ext = b.substring(b.lastIndexOf('.') + 1);
+        }
+        final extNoDot = ext.startsWith('.') ? ext.substring(1) : ext;
+        final idPlus = extNoDot.isNotEmpty ? '${id}.$extNoDot' : id;
+        if (filesIndexById != null && filesIndexById.containsKey(id)) {
+          final entry = filesIndexById[id]!;
+          final bytes = entry.content as List<int>;
+          await File(outPath).writeAsBytes(bytes);
+          result[id] = outPath; continue;
+        }
+        if (filesIndexByBase != null && filesIndexByBase.containsKey(idPlus)) {
+          final entry = filesIndexByBase[idPlus]!;
+          final bytes = entry.content as List<int>;
+          await File(outPath).writeAsBytes(bytes);
+          result[id] = outPath; continue;
+        }
+        if (diskFilesIndexById != null && diskFilesIndexById.containsKey(id)) {
+          final src = diskFilesIndexById[id]!;
+          final bytes = await File(src).readAsBytes();
+          await File(outPath).writeAsBytes(bytes);
+          result[id] = outPath; continue;
+        }
+        if (diskFilesIndexByBase != null && diskFilesIndexByBase.containsKey(idPlus)) {
+          final src = diskFilesIndexByBase[idPlus]!;
+          final bytes = await File(src).readAsBytes();
+          await File(outPath).writeAsBytes(bytes);
+          result[id] = outPath; continue;
+        }
+      } catch (_) {}
+
       // If neither available, we cannot materialize this file; skip (message will fall back to URL/none)
     }
     return result;
   }
 
-  // Returns (conversations, messages)
-  static Future<(int, int)> _importConversations({
+  // Returns (conversations, messages, extraFilesSaved)
+  static Future<(int, int, int)> _importConversations({
     required Map<String, Map<String, dynamic>> topicMeta,
     required Map<String, List<Map<String, dynamic>>> topicMessages,
     required Map<String, String> filePaths,
     required ChatService chatService,
     required RestoreMode mode,
     required Map<String, String> blockTexts,
+    required Map<String, List<_PendingAttachmentRef>> pendingAttachmentsByMessage,
   }) async {
     if (!chatService.initialized) await chatService.init();
-
-    if (mode == RestoreMode.overwrite) {
-      await chatService.clearAllData();
-    }
 
     // Build map of existing conv ids for merge
     final existingConvs = chatService.getAllConversations();
@@ -546,6 +768,7 @@ class CherryImporter {
 
     int convCount = 0;
     int msgCount = 0;
+    int extraSaved = 0; // number of files saved from base64/data urls
 
     for (final entry in topicMessages.entries) {
       final topicId = entry.key;
@@ -591,9 +814,9 @@ class CherryImporter {
         final usage = (m['usage'] as Map?)?.map((k, v) => MapEntry(k.toString(), v));
         final totalTokens = (usage?['total_tokens'] as num?)?.toInt();
 
-        // Attachments -> inline markers appended to content
+        // Attachments -> appended as user-style markers or assistant markdown
         final files = (m['files'] as List?) ?? const <dynamic>[];
-        final attachmentMarkers = <String>[];
+        final attachmentLines = <String>[];
         for (final f in files) {
           if (f is! Map) continue;
           final fid = (f['id'] ?? '').toString();
@@ -602,26 +825,74 @@ class CherryImporter {
           final mime = (f['type'] ?? '').toString();
           final savedPath = filePaths[fid];
           if (savedPath != null && savedPath.isNotEmpty) {
-            final isImage = mime.startsWith('image/') || name.toLowerCase().contains('.') && RegExp(r"\.(png|jpg|jpeg|gif|webp)").hasMatch(name.toLowerCase());
-            if (isImage) {
-              attachmentMarkers.add('[image:${savedPath}]');
-            } else {
-              attachmentMarkers.add('[file:${savedPath}|${name}|${mime.isEmpty ? 'application/octet-stream' : mime}]');
-            }
+            final isImage = mime.toLowerCase().startsWith('image') || (name.toLowerCase().contains('.') && RegExp(r"\.(png|jpg|jpeg|gif|webp)").hasMatch(name.toLowerCase()));
+            attachmentLines.add(_formatAttachmentLine(role, isImage, savedPath, name, mime));
           } else {
             // Fallback to URL if present (no download)
             final url = (f['url'] ?? '').toString();
             if (url.isNotEmpty) {
               final isImage = url.toLowerCase().contains(RegExp(r"\.(png|jpg|jpeg|gif|webp)$"));
-              if (isImage) {
-                attachmentMarkers.add('[image:${url}]');
-              } else {
-                attachmentMarkers.add('[file:${url}|${name}|${mime.isEmpty ? 'application/octet-stream' : mime}]');
-              }
+              attachmentLines.add(_formatAttachmentLine(role, isImage, url, name, mime));
             }
           }
         }
-        final mergedContent = attachmentMarkers.isEmpty ? content : (content.isEmpty ? attachmentMarkers.join('\n') : '$content\n${attachmentMarkers.join('\n')}' );
+
+        // Add images referenced by message blocks (image) and message.metadata.generateImageResponse
+        final extraAtt = pendingAttachmentsByMessage[msgId] ?? const <_PendingAttachmentRef>[];
+        for (final ref in extraAtt) {
+          if (ref.fileId != null) {
+            final savedPath = filePaths[ref.fileId!];
+            if (savedPath != null) {
+              attachmentLines.add(_formatAttachmentLine(role, ref.isImage, savedPath, ref.name ?? (ref.isImage ? 'image' : 'file'), ref.mime ?? (ref.isImage ? 'image/png' : 'application/octet-stream')));
+            }
+          } else if (ref.dataUrl != null) {
+            final savedPath = await _saveDataUrlToUpload(ref.dataUrl!);
+            if (savedPath != null) {
+              extraSaved += 1;
+              attachmentLines.add(_formatAttachmentLine(role, ref.isImage, savedPath, ref.name ?? (ref.isImage ? 'image' : 'file'), ref.mime ?? (ref.isImage ? 'image/png' : 'application/octet-stream')));
+            }
+          } else if (ref.url != null && ref.url!.isNotEmpty) {
+            attachmentLines.add(_formatAttachmentLine(role, ref.isImage, ref.url!, ref.name ?? (ref.isImage ? 'image' : 'file'), ref.mime ?? (ref.isImage ? 'image/png' : 'application/octet-stream')));
+          }
+        }
+
+        // generateImageResponse in metadata
+        final metadata = (m['metadata'] as Map?)?.map((k, v) => MapEntry(k.toString(), v));
+        final gen = (metadata?['generateImageResponse'] as Map?)?.map((k, v) => MapEntry(k.toString(), v));
+        if (gen != null) {
+          final imgs = (gen['images'] as List?) ?? const <dynamic>[];
+          for (final item in imgs) {
+            final s = (item ?? '').toString();
+            if (s.isEmpty) continue;
+            if (s.startsWith('data:image')) {
+              final saved = await _saveDataUrlToUpload(s);
+              if (saved != null) { extraSaved += 1; attachmentLines.add(_formatAttachmentLine(role, true, saved, 'image', 'image/png')); }
+            } else if (s.startsWith('http://') || s.startsWith('https://')) {
+              attachmentLines.add(_formatAttachmentLine(role, true, s, 'image', 'image/png'));
+            } else {
+              // raw base64 without prefix
+              final saved = await _saveDataUrlToUpload('data:image/png;base64,$s');
+              if (saved != null) { extraSaved += 1; attachmentLines.add(_formatAttachmentLine(role, true, saved, 'image', 'image/png')); }
+            }
+          }
+        }
+
+        // Extract any inline data:image base64 URLs inside assistant content and convert to files
+        if (role == 'assistant' && content.contains('data:image')) {
+          final dataUrls = _extractDataImageUrls(content);
+          if (dataUrls.isNotEmpty) {
+            for (final du in dataUrls) {
+              final saved = await _saveDataUrlToUpload(du);
+              if (saved != null) {
+                extraSaved += 1;
+                attachmentLines.add(_formatAttachmentLine(role, true, saved, 'image', 'image/png'));
+              }
+            }
+            // Optionally strip the base64 blobs from content to avoid giant text blobs
+            content = _stripDataImageUrls(content);
+          }
+        }
+        final mergedContent = attachmentLines.isEmpty ? content : (content.isEmpty ? attachmentLines.join('\n') : '$content\n${attachmentLines.join('\n')}' );
 
         messages.add(ChatMessage(
           id: msgId,
@@ -664,6 +935,87 @@ class CherryImporter {
       }
     }
 
-    return (convCount, msgCount);
+    return (convCount, msgCount, extraSaved);
   }
+
+  static String _formatAttachmentLine(String role, bool isImage, String target, String name, String mime) {
+    if (role == 'assistant') {
+      if (isImage) {
+        return '![]($target)';
+      } else {
+        final label = (name.isNotEmpty ? name : 'file');
+        return '[$label]($target)';
+      }
+    } else {
+      if (isImage) {
+        return '[image:$target]';
+      } else {
+        final m = (mime.isEmpty ? 'application/octet-stream' : mime);
+        final label = (name.isNotEmpty ? name : 'file');
+        return '[file:$target|$label|$m]';
+      }
+    }
+  }
+
+  static List<String> _extractDataImageUrls(String text) {
+    final re = RegExp(r'data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+\/\=\r\n]+');
+    return re.allMatches(text).map((m) => m.group(0)!).toList();
+  }
+
+  static String _stripDataImageUrls(String text) {
+    final re = RegExp(r'data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+\/\=\r\n]+');
+    return text.replaceAll(re, '');
+  }
+
+  static Future<String?> _saveDataUrlToUpload(String dataUrl) async {
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      final upload = Directory(p.join(docs.path, 'upload'));
+      if (!await upload.exists()) await upload.create(recursive: true);
+      // Extract mime and data
+      String mime = 'image/png';
+      String payload = dataUrl;
+      final colon = dataUrl.indexOf(':');
+      final semi = dataUrl.indexOf(';');
+      final base = dataUrl.indexOf('base64,');
+      if (colon >= 0 && semi > colon) {
+        mime = dataUrl.substring(colon + 1, semi);
+      }
+      if (base >= 0) {
+        payload = dataUrl.substring(base + 7);
+      }
+      final bytes = base64.decode(payload.replaceAll('\n', ''));
+      String ext = 'png';
+      switch (mime.toLowerCase()) {
+        case 'image/jpeg':
+        case 'image/jpg':
+          ext = 'jpg';
+          break;
+        case 'image/webp':
+          ext = 'webp';
+          break;
+        case 'image/gif':
+          ext = 'gif';
+          break;
+        default:
+          ext = 'png';
+      }
+      final fname = 'cherry_img_${DateTime.now().millisecondsSinceEpoch}_${bytes.length}.$ext';
+      final out = File(p.join(upload.path, fname));
+      await out.writeAsBytes(bytes);
+      return out.path;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+class _PendingAttachmentRef {
+  final String? fileId; // if present, resolve via filePaths
+  final String? dataUrl; // if present, save as file
+  final String? url; // remote url
+  final String? name;
+  final String? mime;
+  final bool isImage;
+  const _PendingAttachmentRef({this.fileId, this.dataUrl, this.url, this.name, this.mime, this.isImage = true});
 }
