@@ -2207,6 +2207,18 @@ abstract class AppLocalizations {
   /// **'Render selected messages to a PNG image'**
   String get messageExportSheetBatchExportImageSubtitle;
 
+  /// No description provided for @messageExportSheetShowThinkingAndToolCards.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Deep Thinking and tool cards'**
+  String get messageExportSheetShowThinkingAndToolCards;
+
+  /// No description provided for @messageExportSheetShowThinkingContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Show thinking content'**
+  String get messageExportSheetShowThinkingContent;
+
   /// No description provided for @messageExportSheetDateTimeWithSecondsPattern.
   ///
   /// In en, this message translates to:

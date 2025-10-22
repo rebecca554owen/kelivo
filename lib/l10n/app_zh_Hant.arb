@@ -361,6 +361,8 @@
   "messageExportSheetExportImage": "匯出為圖片",
   "messageExportSheetSingleExportImageSubtitle": "將該訊息渲染為 PNG 圖片",
   "messageExportSheetBatchExportImageSubtitle": "將選中的訊息渲染為 PNG 圖片",
+  "messageExportSheetShowThinkingAndToolCards": "顯示深度思考卡片與工具卡片",
+  "messageExportSheetShowThinkingContent": "顯示思考內容",
   "messageExportSheetDateTimeWithSecondsPattern": "yyyy年M月d日 HH:mm:ss",
   "exportDisclaimerAiGenerated": "內容由 AI 生成，請仔細甄別",
   "sideDrawerMenuRename": "重新命名",

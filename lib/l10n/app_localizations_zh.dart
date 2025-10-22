@@ -1107,6 +1107,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messageExportSheetBatchExportImageSubtitle => '将选中的消息渲染为 PNG 图片';
 
   @override
+  String get messageExportSheetShowThinkingAndToolCards => '显示思考卡片和工具卡片';
+
+  @override
+  String get messageExportSheetShowThinkingContent => '显示思考内容';
+
+  @override
   String get messageExportSheetDateTimeWithSecondsPattern =>
       'yyyy年M月d日 HH:mm:ss';
 
@@ -3610,6 +3616,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get messageExportSheetBatchExportImageSubtitle => '将选中的消息渲染为 PNG 图片';
 
   @override
+  String get messageExportSheetShowThinkingAndToolCards => '显示思考卡片和工具卡片';
+
+  @override
+  String get messageExportSheetShowThinkingContent => '显示思考内容';
+
+  @override
   String get messageExportSheetDateTimeWithSecondsPattern =>
       'yyyy年M月d日 HH:mm:ss';
 
@@ -6111,6 +6123,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get messageExportSheetBatchExportImageSubtitle => '將選中的訊息渲染為 PNG 圖片';
+
+  @override
+  String get messageExportSheetShowThinkingAndToolCards => '顯示深度思考卡片與工具卡片';
+
+  @override
+  String get messageExportSheetShowThinkingContent => '顯示思考內容';
 
   @override
   String get messageExportSheetDateTimeWithSecondsPattern =>

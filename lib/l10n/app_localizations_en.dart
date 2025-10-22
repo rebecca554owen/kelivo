@@ -1141,6 +1141,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Render selected messages to a PNG image';
 
   @override
+  String get messageExportSheetShowThinkingAndToolCards =>
+      'Show Deep Thinking and tool cards';
+
+  @override
+  String get messageExportSheetShowThinkingContent => 'Show thinking content';
+
+  @override
   String get messageExportSheetDateTimeWithSecondsPattern =>
       'yyyy-MM-dd HH:mm:ss';
 

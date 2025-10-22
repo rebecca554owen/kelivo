@@ -393,6 +393,8 @@
   "messageExportSheetExportImage": "导出为图片",
   "messageExportSheetSingleExportImageSubtitle": "将该消息渲染为 PNG 图片",
   "messageExportSheetBatchExportImageSubtitle": "将选中的消息渲染为 PNG 图片",
+  "messageExportSheetShowThinkingAndToolCards": "显示思考卡片和工具卡片",
+  "messageExportSheetShowThinkingContent": "显示思考内容",
   "messageExportSheetDateTimeWithSecondsPattern": "yyyy年M月d日 HH:mm:ss",
   "exportDisclaimerAiGenerated": "内容由 AI 生成，请仔细甄别",
   "imagePreviewSheetSaveImage": "保存图片",

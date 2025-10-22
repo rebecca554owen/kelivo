@@ -699,7 +699,7 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
                       children: [
                         _buildSwitchRow(
                           context,
-                          title: '显示深度思考卡片和工具卡片',
+                          title: l10n.messageExportSheetShowThinkingAndToolCards,
                           value: _showThinkingAndToolCards,
                           onChanged: (v) {
                             setState(() {
@@ -712,7 +712,7 @@ class _BatchExportSheetState extends State<_BatchExportSheet> {
                         ),
                         _buildSwitchRow(
                           context,
-                          title: '显示思考内容',
+                          title: l10n.messageExportSheetShowThinkingContent,
                           value: _expandThinkingContent,
                           onChanged: _showThinkingAndToolCards ? (v) {
                             setState(() {
@@ -938,7 +938,7 @@ class _ExportSheetState extends State<_ExportSheet> {
                       children: [
                         _buildSwitchRow(
                           context,
-                          title: '显示深度思考卡片和工具卡片',
+                          title: l10n.messageExportSheetShowThinkingAndToolCards,
                           value: _showThinkingAndToolCards,
                           onChanged: (v) {
                             setState(() {
@@ -951,7 +951,7 @@ class _ExportSheetState extends State<_ExportSheet> {
                         ),
                         _buildSwitchRow(
                           context,
-                          title: '显示思考内容',
+                          title: l10n.messageExportSheetShowThinkingContent,
                           value: _expandThinkingContent,
                           onChanged: _showThinkingAndToolCards ? (v) {
                             setState(() {
