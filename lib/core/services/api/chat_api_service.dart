@@ -1412,8 +1412,57 @@ class ChatApiService {
               // if (finishReason != null) {
               //   print('[ChatApi] Received finishReason from choices: $finishReason');
               // }
+
+              // Some providers return non-streaming format (message.content) in SSE
+              final message = c0['message'];
               final delta = c0['delta'];
-              if (delta != null) {
+
+              if (message != null && message['content'] != null) {
+                // Non-streaming format: choices[0].message.content
+                final mc = message['content'];
+                if (mc is String) {
+                  content = mc;
+                } else if (mc is List) {
+                  final sb = StringBuffer();
+                  for (final it in mc) {
+                    if (it is Map) {
+                      final t = (it['text'] ?? '') as String? ?? '';
+                      if (t.isNotEmpty && (it['type'] == null || it['type'] == 'text')) sb.write(t);
+                    }
+                  }
+                  content = sb.toString();
+                } else {
+                  content = (mc ?? '').toString();
+                }
+                if (content.isNotEmpty) {
+                  approxCompletionChars += content.length;
+                }
+
+                // Parse possible image outputs in message content, gated by model output capability
+                if (wantsImageOutput && mc is List) {
+                  final List<dynamic> imageItems = <dynamic>[];
+                  for (final it in mc) {
+                    if (it is Map && (it['type'] == 'image_url' || it['type'] == 'image')) imageItems.add(it);
+                  }
+                  if (imageItems.isNotEmpty) {
+                    final buf = StringBuffer();
+                    for (final it in imageItems) {
+                      if (it is! Map) continue;
+                      dynamic iu = it['image_url'];
+                      String? url;
+                      if (iu is String) {
+                        url = iu;
+                      } else if (iu is Map) {
+                        final u2 = iu['url'];
+                        if (u2 is String) url = u2;
+                      }
+                      if (url != null && url.isNotEmpty) buf.write('\n\n![image](' + url + ')');
+                    }
+                    if (buf.isNotEmpty) content = content + buf.toString();
+                  }
+                }
+              } else if (delta != null) {
+                // Streaming format: choices[0].delta.content
                 // content may be string or list of parts
                 final dc = delta['content'];
                 if (dc is String) {
