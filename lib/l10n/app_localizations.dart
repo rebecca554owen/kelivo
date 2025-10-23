@@ -4193,6 +4193,18 @@ abstract class AppLocalizations {
   /// **'Collapse reasoning after finish'**
   String get displaySettingsPageAutoCollapseThinkingSubtitle;
 
+  /// No description provided for @displaySettingsPageShowChatListDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Chat List Dates'**
+  String get displaySettingsPageShowChatListDateTitle;
+
+  /// No description provided for @displaySettingsPageShowChatListDateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Display date group labels in the conversation list'**
+  String get displaySettingsPageShowChatListDateSubtitle;
+
   /// No description provided for @displaySettingsPageShowUpdatesTitle.
   ///
   /// In en, this message translates to:

@@ -2133,6 +2133,12 @@ class AppLocalizationsZh extends AppLocalizations {
       '思考完成后自动折叠，保持界面简洁';
 
   @override
+  String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
+
+  @override
+  String get displaySettingsPageShowChatListDateSubtitle => '在左侧对话列表中显示日期分组标签';
+
+  @override
   String get displaySettingsPageShowUpdatesTitle => '显示更新';
 
   @override
@@ -4642,6 +4648,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '思考完成后自动折叠，保持界面简洁';
 
   @override
+  String get displaySettingsPageShowChatListDateTitle => '显示对话列表日期';
+
+  @override
+  String get displaySettingsPageShowChatListDateSubtitle => '在左侧对话列表中显示日期分组标签';
+
+  @override
   String get displaySettingsPageShowUpdatesTitle => '显示更新';
 
   @override
@@ -7148,6 +7160,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get displaySettingsPageAutoCollapseThinkingSubtitle =>
       '思考完成後自動折疊，保持介面簡潔';
+
+  @override
+  String get displaySettingsPageShowChatListDateTitle => '顯示對話列表日期';
+
+  @override
+  String get displaySettingsPageShowChatListDateSubtitle => '在左側對話列表中顯示日期分組標籤';
 
   @override
   String get displaySettingsPageShowUpdatesTitle => '顯示更新';

@@ -869,15 +869,16 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           const SizedBox(height: 8),
                         ],
                         for (final group in groups) ...[
-                          Padding(
-                            // Keep label text aligned with tiles (8 outer + 16 inner = 24)
-                            padding: const EdgeInsets.fromLTRB(14, 6, 0, 6),
-                            child: Text(
-                              group.label,
-                              textAlign: TextAlign.left,
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary),
+                          if (context.watch<SettingsProvider>().showChatListDate)
+                            Padding(
+                              // Keep label text aligned with tiles (8 outer + 16 inner = 24)
+                              padding: const EdgeInsets.fromLTRB(14, 6, 0, 6),
+                              child: Text(
+                                group.label,
+                                textAlign: TextAlign.left,
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary),
+                              ),
                             ),
-                          ),
                           Column(
                             children: [
                               for (final chat in group.items)
@@ -891,7 +892,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          if (context.watch<SettingsProvider>().showChatListDate)
+                            const SizedBox(height: 8),
                         ],
                       ],
                     ),
@@ -1652,7 +1654,7 @@ class _ChatTile extends StatelessWidget {
       tileColor = selected ? cs.primary.withOpacity(0.12) : cs.surface;
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 4),
       child: IosCardPress(
         baseColor: tileColor,
         borderRadius: BorderRadius.circular(16),

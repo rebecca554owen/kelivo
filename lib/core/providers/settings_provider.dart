@@ -42,6 +42,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayEnableMathRenderingKey = 'display_enable_math_rendering_v1';
   static const String _displayEnableUserMarkdownKey = 'display_enable_user_markdown_v1';
   static const String _displayEnableReasoningMarkdownKey = 'display_enable_reasoning_markdown_v1';
+  static const String _displayShowChatListDateKey = 'display_show_chat_list_date_v1';
   static const String _appLocaleKey = 'app_locale_v1';
   static const String _translateModelKey = 'translate_model_v1';
   static const String _translatePromptKey = 'translate_prompt_v1';
@@ -200,6 +201,7 @@ class SettingsProvider extends ChangeNotifier {
     _enableMathRendering = prefs.getBool(_displayEnableMathRenderingKey) ?? true;
     _enableUserMarkdown = prefs.getBool(_displayEnableUserMarkdownKey) ?? true;
     _enableReasoningMarkdown = prefs.getBool(_displayEnableReasoningMarkdownKey) ?? true;
+    _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
     // Load app locale; default to follow system on first launch
     _appLocaleTag = prefs.getString(_appLocaleKey);
     if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
@@ -791,6 +793,17 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_displayEnableReasoningMarkdownKey, v);
   }
 
+  // Display: show chat list date
+  bool _showChatListDate = false;
+  bool get showChatListDate => _showChatListDate;
+  Future<void> setShowChatListDate(bool v) async {
+    if (_showChatListDate == v) return;
+    _showChatListDate = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayShowChatListDateKey, v);
+  }
+
   // Display: haptics on message generation
   bool _hapticsOnGenerate = false;
   bool get hapticsOnGenerate => _hapticsOnGenerate;
@@ -966,6 +979,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._enableMathRendering = _enableMathRendering;
     copy._enableUserMarkdown = _enableUserMarkdown;
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
+    copy._showChatListDate = _showChatListDate;
     return copy;
   }
 }
