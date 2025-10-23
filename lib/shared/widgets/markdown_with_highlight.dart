@@ -406,6 +406,19 @@ class MarkdownWithCodeHighlight extends StatelessWidget {
     // Normalize newlines to simplify regex handling
     var out = input.replaceAll('\r\n', '\n');
 
+    // 2025-10-23 Fix: Remove title attributes from markdown links to work around gpt_markdown's
+    // link regex limitation. The package's regex `[^\s]*` stops at spaces, so
+    // [text](url "title") breaks. Strip titles while preserving the URL.
+    // Matches: [text](url "title") or [text](url 'title') or [text](url title)
+    final linkWithTitle = RegExp(
+      r'\[([^\]]+)\]\(([^\s)]+)\s+[^)]*\)',
+    );
+    out = out.replaceAllMapped(linkWithTitle, (match) {
+      final text = match.group(1);
+      final url = match.group(2);
+      return '[$text]($url)';
+    });
+
     // 1) Move fenced code from list lines to the next line: "* ```lang" -> "*\n```lang"
     final bulletFence = RegExp(r"^(\s*(?:[*+-]|\d+\.)\s+)```([^\s`]*)\s*$", multiLine: true);
     out = out.replaceAllMapped(bulletFence, (m) => "${m[1]}\n```${m[2]}" );

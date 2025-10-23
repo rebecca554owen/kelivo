@@ -2200,6 +2200,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Collapse reasoning after finish';
 
   @override
+  String get displaySettingsPageShowChatListDateTitle => 'Show Chat List Dates';
+
+  @override
+  String get displaySettingsPageShowChatListDateSubtitle =>
+      'Display date group labels in the conversation list';
+
+  @override
   String get displaySettingsPageShowUpdatesTitle => 'Show Updates';
 
   @override

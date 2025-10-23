@@ -729,6 +729,8 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
           _iosDivider(context),
           _iosSwitchRow(context, icon: Lucide.ChevronRight, label: l10n.displaySettingsPageMessageNavButtonsTitle, value: sp.showMessageNavButtons, onChanged: (v) => context.read<SettingsProvider>().setShowMessageNavButtons(v)),
           _iosDivider(context),
+          _iosSwitchRow(context, icon: Lucide.Calendar, label: l10n.displaySettingsPageShowChatListDateTitle, value: sp.showChatListDate, onChanged: (v) => context.read<SettingsProvider>().setShowChatListDate(v)),
+          _iosDivider(context),
           _iosSwitchRow(context, icon: Lucide.MessageCirclePlus, label: l10n.displaySettingsPageNewChatOnLaunchTitle, value: sp.newChatOnLaunch, onChanged: (v) => context.read<SettingsProvider>().setNewChatOnLaunch(v)),
         ]),
       ]),

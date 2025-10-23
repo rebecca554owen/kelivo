@@ -687,6 +687,8 @@
   "displaySettingsPageShowTokenStatsSubtitle": "顯示 token 用量與訊息數量",
   "displaySettingsPageAutoCollapseThinkingTitle": "自動折疊思考",
   "displaySettingsPageAutoCollapseThinkingSubtitle": "思考完成後自動折疊，保持介面簡潔",
+  "displaySettingsPageShowChatListDateTitle": "顯示對話列表日期",
+  "displaySettingsPageShowChatListDateSubtitle": "在左側對話列表中顯示日期分組標籤",
   "displaySettingsPageShowUpdatesTitle": "顯示更新",
   "displaySettingsPageShowUpdatesSubtitle": "顯示應用程式更新通知",
   "displaySettingsPageMessageNavButtonsTitle": "訊息導航按鈕",
