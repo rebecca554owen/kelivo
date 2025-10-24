@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:characters/characters.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -29,6 +30,8 @@ import '../../../utils/avatar_cache.dart';
 import 'dart:ui' as ui;
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
+import '../../../desktop/desktop_context_menu.dart';
+import '../../../desktop/menu_anchor.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -41,6 +44,7 @@ class SideDrawer extends StatefulWidget {
     this.loadingConversationIds = const <String>{},
     this.embedded = false,
     this.embeddedWidth,
+    this.showBottomBar = true,
   });
 
   final String userName;
@@ -51,12 +55,14 @@ class SideDrawer extends StatefulWidget {
   final Set<String> loadingConversationIds;
   final bool embedded; // when true, render as a fixed side panel instead of a Drawer
   final double? embeddedWidth; // optional explicit width for embedded mode
+  final bool showBottomBar; // desktop can hide this bottom area
 
   @override
   State<SideDrawer> createState() => _SideDrawerState();
 }
 
 class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
+  bool get _isDesktop => defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   final GlobalKey _assistantTileKey = GlobalKey();
@@ -186,10 +192,60 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     // Update check moved to app startup (main.dart)
   }
 
-  void _showChatMenu(BuildContext context, ChatItem chat) async {
+  void _showChatMenu(BuildContext context, ChatItem chat, {Offset? anchor}) async {
     final l10n = AppLocalizations.of(context)!;
     final chatService = context.read<ChatService>();
     final isPinned = chatService.getConversation(chat.id)?.isPinned ?? false;
+    final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+
+    if (isDesktop) {
+      // Desktop: glass anchored menu near cursor/button
+      Offset pos = anchor ?? DesktopMenuAnchor.positionOrCenter(context);
+      await showDesktopContextMenuAt(
+        context,
+        globalPosition: pos,
+        items: [
+          DesktopContextMenuItem(
+            icon: Lucide.Edit,
+            label: l10n.sideDrawerMenuRename,
+            onTap: () async { await _renameChat(context, chat); },
+          ),
+          DesktopContextMenuItem(
+            icon: Lucide.Pin,
+            label: isPinned ? l10n.sideDrawerMenuUnpin : l10n.sideDrawerMenuPin,
+            onTap: () async { await chatService.togglePinConversation(chat.id); },
+          ),
+          DesktopContextMenuItem(
+            icon: Lucide.RefreshCw,
+            label: l10n.sideDrawerMenuRegenerateTitle,
+            onTap: () async { await _regenerateTitle(context, chat.id); },
+          ),
+          DesktopContextMenuItem(
+            icon: Lucide.Trash2,
+            label: l10n.sideDrawerMenuDelete,
+            danger: true,
+            onTap: () async {
+              final deletingCurrent = chatService.currentConversationId == chat.id;
+              await chatService.deleteConversation(chat.id);
+              showAppSnackBar(
+                context,
+                message: l10n.sideDrawerDeleteSnackbar(chat.title),
+                type: NotificationType.success,
+                duration: const Duration(seconds: 3),
+              );
+              if (deletingCurrent || chatService.currentConversationId == null) {
+                widget.onNewConversation?.call();
+              }
+              Navigator.of(context).maybePop();
+            },
+          ),
+        ],
+      );
+      return;
+    }
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -863,6 +919,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                   loading: widget.loadingConversationIds.contains(chat.id),
                                   onTap: () => widget.onSelectConversation?.call(chat.id),
                                   onLongPress: () => _showChatMenu(context, chat),
+                                  onSecondaryTap: (pos) => _showChatMenu(context, chat, anchor: pos),
                                 ),
                             ],
                           ),
@@ -889,6 +946,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                   loading: widget.loadingConversationIds.contains(chat.id),
                                   onTap: () => widget.onSelectConversation?.call(chat.id),
                                   onLongPress: () => _showChatMenu(context, chat),
+                                  onSecondaryTap: (pos) => _showChatMenu(context, chat, anchor: pos),
                                 ),
                             ],
                           ),
@@ -902,8 +960,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               ),
             ),
 
-            // 底部工具栏（固定）
-            Container(
+            if (widget.showBottomBar && (!widget.embedded || !_isDesktop)) Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               decoration: BoxDecoration(
                 color: widget.embedded ? Colors.transparent : cs.surface,
@@ -1625,12 +1682,13 @@ class _ChatGroup {
   _ChatGroup({required this.label, required this.items});
 }
 
-class _ChatTile extends StatelessWidget {
+class _ChatTile extends StatefulWidget {
   const _ChatTile({
     required this.chat,
     required this.textColor,
     this.onTap,
     this.onLongPress,
+    this.onSecondaryTap,
     this.selected = false,
     this.loading = false,
   });
@@ -1639,8 +1697,17 @@ class _ChatTile extends StatelessWidget {
   final Color textColor;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final void Function(Offset globalPosition)? onSecondaryTap;
   final bool selected;
   final bool loading;
+
+  @override
+  State<_ChatTile> createState() => _ChatTileState();
+}
+
+class _ChatTileState extends State<_ChatTile> {
+  bool _hovered = false;
+  bool get _isDesktop => defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux;
 
   @override
   Widget build(BuildContext context) {
@@ -1649,38 +1716,66 @@ class _ChatTile extends StatelessWidget {
     final Color tileColor;
     if (embedded) {
       // In tablet embedded mode, keep selected highlight, others transparent
-      tileColor = selected ? cs.primary.withOpacity(0.16) : Colors.transparent;
+      tileColor = widget.selected ? cs.primary.withOpacity(0.16) : Colors.transparent;
     } else {
-      tileColor = selected ? cs.primary.withOpacity(0.12) : cs.surface;
+      tileColor = widget.selected ? cs.primary.withOpacity(0.12) : cs.surface;
     }
+    final base = _isDesktop && !widget.selected && _hovered
+        ? (embedded ? cs.primary.withOpacity(0.08) : cs.surface.withOpacity(0.9))
+        : tileColor;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: IosCardPress(
-        baseColor: tileColor,
-        borderRadius: BorderRadius.circular(16),
-        haptics: false,
-        onTap: onTap,
-        onLongPress: onLongPress,
-        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                chat.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: textColor,
-                  fontWeight: FontWeight.w400,
+      child: GestureDetector(
+        onSecondaryTapDown: (details) {
+          if (_isDesktop) {
+            widget.onSecondaryTap?.call(details.globalPosition);
+          }
+        },
+        onLongPress: () {
+          if (_isDesktop) {
+            try {
+              final rb = context.findRenderObject() as RenderBox?;
+              if (rb != null) {
+                final center = rb.localToGlobal(Offset(rb.size.width / 2, rb.size.height / 2));
+                widget.onSecondaryTap?.call(center);
+                return;
+              }
+            } catch (_) {}
+          }
+          widget.onLongPress?.call();
+        },
+        child: MouseRegion(
+          onEnter: (_) { if (_isDesktop) setState(() => _hovered = true); },
+          onExit: (_) { if (_isDesktop) setState(() => _hovered = false); },
+          cursor: _isDesktop ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          child: IosCardPress(
+            baseColor: base,
+            borderRadius: BorderRadius.circular(16),
+            haptics: false,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.chat.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: widget.textColor,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
                 ),
-              ),
+                if (widget.loading) ...[
+                  const SizedBox(width: 8),
+                  _LoadingDot(),
+                ],
+              ],
             ),
-            if (loading) ...[
-              const SizedBox(width: 8),
-              _LoadingDot(),
-            ],
-          ],
+          ),
         ),
       ),
     );

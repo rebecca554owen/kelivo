@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import '../../../core/services/haptics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -25,6 +26,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../desktop/desktop_context_menu.dart';
+import '../../../desktop/menu_anchor.dart';
 
 class ChatMessageWidget extends StatefulWidget {
   final ChatMessage message;
@@ -116,6 +119,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   final GlobalKey _userBubbleKey = GlobalKey();
   OverlayEntry? _userMenuOverlay;
   bool _userMenuActive = false; // for bubble highlight/scale
+  // Desktop anchored menus for bottom action buttons
+  final GlobalKey _moreBtnKey1 = GlobalKey();
+  final GlobalKey _translateBtnKey1 = GlobalKey();
+  final GlobalKey _moreBtnKey2 = GlobalKey();
+  final GlobalKey _translateBtnKey2 = GlobalKey();
   late final Ticker _ticker = Ticker((_) {
     if (mounted && _tickActive) setState(() {});
   });
@@ -562,9 +570,22 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             ],
           ),
           const SizedBox(height: 8),
-          // Message content (long-press for context menu)
+          // Message content (context menu: long-press on mobile, right-click on desktop)
           GestureDetector(
-            onLongPressStart: (_) => _showUserContextMenu(),
+            onLongPressStart: (_) {
+              final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                  defaultTargetPlatform == TargetPlatform.windows ||
+                  defaultTargetPlatform == TargetPlatform.linux;
+              if (isDesktop) return; // Desktop uses right-click menu
+              _showUserContextMenu();
+            },
+            onSecondaryTapDown: (details) {
+              final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                  defaultTargetPlatform == TargetPlatform.windows ||
+                  defaultTargetPlatform == TargetPlatform.linux;
+              if (!isDesktop) return; // Mobile keeps long-press
+              _showUserContextMenuAt(details.globalPosition);
+            },
             behavior: HitTestBehavior.translucent,
             child: Container(
               key: _userBubbleKey,
@@ -780,12 +801,32 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 width: 28,
                 height: 28,
                 child: Center(
-                  child: IosIconButton(
-                    size: 16,
-                    padding: EdgeInsets.all(4),
-                    icon: Lucide.Ellipsis,
-                    color: cs.onSurface.withOpacity(0.9),
-                    onTap: widget.onMore,
+                  child: GestureDetector(
+                    key: _moreBtnKey1,
+                    onTapDown: (d) {
+                      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                          defaultTargetPlatform == TargetPlatform.windows ||
+                          defaultTargetPlatform == TargetPlatform.linux;
+                      if (isDesktop) {
+                        try { DesktopMenuAnchor.setPosition(d.globalPosition); } catch (_) {}
+                      }
+                    },
+                    onTap: () {
+                      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                          defaultTargetPlatform == TargetPlatform.windows ||
+                          defaultTargetPlatform == TargetPlatform.linux;
+                      if (isDesktop) {
+                        _setAnchorFromKey(_moreBtnKey1);
+                      }
+                      widget.onMore?.call();
+                    },
+                    child: IosIconButton(
+                      size: 16,
+                      padding: EdgeInsets.all(4),
+                      icon: Lucide.Ellipsis,
+                      color: cs.onSurface.withOpacity(0.9),
+                      onTap: null,
+                    ),
                   ),
                 ),
               ),
@@ -807,6 +848,56 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         ],
       ),
     );
+  }
+
+  void _showUserContextMenuAt(Offset globalPosition) async {
+    final l10n = AppLocalizations.of(context)!;
+    // Haptic feedback
+    try { Haptics.light(); } catch (_) {}
+    await showDesktopContextMenuAt(
+      context,
+      globalPosition: globalPosition,
+      items: [
+        DesktopContextMenuItem(
+          icon: Lucide.Copy,
+          label: l10n.shareProviderSheetCopyButton,
+          onTap: () async {
+            if (widget.onCopy != null) {
+              widget.onCopy!.call();
+            } else {
+              await Clipboard.setData(ClipboardData(text: widget.message.content));
+              if (mounted) {
+                showAppSnackBar(
+                  context,
+                  message: l10n.chatMessageWidgetCopiedToClipboard,
+                  type: NotificationType.success,
+                );
+              }
+            }
+          },
+        ),
+        DesktopContextMenuItem(
+          icon: Lucide.Pencil,
+          label: l10n.messageMoreSheetEdit,
+          onTap: () => (widget.onEdit ?? widget.onMore)?.call(),
+        ),
+        DesktopContextMenuItem(
+          icon: Lucide.Trash2,
+          label: l10n.messageMoreSheetDelete,
+          danger: true,
+          onTap: () => (widget.onDelete ?? widget.onMore)?.call(),
+        ),
+      ],
+    );
+  }
+
+  void _setAnchorFromKey(GlobalKey key) {
+    final rb = key.currentContext?.findRenderObject() as RenderBox?;
+    if (rb == null) return;
+    try {
+      final center = rb.localToGlobal(Offset(rb.size.width / 2, rb.size.height));
+      DesktopMenuAnchor.setPosition(center);
+    } catch (_) {}
   }
 
   _ParsedUserContent _parseUserContent(String raw) {
@@ -1223,12 +1314,32 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 width: 28,
                 height: 28,
                 child: Center(
-                  child: IosIconButton(
-                    size: 16,
-                    padding: EdgeInsets.all(4),
-                    icon: Lucide.Languages,
-                    color: cs.onSurface.withOpacity(0.9),
-                    onTap: widget.onTranslate,
+                  child: GestureDetector(
+                    key: _translateBtnKey2,
+                    onTapDown: (d) {
+                      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                          defaultTargetPlatform == TargetPlatform.windows ||
+                          defaultTargetPlatform == TargetPlatform.linux;
+                      if (isDesktop) {
+                        try { DesktopMenuAnchor.setPosition(d.globalPosition); } catch (_) {}
+                      }
+                    },
+                    onTap: () {
+                      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                          defaultTargetPlatform == TargetPlatform.windows ||
+                          defaultTargetPlatform == TargetPlatform.linux;
+                      if (isDesktop) {
+                        _setAnchorFromKey(_translateBtnKey2);
+                      }
+                      widget.onTranslate?.call();
+                    },
+                    child: IosIconButton(
+                      size: 16,
+                      padding: EdgeInsets.all(4),
+                      icon: Lucide.Languages,
+                      color: cs.onSurface.withOpacity(0.9),
+                      onTap: null,
+                    ),
                   ),
                 ),
               ),
@@ -1237,12 +1348,32 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 width: 28,
                 height: 28,
                 child: Center(
-                  child: IosIconButton(
-                    size: 16,
-                    padding: EdgeInsets.all(4),
-                    icon: Lucide.Ellipsis,
-                    color: cs.onSurface.withOpacity(0.9),
-                    onTap: widget.onMore,
+                  child: GestureDetector(
+                    key: _moreBtnKey2,
+                    onTapDown: (d) {
+                      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                          defaultTargetPlatform == TargetPlatform.windows ||
+                          defaultTargetPlatform == TargetPlatform.linux;
+                      if (isDesktop) {
+                        try { DesktopMenuAnchor.setPosition(d.globalPosition); } catch (_) {}
+                      }
+                    },
+                    onTap: () {
+                      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                          defaultTargetPlatform == TargetPlatform.windows ||
+                          defaultTargetPlatform == TargetPlatform.linux;
+                      if (isDesktop) {
+                        _setAnchorFromKey(_moreBtnKey2);
+                      }
+                      widget.onMore?.call();
+                    },
+                    child: IosIconButton(
+                      size: 16,
+                      padding: EdgeInsets.all(4),
+                      icon: Lucide.Ellipsis,
+                      color: cs.onSurface.withOpacity(0.9),
+                      onTap: null,
+                    ),
                   ),
                 ),
               ),
@@ -1513,7 +1644,7 @@ class _MenuItem extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: ic),
             const SizedBox(width: 10),
-            Expanded(child: Text(label, style: TextStyle(fontSize: 14.5, color: fg))),
+            Expanded(child: Text(label, style: TextStyle(fontSize: 14.5, color: fg, decoration: TextDecoration.none))),
           ],
         ),
       ),

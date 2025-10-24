@@ -791,6 +791,48 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get assistantEditClearButton;
 
+  /// No description provided for @desktopNavChatTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get desktopNavChatTooltip;
+
+  /// No description provided for @desktopNavTranslateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get desktopNavTranslateTooltip;
+
+  /// No description provided for @desktopNavThemeToggleTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get desktopNavThemeToggleTooltip;
+
+  /// No description provided for @desktopNavSettingsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get desktopNavSettingsTooltip;
+
+  /// No description provided for @desktopAvatarMenuUseEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Use emoji'**
+  String get desktopAvatarMenuUseEmoji;
+
+  /// No description provided for @desktopAvatarMenuChangeFromImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Change from image…'**
+  String get desktopAvatarMenuChangeFromImage;
+
+  /// No description provided for @desktopAvatarMenuReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset avatar'**
+  String get desktopAvatarMenuReset;
+
   /// No description provided for @assistantEditAvatarChooseImage.
   ///
   /// In en, this message translates to:

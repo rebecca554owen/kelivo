@@ -47,6 +47,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../utils/brand_assets.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -181,6 +182,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   bool _learningModeEnabled = false;
   static const Duration _sidebarAnimDuration = Duration(milliseconds: 260);
   static const Curve _sidebarAnimCurve = Curves.easeOutCubic;
+  // Desktop: resizable embedded sidebar width
+  double _embeddedSidebarWidth = 300;
+  static const double _sidebarMinWidth = 200;
+  static const double _sidebarMaxWidth = 480;
 
   // Drawer haptics for swipe-open
   double _lastDrawerValue = 0.0;
@@ -773,7 +778,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget _buildTabletSidebar(BuildContext context) {
     final sidebar = SideDrawer(
       embedded: true,
-      embeddedWidth: 300,
+      embeddedWidth: _embeddedSidebarWidth,
       userName: context.watch<UserProvider>().name,
       assistantName: (() {
         final l10n = AppLocalizations.of(context)!;
@@ -795,14 +800,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return AnimatedContainer(
       duration: _sidebarAnimDuration,
       curve: _sidebarAnimCurve,
-      width: _tabletSidebarOpen ? 300 : 0,
+      width: _tabletSidebarOpen ? _embeddedSidebarWidth : 0,
       color: Colors.transparent,
       child: ClipRect(
         child: OverflowBox(
           alignment: Alignment.centerLeft,
           minWidth: 0,
-          maxWidth: 300,
-          child: SizedBox(width: 300, child: sidebar),
+          maxWidth: _embeddedSidebarWidth,
+          child: SizedBox(width: _embeddedSidebarWidth, child: sidebar),
         ),
       ),
     );
@@ -4187,6 +4192,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     required String? modelDisplay,
     required ColorScheme cs,
   }) {
+    final bool _isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
     return Stack(
       children: [
         Positioned.fill(child: _buildAssistantBackground(context)),
@@ -4194,18 +4202,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       child: Row(
       children: [
         _buildTabletSidebar(context),
-        AnimatedContainer(
-          duration: _sidebarAnimDuration,
-          curve: _sidebarAnimCurve,
-          width: _tabletSidebarOpen ? 0.6 : 0,
-          child: _tabletSidebarOpen
-              ? VerticalDivider(
-                  width: 0.6,
-                  thickness: 0.5,
-                  color: cs.outlineVariant.withOpacity(0.20),
-                )
-              : const SizedBox.shrink(),
-        ),
+        if (_isDesktop)
+          _SidebarResizeHandle(
+            visible: _tabletSidebarOpen,
+            onDrag: (dx) {
+              setState(() {
+                _embeddedSidebarWidth = (_embeddedSidebarWidth + dx).clamp(_sidebarMinWidth, _sidebarMaxWidth);
+              });
+            },
+          )
+        else
+          AnimatedContainer(
+            duration: _sidebarAnimDuration,
+            curve: _sidebarAnimCurve,
+            width: _tabletSidebarOpen ? 0.6 : 0,
+            child: _tabletSidebarOpen
+                ? VerticalDivider(
+                    width: 0.6,
+                    thickness: 0.5,
+                    color: cs.outlineVariant.withOpacity(0.20),
+                  )
+                : const SizedBox.shrink(),
+          ),
         Expanded(
           child: Scaffold(
             key: _scaffoldKey,
@@ -5052,6 +5070,45 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void didPopNext() {
     // Returning to this page: ensure keyboard stays closed unless user taps.
     WidgetsBinding.instance.addPostFrameCallback((_) => _dismissKeyboard());
+  }
+
+}
+
+class _SidebarResizeHandle extends StatefulWidget {
+  const _SidebarResizeHandle({required this.visible, required this.onDrag});
+  final bool visible;
+  final ValueChanged<double> onDrag;
+
+  @override
+  State<_SidebarResizeHandle> createState() => _SidebarResizeHandleState();
+}
+
+class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
+  bool _hovered = false;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (!widget.visible) return const SizedBox.shrink();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: (details) => widget.onDrag(details.delta.dx),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Container(
+          width: 8,
+          height: double.infinity,
+          color: Colors.transparent,
+          alignment: Alignment.center,
+          child: Container(
+            width: 1,
+            height: double.infinity,
+            color: (_hovered ? cs.primary.withOpacity(0.45) : cs.outlineVariant.withOpacity(0.20)),
+          ),
+        ),
+      ),
+    );
   }
 }
 

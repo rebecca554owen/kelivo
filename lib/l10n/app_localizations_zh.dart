@@ -368,6 +368,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditClearButton => '清除';
 
   @override
+  String get desktopNavChatTooltip => '聊天';
+
+  @override
+  String get desktopNavTranslateTooltip => '翻译';
+
+  @override
+  String get desktopNavThemeToggleTooltip => '主题切换';
+
+  @override
+  String get desktopNavSettingsTooltip => '设置';
+
+  @override
+  String get desktopAvatarMenuUseEmoji => '使用表情符号';
+
+  @override
+  String get desktopAvatarMenuChangeFromImage => '从图片更换…';
+
+  @override
+  String get desktopAvatarMenuReset => '重置头像';
+
+  @override
   String get assistantEditAvatarChooseImage => '选择图片';
 
   @override
@@ -2883,6 +2904,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditClearButton => '清除';
 
   @override
+  String get desktopNavChatTooltip => '聊天';
+
+  @override
+  String get desktopNavTranslateTooltip => '翻译';
+
+  @override
+  String get desktopNavThemeToggleTooltip => '主题切换';
+
+  @override
+  String get desktopNavSettingsTooltip => '设置';
+
+  @override
+  String get desktopAvatarMenuUseEmoji => '使用表情符号';
+
+  @override
+  String get desktopAvatarMenuChangeFromImage => '从图片更换…';
+
+  @override
+  String get desktopAvatarMenuReset => '重置头像';
+
+  @override
   String get assistantEditAvatarChooseImage => '选择图片';
 
   @override
@@ -5396,6 +5438,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditClearButton => '清除';
+
+  @override
+  String get desktopNavChatTooltip => '聊天';
+
+  @override
+  String get desktopNavTranslateTooltip => '翻譯';
+
+  @override
+  String get desktopNavThemeToggleTooltip => '主題切換';
+
+  @override
+  String get desktopNavSettingsTooltip => '設定';
+
+  @override
+  String get desktopAvatarMenuUseEmoji => '使用表情符號';
+
+  @override
+  String get desktopAvatarMenuChangeFromImage => '從圖片更換…';
+
+  @override
+  String get desktopAvatarMenuReset => '重置頭像';
 
   @override
   String get assistantEditAvatarChooseImage => '選擇圖片';

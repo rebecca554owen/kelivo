@@ -377,6 +377,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditClearButton => 'Clear';
 
   @override
+  String get desktopNavChatTooltip => 'Chat';
+
+  @override
+  String get desktopNavTranslateTooltip => 'Translate';
+
+  @override
+  String get desktopNavThemeToggleTooltip => 'Theme';
+
+  @override
+  String get desktopNavSettingsTooltip => 'Settings';
+
+  @override
+  String get desktopAvatarMenuUseEmoji => 'Use emoji';
+
+  @override
+  String get desktopAvatarMenuChangeFromImage => 'Change from image…';
+
+  @override
+  String get desktopAvatarMenuReset => 'Reset avatar';
+
+  @override
   String get assistantEditAvatarChooseImage => 'Choose Image';
 
   @override

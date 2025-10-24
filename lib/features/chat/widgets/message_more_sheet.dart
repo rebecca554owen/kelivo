@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:intl/intl.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/chat_message.dart';
@@ -11,20 +12,81 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../desktop/desktop_context_menu.dart';
+import '../../../desktop/menu_anchor.dart';
 
 enum MessageMoreAction { edit, fork, delete, share }
 
 Future<MessageMoreAction?> showMessageMoreSheet(BuildContext context, ChatMessage message) async {
-  final cs = Theme.of(context).colorScheme;
-  return showModalBottomSheet<MessageMoreAction?>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: cs.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (ctx) => _MessageMoreSheet(message: message, parentContext: context),
+  final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
+  if (!isDesktop) {
+    final cs = Theme.of(context).colorScheme;
+    return showModalBottomSheet<MessageMoreAction?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _MessageMoreSheet(message: message, parentContext: context),
+    );
+  }
+
+  // Desktop: show anchored glass menu near the clicked button
+  final l10n = AppLocalizations.of(context)!;
+  MessageMoreAction? selected;
+  await showDesktopContextMenuAt(
+    context,
+    globalPosition: DesktopMenuAnchor.positionOrCenter(context),
+    items: [
+      DesktopContextMenuItem(
+        icon: Lucide.TextSelect,
+        label: l10n.messageMoreSheetSelectCopy,
+        onTap: () {
+          // Open the select-copy sheet after closing menu (keep behavior)
+          Future.delayed(const Duration(milliseconds: 40), () {
+            showSelectCopySheet(context, message: message);
+          });
+        },
+      ),
+      DesktopContextMenuItem(
+        icon: Lucide.BookOpenText,
+        label: l10n.messageMoreSheetRenderWebView,
+        onTap: () {
+          showAppSnackBar(
+            context,
+            message: l10n.messageMoreSheetNotImplemented,
+            type: NotificationType.warning,
+            duration: const Duration(seconds: 3),
+          );
+        },
+      ),
+      DesktopContextMenuItem(
+        icon: Lucide.Pencil,
+        label: l10n.messageMoreSheetEdit,
+        onTap: () { selected = MessageMoreAction.edit; },
+      ),
+      DesktopContextMenuItem(
+        icon: Lucide.Share,
+        label: l10n.messageMoreSheetShare,
+        onTap: () { selected = MessageMoreAction.share; },
+      ),
+      DesktopContextMenuItem(
+        icon: Lucide.GitFork,
+        label: l10n.messageMoreSheetCreateBranch,
+        onTap: () { selected = MessageMoreAction.fork; },
+      ),
+      DesktopContextMenuItem(
+        icon: Lucide.Trash2,
+        label: l10n.messageMoreSheetDelete,
+        danger: true,
+        onTap: () { selected = MessageMoreAction.delete; },
+      ),
+    ],
   );
+  return selected;
 }
 
 class _MessageMoreSheet extends StatefulWidget {
