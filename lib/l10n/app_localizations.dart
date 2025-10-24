@@ -4661,6 +4661,18 @@ abstract class AppLocalizations {
   /// **'Jina'**
   String get searchServiceNameJina;
 
+  /// No description provided for @searchServiceNameBocha.
+  ///
+  /// In en, this message translates to:
+  /// **'Bocha'**
+  String get searchServiceNameBocha;
+
+  /// No description provided for @searchProviderBochaDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Bocha web search API. Accurate web results with optional summaries.'**
+  String get searchProviderBochaDescription;
+
   /// No description provided for @generationInterrupted.
   ///
   /// In en, this message translates to:

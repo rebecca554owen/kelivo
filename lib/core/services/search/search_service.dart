@@ -10,6 +10,7 @@ import 'providers/brave_search_service.dart';
 import 'providers/metaso_search_service.dart';
 import 'providers/ollama_search_service.dart';
 import 'providers/jina_search_service.dart';
+import 'providers/bocha_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -46,6 +47,8 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return OllamaSearchService() as SearchService;
       case JinaOptions:
         return JinaSearchService() as SearchService;
+      case BochaOptions:
+        return BochaSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -157,6 +160,8 @@ abstract class SearchServiceOptions {
         return OllamaOptions.fromJson(json);
       case 'jina':
         return JinaOptions.fromJson(json);
+      case 'bocha':
+        return BochaOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -391,5 +396,43 @@ class JinaOptions extends SearchServiceOptions {
   factory JinaOptions.fromJson(Map<String, dynamic> json) => JinaOptions(
         id: json['id'],
         apiKey: json['apiKey'],
+      );
+}
+
+class BochaOptions extends SearchServiceOptions {
+  final String apiKey;
+  // Optional parameters supported by Bocha API
+  final String? freshness; // e.g., 'noLimit', 'week', 'month', etc.
+  final bool summary; // whether to include textual summary
+  final String? include; // e.g., 'qq.com|m.163.com'
+  final String? exclude; // e.g., 'qq.com|m.163.com'
+
+  BochaOptions({
+    required String id,
+    required this.apiKey,
+    this.freshness,
+    this.summary = true,
+    this.include,
+    this.exclude,
+  }) : super(id: id);
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'bocha',
+        'id': id,
+        'apiKey': apiKey,
+        if (freshness != null) 'freshness': freshness,
+        'summary': summary,
+        if (include != null) 'include': include,
+        if (exclude != null) 'exclude': exclude,
+      };
+
+  factory BochaOptions.fromJson(Map<String, dynamic> json) => BochaOptions(
+        id: json['id'],
+        apiKey: json['apiKey'],
+        freshness: json['freshness'],
+        summary: (json['summary'] ?? true) as bool,
+        include: json['include'],
+        exclude: json['exclude'],
       );
 }

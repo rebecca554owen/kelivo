@@ -1021,6 +1021,8 @@
   "searchServiceNameMetaso": "Metaso",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
+  "searchServiceNameBocha": "Bocha",
+  "searchProviderBochaDescription": "Bocha web search API. Accurate web results with optional summaries.",
   "generationInterrupted": "Generation interrupted",
   "titleForLocale": "New Chat",
   "quickPhraseBackTooltip": "Back",

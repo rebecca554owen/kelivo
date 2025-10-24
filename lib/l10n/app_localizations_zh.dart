@@ -2378,6 +2378,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServiceNameJina => 'Jina';
 
   @override
+  String get searchServiceNameBocha => '博查';
+
+  @override
+  String get searchProviderBochaDescription =>
+      '博查 AI 全网网页搜索，支持时间范围与摘要，更适合 AI 使用。';
+
+  @override
   String get generationInterrupted => '生成已中断';
 
   @override
@@ -4914,6 +4921,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServiceNameJina => 'Jina';
 
   @override
+  String get searchServiceNameBocha => '博查';
+
+  @override
+  String get searchProviderBochaDescription =>
+      '博查 AI 全网网页搜索，支持时间范围与摘要，更适合 AI 使用。';
+
+  @override
   String get generationInterrupted => '生成已中断';
 
   @override
@@ -7448,6 +7462,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameJina => 'Jina';
+
+  @override
+  String get searchServiceNameBocha => '博查';
+
+  @override
+  String get searchProviderBochaDescription =>
+      '博查 AI 全網網頁搜尋，支援時間範圍與摘要，更適合 AI 使用。';
 
   @override
   String get generationInterrupted => '生成已中斷';

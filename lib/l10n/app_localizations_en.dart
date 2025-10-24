@@ -2465,6 +2465,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServiceNameJina => 'Jina';
 
   @override
+  String get searchServiceNameBocha => 'Bocha';
+
+  @override
+  String get searchProviderBochaDescription =>
+      'Bocha web search API. Accurate web results with optional summaries.';
+
+  @override
   String get generationInterrupted => 'Generation interrupted';
 
   @override

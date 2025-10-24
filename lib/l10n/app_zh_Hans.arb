@@ -807,6 +807,8 @@
   "searchServiceNameMetaso": "秘塔",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
+  "searchServiceNameBocha": "博查",
+  "searchProviderBochaDescription": "博查 AI 全网网页搜索，支持时间范围与摘要，更适合 AI 使用。",
   "generationInterrupted": "生成已中断",
   "titleForLocale": "新对话",
   "miniMapTitle": "迷你地图",
