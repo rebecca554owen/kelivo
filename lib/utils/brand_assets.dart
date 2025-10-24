@@ -68,5 +68,7 @@ class BrandAssets {
     MapEntry(RegExp(r'brave'), 'brave-color.svg'),
     MapEntry(RegExp(r'jina'), 'jina-color.svg'),
     MapEntry(RegExp(r'searxng'), 'searxng-color.svg'),
+    MapEntry(RegExp(r'kat'), 'katkwaipilot-color.svg'),
+    MapEntry(RegExp(r'inclusionai'), 'ling.png'),
   ];
 }
