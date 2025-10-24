@@ -1,11 +1,11 @@
-import 'dart:io' show Platform, File;
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:characters/characters.dart';
 import '../l10n/app_localizations.dart';
 import '../core/providers/user_provider.dart';
 import '../core/providers/settings_provider.dart';
-import 'desktop_context_menu.dart';
+import 'user_profile_dialog.dart';
 import '../icons/lucide_adapter.dart' as lucide;
 
 /// A compact left rail for desktop with avatar, primary actions, and bottom system toggles.
@@ -55,7 +55,6 @@ class _UserAvatarButton extends StatefulWidget {
 }
 
 class _UserAvatarButtonState extends State<_UserAvatarButton> {
-  final GlobalKey _key = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -90,12 +89,13 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: GestureDetector(
-        key: _key,
-        onTapDown: (d) {
-          _openMenu(context, d.globalPosition);
+        onTap: () {
+          // Open centered profile dialog
+          showUserProfileDialog(context);
         },
-        onSecondaryTapDown: (d) {
-          _openMenu(context, d.globalPosition);
+        onSecondaryTap: () {
+          // Also open dialog on right-click for consistency
+          showUserProfileDialog(context);
         },
         child: _HoverCircle(child: avatar, size: 44),
       ),
@@ -113,40 +113,7 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
     );
   }
 
-  void _openMenu(BuildContext context, Offset globalPos) async {
-    final up = context.read<UserProvider>();
-    final l10n = AppLocalizations.of(context)!;
-    await showDesktopContextMenuAt(
-      context,
-      globalPosition: globalPos,
-      items: [
-        DesktopContextMenuItem(
-          icon: lucide.Lucide.User,
-          label: l10n.desktopAvatarMenuUseEmoji,
-          onTap: () async {
-            // Lightweight quick defaults for now
-            await up.setAvatarEmoji('😄');
-          },
-        ),
-        DesktopContextMenuItem(
-          icon: lucide.Lucide.Image,
-          label: l10n.desktopAvatarMenuChangeFromImage,
-          onTap: () async {
-            // Keep simple: open native file picker via FilePicker not available here without extra deps.
-            // As a placeholder, reset to default to keep UX consistent for now.
-            await up.resetAvatar();
-          },
-        ),
-        DesktopContextMenuItem(
-          icon: lucide.Lucide.RotateCw,
-          label: l10n.desktopAvatarMenuReset,
-          onTap: () async {
-            await up.resetAvatar();
-          },
-        ),
-      ],
-    );
-  }
+  // Context menu moved into the centered dialog (avatar tap opens menu there).
 }
 
 class _CircleAction extends StatelessWidget {

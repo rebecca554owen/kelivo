@@ -162,9 +162,16 @@ Future<void> showDesktopAnchoredMenu(
   if (rb == null) return;
   final topLeft = rb.localToGlobal(Offset.zero);
   final size = rb.size;
+  // Center the menu horizontally under the avatar (neutralize internal gap)
+  const double minMenuWidth = 160;
+  const double maxMenuWidth = 360;
+  const double gap = 8; // should match showDesktopContextMenuAt gap
+  final double menuWidth = _estimateMenuWidth(context, items, minMenuWidth, maxMenuWidth);
+  final anchorBottomCenter = topLeft + Offset(size.width / 2, size.height);
+  final adjusted = anchorBottomCenter - Offset(menuWidth / 2 + gap, 0);
   await showDesktopContextMenuAt(
     context,
-    globalPosition: topLeft + Offset(size.width / 2, size.height) + offset,
+    globalPosition: adjusted + offset,
     items: items,
   );
 }
