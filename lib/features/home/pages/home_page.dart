@@ -186,6 +186,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   double _embeddedSidebarWidth = 300;
   static const double _sidebarMinWidth = 200;
   static const double _sidebarMaxWidth = 480;
+  bool _desktopUiInited = false;
 
   // Drawer haptics for swipe-open
   double _lastDrawerValue = 0.0;
@@ -773,6 +774,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     setState(() {
       _tabletSidebarOpen = !_tabletSidebarOpen;
     });
+    try { context.read<SettingsProvider>().setDesktopSidebarOpen(_tabletSidebarOpen); } catch (_) {}
   }
 
   Widget _buildTabletSidebar(BuildContext context) {
@@ -4195,6 +4197,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final bool _isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
+    if (_isDesktop && !_desktopUiInited) {
+      _desktopUiInited = true;
+      try {
+        final sp = context.read<SettingsProvider>();
+        _embeddedSidebarWidth = sp.desktopSidebarWidth.clamp(_sidebarMinWidth, _sidebarMaxWidth);
+        _tabletSidebarOpen = sp.desktopSidebarOpen;
+      } catch (_) {}
+    }
     return Stack(
       children: [
         Positioned.fill(child: _buildAssistantBackground(context)),
@@ -4209,6 +4219,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               setState(() {
                 _embeddedSidebarWidth = (_embeddedSidebarWidth + dx).clamp(_sidebarMinWidth, _sidebarMaxWidth);
               });
+            },
+            onDragEnd: () {
+              try { context.read<SettingsProvider>().setDesktopSidebarWidth(_embeddedSidebarWidth); } catch (_) {}
             },
           )
         else
@@ -5075,9 +5088,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 }
 
 class _SidebarResizeHandle extends StatefulWidget {
-  const _SidebarResizeHandle({required this.visible, required this.onDrag});
+  const _SidebarResizeHandle({required this.visible, required this.onDrag, this.onDragEnd});
   final bool visible;
   final ValueChanged<double> onDrag;
+  final VoidCallback? onDragEnd;
 
   @override
   State<_SidebarResizeHandle> createState() => _SidebarResizeHandleState();
@@ -5092,19 +5106,20 @@ class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onHorizontalDragUpdate: (details) => widget.onDrag(details.delta.dx),
+      onHorizontalDragEnd: (_) => widget.onDragEnd?.call(),
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: Container(
-          width: 8,
+          width: 6,
           height: double.infinity,
           color: Colors.transparent,
           alignment: Alignment.center,
           child: Container(
             width: 1,
             height: double.infinity,
-            color: (_hovered ? cs.primary.withOpacity(0.45) : cs.outlineVariant.withOpacity(0.20)),
+            color: (_hovered ? cs.primary.withOpacity(0.28) : cs.outlineVariant.withOpacity(0.10)),
           ),
         ),
       ),

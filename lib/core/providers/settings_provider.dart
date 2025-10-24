@@ -53,6 +53,9 @@ class SettingsProvider extends ChangeNotifier {
   static const String _searchSelectedKey = 'search_selected_v1';
   static const String _searchEnabledKey = 'search_enabled_v1';
   static const String _webDavConfigKey = 'webdav_config_v1';
+  // Desktop UI
+  static const String _desktopSidebarWidthKey = 'desktop_sidebar_width_v1';
+  static const String _desktopSidebarOpenKey = 'desktop_sidebar_open_v1';
 
   List<String> _providersOrder = const [];
   List<String> get providersOrder => _providersOrder;
@@ -66,6 +69,12 @@ class SettingsProvider extends ChangeNotifier {
   bool get useDynamicColor => _useDynamicColor;
   bool _dynamicColorSupported = false; // runtime capability, not persisted
   bool get dynamicColorSupported => _dynamicColorSupported;
+
+  // Desktop UI persisted state
+  double _desktopSidebarWidth = 240;
+  bool _desktopSidebarOpen = true;
+  double get desktopSidebarWidth => _desktopSidebarWidth;
+  bool get desktopSidebarOpen => _desktopSidebarOpen;
 
   Map<String, ProviderConfig> _providerConfigs = {};
   Map<String, ProviderConfig> get providerConfigs => Map.unmodifiable(_providerConfigs);
@@ -202,6 +211,9 @@ class SettingsProvider extends ChangeNotifier {
     _enableUserMarkdown = prefs.getBool(_displayEnableUserMarkdownKey) ?? true;
     _enableReasoningMarkdown = prefs.getBool(_displayEnableReasoningMarkdownKey) ?? true;
     _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
+    // desktop UI
+    _desktopSidebarWidth = prefs.getDouble(_desktopSidebarWidthKey) ?? 300;
+    _desktopSidebarOpen = prefs.getBool(_desktopSidebarOpenKey) ?? true;
     // Load app locale; default to follow system on first launch
     _appLocaleTag = prefs.getString(_appLocaleKey);
     if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
@@ -242,6 +254,24 @@ class SettingsProvider extends ChangeNotifier {
     _initSearchConnectivityTests();
 
     notifyListeners();
+  }
+
+  // ===== Desktop UI setters =====
+  Future<void> setDesktopSidebarWidth(double width) async {
+    final w = width.clamp(200.0, 640.0).toDouble();
+    if ((w - _desktopSidebarWidth).abs() < 0.5) return;
+    _desktopSidebarWidth = w;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_desktopSidebarWidthKey, _desktopSidebarWidth);
+  }
+
+  Future<void> setDesktopSidebarOpen(bool open) async {
+    if (_desktopSidebarOpen == open) return;
+    _desktopSidebarOpen = open;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_desktopSidebarOpenKey, _desktopSidebarOpen);
   }
 
   // ===== App locale (UI language) =====
