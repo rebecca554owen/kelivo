@@ -134,7 +134,7 @@ class _CircleAction extends StatelessWidget {
         onTap: onTap,
         child: _HoverCircle(
           size: size,
-          child: Icon(icon, size: iconSize, color: cs.onSurface),
+          child: Icon(icon, size: iconSize, color: cs.onSurface.withOpacity(0.8)),
         ),
       ),
     );
@@ -195,7 +195,7 @@ class _ThemeCycleButtonState extends State<_ThemeCycleButton> {
         onTap: () => _cycleTheme(context),
         child: _HoverCircle(
           size: 40,
-          child: Icon(icon, size: 20, color: cs.onSurface),
+          child: Icon(icon, size: 20, color: cs.onSurface.withOpacity(0.8)),
         ),
       ),
     );
