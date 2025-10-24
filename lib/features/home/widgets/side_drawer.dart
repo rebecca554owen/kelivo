@@ -740,7 +740,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 controller: _listController,
                 // Reduce side paddings to extend tile backgrounds while
                 // keeping text position unchanged (compensated in tile padding)
-                padding: const EdgeInsets.fromLTRB(10, 4, 10, 16),
+                padding: EdgeInsets.fromLTRB(
+                  10,
+                  (context.watch<SettingsProvider>().showChatListDate || _assistantsExpanded) ? 4 : 10,
+                  10,
+                  16,
+                ),
                 children: [
                   // 助手列表（内联、与话题一体滚动）
                   // 要求：助手列表仅淡入/淡出；下方话题区域需要被顺滑推开
