@@ -637,10 +637,17 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     // Bottom provider tabs (ordered per ProvidersPage order)
     final List<Widget> providerTabs = <Widget>[];
     if (widget.limitProviderKey == null && !_isLoading) {
+      String? selectedProviderKey;
+      // Find which provider currently holds the selected model
+      _groups.forEach((pk, group) {
+        if (selectedProviderKey == null && group.items.any((m) => m.selected)) {
+          selectedProviderKey = pk;
+        }
+      });
       for (final k in _orderedKeys) {
         final g = _groups[k];
         if (g != null) {
-          providerTabs.add(_providerTab(context, k, g.name));
+          providerTabs.add(_providerTab(context, k, g.name, selected: k == selectedProviderKey));
         }
       }
     }
@@ -752,13 +759,14 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
     );
   }
 
-  Widget _providerTab(BuildContext context, String key, String name) {
+  Widget _providerTab(BuildContext context, String key, String name, {bool selected = false}) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: _ProviderChip(
         avatar: _BrandAvatar(name: name, size: 18),
         label: name,
+        selected: selected,
         borderColor: cs.outlineVariant.withOpacity(0.25),
         onTap: () async { await _jumpToProvider(key); },
         onLongPress: () async {
@@ -839,12 +847,13 @@ class _ModelSelectSheetState extends State<_ModelSelectSheet> {
 }
 
 class _ProviderChip extends StatefulWidget {
-  const _ProviderChip({required this.avatar, required this.label, required this.onTap, this.onLongPress, this.borderColor});
+  const _ProviderChip({required this.avatar, required this.label, required this.onTap, this.onLongPress, this.borderColor, this.selected = false});
   final Widget avatar;
   final String label;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final Color? borderColor;
+  final bool selected;
 
   @override
   State<_ProviderChip> createState() => _ProviderChipState();
@@ -856,9 +865,16 @@ class _ProviderChipState extends State<_ProviderChip> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color baseBg = cs.surface;
+    final bool isSelected = widget.selected;
+    // Subtle background tint when selected (less conspicuous)
+    final Color baseBg = isSelected
+        ? (isDark ? cs.primary.withOpacity(0.08) : cs.primary.withOpacity(0.05))
+        : cs.surface;
     final Color overlay = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
     final Color bg = _pressed ? Color.alphaBlend(overlay, baseBg) : baseBg;
+    // Slightly stronger border when selected; keep label color unchanged for subtlety
+    final Color borderColor = widget.borderColor ?? cs.outlineVariant.withOpacity(0.25);
+    final Color labelColor = cs.onSurface;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => setState(() => _pressed = true),
@@ -873,14 +889,14 @@ class _ProviderChipState extends State<_ProviderChip> {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: widget.borderColor ?? cs.outlineVariant.withOpacity(0.25)),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             widget.avatar,
             const SizedBox(width: 6),
-            Text(widget.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(widget.label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: labelColor)),
           ],
         ),
       ),
