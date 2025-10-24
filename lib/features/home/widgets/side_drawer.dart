@@ -1737,30 +1737,21 @@ class _ChatTileState extends State<_ChatTile> {
           }
         },
         onLongPress: () {
-          if (_isDesktop) {
-            try {
-              final rb = context.findRenderObject() as RenderBox?;
-              if (rb != null) {
-                final center = rb.localToGlobal(Offset(rb.size.width / 2, rb.size.height / 2));
-                widget.onSecondaryTap?.call(center);
-                return;
-              }
-            } catch (_) {}
-          }
+          if (_isDesktop) return;
           widget.onLongPress?.call();
         },
         child: MouseRegion(
           onEnter: (_) { if (_isDesktop) setState(() => _hovered = true); },
           onExit: (_) { if (_isDesktop) setState(() => _hovered = false); },
           cursor: _isDesktop ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          child: IosCardPress(
-            baseColor: base,
-            borderRadius: BorderRadius.circular(16),
-            haptics: false,
-            onTap: widget.onTap,
-            onLongPress: widget.onLongPress,
-            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-            child: Row(
+        child: IosCardPress(
+          baseColor: base,
+          borderRadius: BorderRadius.circular(16),
+          haptics: false,
+          onTap: widget.onTap,
+          onLongPress: _isDesktop ? null : widget.onLongPress,
+          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          child: Row(
               children: [
                 Expanded(
                   child: Text(
