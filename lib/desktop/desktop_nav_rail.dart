@@ -1,4 +1,4 @@
-import 'dart:io' show File;
+import 'dart:io' show File, Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:characters/characters.dart';
@@ -27,12 +27,15 @@ class DesktopNavRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final isMac = Platform.isMacOS;
+    final double topGap = isMac ? 36.0 : 8.0;
+
     return Container(
       width: width,
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         children: [
-          const SizedBox(height: 8),
+          SizedBox(height: topGap),
           _UserAvatarButton(),
           const SizedBox(height: 12),
           _CircleAction(tooltip: l10n.desktopNavChatTooltip, icon: lucide.Lucide.MessageCircle, onTap: onTapChat, size: 40, iconSize: 18),
