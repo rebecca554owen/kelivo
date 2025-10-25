@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import '../shared/responsive/breakpoints.dart';
 import 'desktop_nav_rail.dart';
 import 'desktop_chat_page.dart';
+import 'window_title_bar.dart';
 
 /// Desktop home screen: left compact rail + main content.
 /// Phase 1 focuses on structure and platform-appropriate interactions/hover.
@@ -21,6 +23,8 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
     const minWidth = 960.0;
     const minHeight = 640.0;
 
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
@@ -28,7 +32,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         final needsWidthPad = w < minWidth;
         final needsHeightPad = h < minHeight;
 
-        Widget content = Row(
+        Widget body = Row(
           children: [
             DesktopNavRail(
               onTapChat: () => setState(() => _tabIndex = 0),
@@ -52,6 +56,16 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
             ),
           ],
         );
+
+        // Wrap with Windows custom title bar when on Windows platform.
+        final content = isWindows
+            ? Column(
+                children: [
+                  const WindowTitleBar(),
+                  Expanded(child: body),
+                ],
+              )
+            : body;
 
         if (!needsWidthPad && !needsHeightPad) return content;
 

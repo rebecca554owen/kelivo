@@ -6,6 +6,7 @@ import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
 import 'desktop/desktop_home_page.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 // import 'package:logging/logging.dart' as logging;
 // Theme is now managed in SettingsProvider
 import 'theme/theme_factory.dart';
@@ -33,6 +34,8 @@ bool _didEnsureAssistants = false; // ensure defaults after l10n ready
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Desktop (Windows) window setup: hide native title bar for custom Flutter bar
+  await _initDesktopWindow();
   // Debug logging and global error handlers were enabled previously for diagnosis.
   // They are commented out now per request to reduce log noise.
   // FlutterError.onError = (FlutterErrorDetails details) { ... };
@@ -44,7 +47,22 @@ Future<void> main() async {
   // Enable edge-to-edge to allow content under system bars (Android)
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   // Start app (no extra guarded zone logging)
-  runApp(const MyApp());
+runApp(const MyApp());
+}
+
+Future<void> _initDesktopWindow() async {
+  if (kIsWeb) return;
+  try {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      await windowManager.ensureInitialized();
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+    } else if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      await windowManager.ensureInitialized();
+    }
+  } catch (_) {
+    // Ignore on unsupported platforms.
+  }
 }
 
 class MyApp extends StatelessWidget {
