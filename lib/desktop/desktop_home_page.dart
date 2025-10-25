@@ -35,6 +35,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         Widget body = Row(
           children: [
             DesktopNavRail(
+              activeIndex: _tabIndex,
               onTapChat: () => setState(() => _tabIndex = 0),
               onTapTranslate: () => setState(() => _tabIndex = 1),
               onTapSettings: () {

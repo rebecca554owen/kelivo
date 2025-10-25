@@ -12,11 +12,13 @@ import '../icons/lucide_adapter.dart' as lucide;
 class DesktopNavRail extends StatelessWidget {
   const DesktopNavRail({
     super.key,
+    required this.activeIndex,
     required this.onTapChat,
     required this.onTapTranslate,
     required this.onTapSettings,
   });
 
+  final int activeIndex; // 0=Chat, 1=Translate
   final VoidCallback onTapChat;
   final VoidCallback onTapTranslate;
   final VoidCallback onTapSettings;
@@ -29,6 +31,8 @@ class DesktopNavRail extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final isMac = Platform.isMacOS;
     final double topGap = isMac ? 36.0 : 8.0;
+    final isChatActive = activeIndex == 0;
+    final isTranslateActive = activeIndex == 1;
 
     return Container(
       width: width,
@@ -38,9 +42,23 @@ class DesktopNavRail extends StatelessWidget {
           SizedBox(height: topGap),
           _UserAvatarButton(),
           const SizedBox(height: 12),
-          _CircleAction(tooltip: l10n.desktopNavChatTooltip, icon: lucide.Lucide.MessageCircle, onTap: onTapChat, size: 40, iconSize: 18),
+          _CircleAction(
+            tooltip: l10n.desktopNavChatTooltip,
+            icon: lucide.Lucide.MessageCircle,
+            onTap: onTapChat,
+            size: 40,
+            iconSize: 18,
+            iconColor: isChatActive ? cs.primary : null,
+          ),
           const SizedBox(height: 8),
-          _CircleAction(tooltip: l10n.desktopNavTranslateTooltip, icon: lucide.Lucide.Languages, onTap: onTapTranslate, size: 40, iconSize: 18),
+          _CircleAction(
+            tooltip: l10n.desktopNavTranslateTooltip,
+            icon: lucide.Lucide.Languages,
+            onTap: onTapTranslate,
+            size: 40,
+            iconSize: 18,
+            iconColor: isTranslateActive ? cs.primary : null,
+          ),
           const Spacer(),
           _ThemeCycleButton(),
           const SizedBox(height: 8),
@@ -68,22 +86,22 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
     final value = up.avatarValue;
     if (type == 'emoji' && value != null && value.isNotEmpty) {
       avatar = Container(
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(color: cs.primary.withOpacity(0.15), shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: Text(value, style: const TextStyle(fontSize: 20, decoration: TextDecoration.none)),
+        child: Text(value, style: const TextStyle(fontSize: 18, decoration: TextDecoration.none)),
       );
     } else if (type == 'url' && value != null && value.isNotEmpty) {
       avatar = ClipOval(
-        child: Image.network(value, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, __, ___) {
+        child: Image.network(value, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) {
           return _initialAvatar(up.name, cs);
         }),
       );
     } else if (type == 'file' && value != null && value.isNotEmpty) {
       // Local file path
       avatar = ClipOval(
-        child: Image(image: FileImage(File(value)), width: 40, height: 40, fit: BoxFit.cover),
+        child: Image(image: FileImage(File(value)), width: 36, height: 36, fit: BoxFit.cover),
       );
     } else {
       avatar = _initialAvatar(up.name, cs);
@@ -100,7 +118,7 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
           // Also open dialog on right-click for consistency
           showUserProfileDialog(context);
         },
-        child: _HoverCircle(child: avatar, size: 44),
+        child: _HoverCircle(child: avatar, size: 42),
       ),
     );
   }
@@ -108,8 +126,8 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
   Widget _initialAvatar(String name, ColorScheme cs) {
     final letter = name.isNotEmpty ? name.characters.first : '?';
     return Container(
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(color: cs.primary.withOpacity(0.15), shape: BoxShape.circle),
       alignment: Alignment.center,
       child: Text(letter, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
@@ -120,12 +138,13 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
 }
 
 class _CircleAction extends StatelessWidget {
-  const _CircleAction({required this.icon, required this.onTap, required this.tooltip, this.size = 44, this.iconSize = 20});
+  const _CircleAction({required this.icon, required this.onTap, required this.tooltip, this.size = 44, this.iconSize = 20, this.iconColor});
   final IconData icon;
   final VoidCallback onTap;
   final String tooltip;
   final double size;
   final double iconSize;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +156,11 @@ class _CircleAction extends StatelessWidget {
         onTap: onTap,
         child: _HoverCircle(
           size: size,
-          child: Icon(icon, size: iconSize, color: cs.onSurface.withOpacity(0.8)),
+          child: Icon(
+            icon,
+            size: iconSize,
+            color: (iconColor ?? cs.onSurface.withOpacity(0.8)),
+          ),
         ),
       ),
     );
