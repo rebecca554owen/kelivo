@@ -439,6 +439,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     if (service is BraveOptions) return Lucide.Shield;
     if (service is MetasoOptions) return Lucide.Compass;
     if (service is JinaOptions) return Lucide.Sparkles;
+    if (service is PerplexityOptions) return Lucide.Search;
     if (service is BochaOptions) return Lucide.Search;
     return Lucide.Search;
   }
@@ -485,6 +486,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
     if (s is JinaOptions) return 'jina';
+    if (s is PerplexityOptions) return 'perplexity';
     if (s is BochaOptions) return 'bocha';
     return 'search';
   }
@@ -635,6 +637,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
       {'type': 'metaso', 'name': l10n.searchServiceNameMetaso},
       {'type': 'jina', 'name': l10n.searchServiceNameJina},
       {'type': 'ollama', 'name': l10n.searchServiceNameOllama},
+      {'type': 'perplexity', 'name': l10n.searchServiceNamePerplexity},
       {'type': 'bocha', 'name': l10n.searchServiceNameBocha},
     ];
     return ListView.builder(
@@ -674,6 +677,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
       case 'metaso': return l10n.searchServiceNameMetaso;
       case 'jina': return l10n.searchServiceNameJina;
       case 'ollama': return l10n.searchServiceNameOllama;
+      case 'perplexity': return l10n.searchServiceNamePerplexity;
       case 'bocha': return l10n.searchServiceNameBocha;
       default: return '';
     }
@@ -790,6 +794,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
       case 'metaso':
       case 'jina':
       case 'ollama':
+      case 'perplexity':
       case 'bocha':
         return [
           _buildTextField(
@@ -897,6 +902,11 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
         );
       case 'ollama':
         return OllamaOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+        );
+      case 'perplexity':
+        return PerplexityOptions(
           id: id,
           apiKey: _controllers['apiKey']!.text,
         );
@@ -1192,6 +1202,14 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       return JinaOptions(
         id: service.id,
         apiKey: _controllers['apiKey']!.text,
+      );
+    } else if (service is PerplexityOptions) {
+      return PerplexityOptions(
+        id: service.id,
+        apiKey: _controllers['apiKey']!.text,
+        country: service.country,
+        searchDomainFilter: service.searchDomainFilter,
+        maxTokensPerPage: service.maxTokensPerPage,
       );
     } else if (service is BochaOptions) {
       return BochaOptions(

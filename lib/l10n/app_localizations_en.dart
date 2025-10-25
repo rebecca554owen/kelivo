@@ -2465,6 +2465,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServiceNameJina => 'Jina';
 
   @override
+  String get searchServiceNamePerplexity => 'Perplexity';
+
+  @override
+  String get searchProviderPerplexityDescription =>
+      'Perplexity Search API. Ranked web results with region and domain filters.';
+
+  @override
   String get searchServiceNameBocha => 'Bocha';
 
   @override

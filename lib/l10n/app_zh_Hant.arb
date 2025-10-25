@@ -765,6 +765,8 @@
   "searchServiceNameMetaso": "Metaso（秘塔）",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
+  "searchServiceNamePerplexity": "Perplexity",
+  "searchProviderPerplexityDescription": "Perplexity 搜尋 API。提供排序的網頁結果，支援地區與網域過濾。",
   "searchServiceNameBocha": "博查",
   "searchProviderBochaDescription": "博查 AI 全網網頁搜尋，支援時間範圍與摘要，更適合 AI 使用。",
   "generationInterrupted": "生成已中斷",

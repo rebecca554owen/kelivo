@@ -4661,6 +4661,18 @@ abstract class AppLocalizations {
   /// **'Jina'**
   String get searchServiceNameJina;
 
+  /// No description provided for @searchServiceNamePerplexity.
+  ///
+  /// In en, this message translates to:
+  /// **'Perplexity'**
+  String get searchServiceNamePerplexity;
+
+  /// No description provided for @searchProviderPerplexityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Perplexity Search API. Ranked web results with region and domain filters.'**
+  String get searchProviderPerplexityDescription;
+
   /// No description provided for @searchServiceNameBocha.
   ///
   /// In en, this message translates to:

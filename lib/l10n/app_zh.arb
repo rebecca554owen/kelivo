@@ -809,6 +809,8 @@
   "searchServiceNameMetaso": "秘塔",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
+  "searchServiceNamePerplexity": "Perplexity",
+  "searchProviderPerplexityDescription": "Perplexity 搜索 API。提供排序的网页结果，支持区域与域名过滤。",
   "searchServiceNameBocha": "博查",
   "searchProviderBochaDescription": "博查 AI 全网网页搜索，支持时间范围与摘要，更适合 AI 使用。",
   "generationInterrupted": "生成已中断",

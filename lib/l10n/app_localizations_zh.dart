@@ -2378,6 +2378,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServiceNameJina => 'Jina';
 
   @override
+  String get searchServiceNamePerplexity => 'Perplexity';
+
+  @override
+  String get searchProviderPerplexityDescription =>
+      'Perplexity 搜索 API。提供排序的网页结果，支持区域与域名过滤。';
+
+  @override
   String get searchServiceNameBocha => '博查';
 
   @override
@@ -4921,6 +4928,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServiceNameJina => 'Jina';
 
   @override
+  String get searchServiceNamePerplexity => 'Perplexity';
+
+  @override
+  String get searchProviderPerplexityDescription =>
+      'Perplexity 搜索 API。提供排序的网页结果，支持区域与域名过滤。';
+
+  @override
   String get searchServiceNameBocha => '博查';
 
   @override
@@ -7462,6 +7476,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServiceNameJina => 'Jina';
+
+  @override
+  String get searchServiceNamePerplexity => 'Perplexity';
+
+  @override
+  String get searchProviderPerplexityDescription =>
+      'Perplexity 搜尋 API。提供排序的網頁結果，支援地區與網域過濾。';
 
   @override
   String get searchServiceNameBocha => '博查';

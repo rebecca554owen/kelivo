@@ -11,6 +11,7 @@ import 'providers/metaso_search_service.dart';
 import 'providers/ollama_search_service.dart';
 import 'providers/jina_search_service.dart';
 import 'providers/bocha_search_service.dart';
+import 'providers/perplexity_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -49,6 +50,8 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return JinaSearchService() as SearchService;
       case BochaOptions:
         return BochaSearchService() as SearchService;
+      case PerplexityOptions:
+        return PerplexitySearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -162,6 +165,8 @@ abstract class SearchServiceOptions {
         return JinaOptions.fromJson(json);
       case 'bocha':
         return BochaOptions.fromJson(json);
+      case 'perplexity':
+        return PerplexityOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -396,6 +401,39 @@ class JinaOptions extends SearchServiceOptions {
   factory JinaOptions.fromJson(Map<String, dynamic> json) => JinaOptions(
         id: json['id'],
         apiKey: json['apiKey'],
+      );
+}
+
+class PerplexityOptions extends SearchServiceOptions {
+  final String apiKey;
+  final String? country; // ISO 3166-1 alpha-2
+  final List<String>? searchDomainFilter; // domains/URLs
+  final int? maxTokensPerPage; // default 1024
+
+  PerplexityOptions({
+    required String id,
+    required this.apiKey,
+    this.country,
+    this.searchDomainFilter,
+    this.maxTokensPerPage,
+  }) : super(id: id);
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'perplexity',
+        'id': id,
+        'apiKey': apiKey,
+        if (country != null) 'country': country,
+        if (searchDomainFilter != null) 'searchDomainFilter': searchDomainFilter,
+        if (maxTokensPerPage != null) 'maxTokensPerPage': maxTokensPerPage,
+      };
+
+  factory PerplexityOptions.fromJson(Map<String, dynamic> json) => PerplexityOptions(
+        id: json['id'],
+        apiKey: json['apiKey'],
+        country: json['country'],
+        searchDomainFilter: (json['searchDomainFilter'] as List?)?.map((e) => e.toString()).toList(),
+        maxTokensPerPage: json['maxTokensPerPage'],
       );
 }
 
