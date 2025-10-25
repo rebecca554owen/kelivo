@@ -23,7 +23,7 @@ class DesktopNavRail extends StatelessWidget {
   final VoidCallback onTapTranslate;
   final VoidCallback onTapSettings;
 
-  static const double width = 52.0;
+  static const double width = 64.0;
 
   @override
   Widget build(BuildContext context) {
