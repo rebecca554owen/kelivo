@@ -4367,6 +4367,24 @@ abstract class AppLocalizations {
   /// **'Theme Settings'**
   String get displaySettingsPageThemeSettingsTitle;
 
+  /// No description provided for @displaySettingsPageThemeColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme Color'**
+  String get displaySettingsPageThemeColorTitle;
+
+  /// No description provided for @desktopSettingsFontsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fonts'**
+  String get desktopSettingsFontsTitle;
+
+  /// No description provided for @displaySettingsPageOtherSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get displaySettingsPageOtherSettingsTitle;
+
   /// No description provided for @themeSettingsPageDynamicColorSection.
   ///
   /// In en, this message translates to:

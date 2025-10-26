@@ -2298,6 +2298,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageThemeSettingsTitle => 'Theme Settings';
 
   @override
+  String get displaySettingsPageThemeColorTitle => 'Theme Color';
+
+  @override
+  String get desktopSettingsFontsTitle => 'Fonts';
+
+  @override
+  String get displaySettingsPageOtherSettingsTitle => 'Other';
+
+  @override
   String get themeSettingsPageDynamicColorSection => 'Dynamic Color';
 
   @override

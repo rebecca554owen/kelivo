@@ -2220,6 +2220,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageThemeSettingsTitle => '主题设置';
 
   @override
+  String get displaySettingsPageThemeColorTitle => '主题颜色';
+
+  @override
+  String get desktopSettingsFontsTitle => '字体设置';
+
+  @override
+  String get displaySettingsPageOtherSettingsTitle => '其他设置';
+
+  @override
   String get themeSettingsPageDynamicColorSection => '动态颜色';
 
   @override
@@ -4770,6 +4779,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageThemeSettingsTitle => '主题设置';
 
   @override
+  String get displaySettingsPageThemeColorTitle => '主题颜色';
+
+  @override
+  String get desktopSettingsFontsTitle => '字体设置';
+
+  @override
+  String get displaySettingsPageOtherSettingsTitle => '其他设置';
+
+  @override
   String get themeSettingsPageDynamicColorSection => '动态颜色';
 
   @override
@@ -7317,6 +7335,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageThemeSettingsTitle => '主題設定';
+
+  @override
+  String get displaySettingsPageThemeColorTitle => '主題顏色';
+
+  @override
+  String get desktopSettingsFontsTitle => '字體設定';
+
+  @override
+  String get displaySettingsPageOtherSettingsTitle => '其他設定';
 
   @override
   String get themeSettingsPageDynamicColorSection => '動態顏色';

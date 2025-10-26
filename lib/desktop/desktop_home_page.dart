@@ -4,6 +4,7 @@ import '../shared/responsive/breakpoints.dart';
 import 'desktop_nav_rail.dart';
 import 'desktop_chat_page.dart';
 import 'window_title_bar.dart';
+import 'desktop_settings_page.dart';
 
 /// Desktop home screen: left compact rail + main content.
 /// Phase 1 focuses on structure and platform-appropriate interactions/hover.
@@ -15,7 +16,7 @@ class DesktopHomePage extends StatefulWidget {
 }
 
 class _DesktopHomePageState extends State<DesktopHomePage> {
-  int _tabIndex = 0; // 0=Chat, 1=Translate (placeholder)
+  int _tabIndex = 0; // 0=Chat, 1=Translate, 2=Settings
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +40,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
               onTapChat: () => setState(() => _tabIndex = 0),
               onTapTranslate: () => setState(() => _tabIndex = 1),
               onTapSettings: () {
-                // Placeholder: open settings later
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('设置页面（占位）')),
-                );
+                setState(() => _tabIndex = 2);
               },
             ),
             Expanded(
@@ -50,9 +48,11 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
                 duration: const Duration(milliseconds: 220),
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
-                child: _tabIndex == 0
-                    ? const DesktopChatPage()
-                    : _TranslatePlaceholder(key: const ValueKey('translate_placeholder')),
+                child: () {
+                  if (_tabIndex == 0) return const DesktopChatPage();
+                  if (_tabIndex == 1) return _TranslatePlaceholder(key: const ValueKey('translate_placeholder'));
+                  return const DesktopSettingsPage(key: ValueKey('settings_page'));
+                }(),
               ),
             ),
           ],
@@ -107,3 +107,5 @@ class _TranslatePlaceholder extends StatelessWidget {
     );
   }
 }
+
+// No extra router/shim; we import DesktopSettingsPage directly above.
