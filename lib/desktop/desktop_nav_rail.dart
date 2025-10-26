@@ -135,7 +135,15 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
       height: 36,
       decoration: BoxDecoration(color: cs.primary.withOpacity(0.15), shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Text(letter, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
+      child: Text(
+        letter,
+        style: TextStyle(
+          color: cs.primary,
+          fontWeight: FontWeight.w700,
+          decoration: TextDecoration.none,
+          fontSize: 36 * 0.44, // keep initial scaled to avatar size
+        ),
+      ),
     );
   }
 
