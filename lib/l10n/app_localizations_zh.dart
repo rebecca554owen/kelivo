@@ -649,6 +649,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantSettingsAddSheetSave => '保存';
 
   @override
+  String get desktopAssistantsListTitle => '助手列表';
+
+  @override
+  String get assistantEditTemperatureTitle => '温度';
+
+  @override
+  String get assistantEditTopPTitle => 'Top-p';
+
+  @override
   String get assistantSettingsDeleteDialogTitle => '删除助手';
 
   @override
@@ -3208,6 +3217,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantSettingsAddSheetSave => '保存';
 
   @override
+  String get desktopAssistantsListTitle => '助手列表';
+
+  @override
+  String get assistantEditTemperatureTitle => '温度';
+
+  @override
+  String get assistantEditTopPTitle => 'Top-p';
+
+  @override
   String get assistantSettingsDeleteDialogTitle => '删除助手';
 
   @override
@@ -5765,6 +5783,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantSettingsAddSheetSave => '儲存';
+
+  @override
+  String get desktopAssistantsListTitle => '助理列表';
+
+  @override
+  String get assistantEditTemperatureTitle => '溫度';
+
+  @override
+  String get assistantEditTopPTitle => 'Top-p';
 
   @override
   String get assistantSettingsDeleteDialogTitle => '刪除助理';

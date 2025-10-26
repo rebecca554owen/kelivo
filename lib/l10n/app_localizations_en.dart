@@ -662,6 +662,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantSettingsAddSheetSave => 'Save';
 
   @override
+  String get desktopAssistantsListTitle => 'Assistants';
+
+  @override
+  String get assistantEditTemperatureTitle => 'Temperature';
+
+  @override
+  String get assistantEditTopPTitle => 'Top-p';
+
+  @override
   String get assistantSettingsDeleteDialogTitle => 'Delete Assistant';
 
   @override

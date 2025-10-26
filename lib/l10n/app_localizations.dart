@@ -1343,6 +1343,24 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get assistantSettingsAddSheetSave;
 
+  /// No description provided for @desktopAssistantsListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistants'**
+  String get desktopAssistantsListTitle;
+
+  /// No description provided for @assistantEditTemperatureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get assistantEditTemperatureTitle;
+
+  /// No description provided for @assistantEditTopPTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Top-p'**
+  String get assistantEditTopPTitle;
+
   /// No description provided for @assistantSettingsDeleteDialogTitle.
   ///
   /// In en, this message translates to:
