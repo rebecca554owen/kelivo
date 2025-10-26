@@ -1001,6 +1001,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return 'text/plain';
   }
 
+  bool _isImageExtension(String name) {
+    final lower = name.toLowerCase();
+    return lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.heic') ||
+        lower.endsWith('.heif');
+  }
+
   Future<void> _onPickFiles() async {
     try {
       final res = await FilePicker.platform.pickFiles(
@@ -1008,27 +1019,48 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         withData: false,
         type: FileType.custom,
         allowedExtensions: const [
-          'txt','md','json','js','pdf','docx'
+          // images
+          'png','jpg','jpeg','gif','webp','heic','heif',
+          // docs
+          'txt','md','json','js','pdf','docx','html','xml','py','java','kt','dart','ts','tsx','markdown','mdx','yml','yaml'
         ],
       );
       if (res == null || res.files.isEmpty) return;
+      final images = <String>[];
       final docs = <DocumentAttachment>[];
+
+      // Build a flat list preserving order, then map saved -> type
       final toCopy = <XFile>[];
+      final kinds = <bool>[]; // true=image, false=document
+      final names = <String>[];
       for (final f in res.files) {
-        if (f.path != null && f.path!.isNotEmpty) {
-          toCopy.add(XFile(f.path!));
+        final path = f.path;
+        if (path != null && path.isNotEmpty) {
+          toCopy.add(XFile(path));
+          kinds.add(_isImageExtension(f.name));
+          names.add(f.name);
         }
       }
+      if (toCopy.isEmpty) return;
       final saved = await _copyPickedFiles(toCopy);
       for (int i = 0; i < saved.length; i++) {
-        final orig = res.files[i];
         final savedPath = saved[i];
-        final name = orig.name;
-        final mime = _inferMimeByExtension(name);
-        docs.add(DocumentAttachment(path: savedPath, fileName: name, mime: mime));
+        final isImage = kinds[i];
+        if (isImage) {
+          images.add(savedPath);
+        } else {
+          final name = names[i];
+          final mime = _inferMimeByExtension(name);
+          docs.add(DocumentAttachment(path: savedPath, fileName: name, mime: mime));
+        }
+      }
+      if (images.isNotEmpty) {
+        _mediaController.addImages(images);
       }
       if (docs.isNotEmpty) {
         _mediaController.addFiles(docs);
+      }
+      if (images.isNotEmpty || docs.isNotEmpty) {
         _scrollToBottomSoon();
       }
     } catch (_) {}
@@ -4756,6 +4788,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     }
                                   }
 
+                                  final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                      defaultTargetPlatform == TargetPlatform.windows ||
+                                      defaultTargetPlatform == TargetPlatform.linux;
                                   Widget input = ChatInputBar(
                                     key: _inputBarKey,
                                     onMore: _toggleTools,
@@ -4804,8 +4839,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         await _scrollToMessageId(selectedId);
                                       }
                                     },
-                                    onPickCamera: _onPickCamera,
-                                    onPickPhotos: _onPickPhotos,
+                                    onPickCamera: isDesktop ? null : _onPickCamera,
+                                    onPickPhotos: isDesktop ? null : _onPickPhotos,
                                     onUploadFiles: _onPickFiles,
                                     onToggleLearningMode: () async {
                                       final enabled = await LearningModeStore.isEnabled();
