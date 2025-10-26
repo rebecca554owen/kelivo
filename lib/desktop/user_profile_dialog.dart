@@ -2,6 +2,7 @@ import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:characters/characters.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../core/providers/user_provider.dart';
 import '../desktop/desktop_context_menu.dart';
@@ -228,8 +229,22 @@ class _UserProfileDialogBodyState extends State<_UserProfileDialogBody> {
           icon: lucide.Lucide.Image,
           label: l10n.desktopAvatarMenuChangeFromImage,
           onTap: () async {
-            // Placeholder same as rail menu for now
-            await up.resetAvatar();
+            // Desktop: choose an image file and persist it into app's avatars folder
+            try {
+              final res = await FilePicker.platform.pickFiles(
+                allowMultiple: false,
+                withData: false,
+                type: FileType.custom,
+                allowedExtensions: const ['png','jpg','jpeg','gif','webp','heic','heif'],
+              );
+              final f = (res != null && res.files.isNotEmpty) ? res.files.first : null;
+              final path = f?.path;
+              if (path != null && path.isNotEmpty) {
+                await up.setAvatarFilePath(path);
+              }
+            } catch (_) {
+              // no-op on failure
+            }
           },
         ),
         DesktopContextMenuItem(

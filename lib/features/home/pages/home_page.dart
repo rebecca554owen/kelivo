@@ -940,6 +940,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   Future<void> _onPickPhotos() async {
     try {
+      // On desktop, fall back to FilePicker as image_picker is not supported.
+      final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux;
+      if (isDesktop) {
+        final res = await FilePicker.platform.pickFiles(
+          allowMultiple: true,
+          withData: false,
+          type: FileType.custom,
+          allowedExtensions: const ['png','jpg','jpeg','gif','webp','heic','heif'],
+        );
+        if (res == null || res.files.isEmpty) return;
+        final toCopy = <XFile>[];
+        for (final f in res.files) {
+          if (f.path != null && f.path!.isNotEmpty) {
+            toCopy.add(XFile(f.path!));
+          }
+        }
+        if (toCopy.isEmpty) return;
+        final paths = await _copyPickedFiles(toCopy);
+        if (paths.isNotEmpty) {
+          _mediaController.addImages(paths);
+          _scrollToBottomSoon();
+        }
+        return;
+      }
+
       final picker = ImagePicker();
       final files = await picker.pickMultiImage();
       if (files == null || files.isEmpty) return;
