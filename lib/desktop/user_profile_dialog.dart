@@ -7,6 +7,8 @@ import '../core/providers/user_provider.dart';
 import '../desktop/desktop_context_menu.dart';
 import '../l10n/app_localizations.dart';
 import '../icons/lucide_adapter.dart' as lucide;
+import '../shared/widgets/emoji_text.dart';
+import '../shared/widgets/emoji_picker_dialog.dart';
 
 Future<void> showUserProfileDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
@@ -70,7 +72,12 @@ class _UserProfileDialogBodyState extends State<_UserProfileDialogBody> {
         height: 84,
         decoration: BoxDecoration(color: cs.primary.withOpacity(0.15), shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: Text(value, style: const TextStyle(fontSize: 40, decoration: TextDecoration.none)),
+        child: EmojiText(
+          value,
+          fontSize: 40,
+          optimizeEmojiAlign: true,
+          nudge: Offset.zero, // dialog avatar: no extra nudge
+        ),
       );
     } else if (type == 'url' && value != null && value.isNotEmpty) {
       avatarWidget = ClipOval(
@@ -207,7 +214,14 @@ class _UserProfileDialogBodyState extends State<_UserProfileDialogBody> {
           icon: lucide.Lucide.User,
           label: l10n.desktopAvatarMenuUseEmoji,
           onTap: () async {
-            await up.setAvatarEmoji('😄');
+            final emoji = await showEmojiPickerDialog(
+              context,
+              title: l10n.assistantEditEmojiDialogTitle,
+              hintText: l10n.assistantEditEmojiDialogHint,
+            );
+            if (emoji != null && emoji.isNotEmpty) {
+              await up.setAvatarEmoji(emoji);
+            }
           },
         ),
         DesktopContextMenuItem(

@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:characters/characters.dart';
+import '../../../shared/widgets/emoji_text.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../../../icons/lucide_adapter.dart';
@@ -2187,13 +2188,15 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        value.isEmpty
-                            ? '🙂'
-                            : value.characters.take(1).toString(),
-                        style: const TextStyle(fontSize: 40),
-                      ),
+                    child: EmojiText(
+                      value.isEmpty
+                          ? '🙂'
+                          : value.characters.take(1).toString(),
+                      fontSize: 40,
+                      optimizeEmojiAlign: true,
+                      nudge: Offset.zero, // picker preview: no extra nudge
                     ),
+                  ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,
@@ -2251,9 +2254,11 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
-                              child: Text(
+                              child: EmojiText(
                                 e,
-                                style: const TextStyle(fontSize: 20),
+                                fontSize: 20,
+                                optimizeEmojiAlign: true,
+                                nudge: Offset.zero, // picker grid: no extra nudge
                               ),
                             ),
                           );

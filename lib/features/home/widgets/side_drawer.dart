@@ -32,6 +32,7 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../desktop/menu_anchor.dart';
+import '../../../shared/widgets/emoji_text.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -176,7 +177,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Text(emoji.characters.take(1).toString(), style: TextStyle(fontSize: size * 0.5)),
+      child: EmojiText(
+        emoji.characters.take(1).toString(),
+        fontSize: size * 0.5,
+        optimizeEmojiAlign: true,
+      ),
     );
   }
 
@@ -538,9 +543,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
-          child: Text(
+          child: EmojiText(
             value,
-            style: TextStyle(fontSize: size * 0.5),
+            fontSize: size * 0.5,
+            optimizeEmojiAlign: true,
           ),
         );
       }
@@ -1257,7 +1263,12 @@ extension on _SideDrawerState {
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: Text(value.isEmpty ? '🙂' : value.characters.take(1).toString(), style: const TextStyle(fontSize: 40)),
+                    child: EmojiText(
+                      value.isEmpty ? '🙂' : value.characters.take(1).toString(),
+                      fontSize: 40,
+                      optimizeEmojiAlign: true,
+                      nudge: Offset.zero, // mobile/desktop picker preview: no extra nudge
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -1308,7 +1319,12 @@ extension on _SideDrawerState {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             alignment: Alignment.center,
-                            child: Text(e, style: const TextStyle(fontSize: 20)),
+                            child: EmojiText(
+                              e,
+                              fontSize: 20,
+                              optimizeEmojiAlign: true,
+                              nudge: Offset.zero, // picker grid: no extra nudge
+                            ),
                           ),
                         );
                       },

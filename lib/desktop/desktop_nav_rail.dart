@@ -2,6 +2,7 @@ import 'dart:io' show File, Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:characters/characters.dart';
+import '../shared/widgets/emoji_text.dart';
 import '../l10n/app_localizations.dart';
 import '../core/providers/user_provider.dart';
 import '../core/providers/settings_provider.dart';
@@ -90,7 +91,11 @@ class _UserAvatarButtonState extends State<_UserAvatarButton> {
         height: 36,
         decoration: BoxDecoration(color: cs.primary.withOpacity(0.15), shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: Text(value, style: const TextStyle(fontSize: 18, decoration: TextDecoration.none)),
+        child: EmojiText(
+          value,
+          fontSize: 18,
+          optimizeEmojiAlign: true,
+        ),
       );
     } else if (type == 'url' && value != null && value.isNotEmpty) {
       avatar = ClipOval(

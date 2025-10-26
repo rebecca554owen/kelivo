@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:open_filex/open_filex.dart';
 // import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'dart:convert';
+import 'package:characters/characters.dart';
 import '../pages/image_viewer_page.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -28,6 +29,7 @@ import '../../../core/providers/model_provider.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../desktop/menu_anchor.dart';
+import '../../../shared/widgets/emoji_text.dart';
 
 class ChatMessageWidget extends StatefulWidget {
   final ChatMessage message;
@@ -425,10 +427,15 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     Widget avatarContent;
 
     if (userProvider.avatarType == 'emoji' && userProvider.avatarValue != null) {
+      final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+      final double fs = 18;
+      final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
       avatarContent = Center(
-        child: Text(
+        child: EmojiText(
           userProvider.avatarValue!,
-          style: const TextStyle(fontSize: 18),
+          fontSize: fs,
+          optimizeEmojiAlign: true,
+          nudge: nudge,
         ),
       );
     } else if (userProvider.avatarType == 'url' && userProvider.avatarValue != null) {
@@ -1552,12 +1559,20 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         );
       }
       // treat as emoji or single char label
+      final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+      final double fs = 18;
+      final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
       return Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(color: cs.primary.withOpacity(0.1), shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: Text(av.characters.take(1).toString(), style: const TextStyle(fontSize: 18)),
+        child: EmojiText(
+          av.characters.take(1).toString(),
+          fontSize: fs,
+          optimizeEmojiAlign: true,
+          nudge: nudge,
+        ),
       );
     }
     return _assistantInitial(cs);
