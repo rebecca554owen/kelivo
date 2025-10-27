@@ -23,6 +23,7 @@ import 'package:characters/characters.dart';
 import '../features/provider/widgets/add_provider_sheet.dart';
 import '../features/provider/pages/multi_key_manager_page.dart';
 import '../features/model/widgets/model_detail_sheet.dart';
+import 'model_edit_dialog.dart' show showDesktopCreateModelDialog, showDesktopModelEditDialog;
 import '../features/model/widgets/model_select_sheet.dart';
 import '../utils/brand_assets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -1860,7 +1861,7 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
   // }
 
   Future<void> _createModel(BuildContext context) async {
-    final res = await showCreateModelSheet(context, providerKey: widget.providerKey);
+    final res = await showDesktopCreateModelDialog(context, providerKey: widget.providerKey);
     if (res == true && mounted) setState(() {});
   }
 
@@ -2624,7 +2625,7 @@ class _ModelRow extends StatelessWidget {
           const SizedBox(width: 8),
           Row(children: caps.map((w) => Padding(padding: const EdgeInsets.only(left: 4), child: w)).toList()),
           const SizedBox(width: 8),
-          _IconBtn(icon: lucide.Lucide.Settings2, onTap: () async { await showModelDetailSheet(context, providerKey: providerKey, modelId: modelId); }),
+          _IconBtn(icon: lucide.Lucide.Settings2, onTap: () async { await showDesktopModelEditDialog(context, providerKey: providerKey, modelId: modelId); }),
           const SizedBox(width: 4),
           _IconBtn(icon: lucide.Lucide.Minus, onTap: () async {
             final old = context.read<SettingsProvider>().getProviderConfig(providerKey);
