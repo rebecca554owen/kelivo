@@ -19,10 +19,9 @@ import '../utils/avatar_cache.dart';
 import '../utils/sandbox_path_resolver.dart';
 import 'dart:io' show File;
 import 'package:characters/characters.dart';
-// Provider management sheets reused for desktop dialogs
-import '../features/provider/widgets/add_provider_sheet.dart';
 import '../features/provider/pages/multi_key_manager_page.dart';
 import '../features/model/widgets/model_detail_sheet.dart';
+import 'add_provider_dialog.dart' show showDesktopAddProviderDialog;
 import 'model_edit_dialog.dart' show showDesktopCreateModelDialog, showDesktopModelEditDialog;
 import '../features/model/widgets/model_select_sheet.dart';
 import '../utils/brand_assets.dart';
@@ -1025,7 +1024,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
                     const SizedBox(height: 8),
                     // Bottom add button
                     _AddFullWidthButton(height: 36, label: l10n.addProviderSheetAddButton, onTap: () async {
-                      final created = await showAddProviderSheet(context);
+                      final created = await showDesktopAddProviderDialog(context);
                       if (!mounted) return;
                       if (created != null && created.isNotEmpty) {
                         setState(() { _selectedKey = created; });
