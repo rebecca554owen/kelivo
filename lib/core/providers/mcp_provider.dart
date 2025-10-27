@@ -259,6 +259,16 @@ class McpProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reorderServers(int oldIndex, int newIndex) async {
+    if (oldIndex == newIndex) return;
+    if (oldIndex < 0 || oldIndex >= _servers.length) return;
+    if (newIndex < 0 || newIndex >= _servers.length) return;
+    final moved = _servers.removeAt(oldIndex);
+    _servers.insert(newIndex, moved);
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> setToolEnabled(String serverId, String toolName, bool enabled) async {
     final idx = _servers.indexWhere((e) => e.id == serverId);
     if (idx < 0) return;
