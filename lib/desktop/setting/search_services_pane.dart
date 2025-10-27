@@ -504,7 +504,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
+        constraints: const BoxConstraints(maxWidth: 420),
         child: Stack(
           children: [
             Padding(
@@ -844,29 +844,35 @@ class _ServiceTypeDropdownState extends State<_ServiceTypeDropdown> {
           offset: Offset(dx, rb.size.height + 6),
           child: Material(
             color: Colors.transparent,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxH, minWidth: width, maxWidth: width),
-              child: SingleChildScrollView(
+            child: Container(
+              width: width.toDouble(),
+              decoration: BoxDecoration(
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 6))],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  width: width.toDouble(),
                   decoration: BoxDecoration(
                     color: Theme.of(ctx).brightness == Brightness.dark ? const Color(0xFF1C1C1E) : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: cs.outlineVariant.withOpacity(0.12), width: 0.5),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 6))],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    for (int i = 0; i < _types.length; i++) ...[
-                      _DropdownItem(
-                        leading: _BrandBadge(name: _types[i].brand, size: 18),
-                        label: _types[i].name,
-                        selected: widget.selectedType == _types[i].type,
-                        onTap: () { widget.onChanged(_types[i].type); _close(); },
-                      ),
-                      if (i != _types.length - 1) const SizedBox(height: 6),
-                    ],
-                  ]),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxH, minWidth: width, maxWidth: width),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        for (int i = 0; i < _types.length; i++) ...[
+                          _DropdownItem(
+                            leading: _BrandBadge(name: _types[i].brand, size: 18),
+                            label: _types[i].name,
+                            selected: widget.selectedType == _types[i].type,
+                            onTap: () { widget.onChanged(_types[i].type); _close(); },
+                          ),
+                          if (i != _types.length - 1) const SizedBox(height: 6),
+                        ],
+                      ]),
+                    ),
+                  ),
                 ),
               ),
             ),
