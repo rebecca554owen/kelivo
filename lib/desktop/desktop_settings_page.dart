@@ -29,6 +29,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../core/models/api_keys.dart';
 import 'package:file_picker/file_picker.dart';
 import 'desktop_context_menu.dart';
+import 'setting/default_model_pane.dart';
+import 'setting/search_services_pane.dart';
 
 /// Desktop settings layout: left menu + vertical divider + right content.
 /// For now, only the left menu and the Display Settings content are implemented.
@@ -58,6 +60,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
     String titleFor(_SettingsMenuItem it) {
@@ -86,7 +89,6 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
     }
 
     const double menuWidth = 256;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final topBar = SizedBox(
       height: 36,
       child: Align(
@@ -139,7 +141,9 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                         case _SettingsMenuItem.providers:
                           return const _DesktopProvidersBody(key: ValueKey('providers'));
                         case _SettingsMenuItem.defaultModel:
-                          return const _DesktopDefaultModelBody(key: ValueKey('defaultModel'));
+                          return const DesktopDefaultModelPane(key: ValueKey('defaultModel'));
+                        case _SettingsMenuItem.search:
+                          return const DesktopSearchServicesPane(key: ValueKey('search'));
                         default:
                           return _ComingSoonBody(selected: _selected);
                       }
@@ -887,6 +891,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
 
@@ -2676,377 +2681,12 @@ class _CardPressState extends State<_CardPress> {
   }
 }
 
-// Shared desktop text field decoration (top-level helper)
-InputDecoration _deskInputDecoration(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final cs = Theme.of(context).colorScheme;
-  return InputDecoration(
-    isDense: false,
-    filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.2), width: 0.8),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.2), width: 0.8),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: cs.primary.withOpacity(0.45), width: 1.0),
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-  );
-}
+// Removed embedded default model pane; now in setting/default_model_pane.dart
 
-// ===== Default Model (Desktop right content) =====
+// Removed default model prompt dialogs; migrated to setting/default_model_pane.dart
 
-class _DesktopDefaultModelBody extends StatelessWidget {
-  const _DesktopDefaultModelBody({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final settings = context.watch<SettingsProvider>();
-    return Container(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                height: 36,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l10n.defaultModelPageTitle,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: cs.onSurface.withOpacity(0.9)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              _DesktopModelCard(
-                icon: lucide.Lucide.MessageCircle,
-                title: l10n.defaultModelPageChatModelTitle,
-                subtitle: l10n.defaultModelPageChatModelSubtitle,
-                modelProvider: settings.currentModelProvider,
-                modelId: settings.currentModelId,
-                onPick: () async {
-                  final sel = await showModelSelector(context);
-                  if (sel != null) {
-                    await context.read<SettingsProvider>().setCurrentModel(sel.providerKey, sel.modelId);
-                  }
-                },
-              ),
-
-              const SizedBox(height: 16),
-              _DesktopModelCard(
-                icon: lucide.Lucide.NotebookTabs,
-                title: l10n.defaultModelPageTitleModelTitle,
-                subtitle: l10n.defaultModelPageTitleModelSubtitle,
-                modelProvider: settings.titleModelProvider,
-                modelId: settings.titleModelId,
-                fallbackProvider: settings.currentModelProvider,
-                fallbackModelId: settings.currentModelId,
-                onPick: () async {
-                  final sel = await showModelSelector(context);
-                  if (sel != null) {
-                    await context.read<SettingsProvider>().setTitleModel(sel.providerKey, sel.modelId);
-                  }
-                },
-                configAction: () => _showTitlePromptDialog(context),
-              ),
-
-              const SizedBox(height: 16),
-              _DesktopModelCard(
-                icon: lucide.Lucide.Languages,
-                title: l10n.defaultModelPageTranslateModelTitle,
-                subtitle: l10n.defaultModelPageTranslateModelSubtitle,
-                modelProvider: settings.translateModelProvider,
-                modelId: settings.translateModelId,
-                fallbackProvider: settings.currentModelProvider,
-                fallbackModelId: settings.currentModelId,
-                onPick: () async {
-                  final sel = await showModelSelector(context);
-                  if (sel != null) {
-                    await context.read<SettingsProvider>().setTranslateModel(sel.providerKey, sel.modelId);
-                  }
-                },
-                configAction: () => _showTranslatePromptDialog(context),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showTitlePromptDialog(BuildContext context) async {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final sp = context.read<SettingsProvider>();
-    final ctrl = TextEditingController(text: sp.titlePrompt);
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return Dialog(
-          backgroundColor: cs.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text(l10n.defaultModelPagePromptLabel, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700))),
-                      _IconBtn(icon: lucide.Lucide.X, onTap: () => Navigator.of(ctx).maybePop()),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 160),
-                    child: TextField(
-                      controller: ctrl,
-                      maxLines: null,
-                      minLines: 8,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: _deskInputDecoration(ctx).copyWith(hintText: l10n.defaultModelPageTitlePromptHint),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _DeskIosButton(
-                        label: l10n.defaultModelPageResetDefault,
-                        filled: false,
-                        dense: true,
-                        onTap: () async {
-                          await sp.resetTitlePrompt();
-                          ctrl.text = sp.titlePrompt;
-                        },
-                      ),
-                      const Spacer(),
-                      _DeskIosButton(
-                        label: l10n.defaultModelPageSave,
-                        filled: true,
-                        dense: true,
-                        onTap: () async {
-                          await sp.setTitlePrompt(ctrl.text.trim());
-                          if (ctx.mounted) Navigator.of(ctx).maybePop();
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(l10n.defaultModelPageTitleVars('{content}', '{locale}'), style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12)),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showTranslatePromptDialog(BuildContext context) async {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final sp = context.read<SettingsProvider>();
-    final ctrl = TextEditingController(text: sp.translatePrompt);
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return Dialog(
-          backgroundColor: cs.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text(l10n.defaultModelPagePromptLabel, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700))),
-                      _IconBtn(icon: lucide.Lucide.X, onTap: () => Navigator.of(ctx).maybePop()),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 160),
-                    child: TextField(
-                      controller: ctrl,
-                      maxLines: null,
-                      minLines: 8,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: _deskInputDecoration(ctx).copyWith(hintText: l10n.defaultModelPageTranslatePromptHint),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _DeskIosButton(
-                        label: l10n.defaultModelPageResetDefault,
-                        filled: false,
-                        dense: true,
-                        onTap: () async {
-                          await sp.resetTranslatePrompt();
-                          ctrl.text = sp.translatePrompt;
-                        },
-                      ),
-                      const Spacer(),
-                      _DeskIosButton(
-                        label: l10n.defaultModelPageSave,
-                        filled: true,
-                        dense: true,
-                        onTap: () async {
-                          await sp.setTranslatePrompt(ctrl.text.trim());
-                          if (ctx.mounted) Navigator.of(ctx).maybePop();
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(l10n.defaultModelPageTranslateVars('{source_text}', '{target_lang}'), style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 12)),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _DesktopModelCard extends StatefulWidget {
-  const _DesktopModelCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.modelProvider,
-    required this.modelId,
-    required this.onPick,
-    this.fallbackProvider,
-    this.fallbackModelId,
-    this.configAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String? modelProvider;
-  final String? modelId;
-  final String? fallbackProvider;
-  final String? fallbackModelId;
-  final VoidCallback onPick;
-  final VoidCallback? configAction;
-
-  @override
-  State<_DesktopModelCard> createState() => _DesktopModelCardState();
-}
-
-class _DesktopModelCardState extends State<_DesktopModelCard> {
-  bool _hover = false;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final settings = context.read<SettingsProvider>();
-    final l10n = AppLocalizations.of(context)!;
-
-    final usingFallback = widget.modelProvider == null || widget.modelId == null;
-    final effectiveProvider = widget.modelProvider ?? widget.fallbackProvider;
-    final effectiveModelId = widget.modelId ?? widget.fallbackModelId;
-
-    String? providerName;
-    String? modelDisplay;
-    if (effectiveProvider != null && effectiveModelId != null) {
-      final cfg = settings.getProviderConfig(effectiveProvider);
-      providerName = cfg.name.isNotEmpty ? cfg.name : effectiveProvider;
-      final ov = cfg.modelOverrides[effectiveModelId] as Map?;
-      modelDisplay = (ov != null && (ov['name'] as String?)?.isNotEmpty == true) ? (ov['name'] as String) : effectiveModelId;
-    }
-    if (usingFallback) {
-      modelDisplay = l10n.defaultModelPageUseCurrentModel;
-    }
-
-    final baseBg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
-    final borderColor = cs.outlineVariant.withOpacity(isDark ? 0.08 : 0.06);
-    final rowBase = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
-    final hoverOverlay = Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
-
-    return Container(
-      decoration: BoxDecoration(color: baseBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor, width: 0.6)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(widget.icon, size: 18, color: cs.onSurface),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
-                if (widget.configAction != null) _IconBtn(icon: lucide.Lucide.Settings, onTap: widget.configAction!),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(widget.subtitle, style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7))),
-            const SizedBox(height: 8),
-
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              onEnter: (_) => setState(() => _hover = true),
-              onExit: (_) => setState(() => _hover = false),
-              child: _CardPress(
-                onTap: widget.onPick,
-                builder: (pressed, overlay) {
-                  final bg = Color.alphaBlend(overlay, _hover ? Color.alphaBlend(hoverOverlay, rowBase) : rowBase);
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      children: [
-                        _BrandCircle(name: modelDisplay ?? (providerName ?? '?'), size: 24),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            modelDisplay ?? (providerName ?? '-'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// Removed embedded default model card; now in setting/default_model_pane.dart
 
 // ===== Display Settings Body =====
 
@@ -3736,7 +3376,7 @@ class _LanguageDropdownState extends State<_LanguageDropdown> {
           color: Colors.transparent,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1C1C1E) : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: cs.outlineVariant.withOpacity(0.12), width: 0.5),
               boxShadow: [
