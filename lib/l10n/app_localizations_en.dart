@@ -1983,6 +1983,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareProviderSheetShareButton => 'Share';
 
   @override
+  String get providerDetailPageApiBaseUrlLabel => 'API Base URL';
+
+  @override
+  String get providerDetailPageModelsTitle => 'Models';
+
+  @override
+  String get providerModelsGetButton => 'Get';
+
+  @override
+  String get providerDetailPageCapsVision => 'Vision';
+
+  @override
+  String get providerDetailPageCapsImage => 'Image';
+
+  @override
+  String get providerDetailPageCapsTool => 'Tool';
+
+  @override
+  String get providerDetailPageCapsReasoning => 'Reasoning';
+
+  @override
   String get qrScanPageTitle => 'Scan QR';
 
   @override

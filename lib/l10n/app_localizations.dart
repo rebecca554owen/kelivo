@@ -3797,6 +3797,48 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get shareProviderSheetShareButton;
 
+  /// No description provided for @providerDetailPageApiBaseUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Base URL'**
+  String get providerDetailPageApiBaseUrlLabel;
+
+  /// No description provided for @providerDetailPageModelsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Models'**
+  String get providerDetailPageModelsTitle;
+
+  /// No description provided for @providerModelsGetButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Get'**
+  String get providerModelsGetButton;
+
+  /// No description provided for @providerDetailPageCapsVision.
+  ///
+  /// In en, this message translates to:
+  /// **'Vision'**
+  String get providerDetailPageCapsVision;
+
+  /// No description provided for @providerDetailPageCapsImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get providerDetailPageCapsImage;
+
+  /// No description provided for @providerDetailPageCapsTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool'**
+  String get providerDetailPageCapsTool;
+
+  /// No description provided for @providerDetailPageCapsReasoning.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning'**
+  String get providerDetailPageCapsReasoning;
+
   /// No description provided for @qrScanPageTitle.
   ///
   /// In en, this message translates to:

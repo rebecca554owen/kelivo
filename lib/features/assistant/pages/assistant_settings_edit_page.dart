@@ -5170,7 +5170,8 @@ class _DesktopAssistantBasicPaneState extends State<_DesktopAssistantBasicPane> 
                     decoration: InputDecoration(
                       hintText: l10n.assistantEditMaxTokensHint,
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      // Increase height for desktop spec
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
                       filled: true,
                       fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
                       border: OutlineInputBorder(

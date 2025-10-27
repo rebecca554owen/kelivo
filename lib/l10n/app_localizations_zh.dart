@@ -1931,6 +1931,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareProviderSheetShareButton => '分享';
 
   @override
+  String get providerDetailPageApiBaseUrlLabel => 'API Base URL';
+
+  @override
+  String get providerDetailPageModelsTitle => '模型';
+
+  @override
+  String get providerModelsGetButton => '获取';
+
+  @override
+  String get providerDetailPageCapsVision => '视觉';
+
+  @override
+  String get providerDetailPageCapsImage => '生图';
+
+  @override
+  String get providerDetailPageCapsTool => '工具';
+
+  @override
+  String get providerDetailPageCapsReasoning => '推理';
+
+  @override
   String get qrScanPageTitle => '扫码导入';
 
   @override
@@ -4499,6 +4520,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get shareProviderSheetShareButton => '分享';
 
   @override
+  String get providerDetailPageApiBaseUrlLabel => 'API Base URL';
+
+  @override
+  String get providerDetailPageModelsTitle => '模型';
+
+  @override
+  String get providerModelsGetButton => '获取';
+
+  @override
+  String get providerDetailPageCapsVision => '视觉';
+
+  @override
+  String get providerDetailPageCapsImage => '生图';
+
+  @override
+  String get providerDetailPageCapsTool => '工具';
+
+  @override
+  String get providerDetailPageCapsReasoning => '推理';
+
+  @override
   String get qrScanPageTitle => '扫码导入';
 
   @override
@@ -7064,6 +7106,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get shareProviderSheetShareButton => '分享';
+
+  @override
+  String get providerDetailPageApiBaseUrlLabel => 'API Base URL';
+
+  @override
+  String get providerDetailPageModelsTitle => '模型';
+
+  @override
+  String get providerModelsGetButton => '取得';
+
+  @override
+  String get providerDetailPageCapsVision => '視覺';
+
+  @override
+  String get providerDetailPageCapsImage => '生圖';
+
+  @override
+  String get providerDetailPageCapsTool => '工具';
+
+  @override
+  String get providerDetailPageCapsReasoning => '推理';
 
   @override
   String get qrScanPageTitle => '掃碼匯入';

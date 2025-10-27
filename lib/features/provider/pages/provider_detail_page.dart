@@ -498,7 +498,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           if (widget.keyName.toLowerCase() != 'kelivoin' && !_multiKeyEnabled) ...[
             _inputRow(
               context,
-              label: 'API Key',
+              label: l10n.multiKeyPageKey,
               controller: _keyCtrl,
               hint: l10n.providerDetailPageApiKeyHint,
               obscure: !_showApiKey,
@@ -513,7 +513,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ],
           _inputRow(
             context,
-            label: 'API Base URL',
+            label: l10n.providerDetailPageApiBaseUrlLabel,
             controller: _baseCtrl,
             hint: ProviderConfig.defaultsFor(widget.keyName, displayName: widget.displayName).baseUrl,
             enabled: widget.keyName.toLowerCase() != 'kelivoin',

@@ -204,7 +204,7 @@ class _AnimatedFadeState extends State<_AnimatedFade> {
   }
 }
 
-class _GlassMenuItem extends StatelessWidget {
+class _GlassMenuItem extends StatefulWidget {
   const _GlassMenuItem({this.icon, required this.label, this.onTap, this.danger = false});
   final IconData? icon;
   final String label;
@@ -212,29 +212,43 @@ class _GlassMenuItem extends StatelessWidget {
   final bool danger;
 
   @override
+  State<_GlassMenuItem> createState() => _GlassMenuItemState();
+}
+
+class _GlassMenuItemState extends State<_GlassMenuItem> {
+  bool _hover = false;
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fg = danger ? Colors.red.shade600 : cs.onSurface;
-    final ic = danger ? Colors.red.shade600 : cs.onSurface.withOpacity(0.9);
-    return IosCardPress(
-      borderRadius: BorderRadius.zero,
-      baseColor: Colors.transparent,
-      onTap: () {
-        try { Haptics.light(); } catch (_) {}
-        onTap?.call();
-      },
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        alignment: Alignment.centerLeft,
-        child: Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 18, color: ic),
-              const SizedBox(width: 10),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fg = widget.danger ? Colors.red.shade600 : cs.onSurface;
+    final ic = widget.danger ? Colors.red.shade600 : cs.onSurface.withOpacity(0.9);
+    final bg = _hover ? (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05)) : Colors.transparent;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: IosCardPress(
+        borderRadius: BorderRadius.zero,
+        baseColor: Colors.transparent,
+        onTap: () {
+          try { Haptics.light(); } catch (_) {}
+          widget.onTap?.call();
+        },
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(color: bg),
+          child: Row(
+            children: [
+              if (widget.icon != null) ...[
+                Icon(widget.icon, size: 18, color: ic),
+                const SizedBox(width: 10),
+              ],
+              Expanded(child: Text(widget.label, style: TextStyle(fontSize: 14.5, color: fg, decoration: TextDecoration.none))),
             ],
-            Expanded(child: Text(label, style: TextStyle(fontSize: 14.5, color: fg, decoration: TextDecoration.none))),
-          ],
+          ),
         ),
       ),
     );
