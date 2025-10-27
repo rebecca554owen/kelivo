@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/palettes.dart';
 import '../core/providers/settings_provider.dart';
 import '../core/providers/model_provider.dart';
+import 'model_fetch_dialog.dart' show showModelFetchDialog;
 import '../shared/widgets/ios_switch.dart';
 // Desktop assistants panel dependencies
 import '../features/assistant/pages/assistant_settings_edit_page.dart' show showAssistantDesktopDialog; // dialog opener only
@@ -1418,7 +1419,15 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
               Align(
                 alignment: Alignment.centerLeft,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  _DeskIosButton(label: AppLocalizations.of(context)!.providerModelsGetButton, filled: true, dense: true, onTap: () => _showDetectModelsSheet(context)),
+                  _DeskIosButton(
+                    label: AppLocalizations.of(context)!.providerModelsGetButton,
+                    filled: true,
+                    dense: true,
+                    onTap: () async {
+                      final providerName = widget.displayName;
+                      await showModelFetchDialog(context, providerKey: widget.providerKey, providerDisplayName: providerName);
+                    },
+                  ),
                   const SizedBox(width: 8),
                   _DeskIosButton(label: l10n.addProviderSheetAddButton, filled: false, dense: true, onTap: () => _createModel(context)),
                 ]),
@@ -1843,93 +1852,7 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
     );
   }
 
-  Future<void> _showDetectModelsSheet(BuildContext context) async {
-    final cs = Theme.of(context).colorScheme;
-    final sp = context.read<SettingsProvider>();
-    final cfg = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-    bool loading = false;
-    List<ModelInfo> found = const [];
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: StatefulBuilder(builder: (ctx, setSt) {
-          Future<void> _detect() async {
-            setSt(() => loading = true);
-            try {
-              final list = await ProviderManager.listModels(cfg);
-              found = list;
-            } catch (_) {
-              found = const [];
-            }
-            if (ctx.mounted) setSt(() => loading = false);
-          }
-          return Padding(
-            padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + MediaQuery.of(ctx).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.2), borderRadius: BorderRadius.circular(999)))),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: Text(AppLocalizations.of(ctx)!.providerDetailPageModelsTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
-                    _GreyCapsule(label: '${found.length}')
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (!loading)
-                  _DeskIosButton(label: AppLocalizations.of(ctx)!.multiKeyPageDetect, filled: true, onTap: _detect)
-                else
-                  Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary))),
-                const SizedBox(height: 10),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 420),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: found.length,
-                    itemBuilder: (c, i) {
-                      final m = found[i];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            _BrandCircle(name: m.id, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(m.id, style: const TextStyle(fontSize: 13))),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _DeskIosButton(
-                    label: AppLocalizations.of(ctx)!.assistantEditEmojiDialogSave,
-                    filled: true,
-                    onTap: () async {
-                      if (found.isNotEmpty) {
-                        final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                        final ids = found.map((e) => e.id).toList();
-                        await sp.setProviderConfig(widget.providerKey, old.copyWith(models: ids));
-                      }
-                      if (ctx.mounted) Navigator.of(ctx).maybePop();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ),
-    );
-  }
+  // Replaced with desktop centered dialog: showModelFetchDialog
 
   // Future<void> _showGetModelsDialog(BuildContext context) async {
   //   // For now this acts similar to Detect, but kept separate per spec.
