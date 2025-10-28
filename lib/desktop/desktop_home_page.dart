@@ -9,7 +9,10 @@ import 'desktop_settings_page.dart';
 /// Desktop home screen: left compact rail + main content.
 /// Phase 1 focuses on structure and platform-appropriate interactions/hover.
 class DesktopHomePage extends StatefulWidget {
-  const DesktopHomePage({super.key});
+  const DesktopHomePage({super.key, this.initialTabIndex, this.initialProviderKey});
+
+  final int? initialTabIndex; // 0=Chat,1=Translate,2=Settings
+  final String? initialProviderKey;
 
   @override
   State<DesktopHomePage> createState() => _DesktopHomePageState();
@@ -17,6 +20,14 @@ class DesktopHomePage extends StatefulWidget {
 
 class _DesktopHomePageState extends State<DesktopHomePage> {
   int _tabIndex = 0; // 0=Chat, 1=Translate, 2=Settings
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialTabIndex != null) {
+      _tabIndex = widget.initialTabIndex!.clamp(0, 2);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +62,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
                 child: () {
                   if (_tabIndex == 0) return const DesktopChatPage();
                   if (_tabIndex == 1) return _TranslatePlaceholder(key: const ValueKey('translate_placeholder'));
-                  return const DesktopSettingsPage(key: ValueKey('settings_page'));
+                  return DesktopSettingsPage(key: const ValueKey('settings_page'), initialProviderKey: widget.initialProviderKey);
                 }(),
               ),
             ),

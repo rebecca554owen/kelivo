@@ -12,6 +12,7 @@ import '../../provider/pages/provider_detail_page.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../desktop/desktop_home_page.dart' show DesktopHomePage;
 
 class ModelSelection {
   final String providerKey;
@@ -169,6 +170,11 @@ _ModelProcessingResult _processModelsInBackground(_ModelProcessingData data) {
 }
 
 Future<ModelSelection?> showModelSelector(BuildContext context, {String? limitProviderKey}) async {
+  // Desktop platforms use a custom dialog, mobile keeps the bottom sheet UX.
+  final platform = defaultTargetPlatform;
+  if (platform == TargetPlatform.macOS || platform == TargetPlatform.windows || platform == TargetPlatform.linux) {
+    return _showDesktopModelSelector(context, limitProviderKey: limitProviderKey);
+  }
   final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<ModelSelection>(
     context: context,
@@ -1043,3 +1049,456 @@ Widget _modelTagWrap(BuildContext context, ModelInfo m) {
   }
   return Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: chips);
 }
+
+// ===== Desktop dialog implementation =====
+
+Future<ModelSelection?> _showDesktopModelSelector(BuildContext context, {String? limitProviderKey}) async {
+  return showGeneralDialog<ModelSelection>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'model-select-desktop',
+    barrierColor: Colors.black.withOpacity(0.25),
+    pageBuilder: (ctx, _, __) => _DesktopModelSelectDialogBody(limitProviderKey: limitProviderKey),
+    transitionBuilder: (ctx, anim, _, child) {
+      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+class _DesktopModelSelectDialogBody extends StatefulWidget {
+  const _DesktopModelSelectDialogBody({this.limitProviderKey});
+  final String? limitProviderKey;
+  @override
+  State<_DesktopModelSelectDialogBody> createState() => _DesktopModelSelectDialogBodyState();
+}
+
+class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialogBody> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  bool _loading = true;
+  Map<String, _ProviderGroup> _groups = const {};
+  List<_ModelItem> _favItems = const [];
+  List<String> _orderedKeys = const [];
+  // Flattened rows and precise index mapping for jump
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
+  final List<_ListRow> _rows = <_ListRow>[];
+  final Map<String, int> _headerIndexMap = <String, int>{}; // providerKey or '__fav__' -> index
+  final Map<String, int> _modelIndexMap = <String, int>{};  // 'pk::modelId' in provider sections -> index
+  final Map<String, int> _favModelIndexMap = <String, int>{}; // 'pk::modelId' in favorites -> index
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_loadModels);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadModels() async {
+    final settings = context.read<SettingsProvider>();
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    final currentProvider = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final currentModelId = assistant?.chatModelId ?? settings.currentModelId;
+    final currentKey = (currentProvider != null && currentModelId != null) ? '$currentProvider::$currentModelId' : '';
+
+    final data = _ModelProcessingData(
+      providerConfigs: Map<String, dynamic>.from(
+        settings.providerConfigs.map((key, value) => MapEntry(key, {
+              'enabled': value.enabled,
+              'name': value.name,
+              'models': value.models,
+              'overrides': value.modelOverrides,
+            })),
+      ),
+      pinnedModels: settings.pinnedModels,
+      currentModelKey: currentKey,
+      providersOrder: settings.providersOrder,
+      limitProviderKey: widget.limitProviderKey,
+    );
+    // Synchronous processing is fast enough here
+    final result = _processModelsInBackground(data);
+    if (!mounted) return;
+    setState(() {
+      _groups = result.groups;
+      _favItems = result.favItems;
+      _orderedKeys = result.orderedKeys;
+      _loading = false;
+    });
+  }
+
+  bool _matchesSearch(String query, _ModelItem item, String providerName) {
+    if (query.isEmpty) return true;
+    final q = query.toLowerCase();
+    return item.id.toLowerCase().contains(q) || item.info.displayName.toLowerCase().contains(q);
+  }
+
+  bool _providerMatchesSearch(String query, String providerName) {
+    if (query.isEmpty) return true;
+    final lowerQuery = query.toLowerCase();
+    return providerName.toLowerCase().contains(lowerQuery);
+  }
+
+  void _rebuildRows() {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.read<SettingsProvider>();
+    final query = _searchCtrl.text.trim();
+    _rows.clear();
+    _headerIndexMap.clear();
+    _modelIndexMap.clear();
+    _favModelIndexMap.clear();
+
+    final Set<String> favMatchedKeys = <String>{};
+
+    if (widget.limitProviderKey == null) {
+      final pinned = settings.pinnedModels;
+      if (pinned.isNotEmpty) {
+        final favs = <_ModelItem>[];
+        for (final k in pinned) {
+          final parts = k.split('::');
+          if (parts.length < 2) continue;
+          final pk = parts[0];
+          final mid = parts.sublist(1).join('::');
+          final g = _groups[pk];
+          if (g == null) continue;
+          final found = g.items.firstWhere(
+            (e) => e.id == mid,
+            orElse: () => _ModelItem(
+              providerKey: pk,
+              providerName: g.name,
+              id: mid,
+              info: ModelRegistry.infer(ModelInfo(id: mid, displayName: mid)),
+              pinned: true,
+              selected: false,
+            ),
+          );
+          if (_matchesSearch(query, found, found.providerName)) {
+            favs.add(found.copyWith(pinned: true));
+            favMatchedKeys.add('$pk::$mid');
+          }
+        }
+        if (favs.isNotEmpty) {
+          _headerIndexMap['__fav__'] = _rows.length;
+          _rows.add(_HeaderRow(l10n.modelSelectSheetFavoritesSection));
+          for (final m in favs) {
+            _favModelIndexMap['${m.providerKey}::${m.id}'] = _rows.length;
+            _rows.add(_ModelRow(m, showProviderLabel: true));
+          }
+        }
+      }
+    }
+
+    for (final pk in _orderedKeys) {
+      final g = _groups[pk];
+      if (g == null) continue;
+      List<_ModelItem> items;
+      if (query.isEmpty) {
+        items = g.items;
+      } else {
+        final providerMatches = _providerMatchesSearch(query, g.name);
+        items = providerMatches ? g.items : g.items.where((e) => _matchesSearch(query, e, g.name)).toList();
+        if (favMatchedKeys.isNotEmpty) {
+          items = items.where((e) => !favMatchedKeys.contains('${e.providerKey}::${e.id}')).toList();
+        }
+      }
+      if (items.isEmpty) continue;
+      _headerIndexMap[pk] = _rows.length;
+      _rows.add(_HeaderRow(g.name));
+      for (final m in items) {
+        _modelIndexMap['${m.providerKey}::${m.id}'] = _rows.length;
+        _rows.add(_ModelRow(m));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    final dialog = Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 460, maxWidth: 620, maxHeight: 560),
+        child: Material(
+          color: cs.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isDark ? Colors.white.withOpacity(0.08) : cs.outlineVariant.withOpacity(0.25),
+              width: 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Body
+                Expanded(
+                  child: Container(
+                    color: cs.surface,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                          child: TextField(
+                            controller: _searchCtrl,
+                            enabled: !_loading,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: l10n.modelSelectSheetSearchHint,
+                              isDense: true,
+                              filled: true,
+                              fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                              prefixIcon: Icon(Lucide.Search, size: 16, color: cs.onSurface.withOpacity(0.7)),
+                              suffixIcon: (widget.limitProviderKey == null && context.watch<SettingsProvider>().pinnedModels.isNotEmpty)
+                                  ? Tooltip(
+                                      message: l10n.modelSelectSheetFavoritesSection,
+                                      child: IconButton(
+                                        icon: Icon(Lucide.Bookmark, size: 16, color: cs.onSurface.withOpacity(0.7)),
+                                        onPressed: _jumpToFavorites,
+                                      ),
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.transparent)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary.withOpacity(0.4))),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: _loading
+                              ? const Center(child: CircularProgressIndicator())
+                              : _buildList(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Material(type: MaterialType.transparency, child: dialog);
+  }
+
+  Widget _buildList(BuildContext context) {
+    // Watch pinned models to keep the favorites section live when user toggles
+    // favorites from any item.
+    final _ = context.watch<SettingsProvider>().pinnedModels.length;
+    // Build flattened rows based on current search and pinned state
+    _rebuildRows();
+    if (_rows.isEmpty) return const Center(child: SizedBox());
+    return ScrollablePositionedList.builder(
+      itemCount: _rows.length,
+      itemScrollController: _itemScrollController,
+      itemPositionsListener: _itemPositionsListener,
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+      itemBuilder: (context, index) {
+        final row = _rows[index];
+        if (row is _HeaderRow) {
+          final isFav = _headerIndexMap['__fav__'] == index;
+          if (isFav) {
+            return _favoritesHeader(context, row.title);
+          }
+          // Find provider key by matching header index if needed
+          String? providerKey;
+          _headerIndexMap.forEach((k, v) {
+            if (v == index && k != '__fav__') providerKey = k;
+          });
+          return _providerHeader(context, providerKey, row.title);
+        } else if (row is _ModelRow) {
+          return _desktopModelTile(context, row.item, showProviderLabel: row.showProviderLabel);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _desktopModelTile(BuildContext context, _ModelItem m, {bool showProviderLabel = false}) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final bg = m.selected ? (isDark ? cs.primary.withOpacity(0.12) : cs.primary.withOpacity(0.08)) : cs.surface;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: IosCardPress(
+        baseColor: bg,
+        borderRadius: BorderRadius.circular(14),
+        pressedBlendStrength: 0.10,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        onTap: () => Navigator.of(context).pop(ModelSelection(m.providerKey, m.id)),
+        onLongPress: () async {
+          await showModelDetailSheet(context, providerKey: m.providerKey, modelId: m.id);
+          if (mounted) setState(() => _loading = true);
+          await _loadModels();
+        },
+        child: Row(
+          children: [
+            _BrandAvatar(name: m.id, assetOverride: m.asset, size: 18),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: m.info.displayName,
+                  style: const TextStyle(fontSize: 12.5),
+                  children: [
+                    if (showProviderLabel)
+                      TextSpan(text: ' | ${m.providerName}', style: TextStyle(fontSize: 11.5, color: cs.onSurface.withOpacity(0.6))),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Row(children: _buildDesktopCapsules(context, m.info).map((w) => Padding(padding: const EdgeInsets.only(left: 4), child: w)).toList()),
+            const SizedBox(width: 4),
+            Builder(builder: (context) {
+              final pinnedNow = context.select<SettingsProvider, bool>((s) => s.isModelPinned(m.providerKey, m.id));
+              final icon = pinnedNow ? Icons.favorite : Icons.favorite_border;
+              return Tooltip(
+                message: l10n.modelSelectSheetFavoriteTooltip,
+                child: IosIconButton(
+                  icon: icon,
+                  size: 16,
+                  color: cs.primary,
+                  onTap: () => context.read<SettingsProvider>().togglePinModel(m.providerKey, m.id),
+                  padding: const EdgeInsets.all(3),
+                  minSize: 26,
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildDesktopCapsules(BuildContext context, ModelInfo info) {
+    final cs = Theme.of(context).colorScheme;
+    final caps = <Widget>[];
+    Widget pillCapsule(Widget icon, Color color) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final bg = isDark ? color.withOpacity(0.18) : color.withOpacity(0.14);
+      final bd = color.withOpacity(0.22);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: bd, width: 0.5),
+        ),
+        child: icon,
+      );
+    }
+    if (info.input.contains(Modality.image)) {
+      caps.add(pillCapsule(Icon(Lucide.Eye, size: 11, color: cs.secondary), cs.secondary));
+    }
+    if (info.output.contains(Modality.image)) {
+      caps.add(pillCapsule(Icon(Lucide.Image, size: 11, color: cs.tertiary), cs.tertiary));
+    }
+    for (final ab in info.abilities) {
+      if (ab == ModelAbility.tool) {
+        caps.add(pillCapsule(Icon(Lucide.Hammer, size: 11, color: cs.primary), cs.primary));
+      } else if (ab == ModelAbility.reasoning) {
+        caps.add(pillCapsule(SvgPicture.asset('assets/icons/deepthink.svg', width: 11, height: 11, colorFilter: ColorFilter.mode(cs.secondary, BlendMode.srcIn)), cs.secondary));
+      }
+    }
+    return caps;
+  }
+
+  Widget _favoritesHeader(BuildContext context, String title) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+      child: Row(
+        children: [
+          Icon(Lucide.Bookmark, size: 14, color: cs.onSurface.withOpacity(0.6)),
+          const SizedBox(width: 6),
+          Text(title, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.6))),
+        ],
+      ),
+    );
+  }
+
+  Widget _providerHeader(BuildContext context, String? providerKey, String displayName) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+      child: Row(
+        children: [
+          Text(
+            displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.6)),
+          ),
+          const Spacer(),
+          if (providerKey != null)
+            Tooltip(
+              message: AppLocalizations.of(context)!.settingsPageTitle,
+              child: IosIconButton(
+                icon: Lucide.Settings2,
+                size: 16,
+                color: cs.onSurface.withOpacity(0.8),
+                onTap: () async {
+                  final nav = Navigator.of(context);
+                  // Close model dialog first
+                  nav.pop();
+                  // Then navigate to DesktopHomePage with Settings tab open and provider preselected
+                  Future.microtask(() {
+                    nav.push(
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => DesktopHomePage(initialTabIndex: 2, initialProviderKey: providerKey),
+                        transitionDuration: const Duration(milliseconds: 220),
+                        reverseTransitionDuration: const Duration(milliseconds: 200),
+                        transitionsBuilder: (ctx, anim, sec, child) {
+                          final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+                          return FadeTransition(opacity: curved, child: child);
+                        },
+                      ),
+                    );
+                  });
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _jumpToFavorites() async {
+    // Ensure rows are current
+    _rebuildRows();
+    final idx = _headerIndexMap['__fav__'];
+    if (idx == null) return;
+    if (!_itemScrollController.isAttached) {
+      Future.delayed(const Duration(milliseconds: 60), _jumpToFavorites);
+      return;
+    }
+    try {
+      await _itemScrollController.scrollTo(index: idx, duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
+    } catch (_) {}
+  }
+}
+
+// (desktop tactile row removed in favor of IosCardPress for consistency)

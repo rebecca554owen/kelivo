@@ -23,7 +23,7 @@ import '../features/provider/pages/multi_key_manager_page.dart';
 import '../features/model/widgets/model_detail_sheet.dart';
 import 'add_provider_dialog.dart' show showDesktopAddProviderDialog;
 import 'model_edit_dialog.dart' show showDesktopCreateModelDialog, showDesktopModelEditDialog;
-import '../features/model/widgets/model_select_sheet.dart';
+// Removed import of mobile/desktop model selector to avoid circular deps
 import '../utils/brand_assets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../core/models/api_keys.dart';
@@ -40,7 +40,10 @@ import 'setting/about_pane.dart';
 /// Desktop settings layout: left menu + vertical divider + right content.
 /// For now, only the left menu and the Display Settings content are implemented.
 class DesktopSettingsPage extends StatefulWidget {
-  const DesktopSettingsPage({super.key});
+  const DesktopSettingsPage({super.key, this.initialProviderKey});
+
+  // Optional: when provided, jump to Providers tab and preselect this provider
+  final String? initialProviderKey;
 
   @override
   State<DesktopSettingsPage> createState() => _DesktopSettingsPageState();
@@ -61,6 +64,15 @@ enum _SettingsMenuItem {
 
 class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
   _SettingsMenuItem _selected = _SettingsMenuItem.display;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialProviderKey != null) {
+      // Deep link into Providers tab when a provider is specified
+      _selected = _SettingsMenuItem.providers;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +156,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                         case _SettingsMenuItem.assistant:
                           return const _DesktopAssistantsBody(key: ValueKey('assistants'));
                         case _SettingsMenuItem.providers:
-                          return const _DesktopProvidersBody(key: ValueKey('providers'));
+                          return _DesktopProvidersBody(key: const ValueKey('providers'), initialSelectedKey: widget.initialProviderKey);
                         case _SettingsMenuItem.defaultModel:
                           return const DesktopDefaultModelPane(key: ValueKey('defaultModel'));
                         case _SettingsMenuItem.search:
@@ -895,7 +907,8 @@ class _AssistantAvatarDesktop extends StatelessWidget {
 // ===== Providers (Desktop right content) =====
 
 class _DesktopProvidersBody extends StatefulWidget {
-  const _DesktopProvidersBody({super.key});
+  const _DesktopProvidersBody({super.key, this.initialSelectedKey});
+  final String? initialSelectedKey;
   @override
   State<_DesktopProvidersBody> createState() => _DesktopProvidersBodyState();
 }
@@ -945,7 +958,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
     }
     ordered.addAll(map.values);
 
-    _selectedKey ??= (ordered.isNotEmpty ? ordered.first.key : null);
+    _selectedKey ??= (widget.initialSelectedKey ?? (ordered.isNotEmpty ? ordered.first.key : null));
     final selectedKey = _selectedKey;
     final rightPane = selectedKey == null
         ? const SizedBox()
@@ -1896,9 +1909,50 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
       barrierDismissible: true,
       builder: (ctx) {
         Future<void> pickModel() async {
-          final sel = await showModelSelector(ctx, limitProviderKey: widget.providerKey);
-          if (sel != null) {
-            selectedModelId = sel.modelId;
+          // Simple inline picker to avoid depending on model_select_sheet in desktop
+          final sp = context.read<SettingsProvider>();
+          final cfg = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+          final items = List<String>.from(cfg.models);
+          if (items.isEmpty) return;
+          final choice = await showDialog<String>(
+            context: ctx,
+            barrierDismissible: true,
+            builder: (pctx) => Dialog(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(AppLocalizations.of(pctx)!.providerDetailPageSelectModelButton, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700))),
+                          IconButton(onPressed: () => Navigator.of(pctx).maybePop(), icon: const Icon(Icons.close, size: 18)),
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: ListView(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                        children: [
+                          for (final id in items)
+                            ListTile(
+                              dense: true,
+                              title: Text(id, style: const TextStyle(fontSize: 13.5)),
+                              onTap: () => Navigator.of(pctx).pop(id),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          if (choice != null) {
+            selectedModelId = choice;
             (ctx as Element).markNeedsBuild();
           }
         }
