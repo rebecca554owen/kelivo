@@ -12,6 +12,7 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/services/chat/chat_service.dart';
 import '../../core/services/backup/cherry_importer.dart';
 import '../../shared/widgets/ios_switch.dart';
+import '../../shared/widgets/snackbar.dart';
 
 class DesktopBackupPane extends StatefulWidget {
   const DesktopBackupPane({super.key});
@@ -266,6 +267,16 @@ class _DesktopBackupPaneState extends State<DesktopBackupPane> {
                         onTap: busy ? (){} : () async {
                           await _saveConfig();
                           await context.read<BackupProvider>().test();
+                          if (!mounted) return;
+                          final rawMessage = context.read<BackupProvider>().message;
+                          final message = rawMessage ?? l10n.backupPageTestDone;
+                          showAppSnackBar(
+                            context,
+                            message: message,
+                            type: rawMessage != null && rawMessage != 'OK'
+                                ? NotificationType.error
+                                : NotificationType.success,
+                          );
                         },
                       ),
                       _DeskIosButton(
@@ -281,6 +292,14 @@ class _DesktopBackupPaneState extends State<DesktopBackupPane> {
                         onTap: busy ? (){} : () async {
                           await _saveConfig();
                           await context.read<BackupProvider>().backup();
+                          if (!mounted) return;
+                          final rawMessage = context.read<BackupProvider>().message;
+                          final message = rawMessage ?? l10n.backupPageBackupUploaded;
+                          showAppSnackBar(
+                            context,
+                            message: message,
+                            type: NotificationType.info,
+                          );
                         },
                       ),
                     ]),
