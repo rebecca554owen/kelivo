@@ -34,6 +34,7 @@ import 'setting/search_services_pane.dart';
 import 'setting/mcp_pane.dart';
 import 'setting/tts_services_pane.dart';
 import 'setting/quick_phrases_pane.dart';
+import 'setting/backup_pane.dart';
 
 /// Desktop settings layout: left menu + vertical divider + right content.
 /// For now, only the left menu and the Display Settings content are implemented.
@@ -149,6 +150,8 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           return const DesktopSearchServicesPane(key: ValueKey('search'));
                         case _SettingsMenuItem.mcp:
                           return const DesktopMcpPane(key: ValueKey('mcp'));
+                        case _SettingsMenuItem.backup:
+                          return const DesktopBackupPane(key: ValueKey('backup'));
                         case _SettingsMenuItem.quickPhrases:
                           return const DesktopQuickPhrasesPane(key: ValueKey('quickPhrases'));
                         case _SettingsMenuItem.tts:
