@@ -2176,7 +2176,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPageEasterEggButton => 'Nice!';
 
   @override
-  String get aboutPageAppDescription => 'Open-source Mobile AI Assistant';
+  String get aboutPageAppDescription => 'Open-source AI Assistant';
 
   @override
   String get aboutPageNoQQGroup => 'No QQ group yet';
@@ -2431,7 +2431,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get imageViewerPageShareButton => 'Share Image';
 
   @override
-  String get settingsShare => 'Kelivo - Open Source Mobile AI Assistant';
+  String get settingsShare => 'Kelivo - Open Source AI Assistant';
 
   @override
   String get searchProviderBingLocalDescription =>

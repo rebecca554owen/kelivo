@@ -4172,7 +4172,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutPageAppDescription.
   ///
   /// In en, this message translates to:
-  /// **'Open-source Mobile AI Assistant'**
+  /// **'Open-source AI Assistant'**
   String get aboutPageAppDescription;
 
   /// No description provided for @aboutPageNoQQGroup.
@@ -4616,7 +4616,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsShare.
   ///
   /// In en, this message translates to:
-  /// **'Kelivo - Open Source Mobile AI Assistant'**
+  /// **'Kelivo - Open Source AI Assistant'**
   String get settingsShare;
 
   /// No description provided for @searchProviderBingLocalDescription.

@@ -2825,7 +2825,8 @@ class _SettingsCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
               child: Text(
                 title,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface),
+                // Align card title with other panes (15, semi-bold)
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface),
               ),
             ),
             ...children,
@@ -2871,7 +2872,8 @@ class _LabeledRow extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: cs.onSurface, decoration: TextDecoration.none),
+              // Match other settings row labels (14, normal, slightly dimmed)
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: cs.onSurface.withOpacity(0.9), decoration: TextDecoration.none),
             ),
           ),
           const SizedBox(width: 6),
@@ -2968,8 +2970,9 @@ class _ThemeModeSegmentedState extends State<_ThemeModeSegmented> {
                         items[i].$2,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        // Reduce segmented labels to 14 for consistency
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: (mode == items[i].$1)
                               ? cs.primary
@@ -3034,7 +3037,8 @@ class _HoverPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: fg, decoration: TextDecoration.none)),
+              // Keep pill text size aligned with row labels
+              Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: fg, decoration: TextDecoration.none)),
               const SizedBox(width: 8),
               Icon(icon, size: 16, color: fg),
             ],
@@ -3148,7 +3152,8 @@ class _AppLanguageRowState extends State<_AppLanguageRow> {
       final cs = Theme.of(ctx).colorScheme;
       // measure desired content width for centering under trigger
       double measureContentWidth() {
-        final style = const TextStyle(fontSize: 16);
+        // Keep measurement consistent with dropdown item text (14)
+        final style = const TextStyle(fontSize: 14);
         final labels = <String>[
           '🖥️ ${AppLocalizations.of(ctx)!.settingsPageSystemMode}',
           '🇨🇳 ${AppLocalizations.of(ctx)!.displaySettingsPageLanguageChineseLabel}',
@@ -3242,7 +3247,7 @@ class _HoverDropdownButton extends StatelessWidget {
     required this.label,
     required this.onHover,
     required this.onTap,
-    this.fontSize = 16,
+    this.fontSize = 14,
     this.verticalPadding = 8,
     this.borderRadius = 10,
     this.rightAlignArrow = false,
@@ -3929,7 +3934,8 @@ class _ToggleRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: cs.onSurface.withOpacity(0.96), decoration: TextDecoration.none),
+              // Reduce toggle row label size to 14 to match other panes
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: cs.onSurface.withOpacity(0.9), decoration: TextDecoration.none),
             ),
           ),
           IosSwitch(value: value, onChanged: onChanged),

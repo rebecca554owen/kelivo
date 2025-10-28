@@ -918,7 +918,7 @@
   "aboutPageEasterEggTitle": "Easter Egg Unlocked!",
   "aboutPageEasterEggMessage": "Thanks for exploring! \n (No egg yet)",
   "aboutPageEasterEggButton": "Nice!",
-  "aboutPageAppDescription": "Open-source Mobile AI Assistant",
+  "aboutPageAppDescription": "Open-source AI Assistant",
   "aboutPageNoQQGroup": "No QQ group yet",
   "aboutPageVersion": "Version",
   "aboutPageSystem": "System",
@@ -1013,7 +1013,7 @@
     }
   },
   "imageViewerPageShareButton": "Share Image",
-  "settingsShare": "Kelivo - Open Source Mobile AI Assistant",
+  "settingsShare": "Kelivo - Open Source AI Assistant",
   "searchProviderBingLocalDescription": "Uses web scraping to fetch Bing results. No API key required; may be unstable.",
   "searchProviderBraveDescription": "Independent search engine by Brave. Privacy-focused with no tracking or profiling.",
   "searchProviderExaDescription": "Neural search with semantic understanding. Great for research and finding specific content.",

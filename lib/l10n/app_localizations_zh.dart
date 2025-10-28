@@ -2117,7 +2117,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutPageEasterEggButton => '好的';
 
   @override
-  String get aboutPageAppDescription => '开源移动端 AI 助手';
+  String get aboutPageAppDescription => '开源AI 助手';
 
   @override
   String get aboutPageNoQQGroup => '暂无QQ群';
@@ -2349,7 +2349,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get imageViewerPageShareButton => '分享图片';
 
   @override
-  String get settingsShare => 'Kelivo - 开源移动端AI助手';
+  String get settingsShare => 'Kelivo - 开源AI助手';
 
   @override
   String get searchProviderBingLocalDescription =>
@@ -4706,7 +4706,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get aboutPageEasterEggButton => '好的';
 
   @override
-  String get aboutPageAppDescription => '开源移动端 AI 助手';
+  String get aboutPageAppDescription => '开源 AI 助手';
 
   @override
   String get aboutPageNoQQGroup => '暂无QQ群';
@@ -4938,7 +4938,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get imageViewerPageShareButton => '分享图片';
 
   @override
-  String get settingsShare => 'Kelivo - 开源移动端AI助手';
+  String get settingsShare => 'Kelivo - 开源AI助手';
 
   @override
   String get searchProviderBingLocalDescription =>
@@ -7294,7 +7294,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get aboutPageEasterEggButton => '好的';
 
   @override
-  String get aboutPageAppDescription => '開源行動端 AI 助理';
+  String get aboutPageAppDescription => '開源 AI 助理';
 
   @override
   String get aboutPageNoQQGroup => '暫無QQ群';
@@ -7526,7 +7526,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get imageViewerPageShareButton => '分享圖片';
 
   @override
-  String get settingsShare => 'Kelivo - 開源行動端AI助理';
+  String get settingsShare => 'Kelivo - 開源AI助理';
 
   @override
   String get searchProviderBingLocalDescription =>
