@@ -3165,8 +3165,9 @@ class _AppLanguageRowState extends State<_AppLanguageRow> {
           final tp = TextPainter(text: TextSpan(text: s, style: style), textDirection: TextDirection.ltr, maxLines: 1)..layout();
           if (tp.width > maxText) maxText = tp.width;
         }
-        // item padding (12*2) + check icon (16) + gap (10) + list padding (8*2)
-        return maxText + 12 * 2 + 16 + 10 + 8 * 2;
+        // item padding (12*2) + check icon (16) + gap to check (10)
+        // + list padding (8*2) + gap between flag and text (8) + small fudge (2)
+        return maxText + 12 * 2 + 16 + 10 + 8 * 2 + 8 + 2;
       }
       final contentW = measureContentWidth();
       final width = contentW.clamp(minW, maxW);
@@ -3485,7 +3486,15 @@ class _LanguageDropdownItemState extends State<_LanguageDropdownItem> {
             children: [
               Text(widget.item.flag, style: const TextStyle(fontSize: 16, decoration: TextDecoration.none)),
               const SizedBox(width: 8),
-              Expanded(child: Text(widget.item.label, style: TextStyle(fontSize: 14, color: cs.onSurface, decoration: TextDecoration.none))),
+              Expanded(
+                child: Text(
+                  widget.item.label,
+                  style: TextStyle(fontSize: 14, color: cs.onSurface, decoration: TextDecoration.none),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
+              ),
               if (widget.checked) ...[
                 const SizedBox(width: 10),
                 Icon(lucide.Lucide.Check, size: 16, color: cs.primary),
