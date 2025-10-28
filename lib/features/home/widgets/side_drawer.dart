@@ -715,7 +715,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 (ap.currentAssistant?.name ?? widget.assistantName),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textBase),
+                                style: TextStyle(fontSize: _isDesktop ? 14 : 15, fontWeight: FontWeight.w500, color: textBase),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -799,7 +799,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                   a.name,
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textBase2),
+                                                  style: TextStyle(fontSize: _isDesktop ? 14 : 15, fontWeight: FontWeight.w500, color: textBase2),
                                                 ),
                                               ),
                                               IosIconButton(
@@ -1009,7 +1009,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: _isDesktop ? 14 : 16,
                                   fontWeight: FontWeight.w700,
                                   color: textBase,
                                 ),
@@ -1744,8 +1744,9 @@ class _ChatTileState extends State<_ChatTile> {
     final base = _isDesktop && !widget.selected && _hovered
         ? (embedded ? cs.primary.withOpacity(0.08) : cs.surface.withOpacity(0.9))
         : tileColor;
+    final double _vGap = _isDesktop ? 3 : 4;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: _vGap),
       child: GestureDetector(
         onSecondaryTapDown: (details) {
           if (_isDesktop) {
@@ -1766,7 +1767,7 @@ class _ChatTileState extends State<_ChatTile> {
           haptics: false,
           onTap: widget.onTap,
           onLongPress: _isDesktop ? null : widget.onLongPress,
-          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          padding: EdgeInsets.fromLTRB(_isDesktop ? 12 : 14, _isDesktop ? 8 : 10, 8, _isDesktop ? 8 : 10),
           child: Row(
               children: [
                 Expanded(
@@ -1775,7 +1776,7 @@ class _ChatTileState extends State<_ChatTile> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: _isDesktop ? 14 : 15,
                       color: widget.textColor,
                       fontWeight: FontWeight.w400,
                     ),

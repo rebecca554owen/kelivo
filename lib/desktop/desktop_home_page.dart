@@ -106,7 +106,7 @@ class _TranslatePlaceholder extends StatelessWidget {
         ),
         child: Text(
           '翻译（占位）',
-          style: TextStyle(fontSize: 16, color: cs.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600),
         ),
       ),
     );

@@ -569,7 +569,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       ),
                       style: TextStyle(
                         color: theme.colorScheme.onSurface,
-                        fontSize: 15,
+                        fontSize: (Platform.isWindows || Platform.isLinux || Platform.isMacOS) ? 14 : 15,
                       ),
                       cursorColor: theme.colorScheme.primary,
                     ),

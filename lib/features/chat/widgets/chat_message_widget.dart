@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
@@ -611,16 +612,20 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 children: [
                 if (parsed.text.isNotEmpty)
                   Builder(builder: (context) {
+                    final bool isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                        defaultTargetPlatform == TargetPlatform.windows ||
+                        defaultTargetPlatform == TargetPlatform.linux;
+                    final double baseUser = isDesktop ? 14.0 : 15.5;
                     if (settings.enableUserMarkdown) {
                       return DefaultTextStyle.merge(
-                        style: const TextStyle(fontSize: 15.5, height: 1.45),
+                        style: TextStyle(fontSize: baseUser, height: 1.45),
                         child: MarkdownWithCodeHighlight(text: parsed.text),
                       );
                     }
                     return Text(
                       parsed.text,
                       style: TextStyle(
-                        fontSize: 15.5, // ~112% larger default for user text
+                        fontSize: baseUser, // slightly smaller on desktop for readability
                         height: 1.4,
                         color: cs.onSurface,
                       ),
@@ -1143,15 +1148,21 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                SelectionArea(
-                  child: DefaultTextStyle.merge(
-                    style: const TextStyle(fontSize: 15.7, height: 1.5),
-                    child: MarkdownWithCodeHighlight(
-                      text: contentWithoutThink,
-                      onCitationTap: (id) => _handleCitationTap(id),
+                Builder(builder: (context) {
+                  final bool isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                      defaultTargetPlatform == TargetPlatform.windows ||
+                      defaultTargetPlatform == TargetPlatform.linux;
+                  final double baseAssistant = isDesktop ? 14.0 : 15.7;
+                  return SelectionArea(
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(fontSize: baseAssistant, height: 1.5),
+                      child: MarkdownWithCodeHighlight(
+                        text: contentWithoutThink,
+                        onCitationTap: (id) => _handleCitationTap(id),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                }),
                 // Inline sources removed; show a summary card at bottom instead
                 if (widget.message.isStreaming)
                   Padding(
@@ -1219,7 +1230,19 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   children: [
                                     _LoadingIndicator(),
                                     const SizedBox(width: 8),
-                                    Text(l10n.chatMessageWidgetTranslating, style: TextStyle(fontSize: 15.5, color: cs.onSurface.withOpacity(0.5), fontStyle: FontStyle.italic)),
+                                    Builder(builder: (context) {
+                                      final bool isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                          defaultTargetPlatform == TargetPlatform.windows ||
+                                          defaultTargetPlatform == TargetPlatform.linux;
+                                      return Text(
+                                        l10n.chatMessageWidgetTranslating,
+                                        style: TextStyle(
+                                          fontSize: isDesktop ? 14.0 : 15.5,
+                                          color: cs.onSurface.withOpacity(0.5),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      );
+                                    }),
                                   ],
                                 ),
                               )
@@ -1227,13 +1250,19 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
                                 child: SelectionArea(
-                                  child: DefaultTextStyle.merge(
-                                    style: const TextStyle(fontSize: 15.5, height: 1.4),
-                                    child: MarkdownWithCodeHighlight(
-                                      text: widget.message.translation!,
-                                      onCitationTap: (id) => _handleCitationTap(id),
-                                    ),
-                                  ),
+                                  child: Builder(builder: (context) {
+                                    final bool isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                        defaultTargetPlatform == TargetPlatform.windows ||
+                                        defaultTargetPlatform == TargetPlatform.linux;
+                                    final double baseTranslation = isDesktop ? 14.0 : 15.5;
+                                    return DefaultTextStyle.merge(
+                                      style: TextStyle(fontSize: baseTranslation, height: 1.4),
+                                      child: MarkdownWithCodeHighlight(
+                                        text: widget.message.translation!,
+                                        onCitationTap: (id) => _handleCitationTap(id),
+                                      ),
+                                    );
+                                  }),
                                 ),
                               ),
                           ],
