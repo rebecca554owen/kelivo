@@ -4339,33 +4339,144 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 ),
               ),
               titleSpacing: 2,
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedTextSwap(
-                    text: title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  if (providerName != null && modelDisplay != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () => showModelSelectSheet(context),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 0),
-                          child: AnimatedTextSwap(
-                            text: '$modelDisplay ($providerName)',
-                            style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+              title: Builder(builder: (context) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                final bool isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                    defaultTargetPlatform == TargetPlatform.windows ||
+                    defaultTargetPlatform == TargetPlatform.linux;
+                // Desktop: title and model chip in a single row; Tablet can keep same for consistency
+                final String? brandAsset = (modelDisplay != null
+                        ? (BrandAssets.assetForName(modelDisplay))
+                        : null) ?? (providerName != null ? BrandAssets.assetForName(providerName!) : null);
+
+                Widget? capsule;
+                String? capsuleLabel;
+                if (providerName != null && modelDisplay != null) {
+                  capsuleLabel = '$modelDisplay'; // · $providerName';
+                  final Widget brandIcon = AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: ScaleTransition(scale: anim, child: child)),
+                    child: (brandAsset != null)
+                        ? (brandAsset.endsWith('.svg')
+                            ? SvgPicture.asset(brandAsset, width: 16, height: 16, key: ValueKey('brand:$brandAsset'))
+                            : Image.asset(brandAsset, width: 16, height: 16, key: ValueKey('brand:$brandAsset')))
+                        : Icon(Lucide.Boxes, size: 16, color: cs.onSurface.withOpacity(0.7), key: const ValueKey('brand:default')),
+                  );
+
+                  capsule = IosCardPress(
+                    borderRadius: BorderRadius.circular(20),
+                    // baseColor: isDark ? Colors.white12 : Colors.grey.shade200,
+                    baseColor: Colors.transparent,
+                    // AnimatedContainer inside IosCardPress will animate color on hover/press
+                    // We wrap the content in AnimatedSize to animate width changes
+                    pressedBlendStrength: isDark ? 0.18 : 0.12,
+                    padding: EdgeInsets.zero,
+                    onTap: () => showModelSelectSheet(context),
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            brandIcon,
+                            const SizedBox(width: 6),
+                            // Allow label to ellipsize within the chip
+                            Flexible(
+                              child: Transform.translate(
+                                offset: const Offset(0, 0.6), // nudge text slightly down for visual centering
+                                child: AnimatedTextSwap(
+                                  text: capsuleLabel!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.1,
+                                    color: isDark ? Colors.white.withOpacity(0.92) : cs.onSurface.withOpacity(0.9),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                ],
-              ),
+                  );
+                }
+
+                // Primary header row: title expands, capsule stays close to title's right side
+                final row = Row(
+                  mainAxisSize: MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Title sits before capsule, not pushing it to the right
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        child: AnimatedTextSwap(
+                          text: title,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    if (capsule != null) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            transitionBuilder: (child, anim) => FadeTransition(
+                              opacity: anim,
+                              child: SlideTransition(
+                                position: Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero).animate(anim),
+                                child: child,
+                              ),
+                            ),
+                            child: Transform.translate(
+                              offset: const Offset(0, 0.3), // nudge entire capsule slightly down
+                              child: KeyedSubtree(
+                                key: ValueKey('cap:${capsuleLabel ?? ''}'),
+                                child: capsule!,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+
+                // Nudge up to visually center, and animate whole header changes to avoid abrupt jumps
+                return Transform.translate(
+                  offset: const Offset(0, -1.3),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, anim) => FadeTransition(
+                        opacity: anim,
+                        child: SlideTransition(
+                          position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(anim),
+                          child: child,
+                        ),
+                      ),
+                      child: KeyedSubtree(key: ValueKey('hdr:$title|${capsuleLabel ?? ''}'), child: row),
+                    ),
+                  ),
+                );
+              }),
               actions: [
                 IconButton(
                   onPressed: () async {

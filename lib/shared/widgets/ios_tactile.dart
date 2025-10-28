@@ -161,6 +161,7 @@ class IosCardPress extends StatefulWidget {
 
 class _IosCardPressState extends State<IosCardPress> {
   bool _pressed = false;
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -170,37 +171,45 @@ class _IosCardPressState extends State<IosCardPress> {
     final Color base = widget.baseColor ?? (isDark ? Colors.white10 : cs.surface);
     final double k = widget.pressedBlendStrength ?? (isDark ? 0.14 : 0.12);
     final Color pressTarget = Color.lerp(base, isDark ? Colors.white : Colors.black, k) ?? base;
-    final Color target = _pressed ? pressTarget : base;
+    final Color hoverTarget = Color.lerp(base, isDark ? Colors.white : Colors.black, k * 0.7) ?? base;
+    final Color target = _pressed ? pressTarget : (_hovered ? hoverTarget : base);
     final double scale = _pressed ? (widget.pressedScale ?? 1.0) : 1.0;
     final Duration dur = widget.duration ?? const Duration(milliseconds: 200);
 
     final content = widget.padding == null ? widget.child : Padding(padding: widget.padding!, child: widget.child);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (widget.onTap != null || widget.onLongPress != null) ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: (widget.onTap != null || widget.onLongPress != null) ? (_) => setState(() => _pressed = false) : null,
-      onTapCancel: (widget.onTap != null || widget.onLongPress != null) ? () => setState(() => _pressed = false) : null,
-      onTap: widget.onTap == null
-          ? null
-          : () {
-              final sp = context.read<SettingsProvider>();
-              if (widget.haptics && sp.hapticsOnCardTap) Haptics.soft();
-              widget.onTap!.call();
-            },
-      onLongPress: widget.onLongPress,
-      child: AnimatedScale(
-        scale: scale,
-        duration: dur,
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
+    return MouseRegion(
+      cursor: (widget.onTap != null || widget.onLongPress != null)
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (widget.onTap != null || widget.onLongPress != null) ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: (widget.onTap != null || widget.onLongPress != null) ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: (widget.onTap != null || widget.onLongPress != null) ? () => setState(() => _pressed = false) : null,
+        onTap: widget.onTap == null
+            ? null
+            : () {
+                final sp = context.read<SettingsProvider>();
+                if (widget.haptics && sp.hapticsOnCardTap) Haptics.soft();
+                widget.onTap!.call();
+              },
+        onLongPress: widget.onLongPress,
+        child: AnimatedScale(
+          scale: scale,
           duration: dur,
           curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: target,
-            borderRadius: widget.borderRadius ?? BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: dur,
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: target,
+              borderRadius: widget.borderRadius ?? BorderRadius.circular(12),
+            ),
+            child: content,
           ),
-          child: content,
         ),
       ),
     );
