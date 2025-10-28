@@ -16,6 +16,7 @@ import '../../../core/providers/update_provider.dart';
 import '../../../core/models/assistant.dart';
 import '../../assistant/pages/assistant_settings_edit_page.dart';
 import '../../chat/pages/chat_history_page.dart';
+import '../../../desktop/chat_history_dialog.dart';
 import 'package:flutter/services.dart';
 import 'dart:io' show File;
 import 'dart:math' as math;
@@ -675,9 +676,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             icon: Lucide.History,
                             padding: const EdgeInsets.all(10),
                             onTap: () async {
-                              final selectedId = await Navigator.of(context).push<String>(
-                                MaterialPageRoute(builder: (_) => ChatHistoryPage(assistantId: currentAssistantId)),
-                              );
+                              final selectedId = _isDesktop
+                                  ? await showChatHistoryDesktopDialog(context, assistantId: currentAssistantId)
+                                  : await Navigator.of(context).push<String>(
+                                      MaterialPageRoute(builder: (_) => ChatHistoryPage(assistantId: currentAssistantId)),
+                                    );
                               if (selectedId != null && selectedId.isNotEmpty) {
                                 widget.onSelectConversation?.call(selectedId);
                               }
