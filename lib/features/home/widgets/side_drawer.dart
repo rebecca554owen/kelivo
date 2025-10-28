@@ -26,6 +26,7 @@ import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:animations/animations.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
 import 'dart:ui' as ui;
@@ -899,21 +900,19 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     );
                   }),
                   // 3. 聊天记录区（按日期分组，最近在前；垂直列表）
-                  AnimatedSwitcher(
+                  PageTransitionSwitcher(
                     duration: const Duration(milliseconds: 260),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeOutCubic,
-                    transitionBuilder: (child, anim) => FadeTransition(
-                      opacity: anim,
-                      child: SlideTransition(
-                        position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero)
-                            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+                    reverse: false,
+                    transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
+                      return FadeThroughTransition(
+                        animation: CurvedAnimation(parent: primaryAnimation, curve: Curves.easeOutCubic),
+                        secondaryAnimation: CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeInCubic),
                         child: child,
-                      ),
-                    ),
+                      );
+                    },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      key: ValueKey('${_query}_${groups.length}_${pinnedList.length}'),
+                      key: ValueKey('${_query}_' + ([...pinnedList.map((c)=>c.id), ...groups.expand((g)=>g.items.map((c)=>c.id))].join(','))),
                       children: [
                         if (pinnedList.isNotEmpty) ...[
                           Padding(
@@ -922,20 +921,22 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             child: Text(
                               AppLocalizations.of(context)!.sideDrawerPinnedLabel,
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary),
-                            ),
+                            ).animate().fadeIn(duration: 180.ms).moveY(begin: 4, end: 0, duration: 220.ms, curve: Curves.easeOutCubic),
                           ),
                           Column(
                             children: [
-                              for (final chat in pinnedList)
+                              for (int i = 0; i < pinnedList.length; i++)
                                 _ChatTile(
-                                  chat: chat,
+                                  chat: pinnedList[i],
                                   textColor: textBase,
-                                  selected: chat.id == chatService.currentConversationId,
-                                  loading: widget.loadingConversationIds.contains(chat.id),
-                                  onTap: () => widget.onSelectConversation?.call(chat.id),
-                                  onLongPress: () => _showChatMenu(context, chat),
-                                  onSecondaryTap: (pos) => _showChatMenu(context, chat, anchor: pos),
-                                ),
+                                  selected: pinnedList[i].id == chatService.currentConversationId,
+                                  loading: widget.loadingConversationIds.contains(pinnedList[i].id),
+                                  onTap: () => widget.onSelectConversation?.call(pinnedList[i].id),
+                                  onLongPress: () => _showChatMenu(context, pinnedList[i]),
+                                  onSecondaryTap: (pos) => _showChatMenu(context, pinnedList[i], anchor: pos),
+                                ).animate(key: ValueKey('pin-${pinnedList[i].id}'))
+                                  .fadeIn(duration: 220.ms, delay: (20 * i).ms)
+                                  .moveY(begin: 8, end: 0, duration: 260.ms, curve: Curves.easeOutCubic, delay: (20 * i).ms),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -949,20 +950,22 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 group.label,
                                 textAlign: TextAlign.left,
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary),
-                              ),
+                              ).animate().fadeIn(duration: 180.ms).moveY(begin: 4, end: 0, duration: 220.ms, curve: Curves.easeOutCubic),
                             ),
                           Column(
                             children: [
-                              for (final chat in group.items)
+                              for (int j = 0; j < group.items.length; j++)
                                 _ChatTile(
-                                  chat: chat,
+                                  chat: group.items[j],
                                   textColor: textBase,
-                                  selected: chat.id == chatService.currentConversationId,
-                                  loading: widget.loadingConversationIds.contains(chat.id),
-                                  onTap: () => widget.onSelectConversation?.call(chat.id),
-                                  onLongPress: () => _showChatMenu(context, chat),
-                                  onSecondaryTap: (pos) => _showChatMenu(context, chat, anchor: pos),
-                                ),
+                                  selected: group.items[j].id == chatService.currentConversationId,
+                                  loading: widget.loadingConversationIds.contains(group.items[j].id),
+                                  onTap: () => widget.onSelectConversation?.call(group.items[j].id),
+                                  onLongPress: () => _showChatMenu(context, group.items[j]),
+                                  onSecondaryTap: (pos) => _showChatMenu(context, group.items[j], anchor: pos),
+                                ).animate(key: ValueKey('grp-${group.label}-${group.items[j].id}'))
+                                  .fadeIn(duration: 220.ms, delay: (16 * j).ms)
+                                  .moveY(begin: 6, end: 0, duration: 240.ms, curve: Curves.easeOutCubic, delay: (16 * j).ms),
                             ],
                           ),
                           if (context.watch<SettingsProvider>().showChatListDate)
