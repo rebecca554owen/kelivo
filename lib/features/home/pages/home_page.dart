@@ -35,6 +35,7 @@ import '../../settings/widgets/language_select_sheet.dart';
 import '../../chat/widgets/message_more_sheet.dart';
 // import '../../chat/pages/message_edit_page.dart';
 import '../../chat/widgets/message_edit_sheet.dart';
+import '../../../desktop/message_edit_dialog.dart';
 import '../../chat/widgets/message_export_sheet.dart';
 import '../../assistant/widgets/mcp_assistant_sheet.dart';
 import '../../mcp/pages/mcp_page.dart';
@@ -3672,7 +3673,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         }
                                       : null,
                                   onEdit: message.role == 'user' ? () async {
-                                    final edited = await showMessageEditSheet(context, message: message);
+                                    final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                        defaultTargetPlatform == TargetPlatform.windows ||
+                                        defaultTargetPlatform == TargetPlatform.linux;
+                                    final edited = isDesktop
+                                        ? await showMessageEditDesktopDialog(context, message: message)
+                                        : await showMessageEditSheet(context, message: message);
                                     if (edited != null) {
                                       final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                       if (!mounted) return;
@@ -3756,7 +3762,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     await _chatService.deleteMessage(id);
                                   }
                                 } else if (action == MessageMoreAction.edit) {
-                                  final edited = await showMessageEditSheet(context, message: message);
+                                  final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                      defaultTargetPlatform == TargetPlatform.windows ||
+                                      defaultTargetPlatform == TargetPlatform.linux;
+                                  final edited = isDesktop
+                                      ? await showMessageEditDesktopDialog(context, message: message)
+                                      : await showMessageEditSheet(context, message: message);
                                   if (edited != null) {
                                     final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                     if (!mounted) return;
@@ -4652,7 +4663,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                         : null,
                                                     onEdit: message.role == 'user'
                                                         ? () async {
-                                                            final edited = await showMessageEditSheet(context, message: message);
+                                                            final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                                                defaultTargetPlatform == TargetPlatform.windows ||
+                                                                defaultTargetPlatform == TargetPlatform.linux;
+                                                            final edited = isDesktop
+                                                                ? await showMessageEditDesktopDialog(context, message: message)
+                                                                : await showMessageEditSheet(context, message: message);
                                                             if (edited != null) {
                                                               final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                                               if (!mounted) return;
@@ -4727,7 +4743,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                           await _chatService.deleteMessage(id);
                                                         }
                                                       } else if (action == MessageMoreAction.edit) {
-                                                        final edited = await showMessageEditSheet(context, message: message);
+                                                        final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+                                                            defaultTargetPlatform == TargetPlatform.windows ||
+                                                            defaultTargetPlatform == TargetPlatform.linux;
+                                                        final edited = isDesktop
+                                                            ? await showMessageEditDesktopDialog(context, message: message)
+                                                            : await showMessageEditSheet(context, message: message);
                                                         if (edited != null) {
                                                           final newMsg = await _chatService.appendMessageVersion(messageId: message.id, content: edited);
                                                           if (!mounted) return;

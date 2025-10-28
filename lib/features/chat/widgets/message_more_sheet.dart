@@ -14,6 +14,7 @@ import '../../../core/services/haptics.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../desktop/menu_anchor.dart';
+import '../../../desktop/select_copy_dialog.dart';
 
 enum MessageMoreAction { edit, fork, delete, share }
 
@@ -45,9 +46,9 @@ Future<MessageMoreAction?> showMessageMoreSheet(BuildContext context, ChatMessag
         icon: Lucide.TextSelect,
         label: l10n.messageMoreSheetSelectCopy,
         onTap: () {
-          // Open the select-copy sheet after closing menu (keep behavior)
+          // Open desktop dialog after closing menu
           Future.delayed(const Duration(milliseconds: 40), () {
-            showSelectCopySheet(context, message: message);
+            showSelectCopyDesktopDialog(context, message: message);
           });
         },
       ),
