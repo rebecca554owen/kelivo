@@ -71,6 +71,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   ValueNotifier<int>? _closeTicker;
   bool _assistantsExpanded = false;
   final ScrollController _listController = ScrollController();
+  bool _assistantHeaderHovered = false;
 
   // Assistant avatar renderer shared across drawer views
   Widget _assistantAvatar(BuildContext context, Assistant? a, {double size = 28, VoidCallback? onTap}) {
@@ -681,55 +682,67 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  SizedBox(height: _isDesktop ? 8 : 12),
                   
                   // 当前助手区域（固定）
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: KeyedSubtree(
                       key: _assistantTileKey,
-                      child: IosCardPress(
-                        baseColor: widget.embedded ? Colors.transparent : cs.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: _toggleAssistantPicker,
-                        onLongPress: () {
-                          _closeAssistantPicker();
-                          final id = context.read<AssistantProvider>().currentAssistantId;
-                          if (id != null) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
-                            );
-                          }
-                        },
-                        padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
-                        child: Row(
-                          children: [
-                            _assistantAvatar(
-                              context,
-                              ap.currentAssistant,
-                              size: 32,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                (ap.currentAssistant?.name ?? widget.assistantName),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: _isDesktop ? 14 : 15, fontWeight: FontWeight.w500, color: textBase),
+                      child: MouseRegion(
+                        onEnter: (_) { if (_isDesktop) setState(() => _assistantHeaderHovered = true); },
+                        onExit: (_) { if (_isDesktop) setState(() => _assistantHeaderHovered = false); },
+                        cursor: _isDesktop ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                        child: IosCardPress(
+                          baseColor: (() {
+                            final embedded = widget.embedded;
+                            final base = embedded ? Colors.transparent : cs.surface;
+                            if (_isDesktop && _assistantHeaderHovered) {
+                              return embedded ? cs.primary.withOpacity(0.08) : cs.surface.withOpacity(0.9);
+                            }
+                            return base;
+                          })(),
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: _toggleAssistantPicker,
+                          onLongPress: () {
+                            _closeAssistantPicker();
+                            final id = context.read<AssistantProvider>().currentAssistantId;
+                            if (id != null) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
+                              );
+                            }
+                          },
+                          padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                          child: Row(
+                            children: [
+                              _assistantAvatar(
+                                context,
+                                ap.currentAssistant,
+                                size: 32,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            AnimatedRotation(
-                              turns: _assistantsExpanded ? 0.5 : 0.0,
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeOutCubic,
-                              child: Icon(
-                                Lucide.ChevronDown,
-                                size: 18,
-                                color: textBase.withOpacity(0.7),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  (ap.currentAssistant?.name ?? widget.assistantName),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: _isDesktop ? 14 : 15, fontWeight: FontWeight.w500, color: textBase),
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              AnimatedRotation(
+                                turns: _assistantsExpanded ? 0.5 : 0.0,
+                                duration: const Duration(milliseconds: 350),
+                                curve: Curves.easeOutCubic,
+                                child: Icon(
+                                  Lucide.ChevronDown,
+                                  size: 18,
+                                  color: textBase.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -748,7 +761,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 // keeping text position unchanged (compensated in tile padding)
                 padding: EdgeInsets.fromLTRB(
                   10,
-                  (context.watch<SettingsProvider>().showChatListDate || _assistantsExpanded) ? 4 : 10,
+                  (context.watch<SettingsProvider>().showChatListDate || _assistantsExpanded)
+                      ? (_isDesktop ? 2 : 4)
+                      : 10,
                   10,
                   16,
                 ),
@@ -784,33 +799,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                       final a = assistants[i];
                                       return Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                                        child: IosCardPress(
-                                          baseColor: widget.embedded ? Colors.transparent : Theme.of(context).colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(16),
-                                          haptics: false,
+                                        child: _AssistantInlineTile(
+                                          avatar: _assistantAvatar(context, a, size: 32),
+                                          name: a.name,
+                                          textColor: textBase2,
+                                          embedded: widget.embedded,
                                           onTap: () => _handleSelectAssistant(a),
-                                          padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
-                                          child: Row(
-                                            children: [
-                                              _assistantAvatar(context, a, size: 32),
-                                              const SizedBox(width: 16),
-                                              Expanded(
-                                                child: Text(
-                                                  a.name,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(fontSize: _isDesktop ? 14 : 15, fontWeight: FontWeight.w500, color: textBase2),
-                                                ),
-                                              ),
-                                              IosIconButton(
-                                                size: 18,
-                                                color: textBase2.withOpacity(0.7),
-                                                icon: Lucide.Pencil,
-                                                padding: const EdgeInsets.all(8),
-                                                onTap: () => _openAssistantSettings(a.id),
-                                              ),
-                                            ],
-                                          ),
+                                          onEditTap: () => _openAssistantSettings(a.id),
                                         ),
                                       );
                                     },
@@ -1134,6 +1129,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
 
   void _openAssistantSettings(String id) {
     _closeAssistantPicker();
+    final isDesktop = defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+    if (isDesktop) {
+      // Use desktop modal dialog for assistant editing on desktop
+      showAssistantDesktopDialog(context, assistantId: id);
+      return;
+    }
+    // Fallback to mobile edit page on non-desktop platforms
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AssistantSettingsEditPage(assistantId: id)),
     );
@@ -1744,7 +1748,7 @@ class _ChatTileState extends State<_ChatTile> {
     final base = _isDesktop && !widget.selected && _hovered
         ? (embedded ? cs.primary.withOpacity(0.08) : cs.surface.withOpacity(0.9))
         : tileColor;
-    final double _vGap = _isDesktop ? 3 : 4;
+    final double _vGap = _isDesktop ? 4 : 4;
     return Padding(
       padding: EdgeInsets.only(bottom: _vGap),
       child: GestureDetector(
@@ -1767,7 +1771,7 @@ class _ChatTileState extends State<_ChatTile> {
           haptics: false,
           onTap: widget.onTap,
           onLongPress: _isDesktop ? null : widget.onLongPress,
-          padding: EdgeInsets.fromLTRB(_isDesktop ? 12 : 14, _isDesktop ? 8 : 10, 8, _isDesktop ? 8 : 10),
+          padding: EdgeInsets.fromLTRB(_isDesktop ? 14 : 14, _isDesktop ? 9 : 10, 8, _isDesktop ? 9 : 10),
           child: Row(
               children: [
                 Expanded(
@@ -1826,6 +1830,74 @@ class _LoadingDotState extends State<_LoadingDot> with SingleTickerProviderState
         width: 9,
         height: 9,
         decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+      ),
+    );
+  }
+}
+
+class _AssistantInlineTile extends StatefulWidget {
+  const _AssistantInlineTile({
+    required this.avatar,
+    required this.name,
+    required this.textColor,
+    required this.embedded,
+    required this.onTap,
+    required this.onEditTap,
+  });
+
+  final Widget avatar;
+  final String name;
+  final Color textColor;
+  final bool embedded;
+  final VoidCallback onTap;
+  final VoidCallback onEditTap;
+
+  @override
+  State<_AssistantInlineTile> createState() => _AssistantInlineTileState();
+}
+
+class _AssistantInlineTileState extends State<_AssistantInlineTile> {
+  bool _hovered = false;
+  bool get _isDesktop => defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final Color base = widget.embedded ? Colors.transparent : cs.surface;
+    final Color bg = _isDesktop && _hovered
+        ? (widget.embedded ? cs.primary.withOpacity(0.08) : cs.primary.withOpacity(0.9))
+        : base;
+    return MouseRegion(
+      onEnter: (_) { if (_isDesktop) setState(() => _hovered = true); },
+      onExit: (_) { if (_isDesktop) setState(() => _hovered = false); },
+      cursor: _isDesktop ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: IosCardPress(
+        baseColor: bg,
+        borderRadius: BorderRadius.circular(16),
+        haptics: false,
+        onTap: widget.onTap,
+        padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+        child: Row(
+          children: [
+            widget.avatar,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                widget.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: _isDesktop ? 14 : 15, fontWeight: FontWeight.w500, color: widget.textColor),
+              ),
+            ),
+            IosIconButton(
+              size: 18,
+              color: widget.textColor.withOpacity(0.7),
+              icon: Lucide.Pencil,
+              padding: const EdgeInsets.all(8),
+              onTap: widget.onEditTap,
+            ),
+          ],
+        ),
       ),
     );
   }
