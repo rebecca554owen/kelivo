@@ -73,6 +73,8 @@ class _SponsorPageState extends State<SponsorPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wechatQrUrl = isDark ? 'https://c.img.dasctf.com/LightPicture/2025/10/ee10ae78acbd01f3.png' : 'https://c.img.dasctf.com/LightPicture/2025/10/6ba60ac0f2f8e2b4.png';
     return Scaffold(
       appBar: AppBar(
         leading: Tooltip(
@@ -109,7 +111,7 @@ class _SponsorPageState extends State<SponsorPage> {
               icon: Lucide.Link,
               label: l10n.sponsorPageWeChatTitle,
               onTap: () async {
-                final uri = Uri.parse('https://c.img.dasctf.com/LightPicture/2024/12/6c2a6df245ed97b3.jpg');
+                final uri = Uri.parse(wechatQrUrl);
                 if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }
