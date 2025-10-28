@@ -1345,11 +1345,6 @@ class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialog
         pressedBlendStrength: 0.10,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         onTap: () => Navigator.of(context).pop(ModelSelection(m.providerKey, m.id)),
-        onLongPress: () async {
-          await showModelDetailSheet(context, providerKey: m.providerKey, modelId: m.id);
-          if (mounted) setState(() => _loading = true);
-          await _loadModels();
-        },
         child: Row(
           children: [
             _BrandAvatar(name: m.id, assetOverride: m.asset, size: 18),
