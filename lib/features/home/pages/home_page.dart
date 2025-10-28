@@ -4013,8 +4013,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         onSend: (text) {
                           _sendMessage(text);
                           _inputController.clear();
-                          // Dismiss keyboard after sending
-                          _dismissKeyboard();
+                          // Keep focus on desktop; only dismiss on mobile to hide soft keyboard
+                          if (Platform.isAndroid || Platform.isIOS) {
+                            _dismissKeyboard();
+                          } else {
+                            _inputFocus.requestFocus();
+                          }
                         },
                         loading: _isCurrentConversationLoading,
                         showMcpButton: (() {
@@ -5016,7 +5020,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     onSend: (text) {
                                       _sendMessage(text);
                                       _inputController.clear();
-                                      _dismissKeyboard();
+                                      if (Platform.isAndroid || Platform.isIOS) {
+                                        _dismissKeyboard();
+                                      } else {
+                                        _inputFocus.requestFocus();
+                                      }
                                     },
                                     loading: _isCurrentConversationLoading,
                                     showMcpButton: (() {

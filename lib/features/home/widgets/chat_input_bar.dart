@@ -183,6 +183,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _images.clear();
     _docs.clear();
     setState(() {});
+    // Keep focus on desktop so user can continue typing
+    try {
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        widget.focusNode?.requestFocus();
+      }
+    } catch (_) {}
   }
 
   void _insertNewlineAtCursor() {
@@ -220,6 +226,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
     // Enter handling on tablet/desktop: Enter=send, Shift+Enter=newline
     if (isEnter && isTabletOrDesktop) {
       if (!isDown) return KeyEventResult.handled; // ignore key up
+      // Respect IME composition (e.g., Chinese Pinyin). If composing, let IME handle Enter.
+      final composing = _controller.value.composing;
+      final composingActive = composing.isValid && !composing.isCollapsed;
+      if (composingActive) return KeyEventResult.ignored;
       final keys = RawKeyboard.instance.keysPressed;
       final shift = keys.contains(LogicalKeyboardKey.shiftLeft) || keys.contains(LogicalKeyboardKey.shiftRight);
       if (shift) {
