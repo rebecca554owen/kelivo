@@ -851,6 +851,7 @@ class _CompactIconButton extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final fgColor = active ? theme.colorScheme.primary : (isDark ? Colors.white70 : Colors.black54);
+    final bool isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
     // Keep overall button size constant. For model icon with child, enlarge child slightly
     // and reduce padding so (2*padding + childSize) stays unchanged.
@@ -863,7 +864,8 @@ class _CompactIconButton extends StatelessWidget {
       size: isModelChild ? childSize : 20,
       padding: EdgeInsets.all(padding),
       onTap: onTap,
-      onLongPress: onLongPress,
+      // Disable long press on desktop platforms
+      onLongPress: isDesktop ? null : onLongPress,
       color: fgColor,
       builder: childBuilder != null
           ? (c) => SizedBox(width: childSize, height: childSize, child: childBuilder!(c))

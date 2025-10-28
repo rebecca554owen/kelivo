@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/haptics.dart';
@@ -39,6 +40,7 @@ class IosIconButton extends StatefulWidget {
 
 class _IosIconButtonState extends State<IosIconButton> {
   bool _pressed = false;
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +58,8 @@ class _IosIconButtonState extends State<IosIconButton> {
     // to get a subtle lighter/gray look, unless overridden via pressedColor.
     final bool isDark = theme.brightness == Brightness.dark;
     final Color pressTarget = widget.pressedColor ?? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.35) ?? base);
-    final Color target = _pressed ? pressTarget : base;
+    final Color hoverTarget = Color.lerp(base, isDark ? Colors.black : Colors.white, 0.20) ?? base;
+    final Color target = _pressed ? pressTarget : (_hovered ? hoverTarget : base);
 
     final child = TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),
@@ -71,20 +74,42 @@ class _IosIconButtonState extends State<IosIconButton> {
       },
     );
 
+    // Subtle hover background for desktop/web
+    final Color bgTarget = _pressed
+        ? (isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.08))
+        : (_hovered
+            ? (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06))
+            : Colors.transparent);
+
     final content = Semantics(
       button: true,
       enabled: widget.enabled,
       label: widget.semanticLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (widget.enabled && (widget.onTap != null || widget.onLongPress != null)) ? (_) => setState(() => _pressed = true) : null,
-        onTapUp: (widget.enabled && (widget.onTap != null || widget.onLongPress != null)) ? (_) => setState(() => _pressed = false) : null,
-        onTapCancel: (widget.enabled && (widget.onTap != null || widget.onLongPress != null)) ? () => setState(() => _pressed = false) : null,
-        onTap: widget.enabled ? widget.onTap : null,
-        onLongPress: widget.enabled ? widget.onLongPress : null,
-        child: Padding(
-          padding: widget.padding,
-          child: child,
+      child: MouseRegion(
+        cursor: (widget.enabled && (widget.onTap != null || widget.onLongPress != null))
+            ? SystemMouseCursors.click
+            : MouseCursor.defer,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (widget.enabled && (widget.onTap != null || widget.onLongPress != null)) ? (_) => setState(() => _pressed = true) : null,
+          onTapUp: (widget.enabled && (widget.onTap != null || widget.onLongPress != null)) ? (_) => setState(() => _pressed = false) : null,
+          onTapCancel: (widget.enabled && (widget.onTap != null || widget.onLongPress != null)) ? () => setState(() => _pressed = false) : null,
+          onTap: widget.enabled ? widget.onTap : null,
+          onLongPress: widget.enabled ? widget.onLongPress : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: bgTarget,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: widget.padding,
+              child: child,
+            ),
+          ),
         ),
       ),
     );
