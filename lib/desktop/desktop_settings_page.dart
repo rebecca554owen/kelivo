@@ -23,7 +23,8 @@ import '../features/provider/pages/multi_key_manager_page.dart';
 import '../features/model/widgets/model_detail_sheet.dart';
 import 'add_provider_dialog.dart' show showDesktopAddProviderDialog;
 import 'model_edit_dialog.dart' show showDesktopCreateModelDialog, showDesktopModelEditDialog;
-// Removed import of mobile/desktop model selector to avoid circular deps
+// Use the unified model selector (desktop dialog on desktop platforms)
+import '../features/model/widgets/model_select_sheet.dart' show showModelSelector;
 import '../utils/brand_assets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../core/models/api_keys.dart';
@@ -1909,50 +1910,10 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
       barrierDismissible: true,
       builder: (ctx) {
         Future<void> pickModel() async {
-          // Simple inline picker to avoid depending on model_select_sheet in desktop
-          final sp = context.read<SettingsProvider>();
-          final cfg = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-          final items = List<String>.from(cfg.models);
-          if (items.isEmpty) return;
-          final choice = await showDialog<String>(
-            context: ctx,
-            barrierDismissible: true,
-            builder: (pctx) => Dialog(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(AppLocalizations.of(pctx)!.providerDetailPageSelectModelButton, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700))),
-                          IconButton(onPressed: () => Navigator.of(pctx).maybePop(), icon: const Icon(Icons.close, size: 18)),
-                        ],
-                      ),
-                    ),
-                    Flexible(
-                      child: ListView(
-                        shrinkWrap: true,
-                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                        children: [
-                          for (final id in items)
-                            ListTile(
-                              dense: true,
-                              title: Text(id, style: const TextStyle(fontSize: 13.5)),
-                              onTap: () => Navigator.of(pctx).pop(id),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-          if (choice != null) {
-            selectedModelId = choice;
+          // Use the desktop model selector dialog and limit to current provider
+          final sel = await showModelSelector(ctx, limitProviderKey: widget.providerKey);
+          if (sel != null) {
+            selectedModelId = sel.modelId;
             (ctx as Element).markNeedsBuild();
           }
         }

@@ -1212,8 +1212,11 @@ class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialog
         }
       }
       if (items.isEmpty) continue;
-      _headerIndexMap[pk] = _rows.length;
-      _rows.add(_HeaderRow(g.name));
+      // When limiting to a single provider, hide the provider header (and its settings button)
+      if (widget.limitProviderKey == null) {
+        _headerIndexMap[pk] = _rows.length;
+        _rows.add(_HeaderRow(g.name));
+      }
       for (final m in items) {
         _modelIndexMap['${m.providerKey}::${m.id}'] = _rows.length;
         _rows.add(_ModelRow(m));
