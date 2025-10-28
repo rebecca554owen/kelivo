@@ -127,4 +127,5 @@ class Lucide {
   static const IconData bookDashed = lucide.LucideIcons.bookDashed;
   static const IconData toggleRight = lucide.LucideIcons.toggleRight;
   static const IconData Calendar = lucide.LucideIcons.calendar;
+  static const IconData ImageOff = lucide.LucideIcons.imageOff;
 }
