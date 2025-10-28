@@ -56,12 +56,12 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
       height: 40,
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
-        border: Border(
-          bottom: BorderSide(
-            color: cs.outlineVariant.withOpacity(0.25),
-            width: 0.5,
-          ),
-        ),
+        // border: Border(
+        //   bottom: BorderSide(
+        //     color: cs.outlineVariant.withOpacity(0.25),
+        //     width: 0.5,
+        //   ),
+        // ),
       ),
       child: DragToMoveArea(
         child: Row(
