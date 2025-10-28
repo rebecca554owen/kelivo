@@ -4322,6 +4322,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             extendBodyBehindAppBar: true,
             backgroundColor: Colors.transparent,
             appBar: AppBar(
+              centerTitle: false,
               systemOverlayStyle: (Theme.of(context).brightness == Brightness.dark)
                   ? const SystemUiOverlayStyle(
                       statusBarColor: Colors.transparent,
@@ -4398,19 +4399,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             const SizedBox(width: 6),
                             // Allow label to ellipsize within the chip
                             Flexible(
-                              child: Transform.translate(
-                                offset: const Offset(0, 0.6), // nudge text slightly down for visual centering
-                                child: AnimatedTextSwap(
-                                  text: capsuleLabel!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    height: 1.1,
-                                    color: isDark ? Colors.white.withOpacity(0.92) : cs.onSurface.withOpacity(0.9),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              child: AnimatedTextSwap(
+                                text: capsuleLabel!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.1,
+                                  color: isDark ? Colors.white.withOpacity(0.92) : cs.onSurface.withOpacity(0.9),
+                                  fontWeight: FontWeight.w500,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -4425,7 +4423,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Title sits before capsule, not pushing it to the right
+                    // Title expands and ellipsizes as needed
                     Flexible(
                       fit: FlexFit.loose,
                       child: AnimatedSize(
@@ -4441,6 +4439,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     ),
                     if (capsule != null) ...[
                       const SizedBox(width: 8),
+                      // Capsule scales down to avoid overflow but stays left-aligned
                       Flexible(
                         fit: FlexFit.loose,
                         child: FittedBox(
@@ -4455,12 +4454,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                 child: child,
                               ),
                             ),
-                            child: Transform.translate(
-                              offset: const Offset(0, 0.3), // nudge entire capsule slightly down
-                              child: KeyedSubtree(
-                                key: ValueKey('cap:${capsuleLabel ?? ''}'),
-                                child: capsule!,
-                              ),
+                            child: KeyedSubtree(
+                              key: ValueKey('cap:${capsuleLabel ?? ''}'),
+                              child: capsule!,
                             ),
                           ),
                         ),
@@ -4469,22 +4465,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ],
                 );
 
-                // Nudge up to visually center, and animate whole header changes to avoid abrupt jumps
-                return Transform.translate(
-                  offset: const Offset(0, -1.3),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      transitionBuilder: (child, anim) => FadeTransition(
-                        opacity: anim,
-                        child: SlideTransition(
-                          position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(anim),
-                          child: child,
-                        ),
+                // Left-aligned, vertically centered without manual nudges
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(anim),
+                        child: child,
                       ),
-                      child: KeyedSubtree(key: ValueKey('hdr:$title|${capsuleLabel ?? ''}'), child: row),
                     ),
+                    child: KeyedSubtree(key: ValueKey('hdr:$title|${capsuleLabel ?? ''}'), child: row),
                   ),
                 );
               }),
