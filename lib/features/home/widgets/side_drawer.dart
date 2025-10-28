@@ -628,7 +628,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               children: [
             // Fixed header + search
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: EdgeInsets.fromLTRB(16, _isDesktop ? 10 : 4, 16, 0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -668,14 +668,14 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       const SizedBox(width: 8),
                       // 历史按钮（圆形，无水波纹）
                       SizedBox(
-                        width: 45,
-                        height: 45,
+                        width: 40,
+                        height: 40,
                         child: Center(
                           child: IosIconButton(
-                            size: 22,
+                            size: 18,
                             color: textBase,
                             icon: Lucide.History,
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(8),
                             onTap: () async {
                               final selectedId = _isDesktop
                                   ? await showChatHistoryDesktopDialog(context, assistantId: currentAssistantId)
