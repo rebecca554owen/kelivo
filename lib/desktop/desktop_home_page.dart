@@ -62,7 +62,12 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         final content = isWindows
             ? Column(
                 children: [
-                  const WindowTitleBar(),
+                  WindowTitleBar(
+                    leftChildren: [
+                      SizedBox(width: DesktopNavRail.width / 2 - 8 - 6 - 12),
+                      const _TitleBarLeading(),
+                    ],
+                  ),
                   Expanded(child: body),
                 ],
               )
@@ -109,3 +114,36 @@ class _TranslatePlaceholder extends StatelessWidget {
 }
 
 // No extra router/shim; we import DesktopSettingsPage directly above.
+
+class _TitleBarLeading extends StatelessWidget {
+  const _TitleBarLeading({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // App icon
+        Image.asset(
+          'assets/icons/kelivo.png',
+          width: 16,
+          height: 16,
+          filterQuality: FilterQuality.medium,
+        ),
+        const SizedBox(width: 8),
+        // App name
+        Text(
+          'Kelivo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: cs.onSurface.withOpacity(0.8),
+            // Avoid accidental underline when not under a Material ancestor in edge cases
+            decoration: TextDecoration.none,
+          ),
+        ),
+      ],
+    );
+  }
+}
