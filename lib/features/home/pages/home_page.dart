@@ -43,6 +43,7 @@ import '../../provider/pages/providers_page.dart';
 import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../search/widgets/search_settings_sheet.dart';
 import '../../../desktop/search_provider_popover.dart';
+import '../../../desktop/reasoning_budget_popover.dart';
 import '../widgets/mini_map_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
@@ -201,6 +202,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     } catch (_) {
       // Fallback in case Platform.* is not available
       showSearchSettingsSheet(context);
+    }
+  }
+
+  Future<void> _openReasoningSettings() async {
+    try {
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        await showDesktopReasoningBudgetPopover(context, anchorKey: _inputBarKey);
+      } else {
+        await showReasoningBudgetSheet(context);
+      }
+    } catch (_) {
+      await showReasoningBudgetSheet(context);
     }
   }
 
@@ -4015,7 +4028,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             if (assistant.thinkingBudget != null) {
                               context.read<SettingsProvider>().setThinkingBudget(assistant.thinkingBudget);
                             }
-                            await showReasoningBudgetSheet(context);
+                            await _openReasoningSettings();
                             final chosen = context.read<SettingsProvider>().thinkingBudget;
                             await context.read<AssistantProvider>().updateAssistant(
                               assistant.copyWith(thinkingBudget: chosen),
@@ -5024,7 +5037,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         if (assistant.thinkingBudget != null) {
                                           context.read<SettingsProvider>().setThinkingBudget(assistant.thinkingBudget);
                                         }
-                                        await showReasoningBudgetSheet(context);
+                                        await _openReasoningSettings();
                                         final chosen = context.read<SettingsProvider>().thinkingBudget;
                                         await context.read<AssistantProvider>().updateAssistant(
                                           assistant.copyWith(thinkingBudget: chosen),
