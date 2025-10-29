@@ -714,7 +714,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           })(),
                           borderRadius: BorderRadius.circular(16),
                           onTap: _toggleAssistantPicker,
-                          onLongPress: () {
+                          onLongPress: _isDesktop ? null : () {
                             _closeAssistantPicker();
                             final id = context.read<AssistantProvider>().currentAssistantId;
                             if (id != null) {
