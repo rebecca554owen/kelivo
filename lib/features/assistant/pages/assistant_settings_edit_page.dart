@@ -4707,7 +4707,7 @@ Future<void> showAssistantDesktopDialog(BuildContext context, {required String a
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 720),
+          constraints: const BoxConstraints(maxWidth: 860, maxHeight: 640),
           child: _DesktopAssistantDialogShell(assistantId: assistantId),
         ),
       );

@@ -229,7 +229,7 @@ class _AddProviderDialogBodyState extends State<_AddProviderDialogBody> with Sin
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 580, maxWidth: 880, maxHeight: 760),
+        constraints: const BoxConstraints(minWidth: 580, maxWidth: 700, maxHeight: 640),
         child: Material(
           color: cs.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: cs.outlineVariant.withOpacity(0.25))),
