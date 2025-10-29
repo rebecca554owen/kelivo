@@ -2262,10 +2262,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeSettingsPageDynamicColorSection => '动态颜色';
 
   @override
-  String get themeSettingsPageUseDynamicColorTitle => '使用动态颜色';
+  String get themeSettingsPageUseDynamicColorTitle => '系统动态配色';
 
   @override
-  String get themeSettingsPageUseDynamicColorSubtitle => '基于系统配色（Android 12+）';
+  String get themeSettingsPageUseDynamicColorSubtitle => '跟随系统取色（Android 12+）';
+
+  @override
+  String get themeSettingsPageUsePureBackgroundTitle => '纯色背景';
+
+  @override
+  String get themeSettingsPageUsePureBackgroundSubtitle => '仅气泡与强调色随主题变化';
 
   @override
   String get themeSettingsPageColorPalettesSection => '配色方案';
@@ -4851,10 +4857,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get themeSettingsPageDynamicColorSection => '动态颜色';
 
   @override
-  String get themeSettingsPageUseDynamicColorTitle => '使用动态颜色';
+  String get themeSettingsPageUseDynamicColorTitle => '系统动态配色';
 
   @override
-  String get themeSettingsPageUseDynamicColorSubtitle => '基于系统配色（Android 12+）';
+  String get themeSettingsPageUseDynamicColorSubtitle => '跟随系统取色（Android 12+）';
+
+  @override
+  String get themeSettingsPageUsePureBackgroundTitle => '纯色背景';
+
+  @override
+  String get themeSettingsPageUsePureBackgroundSubtitle => '仅气泡与强调色随主题变化';
 
   @override
   String get themeSettingsPageColorPalettesSection => '配色方案';
@@ -7439,10 +7451,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get themeSettingsPageDynamicColorSection => '動態顏色';
 
   @override
-  String get themeSettingsPageUseDynamicColorTitle => '使用動態顏色';
+  String get themeSettingsPageUseDynamicColorTitle => '系統動態配色';
 
   @override
   String get themeSettingsPageUseDynamicColorSubtitle => '基於系統配色（Android 12+）';
+
+  @override
+  String get themeSettingsPageUsePureBackgroundTitle => '純色背景';
+
+  @override
+  String get themeSettingsPageUsePureBackgroundSubtitle => '僅氣泡與強調色隨主題變化';
 
   @override
   String get themeSettingsPageColorPalettesSection => '配色方案';

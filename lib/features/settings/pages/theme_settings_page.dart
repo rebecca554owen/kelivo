@@ -57,6 +57,17 @@ class ThemeSettingsPage extends StatelessWidget {
             ]),
             const SizedBox(height: 12),
           ],
+          _iosSectionCard(children: [
+            _iosSwitchRow(
+              context,
+              icon: Lucide.Square,
+              label: l10n.themeSettingsPageUsePureBackgroundTitle,
+              subtitle: l10n.themeSettingsPageUsePureBackgroundSubtitle,
+              value: settings.usePureBackground,
+              onChanged: (v) => context.read<SettingsProvider>().setUsePureBackground(v),
+            ),
+          ]),
+          const SizedBox(height: 12),
           // header(l10n.themeSettingsPageColorPalettesSection),
           _iosSectionCard(children: [
             for (int i = 0; i < ThemePalettes.all.length; i++) ...[
@@ -77,7 +88,10 @@ Widget _iosSectionCard({required List<Widget> children}) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final Color bg = isDark ? Colors.white10 : Colors.white.withOpacity(0.96);
+    final settings = context.watch<SettingsProvider>();
+    final Color bg = settings.usePureBackground
+        ? (isDark ? Colors.black : const Color(0xFFFFFFFF))
+        : (isDark ? Colors.white10 : Colors.white.withOpacity(0.96));
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -95,7 +109,7 @@ Widget _iosSectionCard({required List<Widget> children}) {
 
 Widget _iosDivider(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
-  return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
+  return Divider(height: 6, thickness: 0.6, indent: 12, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
 }
 
 class _AnimatedPressColor extends StatelessWidget {
@@ -180,10 +194,8 @@ Widget _iosSwitchRow(BuildContext context, {required IconData icon, required Str
       return _AnimatedPressColor(
         pressed: pressed, base: baseColor,
         builder: (c) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(children: [
-            SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
-            const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(label, style: TextStyle(fontSize: 15, color: c)),

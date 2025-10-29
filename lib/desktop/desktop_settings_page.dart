@@ -2062,7 +2062,9 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            color: (Provider.of<SettingsProvider>(ctx, listen: false).usePureBackground)
+                ? (isDark ? Colors.black : Colors.white)
+                : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: cs.outlineVariant.withOpacity(0.12), width: 0.5),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 6))],
@@ -2166,7 +2168,9 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
             child: Container(
               constraints: BoxConstraints(minWidth: triggerW, maxWidth: triggerW),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                color: (Provider.of<SettingsProvider>(ctx, listen: false).usePureBackground)
+                    ? (isDark ? Colors.black : Colors.white)
+                    : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: cs.outlineVariant.withOpacity(0.12), width: 0.5),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 6))],
@@ -2740,6 +2744,8 @@ class _DisplaySettingsBody extends StatelessWidget {
                   _ColorModeRow(),
                   _RowDivider(),
                   _ThemeColorRow(),
+                  _RowDivider(),
+                  _ToggleRowPureBackground(),
                 ],
               ),
               const SizedBox(height: 16),
@@ -2822,8 +2828,9 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sp = context.watch<SettingsProvider>();
     return Material(
-      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      color: sp.usePureBackground ? (isDark ? Colors.black : Colors.white) : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
@@ -3136,6 +3143,20 @@ class _ThemeDotState extends State<_ThemeDot> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ToggleRowPureBackground extends StatelessWidget {
+  const _ToggleRowPureBackground();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sp = context.watch<SettingsProvider>();
+    return _ToggleRow(
+      label: l10n.themeSettingsPageUsePureBackgroundTitle,
+      value: sp.usePureBackground,
+      onChanged: (v) => context.read<SettingsProvider>().setUsePureBackground(v),
     );
   }
 }

@@ -376,8 +376,8 @@ Widget _iosSectionCard({required List<Widget> children}) {
 
 Widget _iosDivider(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
-  // Slightly reduce spacing between items; keep aligned with icon area
-  return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
+  // Align divider with text (no leading icons now)
+  return Divider(height: 6, thickness: 0.6, indent: 12, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
 }
 
 // Shared color tween wrapper to mimic iOS gentle press color transition
@@ -401,7 +401,7 @@ class _AnimatedPressColor extends StatelessWidget {
 
 Widget _iosNavRow(
   BuildContext context, {
-  required IconData icon,
+  required IconData icon, // kept for signature compatibility; no longer rendered
   required String label,
   VoidCallback? onTap,
   String? detailText,
@@ -420,15 +420,10 @@ Widget _iosNavRow(
         base: baseColor,
         builder: (c) {
           return Padding(
-            // Increase left padding to move icon further from card edge; tighten vertical spacing
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            // No leading icon; slightly larger left padding
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
             child: Row(
               children: [
-                SizedBox(
-                  width: 36,
-                  child: Icon(icon, size: 20, color: c),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,
@@ -558,7 +553,7 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
 // Bottom sheet iOS-style option with tactile feedback (no ripple)
 Widget _sheetOption(
   BuildContext context, {
-  required IconData icon,
+  required IconData icon, // kept for compatibility; not rendered
   required String label,
   required VoidCallback onTap,
 }) {
@@ -585,8 +580,6 @@ Widget _sheetOption(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                SizedBox(width: 24, child: Icon(icon, size: 20, color: c)),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,
@@ -604,5 +597,5 @@ Widget _sheetOption(
 
 Widget _sheetDivider(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
-  return Divider(height: 1, thickness: 0.6, indent: 52, endIndent: 16, color: cs.outlineVariant.withOpacity(0.18));
+  return Divider(height: 1, thickness: 0.6, indent: 16, endIndent: 16, color: cs.outlineVariant.withOpacity(0.18));
 }

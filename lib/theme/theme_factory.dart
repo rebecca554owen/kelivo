@@ -179,8 +179,20 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
 }
 
 // New: Build themes from a provided static palette (with optional dynamic override)
-ThemeData buildLightThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynamicScheme}) {
-  final scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
+ThemeData buildLightThemeForScheme(
+  ColorScheme staticScheme, {
+  ColorScheme? dynamicScheme,
+  bool pureBackground = false,
+}) {
+  var scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
+  if (pureBackground) {
+    scheme = scheme.copyWith(
+      surface: const Color(0xFFFFFFFF),
+      background: const Color(0xFFFFFFFF),
+      inverseSurface: const Color(0xFF000000),
+      onInverseSurface: const Color(0xFFFFFFFF),
+    );
+  }
   // Align logging behavior with buildLightTheme so diagnostics are consistent.
   // _logColorScheme('Light ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
   final theme = ThemeData(
@@ -225,6 +237,8 @@ ThemeData buildLightThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynam
   return theme.copyWith(
     textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
     primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+    canvasColor: scheme.surface,
+    dialogBackgroundColor: scheme.surface,
   );
 }
 
@@ -311,8 +325,20 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
   );
 }
 
-ThemeData buildDarkThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynamicScheme}) {
-  final scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
+ThemeData buildDarkThemeForScheme(
+  ColorScheme staticScheme, {
+  ColorScheme? dynamicScheme,
+  bool pureBackground = false,
+}) {
+  var scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
+  if (pureBackground) {
+    scheme = scheme.copyWith(
+      surface: const Color(0xFF000000),
+      background: const Color(0xFF000000),
+      inverseSurface: const Color(0xFFFFFFFF),
+      onInverseSurface: const Color(0xFF000000),
+    );
+  }
   // Align logging behavior with buildDarkTheme so diagnostics are consistent.
   // _logColorScheme('Dark ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
   final theme = ThemeData(
@@ -357,5 +383,7 @@ ThemeData buildDarkThemeForScheme(ColorScheme staticScheme, {ColorScheme? dynami
   return theme.copyWith(
     textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
     primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+    canvasColor: scheme.surface,
+    dialogBackgroundColor: scheme.surface,
   );
 }

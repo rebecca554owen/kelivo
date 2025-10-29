@@ -43,6 +43,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayEnableUserMarkdownKey = 'display_enable_user_markdown_v1';
   static const String _displayEnableReasoningMarkdownKey = 'display_enable_reasoning_markdown_v1';
   static const String _displayShowChatListDateKey = 'display_show_chat_list_date_v1';
+  static const String _displayUsePureBackgroundKey = 'display_use_pure_background_v1';
   static const String _appLocaleKey = 'app_locale_v1';
   static const String _translateModelKey = 'translate_model_v1';
   static const String _translatePromptKey = 'translate_prompt_v1';
@@ -69,6 +70,10 @@ class SettingsProvider extends ChangeNotifier {
   bool get useDynamicColor => _useDynamicColor;
   bool _dynamicColorSupported = false; // runtime capability, not persisted
   bool get dynamicColorSupported => _dynamicColorSupported;
+
+  // When enabled, force pure white/black backgrounds regardless of theme color
+  bool _usePureBackground = false;
+  bool get usePureBackground => _usePureBackground;
 
   // Desktop UI persisted state
   double _desktopSidebarWidth = 240;
@@ -205,6 +210,7 @@ class SettingsProvider extends ChangeNotifier {
     _chatFontScale = prefs.getDouble(_displayChatFontScaleKey) ?? 1.0;
     _autoScrollIdleSeconds = prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
     _chatBackgroundMaskStrength = prefs.getDouble(_displayChatBackgroundMaskStrengthKey) ?? 1.0;
+    _usePureBackground = prefs.getBool(_displayUsePureBackgroundKey) ?? false;
     // display: markdown/math rendering
     _enableDollarLatex = prefs.getBool(_displayEnableDollarLatexKey) ?? true;
     _enableMathRendering = prefs.getBool(_displayEnableMathRenderingKey) ?? true;
@@ -405,6 +411,14 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_useDynamicColorKey, v);
+  }
+
+  Future<void> setUsePureBackground(bool v) async {
+    if (_usePureBackground == v) return;
+    _usePureBackground = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_displayUsePureBackgroundKey, v);
   }
 
   void setDynamicColorSupported(bool v) {
@@ -1010,6 +1024,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._enableUserMarkdown = _enableUserMarkdown;
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     copy._showChatListDate = _showChatListDate;
+    copy._usePureBackground = _usePureBackground;
     return copy;
   }
 }

@@ -128,10 +128,12 @@ class MyApp extends StatelessWidget {
               final light = buildLightThemeForScheme(
                 palette.light,
                 dynamicScheme: useDyn ? lightDynamic : null,
+                pureBackground: settings.usePureBackground,
               );
               final dark = buildDarkThemeForScheme(
                 palette.dark,
                 dynamicScheme: useDyn ? darkDynamic : null,
+                pureBackground: settings.usePureBackground,
               );
               // Log top-level colors likely used by widgets (card/bg/shadow approximations)
               // debugPrint('[Theme/App] Light scaffoldBg=${light.colorScheme.surface.value.toRadixString(16)} card≈${light.colorScheme.surface.value.toRadixString(16)} shadow=${light.colorScheme.shadow.value.toRadixString(16)}');

@@ -4454,14 +4454,26 @@ abstract class AppLocalizations {
   /// No description provided for @themeSettingsPageUseDynamicColorTitle.
   ///
   /// In en, this message translates to:
-  /// **'Use Dynamic Color'**
+  /// **'System Dynamic Colors'**
   String get themeSettingsPageUseDynamicColorTitle;
 
   /// No description provided for @themeSettingsPageUseDynamicColorSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use system colors (Android 12+)'**
+  /// **'Match system palette (Android 12+)'**
   String get themeSettingsPageUseDynamicColorSubtitle;
+
+  /// No description provided for @themeSettingsPageUsePureBackgroundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pure Background'**
+  String get themeSettingsPageUsePureBackgroundTitle;
+
+  /// No description provided for @themeSettingsPageUsePureBackgroundSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubbles and accents follow theme.'**
+  String get themeSettingsPageUsePureBackgroundSubtitle;
 
   /// No description provided for @themeSettingsPageColorPalettesSection.
   ///
