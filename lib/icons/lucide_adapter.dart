@@ -81,6 +81,7 @@ class Lucide {
   static const IconData ChevronLeft = lucide.LucideIcons.chevronLeft;
   static const IconData MessageSquare = lucide.LucideIcons.messageSquare;
   static const IconData CircleStop = lucide.LucideIcons.circleStop;
+  static const IconData CircleX = lucide.LucideIcons.circleX;
   static const IconData Link2 = lucide.LucideIcons.link2;
   static const IconData Shield = lucide.LucideIcons.shield;
   static const IconData Compass = lucide.LucideIcons.compass;

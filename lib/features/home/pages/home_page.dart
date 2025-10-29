@@ -42,6 +42,7 @@ import '../../mcp/pages/mcp_page.dart';
 import '../../provider/pages/providers_page.dart';
 import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../search/widgets/search_settings_sheet.dart';
+import '../../../desktop/search_provider_popover.dart';
 import '../widgets/mini_map_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
@@ -188,6 +189,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   static const double _sidebarMinWidth = 200;
   static const double _sidebarMaxWidth = 480;
   bool _desktopUiInited = false;
+  
+  void _openSearchSettings() {
+    // On desktop platforms show the floating popover; mobile keeps bottom sheet
+    try {
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        showDesktopSearchProviderPopover(context, anchorKey: _inputBarKey);
+      } else {
+        showSearchSettingsSheet(context);
+      }
+    } catch (_) {
+      // Fallback in case Platform.* is not available
+      showSearchSettingsSheet(context);
+    }
+  }
 
   // Drawer haptics for swipe-open
   double _lastDrawerValue = 0.0;
@@ -4011,7 +4026,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         supportsReasoning: (pk != null && mid != null)
                             ? _isReasoningModel(pk, mid)
                             : false,
-                        onOpenSearch: () => showSearchSettingsSheet(context),
+                        onOpenSearch: _openSearchSettings,
                         onSend: (text) {
                           _sendMessage(text);
                           _inputController.clear();
@@ -5018,7 +5033,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     },
                                     reasoningActive: _isReasoningEnabled((context.watch<AssistantProvider>().currentAssistant?.thinkingBudget) ?? settings.thinkingBudget),
                                     supportsReasoning: (pk != null && mid != null) ? _isReasoningModel(pk, mid) : false,
-                                    onOpenSearch: () => showSearchSettingsSheet(context),
+                                    onOpenSearch: _openSearchSettings,
                                     onSend: (text) {
                                       _sendMessage(text);
                                       _inputController.clear();
