@@ -106,7 +106,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       }
     }
 
-    const double menuWidth = 256;
+    const double menuWidth = 250;
     final topBar = SizedBox(
       height: 36,
       child: Align(
@@ -137,7 +137,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _SettingsMenu(
-                  width: 256,
+                  width: menuWidth,
                   selected: _selected,
                   onSelect: (it) => setState(() => _selected = it),
                 ),
@@ -1100,10 +1100,46 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
   // Keep local to this file to avoid cross-file coupling
   
 
+  // Persistent controllers for provider top inputs (desktop)
+  // Avoid rebuilding controllers each frame which breaks focus/IME
+  final TextEditingController _apiKeyCtrl = TextEditingController();
+  final TextEditingController _baseUrlCtrl = TextEditingController();
+  final TextEditingController _locationCtrl = TextEditingController();
+  final TextEditingController _projectIdCtrl = TextEditingController();
+  final TextEditingController _saJsonCtrl = TextEditingController();
+  final TextEditingController _apiPathCtrl = TextEditingController();
+
+  void _syncCtrl(TextEditingController c, String newText) {
+    final v = c.value;
+    // Do not disturb ongoing IME composition
+    if (v.composing.isValid) return;
+    if (c.text != newText) {
+      c.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+    }
+  }
+
+  void _syncControllersFromConfig(ProviderConfig cfg) {
+    _syncCtrl(_apiKeyCtrl, cfg.apiKey);
+    _syncCtrl(_baseUrlCtrl, cfg.baseUrl);
+    _syncCtrl(_apiPathCtrl, cfg.chatPath ?? '/chat/completions');
+    _syncCtrl(_locationCtrl, cfg.location ?? '');
+    _syncCtrl(_projectIdCtrl, cfg.projectId ?? '');
+    _syncCtrl(_saJsonCtrl, cfg.serviceAccountJson ?? '');
+  }
+
   @override
   void dispose() {
     _filterCtrl.dispose();
     _searchFocus.dispose();
+    _apiKeyCtrl.dispose();
+    _baseUrlCtrl.dispose();
+    _locationCtrl.dispose();
+    _projectIdCtrl.dispose();
+    _saJsonCtrl.dispose();
+    _apiPathCtrl.dispose();
     super.dispose();
   }
 
@@ -1158,6 +1194,8 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
     final l10n = AppLocalizations.of(context)!;
     final sp = context.watch<SettingsProvider>();
     final cfg = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+    // Keep controllers synced without breaking IME composition
+    _syncControllersFromConfig(cfg);
     final kind = ProviderConfig.classify(widget.providerKey, explicitType: cfg.providerType);
 
     final models = List<String>.from(cfg.models);
@@ -1239,12 +1277,13 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
                 )
               else
                 TextField(
-                  controller: TextEditingController(text: cfg.apiKey),
+                  controller: _apiKeyCtrl,
                   obscureText: !_showApiKey ? true : false,
-                  onChanged: (v) async {
-                    final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                    await sp.setProviderConfig(widget.providerKey, old.copyWith(apiKey: v));
-                  },
+                    onChanged: (v) async {
+                      // For API keys, save immediately regardless of IME composition
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(apiKey: v));
+                    },
                   style: const TextStyle(fontSize: 14),
                   decoration: _inputDecoration(context).copyWith(
                     hintText: l10n.providerDetailPageApiKeyHint,
@@ -1295,54 +1334,126 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
               if (!(kind == ProviderKind.google && (cfg.vertexAI == true))) ...[
                 _sectionLabel(context, AppLocalizations.of(context)!.providerDetailPageApiBaseUrlLabel, bold: true),
                 const SizedBox(height: 6),
-                TextField(
-                  controller: TextEditingController(text: cfg.baseUrl),
-                  onChanged: (v) async {
-                    final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                    await sp.setProviderConfig(widget.providerKey, old.copyWith(baseUrl: v));
+                Focus(
+                  onFocusChange: (has) async {
+                    if (!has) {
+                      final v = _baseUrlCtrl.text;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(baseUrl: v));
+                    }
                   },
+                  child: TextField(
+                    controller: _baseUrlCtrl,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) async {
+                      final v = _baseUrlCtrl.text;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(baseUrl: v));
+                    },
+                    onEditingComplete: () async {
+                      final v = _baseUrlCtrl.text;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(baseUrl: v));
+                    },
+                    onChanged: (v) async {
+                      if (_baseUrlCtrl.value.composing.isValid) return;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(baseUrl: v));
+                    },
                   style: const TextStyle(fontSize: 14),
                   decoration: _inputDecoration(context).copyWith(hintText: ProviderConfig.defaultsFor(widget.providerKey, displayName: widget.displayName).baseUrl),
+                  ),
                 ),
               ] else ...[
                 _sectionLabel(context, l10n.providerDetailPageLocationLabel, bold: true),
                 const SizedBox(height: 6),
-                TextField(
-                  controller: TextEditingController(text: cfg.location ?? ''),
-                  onChanged: (v) async {
-                    final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                    await sp.setProviderConfig(widget.providerKey, old.copyWith(location: v.trim()));
+                Focus(
+                  onFocusChange: (has) async {
+                    if (!has) {
+                      final v = _locationCtrl.text.trim();
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(location: v));
+                    }
                   },
+                  child: TextField(
+                    controller: _locationCtrl,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) async {
+                      final v = _locationCtrl.text.trim();
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(location: v));
+                    },
+                    onEditingComplete: () async {
+                      final v = _locationCtrl.text.trim();
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(location: v));
+                    },
+                    onChanged: (v) async {
+                      if (_locationCtrl.value.composing.isValid) return;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(location: v.trim()));
+                    },
                   style: const TextStyle(fontSize: 14),
                   decoration: _inputDecoration(context).copyWith(hintText: 'us-central1'),
+                  ),
                 ),
                 const SizedBox(height: 14),
                 _sectionLabel(context, l10n.providerDetailPageProjectIdLabel, bold: true),
                 const SizedBox(height: 6),
-                TextField(
-                  controller: TextEditingController(text: cfg.projectId ?? ''),
-                  onChanged: (v) async {
-                    final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                    await sp.setProviderConfig(widget.providerKey, old.copyWith(projectId: v.trim()));
+                Focus(
+                  onFocusChange: (has) async {
+                    if (!has) {
+                      final v = _projectIdCtrl.text.trim();
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(projectId: v));
+                    }
                   },
-                  style: const TextStyle(fontSize: 14),
-                  decoration: _inputDecoration(context).copyWith(hintText: 'my-project-id'),
+                  child: TextField(
+                    controller: _projectIdCtrl,
+                    onChanged: (v) async {
+                      if (_projectIdCtrl.value.composing.isValid) return;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(projectId: v.trim()));
+                    },
+                    onSubmitted: (_) async {
+                      final v = _projectIdCtrl.text.trim();
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(projectId: v));
+                    },
+                    onEditingComplete: () async {
+                      final v = _projectIdCtrl.text.trim();
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(projectId: v));
+                    },
+                    style: const TextStyle(fontSize: 14),
+                    decoration: _inputDecoration(context).copyWith(hintText: 'my-project-id'),
+                  ),
                 ),
                 const SizedBox(height: 14),
                 _sectionLabel(context, l10n.providerDetailPageServiceAccountJsonLabel, bold: true),
                 const SizedBox(height: 6),
                 ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 120),
-                  child: TextField(
-                    controller: TextEditingController(text: cfg.serviceAccountJson ?? ''),
-                    maxLines: null,
-                    minLines: 6,
-                    onChanged: (v) async {
-                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                      await sp.setProviderConfig(widget.providerKey, old.copyWith(serviceAccountJson: v));
+                  child: Focus(
+                    onFocusChange: (has) async {
+                      if (!has) {
+                        final v = _saJsonCtrl.text;
+                        final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                        await sp.setProviderConfig(widget.providerKey, old.copyWith(serviceAccountJson: v));
+                      }
                     },
-                    style: const TextStyle(fontSize: 14),
-                    decoration: _inputDecoration(context).copyWith(hintText: '{\n  "type": "service_account", ...\n}'),
+                    child: TextField(
+                      controller: _saJsonCtrl,
+                      maxLines: null,
+                      minLines: 6,
+                      onChanged: (v) async {
+                        if (_saJsonCtrl.value.composing.isValid) return;
+                        final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                        await sp.setProviderConfig(widget.providerKey, old.copyWith(serviceAccountJson: v));
+                      },
+                      style: const TextStyle(fontSize: 14),
+                      decoration: _inputDecoration(context).copyWith(hintText: '{\n  "type": "service_account", ...\n}'),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1378,14 +1489,35 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
                 const SizedBox(height: 14),
                 _sectionLabel(context, l10n.providerDetailPageApiPathLabel, bold: true),
                 const SizedBox(height: 6),
-                TextField(
-                  controller: TextEditingController(text: cfg.chatPath ?? '/chat/completions'),
-                  onChanged: (v) async {
-                    final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                    await sp.setProviderConfig(widget.providerKey, old.copyWith(chatPath: v));
+                Focus(
+                  onFocusChange: (has) async {
+                    if (!has) {
+                      final v = _apiPathCtrl.text;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(chatPath: v));
+                    }
                   },
-                  style: const TextStyle(fontSize: 14),
-                  decoration: _inputDecoration(context).copyWith(hintText: '/chat/completions'),
+                  child: TextField(
+                    controller: _apiPathCtrl,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) async {
+                      final v = _apiPathCtrl.text;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(chatPath: v));
+                    },
+                    onEditingComplete: () async {
+                      final v = _apiPathCtrl.text;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(chatPath: v));
+                    },
+                    onChanged: (v) async {
+                      if (_apiPathCtrl.value.composing.isValid) return;
+                      final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                      await sp.setProviderConfig(widget.providerKey, old.copyWith(chatPath: v));
+                    },
+                    style: const TextStyle(fontSize: 14),
+                    decoration: _inputDecoration(context).copyWith(hintText: '/chat/completions'),
+                  ),
                 ),
               ],
 
@@ -1538,14 +1670,24 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
-            child: Consumer<SettingsProvider>(builder: (c, spWatch, _) {
+          child: Consumer<SettingsProvider>(builder: (c, spWatch, _) {
               final cfgNow = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-              // sync controllers when external changes
-              if ((nameCtrl.text) != cfgNow.name) nameCtrl.text = cfgNow.name;
-              if ((proxyHostCtrl.text) != (cfgNow.proxyHost ?? '')) proxyHostCtrl.text = cfgNow.proxyHost ?? '';
-              if ((proxyPortCtrl.text) != (cfgNow.proxyPort ?? '8080')) proxyPortCtrl.text = cfgNow.proxyPort ?? '8080';
-              if ((proxyUserCtrl.text) != (cfgNow.proxyUsername ?? '')) proxyUserCtrl.text = cfgNow.proxyUsername ?? '';
-              if ((proxyPassCtrl.text) != (cfgNow.proxyPassword ?? '')) proxyPassCtrl.text = cfgNow.proxyPassword ?? '';
+              // IME-friendly sync: avoid overwriting while composing
+              void syncCtrl(TextEditingController ctrl, String text) {
+                final v = ctrl.value;
+                if (v.composing.isValid) return;
+                if (ctrl.text != text) {
+                  ctrl.value = TextEditingValue(
+                    text: text,
+                    selection: TextSelection.collapsed(offset: text.length),
+                  );
+                }
+              }
+              syncCtrl(nameCtrl, cfgNow.name);
+              syncCtrl(proxyHostCtrl, cfgNow.proxyHost ?? '');
+              syncCtrl(proxyPortCtrl, cfgNow.proxyPort ?? '8080');
+              syncCtrl(proxyUserCtrl, cfgNow.proxyUsername ?? '');
+              syncCtrl(proxyPassCtrl, cfgNow.proxyPassword ?? '');
               final kindNow = cfgNow.providerType ?? ProviderConfig.classify(cfgNow.id, explicitType: cfgNow.providerType);
               final multiNow = cfgNow.multiKeyEnabled ?? false;
               final respNow = cfgNow.useResponseApi ?? false;
@@ -1583,14 +1725,37 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       // 1) Name
-                      row(l10n.providerDetailPageNameLabel, TextField(
-                        controller: nameCtrl,
-                        style: const TextStyle(fontSize: 14),
-                        decoration: _inputDecoration(ctx),
-                        onChanged: (_) async {
-                          final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                          await spWatch.setProviderConfig(widget.providerKey, old.copyWith(name: nameCtrl.text.trim().isEmpty ? widget.displayName : nameCtrl.text.trim()));
+                      row(l10n.providerDetailPageNameLabel, Focus(
+                        onFocusChange: (has) async {
+                          if (!has) {
+                            final v = nameCtrl.text.trim();
+                            final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                            await spWatch.setProviderConfig(widget.providerKey, old.copyWith(name: v.isEmpty ? widget.displayName : v));
+                          }
                         },
+                        child: TextField(
+                          controller: nameCtrl,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: _inputDecoration(ctx),
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) async {
+                            final v = nameCtrl.text.trim();
+                            final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                            await spWatch.setProviderConfig(widget.providerKey, old.copyWith(name: v.isEmpty ? widget.displayName : v));
+                          },
+                          onEditingComplete: () async {
+                            final v = nameCtrl.text.trim();
+                            final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                            await spWatch.setProviderConfig(widget.providerKey, old.copyWith(name: v.isEmpty ? widget.displayName : v));
+                          },
+                          onChanged: (_) async {
+                            // Avoid saving during IME composing to prevent glitches with Pinyin input
+                            if (nameCtrl.value.composing.isValid) return;
+                            final v = nameCtrl.text.trim();
+                            final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                            await spWatch.setProviderConfig(widget.providerKey, old.copyWith(name: v.isEmpty ? widget.displayName : v));
+                          },
+                        ),
                       )),
                       const SizedBox(height: 4),
                       // 2) Provider type
@@ -1643,25 +1808,65 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
                         secondChild: Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                            row(l10n.providerDetailPageHostLabel, TextField(controller: proxyHostCtrl, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '127.0.0.1'), onChanged: (_) async {
-                              final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                              await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyHost: proxyHostCtrl.text.trim()));
-                            })),
+                            row(l10n.providerDetailPageHostLabel, Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = proxyHostCtrl.text.trim();
+                                  final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyHost: v));
+                                }
+                              },
+                              child: TextField(controller: proxyHostCtrl, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '127.0.0.1'), onChanged: (_) async {
+                                if (proxyHostCtrl.value.composing.isValid) return;
+                                final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyHost: proxyHostCtrl.text.trim()));
+                              }),
+                            )),
                             const SizedBox(height: 4),
-                            row(l10n.providerDetailPagePortLabel, TextField(controller: proxyPortCtrl, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '8080'), onChanged: (_) async {
-                              final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                              await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyPort: proxyPortCtrl.text.trim()));
-                            })),
+                            row(l10n.providerDetailPagePortLabel, Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = proxyPortCtrl.text.trim();
+                                  final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyPort: v));
+                                }
+                              },
+                              child: TextField(controller: proxyPortCtrl, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '8080'), onChanged: (_) async {
+                                if (proxyPortCtrl.value.composing.isValid) return;
+                                final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyPort: proxyPortCtrl.text.trim()));
+                              }),
+                            )),
                             const SizedBox(height: 4),
-                            row(l10n.providerDetailPageUsernameOptionalLabel, TextField(controller: proxyUserCtrl, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx), onChanged: (_) async {
-                              final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                              await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyUsername: proxyUserCtrl.text.trim()));
-                            })),
+                            row(l10n.providerDetailPageUsernameOptionalLabel, Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = proxyUserCtrl.text.trim();
+                                  final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyUsername: v));
+                                }
+                              },
+                              child: TextField(controller: proxyUserCtrl, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx), onChanged: (_) async {
+                                if (proxyUserCtrl.value.composing.isValid) return;
+                                final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyUsername: proxyUserCtrl.text.trim()));
+                              }),
+                            )),
                             const SizedBox(height: 4),
-                            row(l10n.providerDetailPagePasswordOptionalLabel, TextField(controller: proxyPassCtrl, style: const TextStyle(fontSize: 13), obscureText: true, decoration: _inputDecoration(ctx), onChanged: (_) async {
-                              final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
-                              await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyPassword: proxyPassCtrl.text.trim()));
-                            })),
+                            row(l10n.providerDetailPagePasswordOptionalLabel, Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = proxyPassCtrl.text.trim();
+                                  final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyPassword: v));
+                                }
+                              },
+                              child: TextField(controller: proxyPassCtrl, style: const TextStyle(fontSize: 13), obscureText: true, decoration: _inputDecoration(ctx), onChanged: (_) async {
+                                if (proxyPassCtrl.value.composing.isValid) return;
+                                final old = spWatch.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                await spWatch.setProviderConfig(widget.providerKey, old.copyWith(proxyPassword: proxyPassCtrl.text.trim()));
+                              }),
+                            )),
                           ]),
                         ),
                         crossFadeState: proxyEnabledNow ? CrossFadeState.showSecond : CrossFadeState.showFirst,
@@ -1740,19 +1945,55 @@ class _DesktopProviderDetailPaneState extends State<_DesktopProviderDetailPane> 
                             const SizedBox(height: 12),
                             _sectionLabel(ctx, AppLocalizations.of(ctx)!.providerDetailPageHostLabel),
                             const SizedBox(height: 6),
-                            TextField(controller: host, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '127.0.0.1'), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyHost: host.text.trim())); }),
+                            Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = host.text.trim();
+                                  final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyHost: v));
+                                }
+                              },
+                              child: TextField(controller: host, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '127.0.0.1'), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyHost: host.text.trim())); }),
+                            ),
                             const SizedBox(height: 12),
                             _sectionLabel(ctx, AppLocalizations.of(ctx)!.providerDetailPagePortLabel),
                             const SizedBox(height: 6),
-                            TextField(controller: port, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '8080'), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyPort: port.text.trim())); }),
+                            Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = port.text.trim();
+                                  final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyPort: v));
+                                }
+                              },
+                              child: TextField(controller: port, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx).copyWith(hintText: '8080'), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyPort: port.text.trim())); }),
+                            ),
                             const SizedBox(height: 12),
                             _sectionLabel(ctx, AppLocalizations.of(ctx)!.providerDetailPageUsernameOptionalLabel),
                             const SizedBox(height: 6),
-                            TextField(controller: user, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyUsername: user.text.trim())); }),
+                            Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = user.text.trim();
+                                  final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyUsername: v));
+                                }
+                              },
+                              child: TextField(controller: user, style: const TextStyle(fontSize: 13), decoration: _inputDecoration(ctx), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyUsername: user.text.trim())); }),
+                            ),
                             const SizedBox(height: 12),
                             _sectionLabel(ctx, AppLocalizations.of(ctx)!.providerDetailPagePasswordOptionalLabel),
                             const SizedBox(height: 6),
-                            TextField(controller: pass, style: const TextStyle(fontSize: 13), obscureText: true, decoration: _inputDecoration(ctx), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyPassword: pass.text.trim())); }),
+                            Focus(
+                              onFocusChange: (has) async {
+                                if (!has) {
+                                  final v = pass.text.trim();
+                                  final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName);
+                                  await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyPassword: v));
+                                }
+                              },
+                              child: TextField(controller: pass, style: const TextStyle(fontSize: 13), obscureText: true, decoration: _inputDecoration(ctx), onChanged: (_) async { final old = sp.getProviderConfig(widget.providerKey, defaultName: widget.displayName); await sp.setProviderConfig(widget.providerKey, old.copyWith(proxyPassword: pass.text.trim())); }),
+                            ),
                           ],
                         ),
                         crossFadeState: enabled ? CrossFadeState.showSecond : CrossFadeState.showFirst,
