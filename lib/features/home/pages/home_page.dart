@@ -70,6 +70,7 @@ import '../../../core/providers/quick_phrase_provider.dart';
 import '../../quick_phrase/widgets/quick_phrase_menu.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
+import '../../../desktop/quick_phrase_popover.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -2975,11 +2976,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // Dismiss keyboard before showing menu to prevent flickering
     _dismissKeyboard();
     
-    final selected = await showQuickPhraseMenu(
-      context: context,
-      phrases: allAvailable,
-      position: position,
-    );
+    QuickPhrase? selected;
+    try {
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        selected = await showDesktopQuickPhrasePopover(context, anchorKey: _inputBarKey, phrases: allAvailable);
+      } else {
+        selected = await showQuickPhraseMenu(
+          context: context,
+          phrases: allAvailable,
+          position: position,
+        );
+      }
+    } catch (_) {
+      selected = await showQuickPhraseMenu(
+        context: context,
+        phrases: allAvailable,
+        position: position,
+      );
+    }
 
     if (selected != null && mounted) {
       // Insert content at cursor position
