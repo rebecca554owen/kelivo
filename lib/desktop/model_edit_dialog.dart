@@ -125,7 +125,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody> with SingleT
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 540, maxWidth: 880, maxHeight: 760),
+        constraints: const BoxConstraints(minWidth: 540, maxWidth: 700, maxHeight: 650),
         child: Material(
           color: cs.surface,
           shape: RoundedRectangleBorder(
