@@ -44,6 +44,7 @@ import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../search/widgets/search_settings_sheet.dart';
 import '../../../desktop/search_provider_popover.dart';
 import '../../../desktop/reasoning_budget_popover.dart';
+import '../../../desktop/mcp_servers_popover.dart';
 import '../widgets/mini_map_sheet.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
@@ -4001,7 +4002,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         onOpenMcp: () {
                           final a = context.read<AssistantProvider>().currentAssistant;
                           if (a != null) {
-                            showAssistantMcpSheet(context, assistantId: a.id);
+                            try {
+                              if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+                                showDesktopMcpServersPopover(context, anchorKey: _inputBarKey, assistantId: a.id);
+                              } else {
+                                showAssistantMcpSheet(context, assistantId: a.id);
+                              }
+                            } catch (_) {
+                              showAssistantMcpSheet(context, assistantId: a.id);
+                            }
                           }
                         },
                         onLongPressMcp: () {
@@ -4974,7 +4983,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     onOpenMcp: () {
                                       final a = context.read<AssistantProvider>().currentAssistant;
                                       if (a != null) {
-                                        showAssistantMcpSheet(context, assistantId: a.id);
+                                        try {
+                                          if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+                                            showDesktopMcpServersPopover(context, anchorKey: _inputBarKey, assistantId: a.id);
+                                          } else {
+                                            showAssistantMcpSheet(context, assistantId: a.id);
+                                          }
+                                        } catch (_) {
+                                          showAssistantMcpSheet(context, assistantId: a.id);
+                                        }
                                       }
                                     },
                                     onLongPressMcp: () {
