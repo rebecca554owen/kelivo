@@ -1092,6 +1092,7 @@ class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialog
   final Map<String, int> _headerIndexMap = <String, int>{}; // providerKey or '__fav__' -> index
   final Map<String, int> _modelIndexMap = <String, int>{};  // 'pk::modelId' in provider sections -> index
   final Map<String, int> _favModelIndexMap = <String, int>{}; // 'pk::modelId' in favorites -> index
+  bool _autoScrolled = false; // auto-scroll once when dialog opens
 
   @override
   void initState() {
@@ -1134,6 +1135,12 @@ class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialog
       _favItems = result.favItems;
       _orderedKeys = result.orderedKeys;
       _loading = false;
+    });
+    // Defer auto-scroll until list is built and attached
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_autoScrolled) {
+        _autoScrollToCurrent();
+      }
     });
   }
 
@@ -1307,6 +1314,14 @@ class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialog
     final _ = context.watch<SettingsProvider>().pinnedModels.length;
     // Build flattened rows based on current search and pinned state
     _rebuildRows();
+    // After rows are rebuilt and rendered, perform initial auto-scroll
+    if (!_autoScrolled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_autoScrolled) {
+          _autoScrollToCurrent();
+        }
+      });
+    }
     if (_rows.isEmpty) return const Center(child: SizedBox());
     return ScrollablePositionedList.builder(
       itemCount: _rows.length,
@@ -1332,6 +1347,65 @@ class _DesktopModelSelectDialogBodyState extends State<_DesktopModelSelectDialog
         return const SizedBox.shrink();
       },
     );
+  }
+
+  Future<void> _autoScrollToCurrent() async {
+    // Ensure controller is attached to the list before scrolling
+    if (!_itemScrollController.isAttached) {
+      Future.delayed(const Duration(milliseconds: 60), () {
+        if (mounted && !_autoScrolled) _autoScrollToCurrent();
+      });
+      return;
+    }
+
+    final settings = context.read<SettingsProvider>();
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    final pk = assistant?.chatModelProvider ?? settings.currentModelProvider;
+    final mid = assistant?.chatModelId ?? settings.currentModelId;
+    if (pk == null || mid == null) return;
+
+    // Rebuild to ensure index maps are current
+    _rebuildRows();
+
+    final currentKey = '$pk::$mid';
+    final bool showFavorites = widget.limitProviderKey == null && _searchCtrl.text.isEmpty;
+    final bool isPinned = settings.pinnedModels.contains(currentKey);
+
+    int? targetIndex;
+    if (showFavorites && isPinned) {
+      targetIndex = _favModelIndexMap[currentKey];
+    }
+    targetIndex ??= _modelIndexMap[currentKey];
+    // If provider headers are visible, fall back to its section header
+    if (widget.limitProviderKey == null) {
+      targetIndex ??= _headerIndexMap[pk];
+    }
+
+    if (targetIndex == null) return;
+
+    try {
+      await _itemScrollController.scrollTo(
+        index: targetIndex,
+        alignment: 0.5, // try to center the current model
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      );
+      _autoScrolled = true;
+    } catch (_) {
+      // Retry once shortly after if initial scroll fails
+      Future.delayed(const Duration(milliseconds: 80), () async {
+        if (!mounted || _autoScrolled) return;
+        try {
+          await _itemScrollController.scrollTo(
+            index: targetIndex!,
+            alignment: 0.5,
+            duration: const Duration(milliseconds: 360),
+            curve: Curves.easeOutCubic,
+          );
+          _autoScrolled = true;
+        } catch (_) {}
+      });
+    }
   }
 
   Widget _desktopModelTile(BuildContext context, _ModelItem m, {bool showProviderLabel = false}) {
