@@ -4967,24 +4967,33 @@ class _DesktopAssistantBasicPaneState extends State<_DesktopAssistantBasicPane> 
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.assistantEditAssistantNameLabel,
-                  isDense: true,
-                  filled: true,
-                  fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.2)),
+              child: Focus(
+                onFocusChange: (has) async {
+                  if (!has) {
+                    final v = _nameCtrl.text.trim();
+                    await context.read<AssistantProvider>().updateAssistant(a.copyWith(name: v));
+                  }
+                },
+                child: TextField(
+                  controller: _nameCtrl,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    labelText: l10n.assistantEditAssistantNameLabel,
+                    isDense: true,
+                    filled: true,
+                    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: cs.outlineVariant.withOpacity(0.2)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: cs.primary.withOpacity(0.5)),
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: cs.primary.withOpacity(0.5)),
-                  ),
+                  onSubmitted: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(name: v.trim())),
+                  onEditingComplete: () => context.read<AssistantProvider>().updateAssistant(a.copyWith(name: _nameCtrl.text.trim())),
                 ),
-                onSubmitted: (v) => context.read<AssistantProvider>().updateAssistant(a.copyWith(name: v.trim())),
-                onEditingComplete: () => context.read<AssistantProvider>().updateAssistant(a.copyWith(name: _nameCtrl.text.trim())),
               ),
             ),
           ],
