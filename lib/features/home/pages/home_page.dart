@@ -1757,7 +1757,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 parts[idx] = ToolUIPart(
                   id: parts[idx].id,
                   toolName: parts[idx].toolName,
-                  arguments: parts[idx].arguments,
+                  arguments: (r.arguments is Map && (r.arguments as Map).isNotEmpty)
+                      ? Map<String, dynamic>.from(r.arguments)
+                      : parts[idx].arguments,
                   content: r.content,
                   loading: false,
                 );

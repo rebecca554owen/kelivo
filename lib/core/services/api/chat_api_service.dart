@@ -2746,6 +2746,7 @@ class ChatApiService {
       List<Map<String, dynamic>> messages,
       {List<String>? userImagePaths, int? thinkingBudget, double? temperature, double? topP, int? maxTokens, List<Map<String, dynamic>>? tools, Future<String> Function(String, Map<String, dynamic>)? onToolCall, Map<String, String>? extraHeaders, Map<String, dynamic>? extraBody}
       ) async* {
+    // Endpoint and headers (constant across rounds)
     final base = config.baseUrl.endsWith('/')
         ? config.baseUrl.substring(0, config.baseUrl.length - 1)
         : config.baseUrl;
@@ -2755,7 +2756,7 @@ class ChatApiService {
         .abilities
         .contains(ModelAbility.reasoning);
 
-    // Extract system prompt (Anthropic uses top-level `system`, not a `system` role)
+    // Extract system prompt (Anthropic uses top-level `system`)
     String systemPrompt = '';
     final nonSystemMessages = <Map<String, dynamic>>[];
     for (final m in messages) {
@@ -2765,13 +2766,13 @@ class ChatApiService {
         if (s.isNotEmpty) {
           systemPrompt = systemPrompt.isEmpty ? s : (systemPrompt + '\n\n' + s);
         }
-        continue; // skip adding to messages array
+        continue;
       }
       nonSystemMessages.add({'role': role.isEmpty ? 'user' : role, 'content': m['content'] ?? ''});
     }
 
     // Transform last user message to include images per Anthropic schema
-    final transformed = <Map<String, dynamic>>[];
+    final initialMessages = <Map<String, dynamic>>[];
     for (int i = 0; i < nonSystemMessages.length; i++) {
       final m = nonSystemMessages[i];
       final isLast = i == nonSystemMessages.length - 1;
@@ -2781,7 +2782,6 @@ class ChatApiService {
         if (text.isNotEmpty) parts.add({'type': 'text', 'text': text});
         for (final p in userImagePaths!) {
           if (p.startsWith('http') || p.startsWith('data:')) {
-            // Fallback: include link as text
             parts.add({'type': 'text', 'text': p});
           } else {
             final mime = _mimeFromPath(p);
@@ -2796,19 +2796,19 @@ class ChatApiService {
             });
           }
         }
-        transformed.add({'role': 'user', 'content': parts});
+        initialMessages.add({'role': 'user', 'content': parts});
       } else {
-        transformed.add({'role': m['role'] ?? 'user', 'content': m['content'] ?? ''});
+        initialMessages.add({'role': m['role'] ?? 'user', 'content': m['content'] ?? ''});
       }
     }
 
-    // Map OpenAI-style tools to Anthropic custom tools if provided
+    // Map OpenAI-style tools to Anthropic custom tools (client tools)
     List<Map<String, dynamic>>? anthropicTools;
     if (tools != null && tools.isNotEmpty) {
       anthropicTools = [];
       for (final t in tools) {
         final fn = (t['function'] as Map<String, dynamic>?);
-        if (fn == null) continue; // skip non-function entries here (server tools handled below)
+        if (fn == null) continue;
         final name = (fn['name'] ?? '').toString();
         if (name.isEmpty) continue;
         final desc = (fn['description'] ?? '').toString();
@@ -2821,10 +2821,9 @@ class ChatApiService {
       }
     }
 
-    // Collect final tools list: custom tools + pass-through server tool entries + built-in web_search if enabled
+    // Collect final tools list: client + server + built-in web_search
     final List<Map<String, dynamic>> allTools = [];
     if (anthropicTools != null && anthropicTools.isNotEmpty) allTools.addAll(anthropicTools);
-    // Pass-through server tools provided directly by caller (e.g., web_search_20250305)
     if (tools != null && tools.isNotEmpty) {
       for (final t in tools) {
         if (t is Map && t['type'] is String && (t['type'] as String).startsWith('web_search_')) {
@@ -2832,10 +2831,8 @@ class ChatApiService {
         }
       }
     }
-    // Enable Claude built-in web search via per-model override "builtInTools": ["search"]
     final builtIns = _builtInTools(config, modelId);
     if (builtIns.contains('search')) {
-      // Optional parameters can be supplied via modelOverrides[modelId]['webSearch'] map
       Map<String, dynamic> ws = const <String, dynamic>{};
       try {
         final ov = config.modelOverrides[modelId];
@@ -2847,7 +2844,6 @@ class ChatApiService {
         'type': 'web_search_20250305',
         'name': 'web_search',
       };
-      // Copy supported optional fields if present and valid
       if (ws['max_uses'] is int && (ws['max_uses'] as int) > 0) entry['max_uses'] = ws['max_uses'];
       if (ws['allowed_domains'] is List) entry['allowed_domains'] = List<String>.from((ws['allowed_domains'] as List).map((e) => e.toString()));
       if (ws['blocked_domains'] is List) entry['blocked_domains'] = List<String>.from((ws['blocked_domains'] as List).map((e) => e.toString()));
@@ -2855,225 +2851,313 @@ class ChatApiService {
       allTools.add(entry);
     }
 
-    final body = <String, dynamic>{
-      'model': modelId,
-      'max_tokens': maxTokens ?? 4096,
-      'messages': transformed,
-      'stream': true,
-      if (systemPrompt.isNotEmpty) 'system': systemPrompt,
-      if (temperature != null) 'temperature': temperature,
-      if (topP != null) 'top_p': topP,
-      if (allTools.isNotEmpty) 'tools': allTools,
-      if (allTools.isNotEmpty) 'tool_choice': {'type': 'auto'},
-      if (isReasoning)
-        'thinking': {
-          'type': (thinkingBudget == 0) ? 'disabled' : 'enabled',
-          if (thinkingBudget != null && thinkingBudget > 0)
-            'budget_tokens': thinkingBudget,
-        },
-    };
-
-    final request = http.Request('POST', url);
-    final headers = <String, String>{
+    // Headers (constant across rounds)
+    final baseHeaders = <String, String>{
       'x-api-key': _effectiveApiKey(config),
       'anthropic-version': '2023-06-01',
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     };
-    headers.addAll(_customHeaders(config, modelId));
-    if (extraHeaders != null && extraHeaders.isNotEmpty) headers.addAll(extraHeaders);
-    request.headers.addAll(headers);
-    final extraClaude = _customBody(config, modelId);
-    if (extraClaude.isNotEmpty) (body as Map<String, dynamic>).addAll(extraClaude);
-    if (extraBody != null && extraBody.isNotEmpty) {
-      extraBody.forEach((k, v) {
-        (body as Map<String, dynamic>)[k] = (v is String) ? _parseOverrideValue(v) : v;
-      });
-    }
-    request.body = jsonEncode(body);
+    baseHeaders.addAll(_customHeaders(config, modelId));
+    if (extraHeaders != null && extraHeaders.isNotEmpty) baseHeaders.addAll(extraHeaders);
 
-    final response = await client.send(request);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final errorBody = await response.stream.bytesToString();
-      throw HttpException('HTTP ${response.statusCode}: $errorBody');
-    }
+    // Running conversation across rounds
+    List<Map<String, dynamic>> convo = List<Map<String, dynamic>>.from(initialMessages);
+    TokenUsage? totalUsage;
 
-    final stream = response.stream.transform(utf8.decoder);
-    String buffer = '';
-    int totalTokens = 0;
-    TokenUsage? usage;
+    while (true) {
+      // Prepare request body per round
+      final body = <String, dynamic>{
+        'model': modelId,
+        'max_tokens': maxTokens ?? 4096,
+        'messages': convo,
+        'stream': true,
+        if (systemPrompt.isNotEmpty) 'system': systemPrompt,
+        if (temperature != null) 'temperature': temperature,
+        if (topP != null) 'top_p': topP,
+        if (allTools.isNotEmpty) 'tools': allTools,
+        if (allTools.isNotEmpty) 'tool_choice': {'type': 'auto'},
+        if (isReasoning)
+          'thinking': {
+            'type': (thinkingBudget == 0) ? 'disabled' : 'enabled',
+            if (thinkingBudget != null && thinkingBudget > 0)
+              'budget_tokens': thinkingBudget,
+          },
+      };
+      final extraClaude = _customBody(config, modelId);
+      if (extraClaude.isNotEmpty) (body as Map<String, dynamic>).addAll(extraClaude);
+      if (extraBody != null && extraBody.isNotEmpty) {
+        extraBody.forEach((k, v) {
+          (body as Map<String, dynamic>)[k] = (v is String) ? _parseOverrideValue(v) : v;
+        });
+      }
 
-    // Accumulate tool_use inputs by id (client tools)
-    final Map<String, Map<String, dynamic>> _anthToolUse = <String, Map<String, dynamic>>{}; // id -> {name, argsStr}
-    // Track server tool use (web_search) input JSON by block index/id
-    final Map<int, String> _srvIndexToId = <int, String>{};
-    final Map<String, String> _srvArgsStr = <String, String>{}; // id -> raw partial_json concatenated
-    final Map<String, Map<String, dynamic>> _srvArgs = <String, Map<String, dynamic>>{}; // id -> parsed args
+      final request = http.Request('POST', url);
+      request.headers.addAll(baseHeaders);
+      request.body = jsonEncode(body);
 
-    await for (final chunk in stream) {
-      buffer += chunk;
-      final lines = buffer.split('\n');
-      buffer = lines.last;
+      final response = await client.send(request);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final errorBody = await response.stream.bytesToString();
+        throw HttpException('HTTP ${response.statusCode}: $errorBody');
+      }
 
-      for (int i = 0; i < lines.length - 1; i++) {
-        final line = lines[i].trim();
-        if (line.isEmpty || !line.startsWith('data:')) continue;
+      final stream = response.stream.transform(utf8.decoder);
+      String buffer = '';
+      int roundTokens = 0;
+      TokenUsage? usage;
+      String? _lastStopReason;
 
-        final data = line.substring(5).trimLeft();
-        try {
-          final json = jsonDecode(data);
-          final type = json['type'];
+      // Per-round accumulation
+      final Map<String, Map<String, dynamic>> _anthToolUse = <String, Map<String, dynamic>>{}; // id -> {name, args}
+      final Map<int, String> _cliIndexToId = <int, String>{}; // client tool: index -> id
+      final Map<String, String> _toolResultsContent = <String, String>{}; // id -> result text
+      final List<Map<String, dynamic>> assistantBlocks = <Map<String, dynamic>>[];
+      final StringBuffer textBuf = StringBuffer();
 
-          if (type == 'content_block_delta') {
-            final delta = json['delta'];
-            if (delta != null) {
-              if (delta['type'] == 'text_delta') {
-                final content = delta['text'] ?? '';
-                if (content is String && content.isNotEmpty) {
-                  yield ChatStreamChunk(
-                    content: content,
-                    isDone: false,
-                    totalTokens: totalTokens,
-                  );
+      // Server tool helpers (web_search)
+      final Map<int, String> _srvIndexToId = <int, String>{};
+      final Map<String, String> _srvArgsStr = <String, String>{};
+      final Map<String, Map<String, dynamic>> _srvArgs = <String, Map<String, dynamic>>{};
+
+      bool messageStopped = false;
+
+      await for (final chunk in stream) {
+        buffer += chunk;
+        final lines = buffer.split('\n');
+        buffer = lines.last;
+
+        for (int i = 0; i < lines.length - 1; i++) {
+          final line = lines[i].trim();
+          if (line.isEmpty || !line.startsWith('data:')) continue;
+
+          final data = line.substring(5).trimLeft();
+          try {
+            final obj = jsonDecode(data);
+            final type = obj['type'];
+
+            if (type == 'content_block_start') {
+              final cb = obj['content_block'];
+              if (cb is Map && (cb['type'] == 'tool_use')) {
+                // Flush text block before tool_use
+                final t = textBuf.toString();
+                if (t.isNotEmpty) {
+                  assistantBlocks.add({'type': 'text', 'text': t});
+                  textBuf.clear();
                 }
-              } else if (delta['type'] == 'thinking_delta') {
-                final thinking = (delta['thinking'] ?? delta['text'] ?? '') as String;
-                if (thinking.isNotEmpty) {
+                final id = (cb['id'] ?? '').toString();
+                final name = (cb['name'] ?? '').toString();
+                final idx = (obj['index'] is int) ? obj['index'] as int : int.tryParse((obj['index'] ?? '').toString()) ?? -1;
+                if (id.isNotEmpty) {
+                  _anthToolUse.putIfAbsent(id, () => {'name': name, 'args': ''});
+                  assistantBlocks.add({'type': 'tool_use', 'id': id, 'name': name, 'input': {}});
+                  if (idx >= 0) _cliIndexToId[idx] = id;
+                  // Emit placeholder tool-call card immediately
                   yield ChatStreamChunk(
                     content: '',
-                    reasoning: thinking,
                     isDone: false,
-                    totalTokens: totalTokens,
+                    totalTokens: roundTokens,
+                    usage: usage,
+                    toolCalls: [ToolCallInfo(id: id, name: name, arguments: const <String, dynamic>{})],
                   );
                 }
-              } else if (delta['type'] == 'tool_use_delta') {
-                final id = (json['content_block']?['id'] ?? json['id'] ?? '').toString();
+              } else if (cb is Map && (cb['type'] == 'server_tool_use')) {
+                final id = (cb['id'] ?? '').toString();
+                final idx = (obj['index'] is int) ? obj['index'] as int : int.tryParse((obj['index'] ?? '').toString()) ?? -1;
+                if (id.isNotEmpty && idx >= 0) {
+                  _srvIndexToId[idx] = id;
+                  _srvArgsStr[id] = '';
+                }
+                // Emit placeholder for server tool to show card (e.g., built-in web_search)
                 if (id.isNotEmpty) {
-                  final entry = _anthToolUse.putIfAbsent(id, () => {'name': (json['content_block']?['name'] ?? '').toString(), 'args': ''});
-                  final argsDelta = (delta['partial_json'] ?? delta['input'] ?? delta['text'] ?? '').toString();
-                  if (argsDelta.isNotEmpty) entry['args'] = (entry['args'] ?? '') + argsDelta;
+                  yield ChatStreamChunk(
+                    content: '',
+                    isDone: false,
+                    totalTokens: roundTokens,
+                    usage: usage,
+                    toolCalls: [ToolCallInfo(id: id, name: 'search_web', arguments: const <String, dynamic>{})],
+                  );
                 }
-              } else if (delta['type'] == 'input_json_delta') {
-                // Server tool (web_search) input streamed as JSON
-                final idx = json['index'];
-                final index = (idx is int) ? idx : int.tryParse((idx ?? '').toString());
-                if (index != null && _srvIndexToId.containsKey(index)) {
-                  final id = _srvIndexToId[index]!;
-                  final part = (delta['partial_json'] ?? '').toString();
-                  if (part.isNotEmpty) {
-                    _srvArgsStr[id] = (_srvArgsStr[id] ?? '') + part;
+              } else if (cb is Map && (cb['type'] == 'web_search_tool_result')) {
+                // Emit simplified search results to UI
+                final toolUseId = (cb['tool_use_id'] ?? '').toString();
+                final contentBlock = cb['content'];
+                final items = <Map<String, dynamic>>[];
+                String? errorCode;
+                if (contentBlock is List) {
+                  for (int j = 0; j < contentBlock.length; j++) {
+                    final it = contentBlock[j];
+                    if (it is Map && (it['type'] == 'web_search_result')) {
+                      items.add({
+                        'index': j + 1,
+                        'title': (it['title'] ?? '').toString(),
+                        'url': (it['url'] ?? '').toString(),
+                        if ((it['page_age'] ?? '').toString().isNotEmpty) 'page_age': (it['page_age'] ?? '').toString(),
+                      });
+                    }
                   }
+                } else if (contentBlock is Map && (contentBlock['type'] == 'web_search_tool_result_error')) {
+                  errorCode = (contentBlock['error_code'] ?? '').toString();
                 }
-              }
-            }
-          } else if (type == 'content_block_start') {
-            // Start of tool_use block: we can pre-register name/id
-            final cb = json['content_block'];
-            if (cb is Map && (cb['type'] == 'tool_use')) {
-              final id = (cb['id'] ?? '').toString();
-              final name = (cb['name'] ?? '').toString();
-              if (id.isNotEmpty) {
-                _anthToolUse.putIfAbsent(id, () => {'name': name, 'args': ''});
-              }
-            } else if (cb is Map && (cb['type'] == 'server_tool_use')) {
-              // Record mapping index -> id so we can attach input_json_delta fragments
-              final id = (cb['id'] ?? '').toString();
-              final idx = (json['index'] is int) ? json['index'] as int : int.tryParse((json['index'] ?? '').toString()) ?? -1;
-              if (id.isNotEmpty && idx >= 0) {
-                _srvIndexToId[idx] = id;
-                _srvArgsStr[id] = '';
-              }
-            } else if (cb is Map && (cb['type'] == 'web_search_tool_result')) {
-              // Emit a tool result for web_search with simplified items list for UI
-              final toolUseId = (cb['tool_use_id'] ?? '').toString();
-              final contentBlock = cb['content'];
-              final items = <Map<String, dynamic>>[];
-              String? errorCode;
-              if (contentBlock is List) {
-                for (int i = 0; i < contentBlock.length; i++) {
-                  final it = contentBlock[i];
-                  if (it is Map && (it['type'] == 'web_search_result')) {
-                    items.add({
-                      'index': i + 1,
-                      'title': (it['title'] ?? '').toString(),
-                      'url': (it['url'] ?? '').toString(),
-                      if ((it['page_age'] ?? '').toString().isNotEmpty) 'page_age': (it['page_age'] ?? '').toString(),
-                    });
-                  }
-                }
-              } else if (contentBlock is Map && (contentBlock['type'] == 'web_search_tool_result_error')) {
-                errorCode = (contentBlock['error_code'] ?? '').toString();
-              }
-              Map<String, dynamic> args = const <String, dynamic>{};
-              if (_srvArgs.containsKey(toolUseId)) args = _srvArgs[toolUseId]!;
-              // Use toolName 'search_web' for UI consistency
-              final payload = jsonEncode({
-                'items': items,
-                if ((errorCode ?? '').isNotEmpty) 'error': errorCode,
-              });
-              yield ChatStreamChunk(
-                content: '',
-                isDone: false,
-                totalTokens: totalTokens,
-                usage: usage,
-                toolResults: [ToolResultInfo(id: toolUseId.isEmpty ? 'builtin_search' : toolUseId, name: 'search_web', arguments: args, content: payload)],
-              );
-            }
-          } else if (type == 'content_block_stop') {
-            // Finalize tool_use and emit tool call + result
-            final id = (json['content_block']?['id'] ?? json['id'] ?? '').toString();
-            if (id.isNotEmpty && _anthToolUse.containsKey(id)) {
-              final name = (_anthToolUse[id]!['name'] ?? '').toString();
-              Map<String, dynamic> args;
-              try { args = (jsonDecode((_anthToolUse[id]!['args'] ?? '{}') as String) as Map).cast<String, dynamic>(); } catch (_) { args = <String, dynamic>{}; }
-              // Emit placeholder
-              final calls = [ToolCallInfo(id: id, name: name, arguments: args)];
-              yield ChatStreamChunk(content: '', isDone: false, totalTokens: totalTokens, toolCalls: calls, usage: usage);
-              // Execute tool and emit result
-              if (onToolCall != null) {
-                final res = await onToolCall(name, args) ?? '';
-                final results = [ToolResultInfo(id: id, name: name, arguments: args, content: res)];
-                yield ChatStreamChunk(content: '', isDone: false, totalTokens: totalTokens, toolResults: results, usage: usage);
-              }
-            } else {
-              // Possibly end of server_tool_use: map by index
-              final idx = (json['index'] is int) ? json['index'] as int : int.tryParse((json['index'] ?? '').toString());
-              if (idx != null && _srvIndexToId.containsKey(idx)) {
-                final sid = _srvIndexToId[idx]!;
-                Map<String, dynamic> args;
-                try { args = (jsonDecode((_srvArgsStr[sid] ?? '{}')) as Map).cast<String, dynamic>(); } catch (_) { args = <String, dynamic>{}; }
-                _srvArgs[sid] = args;
-                // Emit a placeholder tool call for UI with name 'search_web'
+                Map<String, dynamic> args = const <String, dynamic>{};
+                if (_srvArgs.containsKey(toolUseId)) args = _srvArgs[toolUseId]!;
+                final payload = jsonEncode({'items': items, if ((errorCode ?? '').isNotEmpty) 'error': errorCode});
                 yield ChatStreamChunk(
                   content: '',
                   isDone: false,
-                  totalTokens: totalTokens,
+                  totalTokens: roundTokens,
                   usage: usage,
-                  toolCalls: [ToolCallInfo(id: sid, name: 'search_web', arguments: args)],
+                  toolResults: [ToolResultInfo(id: toolUseId.isEmpty ? 'builtin_search' : toolUseId, name: 'search_web', arguments: args, content: payload)],
                 );
               }
+            } else if (type == 'content_block_delta') {
+              final delta = obj['delta'];
+              if (delta != null) {
+                if (delta['type'] == 'text_delta') {
+                  final content = delta['text'] ?? '';
+                  if (content is String && content.isNotEmpty) {
+                    textBuf.write(content);
+                    yield ChatStreamChunk(content: content, isDone: false, totalTokens: roundTokens);
+                  }
+                } else if (delta['type'] == 'thinking_delta') {
+                  final thinking = (delta['thinking'] ?? delta['text'] ?? '') as String;
+                  if (thinking.isNotEmpty) {
+                    yield ChatStreamChunk(content: '', reasoning: thinking, isDone: false, totalTokens: roundTokens);
+                  }
+                } else if (delta['type'] == 'tool_use_delta') {
+                  // Client tool input fragments stream under the same content_block index
+                  final idx = (obj['index'] is int) ? obj['index'] as int : int.tryParse((obj['index'] ?? '').toString());
+                  final id = (idx != null && _cliIndexToId.containsKey(idx)) ? _cliIndexToId[idx]! : '';
+                  if (id.isNotEmpty) {
+                    final argsDelta = (delta['partial_json'] ?? delta['input'] ?? delta['text'] ?? '').toString();
+                    final entry = _anthToolUse.putIfAbsent(id, () => {'name': '', 'args': ''});
+                    if (argsDelta.isNotEmpty) entry['args'] = (entry['args'] ?? '') + argsDelta;
+                  }
+                } else if (delta['type'] == 'input_json_delta') {
+                  final idxRaw = obj['index'];
+                  final index = (idxRaw is int) ? idxRaw : int.tryParse((idxRaw ?? '').toString());
+                  final part = (delta['partial_json'] ?? '').toString();
+                  if (index != null && part.isNotEmpty) {
+                    if (_cliIndexToId.containsKey(index)) {
+                      final id = _cliIndexToId[index]!;
+                      final entry = _anthToolUse.putIfAbsent(id, () => {'name': '', 'args': ''});
+                      entry['args'] = (entry['args'] ?? '') + part;
+                    } else if (_srvIndexToId.containsKey(index)) {
+                      final id = _srvIndexToId[index]!;
+                      _srvArgsStr[id] = (_srvArgsStr[id] ?? '') + part;
+                    }
+                  }
+                }
+              }
+            } else if (type == 'content_block_stop') {
+              String id = (obj['content_block']?['id'] ?? obj['id'] ?? '').toString();
+              final idx = (obj['index'] is int) ? obj['index'] as int : int.tryParse((obj['index'] ?? '').toString());
+              if (id.isEmpty && idx != null && _cliIndexToId.containsKey(idx)) {
+                id = _cliIndexToId[idx]!;
+              }
+              if (id.isNotEmpty && _anthToolUse.containsKey(id)) {
+                final name = (_anthToolUse[id]!['name'] ?? '').toString();
+                Map<String, dynamic> args;
+                try { args = (jsonDecode((_anthToolUse[id]!['args'] ?? '{}') as String) as Map).cast<String, dynamic>(); } catch (_) { args = <String, dynamic>{}; }
+                // Update last assistant tool_use block input
+                for (int k = assistantBlocks.length - 1; k >= 0; k--) {
+                  final b = assistantBlocks[k];
+                  if (b['type'] == 'tool_use' && (b['id']?.toString() ?? '') == id) {
+                    assistantBlocks[k] = {'type': 'tool_use', 'id': id, 'name': name, 'input': args};
+                    break;
+                  }
+                }
+                // Emit tool result to UI (placeholder was emitted at start)
+                if (onToolCall != null) {
+                  final res = await onToolCall(name, args) ?? '';
+                  _toolResultsContent[id] = res;
+                  yield ChatStreamChunk(content: '', isDone: false, totalTokens: roundTokens, toolResults: [ToolResultInfo(id: id, name: name, arguments: args, content: res)], usage: usage);
+                }
+              } else {
+                final sidx = (obj['index'] is int) ? obj['index'] as int : int.tryParse((obj['index'] ?? '').toString());
+                if (sidx != null && _srvIndexToId.containsKey(sidx)) {
+                  final sid = _srvIndexToId[sidx]!;
+                  Map<String, dynamic> args;
+                  try { args = (jsonDecode((_srvArgsStr[sid] ?? '{}')) as Map).cast<String, dynamic>(); } catch (_) { args = <String, dynamic>{}; }
+                  _srvArgs[sid] = args;
+                  yield ChatStreamChunk(content: '', isDone: false, totalTokens: roundTokens, usage: usage, toolCalls: [ToolCallInfo(id: sid, name: 'search_web', arguments: args)]);
+                }
+              }
+            } else if (type == 'message_delta') {
+              final u = obj['usage'] ?? obj['message']?['usage'];
+              if (u != null) {
+                final inTok = (u['input_tokens'] ?? 0) as int;
+                final outTok = (u['output_tokens'] ?? 0) as int;
+                usage = (usage ?? const TokenUsage()).merge(TokenUsage(promptTokens: inTok, completionTokens: outTok));
+                roundTokens = usage!.totalTokens;
+              }
+              // Capture stop reason to handle pause_turn for server tools
+              try {
+                final d = obj['delta'];
+                final sr = (d is Map) ? (d['stop_reason'] ?? d['stopReason']) : null;
+                if (sr is String && sr.isNotEmpty) {
+                  _lastStopReason = sr;
+                }
+              } catch (_) {}
+            } else if (type == 'message_stop') {
+              // Flush remaining text
+              final t = textBuf.toString();
+              if (t.isNotEmpty) assistantBlocks.add({'type': 'text', 'text': t});
+              messageStopped = true;
             }
-          } else if (type == 'message_stop') {
-            yield ChatStreamChunk(
-              content: '',
-              isDone: true,
-              totalTokens: totalTokens,
-              usage: usage,
-            );
-            return;
-          } else if (type == 'message_delta') {
-            final u = json['usage'] ?? json['message']?['usage'];
-            if (u != null) {
-              final inTok = (u['input_tokens'] ?? 0) as int;
-              final outTok = (u['output_tokens'] ?? 0) as int;
-              usage = (usage ?? const TokenUsage()).merge(TokenUsage(promptTokens: inTok, completionTokens: outTok));
-              totalTokens = usage!.totalTokens;
-            }
+          } catch (_) {
+            // ignore malformed chunk
           }
-        } catch (e) {
-          // Skip malformed JSON
+        }
+        if (messageStopped) break; // break await-for
+      }
+
+      // Merge usage across rounds for final token count
+      if (usage != null) totalUsage = (totalUsage ?? const TokenUsage()).merge(usage!);
+
+      // If no client tool calls, decide whether to continue (pause_turn/server tool) or finalize
+      if (_anthToolUse.isEmpty) {
+        final hadServerTool = assistantBlocks.any((b) => (b is Map) && (b['type'] == 'tool_use' || b['type'] == 'text')) && _srvIndexToId.isNotEmpty;
+        final sr = _lastStopReason ?? '';
+        if (sr == 'pause_turn' || hadServerTool) {
+          // Continue this turn with assistant content only
+          convo = [
+            ...convo,
+            {'role': 'assistant', 'content': assistantBlocks},
+          ];
+          // Loop to next round
+          continue;
+        } else {
+          yield ChatStreamChunk(content: '', isDone: true, totalTokens: (totalUsage?.totalTokens ?? roundTokens), usage: totalUsage ?? usage);
+          return;
         }
       }
+
+      // Build tool_result blocks in a single user message (parallel-safe)
+      final toolResultsBlocks = <Map<String, dynamic>>[];
+      for (final entry in _anthToolUse.entries) {
+        final id = entry.key;
+        final name = (entry.value['name'] ?? '').toString();
+        Map<String, dynamic> args;
+        try { args = (jsonDecode((entry.value['args'] ?? '{}') as String) as Map).cast<String, dynamic>(); } catch (_) { args = <String, dynamic>{}; }
+        String res = _toolResultsContent[id] ?? '';
+        if (res.isEmpty && onToolCall != null) {
+          res = await onToolCall(name, args) ?? '';
+        }
+        toolResultsBlocks.add({
+          'type': 'tool_result',
+          'tool_use_id': id,
+          if (res.isNotEmpty) 'content': res,
+        });
+      }
+
+      // Extend conversation: assistant content (with tool_use blocks) + user tool_results
+      convo = [
+        ...convo,
+        {'role': 'assistant', 'content': assistantBlocks},
+        {'role': 'user', 'content': toolResultsBlocks},
+      ];
+      // Loop to next round; the next response will stream more assistant content
     }
   }
 

@@ -646,7 +646,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             isCollapsed: true,
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 12,
+                              vertical: 11,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
