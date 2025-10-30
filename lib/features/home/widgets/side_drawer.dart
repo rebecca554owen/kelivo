@@ -644,6 +644,15 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             fillColor: isDark ? Colors.white10 : Colors.grey.shade200,
                             isDense: true,
                             isCollapsed: true,
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.only(left: 10, right: 4),
+                              child: Icon(
+                                Lucide.Search,
+                                size: 16,
+                                color: textBase.withOpacity(0.6),
+                              ),
+                            ),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: _isDesktop ? 11 : 10,
