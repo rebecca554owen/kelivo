@@ -1893,10 +1893,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providersPageByteDanceName => 'ByteDance';
 
   @override
-  String get providersPageEnabledStatus => 'Enabled';
+  String get providersPageEnabledStatus => 'ON';
 
   @override
-  String get providersPageDisabledStatus => 'Disabled';
+  String get providersPageDisabledStatus => 'OFF';
 
   @override
   String get providersPageModelsCountSuffix => ' models';

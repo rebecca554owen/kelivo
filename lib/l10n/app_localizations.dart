@@ -3632,13 +3632,13 @@ abstract class AppLocalizations {
   /// No description provided for @providersPageEnabledStatus.
   ///
   /// In en, this message translates to:
-  /// **'Enabled'**
+  /// **'ON'**
   String get providersPageEnabledStatus;
 
   /// No description provided for @providersPageDisabledStatus.
   ///
   /// In en, this message translates to:
-  /// **'Disabled'**
+  /// **'OFF'**
   String get providersPageDisabledStatus;
 
   /// No description provided for @providersPageModelsCountSuffix.
