@@ -616,20 +616,26 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         defaultTargetPlatform == TargetPlatform.windows ||
                         defaultTargetPlatform == TargetPlatform.linux;
                     final double baseUser = isDesktop ? 14.0 : 15.5;
+
+                    Widget content;
                     if (settings.enableUserMarkdown) {
-                      return DefaultTextStyle.merge(
+                      content = DefaultTextStyle.merge(
                         style: TextStyle(fontSize: baseUser, height: 1.45),
                         child: MarkdownWithCodeHighlight(text: parsed.text),
                       );
+                    } else {
+                      content = Text(
+                        parsed.text,
+                        style: TextStyle(
+                          fontSize: baseUser, // slightly smaller on desktop for readability
+                          height: 1.4,
+                          color: cs.onSurface,
+                        ),
+                      );
                     }
-                    return Text(
-                      parsed.text,
-                      style: TextStyle(
-                        fontSize: baseUser, // slightly smaller on desktop for readability
-                        height: 1.4,
-                        color: cs.onSurface,
-                      ),
-                    );
+
+                    // Enable desktop selection/copy for user messages
+                    return isDesktop ? SelectionArea(child: content) : content;
                   }),
                 if (parsed.images.isNotEmpty) ...[
                   const SizedBox(height: 8),
