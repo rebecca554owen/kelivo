@@ -55,15 +55,21 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
               },
             ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                child: () {
-                  if (_tabIndex == 0) return const DesktopChatPage();
-                  if (_tabIndex == 1) return _TranslatePlaceholder(key: const ValueKey('translate_placeholder'));
-                  return DesktopSettingsPage(key: const ValueKey('settings_page'), initialProviderKey: widget.initialProviderKey);
-                }(),
+              // Keep all pages alive so ongoing chat streams are not canceled
+              // when switching tabs (Chat/Translate/Settings) on desktop.
+              child: IndexedStack(
+                index: _tabIndex,
+                children: [
+                  // Chat page remains mounted
+                  const DesktopChatPage(),
+                  // Translate placeholder remains mounted
+                  const _TranslatePlaceholder(key: ValueKey('translate_placeholder')),
+                  // Settings page remains mounted with its initialProviderKey
+                  DesktopSettingsPage(
+                    key: const ValueKey('settings_page'),
+                    initialProviderKey: widget.initialProviderKey,
+                  ),
+                ],
               ),
             ),
           ],
@@ -79,7 +85,17 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
                       const _TitleBarLeading(),
                     ],
                   ),
-                  Expanded(child: body),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        body,
+                        // Inject the lazily-built settings page into the IndexedStack when needed
+                        // to pass initialProviderKey without dropping chat state.
+                        if (_tabIndex == 2)
+                          const SizedBox.shrink(),
+                      ],
+                    ),
+                  ),
                 ],
               )
             : body;

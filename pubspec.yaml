@@ -52,7 +52,7 @@ dependencies:
   hive_flutter: ^1.1.0
   url_launcher: ^6.3.2
   package_info_plus: ^8.3.1
-  gpt_markdown: ^1.1.2
+  gpt_markdown: ^1.1.4
   uuid: ^4.5.0
   intl: ^0.20.2
   path_provider: ^2.1.4

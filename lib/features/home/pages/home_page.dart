@@ -536,12 +536,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   // Restore per-message UI states (reasoning/segments/tool parts/translation) after switching conversations
   void _restoreMessageUiState() {
-    // Clear first to avoid stale entries
-    _reasoning.clear();
-    _reasoningSegments.clear();
-    _toolParts.clear();
-    _translations.clear();
-
+    // Do NOT clear global maps here; other conversations might still be streaming.
+    // We will simply populate/overwrite entries for messages in the current conversation.
     for (final m in _messages) {
       if (m.role == 'assistant') {
         // Restore reasoning state
@@ -906,6 +902,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _switchConversationAnimated(String id) async {
+    // Before switching, persist any in-flight reasoning/content of current conversation
+    try { await _flushCurrentConversationProgress(); } catch (_) {}
     if (_currentConversation?.id == id) return;
     try {
       await _convoFadeController.reverse();
@@ -932,6 +930,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _createNewConversationAnimated() async {
+    // Flush current conversation progress before creating a new one
+    try { await _flushCurrentConversationProgress(); } catch (_) {}
     try { await _convoFadeController.reverse(); } catch (_) {}
     await _createNewConversation();
     if (mounted) {
@@ -1099,6 +1099,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _createNewConversation() async {
+    // Flush any ongoing generation progress for the current conversation
+    try { await _flushCurrentConversationProgress(); } catch (_) {}
     final ap = context.read<AssistantProvider>();
     final settings = context.read<SettingsProvider>();
     final assistantId = ap.currentAssistantId;
@@ -1117,6 +1119,49 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _reasoningSegments.clear();
     });
     _scrollToBottomSoon();
+  }
+
+  // Persist latest in-flight assistant message content and reasoning of the current conversation
+  Future<void> _flushCurrentConversationProgress() async {
+    final cid = _currentConversation?.id;
+    if (cid == null || _messages.isEmpty) return;
+    // Find the latest streaming assistant message in the current conversation
+    ChatMessage? streaming;
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final m = _messages[i];
+      if (m.role == 'assistant' && m.isStreaming && m.conversationId == cid) {
+        streaming = m;
+        break;
+      }
+    }
+    if (streaming == null) return;
+    // Use the UI-side content snapshot (may be ahead of last persisted chunk)
+    String latestContent = streaming.content;
+    // Also capture reasoning progress if tracked in-memory
+    final r = _reasoning[streaming.id];
+    final segs = _reasoningSegments[streaming.id];
+    try {
+      await _chatService.updateMessage(
+        streaming.id,
+        content: latestContent,
+        totalTokens: streaming.totalTokens,
+        // Do not flip isStreaming here; just flush progress
+      );
+      if (r != null) {
+        await _chatService.updateMessage(
+          streaming.id,
+          reasoningText: r.text,
+          reasoningStartAt: r.startAt ?? DateTime.now(),
+          // keep finishedAt as-is (may be null while thinking)
+        );
+      }
+      if (segs != null && segs.isNotEmpty) {
+        await _chatService.updateMessage(
+          streaming.id,
+          reasoningSegmentsJson: _serializeReasoningSegments(segs),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _sendMessage(ChatInputData input) async {
@@ -1717,9 +1762,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 reasoningStartAt: r.startAt,
               );
             } else {
-              // Buffer reasoning only; commit on finish
+              // Buffer reasoning only in UI; still persist progress so it won't be lost on navigation
               _reasoningStartAt ??= DateTime.now();
               _bufferedReasoning += chunk.reasoning!;
+              await _chatService.updateMessage(
+                assistantMessage.id,
+                reasoningText: _bufferedReasoning,
+                reasoningStartAt: _reasoningStartAt,
+              );
             }
           }
 
@@ -1877,6 +1927,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               totalTokens = usage!.totalTokens;
             }
 
+            // Always persist partial content so switching away doesn’t lose it
+            await _chatService.updateMessage(
+              assistantMessage.id,
+              content: fullContent,
+              totalTokens: totalTokens,
+            );
+
             if (streamOutput) {
               // If content has started, consider reasoning finished and collapse (respect setting)
               if ((chunk.content).isNotEmpty) {
@@ -1928,14 +1985,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   }
                 });
               }
-
-              // Persist partial content so it's saved even if interrupted
-              await _chatService.updateMessage(
-                assistantMessage.id,
-                content: fullContent,
-                totalTokens: totalTokens,
-              );
-
               // 滚动到底部显示新内容（仅在未处于用户滚动延迟阶段时）
               Future.delayed(const Duration(milliseconds: 50), () {
                 if (!_isUserScrolling) {
@@ -2601,10 +2650,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
           _reasoningSegments[assistantMessage.id] = segments;
           if (mounted) setState(() {});
-          await _chatService.updateMessage(assistantMessage.id, reasoningText: r.text, reasoningStartAt: r.startAt, reasoningSegmentsJson: _serializeReasoningSegments(segments));
+          await _chatService.updateMessage(
+            assistantMessage.id,
+            reasoningText: r.text,
+            reasoningStartAt: r.startAt,
+            reasoningSegmentsJson: _serializeReasoningSegments(segments),
+          );
         } else {
+          // Buffer in UI; still persist progress so it survives navigation
           _reasoningStartAt2 ??= DateTime.now();
           _bufferedReasoning2 += chunk.reasoning!;
+          await _chatService.updateMessage(
+            assistantMessage.id,
+            reasoningText: _bufferedReasoning2,
+            reasoningStartAt: _reasoningStartAt2,
+          );
         }
       }
 
@@ -2698,6 +2758,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           } catch (_) {}
           if (mounted) setState(() {});
         }
+
+        // Always persist partial content, even if streaming UI is off
+        try {
+          await _chatService.updateMessage(
+            assistantMessage.id,
+            content: fullContent,
+            totalTokens: totalTokens,
+          );
+        } catch (_) {}
 
         if (streamOutput) {
           setState(() {
