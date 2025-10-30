@@ -646,18 +646,18 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             isCollapsed: true,
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 11,
+                              vertical: _isDesktop ? 11 : 10,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               borderSide: const BorderSide(color: Colors.transparent),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               borderSide: const BorderSide(color: Colors.transparent),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               borderSide: const BorderSide(color: Colors.transparent),
                             ),
                           ),
