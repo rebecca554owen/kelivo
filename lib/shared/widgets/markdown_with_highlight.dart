@@ -17,7 +17,7 @@ import 'mermaid_bridge.dart';
 import 'export_capture_scope.dart';
 import 'mermaid_image_cache.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
-import 'package:Kelivo/theme/theme_factory.dart' show kDefaultFontFamilyFallback;
+import 'package:Kelivo/theme/theme_factory.dart' show getPlatformFontFallback;
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
 
@@ -1349,7 +1349,7 @@ class AtxHeadingMd extends BlockMd {
       height: h,
       letterSpacing: ls,
       color: cs.onSurface,
-      fontFamilyFallback: kDefaultFontFamilyFallback,
+      fontFamilyFallback: getPlatformFontFallback(),
     );
   }
 }

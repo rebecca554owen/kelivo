@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 
 // CJK/Latin fallback to stabilize fontWeight (w100–w600) on iOS for Chinese
 const List<String> kDefaultFontFamilyFallback = <String>[
@@ -9,6 +10,25 @@ const List<String> kDefaultFontFamilyFallback = <String>[
   'Hiragino Sans GB',
   'Roboto',
 ];
+
+// Windows-specific font fallback to fix Chinese font rendering issues
+const List<String> kWindowsFontFamilyFallback = <String>[
+  'Twemoji Country Flags',
+  'Segoe UI',
+  'Microsoft YaHei',
+  'SimHei',
+];
+
+// Get platform-appropriate font fallback list
+List<String> getPlatformFontFallback() {
+  if (defaultTargetPlatform == TargetPlatform.windows) {
+    return kWindowsFontFamilyFallback;
+  }
+  return kDefaultFontFamilyFallback;
+}
+
+// Internal helper for theme building
+List<String> _getPlatformFontFallback() => getPlatformFontFallback();
 
 TextTheme _withFontFallback(TextTheme base, List<String> fallback) {
   TextStyle? f(TextStyle? s) => s?.copyWith(fontFamilyFallback: fallback);
@@ -96,6 +116,7 @@ TextTheme _withFontFallback(TextTheme base, List<String> fallback) {
 // }
 
 ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
+  final fontFallback = _getPlatformFontFallback();
   final scheme = (dynamicScheme?.harmonized()) ?? const ColorScheme(
     brightness: Brightness.light,
     primary: Color(0xFF4D5C92),
@@ -142,7 +163,7 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
         color: scheme.onInverseSurface,
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        fontFamilyFallback: kDefaultFontFamilyFallback,
+        fontFamilyFallback: fontFallback,
       ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -160,7 +181,7 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
         color: Colors.black,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
+      ).copyWith(fontFamilyFallback: fontFallback),
       iconTheme: const IconThemeData(color: Colors.black),
       actionsIconTheme: const IconThemeData(color: Colors.black),
       systemOverlayStyle: const SystemUiOverlayStyle(
@@ -173,8 +194,8 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
     ),
   );
   return theme.copyWith(
-    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
-    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+    textTheme: _withFontFallback(theme.textTheme, fontFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, fontFallback),
   );
 }
 
@@ -184,6 +205,7 @@ ThemeData buildLightThemeForScheme(
   ColorScheme? dynamicScheme,
   bool pureBackground = false,
 }) {
+  final fontFallback = _getPlatformFontFallback();
   var scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
   if (pureBackground) {
     scheme = scheme.copyWith(
@@ -206,7 +228,7 @@ ThemeData buildLightThemeForScheme(
         color: scheme.onInverseSurface,
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        fontFamilyFallback: kDefaultFontFamilyFallback,
+        fontFamilyFallback: fontFallback,
       ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -224,7 +246,7 @@ ThemeData buildLightThemeForScheme(
         color: Colors.black,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
+      ).copyWith(fontFamilyFallback: fontFallback),
       iconTheme: const IconThemeData(color: Colors.black),
       actionsIconTheme: const IconThemeData(color: Colors.black),
       systemOverlayStyle: SystemUiOverlayStyle(
@@ -235,14 +257,15 @@ ThemeData buildLightThemeForScheme(
     ),
   );
   return theme.copyWith(
-    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
-    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+    textTheme: _withFontFallback(theme.textTheme, fontFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, fontFallback),
     canvasColor: scheme.surface,
     dialogBackgroundColor: scheme.surface,
   );
 }
 
 ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
+  final fontFallback = _getPlatformFontFallback();
   final scheme = (dynamicScheme?.harmonized()) ?? const ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFFB6C4FF),
@@ -289,7 +312,7 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
         color: scheme.onInverseSurface,
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        fontFamilyFallback: kDefaultFontFamilyFallback,
+        fontFamilyFallback: fontFallback,
       ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -307,7 +330,7 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
         color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
+      ).copyWith(fontFamilyFallback: fontFallback),
       iconTheme: const IconThemeData(color: Colors.white),
       actionsIconTheme: const IconThemeData(color: Colors.white),
       systemOverlayStyle: const SystemUiOverlayStyle(
@@ -320,8 +343,8 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
     ),
   );
   return theme.copyWith(
-    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
-    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+    textTheme: _withFontFallback(theme.textTheme, fontFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, fontFallback),
   );
 }
 
@@ -330,6 +353,7 @@ ThemeData buildDarkThemeForScheme(
   ColorScheme? dynamicScheme,
   bool pureBackground = false,
 }) {
+  final fontFallback = _getPlatformFontFallback();
   var scheme = (dynamicScheme?.harmonized()) ?? staticScheme;
   if (pureBackground) {
     scheme = scheme.copyWith(
@@ -352,7 +376,7 @@ ThemeData buildDarkThemeForScheme(
         color: scheme.onInverseSurface,
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        fontFamilyFallback: kDefaultFontFamilyFallback,
+        fontFamilyFallback: fontFallback,
       ),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -370,7 +394,7 @@ ThemeData buildDarkThemeForScheme(
         color: Colors.white,
         fontSize: 18,
         fontWeight: FontWeight.w600,
-      ).copyWith(fontFamilyFallback: kDefaultFontFamilyFallback),
+      ).copyWith(fontFamilyFallback: fontFallback),
       iconTheme: const IconThemeData(color: Colors.white),
       actionsIconTheme: const IconThemeData(color: Colors.white),
       systemOverlayStyle: SystemUiOverlayStyle(
@@ -381,8 +405,8 @@ ThemeData buildDarkThemeForScheme(
     ),
   );
   return theme.copyWith(
-    textTheme: _withFontFallback(theme.textTheme, kDefaultFontFamilyFallback),
-    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, kDefaultFontFamilyFallback),
+    textTheme: _withFontFallback(theme.textTheme, fontFallback),
+    primaryTextTheme: _withFontFallback(theme.primaryTextTheme, fontFallback),
     canvasColor: scheme.surface,
     dialogBackgroundColor: scheme.surface,
   );
