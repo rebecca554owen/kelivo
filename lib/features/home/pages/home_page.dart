@@ -46,6 +46,7 @@ import '../../../desktop/search_provider_popover.dart';
 import '../../../desktop/reasoning_budget_popover.dart';
 import '../../../desktop/mcp_servers_popover.dart';
 import '../widgets/mini_map_sheet.dart';
+import '../../../desktop/mini_map_popover.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -3475,7 +3476,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             minSize: 44,
             onTap: () async {
               final collapsed = _collapseVersions(_messages);
-              final selectedId = await showMiniMapSheet(context, collapsed);
+              String? selectedId;
+              try {
+                if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+                  selectedId = await showDesktopMiniMapPopover(context, anchorKey: _inputBarKey, messages: collapsed);
+                } else {
+                  selectedId = await showMiniMapSheet(context, collapsed);
+                }
+              } catch (_) {
+                selectedId = await showMiniMapSheet(context, collapsed);
+              }
               if (!mounted) return;
               if (selectedId != null && selectedId.isNotEmpty) {
                 await _scrollToMessageId(selectedId);
@@ -5032,7 +5042,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     showMiniMapButton: true,
                                     onOpenMiniMap: () async {
                                       final collapsed = _collapseVersions(_messages);
-                                      final selectedId = await showMiniMapSheet(context, collapsed);
+                                      String? selectedId;
+                                      try {
+                                        if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+                                          selectedId = await showDesktopMiniMapPopover(context, anchorKey: _inputBarKey, messages: collapsed);
+                                        } else {
+                                          selectedId = await showMiniMapSheet(context, collapsed);
+                                        }
+                                      } catch (_) {
+                                        selectedId = await showMiniMapSheet(context, collapsed);
+                                      }
                                       if (selectedId != null && selectedId.isNotEmpty) {
                                         await _scrollToMessageId(selectedId);
                                       }
