@@ -296,6 +296,7 @@ class ChatApiService {
     required String prompt,
     Map<String, String>? extraHeaders,
     Map<String, dynamic>? extraBody,
+    int? thinkingBudget,
   }) async {
     final kind = ProviderConfig.classify(config.id, explicitType: config.providerType);
     final client = _clientFor(config);
@@ -307,6 +308,10 @@ class ChatApiService {
         final path = (config.useResponseApi == true) ? '/responses' : (config.chatPath ?? '/chat/completions');
         final url = Uri.parse('$base$path');
         Map<String, dynamic> body;
+        final effectiveInfo = _effectiveModelInfo(config, modelId);
+        final isReasoning = effectiveInfo.abilities.contains(ModelAbility.reasoning);
+        final effort = _effortForBudget(thinkingBudget);
+        final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase() ?? '';
         if (config.useResponseApi == true) {
           // Inject built-in web_search tool when enabled and supported
           final toolsList = <Map<String, dynamic>>[];
@@ -344,6 +349,11 @@ class ChatApiService {
             ],
             if (toolsList.isNotEmpty) 'tools': _toResponsesToolsFormat(toolsList),
             if (toolsList.isNotEmpty) 'tool_choice': 'auto',
+            if (isReasoning && effort != 'off')
+              'reasoning': {
+                'summary': 'auto',
+                if (effort != 'auto') 'effort': effort,
+              },
           };
         } else {
           body = {
@@ -352,6 +362,7 @@ class ChatApiService {
               {'role': 'user', 'content': prompt}
             ],
             'temperature': 0.3,
+            if (isReasoning && effort != 'off' && effort != 'auto') 'reasoning_effort': effort,
           };
         }
         final headers = <String, String>{
@@ -366,6 +377,19 @@ class ChatApiService {
           (extraBody).forEach((k, v) {
             (body as Map<String, dynamic>)[k] = (v is String) ? _parseOverrideValue(v) : v;
           });
+        }
+        // Vendor-specific reasoning knobs for chat-completions compatible hosts (non-streaming)
+        if (config.useResponseApi != true) {
+          final off = _isOff(thinkingBudget);
+          if (host.contains('open.bigmodel.cn') || host.contains('bigmodel')) {
+            // Zhipu BigModel: thinking: { type: enabled|disabled }
+            if (isReasoning) {
+              (body as Map<String, dynamic>)['thinking'] = {'type': off ? 'disabled' : 'enabled'};
+            } else {
+              (body as Map<String, dynamic>).remove('thinking');
+            }
+            (body as Map<String, dynamic>).remove('reasoning_effort');
+          }
         }
         // Ensure Responses tools use the flattened schema even if supplied via overrides
         try {
@@ -893,6 +917,14 @@ class ChatApiService {
           (body as Map<String, dynamic>).remove('thinking_budget');
         }
         (body as Map<String, dynamic>).remove('reasoning_effort');
+      } else if (host.contains('open.bigmodel.cn') || host.contains('bigmodel')) {
+        // Zhipu (BigModel): thinking.type enabled/disabled
+        if (isReasoning) {
+          (body as Map<String, dynamic>)['thinking'] = {'type': off ? 'disabled' : 'enabled'};
+        } else {
+          (body as Map<String, dynamic>).remove('thinking');
+        }
+        (body as Map<String, dynamic>).remove('reasoning_effort');
       } else if (host.contains('ark.cn-beijing.volces.com') || host.contains('volc') || host.contains('ark')) {
         // Volc Ark: thinking: { type: enabled|disabled }
         if (isReasoning) {
@@ -1103,6 +1135,13 @@ class ChatApiService {
                 } else {
                   body2.remove('enable_thinking');
                   body2.remove('thinking_budget');
+                }
+                body2.remove('reasoning_effort');
+              } else if (host.contains('open.bigmodel.cn') || host.contains('bigmodel')) {
+                if (isReasoning) {
+                  body2['thinking'] = {'type': off ? 'disabled' : 'enabled'};
+                } else {
+                  body2.remove('thinking');
                 }
                 body2.remove('reasoning_effort');
               } else if (host.contains('ark.cn-beijing.volces.com') || host.contains('volc') || host.contains('ark')) {
@@ -2009,6 +2048,13 @@ class ChatApiService {
                 } else {
                   body2.remove('enable_thinking');
                   body2.remove('thinking_budget');
+                }
+                body2.remove('reasoning_effort');
+              } else if (host.contains('open.bigmodel.cn') || host.contains('bigmodel')) {
+                if (isReasoning) {
+                  body2['thinking'] = {'type': off ? 'disabled' : 'enabled'};
+                } else {
+                  body2.remove('thinking');
                 }
                 body2.remove('reasoning_effort');
               } else if (host.contains('ark.cn-beijing.volces.com') || host.contains('volc') || host.contains('ark')) {
