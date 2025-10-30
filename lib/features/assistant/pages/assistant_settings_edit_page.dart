@@ -745,25 +745,36 @@ class _HeaderRow extends StatefulWidget {
 class _HeaderRowState extends State<_HeaderRow> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _valCtrl;
+  late final FocusNode _nameFocus;
+  late final FocusNode _valFocus;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.name);
     _valCtrl = TextEditingController(text: widget.value);
+    _nameFocus = FocusNode();
+    _valFocus = FocusNode();
   }
 
   @override
   void didUpdateWidget(covariant _HeaderRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.name != widget.name) _nameCtrl.text = widget.name;
-    if (oldWidget.value != widget.value) _valCtrl.text = widget.value;
+    // Avoid resetting controller text while the field is focused to prevent cursor jump.
+    if (oldWidget.name != widget.name && !_nameFocus.hasFocus) {
+      _nameCtrl.text = widget.name;
+    }
+    if (oldWidget.value != widget.value && !_valFocus.hasFocus) {
+      _valCtrl.text = widget.value;
+    }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _valCtrl.dispose();
+    _nameFocus.dispose();
+    _valFocus.dispose();
     super.dispose();
   }
 
@@ -801,6 +812,7 @@ class _HeaderRowState extends State<_HeaderRow> {
             Expanded(
               child: TextField(
                 controller: _nameCtrl,
+                focusNode: _nameFocus,
                 decoration: _dec(context, l10n.assistantEditHeaderNameLabel),
                 onChanged: (v) => widget.onChanged(v, _valCtrl.text),
               ),
@@ -817,6 +829,7 @@ class _HeaderRowState extends State<_HeaderRow> {
         const SizedBox(height: 8),
         TextField(
           controller: _valCtrl,
+          focusNode: _valFocus,
           decoration: _dec(context, l10n.assistantEditHeaderValueLabel),
           onChanged: (v) => widget.onChanged(_nameCtrl.text, v),
         ),
@@ -846,25 +859,36 @@ class _BodyRow extends StatefulWidget {
 class _BodyRowState extends State<_BodyRow> {
   late final TextEditingController _keyCtrl;
   late final TextEditingController _valCtrl;
+  late final FocusNode _keyFocus;
+  late final FocusNode _valFocus;
 
   @override
   void initState() {
     super.initState();
     _keyCtrl = TextEditingController(text: widget.keyName);
     _valCtrl = TextEditingController(text: widget.value);
+    _keyFocus = FocusNode();
+    _valFocus = FocusNode();
   }
 
   @override
   void didUpdateWidget(covariant _BodyRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.keyName != widget.keyName) _keyCtrl.text = widget.keyName;
-    if (oldWidget.value != widget.value) _valCtrl.text = widget.value;
+    // Avoid resetting controller text while the field is focused to prevent cursor jump.
+    if (oldWidget.keyName != widget.keyName && !_keyFocus.hasFocus) {
+      _keyCtrl.text = widget.keyName;
+    }
+    if (oldWidget.value != widget.value && !_valFocus.hasFocus) {
+      _valCtrl.text = widget.value;
+    }
   }
 
   @override
   void dispose() {
     _keyCtrl.dispose();
     _valCtrl.dispose();
+    _keyFocus.dispose();
+    _valFocus.dispose();
     super.dispose();
   }
 
@@ -903,6 +927,7 @@ class _BodyRowState extends State<_BodyRow> {
             Expanded(
               child: TextField(
                 controller: _keyCtrl,
+                focusNode: _keyFocus,
                 decoration: _dec(context, l10n.assistantEditBodyKeyLabel),
                 onChanged: (v) => widget.onChanged(v, _valCtrl.text),
               ),
@@ -919,6 +944,7 @@ class _BodyRowState extends State<_BodyRow> {
         const SizedBox(height: 8),
         TextField(
           controller: _valCtrl,
+          focusNode: _valFocus,
           minLines: 3,
           maxLines: 6,
           decoration: _dec(context, l10n.assistantEditBodyValueLabel),
