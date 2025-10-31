@@ -220,7 +220,7 @@ class _ReasoningContent extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
+        padding: const EdgeInsets.fromLTRB(0, 10, 0, 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
