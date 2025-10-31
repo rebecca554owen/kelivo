@@ -479,7 +479,7 @@ Widget _iosSectionCard({required List<Widget> children}) {
 
 Widget _iosDivider(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
-  return Divider(height: 6, thickness: 0.6, indent: 12, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
+  return Divider(height: 6, thickness: 0.6, indent: 54, endIndent: 12, color: cs.outlineVariant.withOpacity(0.18));
 }
 
 class _AnimatedPressColor extends StatelessWidget {
@@ -557,7 +557,7 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
 
 Widget _iosNavRow(
   BuildContext context, {
-  required IconData icon, // kept for compatibility; not rendered
+  required IconData icon,
   required String label,
   VoidCallback? onTap,
   String? detailText,
@@ -572,8 +572,10 @@ Widget _iosNavRow(
         pressed: pressed, base: baseColor,
         builder: (c) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             child: Row(children: [
+              SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
+              const SizedBox(width: 12),
               Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c), maxLines: 1, overflow: TextOverflow.ellipsis)),
               if (detailBuilder != null) Padding(padding: const EdgeInsets.only(right: 6), child: DefaultTextStyle(style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)), child: detailBuilder(context)))
               else if (detailText != null) Padding(padding: const EdgeInsets.only(right: 6), child: Text(detailText, style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6)))),
@@ -596,8 +598,12 @@ Widget _iosSwitchRow(BuildContext context, {IconData? icon, required String labe
         pressed: pressed, base: baseColor,
         builder: (c) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
             child: Row(children: [
+              if (icon != null) ...[
+                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+              ],
               Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
               IosSwitch(value: value, onChanged: onChanged),
             ]),
@@ -623,6 +629,10 @@ Widget _sheetOption(BuildContext context, {IconData? icon, required String label
             duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic, color: bgTarget,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(children: [
+              if (icon != null) ...[
+                SizedBox(width: 24, child: Icon(icon, size: 20, color: c)),
+                const SizedBox(width: 12),
+              ],
               Expanded(child: Text(label, style: TextStyle(fontSize: 15, color: c))),
             ]),
           );
