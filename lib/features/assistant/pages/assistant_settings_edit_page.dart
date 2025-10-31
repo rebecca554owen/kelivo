@@ -300,7 +300,7 @@ class _MemoryTab extends StatelessWidget {
                 TextField(
                   controller: controller,
                   minLines: 1,
-                  maxLines: 8,
+                  maxLines: 16,
                   decoration: InputDecoration(
                     hintText: l10n.assistantEditMemoryDialogHint,
                     filled: true,
