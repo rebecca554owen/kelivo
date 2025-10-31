@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'preset_message.dart';
 
 class Assistant {
   final String id;
@@ -25,6 +26,8 @@ class Assistant {
   // Memory features
   final bool enableMemory; // assistant memory feature switch
   final bool enableRecentChatsReference; // include recent chat titles in prompt
+  // Preset conversation messages (ordered)
+  final List<PresetMessage> presetMessages;
 
   const Assistant({
     required this.id,
@@ -49,6 +52,7 @@ class Assistant {
     this.customBody = const <Map<String, String>>[],
     this.enableMemory = false,
     this.enableRecentChatsReference = false,
+    this.presetMessages = const <PresetMessage>[],
   });
 
   Assistant copyWith({
@@ -74,6 +78,7 @@ class Assistant {
     List<Map<String, String>>? customBody,
     bool? enableMemory,
     bool? enableRecentChatsReference,
+    List<PresetMessage>? presetMessages,
     bool clearChatModel = false,
     bool clearAvatar = false,
     bool clearTemperature = false,
@@ -106,6 +111,7 @@ class Assistant {
       enableMemory: enableMemory ?? this.enableMemory,
       enableRecentChatsReference:
           enableRecentChatsReference ?? this.enableRecentChatsReference,
+      presetMessages: presetMessages ?? this.presetMessages,
     );
   }
 
@@ -132,6 +138,7 @@ class Assistant {
         'customBody': customBody,
         'enableMemory': enableMemory,
         'enableRecentChatsReference': enableRecentChatsReference,
+        'presetMessages': PresetMessage.encodeList(presetMessages),
     };
 
   static Assistant fromJson(Map<String, dynamic> json) => Assistant(
@@ -182,6 +189,13 @@ class Assistant {
         enableMemory: json['enableMemory'] as bool? ?? false,
         enableRecentChatsReference:
             json['enableRecentChatsReference'] as bool? ?? false,
+        presetMessages: (() {
+          try {
+            return PresetMessage.decodeList(json['presetMessages']);
+          } catch (_) {
+            return const <PresetMessage>[];
+          }
+        })(),
       );
 
   static String encodeList(List<Assistant> list) => jsonEncode(list.map((e) => e.toJson()).toList());

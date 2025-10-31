@@ -236,6 +236,20 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             danger: true,
             onTap: () async {
               final deletingCurrent = chatService.currentConversationId == chat.id;
+              // Pre-compute next recent conversation for current assistant
+              String? nextId;
+              try {
+                final ap = context.read<AssistantProvider>();
+                final currentAid = ap.currentAssistantId;
+                if (currentAid != null) {
+                  final all = chatService.getAllConversations();
+                  final candidates = all
+                      .where((c) => c.assistantId == currentAid && c.id != chat.id)
+                      .toList()
+                    ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+                  if (candidates.isNotEmpty) nextId = candidates.first.id;
+                }
+              } catch (_) {}
               await chatService.deleteConversation(chat.id);
               showAppSnackBar(
                 context,
@@ -244,7 +258,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 duration: const Duration(seconds: 3),
               );
               if (deletingCurrent || chatService.currentConversationId == null) {
-                widget.onNewConversation?.call();
+                if (nextId != null) {
+                  widget.onSelectConversation?.call(nextId!);
+                } else {
+                  widget.onNewConversation?.call();
+                }
               }
               Navigator.of(context).maybePop();
             },
@@ -341,6 +359,19 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       color: Colors.redAccent,
                       action: () async {
                         final deletingCurrent = chatService.currentConversationId == chat.id;
+                        String? nextId;
+                        try {
+                          final ap = context.read<AssistantProvider>();
+                          final currentAid = ap.currentAssistantId;
+                          if (currentAid != null) {
+                            final all = chatService.getAllConversations();
+                            final candidates = all
+                                .where((c) => c.assistantId == currentAid && c.id != chat.id)
+                                .toList()
+                              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+                            if (candidates.isNotEmpty) nextId = candidates.first.id;
+                          }
+                        } catch (_) {}
                         await chatService.deleteConversation(chat.id);
                         showAppSnackBar(
                           context,
@@ -349,7 +380,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           duration: const Duration(seconds: 3),
                         );
                         if (deletingCurrent || chatService.currentConversationId == null) {
-                          widget.onNewConversation?.call();
+                          if (nextId != null) {
+                            widget.onSelectConversation?.call(nextId!);
+                          } else {
+                            widget.onNewConversation?.call();
+                          }
                         }
                         Navigator.of(context).maybePop();
                       },
@@ -1144,7 +1179,25 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final ap = context.read<AssistantProvider>();
     await ap.setCurrentAssistant(assistant.id);
     if (!mounted) return;
-    widget.onNewConversation?.call();
+    // Jump to the most recent conversation for this assistant if any,
+    // otherwise create a new conversation.
+    try {
+      final chatService = context.read<ChatService>();
+      final all = chatService.getAllConversations();
+      // Filter conversations owned by this assistant and pick the newest
+      final recent = all
+          .where((c) => c.assistantId == assistant.id)
+          .toList();
+      if (recent.isNotEmpty) {
+        // getAllConversations is already sorted by updatedAt desc
+        widget.onSelectConversation?.call(recent.first.id);
+      } else {
+        widget.onNewConversation?.call();
+      }
+    } catch (_) {
+      // Fallback: new conversation on any error
+      widget.onNewConversation?.call();
+    }
     Navigator.of(context).maybePop();
   }
 

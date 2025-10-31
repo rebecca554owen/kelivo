@@ -109,6 +109,24 @@ class AssistantProvider extends ChangeNotifier {
     return _assistants[idx];
   }
 
+  // Lightweight accessor so callers don't depend on Assistant.presetMessages symbol
+  List<Map<String, String>> getPresetMessagesForAssistant(String? assistantId) {
+    Assistant? a;
+    if (assistantId != null) {
+      a = getById(assistantId);
+    } else {
+      a = currentAssistant;
+    }
+    if (a == null) return const <Map<String, String>>[];
+    return [
+      for (final m in a.presetMessages)
+        {
+          'role': m.role,
+          'content': m.content,
+        }
+    ];
+  }
+
   Future<String> addAssistant({String? name, dynamic context}) async {
     final a = Assistant(
       id: const Uuid().v4(),

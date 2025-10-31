@@ -2689,4 +2689,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providersPageExportAction => 'Export';
+
+  @override
+  String get assistantEditPresetTitle => 'Preset conversation';
+
+  @override
+  String get assistantEditPresetAddUser => 'Add user preset';
+
+  @override
+  String get assistantEditPresetAddAssistant => 'Add assistant preset';
+
+  @override
+  String get assistantEditPresetInputHintUser => 'Enter user message…';
+
+  @override
+  String get assistantEditPresetInputHintAssistant =>
+      'Enter assistant message…';
+
+  @override
+  String get assistantEditPresetEmpty => 'No preset messages yet';
+
+  @override
+  String get assistantEditPresetEditDialogTitle => 'Edit preset message';
+
+  @override
+  String get assistantEditPresetRoleUser => 'User';
+
+  @override
+  String get assistantEditPresetRoleAssistant => 'Assistant';
 }

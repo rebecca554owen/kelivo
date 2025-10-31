@@ -17,6 +17,8 @@ import '../../../core/models/chat_message.dart';
 import '../../../icons/lucide_adapter.dart';
 // import '../../../theme/design_tokens.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../core/services/chat/chat_service.dart';
+import '../../../core/providers/assistant_provider.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
@@ -228,10 +230,26 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     }
   }
 
+  String _assistantNameFallback() {
+    try {
+      final chat = context.read<ChatService>();
+      final convo = chat.getConversation(widget.message.conversationId);
+      final aId = convo?.assistantId;
+      if (aId != null && aId.isNotEmpty) {
+        final ap = context.read<AssistantProvider>();
+        final a = ap.getById(aId);
+        final name = a?.name.trim();
+        if (name != null && name.isNotEmpty) return name;
+      }
+    } catch (_) {}
+    return 'AI Assistant';
+  }
+
   String _resolveModelDisplayName(SettingsProvider settings) {
     final modelId = widget.message.modelId;
     if (modelId == null || modelId.trim().isEmpty) {
-      return 'AI Assistant';
+      // Prefer assistant's name when model id is missing (e.g., preset assistant messages)
+      return _assistantNameFallback();
     }
 
     final providerId = widget.message.providerId;

@@ -2597,6 +2597,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get providersPageExportAction => '导出';
+
+  @override
+  String get assistantEditPresetTitle => '预设对话信息';
+
+  @override
+  String get assistantEditPresetAddUser => '添加预设用户信息';
+
+  @override
+  String get assistantEditPresetAddAssistant => '添加预设助手信息';
+
+  @override
+  String get assistantEditPresetInputHintUser => '输入用户消息…';
+
+  @override
+  String get assistantEditPresetInputHintAssistant => '输入助手消息…';
+
+  @override
+  String get assistantEditPresetEmpty => '暂无预设消息';
+
+  @override
+  String get assistantEditPresetEditDialogTitle => '编辑预设消息';
+
+  @override
+  String get assistantEditPresetRoleUser => '用户';
+
+  @override
+  String get assistantEditPresetRoleAssistant => '助手';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -5192,6 +5219,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get providersPageExportAction => '导出';
+
+  @override
+  String get assistantEditPresetTitle => '预设对话信息';
+
+  @override
+  String get assistantEditPresetAddUser => '添加预设用户信息';
+
+  @override
+  String get assistantEditPresetAddAssistant => '添加预设助手信息';
+
+  @override
+  String get assistantEditPresetInputHintUser => '输入用户消息…';
+
+  @override
+  String get assistantEditPresetInputHintAssistant => '输入助手消息…';
+
+  @override
+  String get assistantEditPresetEmpty => '暂无预设消息';
+
+  @override
+  String get assistantEditPresetEditDialogTitle => '编辑预设消息';
+
+  @override
+  String get assistantEditPresetRoleUser => '用户';
+
+  @override
+  String get assistantEditPresetRoleAssistant => '助手';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7788,4 +7842,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providersPageExportAction => '匯出';
+
+  @override
+  String get assistantEditPresetTitle => '預設對話訊息';
+
+  @override
+  String get assistantEditPresetAddUser => '新增預設使用者訊息';
+
+  @override
+  String get assistantEditPresetAddAssistant => '新增預設助手訊息';
+
+  @override
+  String get assistantEditPresetInputHintUser => '輸入使用者訊息…';
+
+  @override
+  String get assistantEditPresetInputHintAssistant => '輸入助手訊息…';
+
+  @override
+  String get assistantEditPresetEmpty => '暫無預設訊息';
+
+  @override
+  String get assistantEditPresetEditDialogTitle => '編輯預設訊息';
+
+  @override
+  String get assistantEditPresetRoleUser => '使用者';
+
+  @override
+  String get assistantEditPresetRoleAssistant => '助手';
 }

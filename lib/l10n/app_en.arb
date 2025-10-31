@@ -1104,5 +1104,14 @@
   "providersPageExportShareButton": "Share",
   "providersPageExportCopiedSnackbar": "Copied export code",
   "providersPageDeleteAction": "Delete",
-  "providersPageExportAction": "Export"
+  "providersPageExportAction": "Export",
+  "assistantEditPresetTitle": "Preset conversation",
+  "assistantEditPresetAddUser": "Add user preset",
+  "assistantEditPresetAddAssistant": "Add assistant preset",
+  "assistantEditPresetInputHintUser": "Enter user message…",
+  "assistantEditPresetInputHintAssistant": "Enter assistant message…",
+  "assistantEditPresetEmpty": "No preset messages yet",
+  "assistantEditPresetEditDialogTitle": "Edit preset message",
+  "assistantEditPresetRoleUser": "User",
+  "assistantEditPresetRoleAssistant": "Assistant"
 }

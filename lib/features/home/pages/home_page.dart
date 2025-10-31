@@ -1118,6 +1118,26 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _toolParts.clear();
       _reasoningSegments.clear();
     });
+    // Inject assistant preset messages into new conversation (ordered)
+    try {
+      final ap2 = context.read<AssistantProvider>();
+      final presets = ap2.getPresetMessagesForAssistant(a?.id);
+      if (presets.isNotEmpty && _currentConversation != null) {
+        for (final pm in presets) {
+          final role = (pm['role'] == 'assistant') ? 'assistant' : 'user';
+          final content = (pm['content'] ?? '').trim();
+          if (content.isEmpty) continue;
+          final m = await _chatService.addMessage(
+            conversationId: _currentConversation!.id,
+            role: role,
+            content: content,
+          );
+          if (mounted) {
+            setState(() { _messages.add(m); });
+          }
+        }
+      }
+    } catch (_) {}
     _scrollToBottomSoon();
   }
 
