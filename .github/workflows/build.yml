@@ -449,7 +449,7 @@ jobs:
           cd build/linux/x64/release/bundle
           tar -czf ../../../../../Kelivo_linux_${VERSION}.tar.gz .
 
-      - name: � 创建 AppImage
+      - name: 📦 创建 AppImage
         run: |
           # 下载 appimagetool
           wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
@@ -490,7 +490,7 @@ jobs:
           fi
           
           # 构建 AppImage
-          ./appimagetool AppDir Kelivo_linux_${VERSION}.AppImage
+          ARCH=x86_64 ./appimagetool AppDir Kelivo_linux_${VERSION}.AppImage
 
       - name: 📦 创建 DEB 包
         run: |
