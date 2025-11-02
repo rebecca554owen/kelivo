@@ -267,10 +267,10 @@ jobs:
           channel: stable
           cache: true
 
-      - name: � 获取依赖
+      - name: 🔧 获取依赖
         run: flutter pub get
 
-      - name: �🔍 验证 CMake 版本
+      - name: 🔍 验证 CMake 版本
         shell: pwsh
         run: |
           Write-Host "检查 CMake 版本..."
@@ -293,22 +293,21 @@ jobs:
         run: |
           Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "Kelivo_windows_$env:VERSION.zip"
 
-      - name: � 创建安装程序
+      - name: 🔧 安装 Inno Setup
+        run: choco install innosetup -y
+
+      - name: 📦 创建安装程序
         shell: pwsh
         run: |
-          # 下载 Inno Setup
-          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "innosetup.exe"
-          Start-Process -FilePath "innosetup.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
-          
           # 创建 Inno Setup 脚本
           $issContent = @"
           #define MyAppName "Kelivo"
           #define MyAppVersion "$env:VERSION"
-          #define MyAppPublisher "Your Name"
+          #define MyAppPublisher "Psyche"
           #define MyAppExeName "kelivo.exe"
 
           [Setup]
-          AppId={{YOUR-UNIQUE-APP-ID-HERE}
+          AppId={{A7B8C9D0-E1F2-4A5B-8C9D-0E1F2A3B4C5D}
           AppName={#MyAppName}
           AppVersion={#MyAppVersion}
           AppPublisher={#MyAppPublisher}
@@ -321,6 +320,7 @@ jobs:
           WizardStyle=modern
           ArchitecturesInstallIn64BitMode=x64
           ArchitecturesAllowed=x64
+          UninstallDisplayIcon={app}\{#MyAppExeName}
 
           [Languages]
           Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
@@ -346,7 +346,7 @@ jobs:
           # 编译安装程序
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer.iss"
 
-      - name:  发布到 Release
+      - name: 🚀 发布到 Release
         if: ${{ github.event.inputs.publish_release == 'true' && github.event.inputs.release_tag != '' }}
         uses: softprops/action-gh-release@v2
         with:
