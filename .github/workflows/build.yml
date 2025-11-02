@@ -257,6 +257,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: ✈️ 升级 CMake
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          refreshenv
+
       - name: 🐦 安装 Flutter
         uses: subosito/flutter-action@v2
         with:
