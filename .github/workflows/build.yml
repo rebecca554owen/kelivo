@@ -299,6 +299,46 @@ jobs:
       - name: 📦 创建安装程序
         shell: pwsh
         run: |
+          # 语言文件检测（中文语言包在部分 Runner 缺失，避免编译失败）
+          $zhLangCompiler = "C:\\Program Files (x86)\\Inno Setup 6\\Languages\\ChineseSimplified.isl"
+          $zhLangLocalDir = Join-Path (Get-Location) "Languages"
+          $zhLangLocal = Join-Path $zhLangLocalDir "ChineseSimplified.isl"
+          $languagesBlock = $null
+
+          if (Test-Path $zhLangCompiler) {
+            Write-Host "✅ 检测到中文语言文件: $zhLangCompiler"
+            $languagesBlock = @"
+          [Languages]
+          Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+          "@
+          } else {
+            Write-Host "⚠️ 未在 Inno Setup 安装目录找到中文语言文件，尝试下载到本地项目..."
+            try {
+              New-Item -ItemType Directory -Force -Path $zhLangLocalDir | Out-Null
+              $uri = 'https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/ChineseSimplified.isl'
+              Invoke-WebRequest -Uri $uri -OutFile $zhLangLocal -UseBasicParsing -TimeoutSec 60
+              if (Test-Path $zhLangLocal) {
+                Write-Host "✅ 已下载中文语言文件: $zhLangLocal"
+                $languagesBlock = @"
+          [Languages]
+          Name: "chinesesimplified"; MessagesFile: "$zhLangLocal"
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+          "@
+              }
+            } catch {
+              Write-Host "⚠️ 下载中文语言文件失败: $($_.Exception.Message)"
+            }
+
+            if (-not $languagesBlock) {
+              Write-Host "ℹ️ 将仅包含英文安装向导"
+              $languagesBlock = @"
+          [Languages]
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+          "@
+            }
+          }
+
           # 创建 Inno Setup 脚本
           $issContent = @"
           #define MyAppName "Kelivo"
@@ -322,9 +362,7 @@ jobs:
           ArchitecturesAllowed=x64
           UninstallDisplayIcon={app}\{#MyAppExeName}
 
-          [Languages]
-          Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
-          Name: "english"; MessagesFile: "compiler:Default.isl"
+          $languagesBlock
 
           [Tasks]
           Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加图标:"
