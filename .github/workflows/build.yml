@@ -425,7 +425,8 @@ jobs:
           sudo apt-get install -y \
             clang cmake ninja-build pkg-config libgtk-3-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+            gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            rpm patchelf libfuse2 file
 
       - name: 🐦 安装 Flutter
         uses: subosito/flutter-action@v2
@@ -438,6 +439,7 @@ jobs:
         run: |
           VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION_NUMBER=$(echo $VERSION | cut -d'+' -f1)" >> $GITHUB_ENV
 
       - name: 🏗️ 构建 Linux
         run: flutter build linux --release
@@ -447,16 +449,178 @@ jobs:
           cd build/linux/x64/release/bundle
           tar -czf ../../../../../Kelivo_linux_${VERSION}.tar.gz .
 
-      - name: 🚀 发布到 Release
+      - name: � 创建 AppImage
+        run: |
+          # 下载 appimagetool
+          wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool
+          
+          # 创建 AppDir 结构
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/lib
+          cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
+          
+          # 创建 AppRun 脚本
+          cat > AppDir/AppRun << 'EOF'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=${SELF%/*}
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+          exec "${HERE}/usr/bin/kelivo" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+          
+          # 创建 desktop 文件
+          cat > AppDir/kelivo.desktop << EOF
+          [Desktop Entry]
+          Name=Kelivo
+          Exec=kelivo
+          Icon=kelivo
+          Type=Application
+          Categories=Utility;
+          EOF
+          
+          # 复制图标（如果存在）
+          if [ -f "linux/kelivo.png" ]; then
+            cp linux/kelivo.png AppDir/kelivo.png
+          else
+            # 创建一个简单的占位图标
+            touch AppDir/kelivo.png
+          fi
+          
+          # 构建 AppImage
+          ./appimagetool AppDir Kelivo_linux_${VERSION}.AppImage
+
+      - name: 📦 创建 DEB 包
+        run: |
+          # 创建 DEB 目录结构
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/opt/kelivo
+          mkdir -p deb/usr/share/applications
+          mkdir -p deb/usr/share/icons/hicolor/256x256/apps
+          
+          # 复制文件
+          cp -r build/linux/x64/release/bundle/* deb/opt/kelivo/
+          
+          # 创建 control 文件
+          cat > deb/DEBIAN/control << EOF
+          Package: kelivo
+          Version: ${VERSION_NUMBER}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Psyche <your@email.com>
+          Description: Kelivo Application
+           A Flutter application for Linux
+          EOF
+          
+          # 创建 desktop 文件
+          cat > deb/usr/share/applications/kelivo.desktop << EOF
+          [Desktop Entry]
+          Name=Kelivo
+          Exec=/opt/kelivo/kelivo
+          Icon=kelivo
+          Type=Application
+          Categories=Utility;
+          EOF
+          
+          # 创建启动脚本
+          cat > deb/opt/kelivo/kelivo.sh << 'EOF'
+          #!/bin/bash
+          cd "$(dirname "$0")"
+          ./kelivo "$@"
+          EOF
+          chmod +x deb/opt/kelivo/kelivo.sh
+          
+          # 构建 DEB 包
+          dpkg-deb --build deb Kelivo_linux_${VERSION}_amd64.deb
+
+      - name: 📦 创建 RPM 包
+        run: |
+          # 创建 RPM 构建目录
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          
+          # 创建源码目录
+          mkdir -p kelivo-${VERSION_NUMBER}
+          cp -r build/linux/x64/release/bundle/* kelivo-${VERSION_NUMBER}/
+          tar -czf ~/rpmbuild/SOURCES/kelivo-${VERSION_NUMBER}.tar.gz kelivo-${VERSION_NUMBER}
+          
+          # 创建 spec 文件
+          cat > ~/rpmbuild/SPECS/kelivo.spec << EOF
+          Name:           kelivo
+          Version:        ${VERSION_NUMBER}
+          Release:        1%{?dist}
+          Summary:        Kelivo Application
+          License:        MIT
+          Source0:        %{name}-%{version}.tar.gz
+          BuildArch:      x86_64
+          
+          %description
+          A Flutter application for Linux
+          
+          %prep
+          %setup -q
+          
+          %install
+          mkdir -p %{buildroot}/opt/kelivo
+          cp -r * %{buildroot}/opt/kelivo/
+          
+          mkdir -p %{buildroot}/usr/share/applications
+          cat > %{buildroot}/usr/share/applications/kelivo.desktop << 'DESKTOPEOF'
+          [Desktop Entry]
+          Name=Kelivo
+          Exec=/opt/kelivo/kelivo
+          Icon=kelivo
+          Type=Application
+          Categories=Utility;
+          DESKTOPEOF
+          
+          %files
+          /opt/kelivo/*
+          /usr/share/applications/kelivo.desktop
+          
+          %changelog
+          * $(date "+%a %b %d %Y") Psyche <your@email.com> - ${VERSION_NUMBER}-1
+          - Initial RPM release
+          EOF
+          
+          # 构建 RPM
+          rpmbuild -bb ~/rpmbuild/SPECS/kelivo.spec
+          cp ~/rpmbuild/RPMS/x86_64/kelivo-${VERSION_NUMBER}-1.*.rpm Kelivo_linux_${VERSION}.rpm
+
+      - name: �🚀 发布到 Release
         if: ${{ github.event.inputs.publish_release == 'true' && github.event.inputs.release_tag != '' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
-          files: Kelivo_linux_*.tar.gz
+          files: |
+            Kelivo_linux_*.tar.gz
+            Kelivo_linux_*.AppImage
+            Kelivo_linux_*_amd64.deb
+            Kelivo_linux_*.rpm
 
-      - name: 📤 上传构建产物
+      - name: 📤 上传构建产物 (tar.gz)
         uses: actions/upload-artifact@v4
         with:
           name: Linux-tar.gz
           path: Kelivo_linux_*.tar.gz
+
+      - name: 📤 上传构建产物 (AppImage)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linux-AppImage
+          path: Kelivo_linux_*.AppImage
+
+      - name: 📤 上传构建产物 (DEB)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linux-DEB
+          path: Kelivo_linux_*_amd64.deb
+
+      - name: 📤 上传构建产物 (RPM)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linux-RPM
+          path: Kelivo_linux_*.rpm
