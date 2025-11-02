@@ -89,7 +89,7 @@ jobs:
 
       # 如果有签名密钥，写入密钥文件
       - name: 🔑 写入签名密钥
-        if: ${{ env.SIGN_KEYSTORE_BASE64 != '' }}
+        if: ${{ secrets.SIGN_KEYSTORE_BASE64 != '' }}
         env:
           SIGN_KEYSTORE_BASE64: ${{ secrets.SIGN_KEYSTORE_BASE64 }}
         run: |
@@ -347,7 +347,7 @@ jobs:
           #define MyAppExeName "kelivo.exe"
 
           [Setup]
-          AppId={{A7B8C9D0-E1F2-4A5B-8C9D-0E1F2A3B4C5D}
+          AppId={{A7B8C9D0-E1F2-4A5B-8C9D-0E1F2A3B4C5D}}
           AppName={#MyAppName}
           AppVersion={#MyAppVersion}
           AppPublisher={#MyAppPublisher}
@@ -379,7 +379,8 @@ jobs:
           Filename: "{app}\{#MyAppExeName}"; Description: "启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent
           "@
           
-          $issContent | Out-File -FilePath "installer.iss" -Encoding UTF8
+          # 使用 UTF-8 BOM 以确保中文字符在 Inno Setup 中正确解析
+          $issContent | Out-File -FilePath "installer.iss" -Encoding utf8BOM
           
           # 编译安装程序
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer.iss"
@@ -511,6 +512,7 @@ jobs:
           Priority: optional
           Architecture: amd64
           Maintainer: Psyche <your@email.com>
+          Depends: libgtk-3-0, libstdc++6, libglu1-mesa, libgstreamer1.0-0, libgstreamer-plugins-base1.0-0, libglib2.0-0, libc6
           Description: Kelivo Application
            A Flutter application for Linux
           EOF
@@ -555,6 +557,7 @@ jobs:
           License:        MIT
           Source0:        %{name}-%{version}.tar.gz
           BuildArch:      x86_64
+          Requires:       gtk3, libstdc++(>=6), mesa-libGLU, gstreamer1, gstreamer1-plugins-base, glib2, glibc
           
           %description
           A Flutter application for Linux
@@ -589,7 +592,7 @@ jobs:
           rpmbuild -bb ~/rpmbuild/SPECS/kelivo.spec
           cp ~/rpmbuild/RPMS/x86_64/kelivo-${VERSION_NUMBER}-1.*.rpm Kelivo_linux_${VERSION}.rpm
 
-      - name: �🚀 发布到 Release
+      - name: 🚀 发布到 Release
         if: ${{ github.event.inputs.publish_release == 'true' && github.event.inputs.release_tag != '' }}
         uses: softprops/action-gh-release@v2
         with:
