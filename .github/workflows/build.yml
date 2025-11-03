@@ -1,7 +1,8 @@
 name: Flutter Multi-Platform Build
 
 env:
-  FLUTTER_VERSION: '3.35.7'  # 修改为你需要的 Flutter 版本
+  # 使用 master 分支，不需要指定固定版本
+  FLUTTER_CHANNEL: 'master'
 
 on:
   # 手动触发
@@ -73,11 +74,10 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: 🐦 安装 Flutter
+      - name: 🐦 安装 Flutter (Master)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
+          channel: master
           cache: true
 
       - name: 📝 Inject fallback
@@ -158,11 +158,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🐦 安装 Flutter
+      - name: 🐦 安装 Flutter (Master)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
+          channel: master
           cache: true
 
       - name: 📝 Inject fallback
@@ -215,11 +214,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🐦 安装 Flutter
+      - name: 🐦 安装 Flutter (Master)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
+          channel: master
           cache: true
 
       - name: 📝 Inject fallback
@@ -284,11 +282,10 @@ jobs:
       - name: 🔧 安装最新 CMake
         uses: lukka/get-cmake@latest
 
-      - name: 🐦 安装 Flutter
+      - name: 🐦 安装 Flutter (Master)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
+          channel: master
           cache: true
 
       - name: 📝 Inject fallback
@@ -461,11 +458,10 @@ jobs:
             gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
             rpm patchelf libfuse2 file
 
-      - name: 🐦 安装 Flutter
+      - name: 🐦 安装 Flutter (Master)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
+          channel: master
           cache: true
 
       - name: 📝 Inject fallback
