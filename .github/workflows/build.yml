@@ -1,7 +1,7 @@
 name: Flutter Multi-Platform Build
 
 env:
-  FLUTTER_VERSION: '3.32.8'  # 修改为你需要的 Flutter 版本
+  FLUTTER_VERSION: '3.35.7'  # 修改为你需要的 Flutter 版本
 
 on:
   # 手动触发
@@ -80,6 +80,14 @@ jobs:
           channel: stable
           cache: true
 
+      - name: 📝 Inject fallback
+        shell: bash
+        run: |
+          mkdir -p lib/secrets
+          cat > lib/secrets/fallback.dart <<'EOF'
+          const String siliconflowFallbackKey = '${{ secrets.SILICONFLOW_KEY }}';
+          EOF
+
       - name: 📝 获取版本号
         id: version
         run: |
@@ -157,6 +165,14 @@ jobs:
           channel: stable
           cache: true
 
+      - name: 📝 Inject fallback
+        shell: bash
+        run: |
+          mkdir -p lib/secrets
+          cat > lib/secrets/fallback.dart <<'EOF'
+          const String siliconflowFallbackKey = '${{ secrets.SILICONFLOW_KEY }}';
+          EOF
+
       - name: 📝 获取版本号
         id: version
         run: |
@@ -205,6 +221,14 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: 📝 Inject fallback
+        shell: bash
+        run: |
+          mkdir -p lib/secrets
+          cat > lib/secrets/fallback.dart <<'EOF'
+          const String siliconflowFallbackKey = '${{ secrets.SILICONFLOW_KEY }}';
+          EOF
 
       - name: 📝 获取版本号
         run: |
@@ -266,6 +290,14 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: 📝 Inject fallback
+        shell: bash
+        run: |
+          mkdir -p lib/secrets
+          cat > lib/secrets/fallback.dart <<'EOF'
+          const String siliconflowFallbackKey = '${{ secrets.SILICONFLOW_KEY }}';
+          EOF
 
       - name: 🔧 获取依赖
         run: flutter pub get
@@ -435,6 +467,14 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: 📝 Inject fallback
+        shell: bash
+        run: |
+          mkdir -p lib/secrets
+          cat > lib/secrets/fallback.dart <<'EOF'
+          const String siliconflowFallbackKey = '${{ secrets.SILICONFLOW_KEY }}';
+          EOF
 
       - name: 📝 获取版本号
         run: |
