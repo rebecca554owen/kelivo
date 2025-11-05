@@ -1,4 +1,4 @@
-name: Flutter Multi-Platform Build
+name: Flutter Multi-Platform Build Master
 
 env:
   # 使用 master 分支，不需要指定固定版本
