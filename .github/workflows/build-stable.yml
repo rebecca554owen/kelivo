@@ -52,6 +52,13 @@ on:
         default: ''
         type: string
 
+      # 是否为预发布版本
+      prerelease:
+        description: '是否为预发布版本 (Pre-release)'
+        required: false
+        default: false
+        type: boolean
+
 jobs:
   # Android 构建
   android:
@@ -91,6 +98,10 @@ jobs:
         id: version
         run: |
           VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          if [ "${{ github.event.inputs.publish_release }}" != "true" ]; then
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${VERSION}_${SHORT_SHA}"
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "版本号: $VERSION"
       # 如果有签名密钥，写入密钥文件
@@ -121,6 +132,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: build/app/outputs/flutter-apk/Kelivo_android_*.apk
 
       - name: 📤 上传构建产物 (arm64-v8a)
@@ -172,6 +184,10 @@ jobs:
         id: version
         run: |
           VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          if [ "${{ github.event.inputs.publish_release }}" != "true" ]; then
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${VERSION}_${SHORT_SHA}"
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "版本号: $VERSION"
       - name: 🏗️ 构建 iOS (无签名)
@@ -187,6 +203,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: Kelivo_ios_*.ipa
 
       - name: 📤 上传构建产物
@@ -225,6 +242,10 @@ jobs:
       - name: 📝 获取版本号
         run: |
           VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          if [ "${{ github.event.inputs.publish_release }}" != "true" ]; then
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${VERSION}_${SHORT_SHA}"
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: 🏗️ 构建 macOS
         run: flutter build macos --release
@@ -250,6 +271,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: Kelivo_macos_*.dmg
 
       - name: 📤 上传构建产物
@@ -302,6 +324,10 @@ jobs:
         shell: pwsh
         run: |
           $version = (Select-String -Path pubspec.yaml -Pattern "version:" | ForEach-Object { $_.Line.Split(":")[1].Trim() })
+          if ("${{ github.event.inputs.publish_release }}" -ne "true") {
+            $shortSha = git rev-parse --short HEAD
+            $version = "$version`_$shortSha"
+          }
           echo "VERSION=$version" >> $env:GITHUB_ENV
           Write-Host "版本号: $version"
       - name: 🏗️ 构建 Windows
@@ -399,6 +425,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: |
             Kelivo_windows_*.zip
             Kelivo_windows_*_setup.exe
@@ -452,9 +479,14 @@ jobs:
           EOF
       - name: 📝 获取版本号
         run: |
-          VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          RAW_VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          VERSION=$RAW_VERSION
+          if [ "${{ github.event.inputs.publish_release }}" != "true" ]; then
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${VERSION}_${SHORT_SHA}"
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VERSION_NUMBER=$(echo $VERSION | cut -d'+' -f1)" >> $GITHUB_ENV
+          echo "VERSION_NUMBER=$(echo $RAW_VERSION | cut -d'+' -f1)" >> $GITHUB_ENV
       - name: 🏗️ 构建 Linux
         run: flutter build linux --release
 
@@ -607,6 +639,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: |
             Kelivo_linux_*.tar.gz
             Kelivo_linux_*.AppImage
