@@ -444,33 +444,9 @@ jobs:
   # Linux 构建
   linux:
     if: ${{ github.event.inputs.build_linux == 'true' }}
-    name: 构建 Linux (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+    name: 构建 Linux
+    runs-on: ubuntu-latest
     permissions: write-all
-    strategy:
-      matrix:
-        include:
-          - arch: x64
-            runner: ubuntu-latest
-            bundle_dir: build/linux/x64/release/bundle
-            appimage_arch: x86_64
-            deb_arch: amd64
-            rpm_arch: x86_64
-            flutter_arch: x64
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            bundle_dir: build/linux/arm64/release/bundle
-            appimage_arch: aarch64
-            deb_arch: arm64
-            rpm_arch: aarch64
-            flutter_arch: arm64
-    env:
-      BUNDLE_DIR: ${{ matrix.bundle_dir }}
-      APPIMAGE_ARCH: ${{ matrix.appimage_arch }}
-      DEB_ARCH: ${{ matrix.deb_arch }}
-      RPM_ARCH: ${{ matrix.rpm_arch }}
-      ARCH: ${{ matrix.arch }}
-      FLUTTER_ARCH: ${{ matrix.flutter_arch }}
 
     steps:
       - name: 📦 检出代码
@@ -493,7 +469,6 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-          architecture: ${{ env.FLUTTER_ARCH }}
 
       - name: 📝 Inject fallback
         shell: bash
@@ -517,20 +492,19 @@ jobs:
 
       - name: 📦 打包 tar.gz
         run: |
-          TAR_NAME="Kelivo_linux_${VERSION}_${DEB_ARCH}.tar.gz"
-          cd "$BUNDLE_DIR"
-          tar -czf "../../../../../${TAR_NAME}" .
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../Kelivo_linux_${VERSION}.tar.gz .
       - name: 📦 创建 AppImage
         run: |
           # 下载 appimagetool
-          wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${APPIMAGE_ARCH}.AppImage"
+          wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x appimagetool
           
           # 创建 AppDir 结构
           mkdir -p AppDir/usr/bin
           mkdir -p AppDir/usr/lib
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-          cp -r "$BUNDLE_DIR"/* AppDir/usr/bin/
+          cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
           
           # 创建 AppRun 脚本
           cat > AppDir/AppRun << 'EOF'
@@ -565,7 +539,7 @@ jobs:
           install -Dm644 "$ICON_SOURCE" "AppDir/usr/share/icons/hicolor/256x256/apps/kelivo.png"
           
           # 构建 AppImage
-          ARCH=${APPIMAGE_ARCH} ./appimagetool AppDir "Kelivo_linux_${VERSION}_${APPIMAGE_ARCH}.AppImage"
+          ARCH=x86_64 ./appimagetool AppDir Kelivo_linux_${VERSION}.AppImage
       - name: 📦 创建 DEB 包
         run: |
           # 创建 DEB 目录结构
@@ -583,7 +557,7 @@ jobs:
           Version: ${VERSION_NUMBER}
           Section: utils
           Priority: optional
-          Architecture: ${DEB_ARCH}
+          Architecture: amd64
           Maintainer: Psyche <your@email.com>
           Depends: libgtk-3-0, libstdc++6, libglu1-mesa, libgstreamer1.0-0, libgstreamer-plugins-base1.0-0, libglib2.0-0, libc6
           Description: Kelivo Application
@@ -619,7 +593,7 @@ jobs:
           chmod +x deb/opt/kelivo/kelivo.sh
           
           # 构建 DEB 包
-          dpkg-deb --build deb "Kelivo_linux_${VERSION}_${DEB_ARCH}.deb"
+          dpkg-deb --build deb Kelivo_linux_${VERSION}_amd64.deb
       - name: 📦 创建 RPM 包
         run: |
           # 创建 RPM 构建目录
@@ -647,7 +621,7 @@ jobs:
           Summary:        Kelivo Application
           License:        MIT
           Source0:        %{name}-%{version}.tar.gz
-          BuildArch:      ${RPM_ARCH}
+          BuildArch:      x86_64
           Requires:       gtk3, libstdc++(>=6), mesa-libGLU, gstreamer1, gstreamer1-plugins-base, glib2, glibc
           
           %description
@@ -685,7 +659,7 @@ jobs:
           
           # 构建 RPM
           rpmbuild -bb ~/rpmbuild/SPECS/kelivo.spec
-          cp ~/rpmbuild/RPMS/${RPM_ARCH}/kelivo-${VERSION_NUMBER}-1.*.rpm "Kelivo_linux_${VERSION}_${RPM_ARCH}.rpm"
+          cp ~/rpmbuild/RPMS/x86_64/kelivo-${VERSION_NUMBER}-1.*.rpm Kelivo_linux_${VERSION}.rpm
       - name: 🚀 发布到 Release
         if: ${{ github.event.inputs.publish_release == 'true' && github.event.inputs.release_tag != '' }}
         uses: softprops/action-gh-release@v2
@@ -694,30 +668,30 @@ jobs:
           name: ${{ github.event.inputs.release_tag }}
           prerelease: ${{ github.event.inputs.prerelease }}
           files: |
-            Kelivo_linux_*_${{ env.DEB_ARCH }}.tar.gz
-            Kelivo_linux_*_${{ env.APPIMAGE_ARCH }}.AppImage
-            Kelivo_linux_*_${{ env.DEB_ARCH }}.deb
-            Kelivo_linux_*_${{ env.RPM_ARCH }}.rpm
+            Kelivo_linux_*.tar.gz
+            Kelivo_linux_*.AppImage
+            Kelivo_linux_*_amd64.deb
+            Kelivo_linux_*.rpm
       - name: 📤 上传构建产物 (tar.gz)
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-${{ env.ARCH }}-tar.gz
-          path: Kelivo_linux_*_${{ env.DEB_ARCH }}.tar.gz
+          name: Linux-tar.gz
+          path: Kelivo_linux_*.tar.gz
 
       - name: 📤 上传构建产物 (AppImage)
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-${{ env.ARCH }}-AppImage
-          path: Kelivo_linux_*_${{ env.APPIMAGE_ARCH }}.AppImage
+          name: Linux-AppImage
+          path: Kelivo_linux_*.AppImage
 
       - name: 📤 上传构建产物 (DEB)
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-${{ env.ARCH }}-DEB
-          path: Kelivo_linux_*_${{ env.DEB_ARCH }}.deb
+          name: Linux-DEB
+          path: Kelivo_linux_*_amd64.deb
 
       - name: 📤 上传构建产物 (RPM)
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-${{ env.ARCH }}-RPM
-          path: Kelivo_linux_*_${{ env.RPM_ARCH }}.rpm
+          name: Linux-RPM
+          path: Kelivo_linux_*.rpm
