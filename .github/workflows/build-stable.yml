@@ -551,6 +551,10 @@ jobs:
           # 复制文件
           cp -r build/linux/x64/release/bundle/* deb/opt/kelivo/
           
+          # 创建 /usr/bin 软链接
+          mkdir -p deb/usr/bin
+          ln -s /opt/kelivo/kelivo deb/usr/bin/kelivo
+          
           # 创建 control 文件
           cat > deb/DEBIAN/control << EOF
           Package: kelivo
@@ -634,6 +638,9 @@ jobs:
           mkdir -p %{buildroot}/opt/kelivo
           cp -r * %{buildroot}/opt/kelivo/
           
+          mkdir -p %{buildroot}/usr/bin
+          ln -s /opt/kelivo/kelivo %{buildroot}/usr/bin/kelivo
+          
           mkdir -p %{buildroot}/usr/share/applications
           cat > %{buildroot}/usr/share/applications/kelivo.desktop << 'DESKTOPEOF'
           [Desktop Entry]
@@ -649,6 +656,7 @@ jobs:
           
           %files
           /opt/kelivo/*
+          /usr/bin/kelivo
           /usr/share/applications/kelivo.desktop
           /usr/share/icons/hicolor/256x256/apps/kelivo.png
           
