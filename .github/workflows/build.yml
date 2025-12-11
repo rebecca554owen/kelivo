@@ -451,18 +451,21 @@ jobs:
             appimage_arch: x86_64
             deb_arch: amd64
             rpm_arch: x86_64
+            flutter_arch: x64
           - arch: arm64
             runner: ubuntu-24.04-arm
             bundle_dir: build/linux/arm64/release/bundle
             appimage_arch: aarch64
             deb_arch: arm64
             rpm_arch: aarch64
+            flutter_arch: arm64
     env:
       BUNDLE_DIR: ${{ matrix.bundle_dir }}
       APPIMAGE_ARCH: ${{ matrix.appimage_arch }}
       DEB_ARCH: ${{ matrix.deb_arch }}
       RPM_ARCH: ${{ matrix.rpm_arch }}
       ARCH: ${{ matrix.arch }}
+      FLUTTER_ARCH: ${{ matrix.flutter_arch }}
 
     steps:
       - name: 📦 检出代码
@@ -485,6 +488,7 @@ jobs:
         with:
           channel: master
           cache: true
+          architecture: ${{ env.FLUTTER_ARCH }}
 
       - name: 📝 Inject fallback
         shell: bash
