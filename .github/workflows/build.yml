@@ -545,6 +545,10 @@ jobs:
           # 复制文件
           cp -r build/linux/x64/release/bundle/* deb/opt/kelivo/
           
+          # 创建 /usr/bin 软链接
+          mkdir -p deb/usr/bin
+          ln -s /opt/kelivo/kelivo deb/usr/bin/kelivo
+          
           # 创建 control 文件
           cat > deb/DEBIAN/control << EOF
           Package: kelivo
@@ -588,7 +592,6 @@ jobs:
           
           # 构建 DEB 包
           dpkg-deb --build deb Kelivo_linux_${VERSION}_amd64.deb
-
       - name: 📦 创建 RPM 包
         run: |
           # 创建 RPM 构建目录
@@ -629,6 +632,9 @@ jobs:
           mkdir -p %{buildroot}/opt/kelivo
           cp -r * %{buildroot}/opt/kelivo/
           
+          mkdir -p %{buildroot}/usr/bin
+          ln -s /opt/kelivo/kelivo %{buildroot}/usr/bin/kelivo
+          
           mkdir -p %{buildroot}/usr/share/applications
           cat > %{buildroot}/usr/share/applications/kelivo.desktop << 'DESKTOPEOF'
           [Desktop Entry]
@@ -644,6 +650,7 @@ jobs:
           
           %files
           /opt/kelivo/*
+          /usr/bin/kelivo
           /usr/share/applications/kelivo.desktop
           /usr/share/icons/hicolor/256x256/apps/kelivo.png
           
@@ -655,19 +662,18 @@ jobs:
           # 构建 RPM
           rpmbuild -bb ~/rpmbuild/SPECS/kelivo.spec
           cp ~/rpmbuild/RPMS/x86_64/kelivo-${VERSION_NUMBER}-1.*.rpm Kelivo_linux_${VERSION}.rpm
-
       - name: 🚀 发布到 Release
         if: ${{ github.event.inputs.publish_release == 'true' && github.event.inputs.release_tag != '' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: ${{ github.event.inputs.release_tag }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: |
             Kelivo_linux_*.tar.gz
             Kelivo_linux_*.AppImage
             Kelivo_linux_*_amd64.deb
             Kelivo_linux_*.rpm
-
       - name: 📤 上传构建产物 (tar.gz)
         uses: actions/upload-artifact@v4
         with:
