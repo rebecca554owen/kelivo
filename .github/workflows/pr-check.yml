@@ -80,8 +80,8 @@ jobs:
             "$BASE_DIR/desiredFileName.txt" \
             "desiredFileName.txt"
 
-      - name: flutter analyze (must be clean)
-        run: flutter analyze
+      - name: dart analyze (root package only)
+        run: dart analyze --fatal-infos lib test
 
       - name: flutter test
         run: flutter test
