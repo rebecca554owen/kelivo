@@ -18,8 +18,127 @@ ProviderConfig _moonshotConfig(String baseUrl) {
   );
 }
 
+Future<Map<String, dynamic>> _captureMoonshotBody({
+  required String modelId,
+  required List<Map<String, dynamic>> messages,
+  List<String>? userImagePaths,
+}) async {
+  late Map<String, dynamic> requestBody;
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  addTearDown(() async {
+    await server.close(force: true);
+  });
+
+  server.listen((request) async {
+    requestBody = (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+        .cast<String, dynamic>();
+    request.response.statusCode = HttpStatus.ok;
+    request.response.headers.contentType = ContentType.json;
+    request.response.write(
+      jsonEncode({
+        'choices': [
+          {
+            'message': {'content': 'ok'},
+            'finish_reason': 'stop',
+          },
+        ],
+      }),
+    );
+    await request.response.close();
+  });
+
+  await ChatApiService.sendMessageStream(
+    config: _moonshotConfig(
+      'http://${server.address.address}:${server.port}/v1',
+    ),
+    modelId: modelId,
+    messages: messages,
+    userImagePaths: userImagePaths,
+    stream: false,
+  ).toList();
+  return requestBody;
+}
+
 void main() {
   group('Moonshot Kimi compatibility', () {
+    test('kimi-k3 filters remote images from every input path', () async {
+      final dir = await Directory.systemTemp.createTemp(
+        'kelivo_kimi_k3_images_',
+      );
+      addTearDown(() async {
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      });
+      final localImage = File('${dir.path}/local.png');
+      await localImage.writeAsBytes(const [1, 2, 3, 4]);
+
+      final body = await _captureMoonshotBody(
+        modelId: 'moonshotai/kimi-k3',
+        messages: const [
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': 'structured'},
+              {
+                'type': 'image_url',
+                'image_url': {'url': 'https://example.com/structured.png'},
+              },
+              {
+                'type': 'image_url',
+                'image_url': {'url': 'data:image/png;base64,QUJD'},
+              },
+            ],
+          },
+          {
+            'role': 'user',
+            'content':
+                'markdown ![remote](https://example.com/markdown.png) '
+                '![inline](data:image/png;base64,REVG)',
+          },
+        ],
+        userImagePaths: [
+          'https://example.com/attached.png',
+          'data:image/png;base64,R0hJ',
+          localImage.path,
+        ],
+      );
+
+      final encoded = jsonEncode(body);
+      expect(encoded, isNot(contains('example.com/structured.png')));
+      expect(encoded, isNot(contains('example.com/attached.png')));
+      expect(encoded, contains('example.com/markdown.png'));
+
+      final imageUrls = <String>[];
+      for (final message in (body['messages'] as List).cast<Map>()) {
+        final content = message['content'];
+        if (content is! List) continue;
+        for (final part in content.whereType<Map>()) {
+          if (part['type'] != 'image_url') continue;
+          final imageUrl = part['image_url'];
+          if (imageUrl is Map && imageUrl['url'] is String) {
+            imageUrls.add(imageUrl['url'] as String);
+          }
+        }
+      }
+
+      expect(
+        imageUrls,
+        containsAll([
+          'data:image/png;base64,QUJD',
+          'data:image/png;base64,REVG',
+          'data:image/png;base64,R0hJ',
+          'data:image/png;base64,AQIDBA==',
+        ]),
+      );
+      expect(
+        imageUrls,
+        everyElement(
+          isNot(anyOf(startsWith('http://'), startsWith('https://'))),
+        ),
+      );
+    });
+
     test(
       'kimi-k2.5 disables thinking and strips unsupported sampling params',
       () async {
@@ -147,7 +266,7 @@ void main() {
     );
 
     test(
-      'kimi thinking tool continuation preserves reasoning_content and assistant content',
+      'kimi-k3 tool continuation preserves reasoning_content and assistant content',
       () async {
         final secondRequestCompleter = Completer<Map<String, dynamic>>();
         final toolInvocations = <Map<String, dynamic>>[];
@@ -177,7 +296,7 @@ void main() {
                 'id': 'cmpl-1',
                 'object': 'chat.completion.chunk',
                 'created': 0,
-                'model': 'kimi-k2-thinking',
+                'model': 'kimi-k3',
                 'choices': [
                   {
                     'index': 0,
@@ -208,7 +327,7 @@ void main() {
                 'id': 'cmpl-2',
                 'object': 'chat.completion.chunk',
                 'created': 0,
-                'model': 'kimi-k2-thinking',
+                'model': 'kimi-k3',
                 'choices': [
                   {
                     'index': 0,
@@ -227,7 +346,7 @@ void main() {
         final baseUrl = 'http://${server.address.address}:${server.port}/v1';
         final chunks = await ChatApiService.sendMessageStream(
           config: _moonshotConfig(baseUrl),
-          modelId: 'kimi-k2-thinking',
+          modelId: 'kimi-k3',
           messages: const [
             {'role': 'user', 'content': '今天几号？'},
           ],

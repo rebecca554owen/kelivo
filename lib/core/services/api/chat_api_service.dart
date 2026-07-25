@@ -1195,10 +1195,18 @@ class ChatApiService {
         providerName.contains('deepseek');
   }
 
+  static bool _isClaude5AdaptiveThinkingModel(String modelId) {
+    return RegExp(
+      r'claude-(?:opus|sonnet)-5(?:$|[._:@/-])',
+      caseSensitive: false,
+    ).hasMatch(modelId.trim());
+  }
+
   static bool _supportsClaudeAdaptiveThinking(String modelId) {
     final lower = modelId.trim().toLowerCase();
     if (!lower.contains('claude-')) return false;
     if (lower.contains('fable') || lower.contains('mythos')) return true;
+    if (_isClaude5AdaptiveThinkingModel(lower)) return true;
     final m = RegExp(
       r'claude-(opus|sonnet)-(\d+)[-.](\d+)',
       caseSensitive: false,
@@ -1217,6 +1225,7 @@ class ChatApiService {
     final lower = modelId.trim().toLowerCase();
     if (!lower.contains('claude-')) return false;
     if (lower.contains('fable') || lower.contains('mythos')) return true;
+    if (_isClaude5AdaptiveThinkingModel(lower)) return true;
     final m = RegExp(
       r'claude-(opus|sonnet)-(\d+)[-.](\d+)',
       caseSensitive: false,
@@ -1261,6 +1270,7 @@ class ChatApiService {
 
     final lower = modelId.trim().toLowerCase();
     final supportsXhigh =
+        _isClaude5AdaptiveThinkingModel(lower) ||
         lower.contains('claude-opus-4-7') ||
         lower.contains('claude-opus-4.7') ||
         lower.contains('claude-opus-4-8') ||
@@ -1351,6 +1361,12 @@ class ChatApiService {
 
   static bool _claudeShouldOmitSamplingParams(String modelId, int? budget) {
     if (_isClaudeThinkingAlwaysOnModel(modelId)) return true;
+    final lower = modelId.trim().toLowerCase();
+    if (_isClaude5AdaptiveThinkingModel(lower) ||
+        lower.contains('claude-opus-4-8') ||
+        lower.contains('claude-opus-4.8')) {
+      return true;
+    }
     return _isClaudeAdaptiveOnlyThinkingModel(modelId) &&
         _isClaudeReasoningEnabled(budget);
   }

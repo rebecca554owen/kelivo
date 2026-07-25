@@ -195,6 +195,30 @@ void main() {
       },
     );
 
+    test('maps Kimi K3 effort and omits fixed request parameters', () async {
+      final maxBody = await _captureGenerateTextBody(
+        providerId: 'MoonshotCompatTest',
+        modelId: 'kimi-k3',
+        thinkingBudget: 128000,
+      );
+      final minimumBody = await _captureGenerateTextBody(
+        providerId: 'MoonshotCompatTest',
+        modelId: 'kimi-k3',
+        thinkingBudget: 0,
+      );
+
+      expect(maxBody['reasoning_effort'], 'max');
+      expect(minimumBody['reasoning_effort'], 'low');
+      for (final body in [maxBody, minimumBody]) {
+        expect(body.containsKey('thinking'), isFalse);
+        expect(body.containsKey('temperature'), isFalse);
+        expect(body.containsKey('top_p'), isFalse);
+        expect(body.containsKey('n'), isFalse);
+        expect(body.containsKey('presence_penalty'), isFalse);
+        expect(body.containsKey('frequency_penalty'), isFalse);
+      }
+    });
+
     test(
       'maps DeepSeek reasoning knobs for non-streaming text generation',
       () async {

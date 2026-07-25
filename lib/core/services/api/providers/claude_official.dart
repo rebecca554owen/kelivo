@@ -1,5 +1,16 @@
 part of '../chat_api_service.dart';
 
+int _defaultClaudeMaxOutputTokens(String modelId) {
+  final lower = modelId.trim().toLowerCase();
+  if (RegExp(
+    r'claude-(?:fable-5|mythos-5|opus-(?:5|4-8)|sonnet-5)(?:$|[._:@/-])',
+    caseSensitive: false,
+  ).hasMatch(lower)) {
+    return 128000;
+  }
+  return 64000;
+}
+
 int _readClaudeUsageInt(dynamic value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value) ?? 0;
@@ -359,7 +370,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
     // Prepare request body per round
     final body = <String, dynamic>{
       'model': upstreamModelId,
-      'max_tokens': maxTokens ?? 64000,
+      'max_tokens': maxTokens ?? _defaultClaudeMaxOutputTokens(upstreamModelId),
       'messages': convo,
       'stream': stream,
       if (systemPrompt.isNotEmpty) 'system': systemPrompt,

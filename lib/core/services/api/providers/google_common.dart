@@ -54,6 +54,18 @@ bool _isGemini35FlashModel(String modelId) {
   );
 }
 
+bool _isGemini35FlashLiteModel(String modelId) {
+  return modelId.contains(
+    RegExp(r'gemini-3\.5-flash-lite([._:@/-]|$)', caseSensitive: false),
+  );
+}
+
+bool _isGemini36FlashModel(String modelId) {
+  return modelId.contains(
+    RegExp(r'gemini-3\.6-flash([._:@/-]|$)', caseSensitive: false),
+  );
+}
+
 bool _isGemini3TextModel(String modelId) {
   return modelId.contains(
     RegExp(r'gemini-3(?:\.\d+)?-(?!pro-image)', caseSensitive: false),
@@ -91,6 +103,8 @@ Map<String, dynamic> _googleThinkingConfig(
     RegExp(r'gemini-3-flash(-preview)?', caseSensitive: false),
   );
   final isGemini35Flash = _isGemini35FlashModel(upstreamModelId);
+  final isGemini35FlashLite = _isGemini35FlashLiteModel(upstreamModelId);
+  final isGemini36Flash = _isGemini36FlashModel(upstreamModelId);
   if (isGemini3ProImage) {
     return {
       'includeThoughts': true,
@@ -120,9 +134,12 @@ Map<String, dynamic> _googleThinkingConfig(
     }
     return {'includeThoughts': true, 'thinkingLevel': level};
   }
-  // Gemini 3 Flash and 3.5 Flash: supports 'minimal', 'low', 'medium', 'high'
-  if (isGemini3Flash || isGemini35Flash) {
-    String level = isGemini35Flash ? 'medium' : 'high';
+  // Gemini 3 Flash, 3.5 Flash/Lite, and 3.6 Flash support
+  // 'minimal', 'low', 'medium', and 'high'.
+  if (isGemini3Flash || isGemini35Flash || isGemini36Flash) {
+    String level = isGemini35FlashLite
+        ? 'minimal'
+        : (isGemini35Flash || isGemini36Flash ? 'medium' : 'high');
     if (off) {
       level = 'minimal';
     } else if (budget != null && budget > 0) {
@@ -249,7 +266,10 @@ Map<String, dynamic> _googleApiPart(Map part) {
 }
 
 int? _defaultGeminiMaxOutputTokens(String upstreamModelId) {
-  if (_isGemini35FlashModel(upstreamModelId)) return 65536;
+  if (_isGemini35FlashModel(upstreamModelId) ||
+      _isGemini36FlashModel(upstreamModelId)) {
+    return 65536;
+  }
   return null;
 }
 

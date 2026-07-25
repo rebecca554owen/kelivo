@@ -89,9 +89,11 @@ int _getMaxOutputTokensForClaudeModel(String modelId) {
   // Limits based on Google Vertex AI documentation
   switch (modelId) {
     case 'claude-fable-5':
+    case 'claude-opus-5':
     case 'claude-opus-4-8':
     case 'claude-opus-4-7':
     case 'claude-opus-4-6':
+    case 'claude-sonnet-5':
     case 'claude-sonnet-4-6':
       return 128000;
     case 'claude-opus-4-5@20251101':

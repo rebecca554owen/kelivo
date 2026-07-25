@@ -17,7 +17,7 @@ class ModelRegistry {
   // Vision-capable models (text + image input)
   static final RegExp vision = RegExp(
     // GPT family incl. 4o, 4.1, 5 (exclude gpt-5-chat), and OpenAI o* series
-    r'(gpt-4o|gpt-4\.1|gpt-5(?!-chat)|o\d|gemini|claude|qwen-?3([-.])5|kimi-k2([-.])(?:5|6|7)|doubao.+1([-.])(?:6|8)|grok-4|step-3|intern-s1|minimax-m3(?:$|[/_:@])|mimo-v2(?:-omni(?:$|[/_:@])|\.5(?:$|[/_:@]))|sensenova-6\.7-flash-lite)',
+    r'(gpt-4o|gpt-4\.1|gpt-5(?!-chat)|o\d|gemini|claude|qwen-?3([-.])5|kimi-k2([-.])(?:5|6|7)|kimi-k3(?:$|[/_:@.-])|muse-spark-1\.1(?:$|[/_:@.-])|doubao.+1([-.])(?:6|8)|grok-4|step-3|intern-s1|minimax-m3(?:$|[/_:@])|mimo-v2(?:-omni(?:$|[/_:@])|\.5(?:$|[/_:@]))|sensenova-6\.7-flash-lite)',
     caseSensitive: false,
   );
   // Tool-using models
@@ -25,6 +25,7 @@ class ModelRegistry {
     (r'(gpt-4o|gpt-4\.1|gpt-oss|gpt-5(?!-chat)|o\d|'
             r'gemini|claude|'
             r'qwen-?3|doubao.+1([-.])(?:6|8)|grok-4|kimi-k2|'
+            r'kimi-k3(?:$|[/_:@.-])|muse-spark-1\.1(?:$|[/_:@.-])|'
             r'step-3|intern-s1|glm-4([-.])(?:5|6|7)|glm-5|minimax-(?:m2|m3)|'
             r'deepseek-(?:r1|v3|chat|v3\.1|v3\.2|v4)|'
             r'deepseek-reasoner|'
@@ -41,6 +42,7 @@ class ModelRegistry {
             r'gemma[-_]?4|'
             r'claude|'
             r'qwen-?3|doubao.+1([-.])(?:6|8)|grok-4|kimi-k2|'
+            r'kimi-k3(?:$|[/_:@.-])|muse-spark-1\.1(?:$|[/_:@.-])|'
             r'step-3|intern-s1|glm-4([-.])(?:5|6|7)|glm-5|minimax-(?:m2|m3)|'
             r'deepseek-(?:r1|v3\.1|v3\.2|v4)|'
             r'deepseek-reasoner|'
@@ -296,11 +298,15 @@ class GoogleProvider extends BaseProvider {
       // we manually inject known supported Claude models for convenience.
       if (cfg.vertexAI == true) {
         final knownClaude = [
+          'claude-fable-5',
+          'claude-opus-5',
+          'claude-opus-4-8',
           'claude-opus-4-7',
           'claude-opus-4-6',
           'claude-opus-4-5@20251101',
           'claude-opus-4-1@20250805',
           'claude-opus-4@20250514',
+          'claude-sonnet-5',
           'claude-sonnet-4-6',
           'claude-sonnet-4-5@20250929',
           'claude-sonnet-4@20250514',

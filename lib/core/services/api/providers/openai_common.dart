@@ -120,9 +120,33 @@ bool _isKimiK25Model(String upstreamModelId) {
   return upstreamModelId.toLowerCase().contains('kimi-k2.5');
 }
 
+bool _isKimiK3Model(String upstreamModelId) {
+  return RegExp(
+    r'(^|[/_:@])kimi-k3(?:$|[-.])',
+    caseSensitive: false,
+  ).hasMatch(upstreamModelId.trim());
+}
+
+bool _isRemoteHttpUrl(String source) {
+  final normalized = source.trim().toLowerCase();
+  return normalized.startsWith('http://') || normalized.startsWith('https://');
+}
+
+bool _isRemoteImageContentPart(dynamic part) {
+  if (part is! Map) return false;
+  final type = (part['type'] ?? '').toString().trim().toLowerCase();
+  if (type != 'image_url' && type != 'input_image') return false;
+
+  final imageUrl = part['image_url'];
+  final rawUrl = imageUrl is Map ? imageUrl['url'] : imageUrl;
+  return rawUrl is String && _isRemoteHttpUrl(rawUrl);
+}
+
 bool _isKimiOmitsSamplingParamsModel(String upstreamModelId) {
   final lower = upstreamModelId.toLowerCase();
-  return lower.contains('kimi-k2.5') || lower.contains('kimi-k2.7');
+  return lower.contains('kimi-k2.5') ||
+      lower.contains('kimi-k2.7') ||
+      _isKimiK3Model(lower);
 }
 
 bool _isKimiThinkingModel(String upstreamModelId) {
@@ -130,7 +154,8 @@ bool _isKimiThinkingModel(String upstreamModelId) {
   return lower.contains('kimi-k2-thinking') ||
       lower.contains('kimi-k2.5') ||
       lower.contains('kimi-k2.6') ||
-      lower.contains('kimi-k2.7');
+      lower.contains('kimi-k2.7') ||
+      _isKimiK3Model(lower);
 }
 
 void _removeMoonshotKimiUnsupportedSamplingParams(Map<String, dynamic> body) {
@@ -162,6 +187,27 @@ void _normalizeMoonshotKimiChatBody(
   int? thinkingBudget,
 }) {
   if (!_isKimiThinkingModel(upstreamModelId)) return;
+
+  if (_isKimiK3Model(upstreamModelId)) {
+    body.remove('thinking');
+    _removeMoonshotKimiUnsupportedSamplingParams(body);
+    if (!isReasoning) {
+      body.remove('reasoning_effort');
+      return;
+    }
+    final rawEffort = body['reasoning_effort'];
+    if (rawEffort is! String || rawEffort.trim().isEmpty) {
+      body.remove('reasoning_effort');
+      return;
+    }
+    final effort = openAINormalizeReasoningEffort(rawEffort, upstreamModelId);
+    if (effort == 'auto') {
+      body.remove('reasoning_effort');
+    } else {
+      body['reasoning_effort'] = effort;
+    }
+    return;
+  }
 
   body.remove('reasoning_effort');
   if (!isReasoning) {
@@ -266,10 +312,14 @@ Map<String, dynamic> _buildAssistantToolCallMessage({
 
 String _openAIEffortForBudget(int? budget, String upstreamModelId) {
   final baseEffort = _effortForBudget(budget);
-  final requestedEffort =
-      baseEffort == 'high' && budget != null && budget >= 64000
-      ? 'xhigh'
-      : baseEffort;
+  var requestedEffort = baseEffort;
+  if (baseEffort == 'high' && budget != null) {
+    if (budget >= 128000 && openAISupportsMaxReasoning(upstreamModelId)) {
+      requestedEffort = 'max';
+    } else if (budget >= 64000) {
+      requestedEffort = 'xhigh';
+    }
+  }
   return openAINormalizeReasoningEffort(requestedEffort, upstreamModelId);
 }
 
@@ -298,9 +348,8 @@ bool _allowsSamplingParamsForOpenAIModel(
   String upstreamModelId, {
   required String effort,
 }) {
-  // Source: https://developers.openai.com/api/docs/guides/latest-model#gpt-54-parameter-compatibility
-  // Only the documented GPT-5.2 / GPT-5.4 base-model compatibility rules are
-  // enforced here; other GPT-5 variants keep their request body unchanged.
+  // Source: https://developers.openai.com/api/docs/guides/latest-model
+  // Only documented per-model compatibility rules are enforced here.
   return openAIAllowsSamplingParams(upstreamModelId, effort: effort);
 }
 
@@ -311,6 +360,14 @@ void _sanitizeOpenAIGpt5SamplingParams(
 }) {
   // Must run on the final request body (after override merges), otherwise
   // we may keep/drop sampling params based on stale effort assumptions.
+  final hasChatFunctionTools =
+      body['messages'] is List &&
+      body['tools'] is List &&
+      (body['tools'] as List).isNotEmpty;
+  if (hasChatFunctionTools &&
+      openAIChatCompletionsToolsRequireNone(upstreamModelId)) {
+    body['reasoning_effort'] = 'none';
+  }
   if (!body.containsKey('temperature') &&
       !body.containsKey('top_p') &&
       !body.containsKey('logprobs')) {
@@ -613,6 +670,7 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
   List<Map<String, dynamic>> messages, {
   List<String>? userMediaPaths,
   required bool canImageInput,
+  required bool allowRemoteImages,
   bool stripUnsignedReasoningContent = false,
 }) async {
   final out = <Map<String, dynamic>>[];
@@ -644,7 +702,13 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
     }
 
     if (originalContent is List) {
-      outMsg['content'] = canImageInput ? originalContent : raw;
+      outMsg['content'] = canImageInput
+          ? (allowRemoteImages
+                ? originalContent
+                : originalContent
+                      .where((part) => !_isRemoteImageContentPart(part))
+                      .toList(growable: false))
+          : raw;
       out.add(outMsg);
       continue;
     }
@@ -680,7 +744,7 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
 
     final parsed = await _parseTextAndImages(
       raw,
-      allowRemoteImages: canImageInput,
+      allowRemoteImages: canImageInput && allowRemoteImages,
       allowLocalImages: canImageInput,
       allowDataImages: canImageInput,
       keepRemoteMarkdownText: true,
@@ -708,6 +772,7 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
 
     void addImageUrl(String url) {
       if (url.isEmpty) return;
+      if (!allowRemoteImages && _isRemoteHttpUrl(url)) return;
       if (seenImageUrls.add(url)) {
         parts.add({
           'type': 'image_url',
@@ -744,9 +809,10 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
     }
     if (hasAttachedImages) {
       for (final p in userMediaPaths!) {
+        if (!allowRemoteImages && _isRemoteHttpUrl(p)) continue;
         final normalized = normalizeSrc(p);
         if (!seenSources.add(normalized)) continue;
-        final bool isInlineUrl = p.startsWith('http') || p.startsWith('data:');
+        final bool isInlineUrl = _isRemoteHttpUrl(p) || p.startsWith('data:');
         final String mime = isInlineUrl
             ? _mimeFromDataUrl(p)
             : _mimeFromPath(p);
@@ -826,7 +892,8 @@ class _OpenAIProviderInfo {
   bool get isSiliconFlow =>
       providerId.contains('siliconflow') || host.contains('siliconflow');
   bool get isAzureOpenAI => host.contains('openai.azure.com');
-  bool get isOpenRouter => host.contains('openrouter.ai');
+  bool get isOpenRouter =>
+      providerId.contains('openrouter') || host.contains('openrouter.ai');
   bool get isDeepSeek =>
       host.contains('deepseek') ||
       upstreamModelId.toLowerCase().contains('deepseek');
@@ -839,11 +906,7 @@ class _OpenAIProviderInfo {
       host.contains('intern-ai') ||
       host.contains('intern') ||
       host.contains('chat.intern-ai.org.cn');
-  bool get isKimiThinkingModel =>
-      upstreamModelId.toLowerCase().contains('kimi-k2-thinking') ||
-      upstreamModelId.toLowerCase().contains('kimi-k2.5') ||
-      upstreamModelId.toLowerCase().contains('kimi-k2.6') ||
-      upstreamModelId.toLowerCase().contains('kimi-k2.7');
+  bool get isKimiThinkingModel => _isKimiThinkingModel(upstreamModelId);
 
   bool get needsReasoningEcho =>
       isDeepSeek || isMimo || isZhipu || isKimiThinkingModel;
@@ -860,7 +923,11 @@ void _applyVendorReasoningKnobs(
   final off = _isOff(thinkingBudget);
   if (info.isOpenRouter) {
     if (isReasoning) {
-      if (off) {
+      final support = openAIReasoningSupport(info.upstreamModelId);
+      final requestedEffort = body['reasoning_effort'];
+      if (support?.offFallback != null && requestedEffort is String) {
+        body['reasoning'] = {'effort': requestedEffort};
+      } else if (off) {
         body['reasoning'] = {'enabled': false};
       } else {
         final obj = <String, dynamic>{'enabled': true};
@@ -962,6 +1029,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   final isReasoning = effectiveInfo.abilities.contains(ModelAbility.reasoning);
   final wantsImageOutput = effectiveInfo.output.contains(Modality.image);
   final bool canImageInput = effectiveInfo.input.contains(Modality.image);
+  final bool allowRemoteImages =
+      canImageInput && !_isKimiK3Model(upstreamModelId);
 
   final effort = _openAIEffortForBudget(thinkingBudget, upstreamModelId);
   final info = _OpenAIProviderInfo(
@@ -1160,7 +1229,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           shouldAttachAssistantImage) {
         final parsed = await _parseTextAndImages(
           raw,
-          allowRemoteImages: canImageInput,
+          allowRemoteImages: allowRemoteImages,
           allowLocalImages: canImageInput,
           allowDataImages: canImageInput,
           keepRemoteMarkdownText: true,
@@ -1196,6 +1265,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
 
         void addImage(String url) {
           if (url.isEmpty) return;
+          if (!allowRemoteImages && _isRemoteHttpUrl(url)) return;
           if (seenImageUrls.add(url)) {
             parts.add({'type': 'input_image', 'image_url': url});
           }
@@ -1230,9 +1300,10 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         // Additional images explicitly attached to the last user message
         if (hasAttachedImages) {
           for (final p in userImagePaths!) {
+            if (!allowRemoteImages && _isRemoteHttpUrl(p)) continue;
             final normalized = normalizeSrc(p);
             if (!seenImageSources.add(normalized)) continue;
-            final dataUrl = (p.startsWith('http') || p.startsWith('data:'))
+            final dataUrl = (_isRemoteHttpUrl(p) || p.startsWith('data:'))
                 ? p
                 : await _encodeBase64File(p, withPrefix: true);
             addImage(dataUrl);
@@ -1356,6 +1427,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         messages,
         userMediaPaths: userImagePaths,
         canImageInput: canImageInput,
+        allowRemoteImages: allowRemoteImages,
         stripUnsignedReasoningContent: isClaudeUpstream,
       );
       body = {
@@ -1688,6 +1760,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   next,
                   userMediaPaths: userImagePaths,
                   canImageInput: canImageInput,
+                  allowRemoteImages: allowRemoteImages,
                   stripUnsignedReasoningContent: isClaudeUpstream,
                 );
           reqBody.remove('stream');
@@ -1910,6 +1983,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                       currentMessages,
                       userMediaPaths: userImagePaths,
                       canImageInput: canImageInput,
+                      allowRemoteImages: allowRemoteImages,
                       stripUnsignedReasoningContent: isClaudeUpstream,
                     ),
                     'stream': true,
@@ -2310,7 +2384,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               content = delta;
               approxCompletionChars += content.length;
             }
-          } else if (type == 'response.reasoning_summary_text.delta') {
+          } else if (type == 'response.reasoning_summary_text.delta' ||
+              type == 'response.reasoning_text.delta') {
             final delta = json['delta'];
             if (delta is String) reasoning = delta;
           } else if (type == 'response.output_item.added') {
@@ -3310,6 +3385,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                       currentMessages,
                       userMediaPaths: userImagePaths,
                       canImageInput: canImageInput,
+                      allowRemoteImages: allowRemoteImages,
                       stripUnsignedReasoningContent: isClaudeUpstream,
                     ),
                     'stream': true,
@@ -3821,6 +3897,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           currentMessages,
                           userMediaPaths: userImagePaths,
                           canImageInput: canImageInput,
+                          allowRemoteImages: allowRemoteImages,
                           stripUnsignedReasoningContent: isClaudeUpstream,
                         ),
                         'stream': true,
