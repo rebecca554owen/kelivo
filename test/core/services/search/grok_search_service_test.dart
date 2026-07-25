@@ -14,6 +14,7 @@ void main() {
         id: 'grok-1',
         apiKey: 'xai-test',
         model: 'grok-test',
+        reasoningEffort: 'medium',
         customUrl: 'https://example.com/responses',
         systemPrompt: 'Search carefully.',
       );
@@ -25,6 +26,7 @@ void main() {
       expect(grok.id, 'grok-1');
       expect(grok.apiKey, 'xai-test');
       expect(grok.model, 'grok-test');
+      expect(grok.reasoningEffort, 'medium');
       expect(grok.customUrl, 'https://example.com/responses');
       expect(grok.systemPrompt, 'Search carefully.');
       expect(SearchService.getService(grok), isA<GrokSearchService>());
@@ -109,7 +111,7 @@ void main() {
       expect(result.items.single.text, isEmpty);
     });
 
-    test('keeps explicitly configured model unchanged', () async {
+    test('keeps explicitly configured model and reasoning unchanged', () async {
       http.Request? captured;
       final service = GrokSearchService(
         client: MockClient((request) async {
@@ -138,15 +140,16 @@ void main() {
           id: 'grok-1',
           apiKey: 'xai-test',
           model: 'grok-4-1-fast-non-reasoning',
+          reasoningEffort: 'none',
         ),
       );
 
       final body = jsonDecode(captured!.body) as Map<String, dynamic>;
       expect(body['model'], 'grok-4-1-fast-non-reasoning');
-      expect(body.containsKey('reasoning'), isFalse);
+      expect(body['reasoning'], {'effort': 'none'});
     });
 
-    test('uses current default model with non-reasoning effort', () async {
+    test('uses Grok 4.5 default with minimum reasoning effort', () async {
       http.Request? captured;
       final service = GrokSearchService(
         client: MockClient((request) async {
@@ -175,8 +178,8 @@ void main() {
       );
 
       final body = jsonDecode(captured!.body) as Map<String, dynamic>;
-      expect(body['model'], 'grok-4.3');
-      expect(body['reasoning'], {'effort': 'none'});
+      expect(body['model'], 'grok-4.5');
+      expect(body['reasoning'], {'effort': 'low'});
     });
 
     test(

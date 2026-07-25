@@ -787,6 +787,9 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
     'countries': TextEditingController(),
     'languages': TextEditingController(),
     'model': TextEditingController(text: GrokOptions.defaultModel),
+    'reasoningEffort': TextEditingController(
+      text: GrokOptions.defaultReasoningEffort,
+    ),
     'customUrl': TextEditingController(text: GrokOptions.defaultUrl),
     'systemPrompt': TextEditingController(
       text: GrokOptions.defaultSystemPrompt,
@@ -999,6 +1002,14 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           ),
           const SizedBox(height: 12),
           TextField(
+            controller: _controllers['reasoningEffort'],
+            decoration: _deskInputDecoration(context).copyWith(
+              labelText: l10n.reasoningBudgetSheetTitle,
+              hintText: 'none / low / medium / high / xhigh',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
             controller: _controllers['customUrl'],
             decoration: _deskInputDecoration(context).copyWith(
               labelText: l10n.searchServicesFieldCustomUrlOptional,
@@ -1118,6 +1129,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           id: id,
           apiKey: _controllers['apiKey']!.text,
           model: _controllers['model']!.text.trim(),
+          reasoningEffort: _controllers['reasoningEffort']!.text,
           customUrl: _controllers['customUrl']!.text.trim(),
           systemPrompt: _controllers['systemPrompt']!.text,
         );
@@ -1197,6 +1209,9 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     } else if (s is GrokOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
       _controllers['model'] = TextEditingController(text: s.model);
+      _controllers['reasoningEffort'] = TextEditingController(
+        text: s.reasoningEffort,
+      );
       _controllers['customUrl'] = TextEditingController(text: s.customUrl);
       _controllers['systemPrompt'] = TextEditingController(
         text: s.systemPrompt,
@@ -1333,6 +1348,14 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           decoration: _deskInputDecoration(context).copyWith(
             labelText: l10n.searchServicesDialogModel,
             hintText: GrokOptions.defaultModel,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['reasoningEffort'],
+          decoration: _deskInputDecoration(context).copyWith(
+            labelText: l10n.reasoningBudgetSheetTitle,
+            hintText: 'none / low / medium / high / xhigh',
           ),
         ),
         const SizedBox(height: 12),
@@ -1534,6 +1557,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         id: s.id,
         apiKey: _controllers['apiKey']!.text,
         model: _controllers['model']!.text.trim(),
+        reasoningEffort: _controllers['reasoningEffort']!.text,
         customUrl: _controllers['customUrl']!.text.trim(),
         systemPrompt: _controllers['systemPrompt']!.text,
       );

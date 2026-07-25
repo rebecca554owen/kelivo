@@ -529,13 +529,14 @@ class SerperOptions extends SearchServiceOptions {
 
 class GrokOptions extends SearchServiceOptions {
   static const String defaultUrl = 'https://api.x.ai/v1/responses';
-  static const String defaultModel = 'grok-4.3';
-  static const String defaultReasoningEffort = 'none';
+  static const String defaultModel = 'grok-4.5';
+  static const String defaultReasoningEffort = 'low';
   static const String defaultSystemPrompt =
       "You are a helpful search assistant. Search the web to find accurate and up-to-date information for the user's query. Provide a comprehensive answer with citations.";
 
   final String apiKey;
   final String model;
+  final String reasoningEffort;
   final String customUrl;
   final String systemPrompt;
 
@@ -543,9 +544,14 @@ class GrokOptions extends SearchServiceOptions {
     required super.id,
     required this.apiKey,
     this.model = defaultModel,
+    String? reasoningEffort,
     this.customUrl = defaultUrl,
     this.systemPrompt = defaultSystemPrompt,
-  });
+  }) : reasoningEffort =
+           reasoningEffort ??
+           ((model.trim().isEmpty || model.trim() == defaultModel)
+               ? defaultReasoningEffort
+               : '');
 
   String get resolvedUrl {
     final trimmed = customUrl.trim();
@@ -557,13 +563,7 @@ class GrokOptions extends SearchServiceOptions {
     return trimmed.isEmpty ? defaultModel : trimmed;
   }
 
-  String get resolvedReasoningEffort {
-    final trimmed = model.trim();
-    if (trimmed.isEmpty || trimmed == defaultModel) {
-      return defaultReasoningEffort;
-    }
-    return '';
-  }
+  String get resolvedReasoningEffort => reasoningEffort.trim();
 
   String get resolvedSystemPrompt {
     final trimmed = systemPrompt.trim();
@@ -576,6 +576,7 @@ class GrokOptions extends SearchServiceOptions {
     'id': id,
     'apiKey': apiKey,
     'model': model.trim(),
+    'reasoningEffort': reasoningEffort.trim(),
     'customUrl': customUrl.trim(),
     'systemPrompt': systemPrompt,
   };
@@ -584,6 +585,7 @@ class GrokOptions extends SearchServiceOptions {
     id: json['id'],
     apiKey: json['apiKey'] ?? '',
     model: json['model'] ?? defaultModel,
+    reasoningEffort: json['reasoningEffort'],
     customUrl: json['customUrl'] ?? defaultUrl,
     systemPrompt: json['systemPrompt'] ?? defaultSystemPrompt,
   );

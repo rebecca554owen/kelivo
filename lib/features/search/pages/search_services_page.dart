@@ -1131,6 +1131,13 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
           ),
           const SizedBox(height: 12),
           buildTextField(
+            key: 'reasoningEffort',
+            label: l10n.reasoningBudgetSheetTitle,
+            hint: 'none / low / medium / high / xhigh',
+            initialValue: GrokOptions.defaultReasoningEffort,
+          ),
+          const SizedBox(height: 12),
+          buildTextField(
             key: 'customUrl',
             label: l10n.searchServicesFieldCustomUrlOptional,
             hint: GrokOptions.defaultUrl,
@@ -1261,6 +1268,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
           id: id,
           apiKey: _controllers['apiKey']!.text,
           model: _controllers['model']!.text.trim(),
+          reasoningEffort: _controllers['reasoningEffort']!.text,
           customUrl: _controllers['customUrl']!.text.trim(),
           systemPrompt: _controllers['systemPrompt']!.text,
         );
@@ -1349,6 +1357,9 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
     } else if (service is GrokOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
       _controllers['model'] = TextEditingController(text: service.model);
+      _controllers['reasoningEffort'] = TextEditingController(
+        text: service.reasoningEffort,
+      );
       _controllers['customUrl'] = TextEditingController(
         text: service.customUrl,
       );
@@ -1673,6 +1684,12 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
         ),
         const SizedBox(height: 12),
         buildTextField(
+          key: 'reasoningEffort',
+          label: l10n.reasoningBudgetSheetTitle,
+          hint: 'none / low / medium / high / xhigh',
+        ),
+        const SizedBox(height: 12),
+        buildTextField(
           key: 'customUrl',
           label: l10n.searchServicesFieldCustomUrlOptional,
           hint: GrokOptions.defaultUrl,
@@ -1819,6 +1836,7 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
         id: service.id,
         apiKey: _controllers['apiKey']!.text,
         model: _controllers['model']!.text.trim(),
+        reasoningEffort: _controllers['reasoningEffort']!.text,
         customUrl: _controllers['customUrl']!.text.trim(),
         systemPrompt: _controllers['systemPrompt']!.text,
       );
