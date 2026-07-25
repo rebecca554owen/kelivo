@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:io' show Process, HttpClient, ContentType;
+import 'dart:io' show Process, HttpClient;
 
 import '../../logger.dart';
 import '../models/models.dart';
@@ -389,7 +389,7 @@ class SseClientTransport implements ClientTransport {
       final request = await client.postUrl(url);
 
       // Set headers
-      request.headers.contentType = ContentType.json;
+      request.headers.set('Content-Type', 'application/json');
       if (headers != null) {
         headers!.forEach((name, value) {
           request.headers.add(name, value);
