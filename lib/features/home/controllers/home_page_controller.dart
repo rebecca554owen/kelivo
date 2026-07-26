@@ -362,6 +362,8 @@ class HomePageController extends ChangeNotifier {
       mediaController: _mediaController,
       isImageCropperEnabled: () =>
           _context.read<SettingsProvider>().imageCropperEnabled,
+      getImageCompressConfig: () =>
+          _context.read<SettingsProvider>().resolveImageCompressConfig(),
     );
     _messageBuilderService = MessageBuilderService(
       chatService: _chatService,
@@ -1092,7 +1094,7 @@ class HomePageController extends ChangeNotifier {
 
   Future<void> saveUserMessageEditOnly() async {
     final editState = _userMessageEditState;
-    if (editState == null) return;
+    if (editState == null || _mediaController.hasUnreadyImages) return;
     final input = _mediaController.snapshotInput(_inputController.text);
     if (input.text.trim().isEmpty &&
         input.imagePaths.isEmpty &&

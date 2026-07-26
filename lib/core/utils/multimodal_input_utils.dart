@@ -30,6 +30,7 @@ String inferMediaMimeFromSource(String source, {String fallbackMime = ''}) {
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.webp')) return 'image/webp';
   if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.bmp')) return 'image/bmp';
   if (lower.endsWith('.wav')) return 'audio/wav';
   if (lower.endsWith('.mp3')) return 'audio/mpeg';
   if (lower.endsWith('.pcm16')) return 'audio/pcm16';

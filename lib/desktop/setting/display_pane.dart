@@ -131,6 +131,11 @@ class _DisplaySettingsBody extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SettingsCard(
+                title: l10n.imageSettingsPageTitle,
+                children: const [_ImageCompressionRows()],
+              ),
+              const SizedBox(height: 16),
+              _SettingsCard(
                 title: l10n.displaySettingsPageOtherSettingsTitle,
                 children: const [
                   _ToggleRowAutoScrollEnabled(),
@@ -152,6 +157,177 @@ class _DisplaySettingsBody extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ImageCompressionRows extends StatelessWidget {
+  const _ImageCompressionRows();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    return Column(
+      children: [
+        const _ImageQualityRow(),
+        if (settings.imageUploadQuality == ImageUploadQuality.custom) ...[
+          const _RowDivider(),
+          const _ImageCustomQualityRow(),
+        ],
+        const _RowDivider(),
+        const _ImageCompressTransparentRow(),
+      ],
+    );
+  }
+}
+
+class _ImageQualityRow extends StatelessWidget {
+  const _ImageQualityRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return _LabeledRow(
+      label: l10n.imageSettingsPageQualitySectionTitle,
+      trailing: const _ImageQualityDropdown(),
+    );
+  }
+}
+
+class _ImageQualityDropdown extends StatelessWidget {
+  const _ImageQualityDropdown();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    return DesktopSelectDropdown<ImageUploadQuality>(
+      value: settings.imageUploadQuality,
+      options: [
+        for (final quality in ImageUploadQuality.values)
+          DesktopSelectOption(
+            value: quality,
+            label: _imageQualityTitle(quality, l10n),
+          ),
+      ],
+      minWidth: 140,
+      onSelected: (quality) =>
+          context.read<SettingsProvider>().setImageUploadQuality(quality),
+    );
+  }
+}
+
+class _ImageCustomQualityRow extends StatelessWidget {
+  const _ImageCustomQualityRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    final quality = settings.imageCompressCustomQuality;
+    return _LabeledRow(
+      label: l10n.imageSettingsPageCustomQualityTitle,
+      trailing: SizedBox(
+        width: 280,
+        child: Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: quality.toDouble(),
+                min: 10,
+                max: 100,
+                divisions: 18,
+                label: '$quality',
+                onChanged: (value) => context
+                    .read<SettingsProvider>()
+                    .setImageCompressCustomQuality(value.round()),
+              ),
+            ),
+            SizedBox(
+              width: 32,
+              child: Text(
+                '$quality',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontSize: 14,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageCompressTransparentRow extends StatelessWidget {
+  const _ImageCompressTransparentRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    final cs = Theme.of(context).colorScheme;
+    final enabled = settings.imageUploadQuality != ImageUploadQuality.original;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.imageSettingsPageCompressTransparentTitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: AppFontWeights.regular,
+                      color: cs.onSurface.withValues(alpha: 0.9),
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    l10n.imageSettingsPageCompressTransparentSubtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.25,
+                      color: cs.onSurface.withValues(alpha: 0.58),
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            IosSwitch(
+              value: settings.imageCompressTransparentEnabled,
+              semanticLabel: l10n.imageSettingsPageCompressTransparentTitle,
+              onChanged: enabled
+                  ? (value) => context
+                        .read<SettingsProvider>()
+                        .setImageCompressTransparentEnabled(value)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _imageQualityTitle(ImageUploadQuality quality, AppLocalizations l10n) {
+  return switch (quality) {
+    ImageUploadQuality.original => l10n.imageSettingsPageQualityOriginal,
+    ImageUploadQuality.high => l10n.imageSettingsPageQualityHigh,
+    ImageUploadQuality.balanced => l10n.imageSettingsPageQualityBalanced,
+    ImageUploadQuality.saver => l10n.imageSettingsPageQualitySaver,
+    ImageUploadQuality.custom => l10n.imageSettingsPageQualityCustom,
+  };
 }
 
 class _SettingsCard extends StatelessWidget {

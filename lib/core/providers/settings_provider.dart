@@ -25,6 +25,7 @@ import '../../utils/avatar_cache.dart';
 import '../utils/openai_model_compat.dart';
 import '../../utils/provider_grouping_logic.dart';
 import '../../utils/brand_assets.dart';
+import '../../utils/image_compressor.dart';
 import '../database/business_preferences.dart';
 
 // Desktop: topic list position
@@ -44,6 +45,8 @@ enum DesktopMessageNavButtonsMode {
 
 // Mobile: message navigation buttons visibility mode
 enum MobileMessageNavButtonsMode { always, scroll, never }
+
+enum ImageUploadQuality { original, high, balanced, saver, custom }
 
 class SettingsProvider extends ChangeNotifier {
   static const String _providersOrderKey = 'providers_order_v1';
@@ -183,6 +186,11 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayShowChatListDateKey =
       'display_show_chat_list_date_v1';
   static const String _imageCropperEnabledKey = 'image_cropper_enabled_v1';
+  static const String _imageUploadQualityKey = 'image_upload_quality_v1';
+  static const String _imageCompressCustomQualityKey =
+      'image_compress_custom_quality_v1';
+  static const String _imageCompressTransparentEnabledKey =
+      'image_compress_transparent_enabled_v1';
   static const String _displayMobileCodeBlockWrapKey =
       'display_mobile_code_block_wrap_v1';
   static const String _displayAutoCollapseCodeBlockKey =
@@ -909,6 +917,17 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
     _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
     _imageCropperEnabled = prefs.getBool(_imageCropperEnabledKey) ?? false;
+    _imageUploadQuality = switch (prefs.getString(_imageUploadQualityKey)) {
+      'original' => ImageUploadQuality.original,
+      'high' => ImageUploadQuality.high,
+      'saver' => ImageUploadQuality.saver,
+      'custom' => ImageUploadQuality.custom,
+      _ => ImageUploadQuality.balanced,
+    };
+    _imageCompressCustomQuality =
+        (prefs.getInt(_imageCompressCustomQualityKey) ?? 85).clamp(10, 100);
+    _imageCompressTransparentEnabled =
+        prefs.getBool(_imageCompressTransparentEnabledKey) ?? false;
     _mobileCodeBlockWrap =
         prefs.getBool(_displayMobileCodeBlockWrapKey) ?? false;
     _autoCollapseCodeBlock =
@@ -3700,6 +3719,69 @@ Requirements:
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_imageCropperEnabledKey, v);
+  }
+
+  ImageUploadQuality _imageUploadQuality = ImageUploadQuality.balanced;
+  ImageUploadQuality get imageUploadQuality => _imageUploadQuality;
+  Future<void> setImageUploadQuality(ImageUploadQuality value) async {
+    if (_imageUploadQuality == value) return;
+    _imageUploadQuality = value;
+    notifyListeners();
+    await _preferences.setString(_imageUploadQualityKey, value.name);
+  }
+
+  int _imageCompressCustomQuality = 85;
+  int get imageCompressCustomQuality => _imageCompressCustomQuality;
+  Future<void> setImageCompressCustomQuality(int value) async {
+    final next = value.clamp(10, 100);
+    if (_imageCompressCustomQuality == next) return;
+    _imageCompressCustomQuality = next;
+    notifyListeners();
+    await _preferences.setInt(_imageCompressCustomQualityKey, next);
+  }
+
+  bool _imageCompressTransparentEnabled = false;
+  bool get imageCompressTransparentEnabled => _imageCompressTransparentEnabled;
+  Future<void> setImageCompressTransparentEnabled(bool value) async {
+    if (_imageCompressTransparentEnabled == value) return;
+    _imageCompressTransparentEnabled = value;
+    notifyListeners();
+    await _preferences.setBool(_imageCompressTransparentEnabledKey, value);
+  }
+
+  ImageCompressConfig resolveImageCompressConfig() {
+    return switch (_imageUploadQuality) {
+      ImageUploadQuality.original => ImageCompressConfig(
+        enabled: false,
+        quality: 100,
+        maxLongEdge: 1568,
+        includeTransparent: _imageCompressTransparentEnabled,
+      ),
+      ImageUploadQuality.high => ImageCompressConfig(
+        enabled: true,
+        quality: 90,
+        maxLongEdge: 2048,
+        includeTransparent: _imageCompressTransparentEnabled,
+      ),
+      ImageUploadQuality.balanced => ImageCompressConfig(
+        enabled: true,
+        quality: 85,
+        maxLongEdge: 1568,
+        includeTransparent: _imageCompressTransparentEnabled,
+      ),
+      ImageUploadQuality.saver => ImageCompressConfig(
+        enabled: true,
+        quality: 70,
+        maxLongEdge: 1024,
+        includeTransparent: _imageCompressTransparentEnabled,
+      ),
+      ImageUploadQuality.custom => ImageCompressConfig(
+        enabled: true,
+        quality: _imageCompressCustomQuality,
+        maxLongEdge: 1568,
+        includeTransparent: _imageCompressTransparentEnabled,
+      ),
+    };
   }
 
   // Display: mobile code block word wrap

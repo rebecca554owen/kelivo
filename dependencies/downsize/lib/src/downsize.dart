@@ -8,85 +8,80 @@ class Config {
   /// initial image data.
   final Uint8List data;
 
+  /// JPEG encoding quality.
+  final int quality;
+
   /// minimum image quality.
   final int minQuality;
 
   /// desired file size.
   final double? maxSize;
 
-  Config({required this.data, this.minQuality = 60, this.maxSize});
+  /// Maximum length of the image's longest edge.
+  final int? maxLongEdge;
+
+  Config({
+    required this.data,
+    this.quality = 90,
+    this.minQuality = 60,
+    this.maxSize,
+    this.maxLongEdge,
+  });
 }
 
 class Downsize {
   static Future<Uint8List?> downsize({
     required Uint8List data,
+    int quality = 90,
     int minQuality = 60,
     double? maxSize,
+    int? maxLongEdge,
   }) async {
     if (data.isEmpty) return data;
-    return Downsize().compress(Config(
-      data: data,
-      minQuality: minQuality,
-      maxSize: maxSize,
-    ));
+    return Downsize().compress(
+      Config(
+        data: data,
+        quality: quality,
+        minQuality: minQuality,
+        maxSize: maxSize,
+        maxLongEdge: maxLongEdge,
+      ),
+    );
   }
 
   /// Decode and Compress image data.
   Uint8List? compress(Config config) {
-    Image? image = decodeImage(config.data);
+    Image? image = decodeImage(config.data, frame: 0);
     if (image == null) {
       throw Exception("Unsupported image type.");
     }
 
-    bool isJpg = JpegDecoder().isValidFile(config.data);
-    bool isPng = isJpg ? false : PngDecoder().isValidFile(config.data);
-
-    if (!isPng && !isJpg) {
-      Uint8List data = encodeJpg(image);
-      image = decodeImage(data);
-      if (image == null) {
-        throw Exception("Unsupported image type.");
-      }
-      isJpg = true;
-    }
-
-    var fileSize = config.data.sizeKb;
-    // print('Old File Size Is: ${fileSize}kb, desired size: ${config.maxSize}kb');
-    if (config.maxSize != null && fileSize <= config.maxSize!) {
-      return config.data;
-    }
-
-    // print("image dimensions: ${image.width}/${image.height}");
-
-    if (isPng) {
-      // print('compressPng()');
-      return compressPng(image: image, config: config);
-    }
-    // print('compressJpg()');
-    return compressJpg(image: image, config: config);
+    image = _prepareImage(image, config);
+    return compressJpg(image: image, config: config, preTreatment: false);
   }
 
   /// Compress JPG image.
   Uint8List compressJpg({
     required Image image,
     required Config config,
-    int quality = 90,
+    int? quality,
     bool preTreatment = true,
   }) {
     if (preTreatment) {
-      image = dynamicResize(image);
-      // print("resized to dimensions: ${image.width}/${image.height}");
+      image = _prepareImage(image, config);
     }
 
-    final im = encodeJpg(image, quality: quality);
+    final currentQuality = (quality ?? config.quality).clamp(1, 100).toInt();
+    final minQuality = config.minQuality.clamp(1, 100).toInt();
+    final im = encodeJpg(image, quality: currentQuality);
+    final nextQuality = currentQuality - 10;
     if (config.maxSize != null &&
         im.sizeKb > config.maxSize! &&
-        (quality - 10) >= config.minQuality) {
-      // print('quality => ${quality - 10}');
+        nextQuality >= minQuality) {
       return compressJpg(
         image: image,
         config: config,
-        quality: quality - 10,
+        quality: nextQuality,
         preTreatment: false,
       );
     }
@@ -99,49 +94,38 @@ class Downsize {
     required Image image,
     required Config config,
     int level = 9,
-  }) {
-    int width = image.width;
-    int height = image.height;
+  }) =>
+      compressJpg(image: image, config: config);
 
-    image = dynamicResize(image);
-    // print("resized to dimensions: ${image.width}/${image.height}");
-
-    // remove transparency
-    image = copyResize(
-      image,
-      backgroundColor: ColorRgb8(255, 255, 255),
-      width: width,
-      height: height,
-    );
-
-    // downsize the number of colors (to 8-bit)
-    image = quantize(image, numberOfColors: 256);
-
-    var im = encodePng(image, level: level, filter: PngFilter.none);
-
-    return im;
-  }
-
-  /// Dynamically resize the image based on its dimensions.
-  Image dynamicResize(Image image) {
-    bool byWidth = image.width > image.height;
-    int originalSize = byWidth ? image.width : image.height;
-    int size = originalSize;
-
-    if (originalSize > 2000) {
-      size = (originalSize * 0.5).round();
-    } else if (originalSize > 1000) {
-      size = (originalSize * 0.75).round();
-    } else if (originalSize > 500) {
-      size = (originalSize * 0.9).round();
-    } else {
+  /// Resize the image to fit within [maxLongEdge].
+  Image dynamicResize(Image image, {int? maxLongEdge}) {
+    if (maxLongEdge == null ||
+        maxLongEdge <= 0 ||
+        (image.width <= maxLongEdge && image.height <= maxLongEdge)) {
       return image;
     }
 
     return copyResize(
       image,
-      width: byWidth ? size : null,
-      height: byWidth ? null : size,
+      width: image.width >= image.height ? maxLongEdge : null,
+      height: image.height > image.width ? maxLongEdge : null,
+      interpolation: Interpolation.average,
     );
+  }
+
+  Image _prepareImage(Image image, Config config) {
+    image = bakeOrientation(image);
+    image.exif.clear();
+
+    if (image.hasAlpha) {
+      final background = Image(
+        width: image.width,
+        height: image.height,
+        numChannels: 3,
+      )..clear(ColorRgb8(255, 255, 255));
+      image = compositeImage(background, image);
+    }
+
+    return dynamicResize(image, maxLongEdge: config.maxLongEdge);
   }
 }

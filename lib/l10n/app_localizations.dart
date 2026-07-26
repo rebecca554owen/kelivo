@@ -4937,6 +4937,12 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get chatInputBarMoreTooltip;
 
+  /// No description provided for @chatInputBarImageProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing image'**
+  String get chatInputBarImageProcessing;
+
   /// No description provided for @chatInputBarImageMode.
   ///
   /// In en, this message translates to:
@@ -10579,6 +10585,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Collapse'**
   String get largeContentCollapse;
+
+  /// No description provided for @imageSettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Processing'**
+  String get imageSettingsPageTitle;
+
+  /// No description provided for @imageSettingsPageEditSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing'**
+  String get imageSettingsPageEditSectionTitle;
+
+  /// No description provided for @imageSettingsPageQualitySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Image Quality'**
+  String get imageSettingsPageQualitySectionTitle;
+
+  /// No description provided for @imageSettingsPageQualityOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get imageSettingsPageQualityOriginal;
+
+  /// No description provided for @imageSettingsPageQualityOriginalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t compress; upload as-is'**
+  String get imageSettingsPageQualityOriginalSubtitle;
+
+  /// No description provided for @imageSettingsPageQualityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High Quality'**
+  String get imageSettingsPageQualityHigh;
+
+  /// No description provided for @imageSettingsPageQualityHighSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Long edge 2048 px · quality 90'**
+  String get imageSettingsPageQualityHighSubtitle;
+
+  /// No description provided for @imageSettingsPageQualityBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get imageSettingsPageQualityBalanced;
+
+  /// No description provided for @imageSettingsPageQualityBalancedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Long edge 1568 px · quality 85'**
+  String get imageSettingsPageQualityBalancedSubtitle;
+
+  /// No description provided for @imageSettingsPageQualitySaver.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Saver'**
+  String get imageSettingsPageQualitySaver;
+
+  /// No description provided for @imageSettingsPageQualitySaverSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Long edge 1024 px · quality 70'**
+  String get imageSettingsPageQualitySaverSubtitle;
+
+  /// No description provided for @imageSettingsPageQualityCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get imageSettingsPageQualityCustom;
+
+  /// No description provided for @imageSettingsPageQualityCustomSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the compression quality'**
+  String get imageSettingsPageQualityCustomSubtitle;
+
+  /// No description provided for @imageSettingsPageCustomQualityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression Quality'**
+  String get imageSettingsPageCustomQualityTitle;
+
+  /// No description provided for @imageSettingsPageCompressTransparentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress Transparent & Animated Images'**
+  String get imageSettingsPageCompressTransparentTitle;
+
+  /// No description provided for @imageSettingsPageCompressTransparentSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, transparent PNG, GIF, and similar formats are compressed; transparent areas become white and animations keep only the first frame.'**
+  String get imageSettingsPageCompressTransparentSubtitle;
+
+  /// No description provided for @imageSettingsPageFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.'**
+  String get imageSettingsPageFooter;
 }
 
 class _AppLocalizationsDelegate

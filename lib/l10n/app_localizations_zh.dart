@@ -2540,6 +2540,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInputBarMoreTooltip => '更多';
 
   @override
+  String get chatInputBarImageProcessing => '正在处理图片';
+
+  @override
   String get chatInputBarImageMode => '绘图模式';
 
   @override
@@ -5537,6 +5540,59 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get largeContentCollapse => '收起';
+
+  @override
+  String get imageSettingsPageTitle => '图片处理';
+
+  @override
+  String get imageSettingsPageEditSectionTitle => '编辑';
+
+  @override
+  String get imageSettingsPageQualitySectionTitle => '上传图片质量';
+
+  @override
+  String get imageSettingsPageQualityOriginal => '原图';
+
+  @override
+  String get imageSettingsPageQualityOriginalSubtitle => '不压缩，原样上传';
+
+  @override
+  String get imageSettingsPageQualityHigh => '高质量';
+
+  @override
+  String get imageSettingsPageQualityHighSubtitle => '最长边 2048 像素 · 质量 90';
+
+  @override
+  String get imageSettingsPageQualityBalanced => '平衡';
+
+  @override
+  String get imageSettingsPageQualityBalancedSubtitle => '最长边 1568 像素 · 质量 85';
+
+  @override
+  String get imageSettingsPageQualitySaver => '节省流量';
+
+  @override
+  String get imageSettingsPageQualitySaverSubtitle => '最长边 1024 像素 · 质量 70';
+
+  @override
+  String get imageSettingsPageQualityCustom => '自定义';
+
+  @override
+  String get imageSettingsPageQualityCustomSubtitle => '自选压缩质量';
+
+  @override
+  String get imageSettingsPageCustomQualityTitle => '压缩质量';
+
+  @override
+  String get imageSettingsPageCompressTransparentTitle => '压缩透明及动态图片';
+
+  @override
+  String get imageSettingsPageCompressTransparentSubtitle =>
+      '开启后将压缩透明 PNG、GIF 等格式；透明区域填充为白色，动图仅保留第一帧。';
+
+  @override
+  String get imageSettingsPageFooter =>
+      '压缩在添加图片时进行，已保存或已发送的图片不受影响；压缩后图片以 JPEG 格式随消息发送。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -8073,6 +8129,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatInputBarMoreTooltip => '更多';
+
+  @override
+  String get chatInputBarImageProcessing => '正在处理图片';
 
   @override
   String get chatInputBarImageMode => '绘图模式';
@@ -11072,6 +11131,59 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get largeContentCollapse => '收起';
+
+  @override
+  String get imageSettingsPageTitle => '图片处理';
+
+  @override
+  String get imageSettingsPageEditSectionTitle => '编辑';
+
+  @override
+  String get imageSettingsPageQualitySectionTitle => '上传图片质量';
+
+  @override
+  String get imageSettingsPageQualityOriginal => '原图';
+
+  @override
+  String get imageSettingsPageQualityOriginalSubtitle => '不压缩，原样上传';
+
+  @override
+  String get imageSettingsPageQualityHigh => '高质量';
+
+  @override
+  String get imageSettingsPageQualityHighSubtitle => '最长边 2048 像素 · 质量 90';
+
+  @override
+  String get imageSettingsPageQualityBalanced => '平衡';
+
+  @override
+  String get imageSettingsPageQualityBalancedSubtitle => '最长边 1568 像素 · 质量 85';
+
+  @override
+  String get imageSettingsPageQualitySaver => '节省流量';
+
+  @override
+  String get imageSettingsPageQualitySaverSubtitle => '最长边 1024 像素 · 质量 70';
+
+  @override
+  String get imageSettingsPageQualityCustom => '自定义';
+
+  @override
+  String get imageSettingsPageQualityCustomSubtitle => '自选压缩质量';
+
+  @override
+  String get imageSettingsPageCustomQualityTitle => '压缩质量';
+
+  @override
+  String get imageSettingsPageCompressTransparentTitle => '压缩透明及动态图片';
+
+  @override
+  String get imageSettingsPageCompressTransparentSubtitle =>
+      '开启后将压缩透明 PNG、GIF 等格式；透明区域填充为白色，动图仅保留第一帧。';
+
+  @override
+  String get imageSettingsPageFooter =>
+      '压缩在添加图片时进行，已保存或已发送的图片不受影响；压缩后图片以 JPEG 格式随消息发送。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13607,6 +13719,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputBarMoreTooltip => '更多';
+
+  @override
+  String get chatInputBarImageProcessing => '正在處理圖片';
 
   @override
   String get chatInputBarImageMode => '繪圖模式';
@@ -16607,4 +16722,57 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get largeContentCollapse => '收起';
+
+  @override
+  String get imageSettingsPageTitle => '圖片處理';
+
+  @override
+  String get imageSettingsPageEditSectionTitle => '編輯';
+
+  @override
+  String get imageSettingsPageQualitySectionTitle => '上傳圖片品質';
+
+  @override
+  String get imageSettingsPageQualityOriginal => '原圖';
+
+  @override
+  String get imageSettingsPageQualityOriginalSubtitle => '不壓縮，原樣上傳';
+
+  @override
+  String get imageSettingsPageQualityHigh => '高品質';
+
+  @override
+  String get imageSettingsPageQualityHighSubtitle => '最長邊 2048 像素 · 品質 90';
+
+  @override
+  String get imageSettingsPageQualityBalanced => '平衡';
+
+  @override
+  String get imageSettingsPageQualityBalancedSubtitle => '最長邊 1568 像素 · 品質 85';
+
+  @override
+  String get imageSettingsPageQualitySaver => '節省流量';
+
+  @override
+  String get imageSettingsPageQualitySaverSubtitle => '最長邊 1024 像素 · 品質 70';
+
+  @override
+  String get imageSettingsPageQualityCustom => '自訂';
+
+  @override
+  String get imageSettingsPageQualityCustomSubtitle => '自選壓縮品質';
+
+  @override
+  String get imageSettingsPageCustomQualityTitle => '壓縮品質';
+
+  @override
+  String get imageSettingsPageCompressTransparentTitle => '壓縮透明及動態圖片';
+
+  @override
+  String get imageSettingsPageCompressTransparentSubtitle =>
+      '開啟後將壓縮透明 PNG、GIF 等格式；透明區域填充為白色，動圖僅保留第一幀。';
+
+  @override
+  String get imageSettingsPageFooter =>
+      '壓縮會在加入圖片時進行，已儲存或已傳送的圖片不受影響；壓縮後圖片會以 JPEG 格式隨訊息傳送。';
 }

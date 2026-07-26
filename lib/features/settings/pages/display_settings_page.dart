@@ -9,6 +9,7 @@ import '../../../icons/lucide_adapter.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import '../../../core/providers/settings_provider.dart';
+import 'image_settings_page.dart';
 import 'theme_settings_page.dart';
 import '../../../theme/palettes.dart';
 import '../../../l10n/app_localizations.dart';
@@ -133,6 +134,15 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                   MaterialPageRoute(
                     builder: (_) => const BehaviorStartupSettingsPage(),
                   ),
+                ),
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Image,
+                label: l10n.imageSettingsPageTitle,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ImageSettingsPage()),
                 ),
               ),
               _iosDivider(context),
@@ -2198,16 +2208,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 value: sp.showChatListDate,
                 onChanged: (v) =>
                     context.read<SettingsProvider>().setShowChatListDate(v),
-              ),
-              _iosDivider(context),
-              _iosSwitchRow(
-                context,
-                icon: Lucide.Crop,
-                label: l10n.displaySettingsPageEnableImageCropperTitle,
-                subtitle: l10n.displaySettingsPageEnableImageCropperSubtitle,
-                value: sp.imageCropperEnabled,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().setImageCropperEnabled(v),
               ),
               _iosDivider(context),
               _iosSwitchRow(

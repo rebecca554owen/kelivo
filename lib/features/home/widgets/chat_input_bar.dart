@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:collection';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../../../theme/design_tokens.dart';
@@ -9,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../utils/file_import_helper.dart';
+import '../../../utils/image_compressor.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import '../../../shared/responsive/breakpoints.dart';
@@ -38,8 +40,18 @@ class ChatInputBarController {
 
   bool get allowImagesApiRouting => _state?._allowImagesApiRouting ?? true;
   bool get hasDraftMedia => _state?._hasDraftMedia ?? false;
+  bool get hasUnreadyImages => _state?._hasUnreadyImages ?? false;
 
   void addImages(List<String> paths) => _state?._addImages(paths);
+  void enqueueImages(
+    List<String> paths,
+    ImageCompressConfig config, {
+    bool deleteSourcesAfterProcessing = false,
+  }) => _state?._enqueueImages(
+    paths,
+    config,
+    deleteSourcesAfterProcessing: deleteSourcesAfterProcessing,
+  );
   void clearImages() => _state?._clearImages();
   void addFiles(List<DocumentAttachment> docs) => _state?._addFiles(docs);
   void clearFiles() => _state?._clearFiles();
@@ -47,6 +59,27 @@ class ChatInputBarController {
   ChatInputData snapshotInput(String text) =>
       _state?._snapshotInput(text) ?? ChatInputData(text: text.trim());
   void clearDraft() => _state?._clearDraft();
+}
+
+class _DraftImage {
+  _DraftImage({required this.id, required this.path});
+
+  final int id;
+  String path;
+}
+
+class _ImageProcessingTask {
+  const _ImageProcessingTask({
+    required this.id,
+    required this.sourcePath,
+    required this.config,
+    required this.deleteSourceAfterProcessing,
+  });
+
+  final int id;
+  final String sourcePath;
+  final ImageCompressConfig config;
+  final bool deleteSourceAfterProcessing;
 }
 
 class ChatInputBar extends StatefulWidget {
@@ -159,7 +192,14 @@ class _ChatInputBarState extends State<ChatInputBar>
     with WidgetsBindingObserver {
   late TextEditingController _controller;
   bool _isExpanded = false; // Track expand/collapse state for input field
-  final List<String> _images = <String>[]; // local file paths
+  final List<_DraftImage> _images = <_DraftImage>[];
+  final Queue<_ImageProcessingTask> _imageProcessingQueue =
+      Queue<_ImageProcessingTask>();
+  final Set<int> _processingImageIds = <int>{};
+  final Set<int> _failedImageIds = <int>{};
+  static const int _maxConcurrentImageTasks = 2;
+  int _activeImageTasks = 0;
+  int _nextImageId = 0;
   final List<DocumentAttachment> _docs =
       <DocumentAttachment>[]; // files to upload
   final Map<LogicalKeyboardKey, Timer?> _repeatTimers = {};
@@ -248,17 +288,122 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 
   bool get _hasDraftMedia => _images.isNotEmpty || _docs.isNotEmpty;
+  bool get _hasUnreadyImages =>
+      _processingImageIds.isNotEmpty || _failedImageIds.isNotEmpty;
 
   // Instance method for onChanged to avoid recreating the callback on every build
   void _onTextChanged(String _) => setState(() {});
 
   void _addImages(List<String> paths) {
     if (paths.isEmpty) return;
-    setState(() => _images.addAll(paths));
+    setState(() {
+      _images.addAll(
+        paths.map((path) => _DraftImage(id: _nextImageId++, path: path)),
+      );
+    });
+  }
+
+  void _enqueueImages(
+    List<String> paths,
+    ImageCompressConfig config, {
+    required bool deleteSourcesAfterProcessing,
+  }) {
+    if (paths.isEmpty) return;
+    setState(() {
+      for (final path in paths) {
+        final image = _DraftImage(id: _nextImageId++, path: path);
+        _images.add(image);
+        _processingImageIds.add(image.id);
+        _imageProcessingQueue.add(
+          _ImageProcessingTask(
+            id: image.id,
+            sourcePath: path,
+            config: config,
+            deleteSourceAfterProcessing: deleteSourcesAfterProcessing,
+          ),
+        );
+      }
+    });
+    _pumpImageProcessingQueue();
+  }
+
+  void _pumpImageProcessingQueue() {
+    while (mounted &&
+        _activeImageTasks < _maxConcurrentImageTasks &&
+        _imageProcessingQueue.isNotEmpty) {
+      final task = _imageProcessingQueue.removeFirst();
+      if (!_processingImageIds.contains(task.id)) continue;
+      _activeImageTasks++;
+      unawaited(_processImage(task));
+    }
+  }
+
+  Future<void> _processImage(_ImageProcessingTask task) async {
+    String? savedPath;
+    try {
+      final dir = await AppDirectories.getUploadDirectory();
+      savedPath = await ImageCompressor.compressToUploadDir(
+        task.sourcePath,
+        dir,
+        task.config,
+      );
+      if (savedPath != null &&
+          task.deleteSourceAfterProcessing &&
+          !p.equals(
+            p.normalize(p.absolute(task.sourcePath)),
+            p.normalize(p.absolute(savedPath)),
+          )) {
+        try {
+          await File(task.sourcePath).delete();
+        } catch (_) {}
+      }
+    } catch (_) {
+      savedPath = null;
+    } finally {
+      _activeImageTasks--;
+    }
+
+    final index = mounted
+        ? _images.indexWhere((image) => image.id == task.id)
+        : -1;
+    final taskIsActive = index >= 0 && _processingImageIds.contains(task.id);
+    if (!taskIsActive &&
+        savedPath != null &&
+        !p.equals(
+          p.normalize(p.absolute(task.sourcePath)),
+          p.normalize(p.absolute(savedPath)),
+        )) {
+      try {
+        await File(savedPath).delete();
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    if (taskIsActive) {
+      setState(() {
+        _processingImageIds.remove(task.id);
+        if (savedPath == null) {
+          _failedImageIds.add(task.id);
+        } else {
+          _images[index].path = savedPath;
+        }
+      });
+    }
+    _pumpImageProcessingQueue();
+  }
+
+  void _discardImageState(Iterable<int> ids) {
+    final discarded = ids.toSet();
+    _processingImageIds.removeAll(discarded);
+    _failedImageIds.removeAll(discarded);
+    _imageProcessingQueue.removeWhere((task) => discarded.contains(task.id));
   }
 
   void _clearImages() {
-    setState(() => _images.clear());
+    setState(() {
+      _discardImageState(_images.map((image) => image.id));
+      _images.clear();
+    });
   }
 
   void _addFiles(List<DocumentAttachment> docs) {
@@ -272,9 +417,14 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   void _restoreInput(ChatInputData input) {
     setState(() {
+      _discardImageState(_images.map((image) => image.id));
       _images
         ..clear()
-        ..addAll(input.imagePaths);
+        ..addAll(
+          input.imagePaths.map(
+            (path) => _DraftImage(id: _nextImageId++, path: path),
+          ),
+        );
       _docs
         ..clear()
         ..addAll(input.documents);
@@ -284,7 +434,12 @@ class _ChatInputBarState extends State<ChatInputBar>
   ChatInputData _snapshotInput(String text) {
     return ChatInputData(
       text: text.trim(),
-      imagePaths: List<String>.of(_images),
+      imagePaths: [
+        for (final image in _images)
+          if (!_processingImageIds.contains(image.id) &&
+              !_failedImageIds.contains(image.id))
+            image.path,
+      ],
       documents: List<DocumentAttachment>.of(_docs),
       allowImagesApiRouting: _allowImagesApiRouting,
     );
@@ -293,13 +448,17 @@ class _ChatInputBarState extends State<ChatInputBar>
   void _clearDraft() {
     setState(() {
       _controller.clear();
+      _discardImageState(_images.map((image) => image.id));
       _images.clear();
       _docs.clear();
     });
   }
 
   void _removeImageAt(int index) {
-    setState(() => _images.removeAt(index));
+    setState(() {
+      final image = _images.removeAt(index);
+      _discardImageState([image.id]);
+    });
   }
 
   void _removeDocumentAt(int index) {
@@ -345,6 +504,9 @@ class _ChatInputBarState extends State<ChatInputBar>
       } catch (_) {}
     }
     _repeatTimers.clear();
+    _imageProcessingQueue.clear();
+    _processingImageIds.clear();
+    _failedImageIds.clear();
     widget.mediaController?._unbind(this);
     if (widget.controller == null) {
       _controller.dispose();
@@ -373,7 +535,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   bool get _showExpandButton => _lineCount >= 3;
 
   Future<void> _handleSend() async {
-    if (_isSubmitting) return;
+    if (_isSubmitting || _hasUnreadyImages) return;
     final text = _controller.text.trim();
     if (text.isEmpty && _images.isEmpty && _docs.isEmpty) return;
     _isSubmitting = true;
@@ -382,7 +544,7 @@ class _ChatInputBarState extends State<ChatInputBar>
           await widget.onSend?.call(
             ChatInputData(
               text: text,
-              imagePaths: List.of(_images),
+              imagePaths: _images.map((image) => image.path).toList(),
               documents: List.of(_docs),
               allowImagesApiRouting: _allowImagesApiRouting,
             ),
@@ -392,6 +554,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       if (result == ChatInputSubmissionResult.sent ||
           result == ChatInputSubmissionResult.queued) {
         _controller.clear();
+        _discardImageState(_images.map((image) => image.id));
         _images.clear();
         _docs.clear();
         setState(() {});
@@ -689,6 +852,10 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 
   Future<void> _handlePasteFromClipboard() async {
+    final compressConfig = context
+        .read<SettingsProvider>()
+        .resolveImageCompressConfig();
+
     // 1) Prefer reading via super_clipboard for better Windows support
     try {
       final clipboard = SystemClipboard.instance;
@@ -795,7 +962,11 @@ class _ChatInputBarState extends State<ChatInputBar>
         if (bytes != null && bytes.isNotEmpty && fmt != null) {
           final savedPath = await saveImageBytes(fmt, bytes);
           if (savedPath != null) {
-            _addImages([savedPath]);
+            _enqueueImages(
+              [savedPath],
+              compressConfig,
+              deleteSourcesAfterProcessing: true,
+            );
             return;
           }
         }
@@ -835,10 +1006,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     // 2) Fallback: legacy platform channel image handling
     final imageTempPaths = await ClipboardImages.getImagePaths();
     if (imageTempPaths.isNotEmpty) {
-      final persisted = await _persistClipboardImages(imageTempPaths);
-      if (persisted.isNotEmpty) {
-        _addImages(persisted);
-      }
+      await _enqueueClipboardImages(imageTempPaths);
       return;
     }
 
@@ -848,10 +1016,35 @@ class _ChatInputBarState extends State<ChatInputBar>
       if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
         final filePaths = await ClipboardImages.getFilePaths();
         if (filePaths.isNotEmpty) {
-          final saved = await _copyFilesToUpload(filePaths);
-          if (saved.images.isNotEmpty) _addImages(saved.images);
+          final imagePaths = <String>[];
+          final otherPaths = <String>[];
+          for (final raw in filePaths) {
+            final src = raw.startsWith('file://') ? raw.substring(7) : raw;
+            if (_isImageExtension(p.basename(src))) {
+              imagePaths.add(src);
+            } else {
+              otherPaths.add(src);
+            }
+          }
+          _enqueueImages(
+            imagePaths,
+            compressConfig,
+            deleteSourcesAfterProcessing: false,
+          );
+
+          final saved = await _copyFilesToUpload(otherPaths);
+          if (saved.images.isNotEmpty) {
+            _enqueueImages(
+              saved.images,
+              compressConfig,
+              deleteSourcesAfterProcessing: false,
+            );
+          }
           if (saved.docs.isNotEmpty) _addFiles(saved.docs);
-          handledFiles = saved.images.isNotEmpty || saved.docs.isNotEmpty;
+          handledFiles =
+              imagePaths.isNotEmpty ||
+              saved.images.isNotEmpty ||
+              saved.docs.isNotEmpty;
         }
       }
     } catch (_) {}
@@ -896,6 +1089,10 @@ class _ChatInputBarState extends State<ChatInputBar>
           return (images: images, docs: docs);
         }
         final src = raw.startsWith('file://') ? raw.substring(7) : raw;
+        if (_isImageExtension(p.basename(src))) {
+          images.add(src);
+          continue;
+        }
         final savedPath = await FileImportHelper.copyXFile(
           XFile(src),
           dir,
@@ -1416,48 +1613,39 @@ class _ChatInputBarState extends State<ChatInputBar>
         lower.endsWith('.jpeg') ||
         lower.endsWith('.gif') ||
         lower.endsWith('.webp') ||
+        lower.endsWith('.bmp') ||
         lower.endsWith('.heic') ||
         lower.endsWith('.heif');
   }
 
-  Future<List<String>> _persistClipboardImages(List<String> srcPaths) async {
+  Future<void> _enqueueClipboardImages(List<String> srcPaths) async {
     try {
-      final dir = await AppDirectories.getUploadDirectory();
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      final out = <String>[];
-      int i = 0;
+      final compressConfig = context
+          .read<SettingsProvider>()
+          .resolveImageCompressConfig();
+      final ready = <String>[];
+      final temporary = <String>[];
       for (var raw in srcPaths) {
         try {
           // Normalize path (strip file:// if present)
           final src = raw.startsWith('file://') ? raw.substring(7) : raw;
           // If already under upload directory, just keep it
           if (src.contains('/upload/') || src.contains('\\upload\\')) {
-            out.add(src);
+            ready.add(src);
             continue;
           }
-          final ext = p.extension(src).isNotEmpty ? p.extension(src) : '.png';
-          final name =
-              'paste_${DateTime.now().millisecondsSinceEpoch}_${i++}$ext';
-          final destPath = p.join(dir.path, name);
-          final from = File(src);
-          if (await from.exists()) {
-            await File(destPath).writeAsBytes(await from.readAsBytes());
-            // Best-effort cleanup of the temporary source
-            try {
-              await from.delete();
-            } catch (_) {}
-            out.add(destPath);
-          }
+          if (await File(src).exists()) temporary.add(src);
         } catch (_) {
           // skip single file errors
         }
       }
-      return out;
-    } catch (_) {
-      return const [];
-    }
+      _addImages(ready);
+      _enqueueImages(
+        temporary,
+        compressConfig,
+        deleteSourcesAfterProcessing: true,
+      );
+    } catch (_) {}
   }
 
   void _moveCaret(int dir, {bool extend = false, bool byWord = false}) {
@@ -1507,6 +1695,7 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   Widget _buildInlineAttachmentPreviews(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final previewFill = isDark
         ? Colors.white.withValues(alpha: 0.08)
         : theme.colorScheme.onSurface.withValues(alpha: 0.045);
@@ -1533,7 +1722,10 @@ class _ChatInputBarState extends State<ChatInputBar>
                 itemCount: _images.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, idx) {
-                  final path = _images[idx];
+                  final image = _images[idx];
+                  final processing = _processingImageIds.contains(image.id);
+                  final failed =
+                      !processing && _failedImageIds.contains(image.id);
                   return Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -1544,25 +1736,84 @@ class _ChatInputBarState extends State<ChatInputBar>
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(9),
-                          child: Image.file(
-                            File(path),
-                            width: 64,
-                            height: 64,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 64,
-                              height: 64,
-                              color: previewFill,
-                              child: Icon(
-                                Icons.broken_image,
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.45,
+                          child: processing
+                              ? const ColoredBox(
+                                  color: Colors.black,
+                                  child: SizedBox(width: 64, height: 64),
+                                )
+                              : Image.file(
+                                  File(image.path),
+                                  width: 64,
+                                  height: 64,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 64,
+                                    height: 64,
+                                    color: previewFill,
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.45),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          child: processing
+                              ? IgnorePointer(
+                                  key: ValueKey(
+                                    'chat-input-image-processing:${image.id}',
+                                  ),
+                                  child: Tooltip(
+                                    message: l10n.chatInputBarImageProcessing,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.32,
+                                        ),
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(
+                                  key: ValueKey('image-idle'),
+                                ),
+                        ),
+                      ),
+                      if (failed)
+                        Positioned(
+                          left: 4,
+                          bottom: 4,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.tertiary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.priority_high,
+                              size: 12,
+                              color: theme.colorScheme.onTertiary,
                             ),
                           ),
                         ),
-                      ),
                       Positioned(
                         right: 4,
                         top: 4,
@@ -1989,6 +2240,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                     _CompactSendButton(
                                       enabled:
                                           (hasText || hasImages || hasDocs) &&
+                                          !_hasUnreadyImages &&
                                           !widget.loading,
                                       loading: widget.loading,
                                       onSend: _handleSend,

@@ -502,6 +502,9 @@ void main() {
       findsNothing,
     );
 
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
     controller.dispose();
     focusNode.dispose();
   });
