@@ -4012,9 +4012,15 @@ class ChatDatabaseRepository {
           .map((row) => row.id)
           .toList(growable: false);
 
+      final deletedIds = deletedRows
+          .map((row) => row.id)
+          .toList(growable: false);
+      await (_db.delete(
+        _db.generationRunRows,
+      )..where((row) => row.targetRevisionId.isIn(deletedIds))).go();
       await (_db.delete(
         _db.messageRows,
-      )..where((row) => row.id.isIn(deletedRows.map((row) => row.id)))).go();
+      )..where((row) => row.id.isIn(deletedIds))).go();
       final currentConversation = await _conversationFromRow(
         conversationRow,
         includeMessageIds: false,
