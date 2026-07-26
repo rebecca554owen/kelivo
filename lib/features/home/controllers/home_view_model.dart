@@ -1141,9 +1141,10 @@ class HomeViewModel extends ChangeNotifier {
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
     );
+    final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
 
     // Build content from messages (truncate to reasonable length)
-    final msgs = _chatService.getMessages(convo.id);
+    final msgs = await _chatService.loadMessages(convo.id);
     final tIndex = _chatService.getContextStartIndex(convo.id);
     final List<ChatMessage> sourceAll = (tIndex >= 0 && tIndex <= msgs.length)
         ? msgs.sublist(tIndex)
@@ -1157,7 +1158,6 @@ class HomeViewModel extends ChangeNotifier {
         )
         .join('\n\n');
     final content = joined.length > 3000 ? joined.substring(0, 3000) : joined;
-    final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
 
     String prompt = settings.titlePrompt
         .replaceAll('{locale}', locale)

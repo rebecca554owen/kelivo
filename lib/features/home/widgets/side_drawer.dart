@@ -661,9 +661,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
     );
+    final locale = Localizations.localeOf(context).toLanguageTag();
 
     // Content
-    final msgs = chatService.getMessages(conversationId);
+    final msgs = await chatService.loadMessages(conversationId);
     final joined = msgs
         .where((m) => m.content.isNotEmpty)
         .map(
@@ -672,7 +673,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         )
         .join('\n\n');
     final content = joined.length > 3000 ? joined.substring(0, 3000) : joined;
-    final locale = Localizations.localeOf(context).toLanguageTag();
     final prompt = settings.titlePrompt
         .replaceAll('{locale}', locale)
         .replaceAll('{content}', content);
