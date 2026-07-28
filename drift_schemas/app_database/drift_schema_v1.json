@@ -696,116 +696,6 @@
     },
     {
       "id": 3,
-      "references": [
-        1
-      ],
-      "type": "table",
-      "data": {
-        "name": "tool_event_rows",
-        "was_declared_in_moor": false,
-        "columns": [
-          {
-            "name": "message_id",
-            "getter_name": "messageId",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "defaultConstraints": "REFERENCES message_rows (id) ON DELETE CASCADE",
-            "dialectAwareDefaultConstraints": {
-              "sqlite": "REFERENCES message_rows (id) ON DELETE CASCADE"
-            },
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": [
-              {
-                "foreign_key": {
-                  "to": {
-                    "table": "message_rows",
-                    "column": "id"
-                  },
-                  "initially_deferred": false,
-                  "on_update": null,
-                  "on_delete": "cascade"
-                }
-              }
-            ]
-          },
-          {
-            "name": "events_json",
-            "getter_name": "eventsJson",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          }
-        ],
-        "is_virtual": false,
-        "without_rowid": false,
-        "constraints": [],
-        "explicit_pk": [
-          "message_id"
-        ]
-      }
-    },
-    {
-      "id": 4,
-      "references": [
-        1
-      ],
-      "type": "table",
-      "data": {
-        "name": "gemini_thought_signature_rows",
-        "was_declared_in_moor": false,
-        "columns": [
-          {
-            "name": "message_id",
-            "getter_name": "messageId",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "defaultConstraints": "REFERENCES message_rows (id) ON DELETE CASCADE",
-            "dialectAwareDefaultConstraints": {
-              "sqlite": "REFERENCES message_rows (id) ON DELETE CASCADE"
-            },
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": [
-              {
-                "foreign_key": {
-                  "to": {
-                    "table": "message_rows",
-                    "column": "id"
-                  },
-                  "initially_deferred": false,
-                  "on_update": null,
-                  "on_delete": "cascade"
-                }
-              }
-            ]
-          },
-          {
-            "name": "signature",
-            "getter_name": "signature",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          }
-        ],
-        "is_virtual": false,
-        "without_rowid": false,
-        "constraints": [],
-        "explicit_pk": [
-          "message_id"
-        ]
-      }
-    },
-    {
-      "id": 5,
       "references": [],
       "type": "table",
       "data": {
@@ -842,7 +732,7 @@
       }
     },
     {
-      "id": 6,
+      "id": 4,
       "references": [
         1
       ],
@@ -983,7 +873,7 @@
       }
     },
     {
-      "id": 7,
+      "id": 5,
       "references": [
         1
       ],
@@ -1088,11 +978,11 @@
       }
     },
     {
-      "id": 8,
+      "id": 6,
       "references": [],
       "type": "table",
       "data": {
-        "name": "migration_run_rows",
+        "name": "asset_rows",
         "was_declared_in_moor": false,
         "columns": [
           {
@@ -1106,177 +996,24 @@
             "dsl_features": []
           },
           {
-            "name": "source_kind",
-            "getter_name": "sourceKind",
+            "name": "content_hash",
+            "getter_name": "contentHash",
             "moor_type": "string",
             "nullable": false,
             "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": [
-              {
-                "check": {
-                  "dart_expression": {
-                    "elements": [
-                      {
-                        "lexeme": "sourceKind",
-                        "tag": "sourceKind"
-                      },
-                      ".isIn(const ['hive','legacy_json'])"
-                    ]
-                  }
-                }
-              }
-            ]
-          },
-          {
-            "name": "source_hash",
-            "getter_name": "sourceHash",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          },
-          {
-            "name": "status",
-            "getter_name": "status",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": [
-              {
-                "check": {
-                  "dart_expression": {
-                    "elements": [
-                      {
-                        "lexeme": "status",
-                        "tag": "status"
-                      },
-                      ".isIn(const ['building','completed','failed'])"
-                    ]
-                  }
-                }
-              }
-            ]
-          },
-          {
-            "name": "started_at",
-            "getter_name": "startedAt",
-            "moor_type": "int",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": [],
-            "type_converter": {
-              "dart_expr": "const MicrosecondDateTimeConverter()",
-              "dart_type_name": "DateTime"
-            }
-          },
-          {
-            "name": "completed_at",
-            "getter_name": "completedAt",
-            "moor_type": "int",
-            "nullable": true,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": [],
-            "type_converter": {
-              "dart_expr": "const MicrosecondDateTimeConverter()",
-              "dart_type_name": "DateTime"
-            }
-          }
-        ],
-        "is_virtual": false,
-        "without_rowid": false,
-        "constraints": [
-          "CHECK (completed_at IS NULL OR completed_at >= started_at)"
-        ],
-        "explicit_pk": [
-          "id"
-        ],
-        "unique_keys": [
-          [
-            "source_kind",
-            "source_hash"
-          ]
-        ]
-      }
-    },
-    {
-      "id": 9,
-      "references": [
-        8
-      ],
-      "type": "table",
-      "data": {
-        "name": "migration_issue_rows",
-        "was_declared_in_moor": false,
-        "columns": [
-          {
-            "name": "id",
-            "getter_name": "id",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          },
-          {
-            "name": "migration_run_id",
-            "getter_name": "migrationRunId",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "defaultConstraints": "REFERENCES migration_run_rows (id) ON DELETE CASCADE",
+            "defaultConstraints": "UNIQUE",
             "dialectAwareDefaultConstraints": {
-              "sqlite": "REFERENCES migration_run_rows (id) ON DELETE CASCADE"
+              "sqlite": "UNIQUE"
             },
             "default_dart": null,
             "default_client_dart": null,
             "dsl_features": [
-              {
-                "foreign_key": {
-                  "to": {
-                    "table": "migration_run_rows",
-                    "column": "id"
-                  },
-                  "initially_deferred": false,
-                  "on_update": null,
-                  "on_delete": "cascade"
-                }
-              }
+              "unique"
             ]
           },
           {
-            "name": "conversation_id",
-            "getter_name": "conversationId",
-            "moor_type": "string",
-            "nullable": true,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          },
-          {
-            "name": "source_entity_id",
-            "getter_name": "sourceEntityId",
-            "moor_type": "string",
-            "nullable": true,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          },
-          {
-            "name": "kind",
-            "getter_name": "kind",
+            "name": "path",
+            "getter_name": "path",
             "moor_type": "string",
             "nullable": false,
             "customConstraints": null,
@@ -1285,9 +1022,9 @@
             "dsl_features": []
           },
           {
-            "name": "severity",
-            "getter_name": "severity",
-            "moor_type": "string",
+            "name": "byte_size",
+            "getter_name": "byteSize",
+            "moor_type": "int",
             "nullable": false,
             "customConstraints": null,
             "default_dart": null,
@@ -1298,10 +1035,15 @@
                   "dart_expression": {
                     "elements": [
                       {
-                        "lexeme": "severity",
-                        "tag": "severity"
+                        "lexeme": "ComparableExpr",
+                        "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
                       },
-                      ".isIn(const ['warning','recovered','rejected'])"
+                      "(",
+                      {
+                        "lexeme": "byteSize",
+                        "tag": "byteSize"
+                      },
+                      ").isBiggerOrEqualValue(0)"
                     ]
                   }
                 }
@@ -1309,18 +1051,90 @@
             ]
           },
           {
-            "name": "details_json",
-            "getter_name": "detailsJson",
-            "moor_type": "string",
-            "nullable": false,
+            "name": "width",
+            "getter_name": "width",
+            "moor_type": "int",
+            "nullable": true,
             "customConstraints": null,
-            "default_dart": "const CustomExpression('\\'{}\\'')",
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "check": {
+                  "dart_expression": {
+                    "elements": [
+                      {
+                        "lexeme": "ComparableExpr",
+                        "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+                      },
+                      "(",
+                      {
+                        "lexeme": "width",
+                        "tag": "width"
+                      },
+                      ").isBiggerThanValue(0)"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "height",
+            "getter_name": "height",
+            "moor_type": "int",
+            "nullable": true,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "check": {
+                  "dart_expression": {
+                    "elements": [
+                      {
+                        "lexeme": "ComparableExpr",
+                        "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+                      },
+                      "(",
+                      {
+                        "lexeme": "height",
+                        "tag": "height"
+                      },
+                      ").isBiggerThanValue(0)"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "thumbnail_path",
+            "getter_name": "thumbnailPath",
+            "moor_type": "string",
+            "nullable": true,
+            "customConstraints": null,
+            "default_dart": null,
             "default_client_dart": null,
             "dsl_features": []
           },
           {
             "name": "created_at",
             "getter_name": "createdAt",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [],
+            "type_converter": {
+              "dart_expr": "const MicrosecondDateTimeConverter()",
+              "dart_type_name": "DateTime"
+            }
+          },
+          {
+            "name": "last_referenced_at",
+            "getter_name": "lastReferencedAt",
             "moor_type": "int",
             "nullable": false,
             "customConstraints": null,
@@ -1342,7 +1156,341 @@
       }
     },
     {
+      "id": 7,
+      "references": [
+        1,
+        6
+      ],
+      "type": "table",
+      "data": {
+        "name": "message_asset_rows",
+        "was_declared_in_moor": false,
+        "columns": [
+          {
+            "name": "conversation_id",
+            "getter_name": "conversationId",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "revision_id",
+            "getter_name": "revisionId",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "REFERENCES message_rows (id) ON DELETE CASCADE",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "REFERENCES message_rows (id) ON DELETE CASCADE"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "foreign_key": {
+                  "to": {
+                    "table": "message_rows",
+                    "column": "id"
+                  },
+                  "initially_deferred": false,
+                  "on_update": null,
+                  "on_delete": "cascade"
+                }
+              }
+            ]
+          },
+          {
+            "name": "asset_id",
+            "getter_name": "assetId",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "REFERENCES asset_rows (id) ON DELETE CASCADE",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "REFERENCES asset_rows (id) ON DELETE CASCADE"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "foreign_key": {
+                  "to": {
+                    "table": "asset_rows",
+                    "column": "id"
+                  },
+                  "initially_deferred": false,
+                  "on_update": null,
+                  "on_delete": "cascade"
+                }
+              }
+            ]
+          },
+          {
+            "name": "kind",
+            "getter_name": "kind",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "check": {
+                  "dart_expression": {
+                    "elements": [
+                      {
+                        "lexeme": "kind",
+                        "tag": "kind"
+                      },
+                      ".isNotValue('')"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "is_virtual": false,
+        "without_rowid": false,
+        "constraints": [],
+        "explicit_pk": [
+          "revision_id",
+          "asset_id",
+          "kind"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "references": [
+        6
+      ],
+      "type": "table",
+      "data": {
+        "name": "asset_gc_rows",
+        "was_declared_in_moor": false,
+        "columns": [
+          {
+            "name": "asset_id",
+            "getter_name": "assetId",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "REFERENCES asset_rows (id) ON DELETE CASCADE",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "REFERENCES asset_rows (id) ON DELETE CASCADE"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "foreign_key": {
+                  "to": {
+                    "table": "asset_rows",
+                    "column": "id"
+                  },
+                  "initially_deferred": false,
+                  "on_update": null,
+                  "on_delete": "cascade"
+                }
+              }
+            ]
+          },
+          {
+            "name": "not_before",
+            "getter_name": "notBefore",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [],
+            "type_converter": {
+              "dart_expr": "const MicrosecondDateTimeConverter()",
+              "dart_type_name": "DateTime"
+            }
+          },
+          {
+            "name": "attempts",
+            "getter_name": "attempts",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('0')",
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "check": {
+                  "dart_expression": {
+                    "elements": [
+                      {
+                        "lexeme": "ComparableExpr",
+                        "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+                      },
+                      "(",
+                      {
+                        "lexeme": "attempts",
+                        "tag": "attempts"
+                      },
+                      ").isBiggerOrEqualValue(0)"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "generation",
+            "getter_name": "generation",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('0')",
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "check": {
+                  "dart_expression": {
+                    "elements": [
+                      {
+                        "lexeme": "ComparableExpr",
+                        "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+                      },
+                      "(",
+                      {
+                        "lexeme": "generation",
+                        "tag": "generation"
+                      },
+                      ").isBiggerOrEqualValue(0)"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "is_virtual": false,
+        "without_rowid": false,
+        "constraints": [],
+        "explicit_pk": [
+          "asset_id"
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "references": [],
+      "type": "table",
+      "data": {
+        "name": "gc_audit_rows",
+        "was_declared_in_moor": false,
+        "columns": [
+          {
+            "name": "id",
+            "getter_name": "id",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "PRIMARY KEY AUTOINCREMENT",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "PRIMARY KEY AUTOINCREMENT"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              "auto-increment"
+            ]
+          },
+          {
+            "name": "kind",
+            "getter_name": "kind",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "entity_id",
+            "getter_name": "entityId",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
+            "name": "completed_at",
+            "getter_name": "completedAt",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [],
+            "type_converter": {
+              "dart_expr": "const MicrosecondDateTimeConverter()",
+              "dart_type_name": "DateTime"
+            }
+          }
+        ],
+        "is_virtual": false,
+        "without_rowid": false,
+        "constraints": []
+      }
+    },
+    {
       "id": 10,
+      "references": [
+        1
+      ],
+      "type": "table",
+      "data": {
+        "name": "asset_reference_dirty_rows",
+        "was_declared_in_moor": false,
+        "columns": [
+          {
+            "name": "revision_id",
+            "getter_name": "revisionId",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "REFERENCES message_rows (id) ON DELETE CASCADE",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "REFERENCES message_rows (id) ON DELETE CASCADE"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              {
+                "foreign_key": {
+                  "to": {
+                    "table": "message_rows",
+                    "column": "id"
+                  },
+                  "initially_deferred": false,
+                  "on_update": null,
+                  "on_delete": "cascade"
+                }
+              }
+            ]
+          }
+        ],
+        "is_virtual": false,
+        "without_rowid": false,
+        "constraints": [],
+        "explicit_pk": [
+          "revision_id"
+        ]
+      }
+    },
+    {
+      "id": 11,
       "references": [
         0,
         1
@@ -1548,7 +1696,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 12,
       "references": [],
       "type": "table",
       "data": {
@@ -1628,7 +1776,7 @@
       }
     },
     {
-      "id": 12,
+      "id": 13,
       "references": [],
       "type": "table",
       "data": {
@@ -1708,7 +1856,7 @@
       }
     },
     {
-      "id": 13,
+      "id": 14,
       "references": [],
       "type": "table",
       "data": {
@@ -1788,7 +1936,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 15,
       "references": [],
       "type": "table",
       "data": {
@@ -1868,7 +2016,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 16,
       "references": [],
       "type": "table",
       "data": {
@@ -1948,7 +2096,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 17,
       "references": [],
       "type": "table",
       "data": {
@@ -2038,7 +2186,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 18,
       "references": [],
       "type": "table",
       "data": {
@@ -2118,7 +2266,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 19,
       "references": [],
       "type": "table",
       "data": {
@@ -2198,7 +2346,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 20,
       "references": [],
       "type": "table",
       "data": {
@@ -2278,7 +2426,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 21,
       "references": [],
       "type": "table",
       "data": {
@@ -2358,7 +2506,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 22,
       "references": [],
       "type": "table",
       "data": {
@@ -2438,7 +2586,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "references": [],
       "type": "table",
       "data": {
@@ -2489,7 +2637,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 24,
       "references": [
         0
       ],
@@ -2512,7 +2660,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 25,
       "references": [
         0
       ],
@@ -2531,7 +2679,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 26,
       "references": [
         1
       ],
@@ -2558,7 +2706,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 27,
       "references": [
         1
       ],
@@ -2585,7 +2733,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 28,
       "references": [
         1
       ],
@@ -2616,13 +2764,13 @@
       }
     },
     {
-      "id": 28,
+      "id": 29,
       "references": [
-        6
+        4
       ],
       "type": "index",
       "data": {
-        "on": 6,
+        "on": 4,
         "name": "idx_message_parts_revision_ordinal",
         "sql": null,
         "unique": false,
@@ -2643,13 +2791,13 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "references": [
-        7
+        5
       ],
       "type": "index",
       "data": {
-        "on": 7,
+        "on": 5,
         "name": "idx_provider_artifacts_revision_kind",
         "sql": null,
         "unique": false,
@@ -2670,40 +2818,36 @@
       }
     },
     {
-      "id": 30,
+      "id": 31,
       "references": [
-        9
+        7
       ],
       "type": "index",
       "data": {
-        "on": 9,
-        "name": "idx_migration_issues_run_kind",
+        "on": 7,
+        "name": "idx_message_assets_asset",
         "sql": null,
         "unique": false,
         "columns": [
           {
-            "column": "migration_run_id",
+            "column": "asset_id",
             "order_by": null
           },
           {
-            "column": "kind",
-            "order_by": null
-          },
-          {
-            "column": "id",
+            "column": "revision_id",
             "order_by": null
           }
         ]
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "references": [
-        10
+        11
       ],
       "type": "index",
       "data": {
-        "on": 10,
+        "on": 11,
         "name": "idx_generation_runs_active_target",
         "sql": "CREATE UNIQUE INDEX idx_generation_runs_active_target ON generation_run_rows (conversation_id, target_revision_id) WHERE state IN ('preparing', 'requesting', 'streaming', 'waiting_tool')",
         "unique": true,
@@ -2711,13 +2855,13 @@
       }
     },
     {
-      "id": 32,
+      "id": 33,
       "references": [
-        10
+        11
       ],
       "type": "index",
       "data": {
-        "on": 10,
+        "on": 11,
         "name": "idx_generation_runs_state_updated",
         "sql": null,
         "unique": false,
@@ -2738,13 +2882,13 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
       "references": [
-        16
+        17
       ],
       "type": "index",
       "data": {
-        "on": 16,
+        "on": 17,
         "name": "idx_assistant_memories_assistant",
         "sql": null,
         "unique": false,
@@ -2790,24 +2934,6 @@
       ]
     },
     {
-      "name": "tool_event_rows",
-      "sql": [
-        {
-          "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"tool_event_rows\" (\"message_id\" TEXT NOT NULL REFERENCES message_rows (id) ON DELETE CASCADE, \"events_json\" TEXT NOT NULL, PRIMARY KEY (\"message_id\"));"
-        }
-      ]
-    },
-    {
-      "name": "gemini_thought_signature_rows",
-      "sql": [
-        {
-          "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"gemini_thought_signature_rows\" (\"message_id\" TEXT NOT NULL REFERENCES message_rows (id) ON DELETE CASCADE, \"signature\" TEXT NOT NULL, PRIMARY KEY (\"message_id\"));"
-        }
-      ]
-    },
-    {
       "name": "chat_storage_meta_rows",
       "sql": [
         {
@@ -2835,20 +2961,47 @@
       ]
     },
     {
-      "name": "migration_run_rows",
+      "name": "asset_rows",
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"migration_run_rows\" (\"id\" TEXT NOT NULL, \"source_kind\" TEXT NOT NULL CHECK(\"source_kind\" IN ('hive', 'legacy_json')), \"source_hash\" TEXT NOT NULL, \"status\" TEXT NOT NULL CHECK(\"status\" IN ('building', 'completed', 'failed')), \"started_at\" INTEGER NOT NULL, \"completed_at\" INTEGER NULL, PRIMARY KEY (\"id\"), UNIQUE (\"source_kind\", \"source_hash\"), CHECK (completed_at IS NULL OR completed_at >= started_at));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"asset_rows\" (\"id\" TEXT NOT NULL, \"content_hash\" TEXT NOT NULL UNIQUE, \"path\" TEXT NOT NULL, \"byte_size\" INTEGER NOT NULL CHECK(\"byte_size\" >= 0), \"width\" INTEGER NULL CHECK(\"width\" > 0), \"height\" INTEGER NULL CHECK(\"height\" > 0), \"thumbnail_path\" TEXT NULL, \"created_at\" INTEGER NOT NULL, \"last_referenced_at\" INTEGER NOT NULL, PRIMARY KEY (\"id\"));"
         }
       ]
     },
     {
-      "name": "migration_issue_rows",
+      "name": "message_asset_rows",
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"migration_issue_rows\" (\"id\" TEXT NOT NULL, \"migration_run_id\" TEXT NOT NULL REFERENCES migration_run_rows (id) ON DELETE CASCADE, \"conversation_id\" TEXT NULL, \"source_entity_id\" TEXT NULL, \"kind\" TEXT NOT NULL, \"severity\" TEXT NOT NULL CHECK(\"severity\" IN ('warning', 'recovered', 'rejected')), \"details_json\" TEXT NOT NULL DEFAULT '{}', \"created_at\" INTEGER NOT NULL, PRIMARY KEY (\"id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"message_asset_rows\" (\"conversation_id\" TEXT NOT NULL, \"revision_id\" TEXT NOT NULL REFERENCES message_rows (id) ON DELETE CASCADE, \"asset_id\" TEXT NOT NULL REFERENCES asset_rows (id) ON DELETE CASCADE, \"kind\" TEXT NOT NULL CHECK(\"kind\" IS NOT ''), PRIMARY KEY (\"revision_id\", \"asset_id\", \"kind\"));"
+        }
+      ]
+    },
+    {
+      "name": "asset_gc_rows",
+      "sql": [
+        {
+          "dialect": "sqlite",
+          "sql": "CREATE TABLE IF NOT EXISTS \"asset_gc_rows\" (\"asset_id\" TEXT NOT NULL REFERENCES asset_rows (id) ON DELETE CASCADE, \"not_before\" INTEGER NOT NULL, \"attempts\" INTEGER NOT NULL DEFAULT 0 CHECK(\"attempts\" >= 0), \"generation\" INTEGER NOT NULL DEFAULT 0 CHECK(\"generation\" >= 0), PRIMARY KEY (\"asset_id\"));"
+        }
+      ]
+    },
+    {
+      "name": "gc_audit_rows",
+      "sql": [
+        {
+          "dialect": "sqlite",
+          "sql": "CREATE TABLE IF NOT EXISTS \"gc_audit_rows\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"kind\" TEXT NOT NULL, \"entity_id\" TEXT NOT NULL, \"completed_at\" INTEGER NOT NULL);"
+        }
+      ]
+    },
+    {
+      "name": "asset_reference_dirty_rows",
+      "sql": [
+        {
+          "dialect": "sqlite",
+          "sql": "CREATE TABLE IF NOT EXISTS \"asset_reference_dirty_rows\" (\"revision_id\" TEXT NOT NULL REFERENCES message_rows (id) ON DELETE CASCADE, PRIMARY KEY (\"revision_id\"));"
         }
       ]
     },
@@ -3033,11 +3186,11 @@
       ]
     },
     {
-      "name": "idx_migration_issues_run_kind",
+      "name": "idx_message_assets_asset",
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE INDEX idx_migration_issues_run_kind ON migration_issue_rows (migration_run_id, kind, id)"
+          "sql": "CREATE INDEX idx_message_assets_asset ON message_asset_rows (asset_id, revision_id)"
         }
       ]
     },

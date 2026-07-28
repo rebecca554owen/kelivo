@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
-import 'package:Kelivo/core/services/database_v2_rollout_ledger.dart';
+import 'package:Kelivo/core/services/hive_migration_marker.dart';
 import 'package:Kelivo/features/migration/hive_to_sqlite_migration_service.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
@@ -226,11 +226,12 @@ void main() {
 
     final afterMigration = await HiveToSqliteMigrationService.check();
     expect(afterMigration.needsMigration, isFalse);
-    final rollout = await DatabaseV2RolloutLedger(tempDir).read();
-    expect(rollout, isNotNull);
-    expect(rollout!.conversationCount, 1);
-    expect(rollout.messageCount, 2);
-    expect(rollout.issueCounts.keys, {'warning', 'recovered', 'rejected'});
+    expect(
+      HiveMigrationMarker.isMigrationComplete(
+        File('${tempDir.path}/kelivo.db'),
+      ),
+      isTrue,
+    );
 
     final chatService = ChatService();
     await chatService.init();
@@ -425,6 +426,131 @@ void main() {
       'last-batch-signature',
     );
   });
+
+  test('repairs duplicate (groupId, version) pairs including empty-string '
+      'groupIds instead of failing validation', () async {
+    final baseTime = DateTime(2024, 3, 1, 9);
+    final conversation = Conversation(
+      id: 'conversation-dup-versions',
+      title: 'Duplicate Versions Source',
+      createdAt: baseTime,
+      updatedAt: baseTime.add(const Duration(hours: 1)),
+    );
+    final messages = [
+      ChatMessage(
+        id: 'dup-a',
+        role: 'assistant',
+        content: 'first take',
+        conversationId: conversation.id,
+        timestamp: baseTime,
+        groupId: 'dup-group',
+        version: 0,
+      ),
+      ChatMessage(
+        id: 'dup-b',
+        role: 'assistant',
+        content: 'second take',
+        conversationId: conversation.id,
+        timestamp: baseTime.add(const Duration(minutes: 1)),
+        groupId: 'dup-group',
+        version: 0,
+      ),
+      // '' is stored verbatim and is a real value to the SQLite unique
+      // (conversationId, groupId, version) index, so empty-string groups
+      // need the same version repair as named groups.
+      ChatMessage(
+        id: 'empty-a',
+        role: 'assistant',
+        content: 'empty group first',
+        conversationId: conversation.id,
+        timestamp: baseTime.add(const Duration(minutes: 2)),
+        groupId: '',
+        version: 0,
+      ),
+      ChatMessage(
+        id: 'empty-b',
+        role: 'assistant',
+        content: 'empty group second',
+        conversationId: conversation.id,
+        timestamp: baseTime.add(const Duration(minutes: 3)),
+        groupId: '',
+        version: 0,
+      ),
+    ];
+    conversation.messageIds.addAll(messages.map((message) => message.id));
+
+    _registerHiveAdapters();
+    Hive.init(tempDir.path);
+    final conversations = await Hive.openBox<Conversation>('conversations');
+    final messagesBox = await Hive.openBox<ChatMessage>('messages');
+    await conversations.put(conversation.id, conversation);
+    for (final message in messages) {
+      await messagesBox.put(message.id, message);
+    }
+    await conversations.close();
+    await messagesBox.close();
+    await Hive.close();
+
+    final decision = await HiveToSqliteMigrationService.check();
+    expect(decision.needsMigration, isTrue);
+
+    final service = HiveToSqliteMigrationService(decision);
+    await service.migrate();
+    await service.dispose();
+
+    final chatService = ChatService();
+    await chatService.init();
+    addTearDown(chatService.close);
+
+    final migrated = await chatService.loadMessages(conversation.id);
+    expect(migrated.map((m) => m.id).toList(), [
+      'dup-a',
+      'dup-b',
+      'empty-a',
+      'empty-b',
+    ]);
+    expect(
+      migrated
+          .where((m) => m.groupId == 'dup-group')
+          .map((m) => m.version)
+          .toSet(),
+      {0, 1},
+    );
+    expect(
+      migrated.where((m) => m.groupId == '').map((m) => m.version).toSet(),
+      {0, 1},
+    );
+  });
+
+  test(
+    'failed migration removes the leftover .migrating database family',
+    () async {
+      _registerHiveAdapters();
+      Hive.init(tempDir.path);
+      final conversations = await Hive.openBox<Conversation>('conversations');
+      await conversations.close();
+      await Hive.close();
+      // A directory at the target path makes the final replace step fail
+      // after the temporary database was fully written.
+      await Directory('${tempDir.path}/kelivo.db').create();
+      final staleTemp = File('${tempDir.path}/kelivo.db.migrating');
+      final staleWal = File('${tempDir.path}/kelivo.db.migrating-wal');
+
+      final service = HiveToSqliteMigrationService(
+        HiveToSqliteMigrationDecision(
+          needsMigration: true,
+          appDataDir: tempDir,
+          sqliteFile: File('${tempDir.path}/kelivo.db'),
+          hiveFiles: [File('${tempDir.path}/conversations.hive')],
+        ),
+      );
+      addTearDown(service.dispose);
+
+      await expectLater(service.migrate(), throwsA(anything));
+      expect(await staleTemp.exists(), isFalse);
+      expect(await staleWal.exists(), isFalse);
+    },
+  );
 
   test(
     'does not show empty resource directories in initial backup items',

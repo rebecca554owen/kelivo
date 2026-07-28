@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,7 +13,6 @@ import '../../core/database/chat_database_repository.dart';
 import '../../core/models/chat_message.dart';
 import '../../core/models/conversation.dart';
 import '../../core/services/backup/backup_settings_validator.dart';
-import '../../core/services/database_v2_rollout_ledger.dart';
 import '../../utils/app_directories.dart';
 
 enum HiveToSqliteMigrationStage {
@@ -67,6 +65,7 @@ class HiveToSqliteMigrationStatus {
     this.conversations = 0,
     this.messages = 0,
     this.backupItems = const <HiveToSqliteBackupItem>[],
+    this.chatsExportDegraded = false,
   });
 
   final HiveToSqliteMigrationStage stage;
@@ -79,6 +78,7 @@ class HiveToSqliteMigrationStatus {
   final int conversations;
   final int messages;
   final List<HiveToSqliteBackupItem> backupItems;
+  final bool chatsExportDegraded;
 
   HiveToSqliteMigrationStatus copyWith({
     HiveToSqliteMigrationStage? stage,
@@ -91,6 +91,7 @@ class HiveToSqliteMigrationStatus {
     int? conversations,
     int? messages,
     List<HiveToSqliteBackupItem>? backupItems,
+    bool? chatsExportDegraded,
   }) {
     return HiveToSqliteMigrationStatus(
       stage: stage ?? this.stage,
@@ -103,6 +104,7 @@ class HiveToSqliteMigrationStatus {
       conversations: conversations ?? this.conversations,
       messages: messages ?? this.messages,
       backupItems: backupItems ?? this.backupItems,
+      chatsExportDegraded: chatsExportDegraded ?? this.chatsExportDegraded,
     );
   }
 }
@@ -148,6 +150,7 @@ class HiveToSqliteMigrationService {
   final _controller = StreamController<HiveToSqliteMigrationStatus>.broadcast();
   final _log = <String>[];
   var _lastBackupItems = const <HiveToSqliteBackupItem>[];
+  var _chatsExportDegraded = false;
 
   Stream<HiveToSqliteMigrationStatus> get statusStream => _controller.stream;
 
@@ -324,6 +327,7 @@ class HiveToSqliteMigrationService {
           error: '$error',
           log: List.of(_log),
           backupItems: _lastBackupItems,
+          chatsExportDegraded: _chatsExportDegraded,
         ),
       );
       rethrow;
@@ -357,6 +361,7 @@ class HiveToSqliteMigrationService {
     LazyBox<Conversation>? conversationsBox;
     LazyBox<ChatMessage>? messagesBox;
     LazyBox<dynamic>? toolEventsBox;
+    var published = false;
     try {
       _emit(
         HiveToSqliteMigrationStage.migrating,
@@ -407,11 +412,16 @@ class HiveToSqliteMigrationService {
       );
 
       await repo.clearAllData();
-      final sourceHash = await _legacySourceHash();
-      final migrationRunId = 'hive-${sourceHash.substring(0, 32)}';
+      // 1.1.17 tolerated dangling references, cross-conversation reuse and
+      // duplicate (groupId, version) pairs at runtime; the batches must repair
+      // or skip those shapes instead of failing the whole migration.
+      final repairStats = _MigrationRepairStats();
+      final seenMessageIds = <String>{};
       for (final conversation in conversations) {
         var needsConversationInsert = true;
         var order = 0;
+        final seenGroupVersions = <String>{};
+        final maxGroupVersions = <String, int>{};
         for (
           var start = 0;
           start < conversation.messageIds.length;
@@ -424,8 +434,36 @@ class HiveToSqliteMigrationService {
           final toolEventsByMessageId = <String, List<Map<String, dynamic>>>{};
           final geminiSignaturesByMessageId = <String, String>{};
           for (var i = start; i < end; i++) {
-            final message = await messagesBox.get(conversation.messageIds[i]);
-            if (message == null) continue;
+            var message = await messagesBox.get(conversation.messageIds[i]);
+            if (message == null) {
+              repairStats.danglingMessageRefs++;
+              continue;
+            }
+            if (!seenMessageIds.add(message.id)) {
+              repairStats.duplicateMessageIds++;
+              continue;
+            }
+            if (message.conversationId != conversation.id) {
+              repairStats.conversationIdMismatches++;
+              message = message.copyWith(conversationId: conversation.id);
+            }
+            final groupId = message.groupId;
+            // '' is stored verbatim and is a real value to the
+            // unique(conversationId, groupId, version) index (unlike NULL),
+            // so empty-string groups need version repair too.
+            if (groupId != null) {
+              var version = message.version;
+              if (!seenGroupVersions.add('$groupId $version')) {
+                version = (maxGroupVersions[groupId] ?? version) + 1;
+                repairStats.versionConflicts++;
+                message = message.copyWith(version: version);
+                seenGroupVersions.add('$groupId $version');
+              }
+              final knownMax = maxGroupVersions[groupId];
+              if (knownMax == null || version > knownMax) {
+                maxGroupVersions[groupId] = version;
+              }
+            }
             batch.add((message: message, messageOrder: order));
             order++;
             if (toolEventsBox != null) {
@@ -473,7 +511,9 @@ class HiveToSqliteMigrationService {
           );
         }
       }
-      const migrationIssueCounts = <String, int>{};
+      if (repairStats.hasIssues) {
+        _logLine('legacy-data repairs: ${repairStats.describe()}');
+      }
 
       _emit(
         HiveToSqliteMigrationStage.migrating,
@@ -495,31 +535,14 @@ class HiveToSqliteMigrationService {
         conversations: conversations.length,
         messages: migratedMessages,
       );
-      await _validate(repo, conversations.length, totalMessages);
+      await _validate(repo, conversations.length, migratedMessages);
       await repo.markMigrationComplete();
       await repo.checkpoint();
       await repo.close();
       repo = null;
 
       await _replaceSqlite(tempFile, decision.sqliteFile);
-      try {
-        await DatabaseV2RolloutLedger(
-          decision.appDataDir,
-        ).recordMigrationCompleted(
-          migrationRunId: migrationRunId,
-          sourceKind: 'hive',
-          sourceHash: sourceHash,
-          migratedAtUtc: DateTime.now().toUtc(),
-          conversationCount: conversations.length,
-          messageCount: totalMessages,
-          issueCounts: migrationIssueCounts,
-        );
-      } catch (error) {
-        // Rollout evidence must never turn an already verified and installed
-        // database into a false migration failure. Missing evidence keeps the
-        // later retirement gate closed, which is the safe fallback.
-        _logLine('rollout-ledger: $error');
-      }
+      published = true;
       _emit(
         HiveToSqliteMigrationStage.complete,
         1,
@@ -528,7 +551,7 @@ class HiveToSqliteMigrationService {
         backupPath: backupPath,
         backupItems: _lastBackupItems,
         conversations: conversations.length,
-        messages: totalMessages,
+        messages: migratedMessages,
       );
     } catch (error, stackTrace) {
       _logLine('$error');
@@ -543,6 +566,7 @@ class HiveToSqliteMigrationService {
           error: '$error',
           log: List.of(_log),
           backupItems: _lastBackupItems,
+          chatsExportDegraded: _chatsExportDegraded,
         ),
       );
       rethrow;
@@ -551,20 +575,38 @@ class HiveToSqliteMigrationService {
       await conversationsBox?.close();
       await messagesBox?.close();
       await toolEventsBox?.close();
+      if (!published) {
+        // A failed attempt must not leave the half-migrated database family
+        // behind; the startup gate would otherwise keep rejecting it.
+        await _deleteSqliteFamily(
+          File('${decision.sqliteFile.path}.migrating'),
+        );
+      }
     }
   }
 
-  Future<String> _legacySourceHash() async {
-    final entries = <String>[];
-    for (final file
-        in decision.hiveFiles.toList()
-          ..sort((a, b) => p.basename(a.path).compareTo(p.basename(b.path)))) {
-      final stat = await file.stat();
-      entries.add(
-        '${p.basename(file.path)}:${stat.size}:${stat.modified.toUtc().microsecondsSinceEpoch}',
-      );
+  /// Escape hatch after repeated migration failures: renames the legacy Hive
+  /// artifacts to `<name>.retired` so [check] stops requesting migration and
+  /// the next launch starts with an empty SQLite database. The retired files
+  /// stay on disk for manual recovery.
+  Future<void> skipMigrationAndStartFresh() async {
+    for (final hiveFile in decision.hiveFiles) {
+      final lockFile = File('${p.withoutExtension(hiveFile.path)}.lock');
+      try {
+        if (await lockFile.exists()) {
+          await lockFile.rename('${lockFile.path}.retired');
+        }
+      } catch (error) {
+        // Lock files are advisory; leaving one behind must not block the skip.
+        _logLine('skip-migration lock rename: $error');
+      }
+      if (await hiveFile.exists()) {
+        await hiveFile.rename('${hiveFile.path}.retired');
+      }
     }
-    return sha256.convert(utf8.encode(entries.join('\n'))).toString();
+    // A failed attempt can leave the temporary database family behind.
+    await _deleteSqliteFamily(File('${decision.sqliteFile.path}.migrating'));
+    _logLine('skip-migration: legacy hive files retired');
   }
 
   Future<void> dispose() async {
@@ -654,41 +696,62 @@ class HiveToSqliteMigrationService {
       backupPath: backupPath,
       backupItems: items,
     );
-    final chatsFile = await _exportLegacyChatsToFile(
-      workDir,
-      onProgress: (progress) {
-        _lastBackupItems = _updateBackupItem(
-          _lastBackupItems.isEmpty ? items : _lastBackupItems,
-          _chatsBackupName,
-          state: HiveToSqliteBackupItemState.active,
-        );
-        _emit(
-          HiveToSqliteMigrationStage.backingUp,
-          0.03 + progress.clamp(0, 1) * 0.1,
-          'backup',
-          _chatsBackupName,
-          backupPath: backupPath,
-          backupItems: _lastBackupItems,
-        );
-      },
-    );
-    final chatsBytes = await chatsFile.length();
-    items = _updateBackupItem(
-      _lastBackupItems.isEmpty ? items : _lastBackupItems,
-      _chatsBackupName,
-      bytes: chatsBytes,
-      writtenBytes: chatsBytes,
-      state: HiveToSqliteBackupItemState.done,
-    );
-    _lastBackupItems = items;
-    files.add(
-      _MigrationBackupFile(
-        file: chatsFile,
-        entryName: _chatsBackupName,
-        itemName: _chatsBackupName,
+    File? chatsFile;
+    try {
+      chatsFile = await _exportLegacyChatsToFile(
+        workDir,
+        onProgress: (progress) {
+          _lastBackupItems = _updateBackupItem(
+            _lastBackupItems.isEmpty ? items : _lastBackupItems,
+            _chatsBackupName,
+            state: HiveToSqliteBackupItemState.active,
+          );
+          _emit(
+            HiveToSqliteMigrationStage.backingUp,
+            0.03 + progress.clamp(0, 1) * 0.1,
+            'backup',
+            _chatsBackupName,
+            backupPath: backupPath,
+            backupItems: _lastBackupItems,
+          );
+        },
+      );
+    } catch (error, stackTrace) {
+      // The raw .hive files below stay in the archive and remain the complete
+      // fallback, so a broken chats.json export degrades the backup instead of
+      // failing it.
+      _chatsExportDegraded = true;
+      _logLine('chats.json export skipped: $error');
+      _logLine(stackTrace.toString());
+    }
+    if (chatsFile != null) {
+      final chatsBytes = await chatsFile.length();
+      items = _updateBackupItem(
+        _lastBackupItems.isEmpty ? items : _lastBackupItems,
+        _chatsBackupName,
         bytes: chatsBytes,
-      ),
-    );
+        writtenBytes: chatsBytes,
+        state: HiveToSqliteBackupItemState.done,
+      );
+      _lastBackupItems = items;
+      files.add(
+        _MigrationBackupFile(
+          file: chatsFile,
+          entryName: _chatsBackupName,
+          itemName: _chatsBackupName,
+          bytes: chatsBytes,
+        ),
+      );
+    } else {
+      // Drop the checklist row entirely; the manifest reset below would
+      // otherwise leave it pending forever.
+      items = [
+        for (final item
+            in (_lastBackupItems.isEmpty ? items : _lastBackupItems))
+          if (item.name != _chatsBackupName) item,
+      ];
+      _lastBackupItems = items;
+    }
 
     for (final hiveFile in decision.hiveFiles) {
       final itemName = p.basename(hiveFile.path);
@@ -1152,6 +1215,7 @@ class HiveToSqliteMigrationService {
         conversations: conversations,
         messages: messages,
         backupItems: backupItems ?? _lastBackupItems,
+        chatsExportDegraded: _chatsExportDegraded,
       ),
     );
   }
@@ -1163,6 +1227,25 @@ class HiveToSqliteMigrationService {
     if (_log.length > 200) {
       _log.removeRange(0, _log.length - 200);
     }
+  }
+}
+
+class _MigrationRepairStats {
+  int danglingMessageRefs = 0;
+  int duplicateMessageIds = 0;
+  int conversationIdMismatches = 0;
+  int versionConflicts = 0;
+
+  bool get hasIssues =>
+      danglingMessageRefs > 0 ||
+      duplicateMessageIds > 0 ||
+      conversationIdMismatches > 0 ||
+      versionConflicts > 0;
+
+  String describe() {
+    return 'dangling=$danglingMessageRefs duplicates=$duplicateMessageIds '
+        'conversationIdMismatches=$conversationIdMismatches '
+        'versionConflicts=$versionConflicts';
   }
 }
 

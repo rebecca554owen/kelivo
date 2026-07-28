@@ -130,6 +130,7 @@ class MessageListView extends StatefulWidget {
     this.onToggleReasoningSegment,
     this.buildPinnedStreamingIndicator,
     this.hasMoreBefore = false,
+    this.isLoadingWindow = false,
     this.onLoadMoreBefore,
     this.hasMoreAfter = false,
     this.onLoadMoreAfter,
@@ -207,6 +208,10 @@ class MessageListView extends StatefulWidget {
   onToggleReasoningSegment;
   final Widget Function()? buildPinnedStreamingIndicator;
   final bool hasMoreBefore;
+
+  /// True only while a cold initial window load is in flight; fast-path cache
+  /// hits resolve within one frame batch and never surface the skeleton.
+  final bool isLoadingWindow;
   final Future<bool> Function()? onLoadMoreBefore;
   final bool hasMoreAfter;
   final Future<bool> Function()? onLoadMoreAfter;
@@ -216,6 +221,11 @@ class MessageListView extends StatefulWidget {
   final bool showUserAvatar;
   final bool showTokenStats;
   final Assistant? assistant;
+
+  @visibleForTesting
+  static const Key windowSkeletonKey = ValueKey<String>(
+    'timeline-window-skeleton',
+  );
 
   @override
   State<MessageListView> createState() => _MessageListViewState();
@@ -583,6 +593,16 @@ class _MessageListViewState extends State<MessageListView> {
             return Stack(
               children: [
                 userScrollAwareList,
+                if (_effectiveRenderModels.isEmpty && widget.isLoadingWindow)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: _WindowLoadingSkeleton(
+                        key: MessageListView.windowSkeletonKey,
+                        horizontalPadding: horizontalPad,
+                        topPadding: widget.topContentPadding,
+                      ),
+                    ),
+                  ),
                 if (widget.isPinnedIndicatorActive &&
                     widget.buildPinnedStreamingIndicator != null)
                   widget.buildPinnedStreamingIndicator!(),
@@ -1280,4 +1300,80 @@ class _StreamingMessageDataGateState extends State<_StreamingMessageDataGate> {
   @override
   Widget build(BuildContext context) =>
       widget.builder(context, _visibleData, _deferUpdates);
+}
+
+/// Bubble-shaped shimmer skeleton shown only while a cold initial window
+/// load is in flight and the list has no messages yet.
+class _WindowLoadingSkeleton extends StatefulWidget {
+  const _WindowLoadingSkeleton({
+    super.key,
+    required this.horizontalPadding,
+    required this.topPadding,
+  });
+
+  final double horizontalPadding;
+  final double topPadding;
+
+  @override
+  State<_WindowLoadingSkeleton> createState() => _WindowLoadingSkeletonState();
+}
+
+class _WindowLoadingSkeletonState extends State<_WindowLoadingSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bubbleColor = cs.onSurface.withValues(alpha: 0.08);
+
+    Widget bubble({required bool alignEnd, required double widthFactor}) {
+      return Align(
+        alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: widthFactor,
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        widget.horizontalPadding + 12,
+        widget.topPadding + 24,
+        widget.horizontalPadding + 12,
+        0,
+      ),
+      child: FadeTransition(
+        opacity: _pulse.drive(Tween<double>(begin: 0.45, end: 1.0)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            bubble(alignEnd: false, widthFactor: 0.62),
+            const SizedBox(height: 14),
+            bubble(alignEnd: true, widthFactor: 0.48),
+            const SizedBox(height: 14),
+            bubble(alignEnd: false, widthFactor: 0.7),
+            const SizedBox(height: 14),
+            bubble(alignEnd: true, widthFactor: 0.55),
+          ],
+        ),
+      ),
+    );
+  }
 }

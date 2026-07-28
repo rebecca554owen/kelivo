@@ -869,6 +869,102 @@ Stream<String> _ensureTrailingNewline(Stream<String> source) async* {
   yield '\n';
 }
 
+/// Follow-up tool-call responses are consumed inside the SSE parser's
+/// per-event catch, which tolerates malformed JSON. Convert their transport
+/// failures into [HttpException] up front so that catch cannot swallow them
+/// and let the no-[DONE] fallback persist truncated output as a completion.
+Stream<String> _rethrowFollowUpStreamErrors(Stream<String> source) {
+  return source.transform(
+    StreamTransformer<String, String>.fromHandlers(
+      handleError:
+          (Object error, StackTrace stackTrace, EventSink<String> sink) {
+            if (error is HttpException) {
+              sink.addError(error, stackTrace);
+            } else {
+              sink.addError(
+                HttpException('Follow-up stream failed: $error'),
+                stackTrace,
+              );
+            }
+          },
+    ),
+  );
+}
+
+/// Some providers (e.g. OpenRouter rate limits/moderation) report failures as
+/// an in-band `{"error": ...}` frame on an otherwise 2xx stream. Surface those
+/// as a stream error so truncated output is not persisted as a completion.
+///
+/// OpenRouter's documented mid-stream failure frame carries the top-level
+/// `error` alongside a non-empty `choices` list whose entry has
+/// `finish_reason: "error"`, so the presence of choices/candidates must not
+/// mask a non-empty error payload. Healthy chunks either lack the `error` key
+/// or carry a null/empty placeholder, which [_throwOnInBandStreamError]
+/// ignores.
+void _throwIfInBandStreamError(String data) {
+  final mayCarryError =
+      data.contains('"error"') ||
+      data.contains('response.failed') ||
+      data.contains('response.incomplete');
+  if (!mayCarryError) return;
+  Object? decoded;
+  try {
+    decoded = jsonDecode(data);
+  } catch (_) {
+    return;
+  }
+  if (decoded is! Map) return;
+  final type = (decoded['type'] ?? '').toString();
+  if (type == 'error') {
+    // `event: error` frames: Anthropic-style ones nest the payload under
+    // `error`, while the Responses API puts code/message on the frame itself
+    // ({"type":"error","code":...,"message":...}).
+    final nested = decoded['error'];
+    if (nested is Map && nested.isNotEmpty) {
+      _throwOnInBandStreamError(nested);
+    }
+    _throwOnInBandStreamError(decoded);
+  }
+  if (type == 'response.failed' || type == 'response.incomplete') {
+    // Responses API terminal failure events nest the error under `response`.
+    final response = decoded['response'];
+    if (response is Map) {
+      _throwOnInBandStreamError(response['error']);
+      final details = response['incomplete_details'];
+      if (details is Map && details.isNotEmpty) {
+        final reason = (details['reason'] ?? '').toString().trim();
+        throw HttpException(
+          reason.isEmpty
+              ? 'Provider error: response incomplete'
+              : 'Provider error: response incomplete ($reason)',
+        );
+      }
+    }
+    // A failure event without a parseable payload still must not fall
+    // through and be treated as a normal finish.
+    throw HttpException('Provider error: $type');
+  }
+  _throwOnInBandStreamError(decoded['error']);
+}
+
+/// Throws when [error] carries a provider error payload; no-op for the null or
+/// empty placeholders some providers emit on healthy chunks.
+void _throwOnInBandStreamError(Object? error) {
+  if (error is Map && error.isNotEmpty) {
+    final message = (error['message'] ?? '').toString().trim();
+    final code = (error['code'] ?? error['type'] ?? '').toString().trim();
+    final detail = message.isNotEmpty ? message : jsonEncode(error);
+    throw HttpException(
+      code.isEmpty
+          ? 'Provider error: $detail'
+          : 'Provider error ($code): $detail',
+    );
+  }
+  if (error is String && error.trim().isNotEmpty) {
+    throw HttpException('Provider error: ${error.trim()}');
+  }
+}
+
 class _OpenAIProviderInfo {
   final String host;
   final String providerId;
@@ -2083,6 +2179,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   // This round finished; handle below
                   continue;
                 }
+                _throwIfInBandStreamError(d);
                 try {
                   final o = jsonDecode(d);
                   if (o is Map) {
@@ -2370,6 +2467,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         return;
       }
 
+      _throwIfInBandStreamError(data);
       try {
         final json = jsonDecode(data);
         String content = '';
@@ -2781,12 +2879,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 }
                 req2.headers.addAll(headers2);
                 req2.body = jsonEncode(body2);
-                final resp2 = await client.send(req2);
-                if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
-                  final errorBody = await resp2.stream.bytesToString();
-                  throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+                final http.StreamedResponse resp2;
+                try {
+                  resp2 = await client.send(req2);
+                  if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
+                    final errorBody = await resp2.stream.bytesToString();
+                    throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+                  }
+                } on HttpException {
+                  rethrow;
+                } catch (e) {
+                  // Keep as HttpException so the per-event catch below (which
+                  // tolerates malformed JSON) cannot swallow this failure.
+                  throw HttpException('Follow-up request failed: $e');
                 }
-                final s2 = resp2.stream.transform(utf8.decoder);
+                final s2 = _rethrowFollowUpStreamErrors(
+                  resp2.stream.transform(utf8.decoder),
+                );
                 String buf2 = '';
                 final Map<int, Map<String, String>> respCalls2 =
                     <int, Map<String, String>>{};
@@ -2801,6 +2910,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     if (l.isEmpty || !l.startsWith('data:')) continue;
                     final d = l.substring(5).trimLeft();
                     if (d == '[DONE]') continue;
+                    _throwIfInBandStreamError(d);
                     try {
                       final o = jsonDecode(d);
                       if (o is Map &&
@@ -3449,12 +3559,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             }
             req2.headers.addAll(headers2);
             req2.body = jsonEncode(body2);
-            final resp2 = await client.send(req2);
-            if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
-              final errorBody = await resp2.stream.bytesToString();
-              throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+            final http.StreamedResponse resp2;
+            try {
+              resp2 = await client.send(req2);
+              if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
+                final errorBody = await resp2.stream.bytesToString();
+                throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+              }
+            } on HttpException {
+              rethrow;
+            } catch (e) {
+              // Keep as HttpException so the per-event catch below (which
+              // tolerates malformed JSON) cannot swallow this failure.
+              throw HttpException('Follow-up request failed: $e');
             }
-            final s2 = resp2.stream.transform(utf8.decoder);
+            final s2 = _rethrowFollowUpStreamErrors(
+              resp2.stream.transform(utf8.decoder),
+            );
             String buf2 = '';
             final Map<int, Map<String, String>> toolAcc2 =
                 <int, Map<String, String>>{};
@@ -3475,6 +3596,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 if (d == '[DONE]') {
                   continue;
                 }
+                _throwIfInBandStreamError(d);
                 try {
                   final o = jsonDecode(d);
                   if (o is Map) {
@@ -3962,12 +4084,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 }
                 req2.headers.addAll(headers2);
                 req2.body = jsonEncode(body2);
-                final resp2 = await client.send(req2);
-                if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
-                  final errorBody = await resp2.stream.bytesToString();
-                  throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+                final http.StreamedResponse resp2;
+                try {
+                  resp2 = await client.send(req2);
+                  if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
+                    final errorBody = await resp2.stream.bytesToString();
+                    throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+                  }
+                } on HttpException {
+                  rethrow;
+                } catch (e) {
+                  // Keep as HttpException so the per-event catch below (which
+                  // tolerates malformed JSON) cannot swallow this failure.
+                  throw HttpException('Follow-up request failed: $e');
                 }
-                final s2 = resp2.stream.transform(utf8.decoder);
+                final s2 = _rethrowFollowUpStreamErrors(
+                  resp2.stream.transform(utf8.decoder),
+                );
                 String buf2 = '';
                 final Map<int, Map<String, String>> toolAcc2 =
                     <int, Map<String, String>>{};
@@ -3988,6 +4121,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     if (d == '[DONE]') {
                       continue;
                     }
+                    _throwIfInBandStreamError(d);
                     try {
                       final o = jsonDecode(d);
                       if (o is Map) {
@@ -4272,6 +4406,13 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             // return;
           }
         }
+      } on HttpException {
+        // In-band error frames raised inside this block (follow-up tool-call
+        // streams call _throwIfInBandStreamError in here) and failed follow-up
+        // requests must surface as stream errors; swallowing them would let
+        // the no-[DONE] fallback below persist truncated output as a normal
+        // completion.
+        rethrow;
       } catch (e) {
         // Skip malformed JSON
       }

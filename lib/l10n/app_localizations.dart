@@ -3089,6 +3089,18 @@ abstract class AppLocalizations {
   /// **'Diagnostic code: {code}'**
   String backupRestoreFailureDiagnostic(String code);
 
+  /// No description provided for @startupDatabaseUpdateRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Kelivo to continue'**
+  String get startupDatabaseUpdateRequiredTitle;
+
+  /// No description provided for @startupDatabaseUpdateRequiredContent.
+  ///
+  /// In en, this message translates to:
+  /// **'The chat database on this device was created by a newer version of Kelivo and cannot be opened by this version. Your data has not been changed. Install the latest version of Kelivo, then open it again.'**
+  String get startupDatabaseUpdateRequiredContent;
+
   /// No description provided for @backupPageRestoreFailedMessage.
   ///
   /// In en, this message translates to:
@@ -10567,6 +10579,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry Migration'**
   String get migrationRetryButton;
+
+  /// No description provided for @migrationSkipButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip Migration and Start Fresh'**
+  String get migrationSkipButton;
+
+  /// No description provided for @migrationSkipDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip migration?'**
+  String get migrationSkipDialogTitle;
+
+  /// No description provided for @migrationSkipDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Kelivo will start with an empty chat database. Your old chat history stays on disk (renamed with a .retired suffix) but will NOT be migrated and will not appear in the app. Use your backup ZIP if you need to recover it later.'**
+  String get migrationSkipDialogMessage;
+
+  /// No description provided for @migrationSkipDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get migrationSkipDialogCancel;
+
+  /// No description provided for @migrationSkipDialogConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip and Start Fresh'**
+  String get migrationSkipDialogConfirm;
+
+  /// No description provided for @migrationChatsExportDegradedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The chats.json export was skipped because of an error. The backup ZIP still contains the raw Hive files with your complete chat history.'**
+  String get migrationChatsExportDegradedNote;
 
   /// No description provided for @timelineJumpToLatest.
   ///

@@ -120,43 +120,6 @@ void main() {
       expect(await sourceRepository.isMigrationComplete(), isFalse);
     });
 
-    test('replaces live chat tables from a validated snapshot', () async {
-      await sourceRepository.putMigrationBatch(
-        conversations: [Conversation(id: 'old', title: 'Old')],
-        messages: const [],
-        toolEventsByMessageId: const {},
-        geminiSignaturesByMessageId: const {},
-      );
-      final snapshotFile = File('${directory.path}/replacement.sqlite');
-      await _createSnapshotFixture(
-        databaseFile: snapshotFile,
-        conversationId: 'new',
-        title: 'New',
-        messageId: 'new-message',
-        messageContent: 'new content',
-        isStreaming: true,
-      );
-      await _deleteDatabaseSidecars(snapshotFile);
-
-      final info = await ChatDatabaseRepository.prepareSnapshotForRestore(
-        snapshotFile,
-      );
-      expect(info.conversationCount, 1);
-      await sourceRepository.replaceBackupSnapshot(snapshotFile);
-
-      expect(await sourceRepository.getConversation('old'), isNull);
-      expect(await sourceRepository.getConversation('new'), isNotNull);
-      expect(
-        (await sourceRepository.getMessagesRange(
-          'new',
-          start: 0,
-          limit: 1,
-        )).single.isStreaming,
-        isFalse,
-      );
-      expect(await sourceRepository.isMigrationComplete(), isTrue);
-    });
-
     test(
       'inspects only normalized standalone snapshots without writing',
       () async {
@@ -245,6 +208,31 @@ void main() {
       );
     });
 
+    test('rejects current schema missing an asset table', () async {
+      await sourceRepository.close();
+      sourceClosed = true;
+      final raw = sqlite.sqlite3.open(sourceFile.path);
+      try {
+        raw.execute('DROP TABLE asset_reference_dirty_rows;');
+      } finally {
+        raw.close();
+      }
+
+      expect(
+        () => ChatDatabaseRepository.inspectInstalledDatabase(
+          sourceFile,
+          validateContents: true,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'required_tables',
+          ),
+        ),
+      );
+    });
+
     test(
       'rejects a same-version business table without its primary key',
       () async {
@@ -282,6 +270,48 @@ CREATE TABLE provider_rows (
       },
     );
 
+    test(
+      'rejects a same-version asset table without its primary key',
+      () async {
+        await sourceRepository.close();
+        sourceClosed = true;
+        final raw = sqlite.sqlite3.open(sourceFile.path);
+        try {
+          raw.execute('DROP TABLE message_asset_rows;');
+          raw.execute('''
+CREATE TABLE message_asset_rows (
+  conversation_id TEXT NOT NULL,
+  revision_id TEXT NOT NULL
+    REFERENCES message_rows(id) ON DELETE CASCADE,
+  asset_id TEXT NOT NULL
+    REFERENCES asset_rows(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK(kind <> '')
+);
+''');
+          raw.execute(
+            'CREATE INDEX idx_message_assets_asset '
+            'ON message_asset_rows(asset_id, revision_id);',
+          );
+        } finally {
+          raw.close();
+        }
+
+        expect(
+          () => ChatDatabaseRepository.inspectInstalledDatabase(
+            sourceFile,
+            validateContents: true,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'primary_key_schema:message_asset_rows',
+            ),
+          ),
+        );
+      },
+    );
+
     test('rejects a same-version database missing the memory index', () async {
       await sourceRepository.close();
       sourceClosed = true;
@@ -306,6 +336,105 @@ CREATE TABLE provider_rows (
         ),
       );
     });
+
+    test('rejects a same-version database missing the asset index', () async {
+      await sourceRepository.close();
+      sourceClosed = true;
+      final raw = sqlite.sqlite3.open(sourceFile.path);
+      try {
+        raw.execute('DROP INDEX idx_message_assets_asset;');
+      } finally {
+        raw.close();
+      }
+
+      expect(
+        () => ChatDatabaseRepository.inspectInstalledDatabase(
+          sourceFile,
+          validateContents: true,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'index_schema:idx_message_assets_asset',
+          ),
+        ),
+      );
+    });
+
+    test(
+      'rejects a same-version asset table without unique content hashes',
+      () async {
+        await sourceRepository.close();
+        sourceClosed = true;
+        final raw = sqlite.sqlite3.open(sourceFile.path);
+        try {
+          raw.execute('DROP TABLE asset_rows;');
+          raw.execute('''
+CREATE TABLE asset_rows (
+  id TEXT NOT NULL PRIMARY KEY,
+  content_hash TEXT NOT NULL,
+  path TEXT NOT NULL,
+  byte_size INTEGER NOT NULL CHECK(byte_size >= 0),
+  width INTEGER CHECK(width > 0),
+  height INTEGER CHECK(height > 0),
+  thumbnail_path TEXT,
+  created_at INTEGER NOT NULL,
+  last_referenced_at INTEGER NOT NULL
+);
+''');
+        } finally {
+          raw.close();
+        }
+
+        expect(
+          () => ChatDatabaseRepository.inspectInstalledDatabase(
+            sourceFile,
+            validateContents: true,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'index_schema:asset_rows.content_hash',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'rejects a same-version asset table without its foreign key',
+      () async {
+        await sourceRepository.close();
+        sourceClosed = true;
+        final raw = sqlite.sqlite3.open(sourceFile.path);
+        try {
+          raw.execute('DROP TABLE asset_reference_dirty_rows;');
+          raw.execute('''
+CREATE TABLE asset_reference_dirty_rows (
+  revision_id TEXT PRIMARY KEY NOT NULL
+);
+''');
+        } finally {
+          raw.close();
+        }
+
+        expect(
+          () => ChatDatabaseRepository.inspectInstalledDatabase(
+            sourceFile,
+            validateContents: true,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'foreign_key_schema:asset_reference_dirty_rows',
+            ),
+          ),
+        );
+      },
+    );
   });
 }
 
@@ -356,15 +485,6 @@ Future<void> _createSnapshotFixture({
 
 Future<void> _deleteDatabaseFamily(File databaseFile) async {
   for (final suffix in const ['', '-wal', '-shm', '-journal']) {
-    final file = File('${databaseFile.path}$suffix');
-    if (await file.exists()) {
-      await file.delete();
-    }
-  }
-}
-
-Future<void> _deleteDatabaseSidecars(File databaseFile) async {
-  for (final suffix in const ['-wal', '-shm', '-journal']) {
     final file = File('${databaseFile.path}$suffix');
     if (await file.exists()) {
       await file.delete();

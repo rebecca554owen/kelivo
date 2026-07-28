@@ -2247,461 +2247,6 @@ class ConversationMcpServerRowsCompanion
   }
 }
 
-class $ToolEventRowsTable extends ToolEventRows
-    with TableInfo<$ToolEventRowsTable, ToolEventRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $ToolEventRowsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _messageIdMeta = const VerificationMeta(
-    'messageId',
-  );
-  @override
-  late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-    'message_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES message_rows (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _eventsJsonMeta = const VerificationMeta(
-    'eventsJson',
-  );
-  @override
-  late final GeneratedColumn<String> eventsJson = GeneratedColumn<String>(
-    'events_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [messageId, eventsJson];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'tool_event_rows';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<ToolEventRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('message_id')) {
-      context.handle(
-        _messageIdMeta,
-        messageId.isAcceptableOrUnknown(data['message_id']!, _messageIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_messageIdMeta);
-    }
-    if (data.containsKey('events_json')) {
-      context.handle(
-        _eventsJsonMeta,
-        eventsJson.isAcceptableOrUnknown(data['events_json']!, _eventsJsonMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_eventsJsonMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {messageId};
-  @override
-  ToolEventRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return ToolEventRow(
-      messageId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}message_id'],
-      )!,
-      eventsJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}events_json'],
-      )!,
-    );
-  }
-
-  @override
-  $ToolEventRowsTable createAlias(String alias) {
-    return $ToolEventRowsTable(attachedDatabase, alias);
-  }
-}
-
-class ToolEventRow extends DataClass implements Insertable<ToolEventRow> {
-  final String messageId;
-  final String eventsJson;
-  const ToolEventRow({required this.messageId, required this.eventsJson});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['message_id'] = Variable<String>(messageId);
-    map['events_json'] = Variable<String>(eventsJson);
-    return map;
-  }
-
-  ToolEventRowsCompanion toCompanion(bool nullToAbsent) {
-    return ToolEventRowsCompanion(
-      messageId: Value(messageId),
-      eventsJson: Value(eventsJson),
-    );
-  }
-
-  factory ToolEventRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return ToolEventRow(
-      messageId: serializer.fromJson<String>(json['messageId']),
-      eventsJson: serializer.fromJson<String>(json['eventsJson']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'messageId': serializer.toJson<String>(messageId),
-      'eventsJson': serializer.toJson<String>(eventsJson),
-    };
-  }
-
-  ToolEventRow copyWith({String? messageId, String? eventsJson}) =>
-      ToolEventRow(
-        messageId: messageId ?? this.messageId,
-        eventsJson: eventsJson ?? this.eventsJson,
-      );
-  ToolEventRow copyWithCompanion(ToolEventRowsCompanion data) {
-    return ToolEventRow(
-      messageId: data.messageId.present ? data.messageId.value : this.messageId,
-      eventsJson: data.eventsJson.present
-          ? data.eventsJson.value
-          : this.eventsJson,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ToolEventRow(')
-          ..write('messageId: $messageId, ')
-          ..write('eventsJson: $eventsJson')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(messageId, eventsJson);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is ToolEventRow &&
-          other.messageId == this.messageId &&
-          other.eventsJson == this.eventsJson);
-}
-
-class ToolEventRowsCompanion extends UpdateCompanion<ToolEventRow> {
-  final Value<String> messageId;
-  final Value<String> eventsJson;
-  final Value<int> rowid;
-  const ToolEventRowsCompanion({
-    this.messageId = const Value.absent(),
-    this.eventsJson = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  ToolEventRowsCompanion.insert({
-    required String messageId,
-    required String eventsJson,
-    this.rowid = const Value.absent(),
-  }) : messageId = Value(messageId),
-       eventsJson = Value(eventsJson);
-  static Insertable<ToolEventRow> custom({
-    Expression<String>? messageId,
-    Expression<String>? eventsJson,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (messageId != null) 'message_id': messageId,
-      if (eventsJson != null) 'events_json': eventsJson,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  ToolEventRowsCompanion copyWith({
-    Value<String>? messageId,
-    Value<String>? eventsJson,
-    Value<int>? rowid,
-  }) {
-    return ToolEventRowsCompanion(
-      messageId: messageId ?? this.messageId,
-      eventsJson: eventsJson ?? this.eventsJson,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (messageId.present) {
-      map['message_id'] = Variable<String>(messageId.value);
-    }
-    if (eventsJson.present) {
-      map['events_json'] = Variable<String>(eventsJson.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ToolEventRowsCompanion(')
-          ..write('messageId: $messageId, ')
-          ..write('eventsJson: $eventsJson, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $GeminiThoughtSignatureRowsTable extends GeminiThoughtSignatureRows
-    with
-        TableInfo<$GeminiThoughtSignatureRowsTable, GeminiThoughtSignatureRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $GeminiThoughtSignatureRowsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _messageIdMeta = const VerificationMeta(
-    'messageId',
-  );
-  @override
-  late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-    'message_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES message_rows (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _signatureMeta = const VerificationMeta(
-    'signature',
-  );
-  @override
-  late final GeneratedColumn<String> signature = GeneratedColumn<String>(
-    'signature',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [messageId, signature];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'gemini_thought_signature_rows';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<GeminiThoughtSignatureRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('message_id')) {
-      context.handle(
-        _messageIdMeta,
-        messageId.isAcceptableOrUnknown(data['message_id']!, _messageIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_messageIdMeta);
-    }
-    if (data.containsKey('signature')) {
-      context.handle(
-        _signatureMeta,
-        signature.isAcceptableOrUnknown(data['signature']!, _signatureMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_signatureMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {messageId};
-  @override
-  GeminiThoughtSignatureRow map(
-    Map<String, dynamic> data, {
-    String? tablePrefix,
-  }) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return GeminiThoughtSignatureRow(
-      messageId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}message_id'],
-      )!,
-      signature: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}signature'],
-      )!,
-    );
-  }
-
-  @override
-  $GeminiThoughtSignatureRowsTable createAlias(String alias) {
-    return $GeminiThoughtSignatureRowsTable(attachedDatabase, alias);
-  }
-}
-
-class GeminiThoughtSignatureRow extends DataClass
-    implements Insertable<GeminiThoughtSignatureRow> {
-  final String messageId;
-  final String signature;
-  const GeminiThoughtSignatureRow({
-    required this.messageId,
-    required this.signature,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['message_id'] = Variable<String>(messageId);
-    map['signature'] = Variable<String>(signature);
-    return map;
-  }
-
-  GeminiThoughtSignatureRowsCompanion toCompanion(bool nullToAbsent) {
-    return GeminiThoughtSignatureRowsCompanion(
-      messageId: Value(messageId),
-      signature: Value(signature),
-    );
-  }
-
-  factory GeminiThoughtSignatureRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return GeminiThoughtSignatureRow(
-      messageId: serializer.fromJson<String>(json['messageId']),
-      signature: serializer.fromJson<String>(json['signature']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'messageId': serializer.toJson<String>(messageId),
-      'signature': serializer.toJson<String>(signature),
-    };
-  }
-
-  GeminiThoughtSignatureRow copyWith({String? messageId, String? signature}) =>
-      GeminiThoughtSignatureRow(
-        messageId: messageId ?? this.messageId,
-        signature: signature ?? this.signature,
-      );
-  GeminiThoughtSignatureRow copyWithCompanion(
-    GeminiThoughtSignatureRowsCompanion data,
-  ) {
-    return GeminiThoughtSignatureRow(
-      messageId: data.messageId.present ? data.messageId.value : this.messageId,
-      signature: data.signature.present ? data.signature.value : this.signature,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('GeminiThoughtSignatureRow(')
-          ..write('messageId: $messageId, ')
-          ..write('signature: $signature')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(messageId, signature);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is GeminiThoughtSignatureRow &&
-          other.messageId == this.messageId &&
-          other.signature == this.signature);
-}
-
-class GeminiThoughtSignatureRowsCompanion
-    extends UpdateCompanion<GeminiThoughtSignatureRow> {
-  final Value<String> messageId;
-  final Value<String> signature;
-  final Value<int> rowid;
-  const GeminiThoughtSignatureRowsCompanion({
-    this.messageId = const Value.absent(),
-    this.signature = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  GeminiThoughtSignatureRowsCompanion.insert({
-    required String messageId,
-    required String signature,
-    this.rowid = const Value.absent(),
-  }) : messageId = Value(messageId),
-       signature = Value(signature);
-  static Insertable<GeminiThoughtSignatureRow> custom({
-    Expression<String>? messageId,
-    Expression<String>? signature,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (messageId != null) 'message_id': messageId,
-      if (signature != null) 'signature': signature,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  GeminiThoughtSignatureRowsCompanion copyWith({
-    Value<String>? messageId,
-    Value<String>? signature,
-    Value<int>? rowid,
-  }) {
-    return GeminiThoughtSignatureRowsCompanion(
-      messageId: messageId ?? this.messageId,
-      signature: signature ?? this.signature,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (messageId.present) {
-      map['message_id'] = Variable<String>(messageId.value);
-    }
-    if (signature.present) {
-      map['signature'] = Variable<String>(signature.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('GeminiThoughtSignatureRowsCompanion(')
-          ..write('messageId: $messageId, ')
-          ..write('signature: $signature, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $ChatStorageMetaRowsTable extends ChatStorageMetaRows
     with TableInfo<$ChatStorageMetaRowsTable, ChatStorageMetaRow> {
   @override
@@ -3823,12 +3368,12 @@ class ProviderArtifactRowsCompanion
   }
 }
 
-class $MigrationRunRowsTable extends MigrationRunRows
-    with TableInfo<$MigrationRunRowsTable, MigrationRunRow> {
+class $AssetRowsTable extends AssetRows
+    with TableInfo<$AssetRowsTable, AssetRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $MigrationRunRowsTable(this.attachedDatabase, [this._alias]);
+  $AssetRowsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3838,74 +3383,108 @@ class $MigrationRunRowsTable extends MigrationRunRows
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _sourceKindMeta = const VerificationMeta(
-    'sourceKind',
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
   );
   @override
-  late final GeneratedColumn<String> sourceKind = GeneratedColumn<String>(
-    'source_kind',
-    aliasedName,
-    false,
-    check: () => sourceKind.isIn(const ['hive', 'legacy_json']),
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _sourceHashMeta = const VerificationMeta(
-    'sourceHash',
-  );
-  @override
-  late final GeneratedColumn<String> sourceHash = GeneratedColumn<String>(
-    'source_hash',
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
   @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-    'status',
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
     aliasedName,
     false,
-    check: () => status.isIn(const ['building', 'completed', 'failed']),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _byteSizeMeta = const VerificationMeta(
+    'byteSize',
+  );
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime, int> startedAt =
+  late final GeneratedColumn<int> byteSize = GeneratedColumn<int>(
+    'byte_size',
+    aliasedName,
+    false,
+    check: () => ComparableExpr(byteSize).isBiggerOrEqualValue(0),
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _widthMeta = const VerificationMeta('width');
+  @override
+  late final GeneratedColumn<int> width = GeneratedColumn<int>(
+    'width',
+    aliasedName,
+    true,
+    check: () => ComparableExpr(width).isBiggerThanValue(0),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _heightMeta = const VerificationMeta('height');
+  @override
+  late final GeneratedColumn<int> height = GeneratedColumn<int>(
+    'height',
+    aliasedName,
+    true,
+    check: () => ComparableExpr(height).isBiggerThanValue(0),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _thumbnailPathMeta = const VerificationMeta(
+    'thumbnailPath',
+  );
+  @override
+  late final GeneratedColumn<String> thumbnailPath = GeneratedColumn<String>(
+    'thumbnail_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> createdAt =
       GeneratedColumn<int>(
-        'started_at',
+        'created_at',
         aliasedName,
         false,
         type: DriftSqlType.int,
         requiredDuringInsert: true,
-      ).withConverter<DateTime>($MigrationRunRowsTable.$converterstartedAt);
+      ).withConverter<DateTime>($AssetRowsTable.$convertercreatedAt);
   @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, int> completedAt =
+  late final GeneratedColumnWithTypeConverter<DateTime, int> lastReferencedAt =
       GeneratedColumn<int>(
-        'completed_at',
+        'last_referenced_at',
         aliasedName,
-        true,
+        false,
         type: DriftSqlType.int,
-        requiredDuringInsert: false,
-      ).withConverter<DateTime?>($MigrationRunRowsTable.$convertercompletedAtn);
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($AssetRowsTable.$converterlastReferencedAt);
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    sourceKind,
-    sourceHash,
-    status,
-    startedAt,
-    completedAt,
+    contentHash,
+    path,
+    byteSize,
+    width,
+    height,
+    thumbnailPath,
+    createdAt,
+    lastReferencedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'migration_run_rows';
+  static const String $name = 'asset_rows';
   @override
   VerificationContext validateIntegrity(
-    Insertable<MigrationRunRow> instance, {
+    Insertable<AssetRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -3915,29 +3494,53 @@ class $MigrationRunRowsTable extends MigrationRunRows
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('source_kind')) {
+    if (data.containsKey('content_hash')) {
       context.handle(
-        _sourceKindMeta,
-        sourceKind.isAcceptableOrUnknown(data['source_kind']!, _sourceKindMeta),
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_sourceKindMeta);
+      context.missing(_contentHashMeta);
     }
-    if (data.containsKey('source_hash')) {
+    if (data.containsKey('path')) {
       context.handle(
-        _sourceHashMeta,
-        sourceHash.isAcceptableOrUnknown(data['source_hash']!, _sourceHashMeta),
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
       );
     } else if (isInserting) {
-      context.missing(_sourceHashMeta);
+      context.missing(_pathMeta);
     }
-    if (data.containsKey('status')) {
+    if (data.containsKey('byte_size')) {
       context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+        _byteSizeMeta,
+        byteSize.isAcceptableOrUnknown(data['byte_size']!, _byteSizeMeta),
       );
     } else if (isInserting) {
-      context.missing(_statusMeta);
+      context.missing(_byteSizeMeta);
+    }
+    if (data.containsKey('width')) {
+      context.handle(
+        _widthMeta,
+        width.isAcceptableOrUnknown(data['width']!, _widthMeta),
+      );
+    }
+    if (data.containsKey('height')) {
+      context.handle(
+        _heightMeta,
+        height.isAcceptableOrUnknown(data['height']!, _heightMeta),
+      );
+    }
+    if (data.containsKey('thumbnail_path')) {
+      context.handle(
+        _thumbnailPathMeta,
+        thumbnailPath.isAcceptableOrUnknown(
+          data['thumbnail_path']!,
+          _thumbnailPathMeta,
+        ),
+      );
     }
     return context;
   }
@@ -3945,117 +3548,148 @@ class $MigrationRunRowsTable extends MigrationRunRows
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {sourceKind, sourceHash},
-  ];
-  @override
-  MigrationRunRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  AssetRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MigrationRunRow(
+    return AssetRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      sourceKind: attachedDatabase.typeMapping.read(
+      contentHash: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}source_kind'],
+        data['${effectivePrefix}content_hash'],
       )!,
-      sourceHash: attachedDatabase.typeMapping.read(
+      path: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}source_hash'],
+        data['${effectivePrefix}path'],
       )!,
-      status: attachedDatabase.typeMapping.read(
+      byteSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}byte_size'],
+      )!,
+      width: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}width'],
+      ),
+      height: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}height'],
+      ),
+      thumbnailPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}status'],
-      )!,
-      startedAt: $MigrationRunRowsTable.$converterstartedAt.fromSql(
+        data['${effectivePrefix}thumbnail_path'],
+      ),
+      createdAt: $AssetRowsTable.$convertercreatedAt.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
-          data['${effectivePrefix}started_at'],
+          data['${effectivePrefix}created_at'],
         )!,
       ),
-      completedAt: $MigrationRunRowsTable.$convertercompletedAtn.fromSql(
+      lastReferencedAt: $AssetRowsTable.$converterlastReferencedAt.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
-          data['${effectivePrefix}completed_at'],
-        ),
+          data['${effectivePrefix}last_referenced_at'],
+        )!,
       ),
     );
   }
 
   @override
-  $MigrationRunRowsTable createAlias(String alias) {
-    return $MigrationRunRowsTable(attachedDatabase, alias);
+  $AssetRowsTable createAlias(String alias) {
+    return $AssetRowsTable(attachedDatabase, alias);
   }
 
-  static TypeConverter<DateTime, int> $converterstartedAt =
+  static TypeConverter<DateTime, int> $convertercreatedAt =
       const MicrosecondDateTimeConverter();
-  static TypeConverter<DateTime, int> $convertercompletedAt =
+  static TypeConverter<DateTime, int> $converterlastReferencedAt =
       const MicrosecondDateTimeConverter();
-  static TypeConverter<DateTime?, int?> $convertercompletedAtn =
-      NullAwareTypeConverter.wrap($convertercompletedAt);
 }
 
-class MigrationRunRow extends DataClass implements Insertable<MigrationRunRow> {
+class AssetRow extends DataClass implements Insertable<AssetRow> {
   final String id;
-  final String sourceKind;
-  final String sourceHash;
-  final String status;
-  final DateTime startedAt;
-  final DateTime? completedAt;
-  const MigrationRunRow({
+  final String contentHash;
+  final String path;
+  final int byteSize;
+  final int? width;
+  final int? height;
+  final String? thumbnailPath;
+  final DateTime createdAt;
+  final DateTime lastReferencedAt;
+  const AssetRow({
     required this.id,
-    required this.sourceKind,
-    required this.sourceHash,
-    required this.status,
-    required this.startedAt,
-    this.completedAt,
+    required this.contentHash,
+    required this.path,
+    required this.byteSize,
+    this.width,
+    this.height,
+    this.thumbnailPath,
+    required this.createdAt,
+    required this.lastReferencedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['source_kind'] = Variable<String>(sourceKind);
-    map['source_hash'] = Variable<String>(sourceHash);
-    map['status'] = Variable<String>(status);
+    map['content_hash'] = Variable<String>(contentHash);
+    map['path'] = Variable<String>(path);
+    map['byte_size'] = Variable<int>(byteSize);
+    if (!nullToAbsent || width != null) {
+      map['width'] = Variable<int>(width);
+    }
+    if (!nullToAbsent || height != null) {
+      map['height'] = Variable<int>(height);
+    }
+    if (!nullToAbsent || thumbnailPath != null) {
+      map['thumbnail_path'] = Variable<String>(thumbnailPath);
+    }
     {
-      map['started_at'] = Variable<int>(
-        $MigrationRunRowsTable.$converterstartedAt.toSql(startedAt),
+      map['created_at'] = Variable<int>(
+        $AssetRowsTable.$convertercreatedAt.toSql(createdAt),
       );
     }
-    if (!nullToAbsent || completedAt != null) {
-      map['completed_at'] = Variable<int>(
-        $MigrationRunRowsTable.$convertercompletedAtn.toSql(completedAt),
+    {
+      map['last_referenced_at'] = Variable<int>(
+        $AssetRowsTable.$converterlastReferencedAt.toSql(lastReferencedAt),
       );
     }
     return map;
   }
 
-  MigrationRunRowsCompanion toCompanion(bool nullToAbsent) {
-    return MigrationRunRowsCompanion(
+  AssetRowsCompanion toCompanion(bool nullToAbsent) {
+    return AssetRowsCompanion(
       id: Value(id),
-      sourceKind: Value(sourceKind),
-      sourceHash: Value(sourceHash),
-      status: Value(status),
-      startedAt: Value(startedAt),
-      completedAt: completedAt == null && nullToAbsent
+      contentHash: Value(contentHash),
+      path: Value(path),
+      byteSize: Value(byteSize),
+      width: width == null && nullToAbsent
           ? const Value.absent()
-          : Value(completedAt),
+          : Value(width),
+      height: height == null && nullToAbsent
+          ? const Value.absent()
+          : Value(height),
+      thumbnailPath: thumbnailPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(thumbnailPath),
+      createdAt: Value(createdAt),
+      lastReferencedAt: Value(lastReferencedAt),
     );
   }
 
-  factory MigrationRunRow.fromJson(
+  factory AssetRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MigrationRunRow(
+    return AssetRow(
       id: serializer.fromJson<String>(json['id']),
-      sourceKind: serializer.fromJson<String>(json['sourceKind']),
-      sourceHash: serializer.fromJson<String>(json['sourceHash']),
-      status: serializer.fromJson<String>(json['status']),
-      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
-      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+      contentHash: serializer.fromJson<String>(json['contentHash']),
+      path: serializer.fromJson<String>(json['path']),
+      byteSize: serializer.fromJson<int>(json['byteSize']),
+      width: serializer.fromJson<int?>(json['width']),
+      height: serializer.fromJson<int?>(json['height']),
+      thumbnailPath: serializer.fromJson<String?>(json['thumbnailPath']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastReferencedAt: serializer.fromJson<DateTime>(json['lastReferencedAt']),
     );
   }
   @override
@@ -4063,140 +3697,191 @@ class MigrationRunRow extends DataClass implements Insertable<MigrationRunRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'sourceKind': serializer.toJson<String>(sourceKind),
-      'sourceHash': serializer.toJson<String>(sourceHash),
-      'status': serializer.toJson<String>(status),
-      'startedAt': serializer.toJson<DateTime>(startedAt),
-      'completedAt': serializer.toJson<DateTime?>(completedAt),
+      'contentHash': serializer.toJson<String>(contentHash),
+      'path': serializer.toJson<String>(path),
+      'byteSize': serializer.toJson<int>(byteSize),
+      'width': serializer.toJson<int?>(width),
+      'height': serializer.toJson<int?>(height),
+      'thumbnailPath': serializer.toJson<String?>(thumbnailPath),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastReferencedAt': serializer.toJson<DateTime>(lastReferencedAt),
     };
   }
 
-  MigrationRunRow copyWith({
+  AssetRow copyWith({
     String? id,
-    String? sourceKind,
-    String? sourceHash,
-    String? status,
-    DateTime? startedAt,
-    Value<DateTime?> completedAt = const Value.absent(),
-  }) => MigrationRunRow(
+    String? contentHash,
+    String? path,
+    int? byteSize,
+    Value<int?> width = const Value.absent(),
+    Value<int?> height = const Value.absent(),
+    Value<String?> thumbnailPath = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? lastReferencedAt,
+  }) => AssetRow(
     id: id ?? this.id,
-    sourceKind: sourceKind ?? this.sourceKind,
-    sourceHash: sourceHash ?? this.sourceHash,
-    status: status ?? this.status,
-    startedAt: startedAt ?? this.startedAt,
-    completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    contentHash: contentHash ?? this.contentHash,
+    path: path ?? this.path,
+    byteSize: byteSize ?? this.byteSize,
+    width: width.present ? width.value : this.width,
+    height: height.present ? height.value : this.height,
+    thumbnailPath: thumbnailPath.present
+        ? thumbnailPath.value
+        : this.thumbnailPath,
+    createdAt: createdAt ?? this.createdAt,
+    lastReferencedAt: lastReferencedAt ?? this.lastReferencedAt,
   );
-  MigrationRunRow copyWithCompanion(MigrationRunRowsCompanion data) {
-    return MigrationRunRow(
+  AssetRow copyWithCompanion(AssetRowsCompanion data) {
+    return AssetRow(
       id: data.id.present ? data.id.value : this.id,
-      sourceKind: data.sourceKind.present
-          ? data.sourceKind.value
-          : this.sourceKind,
-      sourceHash: data.sourceHash.present
-          ? data.sourceHash.value
-          : this.sourceHash,
-      status: data.status.present ? data.status.value : this.status,
-      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
-      completedAt: data.completedAt.present
-          ? data.completedAt.value
-          : this.completedAt,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      path: data.path.present ? data.path.value : this.path,
+      byteSize: data.byteSize.present ? data.byteSize.value : this.byteSize,
+      width: data.width.present ? data.width.value : this.width,
+      height: data.height.present ? data.height.value : this.height,
+      thumbnailPath: data.thumbnailPath.present
+          ? data.thumbnailPath.value
+          : this.thumbnailPath,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastReferencedAt: data.lastReferencedAt.present
+          ? data.lastReferencedAt.value
+          : this.lastReferencedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('MigrationRunRow(')
+    return (StringBuffer('AssetRow(')
           ..write('id: $id, ')
-          ..write('sourceKind: $sourceKind, ')
-          ..write('sourceHash: $sourceHash, ')
-          ..write('status: $status, ')
-          ..write('startedAt: $startedAt, ')
-          ..write('completedAt: $completedAt')
+          ..write('contentHash: $contentHash, ')
+          ..write('path: $path, ')
+          ..write('byteSize: $byteSize, ')
+          ..write('width: $width, ')
+          ..write('height: $height, ')
+          ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastReferencedAt: $lastReferencedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, sourceKind, sourceHash, status, startedAt, completedAt);
+  int get hashCode => Object.hash(
+    id,
+    contentHash,
+    path,
+    byteSize,
+    width,
+    height,
+    thumbnailPath,
+    createdAt,
+    lastReferencedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MigrationRunRow &&
+      (other is AssetRow &&
           other.id == this.id &&
-          other.sourceKind == this.sourceKind &&
-          other.sourceHash == this.sourceHash &&
-          other.status == this.status &&
-          other.startedAt == this.startedAt &&
-          other.completedAt == this.completedAt);
+          other.contentHash == this.contentHash &&
+          other.path == this.path &&
+          other.byteSize == this.byteSize &&
+          other.width == this.width &&
+          other.height == this.height &&
+          other.thumbnailPath == this.thumbnailPath &&
+          other.createdAt == this.createdAt &&
+          other.lastReferencedAt == this.lastReferencedAt);
 }
 
-class MigrationRunRowsCompanion extends UpdateCompanion<MigrationRunRow> {
+class AssetRowsCompanion extends UpdateCompanion<AssetRow> {
   final Value<String> id;
-  final Value<String> sourceKind;
-  final Value<String> sourceHash;
-  final Value<String> status;
-  final Value<DateTime> startedAt;
-  final Value<DateTime?> completedAt;
+  final Value<String> contentHash;
+  final Value<String> path;
+  final Value<int> byteSize;
+  final Value<int?> width;
+  final Value<int?> height;
+  final Value<String?> thumbnailPath;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> lastReferencedAt;
   final Value<int> rowid;
-  const MigrationRunRowsCompanion({
+  const AssetRowsCompanion({
     this.id = const Value.absent(),
-    this.sourceKind = const Value.absent(),
-    this.sourceHash = const Value.absent(),
-    this.status = const Value.absent(),
-    this.startedAt = const Value.absent(),
-    this.completedAt = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.path = const Value.absent(),
+    this.byteSize = const Value.absent(),
+    this.width = const Value.absent(),
+    this.height = const Value.absent(),
+    this.thumbnailPath = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastReferencedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  MigrationRunRowsCompanion.insert({
+  AssetRowsCompanion.insert({
     required String id,
-    required String sourceKind,
-    required String sourceHash,
-    required String status,
-    required DateTime startedAt,
-    this.completedAt = const Value.absent(),
+    required String contentHash,
+    required String path,
+    required int byteSize,
+    this.width = const Value.absent(),
+    this.height = const Value.absent(),
+    this.thumbnailPath = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime lastReferencedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       sourceKind = Value(sourceKind),
-       sourceHash = Value(sourceHash),
-       status = Value(status),
-       startedAt = Value(startedAt);
-  static Insertable<MigrationRunRow> custom({
+       contentHash = Value(contentHash),
+       path = Value(path),
+       byteSize = Value(byteSize),
+       createdAt = Value(createdAt),
+       lastReferencedAt = Value(lastReferencedAt);
+  static Insertable<AssetRow> custom({
     Expression<String>? id,
-    Expression<String>? sourceKind,
-    Expression<String>? sourceHash,
-    Expression<String>? status,
-    Expression<int>? startedAt,
-    Expression<int>? completedAt,
+    Expression<String>? contentHash,
+    Expression<String>? path,
+    Expression<int>? byteSize,
+    Expression<int>? width,
+    Expression<int>? height,
+    Expression<String>? thumbnailPath,
+    Expression<int>? createdAt,
+    Expression<int>? lastReferencedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (sourceKind != null) 'source_kind': sourceKind,
-      if (sourceHash != null) 'source_hash': sourceHash,
-      if (status != null) 'status': status,
-      if (startedAt != null) 'started_at': startedAt,
-      if (completedAt != null) 'completed_at': completedAt,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (path != null) 'path': path,
+      if (byteSize != null) 'byte_size': byteSize,
+      if (width != null) 'width': width,
+      if (height != null) 'height': height,
+      if (thumbnailPath != null) 'thumbnail_path': thumbnailPath,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastReferencedAt != null) 'last_referenced_at': lastReferencedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  MigrationRunRowsCompanion copyWith({
+  AssetRowsCompanion copyWith({
     Value<String>? id,
-    Value<String>? sourceKind,
-    Value<String>? sourceHash,
-    Value<String>? status,
-    Value<DateTime>? startedAt,
-    Value<DateTime?>? completedAt,
+    Value<String>? contentHash,
+    Value<String>? path,
+    Value<int>? byteSize,
+    Value<int?>? width,
+    Value<int?>? height,
+    Value<String?>? thumbnailPath,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? lastReferencedAt,
     Value<int>? rowid,
   }) {
-    return MigrationRunRowsCompanion(
+    return AssetRowsCompanion(
       id: id ?? this.id,
-      sourceKind: sourceKind ?? this.sourceKind,
-      sourceHash: sourceHash ?? this.sourceHash,
-      status: status ?? this.status,
-      startedAt: startedAt ?? this.startedAt,
-      completedAt: completedAt ?? this.completedAt,
+      contentHash: contentHash ?? this.contentHash,
+      path: path ?? this.path,
+      byteSize: byteSize ?? this.byteSize,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      createdAt: createdAt ?? this.createdAt,
+      lastReferencedAt: lastReferencedAt ?? this.lastReferencedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4207,23 +3892,34 @@ class MigrationRunRowsCompanion extends UpdateCompanion<MigrationRunRow> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (sourceKind.present) {
-      map['source_kind'] = Variable<String>(sourceKind.value);
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
     }
-    if (sourceHash.present) {
-      map['source_hash'] = Variable<String>(sourceHash.value);
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
     }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
+    if (byteSize.present) {
+      map['byte_size'] = Variable<int>(byteSize.value);
     }
-    if (startedAt.present) {
-      map['started_at'] = Variable<int>(
-        $MigrationRunRowsTable.$converterstartedAt.toSql(startedAt.value),
+    if (width.present) {
+      map['width'] = Variable<int>(width.value);
+    }
+    if (height.present) {
+      map['height'] = Variable<int>(height.value);
+    }
+    if (thumbnailPath.present) {
+      map['thumbnail_path'] = Variable<String>(thumbnailPath.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(
+        $AssetRowsTable.$convertercreatedAt.toSql(createdAt.value),
       );
     }
-    if (completedAt.present) {
-      map['completed_at'] = Variable<int>(
-        $MigrationRunRowsTable.$convertercompletedAtn.toSql(completedAt.value),
+    if (lastReferencedAt.present) {
+      map['last_referenced_at'] = Variable<int>(
+        $AssetRowsTable.$converterlastReferencedAt.toSql(
+          lastReferencedAt.value,
+        ),
       );
     }
     if (rowid.present) {
@@ -4234,48 +3930,28 @@ class MigrationRunRowsCompanion extends UpdateCompanion<MigrationRunRow> {
 
   @override
   String toString() {
-    return (StringBuffer('MigrationRunRowsCompanion(')
+    return (StringBuffer('AssetRowsCompanion(')
           ..write('id: $id, ')
-          ..write('sourceKind: $sourceKind, ')
-          ..write('sourceHash: $sourceHash, ')
-          ..write('status: $status, ')
-          ..write('startedAt: $startedAt, ')
-          ..write('completedAt: $completedAt, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('path: $path, ')
+          ..write('byteSize: $byteSize, ')
+          ..write('width: $width, ')
+          ..write('height: $height, ')
+          ..write('thumbnailPath: $thumbnailPath, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastReferencedAt: $lastReferencedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $MigrationIssueRowsTable extends MigrationIssueRows
-    with TableInfo<$MigrationIssueRowsTable, MigrationIssueRow> {
+class $MessageAssetRowsTable extends MessageAssetRows
+    with TableInfo<$MessageAssetRowsTable, MessageAssetRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $MigrationIssueRowsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _migrationRunIdMeta = const VerificationMeta(
-    'migrationRunId',
-  );
-  @override
-  late final GeneratedColumn<String> migrationRunId = GeneratedColumn<String>(
-    'migration_run_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES migration_run_rows (id) ON DELETE CASCADE',
-    ),
-  );
+  $MessageAssetRowsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _conversationIdMeta = const VerificationMeta(
     'conversationId',
   );
@@ -4283,20 +3959,667 @@ class $MigrationIssueRowsTable extends MigrationIssueRows
   late final GeneratedColumn<String> conversationId = GeneratedColumn<String>(
     'conversation_id',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
-  static const VerificationMeta _sourceEntityIdMeta = const VerificationMeta(
-    'sourceEntityId',
+  static const VerificationMeta _revisionIdMeta = const VerificationMeta(
+    'revisionId',
   );
   @override
-  late final GeneratedColumn<String> sourceEntityId = GeneratedColumn<String>(
-    'source_entity_id',
+  late final GeneratedColumn<String> revisionId = GeneratedColumn<String>(
+    'revision_id',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES message_rows (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES asset_rows (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    check: () => kind.isNotValue(''),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    conversationId,
+    revisionId,
+    assetId,
+    kind,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'message_asset_rows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MessageAssetRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('conversation_id')) {
+      context.handle(
+        _conversationIdMeta,
+        conversationId.isAcceptableOrUnknown(
+          data['conversation_id']!,
+          _conversationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_conversationIdMeta);
+    }
+    if (data.containsKey('revision_id')) {
+      context.handle(
+        _revisionIdMeta,
+        revisionId.isAcceptableOrUnknown(data['revision_id']!, _revisionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionIdMeta);
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {revisionId, assetId, kind};
+  @override
+  MessageAssetRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MessageAssetRow(
+      conversationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}conversation_id'],
+      )!,
+      revisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}revision_id'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+    );
+  }
+
+  @override
+  $MessageAssetRowsTable createAlias(String alias) {
+    return $MessageAssetRowsTable(attachedDatabase, alias);
+  }
+}
+
+class MessageAssetRow extends DataClass implements Insertable<MessageAssetRow> {
+  final String conversationId;
+  final String revisionId;
+  final String assetId;
+  final String kind;
+  const MessageAssetRow({
+    required this.conversationId,
+    required this.revisionId,
+    required this.assetId,
+    required this.kind,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['conversation_id'] = Variable<String>(conversationId);
+    map['revision_id'] = Variable<String>(revisionId);
+    map['asset_id'] = Variable<String>(assetId);
+    map['kind'] = Variable<String>(kind);
+    return map;
+  }
+
+  MessageAssetRowsCompanion toCompanion(bool nullToAbsent) {
+    return MessageAssetRowsCompanion(
+      conversationId: Value(conversationId),
+      revisionId: Value(revisionId),
+      assetId: Value(assetId),
+      kind: Value(kind),
+    );
+  }
+
+  factory MessageAssetRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MessageAssetRow(
+      conversationId: serializer.fromJson<String>(json['conversationId']),
+      revisionId: serializer.fromJson<String>(json['revisionId']),
+      assetId: serializer.fromJson<String>(json['assetId']),
+      kind: serializer.fromJson<String>(json['kind']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'conversationId': serializer.toJson<String>(conversationId),
+      'revisionId': serializer.toJson<String>(revisionId),
+      'assetId': serializer.toJson<String>(assetId),
+      'kind': serializer.toJson<String>(kind),
+    };
+  }
+
+  MessageAssetRow copyWith({
+    String? conversationId,
+    String? revisionId,
+    String? assetId,
+    String? kind,
+  }) => MessageAssetRow(
+    conversationId: conversationId ?? this.conversationId,
+    revisionId: revisionId ?? this.revisionId,
+    assetId: assetId ?? this.assetId,
+    kind: kind ?? this.kind,
+  );
+  MessageAssetRow copyWithCompanion(MessageAssetRowsCompanion data) {
+    return MessageAssetRow(
+      conversationId: data.conversationId.present
+          ? data.conversationId.value
+          : this.conversationId,
+      revisionId: data.revisionId.present
+          ? data.revisionId.value
+          : this.revisionId,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessageAssetRow(')
+          ..write('conversationId: $conversationId, ')
+          ..write('revisionId: $revisionId, ')
+          ..write('assetId: $assetId, ')
+          ..write('kind: $kind')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(conversationId, revisionId, assetId, kind);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MessageAssetRow &&
+          other.conversationId == this.conversationId &&
+          other.revisionId == this.revisionId &&
+          other.assetId == this.assetId &&
+          other.kind == this.kind);
+}
+
+class MessageAssetRowsCompanion extends UpdateCompanion<MessageAssetRow> {
+  final Value<String> conversationId;
+  final Value<String> revisionId;
+  final Value<String> assetId;
+  final Value<String> kind;
+  final Value<int> rowid;
+  const MessageAssetRowsCompanion({
+    this.conversationId = const Value.absent(),
+    this.revisionId = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MessageAssetRowsCompanion.insert({
+    required String conversationId,
+    required String revisionId,
+    required String assetId,
+    required String kind,
+    this.rowid = const Value.absent(),
+  }) : conversationId = Value(conversationId),
+       revisionId = Value(revisionId),
+       assetId = Value(assetId),
+       kind = Value(kind);
+  static Insertable<MessageAssetRow> custom({
+    Expression<String>? conversationId,
+    Expression<String>? revisionId,
+    Expression<String>? assetId,
+    Expression<String>? kind,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (conversationId != null) 'conversation_id': conversationId,
+      if (revisionId != null) 'revision_id': revisionId,
+      if (assetId != null) 'asset_id': assetId,
+      if (kind != null) 'kind': kind,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MessageAssetRowsCompanion copyWith({
+    Value<String>? conversationId,
+    Value<String>? revisionId,
+    Value<String>? assetId,
+    Value<String>? kind,
+    Value<int>? rowid,
+  }) {
+    return MessageAssetRowsCompanion(
+      conversationId: conversationId ?? this.conversationId,
+      revisionId: revisionId ?? this.revisionId,
+      assetId: assetId ?? this.assetId,
+      kind: kind ?? this.kind,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (conversationId.present) {
+      map['conversation_id'] = Variable<String>(conversationId.value);
+    }
+    if (revisionId.present) {
+      map['revision_id'] = Variable<String>(revisionId.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<String>(assetId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessageAssetRowsCompanion(')
+          ..write('conversationId: $conversationId, ')
+          ..write('revisionId: $revisionId, ')
+          ..write('assetId: $assetId, ')
+          ..write('kind: $kind, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetGcRowsTable extends AssetGcRows
+    with TableInfo<$AssetGcRowsTable, AssetGcRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetGcRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES asset_rows (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> notBefore =
+      GeneratedColumn<int>(
+        'not_before',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($AssetGcRowsTable.$converternotBefore);
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    check: () => ComparableExpr(attempts).isBiggerOrEqualValue(0),
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _generationMeta = const VerificationMeta(
+    'generation',
+  );
+  @override
+  late final GeneratedColumn<int> generation = GeneratedColumn<int>(
+    'generation',
+    aliasedName,
+    false,
+    check: () => ComparableExpr(generation).isBiggerOrEqualValue(0),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    assetId,
+    notBefore,
+    attempts,
+    generation,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_gc_rows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetGcRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('generation')) {
+      context.handle(
+        _generationMeta,
+        generation.isAcceptableOrUnknown(data['generation']!, _generationMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {assetId};
+  @override
+  AssetGcRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetGcRow(
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      notBefore: $AssetGcRowsTable.$converternotBefore.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}not_before'],
+        )!,
+      ),
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      generation: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}generation'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetGcRowsTable createAlias(String alias) {
+    return $AssetGcRowsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, int> $converternotBefore =
+      const MicrosecondDateTimeConverter();
+}
+
+class AssetGcRow extends DataClass implements Insertable<AssetGcRow> {
+  final String assetId;
+  final DateTime notBefore;
+  final int attempts;
+  final int generation;
+  const AssetGcRow({
+    required this.assetId,
+    required this.notBefore,
+    required this.attempts,
+    required this.generation,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['asset_id'] = Variable<String>(assetId);
+    {
+      map['not_before'] = Variable<int>(
+        $AssetGcRowsTable.$converternotBefore.toSql(notBefore),
+      );
+    }
+    map['attempts'] = Variable<int>(attempts);
+    map['generation'] = Variable<int>(generation);
+    return map;
+  }
+
+  AssetGcRowsCompanion toCompanion(bool nullToAbsent) {
+    return AssetGcRowsCompanion(
+      assetId: Value(assetId),
+      notBefore: Value(notBefore),
+      attempts: Value(attempts),
+      generation: Value(generation),
+    );
+  }
+
+  factory AssetGcRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetGcRow(
+      assetId: serializer.fromJson<String>(json['assetId']),
+      notBefore: serializer.fromJson<DateTime>(json['notBefore']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      generation: serializer.fromJson<int>(json['generation']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'assetId': serializer.toJson<String>(assetId),
+      'notBefore': serializer.toJson<DateTime>(notBefore),
+      'attempts': serializer.toJson<int>(attempts),
+      'generation': serializer.toJson<int>(generation),
+    };
+  }
+
+  AssetGcRow copyWith({
+    String? assetId,
+    DateTime? notBefore,
+    int? attempts,
+    int? generation,
+  }) => AssetGcRow(
+    assetId: assetId ?? this.assetId,
+    notBefore: notBefore ?? this.notBefore,
+    attempts: attempts ?? this.attempts,
+    generation: generation ?? this.generation,
+  );
+  AssetGcRow copyWithCompanion(AssetGcRowsCompanion data) {
+    return AssetGcRow(
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      notBefore: data.notBefore.present ? data.notBefore.value : this.notBefore,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      generation: data.generation.present
+          ? data.generation.value
+          : this.generation,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetGcRow(')
+          ..write('assetId: $assetId, ')
+          ..write('notBefore: $notBefore, ')
+          ..write('attempts: $attempts, ')
+          ..write('generation: $generation')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(assetId, notBefore, attempts, generation);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetGcRow &&
+          other.assetId == this.assetId &&
+          other.notBefore == this.notBefore &&
+          other.attempts == this.attempts &&
+          other.generation == this.generation);
+}
+
+class AssetGcRowsCompanion extends UpdateCompanion<AssetGcRow> {
+  final Value<String> assetId;
+  final Value<DateTime> notBefore;
+  final Value<int> attempts;
+  final Value<int> generation;
+  final Value<int> rowid;
+  const AssetGcRowsCompanion({
+    this.assetId = const Value.absent(),
+    this.notBefore = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.generation = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AssetGcRowsCompanion.insert({
+    required String assetId,
+    required DateTime notBefore,
+    this.attempts = const Value.absent(),
+    this.generation = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : assetId = Value(assetId),
+       notBefore = Value(notBefore);
+  static Insertable<AssetGcRow> custom({
+    Expression<String>? assetId,
+    Expression<int>? notBefore,
+    Expression<int>? attempts,
+    Expression<int>? generation,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (assetId != null) 'asset_id': assetId,
+      if (notBefore != null) 'not_before': notBefore,
+      if (attempts != null) 'attempts': attempts,
+      if (generation != null) 'generation': generation,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AssetGcRowsCompanion copyWith({
+    Value<String>? assetId,
+    Value<DateTime>? notBefore,
+    Value<int>? attempts,
+    Value<int>? generation,
+    Value<int>? rowid,
+  }) {
+    return AssetGcRowsCompanion(
+      assetId: assetId ?? this.assetId,
+      notBefore: notBefore ?? this.notBefore,
+      attempts: attempts ?? this.attempts,
+      generation: generation ?? this.generation,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (assetId.present) {
+      map['asset_id'] = Variable<String>(assetId.value);
+    }
+    if (notBefore.present) {
+      map['not_before'] = Variable<int>(
+        $AssetGcRowsTable.$converternotBefore.toSql(notBefore.value),
+      );
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (generation.present) {
+      map['generation'] = Variable<int>(generation.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetGcRowsCompanion(')
+          ..write('assetId: $assetId, ')
+          ..write('notBefore: $notBefore, ')
+          ..write('attempts: $attempts, ')
+          ..write('generation: $generation, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GcAuditRowsTable extends GcAuditRows
+    with TableInfo<$GcAuditRowsTable, GcAuditRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GcAuditRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
   );
   static const VerificationMeta _kindMeta = const VerificationMeta('kind');
   @override
@@ -4307,95 +4630,42 @@ class $MigrationIssueRowsTable extends MigrationIssueRows
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _severityMeta = const VerificationMeta(
-    'severity',
+  static const VerificationMeta _entityIdMeta = const VerificationMeta(
+    'entityId',
   );
   @override
-  late final GeneratedColumn<String> severity = GeneratedColumn<String>(
-    'severity',
+  late final GeneratedColumn<String> entityId = GeneratedColumn<String>(
+    'entity_id',
     aliasedName,
     false,
-    check: () => severity.isIn(const ['warning', 'recovered', 'rejected']),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _detailsJsonMeta = const VerificationMeta(
-    'detailsJson',
-  );
   @override
-  late final GeneratedColumn<String> detailsJson = GeneratedColumn<String>(
-    'details_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('{}'),
-  );
-  @override
-  late final GeneratedColumnWithTypeConverter<DateTime, int> createdAt =
+  late final GeneratedColumnWithTypeConverter<DateTime, int> completedAt =
       GeneratedColumn<int>(
-        'created_at',
+        'completed_at',
         aliasedName,
         false,
         type: DriftSqlType.int,
         requiredDuringInsert: true,
-      ).withConverter<DateTime>($MigrationIssueRowsTable.$convertercreatedAt);
+      ).withConverter<DateTime>($GcAuditRowsTable.$convertercompletedAt);
   @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    migrationRunId,
-    conversationId,
-    sourceEntityId,
-    kind,
-    severity,
-    detailsJson,
-    createdAt,
-  ];
+  List<GeneratedColumn> get $columns => [id, kind, entityId, completedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'migration_issue_rows';
+  static const String $name = 'gc_audit_rows';
   @override
   VerificationContext validateIntegrity(
-    Insertable<MigrationIssueRow> instance, {
+    Insertable<GcAuditRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('migration_run_id')) {
-      context.handle(
-        _migrationRunIdMeta,
-        migrationRunId.isAcceptableOrUnknown(
-          data['migration_run_id']!,
-          _migrationRunIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_migrationRunIdMeta);
-    }
-    if (data.containsKey('conversation_id')) {
-      context.handle(
-        _conversationIdMeta,
-        conversationId.isAcceptableOrUnknown(
-          data['conversation_id']!,
-          _conversationIdMeta,
-        ),
-      );
-    }
-    if (data.containsKey('source_entity_id')) {
-      context.handle(
-        _sourceEntityIdMeta,
-        sourceEntityId.isAcceptableOrUnknown(
-          data['source_entity_id']!,
-          _sourceEntityIdMeta,
-        ),
-      );
     }
     if (data.containsKey('kind')) {
       context.handle(
@@ -4405,22 +4675,13 @@ class $MigrationIssueRowsTable extends MigrationIssueRows
     } else if (isInserting) {
       context.missing(_kindMeta);
     }
-    if (data.containsKey('severity')) {
+    if (data.containsKey('entity_id')) {
       context.handle(
-        _severityMeta,
-        severity.isAcceptableOrUnknown(data['severity']!, _severityMeta),
+        _entityIdMeta,
+        entityId.isAcceptableOrUnknown(data['entity_id']!, _entityIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_severityMeta);
-    }
-    if (data.containsKey('details_json')) {
-      context.handle(
-        _detailsJsonMeta,
-        detailsJson.isAcceptableOrUnknown(
-          data['details_json']!,
-          _detailsJsonMeta,
-        ),
-      );
+      context.missing(_entityIdMeta);
     }
     return context;
   }
@@ -4428,310 +4689,185 @@ class $MigrationIssueRowsTable extends MigrationIssueRows
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  MigrationIssueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  GcAuditRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MigrationIssueRow(
+    return GcAuditRow(
       id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
+        DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      migrationRunId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}migration_run_id'],
-      )!,
-      conversationId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}conversation_id'],
-      ),
-      sourceEntityId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}source_entity_id'],
-      ),
       kind: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
       )!,
-      severity: attachedDatabase.typeMapping.read(
+      entityId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}severity'],
+        data['${effectivePrefix}entity_id'],
       )!,
-      detailsJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}details_json'],
-      )!,
-      createdAt: $MigrationIssueRowsTable.$convertercreatedAt.fromSql(
+      completedAt: $GcAuditRowsTable.$convertercompletedAt.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
-          data['${effectivePrefix}created_at'],
+          data['${effectivePrefix}completed_at'],
         )!,
       ),
     );
   }
 
   @override
-  $MigrationIssueRowsTable createAlias(String alias) {
-    return $MigrationIssueRowsTable(attachedDatabase, alias);
+  $GcAuditRowsTable createAlias(String alias) {
+    return $GcAuditRowsTable(attachedDatabase, alias);
   }
 
-  static TypeConverter<DateTime, int> $convertercreatedAt =
+  static TypeConverter<DateTime, int> $convertercompletedAt =
       const MicrosecondDateTimeConverter();
 }
 
-class MigrationIssueRow extends DataClass
-    implements Insertable<MigrationIssueRow> {
-  final String id;
-  final String migrationRunId;
-  final String? conversationId;
-  final String? sourceEntityId;
+class GcAuditRow extends DataClass implements Insertable<GcAuditRow> {
+  final int id;
   final String kind;
-  final String severity;
-  final String detailsJson;
-  final DateTime createdAt;
-  const MigrationIssueRow({
+  final String entityId;
+  final DateTime completedAt;
+  const GcAuditRow({
     required this.id,
-    required this.migrationRunId,
-    this.conversationId,
-    this.sourceEntityId,
     required this.kind,
-    required this.severity,
-    required this.detailsJson,
-    required this.createdAt,
+    required this.entityId,
+    required this.completedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['migration_run_id'] = Variable<String>(migrationRunId);
-    if (!nullToAbsent || conversationId != null) {
-      map['conversation_id'] = Variable<String>(conversationId);
-    }
-    if (!nullToAbsent || sourceEntityId != null) {
-      map['source_entity_id'] = Variable<String>(sourceEntityId);
-    }
+    map['id'] = Variable<int>(id);
     map['kind'] = Variable<String>(kind);
-    map['severity'] = Variable<String>(severity);
-    map['details_json'] = Variable<String>(detailsJson);
+    map['entity_id'] = Variable<String>(entityId);
     {
-      map['created_at'] = Variable<int>(
-        $MigrationIssueRowsTable.$convertercreatedAt.toSql(createdAt),
+      map['completed_at'] = Variable<int>(
+        $GcAuditRowsTable.$convertercompletedAt.toSql(completedAt),
       );
     }
     return map;
   }
 
-  MigrationIssueRowsCompanion toCompanion(bool nullToAbsent) {
-    return MigrationIssueRowsCompanion(
+  GcAuditRowsCompanion toCompanion(bool nullToAbsent) {
+    return GcAuditRowsCompanion(
       id: Value(id),
-      migrationRunId: Value(migrationRunId),
-      conversationId: conversationId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(conversationId),
-      sourceEntityId: sourceEntityId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sourceEntityId),
       kind: Value(kind),
-      severity: Value(severity),
-      detailsJson: Value(detailsJson),
-      createdAt: Value(createdAt),
+      entityId: Value(entityId),
+      completedAt: Value(completedAt),
     );
   }
 
-  factory MigrationIssueRow.fromJson(
+  factory GcAuditRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MigrationIssueRow(
-      id: serializer.fromJson<String>(json['id']),
-      migrationRunId: serializer.fromJson<String>(json['migrationRunId']),
-      conversationId: serializer.fromJson<String?>(json['conversationId']),
-      sourceEntityId: serializer.fromJson<String?>(json['sourceEntityId']),
+    return GcAuditRow(
+      id: serializer.fromJson<int>(json['id']),
       kind: serializer.fromJson<String>(json['kind']),
-      severity: serializer.fromJson<String>(json['severity']),
-      detailsJson: serializer.fromJson<String>(json['detailsJson']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      entityId: serializer.fromJson<String>(json['entityId']),
+      completedAt: serializer.fromJson<DateTime>(json['completedAt']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'migrationRunId': serializer.toJson<String>(migrationRunId),
-      'conversationId': serializer.toJson<String?>(conversationId),
-      'sourceEntityId': serializer.toJson<String?>(sourceEntityId),
+      'id': serializer.toJson<int>(id),
       'kind': serializer.toJson<String>(kind),
-      'severity': serializer.toJson<String>(severity),
-      'detailsJson': serializer.toJson<String>(detailsJson),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'entityId': serializer.toJson<String>(entityId),
+      'completedAt': serializer.toJson<DateTime>(completedAt),
     };
   }
 
-  MigrationIssueRow copyWith({
-    String? id,
-    String? migrationRunId,
-    Value<String?> conversationId = const Value.absent(),
-    Value<String?> sourceEntityId = const Value.absent(),
+  GcAuditRow copyWith({
+    int? id,
     String? kind,
-    String? severity,
-    String? detailsJson,
-    DateTime? createdAt,
-  }) => MigrationIssueRow(
+    String? entityId,
+    DateTime? completedAt,
+  }) => GcAuditRow(
     id: id ?? this.id,
-    migrationRunId: migrationRunId ?? this.migrationRunId,
-    conversationId: conversationId.present
-        ? conversationId.value
-        : this.conversationId,
-    sourceEntityId: sourceEntityId.present
-        ? sourceEntityId.value
-        : this.sourceEntityId,
     kind: kind ?? this.kind,
-    severity: severity ?? this.severity,
-    detailsJson: detailsJson ?? this.detailsJson,
-    createdAt: createdAt ?? this.createdAt,
+    entityId: entityId ?? this.entityId,
+    completedAt: completedAt ?? this.completedAt,
   );
-  MigrationIssueRow copyWithCompanion(MigrationIssueRowsCompanion data) {
-    return MigrationIssueRow(
+  GcAuditRow copyWithCompanion(GcAuditRowsCompanion data) {
+    return GcAuditRow(
       id: data.id.present ? data.id.value : this.id,
-      migrationRunId: data.migrationRunId.present
-          ? data.migrationRunId.value
-          : this.migrationRunId,
-      conversationId: data.conversationId.present
-          ? data.conversationId.value
-          : this.conversationId,
-      sourceEntityId: data.sourceEntityId.present
-          ? data.sourceEntityId.value
-          : this.sourceEntityId,
       kind: data.kind.present ? data.kind.value : this.kind,
-      severity: data.severity.present ? data.severity.value : this.severity,
-      detailsJson: data.detailsJson.present
-          ? data.detailsJson.value
-          : this.detailsJson,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      entityId: data.entityId.present ? data.entityId.value : this.entityId,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('MigrationIssueRow(')
+    return (StringBuffer('GcAuditRow(')
           ..write('id: $id, ')
-          ..write('migrationRunId: $migrationRunId, ')
-          ..write('conversationId: $conversationId, ')
-          ..write('sourceEntityId: $sourceEntityId, ')
           ..write('kind: $kind, ')
-          ..write('severity: $severity, ')
-          ..write('detailsJson: $detailsJson, ')
-          ..write('createdAt: $createdAt')
+          ..write('entityId: $entityId, ')
+          ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    migrationRunId,
-    conversationId,
-    sourceEntityId,
-    kind,
-    severity,
-    detailsJson,
-    createdAt,
-  );
+  int get hashCode => Object.hash(id, kind, entityId, completedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MigrationIssueRow &&
+      (other is GcAuditRow &&
           other.id == this.id &&
-          other.migrationRunId == this.migrationRunId &&
-          other.conversationId == this.conversationId &&
-          other.sourceEntityId == this.sourceEntityId &&
           other.kind == this.kind &&
-          other.severity == this.severity &&
-          other.detailsJson == this.detailsJson &&
-          other.createdAt == this.createdAt);
+          other.entityId == this.entityId &&
+          other.completedAt == this.completedAt);
 }
 
-class MigrationIssueRowsCompanion extends UpdateCompanion<MigrationIssueRow> {
-  final Value<String> id;
-  final Value<String> migrationRunId;
-  final Value<String?> conversationId;
-  final Value<String?> sourceEntityId;
+class GcAuditRowsCompanion extends UpdateCompanion<GcAuditRow> {
+  final Value<int> id;
   final Value<String> kind;
-  final Value<String> severity;
-  final Value<String> detailsJson;
-  final Value<DateTime> createdAt;
-  final Value<int> rowid;
-  const MigrationIssueRowsCompanion({
+  final Value<String> entityId;
+  final Value<DateTime> completedAt;
+  const GcAuditRowsCompanion({
     this.id = const Value.absent(),
-    this.migrationRunId = const Value.absent(),
-    this.conversationId = const Value.absent(),
-    this.sourceEntityId = const Value.absent(),
     this.kind = const Value.absent(),
-    this.severity = const Value.absent(),
-    this.detailsJson = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.rowid = const Value.absent(),
+    this.entityId = const Value.absent(),
+    this.completedAt = const Value.absent(),
   });
-  MigrationIssueRowsCompanion.insert({
-    required String id,
-    required String migrationRunId,
-    this.conversationId = const Value.absent(),
-    this.sourceEntityId = const Value.absent(),
+  GcAuditRowsCompanion.insert({
+    this.id = const Value.absent(),
     required String kind,
-    required String severity,
-    this.detailsJson = const Value.absent(),
-    required DateTime createdAt,
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       migrationRunId = Value(migrationRunId),
-       kind = Value(kind),
-       severity = Value(severity),
-       createdAt = Value(createdAt);
-  static Insertable<MigrationIssueRow> custom({
-    Expression<String>? id,
-    Expression<String>? migrationRunId,
-    Expression<String>? conversationId,
-    Expression<String>? sourceEntityId,
+    required String entityId,
+    required DateTime completedAt,
+  }) : kind = Value(kind),
+       entityId = Value(entityId),
+       completedAt = Value(completedAt);
+  static Insertable<GcAuditRow> custom({
+    Expression<int>? id,
     Expression<String>? kind,
-    Expression<String>? severity,
-    Expression<String>? detailsJson,
-    Expression<int>? createdAt,
-    Expression<int>? rowid,
+    Expression<String>? entityId,
+    Expression<int>? completedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (migrationRunId != null) 'migration_run_id': migrationRunId,
-      if (conversationId != null) 'conversation_id': conversationId,
-      if (sourceEntityId != null) 'source_entity_id': sourceEntityId,
       if (kind != null) 'kind': kind,
-      if (severity != null) 'severity': severity,
-      if (detailsJson != null) 'details_json': detailsJson,
-      if (createdAt != null) 'created_at': createdAt,
-      if (rowid != null) 'rowid': rowid,
+      if (entityId != null) 'entity_id': entityId,
+      if (completedAt != null) 'completed_at': completedAt,
     });
   }
 
-  MigrationIssueRowsCompanion copyWith({
-    Value<String>? id,
-    Value<String>? migrationRunId,
-    Value<String?>? conversationId,
-    Value<String?>? sourceEntityId,
+  GcAuditRowsCompanion copyWith({
+    Value<int>? id,
     Value<String>? kind,
-    Value<String>? severity,
-    Value<String>? detailsJson,
-    Value<DateTime>? createdAt,
-    Value<int>? rowid,
+    Value<String>? entityId,
+    Value<DateTime>? completedAt,
   }) {
-    return MigrationIssueRowsCompanion(
+    return GcAuditRowsCompanion(
       id: id ?? this.id,
-      migrationRunId: migrationRunId ?? this.migrationRunId,
-      conversationId: conversationId ?? this.conversationId,
-      sourceEntityId: sourceEntityId ?? this.sourceEntityId,
       kind: kind ?? this.kind,
-      severity: severity ?? this.severity,
-      detailsJson: detailsJson ?? this.detailsJson,
-      createdAt: createdAt ?? this.createdAt,
-      rowid: rowid ?? this.rowid,
+      entityId: entityId ?? this.entityId,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 
@@ -4739,30 +4875,195 @@ class MigrationIssueRowsCompanion extends UpdateCompanion<MigrationIssueRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (migrationRunId.present) {
-      map['migration_run_id'] = Variable<String>(migrationRunId.value);
-    }
-    if (conversationId.present) {
-      map['conversation_id'] = Variable<String>(conversationId.value);
-    }
-    if (sourceEntityId.present) {
-      map['source_entity_id'] = Variable<String>(sourceEntityId.value);
+      map['id'] = Variable<int>(id.value);
     }
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
     }
-    if (severity.present) {
-      map['severity'] = Variable<String>(severity.value);
+    if (entityId.present) {
+      map['entity_id'] = Variable<String>(entityId.value);
     }
-    if (detailsJson.present) {
-      map['details_json'] = Variable<String>(detailsJson.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<int>(
-        $MigrationIssueRowsTable.$convertercreatedAt.toSql(createdAt.value),
+    if (completedAt.present) {
+      map['completed_at'] = Variable<int>(
+        $GcAuditRowsTable.$convertercompletedAt.toSql(completedAt.value),
       );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GcAuditRowsCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('entityId: $entityId, ')
+          ..write('completedAt: $completedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetReferenceDirtyRowsTable extends AssetReferenceDirtyRows
+    with TableInfo<$AssetReferenceDirtyRowsTable, AssetReferenceDirtyRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetReferenceDirtyRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _revisionIdMeta = const VerificationMeta(
+    'revisionId',
+  );
+  @override
+  late final GeneratedColumn<String> revisionId = GeneratedColumn<String>(
+    'revision_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES message_rows (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [revisionId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_reference_dirty_rows';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetReferenceDirtyRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('revision_id')) {
+      context.handle(
+        _revisionIdMeta,
+        revisionId.isAcceptableOrUnknown(data['revision_id']!, _revisionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {revisionId};
+  @override
+  AssetReferenceDirtyRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetReferenceDirtyRow(
+      revisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}revision_id'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetReferenceDirtyRowsTable createAlias(String alias) {
+    return $AssetReferenceDirtyRowsTable(attachedDatabase, alias);
+  }
+}
+
+class AssetReferenceDirtyRow extends DataClass
+    implements Insertable<AssetReferenceDirtyRow> {
+  final String revisionId;
+  const AssetReferenceDirtyRow({required this.revisionId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['revision_id'] = Variable<String>(revisionId);
+    return map;
+  }
+
+  AssetReferenceDirtyRowsCompanion toCompanion(bool nullToAbsent) {
+    return AssetReferenceDirtyRowsCompanion(revisionId: Value(revisionId));
+  }
+
+  factory AssetReferenceDirtyRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetReferenceDirtyRow(
+      revisionId: serializer.fromJson<String>(json['revisionId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'revisionId': serializer.toJson<String>(revisionId),
+    };
+  }
+
+  AssetReferenceDirtyRow copyWith({String? revisionId}) =>
+      AssetReferenceDirtyRow(revisionId: revisionId ?? this.revisionId);
+  AssetReferenceDirtyRow copyWithCompanion(
+    AssetReferenceDirtyRowsCompanion data,
+  ) {
+    return AssetReferenceDirtyRow(
+      revisionId: data.revisionId.present
+          ? data.revisionId.value
+          : this.revisionId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetReferenceDirtyRow(')
+          ..write('revisionId: $revisionId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => revisionId.hashCode;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetReferenceDirtyRow && other.revisionId == this.revisionId);
+}
+
+class AssetReferenceDirtyRowsCompanion
+    extends UpdateCompanion<AssetReferenceDirtyRow> {
+  final Value<String> revisionId;
+  final Value<int> rowid;
+  const AssetReferenceDirtyRowsCompanion({
+    this.revisionId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AssetReferenceDirtyRowsCompanion.insert({
+    required String revisionId,
+    this.rowid = const Value.absent(),
+  }) : revisionId = Value(revisionId);
+  static Insertable<AssetReferenceDirtyRow> custom({
+    Expression<String>? revisionId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (revisionId != null) 'revision_id': revisionId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AssetReferenceDirtyRowsCompanion copyWith({
+    Value<String>? revisionId,
+    Value<int>? rowid,
+  }) {
+    return AssetReferenceDirtyRowsCompanion(
+      revisionId: revisionId ?? this.revisionId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (revisionId.present) {
+      map['revision_id'] = Variable<String>(revisionId.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -4772,15 +5073,8 @@ class MigrationIssueRowsCompanion extends UpdateCompanion<MigrationIssueRow> {
 
   @override
   String toString() {
-    return (StringBuffer('MigrationIssueRowsCompanion(')
-          ..write('id: $id, ')
-          ..write('migrationRunId: $migrationRunId, ')
-          ..write('conversationId: $conversationId, ')
-          ..write('sourceEntityId: $sourceEntityId, ')
-          ..write('kind: $kind, ')
-          ..write('severity: $severity, ')
-          ..write('detailsJson: $detailsJson, ')
-          ..write('createdAt: $createdAt, ')
+    return (StringBuffer('AssetReferenceDirtyRowsCompanion(')
+          ..write('revisionId: $revisionId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9223,9 +9517,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MessageRowsTable messageRows = $MessageRowsTable(this);
   late final $ConversationMcpServerRowsTable conversationMcpServerRows =
       $ConversationMcpServerRowsTable(this);
-  late final $ToolEventRowsTable toolEventRows = $ToolEventRowsTable(this);
-  late final $GeminiThoughtSignatureRowsTable geminiThoughtSignatureRows =
-      $GeminiThoughtSignatureRowsTable(this);
   late final $ChatStorageMetaRowsTable chatStorageMetaRows =
       $ChatStorageMetaRowsTable(this);
   late final $MessagePartRowsTable messagePartRows = $MessagePartRowsTable(
@@ -9233,11 +9524,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $ProviderArtifactRowsTable providerArtifactRows =
       $ProviderArtifactRowsTable(this);
-  late final $MigrationRunRowsTable migrationRunRows = $MigrationRunRowsTable(
+  late final $AssetRowsTable assetRows = $AssetRowsTable(this);
+  late final $MessageAssetRowsTable messageAssetRows = $MessageAssetRowsTable(
     this,
   );
-  late final $MigrationIssueRowsTable migrationIssueRows =
-      $MigrationIssueRowsTable(this);
+  late final $AssetGcRowsTable assetGcRows = $AssetGcRowsTable(this);
+  late final $GcAuditRowsTable gcAuditRows = $GcAuditRowsTable(this);
+  late final $AssetReferenceDirtyRowsTable assetReferenceDirtyRows =
+      $AssetReferenceDirtyRowsTable(this);
   late final $GenerationRunRowsTable generationRunRows =
       $GenerationRunRowsTable(this);
   late final $AssistantRowsTable assistantRows = $AssistantRowsTable(this);
@@ -9288,9 +9582,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_provider_artifacts_revision_kind',
     'CREATE INDEX idx_provider_artifacts_revision_kind ON provider_artifact_rows (conversation_id, revision_id, kind)',
   );
-  late final Index idxMigrationIssuesRunKind = Index(
-    'idx_migration_issues_run_kind',
-    'CREATE INDEX idx_migration_issues_run_kind ON migration_issue_rows (migration_run_id, kind, id)',
+  late final Index idxMessageAssetsAsset = Index(
+    'idx_message_assets_asset',
+    'CREATE INDEX idx_message_assets_asset ON message_asset_rows (asset_id, revision_id)',
   );
   late final Index idxGenerationRunsActiveTarget = Index(
     'idx_generation_runs_active_target',
@@ -9312,13 +9606,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     conversationRows,
     messageRows,
     conversationMcpServerRows,
-    toolEventRows,
-    geminiThoughtSignatureRows,
     chatStorageMetaRows,
     messagePartRows,
     providerArtifactRows,
-    migrationRunRows,
-    migrationIssueRows,
+    assetRows,
+    messageAssetRows,
+    assetGcRows,
+    gcAuditRows,
+    assetReferenceDirtyRows,
     generationRunRows,
     assistantRows,
     providerRows,
@@ -9339,7 +9634,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxMessagesGroup,
     idxMessagePartsRevisionOrdinal,
     idxProviderArtifactsRevisionKind,
-    idxMigrationIssuesRunKind,
+    idxMessageAssetsAsset,
     idxGenerationRunsActiveTarget,
     idxGenerationRunsStateUpdated,
     idxAssistantMemoriesAssistant,
@@ -9367,7 +9662,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         'message_rows',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('tool_event_rows', kind: UpdateKind.delete)],
+      result: [TableUpdate('message_asset_rows', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'asset_rows',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('message_asset_rows', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'asset_rows',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('asset_gc_rows', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -9375,15 +9684,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [
-        TableUpdate('gemini_thought_signature_rows', kind: UpdateKind.delete),
+        TableUpdate('asset_reference_dirty_rows', kind: UpdateKind.delete),
       ],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'migration_run_rows',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('migration_issue_rows', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -10118,44 +10420,45 @@ final class $$MessageRowsTableReferences
     );
   }
 
-  static MultiTypedResultKey<$ToolEventRowsTable, List<ToolEventRow>>
-  _toolEventRowsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.toolEventRows,
-    aliasName: 'message_rows__id__tool_event_rows__message_id',
+  static MultiTypedResultKey<$MessageAssetRowsTable, List<MessageAssetRow>>
+  _messageAssetRowsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.messageAssetRows,
+    aliasName: 'message_rows__id__message_asset_rows__revision_id',
   );
 
-  $$ToolEventRowsTableProcessedTableManager get toolEventRowsRefs {
-    final manager = $$ToolEventRowsTableTableManager(
+  $$MessageAssetRowsTableProcessedTableManager get messageAssetRowsRefs {
+    final manager = $$MessageAssetRowsTableTableManager(
       $_db,
-      $_db.toolEventRows,
-    ).filter((f) => f.messageId.id.sqlEquals($_itemColumn<String>('id')!));
+      $_db.messageAssetRows,
+    ).filter((f) => f.revisionId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_toolEventRowsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _messageAssetRowsRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
 
   static MultiTypedResultKey<
-    $GeminiThoughtSignatureRowsTable,
-    List<GeminiThoughtSignatureRow>
+    $AssetReferenceDirtyRowsTable,
+    List<AssetReferenceDirtyRow>
   >
-  _geminiThoughtSignatureRowsRefsTable(_$AppDatabase db) =>
+  _assetReferenceDirtyRowsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
-        db.geminiThoughtSignatureRows,
-        aliasName:
-            'message_rows__id__gemini_thought_signature_rows__message_id',
+        db.assetReferenceDirtyRows,
+        aliasName: 'message_rows__id__asset_reference_dirty_rows__revision_id',
       );
 
-  $$GeminiThoughtSignatureRowsTableProcessedTableManager
-  get geminiThoughtSignatureRowsRefs {
-    final manager = $$GeminiThoughtSignatureRowsTableTableManager(
+  $$AssetReferenceDirtyRowsTableProcessedTableManager
+  get assetReferenceDirtyRowsRefs {
+    final manager = $$AssetReferenceDirtyRowsTableTableManager(
       $_db,
-      $_db.geminiThoughtSignatureRows,
-    ).filter((f) => f.messageId.id.sqlEquals($_itemColumn<String>('id')!));
+      $_db.assetReferenceDirtyRows,
+    ).filter((f) => f.revisionId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(
-      _geminiThoughtSignatureRowsRefsTable($_db),
+      _assetReferenceDirtyRowsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -10298,22 +10601,22 @@ class $$MessageRowsTableFilterComposer
     return composer;
   }
 
-  Expression<bool> toolEventRowsRefs(
-    Expression<bool> Function($$ToolEventRowsTableFilterComposer f) f,
+  Expression<bool> messageAssetRowsRefs(
+    Expression<bool> Function($$MessageAssetRowsTableFilterComposer f) f,
   ) {
-    final $$ToolEventRowsTableFilterComposer composer = $composerBuilder(
+    final $$MessageAssetRowsTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.toolEventRows,
-      getReferencedColumn: (t) => t.messageId,
+      referencedTable: $db.messageAssetRows,
+      getReferencedColumn: (t) => t.revisionId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ToolEventRowsTableFilterComposer(
+          }) => $$MessageAssetRowsTableFilterComposer(
             $db: $db,
-            $table: $db.toolEventRows,
+            $table: $db.messageAssetRows,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -10323,24 +10626,23 @@ class $$MessageRowsTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> geminiThoughtSignatureRowsRefs(
-    Expression<bool> Function($$GeminiThoughtSignatureRowsTableFilterComposer f)
-    f,
+  Expression<bool> assetReferenceDirtyRowsRefs(
+    Expression<bool> Function($$AssetReferenceDirtyRowsTableFilterComposer f) f,
   ) {
-    final $$GeminiThoughtSignatureRowsTableFilterComposer composer =
+    final $$AssetReferenceDirtyRowsTableFilterComposer composer =
         $composerBuilder(
           composer: this,
           getCurrentColumn: (t) => t.id,
-          referencedTable: $db.geminiThoughtSignatureRows,
-          getReferencedColumn: (t) => t.messageId,
+          referencedTable: $db.assetReferenceDirtyRows,
+          getReferencedColumn: (t) => t.revisionId,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$GeminiThoughtSignatureRowsTableFilterComposer(
+              }) => $$AssetReferenceDirtyRowsTableFilterComposer(
                 $db: $db,
-                $table: $db.geminiThoughtSignatureRows,
+                $table: $db.assetReferenceDirtyRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -10604,22 +10906,22 @@ class $$MessageRowsTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> toolEventRowsRefs<T extends Object>(
-    Expression<T> Function($$ToolEventRowsTableAnnotationComposer a) f,
+  Expression<T> messageAssetRowsRefs<T extends Object>(
+    Expression<T> Function($$MessageAssetRowsTableAnnotationComposer a) f,
   ) {
-    final $$ToolEventRowsTableAnnotationComposer composer = $composerBuilder(
+    final $$MessageAssetRowsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.toolEventRows,
-      getReferencedColumn: (t) => t.messageId,
+      referencedTable: $db.messageAssetRows,
+      getReferencedColumn: (t) => t.revisionId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ToolEventRowsTableAnnotationComposer(
+          }) => $$MessageAssetRowsTableAnnotationComposer(
             $db: $db,
-            $table: $db.toolEventRows,
+            $table: $db.messageAssetRows,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -10629,26 +10931,24 @@ class $$MessageRowsTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> geminiThoughtSignatureRowsRefs<T extends Object>(
-    Expression<T> Function(
-      $$GeminiThoughtSignatureRowsTableAnnotationComposer a,
-    )
+  Expression<T> assetReferenceDirtyRowsRefs<T extends Object>(
+    Expression<T> Function($$AssetReferenceDirtyRowsTableAnnotationComposer a)
     f,
   ) {
-    final $$GeminiThoughtSignatureRowsTableAnnotationComposer composer =
+    final $$AssetReferenceDirtyRowsTableAnnotationComposer composer =
         $composerBuilder(
           composer: this,
           getCurrentColumn: (t) => t.id,
-          referencedTable: $db.geminiThoughtSignatureRows,
-          getReferencedColumn: (t) => t.messageId,
+          referencedTable: $db.assetReferenceDirtyRows,
+          getReferencedColumn: (t) => t.revisionId,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$GeminiThoughtSignatureRowsTableAnnotationComposer(
+              }) => $$AssetReferenceDirtyRowsTableAnnotationComposer(
                 $db: $db,
-                $table: $db.geminiThoughtSignatureRows,
+                $table: $db.assetReferenceDirtyRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -10674,8 +10974,8 @@ class $$MessageRowsTableTableManager
           MessageRow,
           PrefetchHooks Function({
             bool conversationId,
-            bool toolEventRowsRefs,
-            bool geminiThoughtSignatureRowsRefs,
+            bool messageAssetRowsRefs,
+            bool assetReferenceDirtyRowsRefs,
           })
         > {
   $$MessageRowsTableTableManager(_$AppDatabase db, $MessageRowsTable table)
@@ -10796,15 +11096,14 @@ class $$MessageRowsTableTableManager
           prefetchHooksCallback:
               ({
                 conversationId = false,
-                toolEventRowsRefs = false,
-                geminiThoughtSignatureRowsRefs = false,
+                messageAssetRowsRefs = false,
+                assetReferenceDirtyRowsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
-                    if (toolEventRowsRefs) db.toolEventRows,
-                    if (geminiThoughtSignatureRowsRefs)
-                      db.geminiThoughtSignatureRows,
+                    if (messageAssetRowsRefs) db.messageAssetRows,
+                    if (assetReferenceDirtyRowsRefs) db.assetReferenceDirtyRows,
                   ],
                   addJoins:
                       <
@@ -10842,45 +11141,45 @@ class $$MessageRowsTableTableManager
                       },
                   getPrefetchedDataCallback: (items) async {
                     return [
-                      if (toolEventRowsRefs)
+                      if (messageAssetRowsRefs)
                         await $_getPrefetchedData<
                           MessageRow,
                           $MessageRowsTable,
-                          ToolEventRow
+                          MessageAssetRow
                         >(
                           currentTable: table,
                           referencedTable: $$MessageRowsTableReferences
-                              ._toolEventRowsRefsTable(db),
+                              ._messageAssetRowsRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$MessageRowsTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).toolEventRowsRefs,
+                              ).messageAssetRowsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.messageId == item.id,
+                                (e) => e.revisionId == item.id,
                               ),
                           typedResults: items,
                         ),
-                      if (geminiThoughtSignatureRowsRefs)
+                      if (assetReferenceDirtyRowsRefs)
                         await $_getPrefetchedData<
                           MessageRow,
                           $MessageRowsTable,
-                          GeminiThoughtSignatureRow
+                          AssetReferenceDirtyRow
                         >(
                           currentTable: table,
                           referencedTable: $$MessageRowsTableReferences
-                              ._geminiThoughtSignatureRowsRefsTable(db),
+                              ._assetReferenceDirtyRowsRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$MessageRowsTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).geminiThoughtSignatureRowsRefs,
+                              ).assetReferenceDirtyRowsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.messageId == item.id,
+                                (e) => e.revisionId == item.id,
                               ),
                           typedResults: items,
                         ),
@@ -10906,8 +11205,8 @@ typedef $$MessageRowsTableProcessedTableManager =
       MessageRow,
       PrefetchHooks Function({
         bool conversationId,
-        bool toolEventRowsRefs,
-        bool geminiThoughtSignatureRowsRefs,
+        bool messageAssetRowsRefs,
+        bool assetReferenceDirtyRowsRefs,
       })
     >;
 typedef $$ConversationMcpServerRowsTableCreateCompanionBuilder =
@@ -11215,559 +11514,6 @@ typedef $$ConversationMcpServerRowsTableProcessedTableManager =
       (ConversationMcpServerRow, $$ConversationMcpServerRowsTableReferences),
       ConversationMcpServerRow,
       PrefetchHooks Function({bool conversationId})
-    >;
-typedef $$ToolEventRowsTableCreateCompanionBuilder =
-    ToolEventRowsCompanion Function({
-      required String messageId,
-      required String eventsJson,
-      Value<int> rowid,
-    });
-typedef $$ToolEventRowsTableUpdateCompanionBuilder =
-    ToolEventRowsCompanion Function({
-      Value<String> messageId,
-      Value<String> eventsJson,
-      Value<int> rowid,
-    });
-
-final class $$ToolEventRowsTableReferences
-    extends BaseReferences<_$AppDatabase, $ToolEventRowsTable, ToolEventRow> {
-  $$ToolEventRowsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $MessageRowsTable _messageIdTable(_$AppDatabase db) => db.messageRows
-      .createAlias('tool_event_rows__message_id__message_rows__id');
-
-  $$MessageRowsTableProcessedTableManager get messageId {
-    final $_column = $_itemColumn<String>('message_id')!;
-
-    final manager = $$MessageRowsTableTableManager(
-      $_db,
-      $_db.messageRows,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$ToolEventRowsTableFilterComposer
-    extends Composer<_$AppDatabase, $ToolEventRowsTable> {
-  $$ToolEventRowsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get eventsJson => $composableBuilder(
-    column: $table.eventsJson,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$MessageRowsTableFilterComposer get messageId {
-    final $$MessageRowsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.messageId,
-      referencedTable: $db.messageRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MessageRowsTableFilterComposer(
-            $db: $db,
-            $table: $db.messageRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$ToolEventRowsTableOrderingComposer
-    extends Composer<_$AppDatabase, $ToolEventRowsTable> {
-  $$ToolEventRowsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get eventsJson => $composableBuilder(
-    column: $table.eventsJson,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$MessageRowsTableOrderingComposer get messageId {
-    final $$MessageRowsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.messageId,
-      referencedTable: $db.messageRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MessageRowsTableOrderingComposer(
-            $db: $db,
-            $table: $db.messageRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$ToolEventRowsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ToolEventRowsTable> {
-  $$ToolEventRowsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get eventsJson => $composableBuilder(
-    column: $table.eventsJson,
-    builder: (column) => column,
-  );
-
-  $$MessageRowsTableAnnotationComposer get messageId {
-    final $$MessageRowsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.messageId,
-      referencedTable: $db.messageRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MessageRowsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.messageRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$ToolEventRowsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $ToolEventRowsTable,
-          ToolEventRow,
-          $$ToolEventRowsTableFilterComposer,
-          $$ToolEventRowsTableOrderingComposer,
-          $$ToolEventRowsTableAnnotationComposer,
-          $$ToolEventRowsTableCreateCompanionBuilder,
-          $$ToolEventRowsTableUpdateCompanionBuilder,
-          (ToolEventRow, $$ToolEventRowsTableReferences),
-          ToolEventRow,
-          PrefetchHooks Function({bool messageId})
-        > {
-  $$ToolEventRowsTableTableManager(_$AppDatabase db, $ToolEventRowsTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$ToolEventRowsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$ToolEventRowsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$ToolEventRowsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> messageId = const Value.absent(),
-                Value<String> eventsJson = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => ToolEventRowsCompanion(
-                messageId: messageId,
-                eventsJson: eventsJson,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String messageId,
-                required String eventsJson,
-                Value<int> rowid = const Value.absent(),
-              }) => ToolEventRowsCompanion.insert(
-                messageId: messageId,
-                eventsJson: eventsJson,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$ToolEventRowsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({messageId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (messageId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.messageId,
-                                referencedTable: $$ToolEventRowsTableReferences
-                                    ._messageIdTable(db),
-                                referencedColumn: $$ToolEventRowsTableReferences
-                                    ._messageIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$ToolEventRowsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $ToolEventRowsTable,
-      ToolEventRow,
-      $$ToolEventRowsTableFilterComposer,
-      $$ToolEventRowsTableOrderingComposer,
-      $$ToolEventRowsTableAnnotationComposer,
-      $$ToolEventRowsTableCreateCompanionBuilder,
-      $$ToolEventRowsTableUpdateCompanionBuilder,
-      (ToolEventRow, $$ToolEventRowsTableReferences),
-      ToolEventRow,
-      PrefetchHooks Function({bool messageId})
-    >;
-typedef $$GeminiThoughtSignatureRowsTableCreateCompanionBuilder =
-    GeminiThoughtSignatureRowsCompanion Function({
-      required String messageId,
-      required String signature,
-      Value<int> rowid,
-    });
-typedef $$GeminiThoughtSignatureRowsTableUpdateCompanionBuilder =
-    GeminiThoughtSignatureRowsCompanion Function({
-      Value<String> messageId,
-      Value<String> signature,
-      Value<int> rowid,
-    });
-
-final class $$GeminiThoughtSignatureRowsTableReferences
-    extends
-        BaseReferences<
-          _$AppDatabase,
-          $GeminiThoughtSignatureRowsTable,
-          GeminiThoughtSignatureRow
-        > {
-  $$GeminiThoughtSignatureRowsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $MessageRowsTable _messageIdTable(_$AppDatabase db) =>
-      db.messageRows.createAlias(
-        'gemini_thought_signature_rows__message_id__message_rows__id',
-      );
-
-  $$MessageRowsTableProcessedTableManager get messageId {
-    final $_column = $_itemColumn<String>('message_id')!;
-
-    final manager = $$MessageRowsTableTableManager(
-      $_db,
-      $_db.messageRows,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$GeminiThoughtSignatureRowsTableFilterComposer
-    extends Composer<_$AppDatabase, $GeminiThoughtSignatureRowsTable> {
-  $$GeminiThoughtSignatureRowsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get signature => $composableBuilder(
-    column: $table.signature,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$MessageRowsTableFilterComposer get messageId {
-    final $$MessageRowsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.messageId,
-      referencedTable: $db.messageRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MessageRowsTableFilterComposer(
-            $db: $db,
-            $table: $db.messageRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$GeminiThoughtSignatureRowsTableOrderingComposer
-    extends Composer<_$AppDatabase, $GeminiThoughtSignatureRowsTable> {
-  $$GeminiThoughtSignatureRowsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get signature => $composableBuilder(
-    column: $table.signature,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$MessageRowsTableOrderingComposer get messageId {
-    final $$MessageRowsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.messageId,
-      referencedTable: $db.messageRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MessageRowsTableOrderingComposer(
-            $db: $db,
-            $table: $db.messageRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$GeminiThoughtSignatureRowsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $GeminiThoughtSignatureRowsTable> {
-  $$GeminiThoughtSignatureRowsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get signature =>
-      $composableBuilder(column: $table.signature, builder: (column) => column);
-
-  $$MessageRowsTableAnnotationComposer get messageId {
-    final $$MessageRowsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.messageId,
-      referencedTable: $db.messageRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MessageRowsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.messageRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$GeminiThoughtSignatureRowsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $GeminiThoughtSignatureRowsTable,
-          GeminiThoughtSignatureRow,
-          $$GeminiThoughtSignatureRowsTableFilterComposer,
-          $$GeminiThoughtSignatureRowsTableOrderingComposer,
-          $$GeminiThoughtSignatureRowsTableAnnotationComposer,
-          $$GeminiThoughtSignatureRowsTableCreateCompanionBuilder,
-          $$GeminiThoughtSignatureRowsTableUpdateCompanionBuilder,
-          (
-            GeminiThoughtSignatureRow,
-            $$GeminiThoughtSignatureRowsTableReferences,
-          ),
-          GeminiThoughtSignatureRow,
-          PrefetchHooks Function({bool messageId})
-        > {
-  $$GeminiThoughtSignatureRowsTableTableManager(
-    _$AppDatabase db,
-    $GeminiThoughtSignatureRowsTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$GeminiThoughtSignatureRowsTableFilterComposer(
-                $db: db,
-                $table: table,
-              ),
-          createOrderingComposer: () =>
-              $$GeminiThoughtSignatureRowsTableOrderingComposer(
-                $db: db,
-                $table: table,
-              ),
-          createComputedFieldComposer: () =>
-              $$GeminiThoughtSignatureRowsTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
-          updateCompanionCallback:
-              ({
-                Value<String> messageId = const Value.absent(),
-                Value<String> signature = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => GeminiThoughtSignatureRowsCompanion(
-                messageId: messageId,
-                signature: signature,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String messageId,
-                required String signature,
-                Value<int> rowid = const Value.absent(),
-              }) => GeminiThoughtSignatureRowsCompanion.insert(
-                messageId: messageId,
-                signature: signature,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$GeminiThoughtSignatureRowsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({messageId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (messageId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.messageId,
-                                referencedTable:
-                                    $$GeminiThoughtSignatureRowsTableReferences
-                                        ._messageIdTable(db),
-                                referencedColumn:
-                                    $$GeminiThoughtSignatureRowsTableReferences
-                                        ._messageIdTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$GeminiThoughtSignatureRowsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $GeminiThoughtSignatureRowsTable,
-      GeminiThoughtSignatureRow,
-      $$GeminiThoughtSignatureRowsTableFilterComposer,
-      $$GeminiThoughtSignatureRowsTableOrderingComposer,
-      $$GeminiThoughtSignatureRowsTableAnnotationComposer,
-      $$GeminiThoughtSignatureRowsTableCreateCompanionBuilder,
-      $$GeminiThoughtSignatureRowsTableUpdateCompanionBuilder,
-      (GeminiThoughtSignatureRow, $$GeminiThoughtSignatureRowsTableReferences),
-      GeminiThoughtSignatureRow,
-      PrefetchHooks Function({bool messageId})
     >;
 typedef $$ChatStorageMetaRowsTableCreateCompanionBuilder =
     ChatStorageMetaRowsCompanion Function({
@@ -12419,62 +12165,79 @@ typedef $$ProviderArtifactRowsTableProcessedTableManager =
       ProviderArtifactRow,
       PrefetchHooks Function()
     >;
-typedef $$MigrationRunRowsTableCreateCompanionBuilder =
-    MigrationRunRowsCompanion Function({
+typedef $$AssetRowsTableCreateCompanionBuilder =
+    AssetRowsCompanion Function({
       required String id,
-      required String sourceKind,
-      required String sourceHash,
-      required String status,
-      required DateTime startedAt,
-      Value<DateTime?> completedAt,
+      required String contentHash,
+      required String path,
+      required int byteSize,
+      Value<int?> width,
+      Value<int?> height,
+      Value<String?> thumbnailPath,
+      required DateTime createdAt,
+      required DateTime lastReferencedAt,
       Value<int> rowid,
     });
-typedef $$MigrationRunRowsTableUpdateCompanionBuilder =
-    MigrationRunRowsCompanion Function({
+typedef $$AssetRowsTableUpdateCompanionBuilder =
+    AssetRowsCompanion Function({
       Value<String> id,
-      Value<String> sourceKind,
-      Value<String> sourceHash,
-      Value<String> status,
-      Value<DateTime> startedAt,
-      Value<DateTime?> completedAt,
+      Value<String> contentHash,
+      Value<String> path,
+      Value<int> byteSize,
+      Value<int?> width,
+      Value<int?> height,
+      Value<String?> thumbnailPath,
+      Value<DateTime> createdAt,
+      Value<DateTime> lastReferencedAt,
       Value<int> rowid,
     });
 
-final class $$MigrationRunRowsTableReferences
-    extends
-        BaseReferences<_$AppDatabase, $MigrationRunRowsTable, MigrationRunRow> {
-  $$MigrationRunRowsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
+final class $$AssetRowsTableReferences
+    extends BaseReferences<_$AppDatabase, $AssetRowsTable, AssetRow> {
+  $$AssetRowsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$MessageAssetRowsTable, List<MessageAssetRow>>
+  _messageAssetRowsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.messageAssetRows,
+    aliasName: 'asset_rows__id__message_asset_rows__asset_id',
   );
 
-  static MultiTypedResultKey<$MigrationIssueRowsTable, List<MigrationIssueRow>>
-  _migrationIssueRowsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.migrationIssueRows,
-        aliasName:
-            'migration_run_rows__id__migration_issue_rows__migration_run_id',
-      );
-
-  $$MigrationIssueRowsTableProcessedTableManager get migrationIssueRowsRefs {
-    final manager = $$MigrationIssueRowsTableTableManager(
+  $$MessageAssetRowsTableProcessedTableManager get messageAssetRowsRefs {
+    final manager = $$MessageAssetRowsTableTableManager(
       $_db,
-      $_db.migrationIssueRows,
-    ).filter((f) => f.migrationRunId.id.sqlEquals($_itemColumn<String>('id')!));
+      $_db.messageAssetRows,
+    ).filter((f) => f.assetId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(
-      _migrationIssueRowsRefsTable($_db),
+      _messageAssetRowsRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$AssetGcRowsTable, List<AssetGcRow>>
+  _assetGcRowsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.assetGcRows,
+    aliasName: 'asset_rows__id__asset_gc_rows__asset_id',
+  );
+
+  $$AssetGcRowsTableProcessedTableManager get assetGcRowsRefs {
+    final manager = $$AssetGcRowsTableTableManager(
+      $_db,
+      $_db.assetGcRows,
+    ).filter((f) => f.assetId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_assetGcRowsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
 
-class $$MigrationRunRowsTableFilterComposer
-    extends Composer<_$AppDatabase, $MigrationRunRowsTable> {
-  $$MigrationRunRowsTableFilterComposer({
+class $$AssetRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetRowsTable> {
+  $$AssetRowsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12486,378 +12249,33 @@ class $$MigrationRunRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get sourceKind => $composableBuilder(
-    column: $table.sourceKind,
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get sourceHash => $composableBuilder(
-    column: $table.sourceHash,
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnFilters<int> get byteSize => $composableBuilder(
+    column: $table.byteSize,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get startedAt =>
-      $composableBuilder(
-        column: $table.startedAt,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  ColumnWithTypeConverterFilters<DateTime?, DateTime, int> get completedAt =>
-      $composableBuilder(
-        column: $table.completedAt,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  Expression<bool> migrationIssueRowsRefs(
-    Expression<bool> Function($$MigrationIssueRowsTableFilterComposer f) f,
-  ) {
-    final $$MigrationIssueRowsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.migrationIssueRows,
-      getReferencedColumn: (t) => t.migrationRunId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MigrationIssueRowsTableFilterComposer(
-            $db: $db,
-            $table: $db.migrationIssueRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$MigrationRunRowsTableOrderingComposer
-    extends Composer<_$AppDatabase, $MigrationRunRowsTable> {
-  $$MigrationRunRowsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get sourceKind => $composableBuilder(
-    column: $table.sourceKind,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get sourceHash => $composableBuilder(
-    column: $table.sourceHash,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get startedAt => $composableBuilder(
-    column: $table.startedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get completedAt => $composableBuilder(
-    column: $table.completedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$MigrationRunRowsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $MigrationRunRowsTable> {
-  $$MigrationRunRowsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get sourceKind => $composableBuilder(
-    column: $table.sourceKind,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get sourceHash => $composableBuilder(
-    column: $table.sourceHash,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<DateTime, int> get startedAt =>
-      $composableBuilder(column: $table.startedAt, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<DateTime?, int> get completedAt =>
-      $composableBuilder(
-        column: $table.completedAt,
-        builder: (column) => column,
-      );
-
-  Expression<T> migrationIssueRowsRefs<T extends Object>(
-    Expression<T> Function($$MigrationIssueRowsTableAnnotationComposer a) f,
-  ) {
-    final $$MigrationIssueRowsTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.id,
-          referencedTable: $db.migrationIssueRows,
-          getReferencedColumn: (t) => t.migrationRunId,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer,
-              }) => $$MigrationIssueRowsTableAnnotationComposer(
-                $db: $db,
-                $table: $db.migrationIssueRows,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
-    return f(composer);
-  }
-}
-
-class $$MigrationRunRowsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $MigrationRunRowsTable,
-          MigrationRunRow,
-          $$MigrationRunRowsTableFilterComposer,
-          $$MigrationRunRowsTableOrderingComposer,
-          $$MigrationRunRowsTableAnnotationComposer,
-          $$MigrationRunRowsTableCreateCompanionBuilder,
-          $$MigrationRunRowsTableUpdateCompanionBuilder,
-          (MigrationRunRow, $$MigrationRunRowsTableReferences),
-          MigrationRunRow,
-          PrefetchHooks Function({bool migrationIssueRowsRefs})
-        > {
-  $$MigrationRunRowsTableTableManager(
-    _$AppDatabase db,
-    $MigrationRunRowsTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$MigrationRunRowsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$MigrationRunRowsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$MigrationRunRowsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> sourceKind = const Value.absent(),
-                Value<String> sourceHash = const Value.absent(),
-                Value<String> status = const Value.absent(),
-                Value<DateTime> startedAt = const Value.absent(),
-                Value<DateTime?> completedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => MigrationRunRowsCompanion(
-                id: id,
-                sourceKind: sourceKind,
-                sourceHash: sourceHash,
-                status: status,
-                startedAt: startedAt,
-                completedAt: completedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String sourceKind,
-                required String sourceHash,
-                required String status,
-                required DateTime startedAt,
-                Value<DateTime?> completedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => MigrationRunRowsCompanion.insert(
-                id: id,
-                sourceKind: sourceKind,
-                sourceHash: sourceHash,
-                status: status,
-                startedAt: startedAt,
-                completedAt: completedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$MigrationRunRowsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({migrationIssueRowsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (migrationIssueRowsRefs) db.migrationIssueRows,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (migrationIssueRowsRefs)
-                    await $_getPrefetchedData<
-                      MigrationRunRow,
-                      $MigrationRunRowsTable,
-                      MigrationIssueRow
-                    >(
-                      currentTable: table,
-                      referencedTable: $$MigrationRunRowsTableReferences
-                          ._migrationIssueRowsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$MigrationRunRowsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).migrationIssueRowsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.migrationRunId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$MigrationRunRowsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $MigrationRunRowsTable,
-      MigrationRunRow,
-      $$MigrationRunRowsTableFilterComposer,
-      $$MigrationRunRowsTableOrderingComposer,
-      $$MigrationRunRowsTableAnnotationComposer,
-      $$MigrationRunRowsTableCreateCompanionBuilder,
-      $$MigrationRunRowsTableUpdateCompanionBuilder,
-      (MigrationRunRow, $$MigrationRunRowsTableReferences),
-      MigrationRunRow,
-      PrefetchHooks Function({bool migrationIssueRowsRefs})
-    >;
-typedef $$MigrationIssueRowsTableCreateCompanionBuilder =
-    MigrationIssueRowsCompanion Function({
-      required String id,
-      required String migrationRunId,
-      Value<String?> conversationId,
-      Value<String?> sourceEntityId,
-      required String kind,
-      required String severity,
-      Value<String> detailsJson,
-      required DateTime createdAt,
-      Value<int> rowid,
-    });
-typedef $$MigrationIssueRowsTableUpdateCompanionBuilder =
-    MigrationIssueRowsCompanion Function({
-      Value<String> id,
-      Value<String> migrationRunId,
-      Value<String?> conversationId,
-      Value<String?> sourceEntityId,
-      Value<String> kind,
-      Value<String> severity,
-      Value<String> detailsJson,
-      Value<DateTime> createdAt,
-      Value<int> rowid,
-    });
-
-final class $$MigrationIssueRowsTableReferences
-    extends
-        BaseReferences<
-          _$AppDatabase,
-          $MigrationIssueRowsTable,
-          MigrationIssueRow
-        > {
-  $$MigrationIssueRowsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $MigrationRunRowsTable _migrationRunIdTable(_$AppDatabase db) =>
-      db.migrationRunRows.createAlias(
-        'migration_issue_rows__migration_run_id__migration_run_rows__id',
-      );
-
-  $$MigrationRunRowsTableProcessedTableManager get migrationRunId {
-    final $_column = $_itemColumn<String>('migration_run_id')!;
-
-    final manager = $$MigrationRunRowsTableTableManager(
-      $_db,
-      $_db.migrationRunRows,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_migrationRunIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$MigrationIssueRowsTableFilterComposer
-    extends Composer<_$AppDatabase, $MigrationIssueRowsTable> {
-  $$MigrationIssueRowsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
+  ColumnFilters<int> get width => $composableBuilder(
+    column: $table.width,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get conversationId => $composableBuilder(
-    column: $table.conversationId,
+  ColumnFilters<int> get height => $composableBuilder(
+    column: $table.height,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get sourceEntityId => $composableBuilder(
-    column: $table.sourceEntityId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get kind => $composableBuilder(
-    column: $table.kind,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get severity => $composableBuilder(
-    column: $table.severity,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get detailsJson => $composableBuilder(
-    column: $table.detailsJson,
+  ColumnFilters<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12867,33 +12285,66 @@ class $$MigrationIssueRowsTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
-  $$MigrationRunRowsTableFilterComposer get migrationRunId {
-    final $$MigrationRunRowsTableFilterComposer composer = $composerBuilder(
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int>
+  get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  Expression<bool> messageAssetRowsRefs(
+    Expression<bool> Function($$MessageAssetRowsTableFilterComposer f) f,
+  ) {
+    final $$MessageAssetRowsTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.migrationRunId,
-      referencedTable: $db.migrationRunRows,
-      getReferencedColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.messageAssetRows,
+      getReferencedColumn: (t) => t.assetId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MigrationRunRowsTableFilterComposer(
+          }) => $$MessageAssetRowsTableFilterComposer(
             $db: $db,
-            $table: $db.migrationRunRows,
+            $table: $db.messageAssetRows,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
                 $removeJoinBuilderFromRootComposer,
           ),
     );
-    return composer;
+    return f(composer);
+  }
+
+  Expression<bool> assetGcRowsRefs(
+    Expression<bool> Function($$AssetGcRowsTableFilterComposer f) f,
+  ) {
+    final $$AssetGcRowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.assetGcRows,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetGcRowsTableFilterComposer(
+            $db: $db,
+            $table: $db.assetGcRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
-class $$MigrationIssueRowsTableOrderingComposer
-    extends Composer<_$AppDatabase, $MigrationIssueRowsTable> {
-  $$MigrationIssueRowsTableOrderingComposer({
+class $$AssetRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetRowsTable> {
+  $$AssetRowsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12905,28 +12356,33 @@ class $$MigrationIssueRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get conversationId => $composableBuilder(
-    column: $table.conversationId,
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get sourceEntityId => $composableBuilder(
-    column: $table.sourceEntityId,
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get kind => $composableBuilder(
-    column: $table.kind,
+  ColumnOrderings<int> get byteSize => $composableBuilder(
+    column: $table.byteSize,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get severity => $composableBuilder(
-    column: $table.severity,
+  ColumnOrderings<int> get width => $composableBuilder(
+    column: $table.width,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get detailsJson => $composableBuilder(
-    column: $table.detailsJson,
+  ColumnOrderings<int> get height => $composableBuilder(
+    column: $table.height,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12935,33 +12391,15 @@ class $$MigrationIssueRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$MigrationRunRowsTableOrderingComposer get migrationRunId {
-    final $$MigrationRunRowsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.migrationRunId,
-      referencedTable: $db.migrationRunRows,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$MigrationRunRowsTableOrderingComposer(
-            $db: $db,
-            $table: $db.migrationRunRows,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
+  ColumnOrderings<int> get lastReferencedAt => $composableBuilder(
+    column: $table.lastReferencedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
-class $$MigrationIssueRowsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $MigrationIssueRowsTable> {
-  $$MigrationIssueRowsTableAnnotationComposer({
+class $$AssetRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetRowsTable> {
+  $$AssetRowsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -12971,44 +12409,365 @@ class $$MigrationIssueRowsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get conversationId => $composableBuilder(
-    column: $table.conversationId,
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get sourceEntityId => $composableBuilder(
-    column: $table.sourceEntityId,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
 
-  GeneratedColumn<String> get kind =>
-      $composableBuilder(column: $table.kind, builder: (column) => column);
+  GeneratedColumn<int> get byteSize =>
+      $composableBuilder(column: $table.byteSize, builder: (column) => column);
 
-  GeneratedColumn<String> get severity =>
-      $composableBuilder(column: $table.severity, builder: (column) => column);
+  GeneratedColumn<int> get width =>
+      $composableBuilder(column: $table.width, builder: (column) => column);
 
-  GeneratedColumn<String> get detailsJson => $composableBuilder(
-    column: $table.detailsJson,
+  GeneratedColumn<int> get height =>
+      $composableBuilder(column: $table.height, builder: (column) => column);
+
+  GeneratedColumn<String> get thumbnailPath => $composableBuilder(
+    column: $table.thumbnailPath,
     builder: (column) => column,
   );
 
   GeneratedColumnWithTypeConverter<DateTime, int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  $$MigrationRunRowsTableAnnotationComposer get migrationRunId {
-    final $$MigrationRunRowsTableAnnotationComposer composer = $composerBuilder(
+  GeneratedColumnWithTypeConverter<DateTime, int> get lastReferencedAt =>
+      $composableBuilder(
+        column: $table.lastReferencedAt,
+        builder: (column) => column,
+      );
+
+  Expression<T> messageAssetRowsRefs<T extends Object>(
+    Expression<T> Function($$MessageAssetRowsTableAnnotationComposer a) f,
+  ) {
+    final $$MessageAssetRowsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.migrationRunId,
-      referencedTable: $db.migrationRunRows,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.messageAssetRows,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageAssetRowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.messageAssetRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> assetGcRowsRefs<T extends Object>(
+    Expression<T> Function($$AssetGcRowsTableAnnotationComposer a) f,
+  ) {
+    final $$AssetGcRowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.assetGcRows,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetGcRowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assetGcRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$AssetRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AssetRowsTable,
+          AssetRow,
+          $$AssetRowsTableFilterComposer,
+          $$AssetRowsTableOrderingComposer,
+          $$AssetRowsTableAnnotationComposer,
+          $$AssetRowsTableCreateCompanionBuilder,
+          $$AssetRowsTableUpdateCompanionBuilder,
+          (AssetRow, $$AssetRowsTableReferences),
+          AssetRow,
+          PrefetchHooks Function({
+            bool messageAssetRowsRefs,
+            bool assetGcRowsRefs,
+          })
+        > {
+  $$AssetRowsTableTableManager(_$AppDatabase db, $AssetRowsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetRowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetRowsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> contentHash = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<int> byteSize = const Value.absent(),
+                Value<int?> width = const Value.absent(),
+                Value<int?> height = const Value.absent(),
+                Value<String?> thumbnailPath = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> lastReferencedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AssetRowsCompanion(
+                id: id,
+                contentHash: contentHash,
+                path: path,
+                byteSize: byteSize,
+                width: width,
+                height: height,
+                thumbnailPath: thumbnailPath,
+                createdAt: createdAt,
+                lastReferencedAt: lastReferencedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String contentHash,
+                required String path,
+                required int byteSize,
+                Value<int?> width = const Value.absent(),
+                Value<int?> height = const Value.absent(),
+                Value<String?> thumbnailPath = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime lastReferencedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AssetRowsCompanion.insert(
+                id: id,
+                contentHash: contentHash,
+                path: path,
+                byteSize: byteSize,
+                width: width,
+                height: height,
+                thumbnailPath: thumbnailPath,
+                createdAt: createdAt,
+                lastReferencedAt: lastReferencedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$AssetRowsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({messageAssetRowsRefs = false, assetGcRowsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (messageAssetRowsRefs) db.messageAssetRows,
+                    if (assetGcRowsRefs) db.assetGcRows,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (messageAssetRowsRefs)
+                        await $_getPrefetchedData<
+                          AssetRow,
+                          $AssetRowsTable,
+                          MessageAssetRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetRowsTableReferences
+                              ._messageAssetRowsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetRowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).messageAssetRowsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.assetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (assetGcRowsRefs)
+                        await $_getPrefetchedData<
+                          AssetRow,
+                          $AssetRowsTable,
+                          AssetGcRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetRowsTableReferences
+                              ._assetGcRowsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetRowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).assetGcRowsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.assetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AssetRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AssetRowsTable,
+      AssetRow,
+      $$AssetRowsTableFilterComposer,
+      $$AssetRowsTableOrderingComposer,
+      $$AssetRowsTableAnnotationComposer,
+      $$AssetRowsTableCreateCompanionBuilder,
+      $$AssetRowsTableUpdateCompanionBuilder,
+      (AssetRow, $$AssetRowsTableReferences),
+      AssetRow,
+      PrefetchHooks Function({bool messageAssetRowsRefs, bool assetGcRowsRefs})
+    >;
+typedef $$MessageAssetRowsTableCreateCompanionBuilder =
+    MessageAssetRowsCompanion Function({
+      required String conversationId,
+      required String revisionId,
+      required String assetId,
+      required String kind,
+      Value<int> rowid,
+    });
+typedef $$MessageAssetRowsTableUpdateCompanionBuilder =
+    MessageAssetRowsCompanion Function({
+      Value<String> conversationId,
+      Value<String> revisionId,
+      Value<String> assetId,
+      Value<String> kind,
+      Value<int> rowid,
+    });
+
+final class $$MessageAssetRowsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $MessageAssetRowsTable, MessageAssetRow> {
+  $$MessageAssetRowsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $MessageRowsTable _revisionIdTable(_$AppDatabase db) => db.messageRows
+      .createAlias('message_asset_rows__revision_id__message_rows__id');
+
+  $$MessageRowsTableProcessedTableManager get revisionId {
+    final $_column = $_itemColumn<String>('revision_id')!;
+
+    final manager = $$MessageRowsTableTableManager(
+      $_db,
+      $_db.messageRows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_revisionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AssetRowsTable _assetIdTable(_$AppDatabase db) =>
+      db.assetRows.createAlias('message_asset_rows__asset_id__asset_rows__id');
+
+  $$AssetRowsTableProcessedTableManager get assetId {
+    final $_column = $_itemColumn<String>('asset_id')!;
+
+    final manager = $$AssetRowsTableTableManager(
+      $_db,
+      $_db.assetRows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_assetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MessageAssetRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $MessageAssetRowsTable> {
+  $$MessageAssetRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$MessageRowsTableFilterComposer get revisionId {
+    final $$MessageRowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.revisionId,
+      referencedTable: $db.messageRows,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MigrationRunRowsTableAnnotationComposer(
+          }) => $$MessageRowsTableFilterComposer(
             $db: $db,
-            $table: $db.migrationRunRows,
+            $table: $db.messageRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AssetRowsTableFilterComposer get assetId {
+    final $$AssetRowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRowsTableFilterComposer(
+            $db: $db,
+            $table: $db.assetRows,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13019,90 +12778,201 @@ class $$MigrationIssueRowsTableAnnotationComposer
   }
 }
 
-class $$MigrationIssueRowsTableTableManager
+class $$MessageAssetRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MessageAssetRowsTable> {
+  $$MessageAssetRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$MessageRowsTableOrderingComposer get revisionId {
+    final $$MessageRowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.revisionId,
+      referencedTable: $db.messageRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageRowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.messageRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AssetRowsTableOrderingComposer get assetId {
+    final $$AssetRowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.assetRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MessageAssetRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MessageAssetRowsTable> {
+  $$MessageAssetRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  $$MessageRowsTableAnnotationComposer get revisionId {
+    final $$MessageRowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.revisionId,
+      referencedTable: $db.messageRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageRowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.messageRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AssetRowsTableAnnotationComposer get assetId {
+    final $$AssetRowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assetRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MessageAssetRowsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $MigrationIssueRowsTable,
-          MigrationIssueRow,
-          $$MigrationIssueRowsTableFilterComposer,
-          $$MigrationIssueRowsTableOrderingComposer,
-          $$MigrationIssueRowsTableAnnotationComposer,
-          $$MigrationIssueRowsTableCreateCompanionBuilder,
-          $$MigrationIssueRowsTableUpdateCompanionBuilder,
-          (MigrationIssueRow, $$MigrationIssueRowsTableReferences),
-          MigrationIssueRow,
-          PrefetchHooks Function({bool migrationRunId})
+          $MessageAssetRowsTable,
+          MessageAssetRow,
+          $$MessageAssetRowsTableFilterComposer,
+          $$MessageAssetRowsTableOrderingComposer,
+          $$MessageAssetRowsTableAnnotationComposer,
+          $$MessageAssetRowsTableCreateCompanionBuilder,
+          $$MessageAssetRowsTableUpdateCompanionBuilder,
+          (MessageAssetRow, $$MessageAssetRowsTableReferences),
+          MessageAssetRow,
+          PrefetchHooks Function({bool revisionId, bool assetId})
         > {
-  $$MigrationIssueRowsTableTableManager(
+  $$MessageAssetRowsTableTableManager(
     _$AppDatabase db,
-    $MigrationIssueRowsTable table,
+    $MessageAssetRowsTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$MigrationIssueRowsTableFilterComposer($db: db, $table: table),
+              $$MessageAssetRowsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$MigrationIssueRowsTableOrderingComposer($db: db, $table: table),
+              $$MessageAssetRowsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$MigrationIssueRowsTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
+              $$MessageAssetRowsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<String> id = const Value.absent(),
-                Value<String> migrationRunId = const Value.absent(),
-                Value<String?> conversationId = const Value.absent(),
-                Value<String?> sourceEntityId = const Value.absent(),
+                Value<String> conversationId = const Value.absent(),
+                Value<String> revisionId = const Value.absent(),
+                Value<String> assetId = const Value.absent(),
                 Value<String> kind = const Value.absent(),
-                Value<String> severity = const Value.absent(),
-                Value<String> detailsJson = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => MigrationIssueRowsCompanion(
-                id: id,
-                migrationRunId: migrationRunId,
+              }) => MessageAssetRowsCompanion(
                 conversationId: conversationId,
-                sourceEntityId: sourceEntityId,
+                revisionId: revisionId,
+                assetId: assetId,
                 kind: kind,
-                severity: severity,
-                detailsJson: detailsJson,
-                createdAt: createdAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                required String id,
-                required String migrationRunId,
-                Value<String?> conversationId = const Value.absent(),
-                Value<String?> sourceEntityId = const Value.absent(),
+                required String conversationId,
+                required String revisionId,
+                required String assetId,
                 required String kind,
-                required String severity,
-                Value<String> detailsJson = const Value.absent(),
-                required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
-              }) => MigrationIssueRowsCompanion.insert(
-                id: id,
-                migrationRunId: migrationRunId,
+              }) => MessageAssetRowsCompanion.insert(
                 conversationId: conversationId,
-                sourceEntityId: sourceEntityId,
+                revisionId: revisionId,
+                assetId: assetId,
                 kind: kind,
-                severity: severity,
-                detailsJson: detailsJson,
-                createdAt: createdAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
                   e.readTable(table),
-                  $$MigrationIssueRowsTableReferences(db, table, e),
+                  $$MessageAssetRowsTableReferences(db, table, e),
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({migrationRunId = false}) {
+          prefetchHooksCallback: ({revisionId = false, assetId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -13122,17 +12992,32 @@ class $$MigrationIssueRowsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (migrationRunId) {
+                    if (revisionId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.migrationRunId,
+                                currentColumn: table.revisionId,
                                 referencedTable:
-                                    $$MigrationIssueRowsTableReferences
-                                        ._migrationRunIdTable(db),
+                                    $$MessageAssetRowsTableReferences
+                                        ._revisionIdTable(db),
                                 referencedColumn:
-                                    $$MigrationIssueRowsTableReferences
-                                        ._migrationRunIdTable(db)
+                                    $$MessageAssetRowsTableReferences
+                                        ._revisionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (assetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.assetId,
+                                referencedTable:
+                                    $$MessageAssetRowsTableReferences
+                                        ._assetIdTable(db),
+                                referencedColumn:
+                                    $$MessageAssetRowsTableReferences
+                                        ._assetIdTable(db)
                                         .id,
                               )
                               as T;
@@ -13149,19 +13034,762 @@ class $$MigrationIssueRowsTableTableManager
       );
 }
 
-typedef $$MigrationIssueRowsTableProcessedTableManager =
+typedef $$MessageAssetRowsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $MigrationIssueRowsTable,
-      MigrationIssueRow,
-      $$MigrationIssueRowsTableFilterComposer,
-      $$MigrationIssueRowsTableOrderingComposer,
-      $$MigrationIssueRowsTableAnnotationComposer,
-      $$MigrationIssueRowsTableCreateCompanionBuilder,
-      $$MigrationIssueRowsTableUpdateCompanionBuilder,
-      (MigrationIssueRow, $$MigrationIssueRowsTableReferences),
-      MigrationIssueRow,
-      PrefetchHooks Function({bool migrationRunId})
+      $MessageAssetRowsTable,
+      MessageAssetRow,
+      $$MessageAssetRowsTableFilterComposer,
+      $$MessageAssetRowsTableOrderingComposer,
+      $$MessageAssetRowsTableAnnotationComposer,
+      $$MessageAssetRowsTableCreateCompanionBuilder,
+      $$MessageAssetRowsTableUpdateCompanionBuilder,
+      (MessageAssetRow, $$MessageAssetRowsTableReferences),
+      MessageAssetRow,
+      PrefetchHooks Function({bool revisionId, bool assetId})
+    >;
+typedef $$AssetGcRowsTableCreateCompanionBuilder =
+    AssetGcRowsCompanion Function({
+      required String assetId,
+      required DateTime notBefore,
+      Value<int> attempts,
+      Value<int> generation,
+      Value<int> rowid,
+    });
+typedef $$AssetGcRowsTableUpdateCompanionBuilder =
+    AssetGcRowsCompanion Function({
+      Value<String> assetId,
+      Value<DateTime> notBefore,
+      Value<int> attempts,
+      Value<int> generation,
+      Value<int> rowid,
+    });
+
+final class $$AssetGcRowsTableReferences
+    extends BaseReferences<_$AppDatabase, $AssetGcRowsTable, AssetGcRow> {
+  $$AssetGcRowsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $AssetRowsTable _assetIdTable(_$AppDatabase db) =>
+      db.assetRows.createAlias('asset_gc_rows__asset_id__asset_rows__id');
+
+  $$AssetRowsTableProcessedTableManager get assetId {
+    final $_column = $_itemColumn<String>('asset_id')!;
+
+    final manager = $$AssetRowsTableTableManager(
+      $_db,
+      $_db.assetRows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_assetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AssetGcRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetGcRowsTable> {
+  $$AssetGcRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get notBefore =>
+      $composableBuilder(
+        column: $table.notBefore,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AssetRowsTableFilterComposer get assetId {
+    final $$AssetRowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRowsTableFilterComposer(
+            $db: $db,
+            $table: $db.assetRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetGcRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetGcRowsTable> {
+  $$AssetGcRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get notBefore => $composableBuilder(
+    column: $table.notBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AssetRowsTableOrderingComposer get assetId {
+    final $$AssetRowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.assetRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetGcRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetGcRowsTable> {
+  $$AssetGcRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<DateTime, int> get notBefore =>
+      $composableBuilder(column: $table.notBefore, builder: (column) => column);
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<int> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => column,
+  );
+
+  $$AssetRowsTableAnnotationComposer get assetId {
+    final $$AssetRowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetRowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assetRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetGcRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AssetGcRowsTable,
+          AssetGcRow,
+          $$AssetGcRowsTableFilterComposer,
+          $$AssetGcRowsTableOrderingComposer,
+          $$AssetGcRowsTableAnnotationComposer,
+          $$AssetGcRowsTableCreateCompanionBuilder,
+          $$AssetGcRowsTableUpdateCompanionBuilder,
+          (AssetGcRow, $$AssetGcRowsTableReferences),
+          AssetGcRow,
+          PrefetchHooks Function({bool assetId})
+        > {
+  $$AssetGcRowsTableTableManager(_$AppDatabase db, $AssetGcRowsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetGcRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetGcRowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetGcRowsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> assetId = const Value.absent(),
+                Value<DateTime> notBefore = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<int> generation = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AssetGcRowsCompanion(
+                assetId: assetId,
+                notBefore: notBefore,
+                attempts: attempts,
+                generation: generation,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String assetId,
+                required DateTime notBefore,
+                Value<int> attempts = const Value.absent(),
+                Value<int> generation = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AssetGcRowsCompanion.insert(
+                assetId: assetId,
+                notBefore: notBefore,
+                attempts: attempts,
+                generation: generation,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$AssetGcRowsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({assetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (assetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.assetId,
+                                referencedTable: $$AssetGcRowsTableReferences
+                                    ._assetIdTable(db),
+                                referencedColumn: $$AssetGcRowsTableReferences
+                                    ._assetIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AssetGcRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AssetGcRowsTable,
+      AssetGcRow,
+      $$AssetGcRowsTableFilterComposer,
+      $$AssetGcRowsTableOrderingComposer,
+      $$AssetGcRowsTableAnnotationComposer,
+      $$AssetGcRowsTableCreateCompanionBuilder,
+      $$AssetGcRowsTableUpdateCompanionBuilder,
+      (AssetGcRow, $$AssetGcRowsTableReferences),
+      AssetGcRow,
+      PrefetchHooks Function({bool assetId})
+    >;
+typedef $$GcAuditRowsTableCreateCompanionBuilder =
+    GcAuditRowsCompanion Function({
+      Value<int> id,
+      required String kind,
+      required String entityId,
+      required DateTime completedAt,
+    });
+typedef $$GcAuditRowsTableUpdateCompanionBuilder =
+    GcAuditRowsCompanion Function({
+      Value<int> id,
+      Value<String> kind,
+      Value<String> entityId,
+      Value<DateTime> completedAt,
+    });
+
+class $$GcAuditRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $GcAuditRowsTable> {
+  $$GcAuditRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get completedAt =>
+      $composableBuilder(
+        column: $table.completedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+}
+
+class $$GcAuditRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GcAuditRowsTable> {
+  $$GcAuditRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GcAuditRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GcAuditRowsTable> {
+  $$GcAuditRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get entityId =>
+      $composableBuilder(column: $table.entityId, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<DateTime, int> get completedAt =>
+      $composableBuilder(
+        column: $table.completedAt,
+        builder: (column) => column,
+      );
+}
+
+class $$GcAuditRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GcAuditRowsTable,
+          GcAuditRow,
+          $$GcAuditRowsTableFilterComposer,
+          $$GcAuditRowsTableOrderingComposer,
+          $$GcAuditRowsTableAnnotationComposer,
+          $$GcAuditRowsTableCreateCompanionBuilder,
+          $$GcAuditRowsTableUpdateCompanionBuilder,
+          (
+            GcAuditRow,
+            BaseReferences<_$AppDatabase, $GcAuditRowsTable, GcAuditRow>,
+          ),
+          GcAuditRow,
+          PrefetchHooks Function()
+        > {
+  $$GcAuditRowsTableTableManager(_$AppDatabase db, $GcAuditRowsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GcAuditRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GcAuditRowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GcAuditRowsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> entityId = const Value.absent(),
+                Value<DateTime> completedAt = const Value.absent(),
+              }) => GcAuditRowsCompanion(
+                id: id,
+                kind: kind,
+                entityId: entityId,
+                completedAt: completedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String kind,
+                required String entityId,
+                required DateTime completedAt,
+              }) => GcAuditRowsCompanion.insert(
+                id: id,
+                kind: kind,
+                entityId: entityId,
+                completedAt: completedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GcAuditRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GcAuditRowsTable,
+      GcAuditRow,
+      $$GcAuditRowsTableFilterComposer,
+      $$GcAuditRowsTableOrderingComposer,
+      $$GcAuditRowsTableAnnotationComposer,
+      $$GcAuditRowsTableCreateCompanionBuilder,
+      $$GcAuditRowsTableUpdateCompanionBuilder,
+      (
+        GcAuditRow,
+        BaseReferences<_$AppDatabase, $GcAuditRowsTable, GcAuditRow>,
+      ),
+      GcAuditRow,
+      PrefetchHooks Function()
+    >;
+typedef $$AssetReferenceDirtyRowsTableCreateCompanionBuilder =
+    AssetReferenceDirtyRowsCompanion Function({
+      required String revisionId,
+      Value<int> rowid,
+    });
+typedef $$AssetReferenceDirtyRowsTableUpdateCompanionBuilder =
+    AssetReferenceDirtyRowsCompanion Function({
+      Value<String> revisionId,
+      Value<int> rowid,
+    });
+
+final class $$AssetReferenceDirtyRowsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $AssetReferenceDirtyRowsTable,
+          AssetReferenceDirtyRow
+        > {
+  $$AssetReferenceDirtyRowsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $MessageRowsTable _revisionIdTable(_$AppDatabase db) => db.messageRows
+      .createAlias('asset_reference_dirty_rows__revision_id__message_rows__id');
+
+  $$MessageRowsTableProcessedTableManager get revisionId {
+    final $_column = $_itemColumn<String>('revision_id')!;
+
+    final manager = $$MessageRowsTableTableManager(
+      $_db,
+      $_db.messageRows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_revisionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AssetReferenceDirtyRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $AssetReferenceDirtyRowsTable> {
+  $$AssetReferenceDirtyRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$MessageRowsTableFilterComposer get revisionId {
+    final $$MessageRowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.revisionId,
+      referencedTable: $db.messageRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageRowsTableFilterComposer(
+            $db: $db,
+            $table: $db.messageRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetReferenceDirtyRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AssetReferenceDirtyRowsTable> {
+  $$AssetReferenceDirtyRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$MessageRowsTableOrderingComposer get revisionId {
+    final $$MessageRowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.revisionId,
+      referencedTable: $db.messageRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageRowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.messageRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetReferenceDirtyRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AssetReferenceDirtyRowsTable> {
+  $$AssetReferenceDirtyRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$MessageRowsTableAnnotationComposer get revisionId {
+    final $$MessageRowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.revisionId,
+      referencedTable: $db.messageRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MessageRowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.messageRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AssetReferenceDirtyRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AssetReferenceDirtyRowsTable,
+          AssetReferenceDirtyRow,
+          $$AssetReferenceDirtyRowsTableFilterComposer,
+          $$AssetReferenceDirtyRowsTableOrderingComposer,
+          $$AssetReferenceDirtyRowsTableAnnotationComposer,
+          $$AssetReferenceDirtyRowsTableCreateCompanionBuilder,
+          $$AssetReferenceDirtyRowsTableUpdateCompanionBuilder,
+          (AssetReferenceDirtyRow, $$AssetReferenceDirtyRowsTableReferences),
+          AssetReferenceDirtyRow,
+          PrefetchHooks Function({bool revisionId})
+        > {
+  $$AssetReferenceDirtyRowsTableTableManager(
+    _$AppDatabase db,
+    $AssetReferenceDirtyRowsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetReferenceDirtyRowsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$AssetReferenceDirtyRowsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AssetReferenceDirtyRowsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> revisionId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AssetReferenceDirtyRowsCompanion(
+                revisionId: revisionId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String revisionId,
+                Value<int> rowid = const Value.absent(),
+              }) => AssetReferenceDirtyRowsCompanion.insert(
+                revisionId: revisionId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$AssetReferenceDirtyRowsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({revisionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (revisionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.revisionId,
+                                referencedTable:
+                                    $$AssetReferenceDirtyRowsTableReferences
+                                        ._revisionIdTable(db),
+                                referencedColumn:
+                                    $$AssetReferenceDirtyRowsTableReferences
+                                        ._revisionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AssetReferenceDirtyRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AssetReferenceDirtyRowsTable,
+      AssetReferenceDirtyRow,
+      $$AssetReferenceDirtyRowsTableFilterComposer,
+      $$AssetReferenceDirtyRowsTableOrderingComposer,
+      $$AssetReferenceDirtyRowsTableAnnotationComposer,
+      $$AssetReferenceDirtyRowsTableCreateCompanionBuilder,
+      $$AssetReferenceDirtyRowsTableUpdateCompanionBuilder,
+      (AssetReferenceDirtyRow, $$AssetReferenceDirtyRowsTableReferences),
+      AssetReferenceDirtyRow,
+      PrefetchHooks Function({bool revisionId})
     >;
 typedef $$GenerationRunRowsTableCreateCompanionBuilder =
     GenerationRunRowsCompanion Function({
@@ -15883,24 +16511,25 @@ class $AppDatabaseManager {
         _db,
         _db.conversationMcpServerRows,
       );
-  $$ToolEventRowsTableTableManager get toolEventRows =>
-      $$ToolEventRowsTableTableManager(_db, _db.toolEventRows);
-  $$GeminiThoughtSignatureRowsTableTableManager
-  get geminiThoughtSignatureRows =>
-      $$GeminiThoughtSignatureRowsTableTableManager(
-        _db,
-        _db.geminiThoughtSignatureRows,
-      );
   $$ChatStorageMetaRowsTableTableManager get chatStorageMetaRows =>
       $$ChatStorageMetaRowsTableTableManager(_db, _db.chatStorageMetaRows);
   $$MessagePartRowsTableTableManager get messagePartRows =>
       $$MessagePartRowsTableTableManager(_db, _db.messagePartRows);
   $$ProviderArtifactRowsTableTableManager get providerArtifactRows =>
       $$ProviderArtifactRowsTableTableManager(_db, _db.providerArtifactRows);
-  $$MigrationRunRowsTableTableManager get migrationRunRows =>
-      $$MigrationRunRowsTableTableManager(_db, _db.migrationRunRows);
-  $$MigrationIssueRowsTableTableManager get migrationIssueRows =>
-      $$MigrationIssueRowsTableTableManager(_db, _db.migrationIssueRows);
+  $$AssetRowsTableTableManager get assetRows =>
+      $$AssetRowsTableTableManager(_db, _db.assetRows);
+  $$MessageAssetRowsTableTableManager get messageAssetRows =>
+      $$MessageAssetRowsTableTableManager(_db, _db.messageAssetRows);
+  $$AssetGcRowsTableTableManager get assetGcRows =>
+      $$AssetGcRowsTableTableManager(_db, _db.assetGcRows);
+  $$GcAuditRowsTableTableManager get gcAuditRows =>
+      $$GcAuditRowsTableTableManager(_db, _db.gcAuditRows);
+  $$AssetReferenceDirtyRowsTableTableManager get assetReferenceDirtyRows =>
+      $$AssetReferenceDirtyRowsTableTableManager(
+        _db,
+        _db.assetReferenceDirtyRows,
+      );
   $$GenerationRunRowsTableTableManager get generationRunRows =>
       $$GenerationRunRowsTableTableManager(_db, _db.generationRunRows);
   $$AssistantRowsTableTableManager get assistantRows =>

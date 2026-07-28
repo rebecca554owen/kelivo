@@ -660,6 +660,8 @@
       }
     }
   },
+  "startupDatabaseUpdateRequiredTitle": "Update Kelivo to continue",
+  "startupDatabaseUpdateRequiredContent": "The chat database on this device was created by a newer version of Kelivo and cannot be opened by this version. Your data has not been changed. Install the latest version of Kelivo, then open it again.",
   "backupPageRestoreFailedMessage": "Restore failed: {error}",
   "@backupPageRestoreFailedMessage": {
     "placeholders": {
@@ -2470,6 +2472,12 @@
   "migrationUnknownError": "Unknown migration error.",
   "migrationFailureLogTitle": "Failure log",
   "migrationRetryButton": "Retry Migration",
+  "migrationSkipButton": "Skip Migration and Start Fresh",
+  "migrationSkipDialogTitle": "Skip migration?",
+  "migrationSkipDialogMessage": "Kelivo will start with an empty chat database. Your old chat history stays on disk (renamed with a .retired suffix) but will NOT be migrated and will not appear in the app. Use your backup ZIP if you need to recover it later.",
+  "migrationSkipDialogCancel": "Cancel",
+  "migrationSkipDialogConfirm": "Skip and Start Fresh",
+  "migrationChatsExportDegradedNote": "The chats.json export was skipped because of an error. The backup ZIP still contains the raw Hive files with your complete chat history.",
   "timelineJumpToLatest": "Jump to latest",
   "largeContentShowMore": "Show {count} more",
   "@largeContentShowMore": {"placeholders": {"count": {"type": "int"}}},

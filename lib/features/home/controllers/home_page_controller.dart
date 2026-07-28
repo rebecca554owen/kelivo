@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -148,6 +149,25 @@ class HomePageController extends ChangeNotifier {
   late Animation<double> _messageJumpOpacity;
   bool _chatControllerReady = false;
 
+  /// Serial of the latest animated conversation transition; superseded
+  /// transitions check it to discard their pre-commit work.
+  int _switchSerial = 0;
+
+  // Startup warm-up (cache plan measure 14): after the initial restore
+  // completes, an idle-time serial prefetch of the most recent conversations.
+  // Any user operation bumps _warmupSerial, abandoning the remaining queue.
+  static const int startupWarmupConversationCount = 4;
+  int _warmupSerial = 0;
+  bool _startupWarmupScheduled = false;
+
+  @visibleForTesting
+  int get debugWarmupSerial => _warmupSerial;
+
+  @visibleForTesting
+  void debugAbandonStartupWarmup() {
+    _warmupSerial++;
+  }
+
   // ============================================================================
   // State Fields
   // ============================================================================
@@ -247,6 +267,16 @@ class HomePageController extends ChangeNotifier {
       _chatController.loadingConversationIds;
   Map<String, StreamSubscription<dynamic>> get conversationStreams =>
       _chatController.conversationStreams;
+
+  /// True from app start until the initial conversation restore (or draft
+  /// creation) finishes, so the empty state never flashes during startup.
+  bool _startupConversationPending = true;
+
+  /// Drives the message-list three-state placeholder: true only while the
+  /// initial restore is pending or a cold window load is in flight. Fast-path
+  /// cache hits resolve within one frame batch and never surface a skeleton.
+  bool get isLoadingWindow =>
+      _startupConversationPending || _chatController.isLoadingWindow;
 
   // Delegate to StreamController
   Map<String, stream_ctrl.ReasoningData> get reasoning =>
@@ -625,30 +655,102 @@ class HomePageController extends ChangeNotifier {
   Future<void> initChat() async {
     final prefs = _context.read<SettingsProvider>();
     final assistantProvider = _context.read<AssistantProvider>();
-    await assistantProvider.loaded;
-    await _chatService.init();
-    if (prefs.newChatOnLaunch) {
-      await _createNewConversation();
-    } else {
-      final conversations = _chatService.getAllConversations();
-      if (conversations.isNotEmpty) {
-        final recent = conversations.first;
-        if ((recent.assistantId ?? '').isNotEmpty) {
-          try {
-            await assistantProvider.setCurrentAssistant(recent.assistantId!);
-          } catch (_) {}
-        }
-        _chatService.setCurrentConversation(recent.id);
-        await _chatController.setCurrentConversationAndLoad(recent);
-        _streamController.clearGeminiThoughtSigs();
-        _restoreMessageUiState();
-        _scrollCtrl.positionAtBottomOnNextLayout();
-        notifyListeners();
-      } else {
-        // No conversations exist — create a new empty one so the UI
-        // correctly shows the temporary-chat toggle button instead of
-        // falling back to "new conversation" button.
+    try {
+      // The two startups are independent of each other.
+      await Future.wait([assistantProvider.loaded, _chatService.init()]);
+      if (prefs.newChatOnLaunch) {
         await _createNewConversation();
+      } else {
+        final conversations = _chatService.getAllConversations();
+        if (conversations.isNotEmpty) {
+          final recent = conversations.first;
+          _chatService.setCurrentConversation(recent.id);
+          // Assistant restore and window load are independent; the message
+          // list already tolerates a one-frame missing-assistant fallback.
+          final restoreAssistant = Future<void>(() async {
+            if ((recent.assistantId ?? '').isNotEmpty) {
+              try {
+                await assistantProvider.setCurrentAssistant(
+                  recent.assistantId!,
+                );
+              } catch (_) {}
+            }
+          });
+          final loadWindow = _chatController.setCurrentConversationAndLoad(
+            recent,
+          );
+          // Rebuild while the window load is in flight so a cold load shows
+          // the skeleton instead of a blank list.
+          notifyListeners();
+          await Future.wait([restoreAssistant, loadWindow]);
+          _streamController.clearGeminiThoughtSigs();
+          _restoreMessageUiState();
+          _scrollCtrl.positionAtBottomOnNextLayout();
+          notifyListeners();
+          _scheduleStartupWarmup();
+        } else {
+          // No conversations exist — create a new empty one so the UI
+          // correctly shows the temporary-chat toggle button instead of
+          // falling back to "new conversation" button.
+          await _createNewConversation();
+        }
+      }
+    } finally {
+      _startupConversationPending = false;
+      notifyListeners();
+    }
+  }
+
+  /// Queues an idle-time warm-up of the most recent conversations after the
+  /// initial restore (cache plan measure 14). Runs once per launch.
+  void _scheduleStartupWarmup() {
+    if (_startupWarmupScheduled) return;
+    _startupWarmupScheduled = true;
+    final serial = _warmupSerial;
+    final currentId = _chatService.currentConversationId;
+    final ids = _chatService
+        .getAllConversations()
+        .take(startupWarmupConversationCount)
+        .map((c) => c.id)
+        .where(
+          (id) => id != currentId && !_chatService.isTemporaryConversation(id),
+        )
+        .toList(growable: false);
+    if (ids.isEmpty) return;
+    final Future<void> task;
+    try {
+      task = SchedulerBinding.instance.scheduleTask(
+        () => warmUpRecentConversations(ids, serial),
+        Priority.idle,
+        debugLabel: 'home.startupWarmup',
+      );
+    } catch (_) {
+      // No scheduler binding (bare unit tests): warm-up is optional.
+      return;
+    }
+    unawaited(task.catchError((Object _) {}));
+  }
+
+  /// Cache-only warm-up: fills the service message cache (counted against the
+  /// regular cache budget) and never notifies listeners. The remaining queue
+  /// is abandoned once [serial] no longer matches the current warm-up serial,
+  /// i.e. after any user operation.
+  @visibleForTesting
+  Future<void> warmUpRecentConversations(
+    List<String> conversationIds,
+    int serial,
+  ) async {
+    for (final id in conversationIds) {
+      if (serial != _warmupSerial || !_context.mounted) return;
+      // A streaming conversation owns the single connection queue.
+      if (loadingConversationIds.contains(id)) continue;
+      try {
+        await _chatService.loadTimelinePage(
+          id,
+          limit: ChatService.defaultTimelineInitialSlots,
+        );
+      } catch (_) {
+        // Warm-up failures lose nothing user-visible.
       }
     }
   }
@@ -683,6 +785,7 @@ class HomePageController extends ChangeNotifier {
         input.documents.isEmpty) {
       return ChatInputSubmissionResult.rejected;
     }
+    _warmupSerial++;
     final editState = _userMessageEditState;
     if (editState != null) {
       final newMsg = await _saveEditedUserMessageVersion(input, editState);
@@ -708,6 +811,13 @@ class HomePageController extends ChangeNotifier {
     final settings = _context.read<SettingsProvider>();
     if (settings.insertSuggestionOnTapOnly) {
       _replaceInputWithSuggestion(text);
+      return;
+    }
+    // A tap landing inside the pre-loading race window is a duplicate: the
+    // first send has been claimed but has not set the loading guard yet.
+    final conversationId = currentConversation?.id;
+    if (conversationId != null &&
+        _viewModel.isConversationSendInFlight(conversationId)) {
       return;
     }
     await sendMessage(ChatInputData(text: text));
@@ -752,6 +862,7 @@ class HomePageController extends ChangeNotifier {
     bool assistantAsNewReply = false,
   }) async {
     if (currentConversation == null) return;
+    _warmupSerial++;
 
     final settings = _context.read<SettingsProvider>();
     if (settings.regenerateDeleteTrailingMessages) {
@@ -834,40 +945,68 @@ class HomePageController extends ChangeNotifier {
   // ============================================================================
 
   Future<void> switchConversationAnimated(String id) async {
-    try {
-      await _viewModel.flushCurrentConversationProgress();
-    } catch (_) {}
-    if (currentConversation?.id == id) return;
-    _exitUserMessageEdit(clearDraft: true);
-    if (!isDesktopPlatform) {
-      try {
-        await _convoFadeController.reverse();
-      } catch (_) {}
-    } else {
-      try {
-        _convoFadeController.stop();
-        _convoFadeController.value = 1.0;
-      } catch (_) {}
+    final serial = ++_switchSerial;
+    _warmupSerial++;
+    if (currentConversation?.id == id) {
+      // Already on the target: the serial bump above cancels any in-flight
+      // switch; reveal the current list again in case a fade-out is pending
+      // or in flight. forward() is a no-op when the list is fully visible.
+      if (!isDesktopPlatform) {
+        unawaited(_forwardConvoFade());
+      }
+      return;
     }
-
-    await _viewModel.switchConversation(id);
-    notifyListeners();
+    _exitUserMessageEdit(clearDraft: true);
 
     if (!isDesktopPlatform) {
+      // Fetch-then-commit: fade-out, progress flush, and the DB fetch run
+      // concurrently, but the fetched window is committed only after the
+      // fade-out completes so no new data flashes while opacity is not 0.
+      final fadeFuture = _reverseConvoFade();
+      final flushFuture = _flushProgressSilently();
+      final PreparedConversationSwitch? prepared;
+      try {
+        prepared = await _viewModel.prepareConversationSwitch(id);
+      } catch (_) {
+        if (serial == _switchSerial) await _forwardConvoFade();
+        rethrow;
+      }
+      if (serial != _switchSerial) return;
+      await Future.wait([fadeFuture, flushFuture]);
+      if (serial != _switchSerial) return;
+      if (prepared == null) {
+        // Target vanished; reveal the current list again.
+        await _forwardConvoFade();
+        return;
+      }
+      _viewModel.commitConversationSwitch(prepared);
+      notifyListeners();
+
       try {
         await WidgetsBinding.instance.endOfFrame;
-        if (currentConversation?.id != id) return;
+        if (serial != _switchSerial || currentConversation?.id != id) return;
         // Resolve the real last item while the new conversation is still
         // transparent. Its first maxScrollExtent can contain lazy estimates.
         final activeScrollController = _scrollCtrl;
         await activeScrollController.settleAtBottomBeforeReveal();
-        if (currentConversation?.id != id ||
+        if (serial != _switchSerial ||
+            currentConversation?.id != id ||
             !identical(_scrollCtrl, activeScrollController)) {
           return;
         }
         await _convoFadeController.forward();
       } catch (_) {}
+    } else {
+      await _flushProgressSilently();
+      try {
+        _convoFadeController.stop();
+        _convoFadeController.value = 1.0;
+      } catch (_) {}
+      if (serial != _switchSerial) return;
+      await _viewModel.switchConversation(id);
+      notifyListeners();
     }
+
     if (isDesktopPlatform) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _inputFocus.requestFocus();
@@ -875,7 +1014,28 @@ class HomePageController extends ChangeNotifier {
     }
   }
 
+  Future<void> _reverseConvoFade() async {
+    try {
+      await _convoFadeController.reverse();
+    } catch (_) {}
+  }
+
+  Future<void> _forwardConvoFade() async {
+    try {
+      await _convoFadeController.forward();
+    } catch (_) {}
+  }
+
+  Future<void> _flushProgressSilently() async {
+    try {
+      await _viewModel.flushCurrentConversationProgress();
+    } catch (_) {}
+  }
+
   Future<void> createNewConversationAnimated() async {
+    // Cancel any in-flight conversation switch fetch.
+    _switchSerial++;
+    _warmupSerial++;
     try {
       await _viewModel.flushCurrentConversationProgress();
     } catch (_) {}
@@ -1852,9 +2012,15 @@ class HomePageController extends ChangeNotifier {
         postSwitchDelay: _postSwitchScrollDelay,
       );
 
-  Future<bool> loadMoreBefore() => _viewModel.loadMoreBefore();
+  Future<bool> loadMoreBefore() {
+    _warmupSerial++;
+    return _viewModel.loadMoreBefore();
+  }
 
-  Future<bool> loadMoreAfter() => _viewModel.loadMoreAfter();
+  Future<bool> loadMoreAfter() {
+    _warmupSerial++;
+    return _viewModel.loadMoreAfter();
+  }
 
   List<ChatMessage> allCollapsedMessagesForCurrentConversation() =>
       _chatController.allCollapsedMessagesForCurrentConversation();
@@ -1866,6 +2032,7 @@ class HomePageController extends ChangeNotifier {
     String targetId, {
     bool useRikkaTransition = false,
   }) async {
+    _warmupSerial++;
     if (useRikkaTransition) {
       try {
         await _messageJumpTransitionController.reverse();

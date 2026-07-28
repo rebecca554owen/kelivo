@@ -151,24 +151,6 @@ class ConversationMcpServerRows extends Table {
   ];
 }
 
-class ToolEventRows extends Table {
-  TextColumn get messageId =>
-      text().references(MessageRows, #id, onDelete: KeyAction.cascade)();
-  TextColumn get eventsJson => text()();
-
-  @override
-  Set<Column<Object>> get primaryKey => {messageId};
-}
-
-class GeminiThoughtSignatureRows extends Table {
-  TextColumn get messageId =>
-      text().references(MessageRows, #id, onDelete: KeyAction.cascade)();
-  TextColumn get signature => text()();
-
-  @override
-  Set<Column<Object>> get primaryKey => {messageId};
-}
-
 class ChatStorageMetaRows extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
@@ -244,57 +226,80 @@ class ProviderArtifactRows extends Table {
   ];
 }
 
-class MigrationRunRows extends Table {
+class AssetRows extends Table {
   TextColumn get id => text()();
-  TextColumn get sourceKind =>
-      text()
+  TextColumn get contentHash => text().unique()();
+  TextColumn get path => text()();
+  IntColumn get byteSize =>
+      integer()
       // ignore: recursive_getters
-      .check(sourceKind.isIn(const ['hive', 'legacy_json']))();
-  TextColumn get sourceHash => text()();
-  TextColumn get status =>
-      text()
+      .check(byteSize.isBiggerOrEqualValue(0))();
+  IntColumn get width => integer()
       // ignore: recursive_getters
-      .check(status.isIn(const ['building', 'completed', 'failed']))();
-  IntColumn get startedAt =>
-      integer().map(const MicrosecondDateTimeConverter())();
-  IntColumn get completedAt =>
-      integer().map(const MicrosecondDateTimeConverter()).nullable()();
-
-  @override
-  Set<Column<Object>> get primaryKey => {id};
-
-  @override
-  List<Set<Column<Object>>> get uniqueKeys => [
-    {sourceKind, sourceHash},
-  ];
-
-  @override
-  List<String> get customConstraints => [
-    'CHECK (completed_at IS NULL OR completed_at >= started_at)',
-  ];
-}
-
-@TableIndex(
-  name: 'idx_migration_issues_run_kind',
-  columns: {#migrationRunId, #kind, #id},
-)
-class MigrationIssueRows extends Table {
-  TextColumn get id => text()();
-  TextColumn get migrationRunId =>
-      text().references(MigrationRunRows, #id, onDelete: KeyAction.cascade)();
-  TextColumn get conversationId => text().nullable()();
-  TextColumn get sourceEntityId => text().nullable()();
-  TextColumn get kind => text()();
-  TextColumn get severity =>
-      text()
+      .check(width.isBiggerThanValue(0))
+      .nullable()();
+  IntColumn get height => integer()
       // ignore: recursive_getters
-      .check(severity.isIn(const ['warning', 'recovered', 'rejected']))();
-  TextColumn get detailsJson => text().withDefault(const Constant('{}'))();
+      .check(height.isBiggerThanValue(0))
+      .nullable()();
+  TextColumn get thumbnailPath => text().nullable()();
   IntColumn get createdAt =>
       integer().map(const MicrosecondDateTimeConverter())();
+  IntColumn get lastReferencedAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+}
+
+@TableIndex(name: 'idx_message_assets_asset', columns: {#assetId, #revisionId})
+class MessageAssetRows extends Table {
+  TextColumn get conversationId => text()();
+  TextColumn get revisionId =>
+      text().references(MessageRows, #id, onDelete: KeyAction.cascade)();
+  TextColumn get assetId =>
+      text().references(AssetRows, #id, onDelete: KeyAction.cascade)();
+  TextColumn get kind =>
+      text()
+      // ignore: recursive_getters
+      .check(kind.isNotValue(''))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {revisionId, assetId, kind};
+}
+
+class AssetGcRows extends Table {
+  TextColumn get assetId =>
+      text().references(AssetRows, #id, onDelete: KeyAction.cascade)();
+  IntColumn get notBefore =>
+      integer().map(const MicrosecondDateTimeConverter())();
+  IntColumn get attempts => integer()
+      // ignore: recursive_getters
+      .check(attempts.isBiggerOrEqualValue(0))
+      .withDefault(const Constant(0))();
+  IntColumn get generation => integer()
+      // ignore: recursive_getters
+      .check(generation.isBiggerOrEqualValue(0))
+      .withDefault(const Constant(0))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {assetId};
+}
+
+class GcAuditRows extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get kind => text()();
+  TextColumn get entityId => text()();
+  IntColumn get completedAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
+}
+
+class AssetReferenceDirtyRows extends Table {
+  TextColumn get revisionId =>
+      text().references(MessageRows, #id, onDelete: KeyAction.cascade)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {revisionId};
 }
 
 @TableIndex.sql(
@@ -533,13 +538,14 @@ class PreferenceRows extends Table {
     ConversationRows,
     MessageRows,
     ConversationMcpServerRows,
-    ToolEventRows,
-    GeminiThoughtSignatureRows,
     ChatStorageMetaRows,
     MessagePartRows,
     ProviderArtifactRows,
-    MigrationRunRows,
-    MigrationIssueRows,
+    AssetRows,
+    MessageAssetRows,
+    AssetGcRows,
+    GcAuditRows,
+    AssetReferenceDirtyRows,
     GenerationRunRows,
     AssistantRows,
     ProviderRows,
@@ -571,7 +577,11 @@ class AppDatabase extends _$AppDatabase {
   // a promise that an active WAL can never temporarily exceed 16 MiB.
   static const journalSizeLimitBytes = 16 << 20;
   static const busyTimeoutMillis = 5000;
-  static const synchronousFull = 2;
+  // Under WAL, NORMAL still guarantees crash consistency; a power loss can
+  // only drop transactions since the last checkpoint, which the
+  // generation-run recovery path already tolerates. FULL would add an fsync
+  // per write transaction on the streaming hot path.
+  static const synchronousNormal = 1;
   static const _executionIsolateProbeFunction =
       'kelivo_sqlite_on_opening_isolate';
   static const _maxExecutionIsolateProbeSamples = 1000;
@@ -616,7 +626,7 @@ class AppDatabase extends _$AppDatabase {
         database.execute('PRAGMA journal_mode = WAL;');
         database.execute('PRAGMA foreign_keys = ON;');
         database.execute('PRAGMA busy_timeout = $busyTimeoutMillis;');
-        database.execute('PRAGMA synchronous = FULL;');
+        database.execute('PRAGMA synchronous = NORMAL;');
         database.execute(
           'PRAGMA wal_autocheckpoint = $walAutoCheckpointPages;',
         );

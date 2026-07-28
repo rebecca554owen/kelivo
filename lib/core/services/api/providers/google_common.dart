@@ -287,6 +287,71 @@ bool _shouldRequestGoogleThoughts(
   return _apiModelId(config, modelId).toLowerCase().contains('gemini');
 }
 
+/// Gemini reports prompt-level blocks (safety filters etc.) in-band as
+/// `promptFeedback.blockReason` on a frame without candidates; surface those
+/// as a stream error instead of an empty "normal" completion.
+void _throwIfGeminiPromptBlocked(String data) {
+  if (!data.contains('blockReason')) return;
+  Object? decoded;
+  try {
+    decoded = jsonDecode(data);
+  } catch (_) {
+    return;
+  }
+  if (decoded is! Map) return;
+  final candidates = decoded['candidates'];
+  if (candidates is List && candidates.isNotEmpty) return;
+  final feedback = decoded['promptFeedback'];
+  if (feedback is! Map) return;
+  final reason = (feedback['blockReason'] ?? '').toString().trim();
+  if (reason.isEmpty || reason == 'BLOCK_REASON_UNSPECIFIED') return;
+  final message = (feedback['blockReasonMessage'] ?? '').toString().trim();
+  throw HttpException(
+    message.isEmpty
+        ? 'Prompt blocked ($reason)'
+        : 'Prompt blocked ($reason): $message',
+  );
+}
+
+/// Output-side content filtering ends the candidate with one of these
+/// `finishReason` values and then closes the stream like a regular
+/// completion, so a mid-generation block would otherwise just look like a
+/// short reply.
+const Set<String> _geminiBlockedFinishReasons = {
+  'SAFETY',
+  'RECITATION',
+  'BLOCKLIST',
+  'PROHIBITED_CONTENT',
+  'SPII',
+  'IMAGE_SAFETY',
+};
+
+/// Surfaces candidate-level content filtering (`finishReason: SAFETY` etc.)
+/// as a stream error so truncated output is not persisted as a normal finish.
+void _throwIfGeminiCandidateBlocked(String data) {
+  if (!data.contains('finishReason')) return;
+  Object? decoded;
+  try {
+    decoded = jsonDecode(data);
+  } catch (_) {
+    return;
+  }
+  if (decoded is! Map) return;
+  final candidates = decoded['candidates'];
+  if (candidates is! List) return;
+  for (final cand in candidates) {
+    if (cand is! Map) continue;
+    final reason = (cand['finishReason'] ?? '').toString().trim();
+    if (!_geminiBlockedFinishReasons.contains(reason)) continue;
+    final message = (cand['finishMessage'] ?? '').toString().trim();
+    throw HttpException(
+      message.isEmpty
+          ? 'Response blocked ($reason)'
+          : 'Response blocked ($reason): $message',
+    );
+  }
+}
+
 Stream<ChatStreamChunk> _sendGoogleStream(
   http.Client client,
   ProviderConfig config,
@@ -384,7 +449,9 @@ Stream<ChatStreamChunk> _sendGoogleStream(
           final part = _googleFunctionCallPartFromToolCall(tc);
           if (part != null) parts.add(part);
         }
-        if (persistGeminiThoughtSigs) _ensureGeminiFunctionCallThoughtSig(parts);
+        if (persistGeminiThoughtSigs) {
+          _ensureGeminiFunctionCallThoughtSig(parts);
+        }
         if (parts.isNotEmpty) contents.add({'role': 'model', 'parts': parts});
         continue;
       }
@@ -1023,6 +1090,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
 
   // Accumulate built-in search citations across stream rounds
   final List<Map<String, dynamic>> builtinCitations = <Map<String, dynamic>>[];
+  int malformedResponseRetryCount = 0;
 
   List<Map<String, dynamic>> parseCitations(dynamic gm) {
     final out = <Map<String, dynamic>>[];
@@ -1134,6 +1202,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
     final List<Map<String, dynamic>> roundModelParts = <Map<String, dynamic>>[];
     // Counter for server-side code execution tool cards
     int codeExecCounter = 0;
+    bool retryMalformedResponse = false;
 
     // Capture thought signatures for history (Gemini 3 image/editing)
     String? responseTextThoughtSigKey;
@@ -1222,6 +1291,12 @@ Stream<ChatStreamChunk> _sendGoogleStream(
         if (!line.startsWith('data:')) continue;
         final data = line.substring(5).trim(); // after 'data:'
         if (data.isEmpty) continue;
+        // Gemini can deliver {"error":{code,message,status}}, a prompt-level
+        // block, or a candidate-level content-filter finish in-band on a 2xx
+        // stream; raise before the malformed-chunk guard below can swallow it.
+        _throwIfInBandStreamError(data);
+        _throwIfGeminiPromptBlocked(data);
+        _throwIfGeminiCandidateBlocked(data);
         try {
           final obj = jsonDecode(data) as Map<String, dynamic>;
           final um = obj['usageMetadata'];
@@ -1534,8 +1609,12 @@ Stream<ChatStreamChunk> _sendGoogleStream(
               }
             }
 
+            if (finishReason == 'MALFORMED_RESPONSE' && calls.isEmpty) {
+              retryMalformedResponse = true;
+            }
+
             // When finishing, emit any buffered inline image (and trailing text) in one batch to avoid partial base64 during streaming.
-            if (finishReason != null) {
+            if (finishReason != null && !retryMalformedResponse) {
               final pendingImage = await takeBufferedImageMarkdown();
               if (pendingImage.isNotEmpty) {
                 textDelta += pendingImage;
@@ -1563,6 +1642,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
 
             // If server signaled finish, end stream immediately
             if (finishReason != null &&
+                !retryMalformedResponse &&
                 calls.isEmpty &&
                 (!expectImage || receivedImage)) {
               // Emit final citations if any not emitted
@@ -1613,6 +1693,18 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       }
     }
 
+    if (retryMalformedResponse) {
+      // This is a transient model-generation failure, so retry the unchanged
+      // round once without adding the malformed candidate to conversation.
+      if (malformedResponseRetryCount == 0) {
+        malformedResponseRetryCount++;
+        continue;
+      }
+      throw const HttpException(
+        'Gemini response generation failed (MALFORMED_RESPONSE)',
+      );
+    }
+
     // Flush any buffered inline image (e.g., when stream ends without explicit finishReason)
     final pendingImage = await takeBufferedImageMarkdown();
     if (pendingImage.isNotEmpty) {
@@ -1652,6 +1744,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
     }
 
     // Append model functionCall(s) and user functionResponse(s) to conversation, then loop
+    malformedResponseRetryCount = 0;
     if (isGemini3) {
       // Gemini 3: preserve the original model parts order exactly.
       convo.add({'role': 'model', 'parts': roundModelParts});
