@@ -17,6 +17,7 @@ import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart'
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 
 Future<SettingsProvider> _createSettings(
@@ -799,12 +800,16 @@ void main() {
       expect(find.byTooltip('Replay'), findsOneWidget);
     });
 
-    testWidgets('text to speech tool card opens details for long text', (
+    testWidgets('tool card opens custom details and shows the full result', (
       tester,
     ) async {
       final settings = await _createSettings(
         ChatMessageBackgroundStyle.defaultStyle,
       );
+      final longResult = List<String>.generate(
+        100,
+        (index) => 'result-$index',
+      ).join('\n');
 
       await tester.pumpWidget(
         _buildHarness(
@@ -817,12 +822,12 @@ void main() {
               isStreaming: true,
             ),
             showModelIcon: false,
-            toolParts: const [
+            toolParts: [
               ToolUIPart(
                 id: 'tts',
                 toolName: 'text_to_speech',
-                arguments: {'text': 'Replay this line'},
-                content: '{"success":true}',
+                arguments: const {'text': 'Replay this line'},
+                content: longResult,
               ),
             ],
           ),
@@ -836,8 +841,14 @@ void main() {
       await tester.tap(find.text('Speaking:'));
       await tester.pumpAndSettle();
 
+      expect(find.byKey(CustomBottomSheet.panelKey), findsOneWidget);
       expect(find.text('Arguments'), findsOneWidget);
       expect(find.text('Replay this line'), findsWidgets);
+      expect(find.textContaining('result-99'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('bounded-large-text-toggle')),
+        findsNothing,
+      );
       expect(find.byTooltip('Replay'), findsOneWidget);
     });
 
