@@ -383,6 +383,46 @@ void main() {
       },
     );
 
+    test('visible version keeps its in-memory translation snapshot', () async {
+      messages = <ChatMessage>[
+        _versionedMessage(
+          id: 'answer-v0',
+          role: 'assistant',
+          groupId: 'answer',
+          version: 0,
+        ),
+        _versionedMessage(
+          id: 'answer-v1',
+          role: 'assistant',
+          groupId: 'answer',
+          version: 1,
+        ),
+      ];
+      conversation = Conversation(
+        id: conversation.id,
+        title: conversation.title,
+        messageIds: messages.map((message) => message.id).toList(),
+      );
+      chatService = _FakeLazyChatService(messages)
+        ..versionSelections = const {'answer': 1};
+      controller.dispose();
+      controller = ChatController(chatService: chatService);
+      await controller.setCurrentConversationAndLoad(conversation);
+
+      final translating = controller.messages.single.copyWith(
+        translation: 'Translating…',
+      );
+      expect(controller.replaceMessageSnapshot(translating), isTrue);
+      expect(controller.collapsedMessages.single.translation, 'Translating…');
+
+      final partial = translating.copyWith(translation: 'Translated chunk');
+      expect(controller.replaceMessageSnapshot(partial), isTrue);
+      expect(
+        controller.collapsedMessages.single.translation,
+        'Translated chunk',
+      );
+    });
+
     test('generation lifecycle signals are isolated by conversation', () async {
       await controller.setCurrentConversationAndLoad(conversation);
       final background = ChatMessage(

@@ -123,6 +123,9 @@ class TranslationService {
       final buffer = StringBuffer();
 
       await for (final chunk in translationStream) {
+        // Reasoning/usage chunks carry no visible text. Keep the loading card
+        // until translated text arrives instead of replacing it with empty.
+        if (chunk.content.isEmpty && !chunk.isDone) continue;
         buffer.write(chunk.content);
         // 实时更新翻译
         onTranslationUpdate(buffer.toString());

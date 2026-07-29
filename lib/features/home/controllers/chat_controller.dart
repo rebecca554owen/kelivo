@@ -1015,9 +1015,13 @@ class ChatController extends ChangeNotifier {
       return _messagesWithVisibleGroupsCache = _messages;
     }
 
-    final visibleIds = {for (final message in _messages) message.id};
+    final windowMessagesById = {
+      for (final message in _messages) message.id: message,
+    };
+    final visibleIds = windowMessagesById.keys;
     final byGroup = <String, List<ChatMessage>>{};
-    for (final message in visibleVersions) {
+    for (final cachedMessage in visibleVersions) {
+      final message = windowMessagesById[cachedMessage.id] ?? cachedMessage;
       final groupId = message.groupId ?? message.id;
       byGroup.putIfAbsent(groupId, () => <ChatMessage>[]).add(message);
     }
