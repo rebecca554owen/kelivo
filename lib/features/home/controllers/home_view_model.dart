@@ -827,7 +827,10 @@ class HomeViewModel extends ChangeNotifier {
   void commitConversationSwitch(PreparedConversationSwitch prepared) {
     final id = prepared.conversation.id;
     _chatService.setCurrentConversation(id);
-    _chatController.commitConversationWindow(prepared.window);
+    _chatController.commitConversationWindow(
+      prepared.window,
+      onDeferredGroupDataLoaded: notifyListeners,
+    );
     // Same concurrency as switchConversation: the assistant change notifies
     // before its disk write completes.
     final assistantProvider = _contextProvider.read<AssistantProvider>();

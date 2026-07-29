@@ -148,6 +148,15 @@ class ChatActions {
   /// stopping generation" invariant.
   static ChatActions? _current;
 
+  /// Flush the latest in-memory generation snapshot before the app exits.
+  static Future<void> flushActiveGenerationProgress() async {
+    final actions = _current;
+    if (actions == null) return;
+    await actions.flushConversationProgress(
+      actions.chatController.currentConversation,
+    );
+  }
+
   /// Stop any in-flight generation for [conversationId] before its rows are
   /// deleted, so streaming checkpoints cannot write to removed messages.
   static Future<void> cancelActiveGenerationFor(String conversationId) async {

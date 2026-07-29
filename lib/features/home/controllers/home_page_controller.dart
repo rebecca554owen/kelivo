@@ -1783,6 +1783,12 @@ class HomePageController extends ChangeNotifier {
 
   Future<void> setSelectedVersion(String groupId, int version) async {
     await _chatController.setSelectedVersion(groupId, version);
+    for (final message in _chatController.collapsedMessages) {
+      if ((message.groupId ?? message.id) == groupId) {
+        _restoreAssistantMessageUiState(message);
+        break;
+      }
+    }
     notifyListeners();
   }
 
@@ -2272,12 +2278,7 @@ class HomePageController extends ChangeNotifier {
     for (int i = 0; i < messages.length; i++) {
       final m = messages[i];
       if (m.role == 'assistant') {
-        _streamController.restoreMessageUiState(
-          m,
-          getToolEventsFromDb: (id) => _chatService.getToolEvents(id),
-          getGeminiThoughtSigFromDb: (id) =>
-              _chatService.getGeminiThoughtSignature(id),
-        );
+        _restoreAssistantMessageUiState(m);
 
         final cleanedContent = _streamController.captureGeminiThoughtSignature(
           m.content,
@@ -2302,6 +2303,15 @@ class HomePageController extends ChangeNotifier {
         _translations[m.id] = td;
       }
     }
+  }
+
+  void _restoreAssistantMessageUiState(ChatMessage message) {
+    _streamController.restoreMessageUiState(
+      message,
+      getToolEventsFromDb: (id) => _chatService.getToolEvents(id),
+      getGeminiThoughtSigFromDb: (id) =>
+          _chatService.getGeminiThoughtSignature(id),
+    );
   }
 
   void _scheduleInlineImageSanitize(

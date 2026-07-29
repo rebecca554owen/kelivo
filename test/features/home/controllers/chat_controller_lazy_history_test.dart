@@ -20,6 +20,9 @@ class _FakeLazyChatService extends ChatService {
   int messageIndexCalls = 0;
   int contextStartIndex = -1;
   bool temporary = false;
+  int? timelineSelectedVersionOverride;
+  bool requireGroupLoad = false;
+  bool groupsLoaded = false;
 
   @override
   bool isTemporaryConversation(String? id) => temporary;
@@ -127,7 +130,8 @@ class _FakeLazyChatService extends ChatService {
     }
     final activeMessages = <ChatMessage>[];
     for (final entry in grouped.entries) {
-      final selectedVersion = versionSelections[entry.key];
+      final selectedVersion =
+          timelineSelectedVersionOverride ?? versionSelections[entry.key];
       activeMessages.add(
         entry.value.firstWhere(
           (message) => selectedVersion == null
@@ -241,6 +245,7 @@ class _FakeLazyChatService extends ChatService {
     String conversationId,
     Iterable<String> groupIds,
   ) {
+    if (requireGroupLoad && !groupsLoaded) return const <ChatMessage>[];
     final targets = groupIds.where((id) => id.isNotEmpty).toSet();
     if (targets.isEmpty) return const <ChatMessage>[];
 
@@ -256,7 +261,10 @@ class _FakeLazyChatService extends ChatService {
   Future<List<ChatMessage>> loadMessagesForGroups(
     String conversationId,
     Iterable<String> groupIds,
-  ) async => getMessagesForGroups(conversationId, groupIds);
+  ) async {
+    groupsLoaded = true;
+    return getMessagesForGroups(conversationId, groupIds);
+  }
 
   @override
   Conversation? getConversation(String id) {
@@ -742,6 +750,44 @@ void main() {
         await controller.setCurrentConversationAndLoad(conversation);
 
         expect(controller.collapsedMessages.single.id, 'answer-v1');
+      },
+    );
+
+    test(
+      'opening preloads the persisted selected version before first paint',
+      () async {
+        messages = <ChatMessage>[
+          _versionedMessage(
+            id: 'answer-v0',
+            role: 'assistant',
+            groupId: 'answer',
+            version: 0,
+          ),
+          _versionedMessage(
+            id: 'answer-v1',
+            role: 'assistant',
+            groupId: 'answer',
+            version: 1,
+          ),
+        ];
+        conversation = Conversation(
+          id: conversation.id,
+          title: conversation.title,
+          messageIds: messages.map((message) => message.id).toList(),
+          versionSelections: const {'answer': 1},
+        );
+        chatService = _FakeLazyChatService(messages)
+          ..versionSelections = const {'answer': 1}
+          ..timelineSelectedVersionOverride = 0
+          ..requireGroupLoad = true;
+        controller.dispose();
+        controller = ChatController(chatService: chatService);
+
+        await controller.setCurrentConversationAndLoad(conversation);
+
+        expect(chatService.groupsLoaded, isTrue);
+        expect(controller.collapsedMessages.single.id, 'answer-v1');
+        expect(controller.groupedMessages['answer'], hasLength(2));
       },
     );
 

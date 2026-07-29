@@ -68,6 +68,7 @@ import 'dart:io'
         stderr; // kept for global override usage inside provider
 import 'core/services/android_background.dart';
 import 'core/services/notification_service.dart';
+import 'features/home/controllers/chat_actions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver =
@@ -451,6 +452,7 @@ void _installExitFlush(BusinessPreferences businessPreferences) {
       defaultTargetPlatform == TargetPlatform.linux;
   if (!isDesktop || _exitFlushListener != null) return;
   AppExitFlush.register(businessPreferences.flushPendingWrites);
+  AppExitFlush.register(ChatActions.flushActiveGenerationProgress);
   _exitFlushListener = AppLifecycleListener(
     onExitRequested: () async {
       try {

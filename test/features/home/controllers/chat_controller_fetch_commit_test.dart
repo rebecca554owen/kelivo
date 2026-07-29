@@ -19,6 +19,9 @@ class _ControlledChatService extends ChatService {
 
   final Map<String, List<ChatMessage>> _messagesByConversation;
   final List<_PageRequest> pageRequests = <_PageRequest>[];
+  final Map<String, Set<String>> _loadedGroupIds = <String, Set<String>>{};
+  int groupLoadCalls = 0;
+  int groupLoadFailuresRemaining = 0;
 
   @override
   Future<LoadedTimelinePage?> loadTimelinePage(
@@ -95,13 +98,32 @@ class _ControlledChatService extends ChatService {
   List<ChatMessage> getMessagesForGroups(
     String conversationId,
     Iterable<String> groupIds,
-  ) => const <ChatMessage>[];
+  ) {
+    final loaded = _loadedGroupIds[conversationId] ?? const <String>{};
+    final targets = groupIds.where(loaded.contains).toSet();
+    return _messagesByConversation[conversationId]
+            ?.where(
+              (message) => targets.contains(message.groupId ?? message.id),
+            )
+            .toList(growable: false) ??
+        const <ChatMessage>[];
+  }
 
   @override
   Future<List<ChatMessage>> loadMessagesForGroups(
     String conversationId,
     Iterable<String> groupIds,
-  ) async => const <ChatMessage>[];
+  ) async {
+    groupLoadCalls++;
+    if (groupLoadFailuresRemaining > 0) {
+      groupLoadFailuresRemaining--;
+      throw StateError('group load failed');
+    }
+    _loadedGroupIds
+        .putIfAbsent(conversationId, () => <String>{})
+        .addAll(groupIds);
+    return getMessagesForGroups(conversationId, groupIds);
+  }
 
   @override
   Map<String, int> getFirstMessageIndicesForGroups(
@@ -122,6 +144,17 @@ ChatMessage _message(String conversationId, int index) {
     role: index.isEven ? 'user' : 'assistant',
     content: '$conversationId message $index',
     conversationId: conversationId,
+  );
+}
+
+ChatMessage _versionedMessage(String id, int version) {
+  return ChatMessage(
+    id: id,
+    role: 'assistant',
+    content: 'Version $version',
+    conversationId: 'conv-versioned',
+    groupId: 'group-a',
+    version: version,
   );
 }
 
@@ -203,6 +236,73 @@ void main() {
       expect(controller.versionSelections, const {'group-a': 1});
       expect(controller.isLoadingWindow, isFalse);
       expect(notifyCount, 1);
+    });
+
+    test('fetch includes visible message versions before commit', () async {
+      final version0 = _versionedMessage('answer-v0', 0);
+      final version1 = _versionedMessage('answer-v1', 1);
+      service._messagesByConversation['conv-versioned'] = [version0, version1];
+
+      final fetch = controller.fetchConversationWindow(
+        service.getConversation('conv-versioned')!,
+      );
+      service.completePage(
+        service.pageRequests.last,
+        [version1],
+        startIndex: 0,
+        totalSlotCount: 1,
+      );
+      final fetched = await fetch;
+
+      expect(service.groupLoadCalls, 1);
+
+      int? versionCountAtCommit;
+      String? selectedMessageAtCommit;
+      controller.addListener(() {
+        final model = controller.messageRenderModels.single;
+        versionCountAtCommit = model.versionCount;
+        selectedMessageAtCommit = model.message.id;
+      });
+      controller.commitConversationWindow(fetched);
+
+      expect(versionCountAtCommit, 2);
+      expect(selectedMessageAtCommit, 'answer-v1');
+    });
+
+    test('failed version preload still commits and retries', () async {
+      final version0 = _versionedMessage('answer-v0', 0);
+      final version1 = _versionedMessage('answer-v1', 1);
+      service._messagesByConversation['conv-versioned'] = [version0, version1];
+      service.groupLoadFailuresRemaining = 1;
+
+      final fetch = controller.fetchConversationWindow(
+        service.getConversation('conv-versioned')!,
+      );
+      service.completePage(
+        service.pageRequests.last,
+        [version1],
+        startIndex: 0,
+        totalSlotCount: 1,
+      );
+      final fetched = await fetch;
+
+      final observedVersionCounts = <int>[];
+      controller.addListener(() {
+        observedVersionCounts.add(
+          controller.messageRenderModels.single.versionCount,
+        );
+      });
+      var deferredRefreshCount = 0;
+      controller.commitConversationWindow(
+        fetched,
+        onDeferredGroupDataLoaded: () => deferredRefreshCount++,
+      );
+
+      expect(observedVersionCounts, [1]);
+      await Future<void>.delayed(Duration.zero);
+      expect(service.groupLoadCalls, 2);
+      expect(observedVersionCounts, [1, 2]);
+      expect(deferredRefreshCount, 1);
     });
 
     test('commit supersedes an in-flight window load', () async {
