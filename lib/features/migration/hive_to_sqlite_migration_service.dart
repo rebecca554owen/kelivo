@@ -419,7 +419,11 @@ class HiveToSqliteMigrationService {
       final seenMessageIds = <String>{};
       for (final legacyConversation in conversations) {
         final conversation = await _convertLegacyVersionSelections(
-          legacyConversation,
+          await _convertLegacyTruncateIndex(
+            legacyConversation,
+            messagesBox,
+            seenMessageIds,
+          ),
           messagesBox,
           seenMessageIds,
         );
@@ -588,6 +592,30 @@ class HiveToSqliteMigrationService {
         );
       }
     }
+  }
+
+  Future<Conversation> _convertLegacyTruncateIndex(
+    Conversation conversation,
+    LazyBox<ChatMessage> messagesBox,
+    Set<String> alreadyMigratedMessageIds,
+  ) async {
+    final truncateIndex = conversation.truncateIndex;
+    if (truncateIndex < 0 || truncateIndex > conversation.messageIds.length) {
+      return conversation;
+    }
+
+    final groupsBeforeTruncate = <String>{};
+    for (var i = 0; i < truncateIndex; i++) {
+      final message = await messagesBox.get(conversation.messageIds[i]);
+      if (message == null || alreadyMigratedMessageIds.contains(message.id)) {
+        continue;
+      }
+      groupsBeforeTruncate.add(message.groupId ?? message.id);
+    }
+    final logicalIndex = groupsBeforeTruncate.length;
+    return logicalIndex == truncateIndex
+        ? conversation
+        : conversation.copyWith(truncateIndex: logicalIndex);
   }
 
   Future<Conversation> _convertLegacyVersionSelections(

@@ -324,7 +324,7 @@ void main() {
       updatedAt: baseTime.add(const Duration(hours: 1)),
       assistantId: 'assistant-many',
       mcpServerIds: ['filesystem', 'search'],
-      truncateIndex: 12,
+      truncateIndex: messageCount,
       versionSelections: {'group-12': 1},
       summary: 'large summary',
       lastSummarizedMessageCount: 64,
@@ -398,7 +398,7 @@ void main() {
     final migratedConversation = chatService.getConversation(conversation.id);
     expect(migratedConversation, isNotNull);
     expect(migratedConversation!.mcpServerIds, ['filesystem', 'search']);
-    expect(migratedConversation.truncateIndex, 12);
+    expect(migratedConversation.truncateIndex, messageCount - 1);
     expect(migratedConversation.versionSelections, {'group-12': 2});
     expect(migratedConversation.summary, 'large summary');
     expect(migratedConversation.lastSummarizedMessageCount, 64);
@@ -416,7 +416,15 @@ void main() {
       conversation.id,
     );
     expect(timeline, hasLength(messageCount - 1));
-    expect(chatService.getContextStartIndex(conversation.id), 12);
+    expect(chatService.getContextStartIndex(conversation.id), messageCount - 1);
+    expect(
+      await chatService.loadSelectedContextMessages(
+        conversation.id,
+        truncateIndex: migratedConversation.truncateIndex,
+        limit: messageCount,
+      ),
+      isEmpty,
+    );
     expect(
       chatService.getToolEvents('message-129').single['name'],
       'batch-check',
