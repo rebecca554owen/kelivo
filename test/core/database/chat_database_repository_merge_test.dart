@@ -256,6 +256,54 @@ void main() {
       });
     });
 
+    test('remap 时 group_id 为 null 的 v0 与后续版本仍属同一版本组', () async {
+      await putConversation(
+        live,
+        conversationId: 'versioned',
+        title: 'Local',
+        messageId: 'local-message',
+        content: 'local',
+      );
+
+      // 生产形态：v0 不显式传 id，因此 group_id 落库为 NULL。
+      final v0 = ChatMessage(
+        role: 'assistant',
+        content: 'v0',
+        conversationId: 'versioned',
+      );
+      await source.createConversationWithMessages(
+        conversation: Conversation(id: 'versioned', title: 'Imported'),
+        messages: [v0],
+      );
+      final appended = await source.appendMessageVersion(
+        messageId: v0.id,
+        content: 'v1',
+      );
+      expect(appended, isNotNull);
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+      final remappedId = report.remappedConversationIds['versioned'];
+      expect(remappedId, isNotNull);
+
+      final projections = await live.getSelectedMessageProjections(remappedId!);
+      expect(projections, hasLength(1));
+      expect(projections.single.content, 'v1');
+      expect(
+        await live.getMaxMessageVersionForGroup(
+          remappedId,
+          projections.single.groupId!,
+        ),
+        1,
+      );
+
+      final second = await live.mergeBackupSnapshot(sourceFile);
+      expect(second.importedConversations, 0);
+      expect(second.deduplicatedConversations, 1);
+      expect(await live.getAllConversations(), hasLength(2));
+    });
+
     test('非法 order 在事务写入前拒绝且 live 不变', () async {
       await putConversation(
         live,

@@ -3851,11 +3851,18 @@ class ChatDatabaseRepository {
     final remapping = sourceId != targetId;
     final groupIdMap = <String, String>{};
     for (final row in sourceMessages) {
-      final groupId = row.data['group_id']?.toString();
-      if (groupId == null || groupIdMap.containsKey(groupId)) continue;
-      groupIdMap[groupId] = remapping
-          ? _deterministicMergeId('group', groupId, targetId)
-          : groupId;
+      // A group is keyed by COALESCE(group_id, id): the first revision keeps a
+      // null group_id, later versions carry that revision's id. Remapped groups
+      // must therefore follow the anchor revision's new id, otherwise the
+      // anchor and its later versions end up in two different groups.
+      final groupId =
+          row.data['group_id']?.toString() ?? row.read<String>('id');
+      if (groupIdMap.containsKey(groupId)) continue;
+      groupIdMap[groupId] =
+          messageIdMap[groupId] ??
+          (remapping
+              ? _deterministicMergeId('group', groupId, targetId)
+              : groupId);
     }
     final sourceConversation = await _db
         .customSelect(
@@ -3894,8 +3901,10 @@ class ChatDatabaseRepository {
         (row) => row.read<String>('id') == entry.key,
       );
       final sourceGroupId = sourceMessage.data['group_id']?.toString();
+      // Anchor revisions keep their null group_id so the merged rows describe
+      // the same groups as the snapshot and stay fingerprint-identical.
       final targetGroupId = sourceGroupId == null
-          ? entry.value
+          ? null
           : (groupIdMap[sourceGroupId] ?? sourceGroupId);
       await _db.customStatement(
         'INSERT INTO main.message_rows '
