@@ -1076,7 +1076,7 @@ void main() {
     );
 
     test(
-      'versioned settings-only merge preserves an explicitly empty instruction list',
+      'versioned settings-only merge keeps local instructions when backup is empty',
       () async {
         final zipFile = await _createSqliteBackupFixture(
           root: root,
@@ -1101,15 +1101,14 @@ void main() {
         final restored = await BusinessRestoreService(
           businessRepository,
         ).exportSettings();
+        expect(jsonDecode(restored['instruction_injections_v1']! as String), [
+          {'id': 'local', 'title': 'Local', 'prompt': 'Keep'},
+        ]);
         expect(
-          jsonDecode(restored['instruction_injections_v1']! as String),
-          isEmpty,
-        );
-        expect(
-          await InstructionInjectionStore(
+          (await InstructionInjectionStore(
             BusinessPreferences(businessRepository),
-          ).getAll(),
-          isEmpty,
+          ).getAll()).map((item) => item.id),
+          ['local'],
         );
       },
     );

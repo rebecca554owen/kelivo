@@ -392,24 +392,54 @@ void main() {
     expect(merged['pinned_models_v1'], <String>['provider/model']);
   });
 
-  test('merge preserves an explicitly empty instruction list', () {
-    final merged = BusinessSettingsMerger.merge(
-      {
-        'instruction_injections_active_ids_by_assistant_v1': jsonEncode({
-          '__global__': <String>['old-id'],
-        }),
-      },
-      {'instruction_injections_v1': jsonEncode(const <Object>[])},
-      preserveExplicitEmptyInstructionList: true,
-    );
+  test('merge keeps local list entities and adds imported rows', () {
+    final entityKeys = <String, String>{
+      'world_books_v1': 'world-book',
+      'quick_phrases_v1': 'quick-phrase',
+      'tts_services_v1': 'tts',
+      'instruction_injections_v1': 'injection',
+    };
+    Map<String, Object?> rowLists(String origin) => {
+      for (final entry in entityKeys.entries)
+        entry.key: jsonEncode([
+          {'id': '$origin-${entry.value}'},
+        ]),
+    };
+    final existing = <String, Object?>{
+      ...rowLists('local'),
+      'instruction_injections_active_ids_by_assistant_v1': jsonEncode({
+        '__global__': <String>['local-injection'],
+      }),
+    };
+    final emptyBackup = BusinessSettingsMerger.merge(existing, {
+      for (final key in entityKeys.keys) key: jsonEncode(const <Object>[]),
+    });
 
-    expect(jsonDecode(merged['instruction_injections_v1']! as String), isEmpty);
+    for (final entry in entityKeys.entries) {
+      final rows = jsonDecode(emptyBackup[entry.key]! as String) as List;
+      expect(rows.map((row) => row['id']), [
+        'local-${entry.value}',
+      ], reason: entry.key);
+    }
     expect(
       jsonDecode(
-        merged['instruction_injections_active_ids_by_assistant_v1']! as String,
+        emptyBackup['instruction_injections_active_ids_by_assistant_v1']!
+            as String,
       ),
-      {'__global__': <Object>[]},
+      {
+        '__global__': <String>['local-injection'],
+      },
     );
+
+    final merged = BusinessSettingsMerger.merge(existing, rowLists('imported'));
+
+    for (final entry in entityKeys.entries) {
+      final rows = jsonDecode(merged[entry.key]! as String) as List;
+      expect(rows.map((row) => row['id']), [
+        'local-${entry.value}',
+        'imported-${entry.value}',
+      ], reason: entry.key);
+    }
   });
 
   test('rejects present but invalid pinned model lists', () {

@@ -82,7 +82,7 @@ final class BusinessSettingsMerger {
           localRows,
           importedRows,
         ),
-        _ => _reorderRows(importedRows),
+        _ => _mergeEntityRowsById(localRows, importedRows),
       };
     }
     if (effectiveIncomingKeys.contains(_providerOrderKey) &&
@@ -241,10 +241,6 @@ final class BusinessSettingsMerger {
     }
     return _assignSortOrders(merged);
   }
-
-  static List<BusinessEntityValue> _reorderRows(
-    List<BusinessEntityValue> rows,
-  ) => _assignSortOrders(_orderedRows(rows));
 
   static List<BusinessEntityValue> _orderedRows(
     List<BusinessEntityValue> rows,
