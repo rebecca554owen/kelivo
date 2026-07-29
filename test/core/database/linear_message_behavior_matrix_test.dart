@@ -166,6 +166,38 @@ void main() {
     },
   );
 
+  test(
+    'truncate regeneration keeps appended versions of earlier groups',
+    () async {
+      await seed();
+      final editedUser = await repository.appendMessageVersion(
+        messageId: 'user-0',
+        content: 'edited question',
+      );
+
+      final result = await repository.beginRegeneration(
+        conversation: editedUser!.conversation,
+        assistantMessage: message(
+          id: 'assistant-v1',
+          role: 'assistant',
+          content: '',
+          groupId: 'assistant-group',
+          version: 1,
+          isStreaming: true,
+        ),
+        runId: 'run-truncate-after-edit',
+        truncateFuture: true,
+      );
+
+      expect(await visibleIds(), [editedUser.message.id, 'assistant-v1']);
+      expect(await repository.getMessage(editedUser.message.id), isNotNull);
+      expect(result.conversation.versionSelections, {
+        'user-0': 1,
+        'assistant-group': 1,
+      });
+    },
+  );
+
   test('version switching changes only the selected row', () async {
     await seed(includeAlternate: true);
 

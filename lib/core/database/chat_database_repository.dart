@@ -2828,39 +2828,10 @@ class ChatDatabaseRepository {
       () => _db.transaction(() async {
         var current = conversation;
         if (truncateFuture) {
-          final rows =
-              await (_db.select(_db.messageRows)
-                    ..where((row) => row.conversationId.equals(conversation.id))
-                    ..orderBy([(row) => OrderingTerm.asc(row.messageOrder)]))
-                  .get();
-          final groupId = assistantMessage.groupId!;
-          final groupRows = rows
-              .where((row) => (row.groupId ?? row.id) == groupId)
-              .toList(growable: false);
-          if (groupRows.isEmpty) {
-            throw StateError('linear_message_group_missing');
-          }
-          final anchorOrder = groupRows
-              .map((row) => row.messageOrder)
-              .reduce((left, right) => left < right ? left : right);
-          final trailing = rows
-              .where(
-                (row) =>
-                    row.messageOrder > anchorOrder &&
-                    (row.groupId ?? row.id) != groupId,
-              )
-              .toList(growable: false);
-          if (trailing.isNotEmpty) {
-            final selectionChanges = <String, int?>{
-              for (final row in trailing) row.groupId ?? row.id: null,
-            };
-            final deleted = await _deleteMessages(
-              conversationId: conversation.id,
-              messageIds: trailing.map((row) => row.id).toSet(),
-              versionSelectionChanges: selectionChanges,
-            );
-            if (deleted != null) current = deleted.conversation;
-          }
+          current = await _truncateLinearMessageGroupsAfter(
+            conversation: conversation,
+            anchorGroupId: assistantMessage.groupId!,
+          );
         }
         final persisted = await _appendLinearMessageToConversation(
           conversation: current,
@@ -2882,6 +2853,89 @@ class ChatDatabaseRepository {
         );
       }),
     );
+  }
+
+  Future<GenerationBeginResult> beginAssistantGeneration({
+    required Conversation conversation,
+    required ChatMessage assistantMessage,
+    required String anchorGroupId,
+    required String runId,
+    required bool truncateFuture,
+  }) {
+    _validateGenerationBeginMessages(
+      conversation: conversation,
+      assistantMessage: assistantMessage,
+    );
+    return _observer.measure(
+      ChatDatabaseOperation.commandAppendMessage,
+      () => _db.transaction(() async {
+        var current = conversation;
+        if (truncateFuture) {
+          current = await _truncateLinearMessageGroupsAfter(
+            conversation: conversation,
+            anchorGroupId: anchorGroupId,
+          );
+        }
+        final persisted = await _appendLinearMessageToConversation(
+          conversation: current,
+          message: assistantMessage,
+          selectVersion: false,
+          touchUpdatedAt: true,
+        );
+        final run = await GenerationRunCommands(_db).create(
+          id: runId,
+          conversationId: conversation.id,
+          targetRevisionId: assistantMessage.id,
+          createdAt: assistantMessage.timestamp,
+        );
+        return (
+          conversation: persisted,
+          userMessage: null,
+          assistantMessage: assistantMessage,
+          run: run,
+        );
+      }),
+    );
+  }
+
+  Future<Conversation> _truncateLinearMessageGroupsAfter({
+    required Conversation conversation,
+    required String anchorGroupId,
+  }) async {
+    final rows =
+        await (_db.select(_db.messageRows)
+              ..where((row) => row.conversationId.equals(conversation.id))
+              ..orderBy([(row) => OrderingTerm.asc(row.messageOrder)]))
+            .get();
+    final firstOrderByGroup = <String, int>{};
+    for (final row in rows) {
+      final groupId = row.groupId ?? row.id;
+      final current = firstOrderByGroup[groupId];
+      if (current == null || row.messageOrder < current) {
+        firstOrderByGroup[groupId] = row.messageOrder;
+      }
+    }
+    final anchorOrder = firstOrderByGroup[anchorGroupId];
+    if (anchorOrder == null) {
+      throw StateError('linear_message_group_missing');
+    }
+    final trailingGroupIds = {
+      for (final entry in firstOrderByGroup.entries)
+        if (entry.value > anchorOrder) entry.key,
+    };
+    if (trailingGroupIds.isEmpty) return conversation;
+
+    final trailing = rows
+        .where((row) => trailingGroupIds.contains(row.groupId ?? row.id))
+        .toList(growable: false);
+    final deleted = await _deleteMessages(
+      conversationId: conversation.id,
+      messageIds: trailing.map((row) => row.id).toSet(),
+      versionSelectionChanges: {
+        for (final groupId in trailingGroupIds) groupId: null,
+      },
+    );
+    return deleted?.conversation ?? conversation;
   }
 
   static void _validateGenerationBeginMessages({

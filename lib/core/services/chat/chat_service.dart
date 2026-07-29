@@ -2414,6 +2414,45 @@ class ChatService extends ChangeNotifier {
     return result;
   }
 
+  Future<GenerationBeginResult> beginAssistantGeneration({
+    required String conversationId,
+    required String modelId,
+    required String providerId,
+    required String anchorGroupId,
+    required bool truncateFuture,
+  }) async {
+    if (!_initialized) await init();
+    if (isTemporaryConversation(conversationId)) {
+      throw StateError('temporary_generation_is_not_persisted');
+    }
+    final conversation = _conversationsCache[conversationId];
+    if (conversation == null) throw StateError('conversation_missing');
+    await _loadMessageOrder(conversationId);
+    final assistantMessage = ChatMessage(
+      role: 'assistant',
+      content: '',
+      conversationId: conversationId,
+      modelId: modelId,
+      providerId: providerId,
+      isStreaming: true,
+    );
+    final result = await _repo.beginAssistantGeneration(
+      conversation: conversation,
+      assistantMessage: assistantMessage,
+      anchorGroupId: anchorGroupId,
+      runId: const Uuid().v4(),
+      truncateFuture: truncateFuture,
+    );
+    if (truncateFuture) {
+      _messagesCache.remove(conversationId);
+      _messageOrderIds.remove(conversationId);
+      _firstGroupIndicesCache.remove(conversationId);
+      await _loadMessageOrder(conversationId);
+    }
+    await _publishGenerationBegin(result);
+    return result;
+  }
+
   Future<void> _publishGenerationBegin(GenerationBeginResult result) async {
     final conversationId = result.conversation.id;
     _draftConversations.remove(conversationId);

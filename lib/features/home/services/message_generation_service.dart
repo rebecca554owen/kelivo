@@ -316,6 +316,32 @@ class MessageGenerationService {
     return (assistantMessage: result.assistantMessage, runId: result.run.id);
   }
 
+  Future<({ChatMessage assistantMessage, String? runId})>
+  beginAssistantGeneration({
+    required String conversationId,
+    required String modelId,
+    required String providerKey,
+    required String anchorGroupId,
+    required bool truncateFuture,
+  }) async {
+    if (chatService.isTemporaryConversation(conversationId)) {
+      final assistantMessage = await createAssistantPlaceholder(
+        conversationId: conversationId,
+        modelId: modelId,
+        providerKey: providerKey,
+      );
+      return (assistantMessage: assistantMessage, runId: null);
+    }
+    final result = await chatService.beginAssistantGeneration(
+      conversationId: conversationId,
+      modelId: modelId,
+      providerId: providerKey,
+      anchorGroupId: anchorGroupId,
+      truncateFuture: truncateFuture,
+    );
+    return (assistantMessage: result.assistantMessage, runId: result.run.id);
+  }
+
   /// Build the persisted content string for a user message.
   static String buildPersistedUserMessageContent(
     ChatInputData input, {

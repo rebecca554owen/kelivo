@@ -306,6 +306,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('assistant edit save and send creates a new reply slot', (
+    tester,
+  ) async {
+    final controller = await pumpHarness(tester);
+    await tester.runAsync(() async {
+      final convo = await openConversation(controller);
+      await controller.sendMessage(ChatInputData(text: 'hello'));
+      await waitFor(
+        () => !controller.chatController.isConversationLoading(convo.id),
+        'initial streaming to finish',
+      );
+      final before = await service.loadMessages(convo.id);
+      final original = before.firstWhere((m) => m.role == 'assistant');
+      final edited = await service.appendMessageVersion(
+        messageId: original.id,
+        content: 'edited answer',
+      );
+      expect(edited, isNotNull);
+
+      await controller.regenerateAtMessage(edited!, assistantAsNewReply: true);
+
+      await waitFor(() => streamRequestCount == 2, 'second stream to fire');
+      await waitFor(
+        () => !controller.chatController.isConversationLoading(convo.id),
+        'new reply streaming to finish',
+      );
+      final messages = await service.loadMessages(convo.id);
+      final editedGroupId = original.groupId ?? original.id;
+      final newReplies = messages.where(
+        (message) =>
+            message.role == 'assistant' &&
+            (message.groupId ?? message.id) != editedGroupId,
+      );
+      expect(
+        messages.where((message) => message.role == 'assistant'),
+        hasLength(3),
+      );
+      expect(newReplies, hasLength(1));
+      expect(
+        newReplies.single.groupId ?? newReplies.single.id,
+        newReplies.single.id,
+      );
+      expect(newReplies.single.version, 0);
+      expect(newReplies.single.isStreaming, isFalse);
+    });
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('multi-version conversation still saves generated suggestions', (
     tester,
   ) async {
