@@ -140,30 +140,40 @@ void main() {
       },
     );
 
-    test('GPT-5.6 Chat tools force the documented none effort', () async {
+    test('GPT-5.6 Chat tools force none in the provider format', () async {
+      const tools = [
+        {
+          'type': 'function',
+          'function': {
+            'name': 'lookup',
+            'description': 'Look something up',
+            'parameters': {'type': 'object', 'properties': <String, dynamic>{}},
+          },
+        },
+      ];
       final body = await _captureChatBody(
         modelId: 'openai/gpt-5.6-sol',
         thinkingBudget: 128000,
         temperature: 0.7,
         topP: 0.8,
-        tools: const [
-          {
-            'type': 'function',
-            'function': {
-              'name': 'lookup',
-              'description': 'Look something up',
-              'parameters': {
-                'type': 'object',
-                'properties': <String, dynamic>{},
-              },
-            },
-          },
-        ],
+        tools: tools,
+      );
+      final openRouterBody = await _captureChatBody(
+        modelId: 'openai/gpt-5.6-sol',
+        thinkingBudget: 128000,
+        temperature: 0.7,
+        topP: 0.8,
+        tools: tools,
+        providerId: 'OpenRouter',
       );
 
       expect(body['reasoning_effort'], 'none');
       expect(body['temperature'], 0.7);
       expect(body['top_p'], 0.8);
+      expect(openRouterBody['reasoning'], {'effort': 'none'});
+      expect(openRouterBody.containsKey('reasoning_effort'), isFalse);
+      expect(openRouterBody['temperature'], 0.7);
+      expect(openRouterBody['top_p'], 0.8);
     });
 
     test('GPT-5.6 auto effort omits incompatible sampling params', () async {

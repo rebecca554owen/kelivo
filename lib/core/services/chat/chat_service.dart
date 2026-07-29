@@ -1002,33 +1002,32 @@ class ChatService extends ChangeNotifier {
   /// Builds the source text for LLM title generation.
   ///
   /// Collects the conversation tail (most recent ~3000 content characters,
-  /// honoring the conversation's truncateIndex) identically on both paths:
-  /// served from the cache when the conversation is fully cached, otherwise
-  /// paged from the tail via range loads. Applies the conversation's
-  /// truncateIndex and collapses each group to its selected version, mirroring
-  /// the rules the title generators used before this was extracted.
+  /// honoring the conversation's logical truncateIndex) identically on both
+  /// paths: served from the cache when the conversation is fully cached,
+  /// otherwise paged from the selected logical timeline.
   Future<String> generateTitleSource(String conversationId) async {
     if (!_initialized) return '';
     if (_conversationForMessages(conversationId) == null) return '';
-    final total = getMessageCount(conversationId);
     final truncateIndex = getContextStartIndex(conversationId);
-    final start = (truncateIndex >= 0 && truncateIndex <= total)
-        ? truncateIndex
-        : 0;
 
     final List<ChatMessage> source;
     if (isConversationFullyCached(conversationId)) {
-      source = _titleSourceTailWindow(_messagesCache[conversationId]!, start);
+      final selected = _collapseTitleVersions(
+        _messagesCache[conversationId]!,
+        getVersionSelections(conversationId),
+      );
+      final start = (truncateIndex >= 0 && truncateIndex <= selected.length)
+          ? truncateIndex
+          : 0;
+      source = _titleSourceTailWindow(selected, start);
     } else {
       source = await _loadTitleSourceTail(
         conversationId,
-        start: start,
-        total: total,
+        truncateIndex: truncateIndex,
       );
     }
 
-    final selections = getVersionSelections(conversationId);
-    final joined = _collapseTitleVersions(source, selections)
+    final joined = source
         .where((message) => message.content.isNotEmpty)
         .map(
           (message) =>
@@ -1043,29 +1042,36 @@ class ChatService extends ChangeNotifier {
 
   Future<List<ChatMessage>> _loadTitleSourceTail(
     String conversationId, {
-    required int start,
-    required int total,
+    required int truncateIndex,
   }) async {
     final selected = <ChatMessage>[];
     var chars = 0;
-    var end = total;
-    while (end > start && chars < _titleSourceMaxChars) {
-      final batchStart = (end - defaultHistoryPageSize)
-          .clamp(start, end)
-          .toInt();
-      final batch = await loadMessagesRange(
+    String? beforeRevisionId;
+    int? start;
+    while (chars < _titleSourceMaxChars) {
+      final page = await loadTimelinePage(
         conversationId,
-        start: batchStart,
-        limit: end - batchStart,
+        beforeRevisionId: beforeRevisionId,
+        limit: defaultHistoryPageSize,
       );
-      if (batch.isEmpty) break;
-      for (var i = batch.length - 1; i >= 0; i--) {
-        final message = batch[i];
-        selected.insert(0, message);
-        chars += message.content.length;
+      if (page == null || page.slots.isEmpty) break;
+      start ??= (truncateIndex >= 0 && truncateIndex <= page.totalSlotCount)
+          ? truncateIndex
+          : 0;
+      for (var i = page.slots.length - 1; i >= 0; i--) {
+        final slot = page.slots[i];
+        if (slot.identity.logicalIndex < start) break;
+        selected.insert(0, slot.message);
+        chars += slot.message.content.length;
         if (chars >= _titleSourceMaxChars) break;
       }
-      end = batchStart;
+      if (chars >= _titleSourceMaxChars ||
+          !page.hasMoreBefore ||
+          page.slots.first.identity.logicalIndex <= start) {
+        break;
+      }
+      beforeRevisionId = page.beforeRevisionId;
+      if (beforeRevisionId == null) break;
     }
     return selected;
   }

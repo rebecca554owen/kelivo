@@ -903,6 +903,7 @@ class ChatApiService {
           body,
           upstreamModelId,
           fallbackEffort: effort,
+          isOpenRouter: info.isOpenRouter,
         );
         final resp = await client.post(
           url,

@@ -357,6 +357,7 @@ void _sanitizeOpenAIGpt5SamplingParams(
   Map<String, dynamic> body,
   String upstreamModelId, {
   required String fallbackEffort,
+  required bool isOpenRouter,
 }) {
   // Must run on the final request body (after override merges), otherwise
   // we may keep/drop sampling params based on stale effort assumptions.
@@ -366,7 +367,20 @@ void _sanitizeOpenAIGpt5SamplingParams(
       (body['tools'] as List).isNotEmpty;
   if (hasChatFunctionTools &&
       openAIChatCompletionsToolsRequireNone(upstreamModelId)) {
-    body['reasoning_effort'] = 'none';
+    if (isOpenRouter) {
+      final reasoning = body['reasoning'];
+      final normalized = reasoning is Map
+          ? Map<String, dynamic>.from(reasoning)
+          : <String, dynamic>{};
+      normalized
+        ..remove('enabled')
+        ..remove('max_tokens')
+        ..['effort'] = 'none';
+      body['reasoning'] = normalized;
+      body.remove('reasoning_effort');
+    } else {
+      body['reasoning_effort'] = 'none';
+    }
   }
   if (!body.containsKey('temperature') &&
       !body.containsKey('top_p') &&
@@ -1605,6 +1619,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     body,
     upstreamModelId,
     fallbackEffort: effort,
+    isOpenRouter: info.isOpenRouter,
   );
   _normalizeMoonshotKimiChatBody(
     body,
@@ -2130,6 +2145,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               body2,
               upstreamModelId,
               fallbackEffort: effort,
+              isOpenRouter: info.isOpenRouter,
             );
             _normalizeMoonshotKimiChatBody(
               body2,
@@ -2864,6 +2880,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   body2,
                   upstreamModelId,
                   fallbackEffort: effort,
+                  isOpenRouter: info.isOpenRouter,
                 );
 
                 final req2 = http.Request('POST', url);
@@ -3540,6 +3557,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               body2,
               upstreamModelId,
               fallbackEffort: effort,
+              isOpenRouter: info.isOpenRouter,
             );
             _normalizeMoonshotKimiChatBody(
               body2,
@@ -4064,6 +4082,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   body2,
                   upstreamModelId,
                   fallbackEffort: effort,
+                  isOpenRouter: info.isOpenRouter,
                 );
                 _normalizeMoonshotKimiChatBody(
                   body2,

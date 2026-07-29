@@ -259,7 +259,7 @@ void main() {
       },
     );
 
-    test('honors the conversation truncateIndex', () async {
+    test('honors a logical truncateIndex after regeneration', () async {
       final service = createService();
       await service.init();
       final conversation = await service.createConversation(title: 'Chat');
@@ -268,6 +268,16 @@ void main() {
         role: 'user',
         content: 'hidden question',
       );
+      final original = await service.addMessage(
+        conversationId: conversation.id,
+        role: 'assistant',
+        content: 'hidden answer',
+      );
+      await service.appendMessageVersion(
+        messageId: original.id,
+        content: 'regenerated hidden answer',
+      );
+      await service.toggleTruncateAtTail(conversation.id);
       await service.addMessage(
         conversationId: conversation.id,
         role: 'user',
@@ -278,12 +288,13 @@ void main() {
         role: 'assistant',
         content: 'visible answer',
       );
+
+      final cold = await service.generateTitleSource(conversation.id);
       await service.loadMessages(conversation.id);
+      final warm = await service.generateTitleSource(conversation.id);
 
-      service.getConversation(conversation.id)!.truncateIndex = 1;
-
-      final source = await service.generateTitleSource(conversation.id);
-      expect(source, 'User: visible question\n\nAssistant: visible answer');
+      expect(cold, 'User: visible question\n\nAssistant: visible answer');
+      expect(warm, cold);
     });
 
     test(
