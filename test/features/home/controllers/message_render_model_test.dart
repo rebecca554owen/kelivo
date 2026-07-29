@@ -22,7 +22,7 @@ void main() {
   test('projects versions, divider and latest assistant in one snapshot', () {
     final user = message('user', 'user');
     final first = message('a0', 'assistant', groupId: 'answer', version: 0);
-    final selected = message('a1', 'assistant', groupId: 'answer', version: 1);
+    final selected = message('a2', 'assistant', groupId: 'answer', version: 2);
     final streaming = message('tail', 'assistant', streaming: true);
 
     final models = MessageRenderModelProjector.project(
@@ -32,13 +32,15 @@ void main() {
         'answer': [selected, first],
         'tail': [streaming],
       },
-      versionSelections: const {'answer': 1},
+      versionSelections: const {'answer': 2},
       versionCounts: const {'answer': 2},
       contextDividerIndex: 1,
     );
 
     expect(models.map((model) => model.slotId), ['user', 'answer', 'tail']);
-    expect(models[1].versions.map((item) => item.version), [0, 1]);
+    expect(models[1].versions.map((item) => item.version), [0, 2]);
+    expect(models[1].availableVersions, [0, 2]);
+    expect(models[1].selectedVersion, 2);
     expect(models[1].selectedVersionIndex, 1);
     expect(models[1].showContextDivider, isTrue);
     expect(models[1].isLatestCompleteAssistant, isTrue);
@@ -61,7 +63,7 @@ void main() {
     expect(models.single.versionCount, 1);
   });
 
-  test('uses authoritative slot count when sibling revisions are evicted', () {
+  test('uses available revisions for the display ordinal', () {
     final selected = message('a1', 'assistant', groupId: 'answer', version: 1);
 
     final models = MessageRenderModelProjector.project(
@@ -76,6 +78,6 @@ void main() {
 
     expect(models.single.versions, [selected]);
     expect(models.single.versionCount, 2);
-    expect(models.single.selectedVersionIndex, 1);
+    expect(models.single.selectedVersionIndex, 0);
   });
 }

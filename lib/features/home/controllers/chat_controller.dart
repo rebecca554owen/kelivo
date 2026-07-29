@@ -840,12 +840,12 @@ class ChatController extends ChangeNotifier {
   // Version Selection
   // ============================================================================
 
-  /// Get the selected version index for a message group.
+  /// Get the selected real version number for a message group.
   int getSelectedVersion(String groupId) {
     return _versionSelections[groupId] ?? -1;
   }
 
-  /// Set the selected version for a message group.
+  /// Set the selected real version number for a message group.
   Future<void> setSelectedVersion(String groupId, int version) async {
     _versionSelections[groupId] = version;
     if (_currentConversation != null) {

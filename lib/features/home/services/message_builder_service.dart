@@ -107,10 +107,16 @@ class MessageBuilderService {
     for (final gid in order) {
       final vers = byGroup[gid]!;
       final sel = versionSelections[gid];
-      final idx = (sel != null && sel >= 0 && sel < vers.length)
-          ? sel
-          : (vers.length - 1);
-      out.add(vers[idx]);
+      ChatMessage? selected;
+      if (sel != null) {
+        for (final candidate in vers) {
+          if (candidate.version == sel) {
+            selected = candidate;
+            break;
+          }
+        }
+      }
+      out.add(selected ?? vers.last);
     }
 
     return out;
@@ -220,10 +226,7 @@ class MessageBuilderService {
       }
       if (content.isEmpty) continue;
       final role = m.role == 'assistant' ? 'assistant' : 'user';
-      final message = <String, dynamic>{
-        'role': role,
-        'content': content,
-      };
+      final message = <String, dynamic>{'role': role, 'content': content};
       if (role == 'user') {
         message[internalRevisionIdKey] = m.id;
       }
@@ -382,7 +385,10 @@ class MessageBuilderService {
     // WorldBook lore may also use role=user and must not be treated as chat input.
     bool isPersistedUserMessage(Map<String, dynamic> message) {
       if (message['role'] != 'user') return false;
-      return (message[internalRevisionIdKey] ?? '').toString().trim().isNotEmpty;
+      return (message[internalRevisionIdKey] ?? '')
+          .toString()
+          .trim()
+          .isNotEmpty;
     }
 
     // Find last real user message index (skip injected lore).

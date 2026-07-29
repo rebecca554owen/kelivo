@@ -340,8 +340,8 @@ void main() {
           timestamp: baseTime.add(Duration(minutes: i)),
           modelId: i.isOdd ? 'model-$i' : null,
           providerId: i.isOdd ? 'provider' : null,
-          groupId: 'group-$i',
-          version: i % 3,
+          groupId: i == 110 ? 'group-12' : 'group-$i',
+          version: i == 110 ? 2 : i % 3,
           promptTokens: i,
           completionTokens: i + 1,
         ),
@@ -399,7 +399,7 @@ void main() {
     expect(migratedConversation, isNotNull);
     expect(migratedConversation!.mcpServerIds, ['filesystem', 'search']);
     expect(migratedConversation.truncateIndex, 12);
-    expect(migratedConversation.versionSelections, {'group-12': 1});
+    expect(migratedConversation.versionSelections, {'group-12': 2});
     expect(migratedConversation.summary, 'large summary');
     expect(migratedConversation.lastSummarizedMessageCount, 64);
     expect(migratedConversation.chatSuggestions, ['next']);
@@ -415,7 +415,7 @@ void main() {
     final timeline = await chatService.loadActiveTimelineMessages(
       conversation.id,
     );
-    expect(timeline, hasLength(messageCount));
+    expect(timeline, hasLength(messageCount - 1));
     expect(chatService.getContextStartIndex(conversation.id), 12);
     expect(
       chatService.getToolEvents('message-129').single['name'],
@@ -427,14 +427,14 @@ void main() {
     );
   });
 
-  test('repairs duplicate (groupId, version) pairs including empty-string '
-      'groupIds instead of failing validation', () async {
+  test('repairs duplicate versions and preserves selection identity', () async {
     final baseTime = DateTime(2024, 3, 1, 9);
     final conversation = Conversation(
       id: 'conversation-dup-versions',
       title: 'Duplicate Versions Source',
       createdAt: baseTime,
       updatedAt: baseTime.add(const Duration(hours: 1)),
+      versionSelections: {'dup-group': 1},
     );
     final messages = [
       ChatMessage(
@@ -519,6 +519,16 @@ void main() {
     expect(
       migrated.where((m) => m.groupId == '').map((m) => m.version).toSet(),
       {0, 1},
+    );
+    expect(chatService.getConversation(conversation.id)?.versionSelections, {
+      'dup-group': 1,
+    });
+    final timeline = await chatService.loadActiveTimelineMessages(
+      conversation.id,
+    );
+    expect(
+      timeline.singleWhere((message) => message.groupId == 'dup-group').id,
+      'dup-b',
     );
   });
 

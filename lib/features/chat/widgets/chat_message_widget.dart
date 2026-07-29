@@ -685,7 +685,7 @@ class ChatMessageWidget extends StatefulWidget {
   final VoidCallback? onEdit; // user: edit
   final VoidCallback? onDelete; // user: delete
   // Optional version switcher (branch) UI controls
-  final int? versionIndex; // zero-based
+  final int? versionIndex; // zero-based display ordinal, not a version number
   final int? versionCount;
   final VoidCallback? onPrevVersion;
   final VoidCallback? onNextVersion;

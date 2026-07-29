@@ -417,7 +417,12 @@ class HiveToSqliteMigrationService {
       // or skip those shapes instead of failing the whole migration.
       final repairStats = _MigrationRepairStats();
       final seenMessageIds = <String>{};
-      for (final conversation in conversations) {
+      for (final legacyConversation in conversations) {
+        final conversation = await _convertLegacyVersionSelections(
+          legacyConversation,
+          messagesBox,
+          seenMessageIds,
+        );
         var needsConversationInsert = true;
         var order = 0;
         final seenGroupVersions = <String>{};
@@ -583,6 +588,70 @@ class HiveToSqliteMigrationService {
         );
       }
     }
+  }
+
+  Future<Conversation> _convertLegacyVersionSelections(
+    Conversation conversation,
+    LazyBox<ChatMessage> messagesBox,
+    Set<String> alreadyMigratedMessageIds,
+  ) async {
+    if (conversation.versionSelections.isEmpty) return conversation;
+
+    final messagesByGroup = <String, List<ChatMessage>>{
+      for (final groupId in conversation.versionSelections.keys)
+        groupId: <ChatMessage>[],
+    };
+    final repairedVersionsByMessageId = <String, int>{};
+    final localMessageIds = <String>{};
+    final seenGroupVersions = <String>{};
+    final maxGroupVersions = <String, int>{};
+    for (final messageId in conversation.messageIds) {
+      final message = await messagesBox.get(messageId);
+      if (message == null) continue;
+      messagesByGroup[message.groupId ?? message.id]?.add(message);
+      if (alreadyMigratedMessageIds.contains(message.id) ||
+          !localMessageIds.add(message.id)) {
+        continue;
+      }
+
+      final groupId = message.groupId;
+      if (groupId == null) continue;
+      var repairedVersion = message.version;
+      if (!seenGroupVersions.add('$groupId\u0000$repairedVersion')) {
+        repairedVersion = (maxGroupVersions[groupId] ?? repairedVersion) + 1;
+        repairedVersionsByMessageId[message.id] = repairedVersion;
+        seenGroupVersions.add('$groupId\u0000$repairedVersion');
+      }
+      final knownMax = maxGroupVersions[groupId];
+      if (knownMax == null || repairedVersion > knownMax) {
+        maxGroupVersions[groupId] = repairedVersion;
+      }
+    }
+
+    final convertedSelections = Map<String, int>.from(
+      conversation.versionSelections,
+    );
+    var changed = false;
+    for (final entry in conversation.versionSelections.entries) {
+      final messages = messagesByGroup[entry.key]!
+        ..sort((left, right) => left.version.compareTo(right.version));
+      if (messages.isEmpty) continue;
+      final ordinal = entry.value;
+      final selectedMessage = ordinal >= 0 && ordinal < messages.length
+          ? messages[ordinal]
+          : messages.last;
+      final version =
+          repairedVersionsByMessageId[selectedMessage.id] ??
+          selectedMessage.version;
+      if (version != ordinal) {
+        convertedSelections[entry.key] = version;
+        changed = true;
+      }
+    }
+
+    return changed
+        ? conversation.copyWith(versionSelections: convertedSelections)
+        : conversation;
   }
 
   /// Escape hatch after repeated migration failures: renames the legacy Hive

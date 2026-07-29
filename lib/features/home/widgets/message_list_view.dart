@@ -790,8 +790,10 @@ class _MessageListViewState extends State<MessageListView> {
     final useAssistAvatar = assistant?.useAssistantAvatar == true;
     final useAssistName = assistant?.useAssistantName == true;
     final gid = model.slotId;
+    final availableVersions = model.availableVersions;
+    final selectedVersion = model.selectedVersion;
     final selectedIdx = model.selectedVersionIndex;
-    final total = model.versionCount;
+    final total = availableVersions.length;
     final messageSuggestions =
         !widget.selecting &&
             model.isLatestCompleteAssistant &&
@@ -853,6 +855,8 @@ class _MessageListViewState extends State<MessageListView> {
                               useAssistName: useAssistName,
                               assistant: assistant,
                               gid: gid,
+                              availableVersions: availableVersions,
+                              selectedVersion: selectedVersion,
                               selectedIdx: selectedIdx,
                               total: total,
                               isProcessingFiles: isProcessingFiles,
@@ -869,6 +873,8 @@ class _MessageListViewState extends State<MessageListView> {
                               useAssistName: useAssistName,
                               assistant: assistant,
                               gid: gid,
+                              availableVersions: availableVersions,
+                              selectedVersion: selectedVersion,
                               selectedIdx: selectedIdx,
                               total: total,
                               isProcessingFiles: isProcessingFiles,
@@ -957,6 +963,8 @@ class _MessageListViewState extends State<MessageListView> {
     required bool useAssistName,
     required dynamic assistant,
     required String gid,
+    required List<int> availableVersions,
+    required int selectedVersion,
     required int selectedIdx,
     required int total,
     required bool isProcessingFiles,
@@ -1008,6 +1016,8 @@ class _MessageListViewState extends State<MessageListView> {
             useAssistName: useAssistName,
             assistant: assistant,
             gid: gid,
+            availableVersions: availableVersions,
+            selectedVersion: selectedVersion,
             selectedIdx: selectedIdx,
             total: total,
             isProcessingFiles: isProcessingFiles,
@@ -1031,6 +1041,8 @@ class _MessageListViewState extends State<MessageListView> {
     required bool useAssistName,
     required dynamic assistant,
     required String gid,
+    required List<int> availableVersions,
+    required int selectedVersion,
     required int selectedIdx,
     required int total,
     required bool isProcessingFiles,
@@ -1038,16 +1050,24 @@ class _MessageListViewState extends State<MessageListView> {
     required _MessagePresentation presentation,
     bool enableStreamingTextMotion = true,
   }) {
+    final currentIdx = availableVersions.indexOf(selectedVersion);
     return ChatMessageWidget(
       message: message,
       enableStreamingTextMotion: enableStreamingTextMotion,
-      versionIndex: selectedIdx,
+      versionIndex: currentIdx < 0 ? selectedIdx : currentIdx,
       versionCount: total > 0 ? total : 1,
-      onPrevVersion: (selectedIdx > 0)
-          ? () => widget.onVersionChange?.call(gid, selectedIdx - 1)
+      onPrevVersion: (currentIdx > 0)
+          ? () => widget.onVersionChange?.call(
+              gid,
+              availableVersions[currentIdx - 1],
+            )
           : null,
-      onNextVersion: (selectedIdx < total - 1)
-          ? () => widget.onVersionChange?.call(gid, selectedIdx + 1)
+      onNextVersion:
+          (currentIdx >= 0 && currentIdx < availableVersions.length - 1)
+          ? () => widget.onVersionChange?.call(
+              gid,
+              availableVersions[currentIdx + 1],
+            )
           : null,
       modelIcon:
           (!useAssistAvatar &&

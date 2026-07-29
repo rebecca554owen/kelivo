@@ -559,30 +559,27 @@ class HomeViewModel extends ChangeNotifier {
       ..sort((a, b) => a.version.compareTo(b.version));
     if (sorted.isEmpty) return null;
 
-    final remainingCount = sorted
-        .where((message) => !deletedMessageIds.contains(message.id))
-        .length;
-    if (remainingCount <= 0) return null;
+    final remainingVersions =
+        sorted
+            .where((message) => !deletedMessageIds.contains(message.id))
+            .map((message) => message.version)
+            .toSet()
+            .toList()
+          ..sort();
+    if (remainingVersions.isEmpty) return null;
 
-    int newSelection = oldSelection ?? (sorted.length - 1);
-    final deletedIndices = <int>[];
-    for (int i = 0; i < sorted.length; i++) {
-      if (deletedMessageIds.contains(sorted[i].id)) {
-        deletedIndices.add(i);
-      }
+    final newSelection = oldSelection ?? sorted.last.version;
+    final selectedVersionWasDeleted = sorted.any(
+      (message) =>
+          deletedMessageIds.contains(message.id) &&
+          message.version == newSelection,
+    );
+    if (!selectedVersionWasDeleted) return newSelection;
+
+    for (final version in remainingVersions.reversed) {
+      if (version < newSelection) return version;
     }
-
-    for (final deletedIndex in deletedIndices) {
-      if (deletedIndex < newSelection) {
-        newSelection -= 1;
-      } else if (deletedIndex == newSelection) {
-        newSelection = newSelection > 0 ? newSelection - 1 : 0;
-      }
-    }
-
-    if (newSelection < 0) return 0;
-    if (newSelection > remainingCount - 1) return remainingCount - 1;
-    return newSelection;
+    return remainingVersions.first;
   }
 
   @visibleForTesting
@@ -625,7 +622,7 @@ class HomeViewModel extends ChangeNotifier {
           : Set<String>.of(entry.value);
       final oldSelection =
           versionSelections[groupId] ??
-          (versionsBefore.isNotEmpty ? versionsBefore.length - 1 : 0);
+          (versionsBefore.isNotEmpty ? versionsBefore.last.version : 0);
       final nextVersionSelection = computeNextVersionSelection(
         versionsBefore: versionsBefore,
         deletedMessageIds: deletedMessageIds,
@@ -723,7 +720,7 @@ class HomeViewModel extends ChangeNotifier {
 
     final oldSel =
         versionSelections[gid] ??
-        (versionsBefore.isNotEmpty ? versionsBefore.length - 1 : 0);
+        (versionsBefore.isNotEmpty ? versionsBefore.last.version : 0);
     final newSel = computeNextVersionSelection(
       versionsBefore: versionsBefore,
       deletedMessageIds: deletedMessageIds,
