@@ -131,6 +131,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   String? _selectedResultConversationId;
   String? _hoveredResultConversationId;
   bool _globalSearchHasRun = false;
+  bool _globalSearchLoading = false;
+  int _globalSearchRequestId = 0;
+  String? _runningGlobalSearchQuery;
 
   @override
   void initState() {
@@ -741,19 +744,44 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   }
 
   Future<void> _runGlobalSearch() async {
-    if (_query.trim().isEmpty) {
+    final query = _query.trim();
+    if (query.isEmpty) {
       _clearGlobalSearchState(clearText: false);
       return;
     }
-    final chatService = context.read<ChatService>();
-    final results = await GlobalSessionSearchService.search(
-      chatService: chatService,
-      query: _query,
-    );
+    if (_globalSearchLoading && _runningGlobalSearchQuery == query) return;
+
+    final requestId = ++_globalSearchRequestId;
     setState(() {
-      _globalSearchResults = results;
-      _globalSearchHasRun = true;
+      _globalSearchLoading = true;
+      _runningGlobalSearchQuery = query;
+      _globalSearchResults = const [];
+      _globalSearchHasRun = false;
     });
+
+    final chatService = context.read<ChatService>();
+    try {
+      final results = await GlobalSessionSearchService.search(
+        chatService: chatService,
+        query: query,
+      );
+      if (!mounted ||
+          requestId != _globalSearchRequestId ||
+          query != _query.trim()) {
+        return;
+      }
+      setState(() {
+        _globalSearchResults = results;
+        _globalSearchHasRun = true;
+      });
+    } finally {
+      if (mounted && requestId == _globalSearchRequestId) {
+        setState(() {
+          _globalSearchLoading = false;
+          _runningGlobalSearchQuery = null;
+        });
+      }
+    }
   }
 
   void _submitMobileGlobalSearch() {
@@ -767,6 +795,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   }
 
   void _clearGlobalSearchState({bool clearText = false}) {
+    _globalSearchRequestId++;
     if (clearText && _searchController.text.isNotEmpty) {
       _searchController.clear();
     }
@@ -774,6 +803,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       _query = clearText ? '' : _searchController.text;
       _globalSearchResults = const [];
       _globalSearchHasRun = false;
+      _globalSearchLoading = false;
+      _runningGlobalSearchQuery = null;
       _selectedResultConversationId = null;
       _hoveredResultConversationId = null;
     });
@@ -867,6 +898,20 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final highlightColor = isDark
         ? const Color(0xFFB8860B).withValues(alpha: 0.55)
         : const Color(0xFFFFD700).withValues(alpha: 0.55);
+
+    if (_globalSearchLoading) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 28),
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+          ),
+        ),
+      );
+    }
 
     if (!_globalSearchHasRun) {
       if (!_isDesktop) {

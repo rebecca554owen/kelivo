@@ -2045,7 +2045,7 @@ class ChatDatabaseRepository {
           WHERE mx.conversation_id = c.id
             AND mx.role IN ('user', 'assistant')
             AND LOWER(mx.content) LIKE ? ESCAPE '\\'
-            ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM linear_ranked visible WHERE visible.id = mx.id AND visible.version_rank = 1)'}
+            ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible WHERE visible.conversation_id = mx.conversation_id AND visible.group_id = COALESCE(mx.group_id, mx.id) AND visible.selected_version = mx.version)'}
         )
         ''');
       existsArgs.add(pattern);
@@ -2069,7 +2069,7 @@ class ChatDatabaseRepository {
         EXISTS (
           SELECT 1 FROM message_search_fts fx
           WHERE fx.conversation_id = c.id AND fx.content MATCH ?
-            ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM linear_ranked visible WHERE visible.id = fx.id AND visible.version_rank = 1)'}
+            ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible INNER JOIN message_rows selected ON selected.id = fx.id WHERE visible.conversation_id = selected.conversation_id AND visible.group_id = COALESCE(selected.group_id, selected.id) AND visible.selected_version = selected.version)'}
         )
         ''');
       existsArgs
@@ -2083,31 +2083,26 @@ class ChatDatabaseRepository {
     final rows = await _db
         .customSelect(
           '''
-      WITH group_rows AS (
-        SELECT conversation_id, COALESCE(group_id, id) AS group_id,
-               MAX(version) AS latest_version
-        FROM message_rows
-        GROUP BY conversation_id, COALESCE(group_id, id)
-      ), selections AS (
+      WITH selections AS (
         SELECT c.id AS conversation_id, j.key AS group_id,
                CAST(j.value AS INTEGER) AS selected_version
         FROM conversation_rows c, json_each(c.version_selections_json) j
-      ), linear_ranked AS (
-        SELECT m.id, m.conversation_id,
-               ROW_NUMBER() OVER (
-                 PARTITION BY m.conversation_id, COALESCE(m.group_id, m.id)
-                 ORDER BY CASE
-                   WHEN m.version = COALESCE(s.selected_version, g.latest_version)
-                   THEN 0 ELSE 1 END,
-                   m.version DESC, m.message_order DESC, m.id DESC
-               ) AS version_rank
+      ), visible_groups AS (
+        SELECT
+          m.conversation_id,
+          COALESCE(m.group_id, m.id) AS group_id,
+          MAX(m.version) AS max_version,
+          COALESCE(
+            MAX(CASE
+              WHEN m.version = s.selected_version THEN m.version
+            END),
+            MAX(m.version)
+          ) AS selected_version
         FROM message_rows m
-        JOIN group_rows g
-          ON g.conversation_id = m.conversation_id
-         AND g.group_id = COALESCE(m.group_id, m.id)
         LEFT JOIN selections s
-          ON s.conversation_id = g.conversation_id
-         AND s.group_id = g.group_id
+          ON s.conversation_id = m.conversation_id
+         AND s.group_id = COALESCE(m.group_id, m.id)
+        GROUP BY m.conversation_id, COALESCE(m.group_id, m.id)
       )
       SELECT
         c.id AS conversation_id,
@@ -2120,27 +2115,25 @@ class ChatDatabaseRepository {
         m.version AS version,
         m.message_order AS message_order,
         (
-          SELECT selected.version
-          FROM linear_ranked visible
-          INNER JOIN message_rows selected ON selected.id = visible.id
+          SELECT visible.selected_version
+          FROM visible_groups visible
           WHERE visible.conversation_id = m.conversation_id
-            AND visible.version_rank = 1
-            AND COALESCE(selected.group_id, selected.id) =
-                COALESCE(m.group_id, m.id)
+            AND visible.group_id = COALESCE(m.group_id, m.id)
           LIMIT 1
         ) AS selected_version,
         (
-          SELECT MAX(vm.version)
-          FROM message_rows vm
-          WHERE vm.conversation_id = m.conversation_id
-            AND COALESCE(vm.group_id, vm.id) = COALESCE(m.group_id, m.id)
+          SELECT visible.max_version
+          FROM visible_groups visible
+          WHERE visible.conversation_id = m.conversation_id
+            AND visible.group_id = COALESCE(m.group_id, m.id)
+          LIMIT 1
         ) AS max_version
       FROM conversation_rows c
       LEFT JOIN message_rows m
         ON m.conversation_id = c.id
         AND m.role IN ('user', 'assistant')
         AND (${messageAnyClauses.join(' OR ')})
-        ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM linear_ranked visible WHERE visible.conversation_id = m.conversation_id AND visible.id = m.id AND visible.version_rank = 1)'}
+        ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible WHERE visible.conversation_id = m.conversation_id AND visible.group_id = COALESCE(m.group_id, m.id) AND visible.selected_version = m.version)'}
       WHERE (${titleClauses.join(' AND ')}) OR (${existsClauses.join(' AND ')})
       ORDER BY c.updated_at DESC, m.message_order ASC
       LIMIT ?
