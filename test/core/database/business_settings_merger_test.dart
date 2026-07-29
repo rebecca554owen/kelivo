@@ -39,7 +39,7 @@ void main() {
     expect(jsonDecode(merged.preferences['assistant_tag_map_v1']! as String), {
       'assistant-a': localTag.id,
     });
-    expect(merged.preferences['theme_mode_v1'], 'dark');
+    expect(merged.preferences['theme_mode_v1'], 'light');
   });
 
   test('snapshot merge preserves incoming id-less entity row identity', () {
@@ -182,7 +182,7 @@ void main() {
     },
   );
 
-  test('merges frozen special keys and overwrites ordinary keys', () {
+  test('merges frozen special keys and preserves ordinary local keys', () {
     final existing = <String, Object?>{
       'assistants_v1': jsonEncode([
         {
@@ -224,6 +224,7 @@ void main() {
       }),
       'theme_mode_v1': 'dark',
       'plugin_future_key_v1': 'new',
+      'new_preference_v1': 'added',
     };
 
     final merged = BusinessSettingsMerger.merge(existing, incoming);
@@ -252,8 +253,9 @@ void main() {
       'shared': 'local-group',
       'incoming': 'incoming-group',
     });
-    expect(merged['theme_mode_v1'], 'dark');
-    expect(merged['plugin_future_key_v1'], 'new');
+    expect(merged['theme_mode_v1'], 'light');
+    expect(merged['plugin_future_key_v1'], 'old');
+    expect(merged['new_preference_v1'], 'added');
   });
 
   test(
@@ -381,7 +383,7 @@ void main() {
     expect(jsonDecode(merged['search_services_v1']! as String), [
       {'id': 'search-a', 'type': 'bing_local'},
     ]);
-    expect(merged['theme_mode_v1'], 'dark');
+    expect(merged['theme_mode_v1'], 'light');
   });
 
   test('merges pinned models into an empty target snapshot', () {

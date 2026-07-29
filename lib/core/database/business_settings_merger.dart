@@ -124,7 +124,7 @@ final class BusinessSettingsMerger {
           imported as String,
         );
       } else {
-        preferences[key] = imported;
+        preferences.putIfAbsent(key, () => imported);
       }
     }
 
