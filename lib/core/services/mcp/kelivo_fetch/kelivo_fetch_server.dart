@@ -404,8 +404,8 @@ class KelivoInMemoryClientTransport implements mcp.ClientTransport {
   Future<void> get onClose => _closeCompleter.future;
 
   @override
-  void send(dynamic message) {
-    if (_closed) return;
+  mcp.TransportSendOperation send(dynamic message) {
+    if (_closed) return mcp.TransportSendOperation.completed();
     // Process asynchronously to mimic real transport
     Future.microtask(() async {
       final resp = await _server.handleMessage(message);
@@ -414,6 +414,7 @@ class KelivoInMemoryClientTransport implements mcp.ClientTransport {
         _messageController.add(resp);
       }
     });
+    return mcp.TransportSendOperation.completed();
   }
 
   @override

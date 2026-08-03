@@ -292,7 +292,15 @@ class SseAuthClientTransport implements ClientTransport {
   Future<void> get onClose => _closeCompleter.future;
 
   @override
-  void send(dynamic message) async {
+  TransportSendOperation send(dynamic message) {
+    final pending = _PendingAuthenticatedPost();
+    return TransportSendOperation(
+      _send(message, pending),
+      cancel: pending.cancel,
+    );
+  }
+
+  Future<void> _send(dynamic message, _PendingAuthenticatedPost pending) async {
     if (_isClosed) {
       _logger.debug('Attempted to send on closed authenticated transport');
       return;
@@ -304,20 +312,28 @@ class SseAuthClientTransport implements ClientTransport {
       );
     }
 
+    final client = HttpClient();
+    HttpClientRequest? request;
+    pending.client = client;
     try {
+      if (pending.cancelled) return;
       final jsonMessage = jsonEncode(message);
       _logger.debug('Sending authenticated message: $jsonMessage');
 
       final url = Uri.parse(_messageEndpoint!);
-      final client = HttpClient();
-      final request = await client.postUrl(url);
+      request = await client.postUrl(url);
+      pending.request = request;
+      if (pending.cancelled) {
+        request.abort();
+        return;
+      }
 
       // Set content type
       request.headers.contentType = ContentType.json;
 
       // Add authentication headers
       _baseHeaders.forEach((name, value) {
-        request.headers.add(name, value);
+        request!.headers.add(name, value);
       });
 
       // Add current OAuth token if available
@@ -350,7 +366,8 @@ class SseAuthClientTransport implements ClientTransport {
             !_isRefreshingToken) {
           await _refreshTokenIfNeeded();
           // Retry the send operation
-          return send(message);
+          await _send(message, pending);
+          return;
         } else {
           throw McpError(
             'Authentication failed during send: ${response.statusCode}',
@@ -363,12 +380,14 @@ class SseAuthClientTransport implements ClientTransport {
           'Error sending authenticated message: ${response.statusCode}',
         );
       }
-
-      client.close();
       _logger.debug('Authenticated message sent successfully');
     } catch (e) {
       _logger.debug('Error sending authenticated message: $e');
       rethrow;
+    } finally {
+      if (identical(pending.request, request)) pending.request = null;
+      if (identical(pending.client, client)) pending.client = null;
+      client.close(force: true);
     }
   }
 
@@ -395,13 +414,26 @@ class SseAuthClientTransport implements ClientTransport {
   }
 }
 
+final class _PendingAuthenticatedPost {
+  bool cancelled = false;
+  HttpClient? client;
+  HttpClientRequest? request;
+
+  void cancel() {
+    if (cancelled) return;
+    cancelled = true;
+    request?.abort();
+    client?.close(force: true);
+  }
+}
+
 /// Authenticated EventSource implementation
 class AuthenticatedEventSource implements EventSource {
   HttpClient? _client;
   HttpClientRequest? _request;
   HttpClientResponse? _response;
   StreamSubscription? _subscription;
-  final _buffer = StringBuffer();
+  final SseParser _parser = SseParser();
   bool _isConnected = false;
 
   @override
@@ -418,6 +450,8 @@ class AuthenticatedEventSource implements EventSource {
     Function(dynamic)? onMessage,
     Function(dynamic)? onError,
     Function(String?)? onEndpoint,
+    Function(SseEvent)? onEvent,
+    Function()? onDone,
     Function(int, String)? onAuthFailure,
   }) async {
     _logger.debug('AuthenticatedEventSource connecting to: $url');
@@ -468,73 +502,19 @@ class AuthenticatedEventSource implements EventSource {
           try {
             final chunk = utf8.decode(data, allowMalformed: true);
             _logger.debug('Raw authenticated SSE data: [$chunk]');
-            _buffer.write(chunk);
-
-            // Process all events in buffer
-            final content = _buffer.toString();
-
-            // Check for JSON-RPC responses
-            if (content.contains('"jsonrpc":"2.0"') ||
-                content.contains('"jsonrpc": "2.0"')) {
-              _logger.debug(
-                'Detected JSON-RPC data in authenticated SSE stream',
-              );
-
-              try {
-                final jsonStart = content.indexOf('{');
-                final jsonEnd = content.lastIndexOf('}') + 1;
-
-                if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                  final jsonStr = content.substring(jsonStart, jsonEnd);
-                  _logger.debug('Extracted authenticated JSON: $jsonStr');
-
-                  try {
-                    final jsonData = jsonDecode(jsonStr);
-                    _logger.debug(
-                      'Parsed authenticated JSON-RPC data: $jsonData',
-                    );
-
-                    // Clear processed data from buffer
-                    if (jsonEnd < content.length) {
-                      _buffer.clear();
-                      _buffer.write(content.substring(jsonEnd));
-                    } else {
-                      _buffer.clear();
-                    }
-
-                    // Forward to message handler
-                    if (onMessage != null) {
-                      onMessage(jsonData);
-                    }
-                    return;
-                  } catch (e) {
-                    _logger.debug(
-                      'JSON parse error in authenticated stream: $e',
-                    );
-                  }
+            for (final event in _parser.add(chunk)) {
+              onEvent?.call(event);
+              final eventData = event.data;
+              if (event.event == 'endpoint' && eventData != null) {
+                onOpen?.call(eventData);
+                onEndpoint?.call(eventData);
+              } else if (eventData != null) {
+                try {
+                  onMessage?.call(jsonDecode(eventData));
+                } catch (_) {
+                  onMessage?.call(eventData);
                 }
-              } catch (e) {
-                _logger.debug(
-                  'Error extracting JSON from authenticated stream: $e',
-                );
               }
-            }
-
-            // Process SSE events
-            final event = _processBuffer();
-            _logger.debug(
-              'Processed authenticated SSE event: ${event.event}, data: ${event.data}',
-            );
-
-            if (event.event == 'endpoint' && event.data != null) {
-              _logger.debug(
-                'Received authenticated endpoint event: ${event.data}',
-              );
-              if (onOpen != null) {
-                onOpen(event.data);
-              }
-            } else if (event.data != null && onMessage != null) {
-              onMessage(event.data);
             }
           } catch (e) {
             _logger.debug('Error processing authenticated SSE data: $e');
@@ -550,8 +530,13 @@ class AuthenticatedEventSource implements EventSource {
         onDone: () {
           _logger.debug('Authenticated EventSource stream closed');
           _isConnected = false;
-          if (onError != null) {
-            onError('Authenticated connection closed');
+          for (final event in _parser.close()) {
+            onEvent?.call(event);
+          }
+          if (onDone != null) {
+            onDone();
+          } else {
+            onError?.call('Authenticated connection closed');
           }
         },
       );
@@ -563,55 +548,6 @@ class AuthenticatedEventSource implements EventSource {
       }
       rethrow;
     }
-  }
-
-  _SseEvent _processBuffer() {
-    final content = _buffer.toString();
-    _logger.debug('_processBuffer authenticated content: [$content]');
-
-    if (content.isEmpty) {
-      return _SseEvent('', null);
-    }
-
-    final eventBlocks = content.split('\n\n');
-    _logger.debug(
-      '_processBuffer authenticated event blocks count: ${eventBlocks.length}',
-    );
-
-    if (eventBlocks.length < 2) {
-      return _SseEvent('', null);
-    }
-
-    final eventBlock = eventBlocks[0];
-    final lines = eventBlock.split('\n');
-
-    String currentEvent = '';
-    String? currentData;
-
-    for (final line in lines) {
-      final trimmedLine = line.trim();
-      _logger.debug('Processing authenticated line: [$trimmedLine]');
-
-      if (trimmedLine.startsWith('event:')) {
-        currentEvent = trimmedLine.substring(6).trim();
-        _logger.debug('Found authenticated event type: $currentEvent');
-      } else if (trimmedLine.startsWith('data:')) {
-        currentData = trimmedLine.substring(5).trim();
-        _logger.debug('Found authenticated event data: $currentData');
-      }
-    }
-
-    // Clear processed event from buffer
-    final remaining = eventBlocks.skip(1).join('\n\n');
-    _buffer.clear();
-    if (remaining.isNotEmpty) {
-      _buffer.write(remaining);
-    }
-
-    _logger.debug(
-      'Complete authenticated event found: $currentEvent, data: $currentData',
-    );
-    return _SseEvent(currentEvent, currentData);
   }
 
   @override
@@ -639,11 +575,4 @@ class AuthenticatedEventSource implements EventSource {
 
     _isConnected = false;
   }
-}
-
-class _SseEvent {
-  final String event;
-  final String? data;
-
-  _SseEvent(this.event, this.data);
 }

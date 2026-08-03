@@ -42,7 +42,7 @@ class MockTransport implements ClientTransport {
   Future<void> get onClose => _closeCompleter.future;
 
   @override
-  void send(dynamic message) {
+  TransportSendOperation send(dynamic message) {
     if (_closed) {
       throw McpError('Transport is closed');
     }
@@ -69,6 +69,7 @@ class MockTransport implements ClientTransport {
         }
       }
     }
+    return TransportSendOperation.completed();
   }
 
   /// Schedule a response to be sent asynchronously

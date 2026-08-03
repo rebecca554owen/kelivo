@@ -260,16 +260,22 @@ class McpClient {
     required TransportConfig transportConfig,
   }) async {
     return Results.catchingAsync(() async {
-      final client = createClient(config);
-      final transport = await _createTransport(transportConfig);
-
-      await client.connectWithRetry(
-        transport,
-        maxRetries: config.maxRetries,
-        delay: config.retryDelay,
-      );
-
-      return client;
+      final attempts = config.maxRetries < 1 ? 1 : config.maxRetries;
+      Object? lastError;
+      for (var attempt = 1; attempt <= attempts; attempt++) {
+        final client = createClient(config);
+        try {
+          final transport = await _createTransport(transportConfig);
+          await client.connect(transport);
+          return client;
+        } catch (error) {
+          lastError = error;
+          client.dispose();
+          if (attempt < attempts) await Future<void>.delayed(config.retryDelay);
+        }
+      }
+      if (attempts == 1 && lastError is Exception) throw lastError;
+      throw McpError('Failed to connect after $attempts attempts: $lastError');
     });
   }
 

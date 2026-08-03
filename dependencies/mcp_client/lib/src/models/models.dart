@@ -910,6 +910,147 @@ class McpError implements Exception {
   String toString() => 'McpError ${code != null ? '($code)' : ''}: $message';
 }
 
+/// Structured HTTP failure raised by HTTP-based MCP transports.
+@immutable
+class McpHttpError extends McpError {
+  final int statusCode;
+  final Duration? retryAfter;
+  final String? body;
+
+  /// Whether the transport itself attached a non-empty session identifier.
+  final bool sessionIdPresent;
+
+  /// True only when the server rejected the request before accepting it.
+  /// A caller may retry such a request after creating a new session.
+  final bool canRetryRequest;
+
+  /// Background GET failures are not tied to a JSON-RPC request.
+  final bool isBackgroundRequest;
+
+  McpHttpError({
+    required this.statusCode,
+    required String message,
+    this.retryAfter,
+    this.body,
+    this.sessionIdPresent = false,
+    this.canRetryRequest = false,
+    this.isBackgroundRequest = false,
+  }) : super(message);
+
+  static Duration? parseRetryAfter(String? value, {DateTime? now}) {
+    if (value == null || value.isEmpty) return null;
+    if (RegExp(r'^[0-9]+$').hasMatch(value)) {
+      final seconds = int.tryParse(value);
+      return seconds == null ? null : Duration(seconds: seconds);
+    }
+
+    final date = _parseHttpDate(value, now ?? DateTime.now().toUtc());
+    if (date == null) return null;
+    final delay = date.difference((now ?? DateTime.now()).toUtc());
+    return delay.isNegative ? Duration.zero : delay;
+  }
+
+  static DateTime? _parseHttpDate(String value, DateTime now) {
+    final imf = RegExp(
+      r'^[A-Za-z]{3}, ([0-9]{2}) ([A-Za-z]{3}) ([0-9]{4}) '
+      r'([0-9]{2}):([0-9]{2}):([0-9]{2}) GMT$',
+    ).firstMatch(value);
+    if (imf != null) {
+      return _checkedUtcDate(
+        imf.group(3)!,
+        imf.group(2)!,
+        imf.group(1)!,
+        imf.group(4)!,
+        imf.group(5)!,
+        imf.group(6)!,
+      );
+    }
+
+    final rfc850 = RegExp(
+      r'^[A-Za-z]+, ([0-9]{2})-([A-Za-z]{3})-([0-9]{2}) '
+      r'([0-9]{2}):([0-9]{2}):([0-9]{2}) GMT$',
+    ).firstMatch(value);
+    if (rfc850 != null) {
+      final shortYear = int.parse(rfc850.group(3)!);
+      var year = (now.year ~/ 100) * 100 + shortYear;
+      if (year > now.year + 50) year -= 100;
+      return _checkedUtcDate(
+        year.toString(),
+        rfc850.group(2)!,
+        rfc850.group(1)!,
+        rfc850.group(4)!,
+        rfc850.group(5)!,
+        rfc850.group(6)!,
+      );
+    }
+
+    final asctime = RegExp(
+      r'^[A-Za-z]{3} ([A-Za-z]{3}) +([0-9]{1,2}) '
+      r'([0-9]{2}):([0-9]{2}):([0-9]{2}) ([0-9]{4})$',
+    ).firstMatch(value);
+    if (asctime == null) return null;
+    return _checkedUtcDate(
+      asctime.group(6)!,
+      asctime.group(1)!,
+      asctime.group(2)!,
+      asctime.group(3)!,
+      asctime.group(4)!,
+      asctime.group(5)!,
+    );
+  }
+
+  static DateTime? _checkedUtcDate(
+    String yearValue,
+    String monthValue,
+    String dayValue,
+    String hourValue,
+    String minuteValue,
+    String secondValue,
+  ) {
+    const months = <String, int>{
+      'Jan': 1,
+      'Feb': 2,
+      'Mar': 3,
+      'Apr': 4,
+      'May': 5,
+      'Jun': 6,
+      'Jul': 7,
+      'Aug': 8,
+      'Sep': 9,
+      'Oct': 10,
+      'Nov': 11,
+      'Dec': 12,
+    };
+    final year = int.tryParse(yearValue);
+    final month = months[monthValue];
+    final day = int.tryParse(dayValue);
+    final hour = int.tryParse(hourValue);
+    final minute = int.tryParse(minuteValue);
+    final second = int.tryParse(secondValue);
+    if (year == null ||
+        month == null ||
+        day == null ||
+        hour == null ||
+        minute == null ||
+        second == null ||
+        hour > 23 ||
+        minute > 59 ||
+        second > 59) {
+      return null;
+    }
+    final parsed = DateTime.utc(year, month, day, hour, minute, second);
+    if (parsed.year != year ||
+        parsed.month != month ||
+        parsed.day != day ||
+        parsed.hour != hour ||
+        parsed.minute != minute ||
+        parsed.second != second) {
+      return null;
+    }
+    return parsed;
+  }
+}
+
 /// JSON-RPC message
 @immutable
 class JsonRpcMessage {

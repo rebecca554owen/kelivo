@@ -42,11 +42,7 @@ class McpToolService extends ChangeNotifier {
     if (selected.isEmpty) return null;
 
     // Find a server that has this tool enabled
-    final connected = mcpProvider.connectedServers
-        .where((s) => selected.contains(s.id))
-        .toList();
-    // debugPrint('[MCP/Call/Select] connectedAndSelected=${connected.map((s)=>s.id).join(',')}');
-    for (final s in connected) {
+    for (final s in _routingServers(mcpProvider, selected)) {
       final has = s.tools.any((t) => t.enabled && t.name == toolName);
       if (has) {
         // debugPrint('[MCP/Call/Select] using server=${s.id} name=${s.name} transport=${s.transport.name}');
@@ -66,12 +62,9 @@ class McpToolService extends ChangeNotifier {
   }) async {
     // Attempt call via selected server
     final selected = chat.getConversationMcpServers(conversationId).toSet();
-    final connected = mcpProvider.connectedServers
-        .where((s) => selected.contains(s.id))
-        .toList();
     mcp.CallToolResult? res;
     McpServerConfig? usedServer;
-    for (final s in connected) {
+    for (final s in _routingServers(mcpProvider, selected)) {
       final has = s.tools.any((t) => t.enabled && t.name == toolName);
       if (!has) continue;
       usedServer = s;
@@ -177,9 +170,7 @@ class McpToolService extends ChangeNotifier {
     final selected = (a?.mcpServerIds ?? const <String>[]).toSet();
     // debugPrint('[MCP/Call/Select] assistant=${assistantId ?? a?.id ?? '(current)'} tool=$toolName selectedServers=${selected.join(',')}');
     if (selected.isEmpty) return '';
-    for (final s in mcpProvider.connectedServers.where(
-      (s) => selected.contains(s.id),
-    )) {
+    for (final s in _routingServers(mcpProvider, selected)) {
       final has = s.tools.any((t) => t.enabled && t.name == toolName);
       if (has) {
         // debugPrint('[MCP/Call/Select] using server=${s.id} name=${s.name} transport=${s.transport.name}');
@@ -260,6 +251,26 @@ class McpToolService extends ChangeNotifier {
       }
     }
     return '';
+  }
+
+  Iterable<McpServerConfig> _routingServers(
+    McpProvider provider,
+    Set<String> selected,
+  ) sync* {
+    for (final server in provider.servers) {
+      if (server.enabled &&
+          selected.contains(server.id) &&
+          provider.statusFor(server.id) == McpStatus.connected) {
+        yield server;
+      }
+    }
+    for (final server in provider.servers) {
+      if (server.enabled &&
+          selected.contains(server.id) &&
+          provider.statusFor(server.id) != McpStatus.connected) {
+        yield server;
+      }
+    }
   }
 
   String _renderToolErrorForModel({

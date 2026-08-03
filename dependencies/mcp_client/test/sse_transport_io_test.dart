@@ -10,6 +10,29 @@ import 'package:test/test.dart';
 
 void main() {
   group('Native SSE transport', () {
+    test('shared parser preserves opaque IDs and rejects malformed retry', () {
+      final parser = SseParser();
+      final events = <SseEvent>[
+        ...parser.add(
+          'id:  opaque\t \r'
+          'retry:  0 \r'
+          'data: {}\r\r',
+        ),
+        ...parser.close(),
+      ];
+
+      expect(events, hasLength(1));
+      expect(events.single.id, ' opaque\t ');
+      expect(events.single.retry, isNull);
+
+      final invalidId = SseParser();
+      final nulEvents = <SseEvent>[
+        ...invalidId.add('id: bad\u0000id\rdata: {}\r\r'),
+        ...invalidId.close(),
+      ];
+      expect(nulEvents.single.hasId, isFalse);
+    });
+
     test(
       'keeps an event intact when its fields arrive in separate chunks',
       () async {
@@ -90,12 +113,17 @@ void main() {
       transport = await SseClientTransport.create(
         serverUrl: 'http://${server.address.address}:${server.port}/sse',
       );
-      transport.send({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'});
+      final send = transport.send({
+        'jsonrpc': '2.0',
+        'id': 1,
+        'method': 'initialize',
+      });
 
       expect(
         await receivedContentType.future.timeout(const Duration(seconds: 1)),
         'application/json',
       );
+      await send.done;
     });
   });
 }

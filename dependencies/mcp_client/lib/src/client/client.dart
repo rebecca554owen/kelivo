@@ -21,13 +21,16 @@ class Client {
   final ClientCapabilities capabilities;
 
   /// Timeout for individual requests.
-  final Duration requestTimeout;
+  Duration _requestTimeout;
+
+  Duration get requestTimeout => _requestTimeout;
 
   /// Protocol version this client implements
   final String protocolVersion = McpProtocol.defaultVersion;
 
   /// Transport connection
   ClientTransport? _transport;
+  StreamSubscription<dynamic>? _transportMessageSubscription;
 
   /// Stream controller for handling incoming messages
   final _messageController = StreamController<JsonRpcMessage>.broadcast();
@@ -47,6 +50,7 @@ class Client {
 
   /// Map of request completion handlers by ID
   final _requestCompleters = <int, Completer<dynamic>>{};
+  Completer<void>? _pendingRequestsDrained;
 
   /// Map of notification handlers by method
   final _notificationHandlers = <String, Function(Map<String, dynamic>)>{};
@@ -99,12 +103,24 @@ class Client {
     required this.name,
     required this.version,
     this.capabilities = const ClientCapabilities(),
-    this.requestTimeout = const Duration(seconds: 30),
-  }) {
+    Duration requestTimeout = const Duration(seconds: 30),
+  }) : _requestTimeout = requestTimeout {
     // Default `roots/list` handler returns the locally registered roots.
     // Hosts may override with [onListRoots] for dynamic roots.
     _requestHandlers['roots/list'] =
         (_) async => {'roots': _roots.map((r) => r.toJson()).toList()};
+    _messageController.stream.listen((message) async {
+      try {
+        await _processMessage(message);
+      } catch (error) {
+        _logger.debug('Error processing message: $error');
+        if (!_errorStreamController.isClosed) {
+          _errorStreamController.add(
+            McpError('Error processing message: $error'),
+          );
+        }
+      }
+    });
   }
 
   /// Connect the client to a transport
@@ -118,51 +134,14 @@ class Client {
     }
 
     _connecting = true;
-    _transport = transport;
-    _transport!.onMessage.listen(_handleMessage);
-    _transport!.onClose
-        .then((_) {
-          // Only send disconnect event if we're still connected
-          if (_transport != null) {
-            _disconnectStreamController.add(DisconnectReason.transportClosed);
-            _onDisconnect();
-          }
-        })
-        .catchError((error) {
-          // Only handle error if we're still connected
-          if (_transport != null) {
-            _errorStreamController.add(McpError('Transport error: $error'));
-            _disconnectStreamController.add(DisconnectReason.transportError);
-            _onDisconnect();
-          }
-        });
-
-    // Set up message handling
-    _messageController.stream.listen((message) async {
-      try {
-        await _processMessage(message);
-      } catch (e) {
-        _logger.debug('Error processing message: $e');
-        _errorStreamController.add(McpError('Error processing message: $e'));
-      }
-    });
+    _attachTransport(transport);
 
     // Initialize the connection
     try {
       await initialize();
       _connecting = false;
 
-      // Emit connection event after successful initialization
-      if (_initialized && _serverInfo != null && _serverCapabilities != null) {
-        _connectStreamController.add(
-          ServerInfo(
-            name: _serverInfo!['name'] as String? ?? 'Unknown',
-            version: _serverInfo!['version'] as String? ?? 'Unknown',
-            capabilities: _serverCapabilities!.toJson(),
-            protocolVersion: protocolVersion,
-          ),
-        );
-      }
+      _emitConnected();
     } catch (e) {
       _connecting = false;
       _errorStreamController.add(McpError('Initialization error: $e'));
@@ -186,87 +165,84 @@ class Client {
     }
 
     _connecting = true;
-    int attempts = 0;
-
-    while (attempts < maxRetries) {
+    _attachTransport(transport);
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        _transport = transport;
-        _transport!.onMessage.listen(_handleMessage);
-        _transport!.onClose
-            .then((_) {
-              // Only send disconnect event if we're still connected
-              if (_transport != null) {
-                _disconnectStreamController.add(
-                  DisconnectReason.transportClosed,
-                );
-                _onDisconnect();
-              }
-            })
-            .catchError((error) {
-              // Only handle error if we're still connected
-              if (_transport != null) {
-                _errorStreamController.add(McpError('Transport error: $error'));
-                _disconnectStreamController.add(
-                  DisconnectReason.transportError,
-                );
-                _onDisconnect();
-              }
-            });
-
-        // Message handling setup
-        _messageController.stream.listen((message) async {
-          try {
-            await _processMessage(message);
-          } catch (e) {
-            _logger.debug('Error processing message: $e');
-            _errorStreamController.add(
-              McpError('Error processing message: $e'),
-            );
-          }
-        });
-
-        // Initialize connection
         await initialize();
         _connecting = false;
-
-        // Emit connection event after successful initialization
-        if (_initialized &&
-            _serverInfo != null &&
-            _serverCapabilities != null) {
-          _connectStreamController.add(
-            ServerInfo(
-              name: _serverInfo!['name'] as String? ?? 'Unknown',
-              version: _serverInfo!['version'] as String? ?? 'Unknown',
-              capabilities: _serverCapabilities!.toJson(),
-              protocolVersion: protocolVersion,
-            ),
-          );
-        }
-
-        return; // Successfully connected
+        _emitConnected();
+        return;
       } catch (e) {
-        // Clean up resources on failure
-        if (_transport != null) {
-          try {
-            _transport!.close();
-          } catch (_) {}
-          _transport = null;
-        }
-
-        attempts++;
-        if (attempts >= maxRetries) {
+        _initialized = false;
+        final transportClosed = !identical(_transport, transport);
+        if (attempt >= maxRetries || transportClosed) {
           _connecting = false;
-          _errorStreamController.add(
-            McpError('Failed to connect after $maxRetries attempts: $e'),
+          disconnect();
+          if (maxRetries == 1 || transportClosed) {
+            _errorStreamController.add(
+              e is McpError ? e : McpError('Connection failed: $e'),
+            );
+            rethrow;
+          }
+          final failure = McpError(
+            'Failed to connect after $maxRetries attempts: $e',
           );
-          throw McpError('Failed to connect after $maxRetries attempts: $e');
+          _errorStreamController.add(failure);
+          throw failure;
         }
 
         _logger.debug(
-          'Connection attempt $attempts failed: $e. Retrying in ${delay.inSeconds} seconds...',
+          'Connection attempt $attempt failed: $e. '
+          'Retrying in ${delay.inSeconds} seconds...',
         );
         await Future.delayed(delay);
       }
+    }
+  }
+
+  void _attachTransport(ClientTransport transport) {
+    _transport = transport;
+    _transportMessageSubscription = transport.onMessage.listen(
+      _handleMessage,
+      onError: (Object error, StackTrace stackTrace) {
+        if (!_errorStreamController.isClosed) {
+          _errorStreamController.add(
+            error is McpError ? error : McpError('Transport error: $error'),
+          );
+        }
+      },
+    );
+    transport.onClose.then(
+      (_) {
+        if (identical(_transport, transport)) {
+          _disconnectStreamController.add(DisconnectReason.transportClosed);
+          _onDisconnect();
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (identical(_transport, transport)) {
+          if (!_errorStreamController.isClosed) {
+            _errorStreamController.add(
+              error is McpError ? error : McpError('Transport error: $error'),
+            );
+          }
+          _disconnectStreamController.add(DisconnectReason.transportError);
+          _onDisconnect();
+        }
+      },
+    );
+  }
+
+  void _emitConnected() {
+    if (_initialized && _serverInfo != null && _serverCapabilities != null) {
+      _connectStreamController.add(
+        ServerInfo(
+          name: _serverInfo!['name'] as String? ?? 'Unknown',
+          version: _serverInfo!['version'] as String? ?? 'Unknown',
+          capabilities: _serverCapabilities!.toJson(),
+          protocolVersion: protocolVersion,
+        ),
+      );
     }
   }
 
@@ -329,6 +305,39 @@ class Client {
   /// before then.
   String? get negotiatedProtocolVersion => _negotiatedProtocolVersion;
   String? _negotiatedProtocolVersion;
+
+  String? get sessionId {
+    final transport = _transport;
+    return transport is StreamableHttpClientTransport
+        ? transport.sessionId
+        : null;
+  }
+
+  void setRequestTimeout(Duration timeout) {
+    if (timeout <= Duration.zero) return;
+    _requestTimeout = timeout;
+    final transport = _transport;
+    if (transport is StreamableHttpClientTransport) {
+      transport.setRequestTimeout(timeout);
+    }
+  }
+
+  Future<void> ping() async {
+    if (!_initialized) throw McpError('Client is not initialized');
+    await _sendRequest('ping', const {});
+  }
+
+  Future<void> terminateSession() async {
+    final transport = _transport;
+    if (transport is StreamableHttpClientTransport) {
+      await transport.terminateSession();
+    }
+  }
+
+  /// Completes once requests already issued through this client have settled.
+  /// New callers should stop routing work to the client before awaiting this.
+  Future<void> waitForPendingRequests() =>
+      _pendingRequestsDrained?.future ?? Future<void>.value();
 
   /// Validate protocol version compatibility
   void _validateProtocolVersion(String serverProtoVersion) {
@@ -839,6 +848,8 @@ class Client {
       final transport = _transport;
       _transport =
           null; // Clear reference before closing to avoid double events
+      unawaited(_transportMessageSubscription?.cancel());
+      _transportMessageSubscription = null;
       transport!.close();
       _onDisconnect();
     }
@@ -859,6 +870,8 @@ class Client {
   void _onDisconnect() {
     _transport = null;
     _initialized = false;
+    unawaited(_transportMessageSubscription?.cancel());
+    _transportMessageSubscription = null;
 
     // Complete any pending requests with an error
     for (final completer in _requestCompleters.values) {
@@ -867,6 +880,7 @@ class Client {
       }
     }
     _requestCompleters.clear();
+    _completePendingRequestsDrain();
   }
 
   /// Handle incoming messages from the transport
@@ -932,7 +946,7 @@ class Client {
   void _sendResultResponse(dynamic id, Map<String, dynamic> result) {
     final transport = _transport;
     if (transport == null) return;
-    transport.send({'jsonrpc': '2.0', 'id': id, 'result': result});
+    _sendUntracked(transport, {'jsonrpc': '2.0', 'id': id, 'result': result});
   }
 
   /// Send a JSON-RPC `error` response to the server.
@@ -944,7 +958,7 @@ class Client {
   }) {
     final transport = _transport;
     if (transport == null) return;
-    transport.send({
+    _sendUntracked(transport, {
       'jsonrpc': '2.0',
       'id': id,
       'error': {
@@ -963,7 +977,7 @@ class Client {
       return;
     }
 
-    final completer = _requestCompleters.remove(id)!;
+    final completer = _removeRequestCompleter(id)!;
 
     if (response.error != null) {
       final code = response.error!['code'] as int;
@@ -1007,6 +1021,9 @@ class Client {
 
     final id = _requestId++;
     final completer = Completer<dynamic>();
+    if (_requestCompleters.isEmpty) {
+      _pendingRequestsDrained = Completer<void>();
+    }
     _requestCompleters[id] = completer;
 
     // Create a deep copy of params to avoid potential modification issues
@@ -1019,10 +1036,11 @@ class Client {
       'params': safeParams,
     };
 
+    late final TransportSendOperation operation;
     try {
-      _transport!.send(request);
+      operation = _transport!.send(request);
     } catch (e) {
-      _requestCompleters.remove(id);
+      _removeRequestCompleter(id);
       final error = McpError('Failed to send request: $e');
       _errorStreamController.add(error);
       throw error;
@@ -1030,10 +1048,13 @@ class Client {
 
     try {
       // Add timeout for requests
-      final result = await completer.future.timeout(
+      final result = await Future.any<dynamic>([
+        completer.future,
+        operation.done.then<dynamic>((_) => completer.future),
+      ]).timeout(
         requestTimeout,
         onTimeout: () {
-          _requestCompleters.remove(id);
+          _removeRequestCompleter(id);
           final error = McpError('Request timed out: $method');
           _errorStreamController.add(error);
           throw error;
@@ -1041,13 +1062,31 @@ class Client {
       );
       return result;
     } catch (e) {
+      _removeRequestCompleter(id);
       if (e is! McpError) {
-        final error = McpError('Request failed: $e');
+        final error =
+            e is Exception
+                ? McpError('Request failed: $e')
+                : McpError('Request failed');
         _errorStreamController.add(error);
         throw error;
       }
       rethrow;
+    } finally {
+      operation.cancel();
     }
+  }
+
+  Completer<dynamic>? _removeRequestCompleter(int id) {
+    final completer = _requestCompleters.remove(id);
+    if (_requestCompleters.isEmpty) _completePendingRequestsDrain();
+    return completer;
+  }
+
+  void _completePendingRequestsDrain() {
+    final drained = _pendingRequestsDrained;
+    if (drained != null && !drained.isCompleted) drained.complete();
+    _pendingRequestsDrained = null;
   }
 
   /// Send a JSON-RPC notification
@@ -1062,7 +1101,20 @@ class Client {
       'params': params,
     };
 
-    _transport!.send(notification);
+    _sendUntracked(_transport!, notification);
+  }
+
+  void _sendUntracked(ClientTransport transport, dynamic message) {
+    final operation = transport.send(message);
+    unawaited(
+      operation.done.catchError((Object error, StackTrace stackTrace) {
+        if (!_errorStreamController.isClosed) {
+          _errorStreamController.add(
+            error is McpError ? error : McpError('Transport error: $error'),
+          );
+        }
+      }),
+    );
   }
 }
 

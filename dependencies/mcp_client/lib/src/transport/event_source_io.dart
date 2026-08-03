@@ -5,11 +5,9 @@ import 'dart:io';
 import '../../logger.dart';
 import '../models/models.dart';
 import 'event_source_stub.dart' as stub;
+import 'sse_parser.dart';
 
 final Logger _logger = Logger('mcp_client.event_source_io');
-final RegExp _eventDelimiter = RegExp(
-  r'\r\n\r\n|\r\n\n|\r\n\r|\n\r\n|\n\n|\n\r|\r\r\n|\r\r',
-);
 
 /// Native platform EventSource implementation using HttpClient
 class EventSource implements stub.EventSource {
@@ -17,7 +15,7 @@ class EventSource implements stub.EventSource {
   HttpClientRequest? _request;
   HttpClientResponse? _response;
   StreamSubscription? _subscription;
-  final _buffer = StringBuffer();
+  final SseParser _parser = SseParser();
   bool _isConnected = false;
 
   EventSource();
@@ -36,6 +34,8 @@ class EventSource implements stub.EventSource {
     Function(dynamic)? onMessage,
     Function(dynamic)? onError,
     Function(String?)? onEndpoint,
+    Function(SseEvent)? onEvent,
+    Function()? onDone,
   }) async {
     _logger.debug('EventSource connecting');
     if (_isConnected) {
@@ -64,8 +64,16 @@ class EventSource implements stub.EventSource {
 
       if (_response!.statusCode != 200) {
         final body = await _response!.transform(utf8.decoder).join();
-        throw McpError(
-          'Failed to connect to SSE endpoint: ${_response!.statusCode} - $body',
+        throw McpHttpError(
+          statusCode: _response!.statusCode,
+          message:
+              'Failed to connect to SSE endpoint: '
+              '${_response!.statusCode} - $body',
+          retryAfter: McpHttpError.parseRetryAfter(
+            _response!.headers.value('Retry-After'),
+          ),
+          body: body,
+          isBackgroundRequest: true,
         );
       }
 
@@ -79,64 +87,14 @@ class EventSource implements stub.EventSource {
           try {
             // Log raw data for debugging
             _logger.debug('Raw SSE data: [$chunk]');
-            _buffer.write(chunk);
-
-            // Process SSE events
-            for (final event in _processBuffer()) {
-              _logger.debug(
-                'Processed SSE event: ${event.event}, data: ${event.data}',
-              );
-
-              if (event.event == 'endpoint' && event.data != null) {
-                _logger.debug('Received endpoint event: ${event.data}');
-                if (onEndpoint != null) {
-                  onEndpoint(event.data);
-                }
-              } else if (event.event == 'open' && onOpen != null) {
-                _logger.debug('Connection opened');
-                onOpen(event.data);
-              } else if (event.event == 'message' && event.data != null) {
-                _logger.debug('Received message data: ${event.data}');
-                // Try to parse as JSON
-                try {
-                  final message = jsonDecode(event.data!);
-                  _logger.debug('Parsed message: $message');
-                  if (onMessage != null) {
-                    onMessage(message);
-                  }
-                } catch (e) {
-                  _logger.debug('Failed to parse message as JSON: $e');
-                  // Pass raw data if JSON parsing fails
-                  if (onMessage != null) {
-                    onMessage(event.data);
-                  }
-                }
-              } else if (event.event == 'error' && event.data != null) {
-                _logger.error('Received error event: ${event.data}');
-                if (onError != null) {
-                  onError(event.data);
-                }
-              } else if (event.event == null && event.data != null) {
-                // Handle data without explicit event type
-                _logger.debug(
-                  'Received data without event type: ${event.data}',
-                );
-
-                // Check if it's an endpoint URL
-                if (event.data!.startsWith('http://') ||
-                    event.data!.startsWith('https://')) {
-                  _logger.debug('Detected endpoint URL: ${event.data}');
-                  if (onEndpoint != null) {
-                    onEndpoint(event.data);
-                  }
-                } else {
-                  // Treat as regular message
-                  if (onMessage != null) {
-                    onMessage(event.data);
-                  }
-                }
-              }
-            }
+            _dispatchEvents(
+              _parser.add(chunk),
+              onOpen: onOpen,
+              onMessage: onMessage,
+              onError: onError,
+              onEndpoint: onEndpoint,
+              onEvent: onEvent,
+            );
           } catch (e) {
             _logger.error('Error processing SSE data: $e');
             if (onError != null) {
@@ -154,6 +112,15 @@ class EventSource implements stub.EventSource {
         onDone: () {
           _logger.debug('EventSource stream closed');
           _isConnected = false;
+          _dispatchEvents(
+            _parser.close(),
+            onOpen: onOpen,
+            onMessage: onMessage,
+            onError: onError,
+            onEndpoint: onEndpoint,
+            onEvent: onEvent,
+          );
+          onDone?.call();
         },
       );
     } catch (e) {
@@ -166,41 +133,36 @@ class EventSource implements stub.EventSource {
     }
   }
 
-  /// Process the buffer to extract SSE events
-  List<SseEvent> _processBuffer() {
-    final events = <SseEvent>[];
-
-    while (true) {
-      final content = _buffer.toString();
-      final delimiter = _eventDelimiter.firstMatch(content);
-      if (delimiter == null) {
-        break;
-      }
-
-      final eventBlock = content.substring(0, delimiter.start);
-      _buffer
-        ..clear()
-        ..write(content.substring(delimiter.end));
-
-      String? eventType;
-      String? eventData;
-      String? eventId;
-
-      for (final line in eventBlock.split(RegExp(r'\r\n|\r|\n'))) {
-        if (line.startsWith('event:')) {
-          eventType = line.substring(6).trim();
-        } else if (line.startsWith('data:')) {
-          final data = line.substring(5).trim();
-          eventData = eventData == null ? data : '$eventData\n$data';
-        } else if (line.startsWith('id:')) {
-          eventId = line.substring(3).trim();
+  void _dispatchEvents(
+    List<SseEvent> events, {
+    required Function(String?)? onOpen,
+    required Function(dynamic)? onMessage,
+    required Function(dynamic)? onError,
+    required Function(String?)? onEndpoint,
+    required Function(SseEvent)? onEvent,
+  }) {
+    for (final event in events) {
+      onEvent?.call(event);
+      final data = event.data;
+      if (event.event == 'endpoint' && data != null) {
+        onEndpoint?.call(data);
+      } else if (event.event == 'open') {
+        onOpen?.call(data);
+      } else if (event.event == 'error' && data != null) {
+        onError?.call(data);
+      } else if (data != null) {
+        if (event.event == null &&
+            (data.startsWith('http://') || data.startsWith('https://'))) {
+          onEndpoint?.call(data);
+          continue;
+        }
+        try {
+          onMessage?.call(jsonDecode(data));
+        } catch (_) {
+          onMessage?.call(data);
         }
       }
-
-      events.add(SseEvent(event: eventType, data: eventData, id: eventId));
     }
-
-    return events;
   }
 
   @override
@@ -210,13 +172,4 @@ class EventSource implements stub.EventSource {
     _subscription?.cancel();
     _client?.close(force: true);
   }
-}
-
-/// SSE event data
-class SseEvent {
-  final String? event;
-  final String? data;
-  final String? id;
-
-  SseEvent({this.event, this.data, this.id});
 }

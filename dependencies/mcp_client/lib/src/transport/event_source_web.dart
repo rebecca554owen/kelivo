@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../../logger.dart';
 import '../models/models.dart';
 import 'event_source_stub.dart' as stub;
+import 'sse_parser.dart';
 
 final Logger _logger = Logger('mcp_client.event_source_web');
 
@@ -15,7 +16,7 @@ class EventSource implements stub.EventSource {
   StreamSubscription? _subscription;
   bool _isConnected = false;
   http.StreamedResponse? _response;
-  final _buffer = StringBuffer();
+  final SseParser _parser = SseParser();
 
   EventSource();
 
@@ -33,6 +34,8 @@ class EventSource implements stub.EventSource {
     Function(dynamic)? onMessage,
     Function(dynamic)? onError,
     Function(String?)? onEndpoint,
+    Function(SseEvent)? onEvent,
+    Function()? onDone,
   }) async {
     _logger.debug('EventSource connecting (web)');
     if (_isConnected) {
@@ -59,8 +62,16 @@ class EventSource implements stub.EventSource {
 
       if (_response!.statusCode != 200) {
         final body = await _response!.stream.transform(utf8.decoder).join();
-        throw McpError(
-          'Failed to connect to SSE endpoint: ${_response!.statusCode} - $body',
+        throw McpHttpError(
+          statusCode: _response!.statusCode,
+          message:
+              'Failed to connect to SSE endpoint: '
+              '${_response!.statusCode} - $body',
+          retryAfter: McpHttpError.parseRetryAfter(
+            _response!.headers['retry-after'],
+          ),
+          body: body,
+          isBackgroundRequest: true,
         );
       }
 
@@ -77,8 +88,14 @@ class EventSource implements stub.EventSource {
             (String chunk) {
               try {
                 _logger.debug('Received SSE chunk: $chunk');
-                _buffer.write(chunk);
-                _processBuffer(onMessage, onEndpoint, onError);
+                _dispatchEvents(
+                  _parser.add(chunk),
+                  onOpen: onOpen,
+                  onMessage: onMessage,
+                  onError: onError,
+                  onEndpoint: onEndpoint,
+                  onEvent: onEvent,
+                );
               } catch (e) {
                 _logger.error('Error processing SSE chunk: $e');
                 if (onError != null) {
@@ -96,6 +113,15 @@ class EventSource implements stub.EventSource {
             onDone: () {
               _logger.debug('EventSource stream closed');
               _isConnected = false;
+              _dispatchEvents(
+                _parser.close(),
+                onOpen: onOpen,
+                onMessage: onMessage,
+                onError: onError,
+                onEndpoint: onEndpoint,
+                onEvent: onEvent,
+              );
+              onDone?.call();
             },
           );
     } catch (e) {
@@ -108,102 +134,35 @@ class EventSource implements stub.EventSource {
     }
   }
 
-  void _processBuffer(
-    Function(dynamic)? onMessage,
-    Function(String?)? onEndpoint,
-    Function(dynamic)? onError,
-  ) {
-    final content = _buffer.toString();
-
-    // Process all complete events (separated by double newline)
-    final eventBlocks = content.split(RegExp(r'(\r?\n){2}'));
-
-    if (eventBlocks.length < 2) {
-      // No complete event yet
-      return;
-    }
-
-    // Process complete events
-    for (int i = 0; i < eventBlocks.length - 1; i++) {
-      final eventBlock = eventBlocks[i];
-      if (eventBlock.isEmpty) continue;
-
-      final lines = eventBlock.split(RegExp(r'\r?\n'));
-      String? eventType;
-      String? eventData;
-
-      for (final line in lines) {
-        if (line.startsWith('event:')) {
-          eventType = line.substring(6).trim();
-        } else if (line.startsWith('data:')) {
-          final data = line.substring(5).trim();
-          if (eventData == null) {
-            eventData = data;
-          } else {
-            eventData = '$eventData\n$data';
-          }
+  void _dispatchEvents(
+    List<SseEvent> events, {
+    required Function(String?)? onOpen,
+    required Function(dynamic)? onMessage,
+    required Function(dynamic)? onError,
+    required Function(String?)? onEndpoint,
+    required Function(SseEvent)? onEvent,
+  }) {
+    for (final event in events) {
+      onEvent?.call(event);
+      final data = event.data;
+      if (event.event == 'endpoint' && data != null) {
+        onEndpoint?.call(data);
+      } else if (event.event == 'open') {
+        onOpen?.call(data);
+      } else if (event.event == 'error' && data != null) {
+        onError?.call(data);
+      } else if (data != null) {
+        if (event.event == null &&
+            (data.startsWith('http://') || data.startsWith('https://'))) {
+          onEndpoint?.call(data);
+          continue;
+        }
+        try {
+          onMessage?.call(jsonDecode(data));
+        } catch (_) {
+          onMessage?.call(data);
         }
       }
-
-      // Handle different event types
-      if (eventType == 'endpoint' && eventData != null) {
-        _logger.debug('Received endpoint event: $eventData');
-        if (onEndpoint != null) {
-          onEndpoint(eventData);
-        }
-      } else if ((eventType == 'message' || eventType == null) &&
-          eventData != null) {
-        _logger.debug('Received message data: $eventData');
-
-        // Check if it's an endpoint URL without event type
-        if (eventType == null && (eventData.startsWith('http://') || eventData.startsWith('https://'))) {
-          _logger.debug('Detected endpoint URL: $eventData');
-          if (onEndpoint != null) {
-            onEndpoint(eventData);
-          }
-        } else if (eventData.contains('"jsonrpc":"2.0"') ||
-            eventData.contains('"jsonrpc": "2.0"')) {
-          // Check if it's JSON-RPC data
-          try {
-            final jsonData = jsonDecode(eventData);
-            _logger.debug('Parsed JSON-RPC data: $jsonData');
-            if (onMessage != null) {
-              onMessage(jsonData);
-            }
-          } catch (e) {
-            _logger.debug('Failed to parse as JSON-RPC: $e');
-            if (onMessage != null) {
-              onMessage(eventData);
-            }
-          }
-        } else {
-          // Try to parse as JSON
-          try {
-            final message = jsonDecode(eventData);
-            _logger.debug('Parsed message: $message');
-            if (onMessage != null) {
-              onMessage(message);
-            }
-          } catch (e) {
-            _logger.debug('Failed to parse message as JSON: $e');
-            // Pass raw data if JSON parsing fails
-            if (onMessage != null) {
-              onMessage(eventData);
-            }
-          }
-        }
-      } else if (eventType == 'error' && eventData != null) {
-        _logger.error('Received error event: $eventData');
-        if (onError != null) {
-          onError(eventData);
-        }
-      }
-    }
-
-    // Keep the incomplete last block in buffer
-    _buffer.clear();
-    if (eventBlocks.isNotEmpty) {
-      _buffer.write(eventBlocks.last);
     }
   }
 

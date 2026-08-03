@@ -1,9 +1,10 @@
-/// Streamable HTTP transport for MCP 2025-03-26
+/// Streamable HTTP transport for MCP 2025-03-26 and later.
 library;
 
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
@@ -17,31 +18,15 @@ import 'transport.dart';
 
 final Logger _logger = Logger('mcp_client.streamable_http_transport');
 
-/// HTTP transport configuration
 @immutable
 class StreamableHttpTransportConfig {
-  /// Base URL for the MCP server
   final String baseUrl;
-
-  /// OAuth configuration (optional)
   final OAuthConfig? oauthConfig;
-
-  /// Additional headers to send with requests
   final Map<String, String> headers;
-
-  /// Request timeout
   final Duration timeout;
-
-  /// SSE read timeout (longer for streaming)
   final Duration sseReadTimeout;
-
-  /// Maximum number of concurrent requests
   final int maxConcurrentRequests;
-
-  /// Whether to use HTTP/2 if available
   final bool useHttp2;
-
-  /// Whether to terminate session on close
   final bool terminateOnClose;
 
   const StreamableHttpTransportConfig({
@@ -56,26 +41,38 @@ class StreamableHttpTransportConfig {
   });
 }
 
-/// Streamable HTTP client transport for MCP
 class StreamableHttpClientTransport implements ClientTransport {
+  static const Duration _minimumReconnectDelay = Duration(seconds: 1);
+  static const Duration _defaultReconnectDelay = Duration(seconds: 1);
+  static const Duration _authenticationRetryDelay = Duration(minutes: 5);
+  static const Set<String> _reservedHeaders = {
+    'accept',
+    'content-type',
+    'last-event-id',
+    'mcp-protocol-version',
+    'mcp-session-id',
+  };
+
   final StreamableHttpTransportConfig config;
   final http.Client _httpClient;
   final HttpOAuthClient? _oauthClient;
   final OAuthTokenManager? _tokenManager;
-
   final StreamController<dynamic> _messageController =
-      StreamController.broadcast();
+      StreamController<dynamic>.broadcast();
   final Completer<void> _closeCompleter = Completer<void>();
+  final Semaphore _requestSemaphore;
+  final Set<_PostRequestTask> _postTasks = {};
+  final Completer<void> _closedSignal = Completer<void>();
 
   bool _isClosed = false;
-  final Semaphore _requestSemaphore;
   String _baseUrl;
+  Duration _requestTimeout;
   String? _sessionId;
   String? _protocolVersion;
-  final Map<int, Completer<dynamic>> _pendingRequests = {};
-  EventSource? _eventSource;
-  StreamSubscription? _sseSubscription;
-  bool _getStreamActive = false;
+  EventSource? _getEventSource;
+  Future<void>? _getTask;
+  String? _getLastEventId;
+  Duration _getSseRetry = _defaultReconnectDelay;
 
   StreamableHttpClientTransport._({
     required this.config,
@@ -86,16 +83,9 @@ class StreamableHttpClientTransport implements ClientTransport {
        _oauthClient = oauthClient,
        _tokenManager = tokenManager,
        _baseUrl = config.baseUrl,
+       _requestTimeout = config.timeout,
        _requestSemaphore = Semaphore(config.maxConcurrentRequests);
 
-  /// Spec 2025-06-18+: record the negotiated MCP protocol version so
-  /// every post-handshake HTTP request carries
-  /// `MCP-Protocol-Version: <version>`.
-  void setProtocolVersion(String version) {
-    _protocolVersion = version;
-  }
-
-  /// Create a new Streamable HTTP transport
   static Future<StreamableHttpClientTransport> create({
     required String baseUrl,
     OAuthConfig? oauthConfig,
@@ -104,7 +94,7 @@ class StreamableHttpClientTransport implements ClientTransport {
     int? maxConcurrentRequests,
     bool? useHttp2,
     http.Client? httpClient,
-    bool terminateOnClose = true, // Default: true for backward compatibility
+    bool terminateOnClose = true,
   }) async {
     final config = StreamableHttpTransportConfig(
       baseUrl: baseUrl,
@@ -115,22 +105,13 @@ class StreamableHttpClientTransport implements ClientTransport {
       useHttp2: useHttp2 ?? true,
       terminateOnClose: terminateOnClose,
     );
-
-    final client =
-        httpClient ??
-        (config.useHttp2
-            ? http.Client()
-            : // Use default client
-            http.Client());
-
-    HttpOAuthClient? oauthClient;
-    OAuthTokenManager? tokenManager;
-
-    if (oauthConfig != null) {
-      oauthClient = HttpOAuthClient(config: oauthConfig, httpClient: client);
-      tokenManager = OAuthTokenManager(oauthClient);
-    }
-
+    final client = httpClient ?? http.Client();
+    final oauthClient =
+        oauthConfig == null
+            ? null
+            : HttpOAuthClient(config: oauthConfig, httpClient: client);
+    final tokenManager =
+        oauthClient == null ? null : OAuthTokenManager(oauthClient);
     return StreamableHttpClientTransport._(
       config: config,
       httpClient: client,
@@ -145,407 +126,493 @@ class StreamableHttpClientTransport implements ClientTransport {
   @override
   Future<void> get onClose => _closeCompleter.future;
 
-  /// Get the base URL
   String get baseUrl => _baseUrl;
-
-  /// Get the maximum concurrent requests
   int get maxConcurrentRequests => config.maxConcurrentRequests;
-
-  /// Check if HTTP/2 is enabled
   bool get useHttp2 => config.useHttp2;
-
-  /// Get the OAuth configuration
   OAuthConfig? get oauthConfig => config.oauthConfig;
-
-  /// Get the current session ID
   String? get sessionId => _sessionId;
 
-  /// Send a JSON-RPC message
-  @override
-  void send(dynamic message) {
-    if (_isClosed) return;
+  void setRequestTimeout(Duration timeout) {
+    if (timeout > Duration.zero) _requestTimeout = timeout;
+  }
 
-    // Check if this is the initialized notification
-    if (message is Map &&
-        message['method'] == 'notifications/initialized' &&
-        !_getStreamActive) {
+  void setProtocolVersion(String version) {
+    _protocolVersion = version;
+  }
+
+  @override
+  TransportSendOperation send(dynamic message) {
+    if (_isClosed) {
+      return TransportSendOperation(
+        Future<void>.error(McpError('Transport is closed')),
+      );
+    }
+
+    if (message is Map && message['method'] == 'notifications/initialized') {
       _startGetStream();
     }
 
-    _sendRequest(message).catchError((error) {
-      _messageController.addError(error);
+    final requestId =
+        message is Map && message['method'] != null && message['id'] is int
+            ? message['id'] as int
+            : null;
+    final task = _PostRequestTask(requestId);
+    _postTasks.add(task);
+    final done = _sendRequest(message, task).whenComplete(() {
+      _postTasks.remove(task);
     });
+    return TransportSendOperation(done, cancel: task.cancel);
   }
 
-  /// Send HTTP request with proper authentication
-  Future<void> _sendRequest(dynamic message) async {
-    // Check if transport is closed before sending
-    if (_isClosed) {
-      _logger.debug('Transport closed, ignoring request');
-      return;
-    }
-
+  Future<void> _sendRequest(dynamic message, _PostRequestTask task) async {
     await _requestSemaphore.acquire();
-
     try {
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-        // StreamableHTTP standard requires accepting both content types
-        'Accept': 'application/json, text/event-stream',
-        ...config.headers,
-      };
+      if (_isClosed || task.cancelled) return;
+      final sessionIdPresent = _sessionId?.isNotEmpty == true;
+      final request = http.AbortableRequest(
+        'POST',
+        Uri.parse(_baseUrl),
+        abortTrigger: task.cancelledFuture,
+      )..body = jsonEncode(message);
+      request.headers.addAll(
+        await _requestHeaders(
+          accept: 'application/json, text/event-stream',
+          contentType: 'application/json',
+          includeSession: true,
+        ),
+      );
 
-      // Add session ID if available
-      if (_sessionId != null) {
-        headers['MCP-Session-Id'] = _sessionId!;
+      final response = await _sendWithRedirects(request);
+      _captureSessionId(response.headers['mcp-session-id']);
+
+      if (response.statusCode == 202) {
+        await _drainResponse(response);
+        return;
+      }
+      if (response.statusCode >= 400) {
+        throw await _httpError(
+          response,
+          sessionIdPresent: sessionIdPresent,
+          canRetryRequest: response.statusCode == 404 && sessionIdPresent,
+        );
       }
 
-      // Spec 2025-06-18+: every post-handshake HTTP request MUST carry
-      // the negotiated protocol version. Older revisions ignore this
-      // header. Set via [setProtocolVersion] after initialize.
-      if (_protocolVersion != null &&
-          McpProtocol.requiresProtocolHeader(_protocolVersion!)) {
-        headers['MCP-Protocol-Version'] = _protocolVersion!;
+      final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+      if (contentType.startsWith('application/json')) {
+        final body = await response.stream.bytesToString();
+        if (body.isNotEmpty) _dispatchJson(body, task);
+        return;
       }
-
-      // Add OAuth token if available
-      if (_tokenManager != null) {
+      if (contentType.startsWith('text/event-stream')) {
+        bool received;
         try {
-          final token = await _tokenManager.getAccessToken();
-          headers['Authorization'] = 'Bearer $token';
-        } on OAuthError catch (e) {
-          if (e.error == 'no_valid_token') {
-            // Send 401 to trigger OAuth flow
-            _messageController.add({
-              'jsonrpc': '2.0',
-              'error': {
-                'code': -32001,
-                'message': 'Authentication required',
-                'data': {'oauth_error': e.toJson()},
-              },
-              if (message is Map && message['id'] != null) 'id': message['id'],
-            });
+          received = await _consumeSse(response.stream, task);
+        } catch (_) {
+          if (_canResumePost(task)) {
+            await _resumePost(task);
             return;
           }
           rethrow;
         }
-      }
-
-      final body = jsonEncode(message);
-      final uri = Uri.parse(_baseUrl);
-
-      // Store request ID if this is a request
-      int? requestId;
-      if (message is Map && message['id'] != null) {
-        requestId = message['id'] as int;
-        _pendingRequests[requestId] = Completer<dynamic>();
-      }
-
-      // Build a streamed request so SSE responses can be read live.
-      //
-      // FastMCP routes server-initiated requests
-      // (`sampling/createMessage`, `elicitation/create`) on the in-flight
-      // POST's SSE response stream — not the standalone GET stream — and
-      // those requests fire mid-tool-call. Buffering the body via
-      // `httpClient.post(...).bodyBytes` deadlocks: the server holds the
-      // SSE response open waiting for our reply to a server-initiated
-      // request, but we can't see the request until the stream closes.
-      // Streaming the response while it's open lets us dispatch each SSE
-      // event the moment it arrives.
-      final request = http.Request('POST', uri)..body = body;
-      headers.forEach((k, v) => request.headers[k] = v);
-
-      final response = await _sendWithRedirects(request);
-
-      // Extract session ID from response headers
-      final newSessionId = response.headers['mcp-session-id'];
-      if (newSessionId != null && newSessionId != _sessionId) {
-        _sessionId = newSessionId;
-        _logger.debug('Received session ID: $_sessionId');
-      }
-
-      if (response.statusCode == 202) {
-        // 202 Accepted - no immediate response expected
-        _logger.debug('Received 202 Accepted');
-        // Drain any stray bytes so the connection can be released.
-        await response.stream.drain<void>();
-        return;
-      }
-
-      if (response.statusCode == 404) {
-        // Session terminated
-        if (requestId != null) {
-          _messageController.add({
-            'jsonrpc': '2.0',
-            'id': requestId,
-            'error': {'code': 32600, 'message': 'Session terminated'},
-          });
-        }
-        await response.stream.drain<void>();
-        return;
-      }
-
-      if (response.statusCode == 401) {
-        // Authentication required - trigger OAuth flow
-        _messageController.add({
-          'jsonrpc': '2.0',
-          'error': {
-            'code': -32001,
-            'message': 'Authentication required',
-            'data': {
-              'www_authenticate': response.headers['www-authenticate'],
-              'oauth_config_hint': config.oauthConfig?.toJson(),
-            },
-          },
-          if (requestId != null) 'id': requestId,
-        });
-        await response.stream.drain<void>();
-        return;
-      }
-
-      if (response.statusCode >= 400) {
-        // Buffer the error body for the exception message.
-        final errorBody = await response.stream.bytesToString();
-        throw McpError(
-          'HTTP ${response.statusCode}: ${response.reasonPhrase}'
-          '${errorBody.isEmpty ? '' : ' — $errorBody'}',
-        );
-      }
-
-      // Check content type
-      final contentType = response.headers['content-type']?.toLowerCase() ?? '';
-
-      if (contentType.startsWith('application/json')) {
-        // Direct JSON response - read the entire body, decode as UTF-8.
-        final responseBody = await response.stream.bytesToString();
-        if (responseBody.isNotEmpty) {
-          final responseMessage = jsonDecode(responseBody);
-          _messageController.add(responseMessage);
-        }
-      } else if (contentType.startsWith('text/event-stream')) {
-        // SSE response — process each event as it arrives so
-        // server-initiated requests embedded in this stream don't have
-        // to wait for the whole tool call to finish.
-        await _handleStreamedSseResponse(response, requestId);
-      } else {
-        _logger.warning('Unexpected content type: $contentType');
-        // Try to parse as JSON anyway - read full body
-        final responseBody = await response.stream.bytesToString();
-        if (responseBody.isNotEmpty) {
-          try {
-            final responseMessage = jsonDecode(responseBody);
-            _messageController.add(responseMessage);
-          } catch (e) {
-            _logger.error('Failed to parse response: $e');
+        if (task.requestId != null && !received && !task.cancelled) {
+          if (task.lastEventId == null) {
+            throw McpError(
+              'POST SSE ended before the final response; result is unknown',
+            );
           }
+          await _resumePost(task);
+        }
+        return;
+      }
+
+      final body = await response.stream.bytesToString();
+      if (body.isNotEmpty) {
+        try {
+          _dispatchJson(body, task);
+        } catch (_) {
+          throw McpError('Unexpected HTTP response content type: $contentType');
         }
       }
+    } on http.RequestAbortedException {
+      if (!task.cancelled) rethrow;
     } finally {
       _requestSemaphore.release();
     }
+  }
+
+  bool _canResumePost(_PostRequestTask task) =>
+      !_isClosed &&
+      !task.cancelled &&
+      !task.responseReceived &&
+      task.requestId != null &&
+      task.lastEventId != null;
+
+  Future<void> _resumePost(_PostRequestTask task) async {
+    while (!_isClosed && !task.cancelled && !task.responseReceived) {
+      await _waitForRetry(_boundedRetry(task.sseRetry), task.cancelledFuture);
+      if (_isClosed || task.cancelled) return;
+
+      final request = http.AbortableRequest(
+        'GET',
+        Uri.parse(_baseUrl),
+        abortTrigger: task.cancelledFuture,
+      );
+      request.headers.addAll(
+        await _requestHeaders(
+          accept: 'text/event-stream',
+          includeSession: true,
+          lastEventId: task.lastEventId,
+        ),
+      );
+
+      try {
+        final response = await _sendWithRedirects(request);
+        if (response.statusCode == 200) {
+          final received = await _consumeSse(response.stream, task);
+          if (received) return;
+          continue;
+        }
+
+        final error = await _httpError(
+          response,
+          sessionIdPresent: _sessionId?.isNotEmpty == true,
+          canRetryRequest: false,
+        );
+        if (_isRetryableStatus(error.statusCode)) {
+          await _waitForRetry(_httpRetryDelay(error), task.cancelledFuture);
+          continue;
+        }
+        throw error;
+      } on http.RequestAbortedException {
+        if (!task.cancelled) rethrow;
+      } on McpHttpError {
+        rethrow;
+      } catch (_) {
+        await _waitForRetry(_boundedRetry(task.sseRetry), task.cancelledFuture);
+      }
+    }
+  }
+
+  Future<bool> _consumeSse(
+    Stream<List<int>> byteStream,
+    _PostRequestTask task,
+  ) async {
+    final parser = SseParser();
+    await for (final chunk in byteStream.transform(utf8.decoder)) {
+      for (final event in parser.add(chunk)) {
+        if (_applyPostEvent(event, task)) return true;
+      }
+    }
+    for (final event in parser.close()) {
+      if (_applyPostEvent(event, task)) return true;
+    }
+    return task.responseReceived;
+  }
+
+  bool _applyPostEvent(SseEvent event, _PostRequestTask task) {
+    if (event.hasId) {
+      task.lastEventId =
+          event.id == null || event.id!.isEmpty ? null : event.id;
+    }
+    if (event.retry != null) task.sseRetry = event.retry!;
+    final data = event.data;
+    if (data == null || data == '[DONE]') return false;
+    try {
+      final decoded = jsonDecode(data);
+      _messageController.add(decoded);
+      if (_isResponseFor(decoded, task.requestId)) {
+        task.responseReceived = true;
+        return true;
+      }
+    } catch (_) {
+      _logger.debug('Failed to parse SSE data: $data');
+    }
+    return false;
+  }
+
+  void _dispatchJson(String body, _PostRequestTask task) {
+    final decoded = jsonDecode(body);
+    _messageController.add(decoded);
+    if (_isResponseFor(decoded, task.requestId)) {
+      task.responseReceived = true;
+    }
+  }
+
+  bool _isResponseFor(dynamic message, int? requestId) {
+    return requestId != null &&
+        message is Map &&
+        message['id'] == requestId &&
+        message['method'] == null &&
+        (message.containsKey('result') || message.containsKey('error'));
+  }
+
+  void _startGetStream() {
+    if (_isClosed || _sessionId == null || _getTask != null) return;
+    final task = _runGetStream();
+    _getTask = task;
+    unawaited(
+      task.whenComplete(() {
+        if (identical(_getTask, task)) _getTask = null;
+      }),
+    );
+  }
+
+  Future<void> _runGetStream() async {
+    while (!_isClosed && _sessionId != null) {
+      final done = Completer<void>();
+      final eventSource = EventSource();
+      _getEventSource = eventSource;
+      Object? streamError;
+      try {
+        await eventSource.connect(
+          _baseUrl,
+          headers: await _requestHeaders(
+            accept: 'text/event-stream',
+            includeSession: true,
+            lastEventId: _getLastEventId,
+          ),
+          onMessage: (message) {
+            if (!_messageController.isClosed) {
+              _messageController.add(message);
+            }
+          },
+          onEvent: (event) {
+            if (event.hasId) {
+              _getLastEventId =
+                  event.id == null || event.id!.isEmpty ? null : event.id;
+            }
+            if (event.retry != null) _getSseRetry = event.retry!;
+          },
+          onError: (error) {
+            streamError = error;
+            if (!done.isCompleted) done.complete();
+          },
+          onDone: () {
+            if (!done.isCompleted) done.complete();
+          },
+        );
+        await Future.any<void>([done.future, _closedSignal.future]);
+      } catch (error) {
+        streamError = error;
+      } finally {
+        if (identical(_getEventSource, eventSource)) {
+          _getEventSource = null;
+        }
+        eventSource.close();
+      }
+      if (_isClosed) return;
+
+      var delay = _boundedRetry(_getSseRetry);
+      final error = streamError;
+      if (error is McpHttpError) {
+        final backgroundError = McpHttpError(
+          statusCode: error.statusCode,
+          message: error.message,
+          retryAfter: error.retryAfter,
+          body: error.body,
+          sessionIdPresent: _sessionId?.isNotEmpty == true,
+          isBackgroundRequest: true,
+        );
+        if (!_messageController.isClosed) {
+          _messageController.addError(backgroundError);
+        }
+        if (backgroundError.statusCode == 404 &&
+            backgroundError.sessionIdPresent) {
+          _failTransport(backgroundError);
+          return;
+        }
+        if (backgroundError.statusCode == 401 ||
+            backgroundError.statusCode == 403) {
+          delay = _authenticationRetryDelay;
+        } else if (_isRetryableStatus(backgroundError.statusCode)) {
+          delay = _httpRetryDelay(backgroundError);
+        } else {
+          return;
+        }
+      }
+      await _waitForRetry(delay, _closedSignal.future);
+    }
+  }
+
+  Future<Map<String, String>> _requestHeaders({
+    required String accept,
+    String? contentType,
+    required bool includeSession,
+    String? lastEventId,
+  }) async {
+    final headers = <String, String>{};
+    for (final entry in config.headers.entries) {
+      if (!_reservedHeaders.contains(entry.key.toLowerCase())) {
+        headers[entry.key] = entry.value;
+      }
+    }
+    headers['Accept'] = accept;
+    if (contentType != null) headers['Content-Type'] = contentType;
+    if (includeSession && _sessionId?.isNotEmpty == true) {
+      headers['MCP-Session-Id'] = _sessionId!;
+    }
+    if (_protocolVersion != null &&
+        McpProtocol.requiresProtocolHeader(_protocolVersion!)) {
+      headers['MCP-Protocol-Version'] = _protocolVersion!;
+    }
+    if (lastEventId != null) headers['Last-Event-ID'] = lastEventId;
+    if (_tokenManager != null) {
+      headers['Authorization'] =
+          'Bearer ${await _tokenManager.getAccessToken()}';
+    }
+    return headers;
   }
 
   Future<http.StreamedResponse> _sendWithRedirects(
     http.Request request, {
     int redirectCount = 0,
   }) async {
-    final response = await _httpClient.send(request).timeout(config.timeout);
-    if (!_isPreserveMethodRedirect(response.statusCode)) {
+    final response = await _httpClient.send(request).timeout(_requestTimeout);
+    if (response.statusCode != 307 && response.statusCode != 308) {
       return response;
     }
-
     final location = response.headers['location'];
-    if (location == null || location.trim().isEmpty) {
-      return response;
-    }
+    if (location == null || location.trim().isEmpty) return response;
     if (redirectCount >= 5) {
-      await response.stream.drain<void>();
+      await _drainResponse(response);
       throw McpError('Too many HTTP redirects while connecting to MCP server');
     }
 
-    final currentUri = request.url;
-    final redirectedUri = currentUri.resolve(location);
-    await response.stream.drain<void>();
-
+    final redirectedUri = request.url.resolve(location);
+    if (!_isSameOrigin(request.url, redirectedUri)) {
+      await _drainResponse(response);
+      throw McpError(
+        'Refusing cross-origin or protocol-downgrade MCP redirect: '
+        '${request.url} -> $redirectedUri',
+      );
+    }
+    await _drainResponse(response);
     _baseUrl = redirectedUri.toString();
-    final redirectedRequest =
-        http.Request(request.method, redirectedUri)
-          ..bodyBytes = request.bodyBytes
-          ..followRedirects = request.followRedirects
-          ..maxRedirects = request.maxRedirects
-          ..persistentConnection = request.persistentConnection;
-    request.headers.forEach((key, value) {
-      redirectedRequest.headers[key] = value;
-    });
+    final redirected = http.AbortableRequest(
+      request.method,
+      redirectedUri,
+      abortTrigger:
+          request is http.AbortableRequest ? request.abortTrigger : null,
+    )..bodyBytes = request.bodyBytes;
+    redirected.headers.addAll(request.headers);
+    return _sendWithRedirects(redirected, redirectCount: redirectCount + 1);
+  }
 
-    return _sendWithRedirects(
-      redirectedRequest,
-      redirectCount: redirectCount + 1,
+  bool _isSameOrigin(Uri source, Uri target) =>
+      source.scheme.toLowerCase() == target.scheme.toLowerCase() &&
+      source.host.toLowerCase() == target.host.toLowerCase() &&
+      _effectivePort(source) == _effectivePort(target);
+
+  int _effectivePort(Uri uri) {
+    if (uri.hasPort) return uri.port;
+    return uri.scheme.toLowerCase() == 'https' ? 443 : 80;
+  }
+
+  Future<void> _drainResponse(http.StreamedResponse response) =>
+      response.stream.drain<void>().timeout(_requestTimeout);
+
+  Future<McpHttpError> _httpError(
+    http.StreamedResponse response, {
+    required bool sessionIdPresent,
+    required bool canRetryRequest,
+  }) async {
+    final body = await response.stream.bytesToString();
+    return McpHttpError(
+      statusCode: response.statusCode,
+      message:
+          'HTTP ${response.statusCode}: ${response.reasonPhrase}'
+          '${body.isEmpty ? '' : ' — $body'}',
+      retryAfter: McpHttpError.parseRetryAfter(response.headers['retry-after']),
+      body: body,
+      sessionIdPresent: sessionIdPresent,
+      canRetryRequest: canRetryRequest,
     );
   }
 
-  bool _isPreserveMethodRedirect(int statusCode) =>
-      statusCode == 307 || statusCode == 308;
+  bool _isRetryableStatus(int statusCode) =>
+      statusCode == 408 || statusCode == 429 || statusCode >= 500;
 
-  /// Handle a streamed SSE response from a POST request, dispatching
-  /// each event as it arrives. Required for cases where the server
-  /// embeds server-initiated requests (`sampling/createMessage`,
-  /// `elicitation/create`) in the response stream and waits for the
-  /// client's reply before producing the final tool result — buffering
-  /// the body would deadlock.
-  Future<void> _handleStreamedSseResponse(
-    http.StreamedResponse response,
-    int? requestId,
-  ) async {
-    _logger.debug('Handling streamed SSE response');
-    final lineStream = response.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
+  Duration _httpRetryDelay(McpHttpError error) =>
+      _boundedRetry(error.retryAfter ?? _defaultReconnectDelay);
 
-    await for (final line in lineStream) {
-      if (!line.startsWith('data:')) continue;
-      final data = line.substring(5).trim();
-      if (data.isEmpty || data == '[DONE]') continue;
-      try {
-        final decoded = jsonDecode(data);
-        _messageController.add(decoded);
-      } catch (e) {
-        _logger.debug('Failed to parse SSE data: $data');
-      }
+  Duration _boundedRetry(Duration delay) =>
+      delay < _minimumReconnectDelay ? _minimumReconnectDelay : delay;
+
+  Future<void> _waitForRetry(Duration delay, Future<void> cancellation) async {
+    await Future.any<void>([Future<void>.delayed(delay), cancellation]);
+  }
+
+  void _captureSessionId(String? value) {
+    if (value != null && value.trim().isNotEmpty) {
+      _sessionId = value;
     }
   }
 
-  /// Start GET stream for server-initiated messages
-  void _startGetStream() {
-    if (_getStreamActive || _sessionId == null) return;
-
-    _getStreamActive = true;
-    _logger.debug('Starting GET stream for session: $_sessionId');
-
-    _establishGetStream().catchError((error) {
-      _logger.error('GET stream error: $error');
-      _getStreamActive = false;
-    });
+  void _failTransport(Object error) {
+    if (_isClosed) return;
+    _isClosed = true;
+    if (!_closedSignal.isCompleted) _closedSignal.complete();
+    for (final task in _postTasks.toList()) {
+      task.cancel();
+    }
+    _getEventSource?.close();
+    _httpClient.close();
+    _oauthClient?.close();
+    _tokenManager?.dispose();
+    if (!_messageController.isClosed) _messageController.close();
+    if (!_closeCompleter.isCompleted) _closeCompleter.completeError(error);
   }
 
-  /// Establish SSE GET stream
-  Future<void> _establishGetStream() async {
+  Future<void> terminateSession() async {
+    if (_sessionId?.isNotEmpty != true || _isClosed) return;
+    final request = http.Request('DELETE', Uri.parse(_baseUrl));
+    request.headers.addAll(
+      await _requestHeaders(
+        accept: 'application/json, text/event-stream',
+        includeSession: true,
+      ),
+    );
     try {
-      final uri = Uri.parse(_baseUrl);
-
-      // Set up headers
-      final headers = <String, String>{
-        'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        ...config.headers,
-      };
-
-      if (_sessionId != null) {
-        headers['MCP-Session-Id'] = _sessionId!;
+      final response = await _sendWithRedirects(request);
+      await _drainResponse(response);
+      if (response.statusCode != 200 &&
+          response.statusCode != 204 &&
+          response.statusCode != 405) {
+        _logger.warning('Session termination failed: ${response.statusCode}');
       }
-
-      // Add OAuth token if available
-      if (_tokenManager != null) {
-        try {
-          final token = await _tokenManager.getAccessToken();
-          headers['Authorization'] = 'Bearer $token';
-        } catch (e) {
-          _logger.debug('Failed to add OAuth token to GET stream: $e');
-        }
-      }
-
-      // Create EventSource instance
-      _eventSource = EventSource();
-
-      // Connect to SSE endpoint
-      await _eventSource!.connect(
-        uri.toString(),
-        headers: headers,
-        onOpen: (_) {
-          _logger.debug('GET SSE connection established');
-        },
-        onMessage: (data) {
-          if (data is Map) {
-            _logger.debug('Received SSE message: $data');
-            _messageController.add(data);
-          } else if (data is String) {
-            try {
-              final message = jsonDecode(data);
-              _logger.debug('Received SSE message: $message');
-              _messageController.add(message);
-            } catch (e) {
-              _logger.debug('Failed to parse SSE message: $data');
-            }
-          }
-        },
-        onError: (error) {
-          _logger.error('GET stream error: $error');
-          _getStreamActive = false;
-        },
-      );
-    } catch (e) {
-      _logger.error('Failed to establish GET stream: $e');
-      _getStreamActive = false;
-      rethrow;
+    } catch (error) {
+      _logger.warning('Session termination failed: $error');
     }
   }
 
   @override
   void close() {
     if (_isClosed) return;
+    final termination =
+        config.terminateOnClose && _sessionId != null
+            ? terminateSession()
+            : null;
     _isClosed = true;
-
-    // Terminate session if configured
-    if (config.terminateOnClose && _sessionId != null) {
-      _terminateSession().catchError((error) {
-        _logger.debug('Failed to terminate session: $error');
-      });
+    if (!_closedSignal.isCompleted) _closedSignal.complete();
+    for (final task in _postTasks.toList()) {
+      task.cancel();
     }
+    _getEventSource?.close();
+    if (termination == null) {
+      _closeHttpResources();
+    } else {
+      unawaited(termination.whenComplete(_closeHttpResources));
+    }
+    if (!_messageController.isClosed) _messageController.close();
+    if (!_closeCompleter.isCompleted) _closeCompleter.complete();
+  }
 
-    // Close GET stream
-    _sseSubscription?.cancel();
-    _eventSource?.close();
-
-    // Clear pending requests without completing them with error
-    // to avoid unhandled exceptions during shutdown
-    _pendingRequests.clear();
-
-    _messageController.close();
+  void _closeHttpResources() {
     _httpClient.close();
     _oauthClient?.close();
     _tokenManager?.dispose();
-
-    if (!_closeCompleter.isCompleted) {
-      _closeCompleter.complete();
-    }
   }
 
-  /// Terminate the session
-  Future<void> _terminateSession() async {
-    if (_sessionId == null) return;
-
-    try {
-      final headers = <String, String>{
-        'MCP-Session-Id': _sessionId!,
-        ...config.headers,
-      };
-
-      final uri = Uri.parse(_baseUrl);
-      final response = await _httpClient
-          .delete(uri, headers: headers)
-          .timeout(Duration(seconds: 5));
-
-      if (response.statusCode == 405) {
-        _logger.debug('Server does not allow session termination');
-      } else if (response.statusCode != 200 && response.statusCode != 204) {
-        _logger.warning('Session termination failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      _logger.warning('Session termination failed: $e');
-    }
-  }
-
-  /// Initiate OAuth authentication flow
   Future<OAuthToken> authenticateWithOAuth({
     required List<String> scopes,
     String? state,
@@ -553,31 +620,40 @@ class StreamableHttpClientTransport implements ClientTransport {
     if (_oauthClient == null) {
       throw StateError('OAuth not configured for this transport');
     }
-
     final authUrl = await _oauthClient.getAuthorizationUrl(
       scopes: scopes,
       state: state,
     );
-
-    // In a real implementation, you would:
-    // 1. Open the auth URL in a browser
-    // 2. Handle the redirect
-    // 3. Extract the authorization code
-    // 4. Exchange it for a token
-
     throw UnimplementedError(
       'OAuth flow requires platform-specific implementation. '
       'Authorization URL: $authUrl',
     );
   }
 
-  /// Set OAuth token manually
   void setOAuthToken(OAuthToken token) {
     _tokenManager?.setToken(token);
   }
 }
 
-/// Semaphore for controlling concurrent requests
+final class _PostRequestTask {
+  final int? requestId;
+  final Completer<void> _cancelled = Completer<void>();
+  bool cancelled = false;
+  bool responseReceived = false;
+  String? lastEventId;
+  Duration sseRetry = const Duration(seconds: 1);
+
+  _PostRequestTask(this.requestId);
+
+  Future<void> get cancelledFuture => _cancelled.future;
+
+  void cancel() {
+    if (cancelled) return;
+    cancelled = true;
+    if (!_cancelled.isCompleted) _cancelled.complete();
+  }
+}
+
 class Semaphore {
   final int maxCount;
   int _currentCount;
@@ -590,7 +666,6 @@ class Semaphore {
       _currentCount--;
       return;
     }
-
     final completer = Completer<void>();
     _waitQueue.add(completer);
     return completer.future;
@@ -598,8 +673,7 @@ class Semaphore {
 
   void release() {
     if (_waitQueue.isNotEmpty) {
-      final completer = _waitQueue.removeFirst();
-      completer.complete();
+      _waitQueue.removeFirst().complete();
     } else {
       _currentCount++;
     }

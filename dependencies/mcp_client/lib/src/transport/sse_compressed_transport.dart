@@ -192,7 +192,15 @@ class SseCompressedClientTransport implements ClientTransport {
   Future<void> get onClose => _closeCompleter.future;
 
   @override
-  void send(dynamic message) async {
+  TransportSendOperation send(dynamic message) {
+    final pending = _PendingCompressedPost();
+    return TransportSendOperation(
+      _send(message, pending),
+      cancel: pending.cancel,
+    );
+  }
+
+  Future<void> _send(dynamic message, _PendingCompressedPost pending) async {
     if (_isClosed) {
       _logger.debug('Attempted to send on closed compressed transport');
       return;
@@ -204,7 +212,11 @@ class SseCompressedClientTransport implements ClientTransport {
       );
     }
 
+    final client = HttpClient();
+    HttpClientRequest? request;
+    pending.client = client;
     try {
+      if (pending.cancelled) return;
       final jsonMessage = jsonEncode(message);
       final shouldCompress = jsonMessage.length >= _compressionThreshold;
 
@@ -213,15 +225,19 @@ class SseCompressedClientTransport implements ClientTransport {
       );
 
       final url = Uri.parse(_messageEndpoint!);
-      final client = HttpClient();
-      final request = await client.postUrl(url);
+      request = await client.postUrl(url);
+      pending.request = request;
+      if (pending.cancelled) {
+        request.abort();
+        return;
+      }
 
       // Set content type
       request.headers.contentType = ContentType.json;
 
       // Add base headers
       _baseHeaders.forEach((name, value) {
-        request.headers.add(name, value);
+        request!.headers.add(name, value);
       });
 
       // Apply compression if needed and supported
@@ -254,12 +270,14 @@ class SseCompressedClientTransport implements ClientTransport {
           'Error sending compressed message: ${response.statusCode}',
         );
       }
-
-      client.close();
       _logger.debug('Compressed message sent successfully');
     } catch (e) {
       _logger.debug('Error sending compressed message: $e');
       rethrow;
+    } finally {
+      if (identical(pending.request, request)) pending.request = null;
+      if (identical(pending.client, client)) pending.client = null;
+      client.close(force: true);
     }
   }
 
@@ -344,6 +362,19 @@ class SseCompressedClientTransport implements ClientTransport {
     if (!_closeCompleter.isCompleted) {
       _closeCompleter.complete();
     }
+  }
+}
+
+final class _PendingCompressedPost {
+  bool cancelled = false;
+  HttpClient? client;
+  HttpClientRequest? request;
+
+  void cancel() {
+    if (cancelled) return;
+    cancelled = true;
+    request?.abort();
+    client?.close(force: true);
   }
 }
 

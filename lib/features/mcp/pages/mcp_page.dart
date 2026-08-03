@@ -120,8 +120,10 @@ class McpPage extends StatelessWidget {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             final mcpProvider = ctx.read<McpProvider>();
-                            await mcpProvider.reconnect(serverId);
-                            if (ctx.mounted) {
+                            final connected = await mcpProvider.reconnect(
+                              serverId,
+                            );
+                            if (connected && ctx.mounted) {
                               Navigator.of(ctx).pop();
                             }
                           },

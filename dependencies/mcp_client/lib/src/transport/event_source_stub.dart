@@ -1,3 +1,5 @@
+import 'sse_parser.dart';
+
 /// Abstract EventSource interface for cross-platform SSE support
 abstract class EventSource {
   /// Whether the connection is active
@@ -14,6 +16,8 @@ abstract class EventSource {
     Function(dynamic)? onMessage,
     Function(dynamic)? onError,
     Function(String?)? onEndpoint,
+    Function(SseEvent)? onEvent,
+    Function()? onDone,
   });
 
   /// Close the connection
