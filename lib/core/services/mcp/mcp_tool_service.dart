@@ -6,6 +6,32 @@ import '../chat/chat_service.dart';
 import '../../providers/assistant_provider.dart';
 import '../../../utils/app_directories.dart';
 
+class _McpToolRoute {
+  const _McpToolRoute({
+    required this.server,
+    required this.tool,
+    required this.exposedName,
+  });
+
+  final McpServerConfig server;
+  final McpToolConfig tool;
+  final String exposedName;
+}
+
+class McpToolRouteSnapshot {
+  McpToolRouteSnapshot._(List<_McpToolRoute> routes)
+    : _routes = List.unmodifiable(routes);
+
+  final List<_McpToolRoute> _routes;
+
+  _McpToolRoute? _find(String exposedName) {
+    for (final route in _routes) {
+      if (route.exposedName == exposedName) return route;
+    }
+    return null;
+  }
+}
+
 class McpToolService extends ChangeNotifier {
   McpToolService();
 
@@ -15,19 +41,23 @@ class McpToolService extends ChangeNotifier {
     String conversationId,
   ) {
     final selected = chat.getConversationMcpServers(conversationId).toSet();
-    return mcpProvider.getEnabledToolsForServers(selected);
+    return _exposedTools(mcpProvider, selected);
   }
 
   List<McpToolConfig> listAvailableToolsForAssistant(
     McpProvider mcpProvider,
     AssistantProvider assistants,
-    String? assistantId,
-  ) {
+    String? assistantId, {
+    McpToolRouteSnapshot? routeSnapshot,
+  }) {
+    if (routeSnapshot != null) {
+      return _exposedToolsForRoutes(routeSnapshot._routes);
+    }
     final a = (assistantId != null)
         ? assistants.getById(assistantId)
         : assistants.currentAssistant;
     final selected = (a?.mcpServerIds ?? const <String>[]).toSet();
-    return mcpProvider.getEnabledToolsForServers(selected);
+    return _exposedTools(mcpProvider, selected);
   }
 
   Future<mcp.CallToolResult?> callToolForConversation(
@@ -38,18 +68,11 @@ class McpToolService extends ChangeNotifier {
     Map<String, dynamic> arguments = const {},
   }) async {
     final selected = chat.getConversationMcpServers(conversationId).toSet();
-    // debugPrint('[MCP/Call/Select] convo=$conversationId tool=$toolName selectedServers=${selected.join(',')}');
     if (selected.isEmpty) return null;
 
-    // Find a server that has this tool enabled
-    for (final s in _routingServers(mcpProvider, selected)) {
-      final has = s.tools.any((t) => t.enabled && t.name == toolName);
-      if (has) {
-        // debugPrint('[MCP/Call/Select] using server=${s.id} name=${s.name} transport=${s.transport.name}');
-        return await mcpProvider.callTool(s.id, toolName, arguments);
-      }
-    }
-    return null;
+    final route = _findRoute(mcpProvider, selected, toolName);
+    if (route == null) return null;
+    return mcpProvider.callTool(route.server.id, route.tool.name, arguments);
   }
 
   // Convenience: call tool and flatten result contents to plain text
@@ -62,27 +85,23 @@ class McpToolService extends ChangeNotifier {
   }) async {
     // Attempt call via selected server
     final selected = chat.getConversationMcpServers(conversationId).toSet();
-    mcp.CallToolResult? res;
-    McpServerConfig? usedServer;
-    for (final s in _routingServers(mcpProvider, selected)) {
-      final has = s.tools.any((t) => t.enabled && t.name == toolName);
-      if (!has) continue;
-      usedServer = s;
-      res = await mcpProvider.callTool(s.id, toolName, arguments);
-      break;
-    }
+    final route = _findRoute(mcpProvider, selected, toolName);
+    final res = route == null
+        ? null
+        : await mcpProvider.callTool(
+            route.server.id,
+            route.tool.name,
+            arguments,
+          );
     if (res == null) {
-      if (usedServer != null) {
-        final errMsg = mcpProvider.errorFor(usedServer.id) ?? 'Unknown error';
-        final schema = usedServer.tools
-            .firstWhere((t) => t.name == toolName)
-            .schema;
+      if (route != null) {
+        final errMsg = mcpProvider.errorFor(route.server.id) ?? 'Unknown error';
         return _renderToolErrorForModel(
-          serverName: usedServer.name,
+          serverName: route.server.name,
           toolName: toolName,
           arguments: arguments,
           errorMessage: errMsg,
-          schema: schema,
+          schema: route.tool.schema,
         );
       }
       return '';
@@ -162,6 +181,7 @@ class McpToolService extends ChangeNotifier {
     required String? assistantId,
     required String toolName,
     Map<String, dynamic> arguments = const {},
+    McpToolRouteSnapshot? routeSnapshot,
   }) async {
     // try servers selected for the assistant
     final a = (assistantId != null)
@@ -170,20 +190,31 @@ class McpToolService extends ChangeNotifier {
     final selected = (a?.mcpServerIds ?? const <String>[]).toSet();
     // debugPrint('[MCP/Call/Select] assistant=${assistantId ?? a?.id ?? '(current)'} tool=$toolName selectedServers=${selected.join(',')}');
     if (selected.isEmpty) return '';
-    for (final s in _routingServers(mcpProvider, selected)) {
-      final has = s.tools.any((t) => t.enabled && t.name == toolName);
+    final routes = routeSnapshot?._routes ?? _toolRoutes(mcpProvider, selected);
+    for (final publishedRoute in routes) {
+      final has = publishedRoute.exposedName == toolName;
       if (has) {
+        final route = _currentRouteForIdentity(
+          mcpProvider,
+          selected,
+          publishedRoute,
+        );
+        if (route == null) return '';
+        final s = route.server;
         // debugPrint('[MCP/Call/Select] using server=${s.id} name=${s.name} transport=${s.transport.name}');
-        final res = await mcpProvider.callTool(s.id, toolName, arguments);
+        final res = await mcpProvider.callTool(
+          s.id,
+          route.tool.name,
+          arguments,
+        );
         if (res == null) {
           final errMsg = mcpProvider.errorFor(s.id) ?? 'Unknown error';
-          final schema = s.tools.firstWhere((t) => t.name == toolName).schema;
           return _renderToolErrorForModel(
             serverName: s.name,
             toolName: toolName,
             arguments: arguments,
             errorMessage: errMsg,
-            schema: schema,
+            schema: route.tool.schema,
           );
         }
         final buf = StringBuffer();
@@ -253,24 +284,171 @@ class McpToolService extends ChangeNotifier {
     return '';
   }
 
-  Iterable<McpServerConfig> _routingServers(
+  bool toolNeedsApprovalForAssistant(
+    McpProvider mcpProvider,
+    AssistantProvider assistants, {
+    required String? assistantId,
+    required String toolName,
+    McpToolRouteSnapshot? routeSnapshot,
+  }) {
+    final assistant = assistantId != null
+        ? assistants.getById(assistantId)
+        : assistants.currentAssistant;
+    final selected = (assistant?.mcpServerIds ?? const <String>[]).toSet();
+    final publishedRoute = routeSnapshot != null
+        ? routeSnapshot._find(toolName)
+        : _findRoute(mcpProvider, selected, toolName);
+    if (publishedRoute == null) return false;
+    final route = _currentRouteForIdentity(
+      mcpProvider,
+      selected,
+      publishedRoute,
+    );
+    return route?.tool.needsApproval ?? true;
+  }
+
+  McpToolRouteSnapshot captureRoutesForAssistant(
+    McpProvider mcpProvider,
+    AssistantProvider assistants, {
+    required String? assistantId,
+  }) {
+    final assistant = assistantId != null
+        ? assistants.getById(assistantId)
+        : assistants.currentAssistant;
+    final selected = (assistant?.mcpServerIds ?? const <String>[]).toSet();
+    return McpToolRouteSnapshot._(_toolRoutes(mcpProvider, selected));
+  }
+
+  List<McpToolConfig> _exposedTools(
     McpProvider provider,
     Set<String> selected,
-  ) sync* {
+  ) {
+    return _exposedToolsForRoutes(_toolRoutes(provider, selected));
+  }
+
+  List<McpToolConfig> _exposedToolsForRoutes(Iterable<_McpToolRoute> routes) {
+    return [
+      for (final route in routes) route.tool.copyWith(name: route.exposedName),
+    ];
+  }
+
+  _McpToolRoute? _findRoute(
+    McpProvider provider,
+    Set<String> selected,
+    String exposedName,
+  ) {
+    for (final route in _toolRoutes(provider, selected)) {
+      if (route.exposedName == exposedName) return route;
+    }
+    return null;
+  }
+
+  _McpToolRoute? _currentRouteForIdentity(
+    McpProvider provider,
+    Set<String> selected,
+    _McpToolRoute publishedRoute,
+  ) {
     for (final server in provider.servers) {
-      if (server.enabled &&
-          selected.contains(server.id) &&
-          provider.statusFor(server.id) == McpStatus.connected) {
-        yield server;
+      if (server.id != publishedRoute.server.id ||
+          !server.enabled ||
+          !selected.contains(server.id)) {
+        continue;
+      }
+      for (final tool in server.tools) {
+        if (tool.name == publishedRoute.tool.name && tool.enabled) {
+          return _McpToolRoute(
+            server: server,
+            tool: tool,
+            exposedName: publishedRoute.exposedName,
+          );
+        }
       }
     }
+    return null;
+  }
+
+  List<_McpToolRoute> _toolRoutes(McpProvider provider, Set<String> selected) {
+    final entries = <({McpServerConfig server, McpToolConfig tool})>[];
     for (final server in provider.servers) {
-      if (server.enabled &&
-          selected.contains(server.id) &&
-          provider.statusFor(server.id) != McpStatus.connected) {
-        yield server;
+      if (!server.enabled || !selected.contains(server.id)) continue;
+      for (final tool in server.tools.where((tool) => tool.enabled)) {
+        entries.add((server: server, tool: tool));
       }
     }
+
+    final originalNameCounts = <String, int>{};
+    for (final entry in entries) {
+      originalNameCounts.update(
+        entry.tool.name,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+    }
+    final usedNames = <String>{
+      for (final entry in entries)
+        if (originalNameCounts[entry.tool.name] == 1) entry.tool.name,
+    };
+    final routes = <_McpToolRoute>[];
+    for (final entry in entries) {
+      final duplicated = originalNameCounts[entry.tool.name]! > 1;
+      var exposedName = duplicated
+          ? _qualifiedToolName(entry.server.name, entry.tool.name)
+          : entry.tool.name;
+      if (duplicated && usedNames.contains(exposedName)) {
+        exposedName = _appendToolNameSuffix(
+          exposedName,
+          _serverIdSuffix(entry.server.id),
+        );
+      }
+      var uniqueName = exposedName;
+      var counter = 2;
+      while (duplicated && usedNames.contains(uniqueName)) {
+        uniqueName = _appendToolNameSuffix(exposedName, counter.toString());
+        counter++;
+      }
+      usedNames.add(uniqueName);
+      routes.add(
+        _McpToolRoute(
+          server: entry.server,
+          tool: entry.tool,
+          exposedName: uniqueName,
+        ),
+      );
+    }
+    return routes;
+  }
+
+  String _qualifiedToolName(String serverName, String toolName) {
+    final server = _sanitizeToolNamePart(serverName, fallback: 'mcp');
+    final tool = _sanitizeToolNamePart(toolName, fallback: 'tool');
+    var name = '${server}__$tool';
+    if (!RegExp(r'^[a-zA-Z_]').hasMatch(name)) name = 'mcp_$name';
+    return _limitToolName(name);
+  }
+
+  String _sanitizeToolNamePart(String value, {required String fallback}) {
+    var sanitized = value.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    sanitized = sanitized.replaceAll(RegExp(r'^-+'), '');
+    sanitized = sanitized.replaceAll(RegExp(r'[_-]+$'), '');
+    return sanitized.isEmpty ? fallback : sanitized;
+  }
+
+  String _serverIdSuffix(String serverId) {
+    final sanitized = _sanitizeToolNamePart(serverId, fallback: 'server');
+    return sanitized.length > 8 ? sanitized.substring(0, 8) : sanitized;
+  }
+
+  String _appendToolNameSuffix(String name, String suffix) {
+    final separatorAndSuffix = '_$suffix';
+    final maxBaseLength = 64 - separatorAndSuffix.length;
+    final base = name.length > maxBaseLength
+        ? name.substring(0, maxBaseLength)
+        : name;
+    return '$base$separatorAndSuffix';
+  }
+
+  String _limitToolName(String name) {
+    return name.length > 64 ? name.substring(0, 64) : name;
   }
 
   String _renderToolErrorForModel({

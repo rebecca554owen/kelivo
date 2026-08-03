@@ -201,12 +201,16 @@ class MessageGenerationService {
     messageBuilderService.stripInternalRevisionIds(apiMessages);
 
     // Prepare tools
+    final mcpRouteSnapshot = generationController.captureMcpToolRoutes(
+      assistant,
+    );
     final toolDefs = generationController.buildToolDefinitions(
       settings,
       assistant,
       providerKey,
       modelId,
       hasBuiltInSearch,
+      mcpRouteSnapshot: mcpRouteSnapshot,
     );
     final onToolCall = toolDefs.isNotEmpty
         ? generationController.buildToolCallHandler(
@@ -215,6 +219,7 @@ class MessageGenerationService {
             approvalService: approvalService,
             askUserService: askUserService,
             conversationId: currentConversation?.id,
+            mcpRouteSnapshot: mcpRouteSnapshot,
           )
         : null;
 
