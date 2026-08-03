@@ -296,6 +296,52 @@ void main() {
   );
 
   test(
+    'disabling returns before remote session termination finishes',
+    () async {
+      final deleteRelease = Completer<void>();
+      final server = await _MockMcpServer.start(deleteRelease: deleteRelease);
+      final harness = await BusinessTestHarness.create();
+      final provider = McpProvider(preferences: harness.preferences);
+
+      try {
+        await _waitUntil(
+          () => provider.servers.isNotEmpty,
+          label: 'provider load',
+        );
+        final id = await provider.addServer(
+          enabled: true,
+          name: 'Remote',
+          transport: McpTransportType.http,
+          url: server.url,
+        );
+        await _waitUntil(
+          () => provider.getById(id)?.tools.length == 1,
+          label: 'initial tools',
+        );
+
+        final disabling = provider.updateServerMetadata(
+          provider.getById(id)!.copyWith(enabled: false),
+        );
+        await _waitUntil(
+          () => server.deleteCount == 1,
+          label: 'session termination request',
+        );
+        await disabling.timeout(const Duration(milliseconds: 500));
+
+        expect(provider.getById(id)?.enabled, isFalse);
+        expect(provider.statusFor(id), McpStatus.idle);
+        expect(deleteRelease.isCompleted, isFalse);
+      } finally {
+        if (!deleteRelease.isCompleted) deleteRelease.complete();
+        provider.dispose();
+        await harness.close();
+        await server.close();
+      }
+    },
+    timeout: const Timeout(Duration(seconds: 8)),
+  );
+
+  test(
     'cached tools reconnect lazily and preserve validation errors',
     () async {
       final server = await _MockMcpServer.start();
@@ -366,6 +412,7 @@ class _MockMcpServer {
   final bool rejectFirstSessionToolCalls;
   final bool supportsTools;
   final Completer<void>? firstInitializeGate;
+  final Completer<void>? deleteRelease;
   final Map<String, int> _counts = {};
   final List<HttpResponse> _openStreams = [];
   late final Future<void> _serving;
@@ -393,6 +440,7 @@ class _MockMcpServer {
     required this.rejectFirstSessionToolCalls,
     required this.supportsTools,
     required this.firstInitializeGate,
+    required this.deleteRelease,
   }) {
     _serving = _serve();
   }
@@ -405,6 +453,7 @@ class _MockMcpServer {
     bool rejectFirstSessionToolCalls = false,
     bool supportsTools = true,
     Completer<void>? firstInitializeGate,
+    Completer<void>? deleteRelease,
   }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     return _MockMcpServer._(
@@ -416,6 +465,7 @@ class _MockMcpServer {
       rejectFirstSessionToolCalls: rejectFirstSessionToolCalls,
       supportsTools: supportsTools,
       firstInitializeGate: firstInitializeGate,
+      deleteRelease: deleteRelease,
     );
   }
 
@@ -455,6 +505,7 @@ class _MockMcpServer {
       if (request.method == 'DELETE') {
         deleteCount++;
         await request.drain<void>();
+        await deleteRelease?.future;
         request.response.statusCode = HttpStatus.noContent;
         await request.response.close();
         continue;
