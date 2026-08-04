@@ -1,15 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class GrokSearchService extends SearchService<GrokOptions> {
-  GrokSearchService({http.Client? client}) : _client = client ?? http.Client();
-
-  final http.Client _client;
+  GrokSearchService({super.client});
 
   @override
   String get name => 'Grok';
@@ -52,16 +49,18 @@ class GrokSearchService extends SearchService<GrokOptions> {
         body['reasoning'] = {'effort': reasoningEffort};
       }
 
-      final response = await _client
-          .post(
-            Uri.parse(serviceOptions.resolvedUrl),
-            headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey.trim()}',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(Duration(milliseconds: commonOptions.timeout));
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse(serviceOptions.resolvedUrl),
+              headers: {
+                'Authorization': 'Bearer ${serviceOptions.apiKey.trim()}',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode(body),
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
+      );
 
       if (response.statusCode != 200) {
         throw Exception(

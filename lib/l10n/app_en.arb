@@ -1600,6 +1600,63 @@
   "searchServicesEditDialogUsernameOptional": "Username (optional)",
   "searchServicesEditDialogPasswordOptional": "Password (optional)",
   "searchServicesEditDialogRegionOptional": "Region (optional, default: us-en)",
+  "searchServiceEditorProviderTypeTitle": "Search provider",
+  "searchServiceEditorConfigurationTitle": "Configuration",
+  "searchServiceEditorNoConfiguration": "This provider does not require additional configuration.",
+  "searchServiceEditorUsageTitle": "Account usage",
+  "searchServiceEditorUsageNotQueried": "Usage has not been queried yet.",
+  "searchServiceEditorUsageQuery": "Check usage",
+  "searchServiceEditorUsageQuerying": "Checking…",
+  "searchServiceEditorUsageRemaining": "{remaining} credits remaining",
+  "@searchServiceEditorUsageRemaining": {
+    "placeholders": {
+      "remaining": { "type": "String" }
+    }
+  },
+  "searchServiceEditorUsageBalance": "Balance: {balance}",
+  "@searchServiceEditorUsageBalance": {
+    "placeholders": {
+      "balance": { "type": "String" }
+    }
+  },
+  "searchServiceEditorUsageUsed": "{used} of {limit} credits used",
+  "@searchServiceEditorUsageUsed": {
+    "placeholders": {
+      "used": { "type": "String" },
+      "limit": { "type": "String" }
+    }
+  },
+  "searchServiceEditorUsageFailed": "Could not query usage: {message}",
+  "@searchServiceEditorUsageFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "searchServiceEditorTestTitle": "Test search",
+  "searchServiceEditorTestQueryHint": "Enter a query",
+  "searchServiceEditorTestRun": "Run test search",
+  "searchServiceEditorTestRunning": "Searching…",
+  "searchServiceEditorTestNoResults": "The provider returned no results.",
+  "searchServiceEditorTestFailed": "Search failed: {message}",
+  "@searchServiceEditorTestFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "searchServiceEditorResultOpenTooltip": "Open result",
+  "searchServiceEditorDeleteTooltip": "Delete search service",
+  "searchServiceEditorDeleteTitle": "Delete search service?",
+  "searchServiceEditorDeleteMessage": "Delete {provider}? This cannot be undone.",
+  "@searchServiceEditorDeleteMessage": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+  "searchServiceEditorDeleteConfirm": "Delete",
+  "searchServiceEditorDiscardTitle": "Discard changes?",
+  "searchServiceEditorDiscardMessage": "Your unsaved search service settings will be lost.",
+  "searchServiceEditorKeepEditing": "Keep editing",
+  "searchServiceEditorDiscard": "Discard",
   "searchSettingsSheetTitle": "Search Settings",
   "searchSettingsSheetBuiltinSearchTitle": "Built-in Search",
   "searchSettingsSheetBuiltinSearchDescription": "Enable model's built-in search",

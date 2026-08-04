@@ -1,18 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class SerperSearchService extends SearchService<SerperOptions> {
-  SerperSearchService({http.Client? client})
-    : _client = client ?? http.Client();
+  SerperSearchService({super.client});
 
   static const String endpoint = 'https://google.serper.dev/search';
-
-  final http.Client _client;
 
   @override
   String get name => 'Serper';
@@ -42,16 +38,18 @@ class SerperSearchService extends SearchService<SerperOptions> {
         if (serviceOptions.page > 1) 'page': serviceOptions.page,
       };
 
-      final response = await _client
-          .post(
-            Uri.parse(endpoint),
-            headers: {
-              'X-API-KEY': serviceOptions.apiKey,
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(Duration(milliseconds: commonOptions.timeout));
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse(endpoint),
+              headers: {
+                'X-API-KEY': serviceOptions.apiKey,
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode(body),
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API request failed: ${response.statusCode}');

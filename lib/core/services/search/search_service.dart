@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../network/dio_http_client.dart';
 // Import statements for service implementations
 import 'providers/bing_search_service.dart';
 import 'providers/tavily_search_service.dart';
@@ -19,6 +22,10 @@ import 'providers/querit_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
+  SearchService({this.client});
+
+  final http.Client? client;
+
   String get name;
 
   Widget description(BuildContext context);
@@ -28,6 +35,20 @@ abstract class SearchService<T extends SearchServiceOptions> {
     required SearchCommonOptions commonOptions,
     required T serviceOptions,
   });
+
+  /// Runs search traffic through the app's logged HTTP client by default.
+  /// Tests can inject a client without transferring ownership to the service.
+  Future<R> withHttpClient<R>(
+    Future<R> Function(http.Client client) request,
+  ) async {
+    final ownsClient = client == null;
+    final effectiveClient = client ?? DioHttpClient();
+    try {
+      return await request(effectiveClient);
+    } finally {
+      if (ownsClient) effectiveClient.close();
+    }
+  }
 
   // Factory method to get service instance based on options type
   static SearchService getService(SearchServiceOptions options) {

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
@@ -26,27 +25,29 @@ class JinaSearchService extends SearchService<JinaOptions> {
     try {
       final body = jsonEncode({'q': query});
 
-      final response = await http
-          .post(
-            Uri.parse('https://s.jina.ai/'),
-            headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey}',
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              // Speed up and reduce payload: omit page content in response
-              // 'X-Respond-With': 'no-content',
-              // Some gateways behave better with a standard UA
-              // 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            },
-            body: body,
-          )
-          .timeout(
-            Duration(
-              milliseconds: commonOptions.timeout < 15000
-                  ? 15000
-                  : commonOptions.timeout,
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse('https://s.jina.ai/'),
+              headers: {
+                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                // Speed up and reduce payload: omit page content in response
+                // 'X-Respond-With': 'no-content',
+                // Some gateways behave better with a standard UA
+                // 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              },
+              body: body,
+            )
+            .timeout(
+              Duration(
+                milliseconds: commonOptions.timeout < 15000
+                    ? 15000
+                    : commonOptions.timeout,
+              ),
             ),
-          );
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API request failed: ${response.statusCode}');

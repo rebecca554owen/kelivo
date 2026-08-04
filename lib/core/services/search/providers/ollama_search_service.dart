@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
@@ -29,16 +28,18 @@ class OllamaSearchService extends SearchService<OllamaOptions> {
         'max_results': commonOptions.resultSize.clamp(1, 10),
       });
 
-      final response = await http
-          .post(
-            Uri.parse('https://ollama.com/api/web_search'),
-            headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey}',
-              'Content-Type': 'application/json',
-            },
-            body: body,
-          )
-          .timeout(Duration(milliseconds: commonOptions.timeout));
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse('https://ollama.com/api/web_search'),
+              headers: {
+                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Content-Type': 'application/json',
+              },
+              body: body,
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API request failed: ${response.statusCode}');

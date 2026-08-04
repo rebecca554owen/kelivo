@@ -1,9 +1,12 @@
-import 'package:ddgs/ddgs.dart' show DDGS;
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart' as parser;
+
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
 class DuckDuckGoSearchService extends SearchService<DuckDuckGoOptions> {
+  DuckDuckGoSearchService({super.client});
+
   @override
   String get name => 'DuckDuckGo';
 
@@ -22,30 +25,46 @@ class DuckDuckGoSearchService extends SearchService<DuckDuckGoOptions> {
     required SearchCommonOptions commonOptions,
     required DuckDuckGoOptions serviceOptions,
   }) async {
-    final ddgs = DDGS(timeout: Duration(milliseconds: commonOptions.timeout));
     final region = serviceOptions.region.trim().isNotEmpty
         ? serviceOptions.region.trim()
         : 'us-en';
 
     try {
-      final results = await ddgs.text(
-        query,
-        region: region,
-        maxResults: commonOptions.resultSize,
-        backend: 'duckduckgo',
+      final uri = Uri.https('duckduckgo.com', '/html/', {
+        'q': query,
+        'kl': region,
+      });
+      final response = await withHttpClient(
+        (client) => client
+            .get(
+              uri,
+              headers: const {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
+              },
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
       );
+      if (response.statusCode != 200) {
+        throw Exception('API request failed: ${response.statusCode}');
+      }
 
+      final document = parser.parse(response.body);
       final items = <SearchResultItem>[];
-      for (final item in results) {
-        final map = Map<String, dynamic>.from(item);
-        final title = map['title']?.toString() ?? '';
-        final url = map['href']?.toString() ?? map['url']?.toString() ?? '';
-        final snippet =
-            map['body']?.toString() ??
-            map['description']?.toString() ??
-            map['snippet']?.toString() ??
-            map['content']?.toString() ??
+      for (final result
+          in document
+              .querySelectorAll('.result')
+              .take(commonOptions.resultSize)) {
+        final titleElement = result.querySelector('.result__a');
+        final urlElement = result.querySelector('.result__url');
+        final snippetElement = result.querySelector('.result__snippet');
+        final title = titleElement?.text.trim() ?? '';
+        final rawUrl =
+            titleElement?.attributes['href']?.trim() ??
+            urlElement?.text.trim() ??
             '';
+        final url = _resolveResultUrl(rawUrl);
+        final snippet = snippetElement?.text.trim() ?? '';
         if (title.isEmpty && url.isEmpty && snippet.isEmpty) continue;
         items.add(SearchResultItem(title: title, url: url, text: snippet));
       }
@@ -53,8 +72,13 @@ class DuckDuckGoSearchService extends SearchService<DuckDuckGoOptions> {
       return SearchResult(items: items);
     } catch (e) {
       throw Exception('DuckDuckGo search failed: $e');
-    } finally {
-      ddgs.close();
     }
+  }
+
+  static String _resolveResultUrl(String raw) {
+    if (raw.isEmpty) return raw;
+    final normalized = raw.startsWith('//') ? 'https:$raw' : raw;
+    final uri = Uri.tryParse(normalized);
+    return uri?.queryParameters['uddg'] ?? normalized;
   }
 }

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
@@ -30,16 +29,18 @@ class ExaSearchService extends SearchService<ExaOptions> {
         'contents': {'text': true},
       });
 
-      final response = await http
-          .post(
-            Uri.parse(serviceOptions.resolvedUrl),
-            headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey}',
-              'Content-Type': 'application/json',
-            },
-            body: body,
-          )
-          .timeout(Duration(milliseconds: commonOptions.timeout));
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse(serviceOptions.resolvedUrl),
+              headers: {
+                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Content-Type': 'application/json',
+              },
+              body: body,
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API request failed: ${response.statusCode}');

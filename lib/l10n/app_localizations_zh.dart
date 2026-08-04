@@ -3655,6 +3655,96 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServicesEditDialogRegionOptional => '地区（可选，默认 us-en）';
 
   @override
+  String get searchServiceEditorProviderTypeTitle => '搜索提供商';
+
+  @override
+  String get searchServiceEditorConfigurationTitle => '服务配置';
+
+  @override
+  String get searchServiceEditorNoConfiguration => '此提供商无需额外配置。';
+
+  @override
+  String get searchServiceEditorUsageTitle => '账户用量';
+
+  @override
+  String get searchServiceEditorUsageNotQueried => '尚未查询用量。';
+
+  @override
+  String get searchServiceEditorUsageQuery => '查询用量';
+
+  @override
+  String get searchServiceEditorUsageQuerying => '查询中…';
+
+  @override
+  String searchServiceEditorUsageRemaining(String remaining) {
+    return '剩余 $remaining 额度';
+  }
+
+  @override
+  String searchServiceEditorUsageBalance(String balance) {
+    return '余额 $balance';
+  }
+
+  @override
+  String searchServiceEditorUsageUsed(String used, String limit) {
+    return '已使用 $used / $limit 额度';
+  }
+
+  @override
+  String searchServiceEditorUsageFailed(String message) {
+    return '用量查询失败：$message';
+  }
+
+  @override
+  String get searchServiceEditorTestTitle => '测试搜索';
+
+  @override
+  String get searchServiceEditorTestQueryHint => '输入测试关键词';
+
+  @override
+  String get searchServiceEditorTestRun => '运行测试搜索';
+
+  @override
+  String get searchServiceEditorTestRunning => '搜索中…';
+
+  @override
+  String get searchServiceEditorTestNoResults => '提供商未返回任何结果。';
+
+  @override
+  String searchServiceEditorTestFailed(String message) {
+    return '搜索失败：$message';
+  }
+
+  @override
+  String get searchServiceEditorResultOpenTooltip => '打开结果';
+
+  @override
+  String get searchServiceEditorDeleteTooltip => '删除搜索服务';
+
+  @override
+  String get searchServiceEditorDeleteTitle => '删除搜索服务？';
+
+  @override
+  String searchServiceEditorDeleteMessage(String provider) {
+    return '确定删除 $provider 吗？此操作无法撤销。';
+  }
+
+  @override
+  String get searchServiceEditorDeleteConfirm => '删除';
+
+  @override
+  String get searchServiceEditorDiscardTitle => '放弃更改？';
+
+  @override
+  String get searchServiceEditorDiscardMessage => '尚未保存的搜索服务设置将会丢失。';
+
+  @override
+  String get searchServiceEditorKeepEditing => '继续编辑';
+
+  @override
+  String get searchServiceEditorDiscard => '放弃';
+
+  @override
   String get searchSettingsSheetTitle => '搜索设置';
 
   @override
@@ -9273,6 +9363,96 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServicesEditDialogRegionOptional => '地区（可选，默认 us-en）';
 
   @override
+  String get searchServiceEditorProviderTypeTitle => '搜索提供商';
+
+  @override
+  String get searchServiceEditorConfigurationTitle => '服务配置';
+
+  @override
+  String get searchServiceEditorNoConfiguration => '此提供商无需额外配置。';
+
+  @override
+  String get searchServiceEditorUsageTitle => '账户用量';
+
+  @override
+  String get searchServiceEditorUsageNotQueried => '尚未查询用量。';
+
+  @override
+  String get searchServiceEditorUsageQuery => '查询用量';
+
+  @override
+  String get searchServiceEditorUsageQuerying => '查询中…';
+
+  @override
+  String searchServiceEditorUsageRemaining(String remaining) {
+    return '剩余 $remaining 额度';
+  }
+
+  @override
+  String searchServiceEditorUsageBalance(String balance) {
+    return '余额 $balance';
+  }
+
+  @override
+  String searchServiceEditorUsageUsed(String used, String limit) {
+    return '已使用 $used / $limit 额度';
+  }
+
+  @override
+  String searchServiceEditorUsageFailed(String message) {
+    return '用量查询失败：$message';
+  }
+
+  @override
+  String get searchServiceEditorTestTitle => '测试搜索';
+
+  @override
+  String get searchServiceEditorTestQueryHint => '输入测试关键词';
+
+  @override
+  String get searchServiceEditorTestRun => '运行测试搜索';
+
+  @override
+  String get searchServiceEditorTestRunning => '搜索中…';
+
+  @override
+  String get searchServiceEditorTestNoResults => '提供商未返回任何结果。';
+
+  @override
+  String searchServiceEditorTestFailed(String message) {
+    return '搜索失败：$message';
+  }
+
+  @override
+  String get searchServiceEditorResultOpenTooltip => '打开结果';
+
+  @override
+  String get searchServiceEditorDeleteTooltip => '删除搜索服务';
+
+  @override
+  String get searchServiceEditorDeleteTitle => '删除搜索服务？';
+
+  @override
+  String searchServiceEditorDeleteMessage(String provider) {
+    return '确定删除 $provider 吗？此操作无法撤销。';
+  }
+
+  @override
+  String get searchServiceEditorDeleteConfirm => '删除';
+
+  @override
+  String get searchServiceEditorDiscardTitle => '放弃更改？';
+
+  @override
+  String get searchServiceEditorDiscardMessage => '尚未保存的搜索服务设置将会丢失。';
+
+  @override
+  String get searchServiceEditorKeepEditing => '继续编辑';
+
+  @override
+  String get searchServiceEditorDiscard => '放弃';
+
+  @override
   String get searchSettingsSheetTitle => '搜索设置';
 
   @override
@@ -14887,6 +15067,96 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServicesEditDialogRegionOptional => '地區（可選，預設 us-en）';
+
+  @override
+  String get searchServiceEditorProviderTypeTitle => '搜尋提供商';
+
+  @override
+  String get searchServiceEditorConfigurationTitle => '服務設定';
+
+  @override
+  String get searchServiceEditorNoConfiguration => '此提供商無需額外設定。';
+
+  @override
+  String get searchServiceEditorUsageTitle => '帳戶用量';
+
+  @override
+  String get searchServiceEditorUsageNotQueried => '尚未查詢用量。';
+
+  @override
+  String get searchServiceEditorUsageQuery => '查詢用量';
+
+  @override
+  String get searchServiceEditorUsageQuerying => '查詢中…';
+
+  @override
+  String searchServiceEditorUsageRemaining(String remaining) {
+    return '剩餘 $remaining 額度';
+  }
+
+  @override
+  String searchServiceEditorUsageBalance(String balance) {
+    return '餘額 $balance';
+  }
+
+  @override
+  String searchServiceEditorUsageUsed(String used, String limit) {
+    return '已使用 $used / $limit 額度';
+  }
+
+  @override
+  String searchServiceEditorUsageFailed(String message) {
+    return '用量查詢失敗：$message';
+  }
+
+  @override
+  String get searchServiceEditorTestTitle => '測試搜尋';
+
+  @override
+  String get searchServiceEditorTestQueryHint => '輸入測試關鍵字';
+
+  @override
+  String get searchServiceEditorTestRun => '執行測試搜尋';
+
+  @override
+  String get searchServiceEditorTestRunning => '搜尋中…';
+
+  @override
+  String get searchServiceEditorTestNoResults => '提供商未回傳任何結果。';
+
+  @override
+  String searchServiceEditorTestFailed(String message) {
+    return '搜尋失敗：$message';
+  }
+
+  @override
+  String get searchServiceEditorResultOpenTooltip => '開啟結果';
+
+  @override
+  String get searchServiceEditorDeleteTooltip => '刪除搜尋服務';
+
+  @override
+  String get searchServiceEditorDeleteTitle => '刪除搜尋服務？';
+
+  @override
+  String searchServiceEditorDeleteMessage(String provider) {
+    return '確定刪除 $provider 嗎？此操作無法復原。';
+  }
+
+  @override
+  String get searchServiceEditorDeleteConfirm => '刪除';
+
+  @override
+  String get searchServiceEditorDiscardTitle => '放棄變更？';
+
+  @override
+  String get searchServiceEditorDiscardMessage => '尚未儲存的搜尋服務設定將會遺失。';
+
+  @override
+  String get searchServiceEditorKeepEditing => '繼續編輯';
+
+  @override
+  String get searchServiceEditorDiscard => '放棄';
 
   @override
   String get searchSettingsSheetTitle => '搜尋設定';

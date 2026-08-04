@@ -7076,6 +7076,162 @@ abstract class AppLocalizations {
   /// **'Region (optional, default: us-en)'**
   String get searchServicesEditDialogRegionOptional;
 
+  /// No description provided for @searchServiceEditorProviderTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search provider'**
+  String get searchServiceEditorProviderTypeTitle;
+
+  /// No description provided for @searchServiceEditorConfigurationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration'**
+  String get searchServiceEditorConfigurationTitle;
+
+  /// No description provided for @searchServiceEditorNoConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider does not require additional configuration.'**
+  String get searchServiceEditorNoConfiguration;
+
+  /// No description provided for @searchServiceEditorUsageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account usage'**
+  String get searchServiceEditorUsageTitle;
+
+  /// No description provided for @searchServiceEditorUsageNotQueried.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage has not been queried yet.'**
+  String get searchServiceEditorUsageNotQueried;
+
+  /// No description provided for @searchServiceEditorUsageQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Check usage'**
+  String get searchServiceEditorUsageQuery;
+
+  /// No description provided for @searchServiceEditorUsageQuerying.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get searchServiceEditorUsageQuerying;
+
+  /// No description provided for @searchServiceEditorUsageRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{remaining} credits remaining'**
+  String searchServiceEditorUsageRemaining(String remaining);
+
+  /// No description provided for @searchServiceEditorUsageBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance: {balance}'**
+  String searchServiceEditorUsageBalance(String balance);
+
+  /// No description provided for @searchServiceEditorUsageUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {limit} credits used'**
+  String searchServiceEditorUsageUsed(String used, String limit);
+
+  /// No description provided for @searchServiceEditorUsageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not query usage: {message}'**
+  String searchServiceEditorUsageFailed(String message);
+
+  /// No description provided for @searchServiceEditorTestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test search'**
+  String get searchServiceEditorTestTitle;
+
+  /// No description provided for @searchServiceEditorTestQueryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a query'**
+  String get searchServiceEditorTestQueryHint;
+
+  /// No description provided for @searchServiceEditorTestRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Run test search'**
+  String get searchServiceEditorTestRun;
+
+  /// No description provided for @searchServiceEditorTestRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching…'**
+  String get searchServiceEditorTestRunning;
+
+  /// No description provided for @searchServiceEditorTestNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'The provider returned no results.'**
+  String get searchServiceEditorTestNoResults;
+
+  /// No description provided for @searchServiceEditorTestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Search failed: {message}'**
+  String searchServiceEditorTestFailed(String message);
+
+  /// No description provided for @searchServiceEditorResultOpenTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open result'**
+  String get searchServiceEditorResultOpenTooltip;
+
+  /// No description provided for @searchServiceEditorDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete search service'**
+  String get searchServiceEditorDeleteTooltip;
+
+  /// No description provided for @searchServiceEditorDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete search service?'**
+  String get searchServiceEditorDeleteTitle;
+
+  /// No description provided for @searchServiceEditorDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {provider}? This cannot be undone.'**
+  String searchServiceEditorDeleteMessage(String provider);
+
+  /// No description provided for @searchServiceEditorDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get searchServiceEditorDeleteConfirm;
+
+  /// No description provided for @searchServiceEditorDiscardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get searchServiceEditorDiscardTitle;
+
+  /// No description provided for @searchServiceEditorDiscardMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your unsaved search service settings will be lost.'**
+  String get searchServiceEditorDiscardMessage;
+
+  /// No description provided for @searchServiceEditorKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get searchServiceEditorKeepEditing;
+
+  /// No description provided for @searchServiceEditorDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get searchServiceEditorDiscard;
+
   /// No description provided for @searchSettingsSheetTitle.
   ///
   /// In en, this message translates to:

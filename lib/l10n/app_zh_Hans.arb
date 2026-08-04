@@ -1274,6 +1274,63 @@
   "searchServicesEditDialogUsernameOptional": "用户名（可选）",
   "searchServicesEditDialogPasswordOptional": "密码（可选）",
   "searchServicesEditDialogRegionOptional": "地区（可选，默认 us-en）",
+  "searchServiceEditorProviderTypeTitle": "搜索提供商",
+  "searchServiceEditorConfigurationTitle": "服务配置",
+  "searchServiceEditorNoConfiguration": "此提供商无需额外配置。",
+  "searchServiceEditorUsageTitle": "账户用量",
+  "searchServiceEditorUsageNotQueried": "尚未查询用量。",
+  "searchServiceEditorUsageQuery": "查询用量",
+  "searchServiceEditorUsageQuerying": "查询中…",
+  "searchServiceEditorUsageRemaining": "剩余 {remaining} 额度",
+  "@searchServiceEditorUsageRemaining": {
+    "placeholders": {
+      "remaining": { "type": "String" }
+    }
+  },
+  "searchServiceEditorUsageBalance": "余额 {balance}",
+  "@searchServiceEditorUsageBalance": {
+    "placeholders": {
+      "balance": { "type": "String" }
+    }
+  },
+  "searchServiceEditorUsageUsed": "已使用 {used} / {limit} 额度",
+  "@searchServiceEditorUsageUsed": {
+    "placeholders": {
+      "used": { "type": "String" },
+      "limit": { "type": "String" }
+    }
+  },
+  "searchServiceEditorUsageFailed": "用量查询失败：{message}",
+  "@searchServiceEditorUsageFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "searchServiceEditorTestTitle": "测试搜索",
+  "searchServiceEditorTestQueryHint": "输入测试关键词",
+  "searchServiceEditorTestRun": "运行测试搜索",
+  "searchServiceEditorTestRunning": "搜索中…",
+  "searchServiceEditorTestNoResults": "提供商未返回任何结果。",
+  "searchServiceEditorTestFailed": "搜索失败：{message}",
+  "@searchServiceEditorTestFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "searchServiceEditorResultOpenTooltip": "打开结果",
+  "searchServiceEditorDeleteTooltip": "删除搜索服务",
+  "searchServiceEditorDeleteTitle": "删除搜索服务？",
+  "searchServiceEditorDeleteMessage": "确定删除 {provider} 吗？此操作无法撤销。",
+  "@searchServiceEditorDeleteMessage": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+  "searchServiceEditorDeleteConfirm": "删除",
+  "searchServiceEditorDiscardTitle": "放弃更改？",
+  "searchServiceEditorDiscardMessage": "尚未保存的搜索服务设置将会丢失。",
+  "searchServiceEditorKeepEditing": "继续编辑",
+  "searchServiceEditorDiscard": "放弃",
   "searchSettingsSheetTitle": "搜索设置",
   "searchSettingsSheetBuiltinSearchTitle": "模型内置搜索",
   "searchSettingsSheetBuiltinSearchDescription": "是否启用模型内置的搜索功能",

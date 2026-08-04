@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
@@ -31,17 +30,19 @@ class MetasoSearchService extends SearchService<MetasoOptions> {
         'includeSummary': false,
       });
 
-      final response = await http
-          .post(
-            Uri.parse('https://metaso.cn/api/v1/search'),
-            headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey}',
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: body,
-          )
-          .timeout(Duration(milliseconds: commonOptions.timeout));
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse('https://metaso.cn/api/v1/search'),
+              headers: {
+                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: body,
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API request failed: ${response.statusCode}');

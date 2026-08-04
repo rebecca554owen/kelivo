@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
@@ -41,16 +40,18 @@ class PerplexitySearchService extends SearchService<PerplexityOptions> {
         body['max_tokens_per_page'] = serviceOptions.maxTokensPerPage;
       }
 
-      final response = await http
-          .post(
-            Uri.parse('https://api.perplexity.ai/search'),
-            headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey}',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(Duration(milliseconds: commonOptions.timeout));
+      final response = await withHttpClient(
+        (client) => client
+            .post(
+              Uri.parse('https://api.perplexity.ai/search'),
+              headers: {
+                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode(body),
+            )
+            .timeout(Duration(milliseconds: commonOptions.timeout)),
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API request failed: ${response.statusCode}');
