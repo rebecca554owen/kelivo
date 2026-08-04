@@ -213,11 +213,12 @@ class HomeViewModel extends ChangeNotifier {
   Conversation? get currentConversation => _chatController.currentConversation;
   List<ChatMessage> get messages => _chatController.messages;
   Map<String, int> get versionSelections => _chatController.versionSelections;
-  Set<String> get loadingConversationIds =>
-      _chatController.loadingConversationIds;
+  Set<String> get loadingConversationIds => <String>{
+    for (final id in _chatController.loadingConversationIds)
+      if (!_chatActions.isStopping(id)) id,
+  };
 
-  /// Whether a send/regenerate for [conversationId] has been claimed but has
-  /// not yet handed exclusion off to the loading guard.
+  /// Whether send/regenerate or cancellation teardown owns [conversationId].
   bool isConversationSendInFlight(String conversationId) =>
       _chatActions.isSendInFlight(conversationId);
   Map<String, StreamSubscription<dynamic>> get conversationStreams =>
@@ -232,9 +233,13 @@ class HomeViewModel extends ChangeNotifier {
       _streamController.contentSplits;
   Map<String, List<ToolUIPart>> get toolParts => _streamController.toolParts;
 
-  /// Whether the current conversation is actively generating.
-  bool get isCurrentConversationLoading =>
-      _chatController.isCurrentConversationLoading;
+  /// Whether the current conversation should show the generating state.
+  bool get isCurrentConversationLoading {
+    final cid = currentConversation?.id;
+    if (cid == null) return false;
+    return _chatController.isConversationLoading(cid) &&
+        !_chatActions.isStopping(cid);
+  }
 
   QueuedChatInput? get currentQueuedInput {
     final cid = currentConversation?.id;
@@ -499,6 +504,7 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     if (!result.success) {
+      if (result.errorMessage == 'in_flight') return false;
       if (result.errorMessage == 'no_model') {
         onWarning?.call('no_model');
       } else {

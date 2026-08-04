@@ -338,6 +338,8 @@ class ChatActions {
       <String, _GenerationCheckpointCursor>{};
   final ActiveStreamingMessageStore _activeAssistantMessages =
       ActiveStreamingMessageStore();
+  final Map<String, Future<void>> _cancelStreamingFutures =
+      <String, Future<void>>{};
 
   /// Per-conversation send/regenerate claim, taken synchronously before the
   /// first await so a re-entrant call loses before persisting anything. The
@@ -346,10 +348,13 @@ class ChatActions {
   final Map<String, int> _sendInFlightClaims = <String, int>{};
   var _sendInFlightClaimSerial = 0;
 
-  /// Whether a send/regenerate for [conversationId] has been claimed but has
-  /// not yet handed exclusion off to the loading guard.
+  /// Whether send/regenerate or cancellation teardown owns [conversationId].
   bool isSendInFlight(String conversationId) =>
-      _sendInFlightClaims.containsKey(conversationId);
+      _sendInFlightClaims.containsKey(conversationId) ||
+      isStopping(conversationId);
+
+  bool isStopping(String conversationId) =>
+      _cancelStreamingFutures.containsKey(conversationId);
 
   List<ChatMessage> get _messages => chatController.messages;
   Map<String, int> get _versionSelections => chatController.versionSelections;
@@ -361,7 +366,8 @@ class ChatActions {
 
   bool _hasActiveGeneration(String conversationId) =>
       _conversationStreams.containsKey(conversationId) ||
-      _activeAssistantMessages[conversationId] != null;
+      _activeAssistantMessages[conversationId] != null ||
+      isStopping(conversationId);
 
   /// Id of the assistant message an in-flight generation checkpoints into,
   /// or null when [conversationId] has no active generation.
@@ -380,6 +386,8 @@ class ChatActions {
       await subscription.cancel().timeout(_streamCancelTimeout);
     } on TimeoutException {
       // Cancellation keeps running in the background.
+    } catch (_) {
+      // The HTTP request is already aborted; local terminal cleanup must still run.
     }
   }
 
@@ -714,8 +722,11 @@ class ChatActions {
     return _BarrierStreamSubscription<T>(sourceSubscription, () async {
       terminalQueued = true;
       events.clear();
-      await sourceSubscription.cancel();
-      await drainFuture;
+      try {
+        await sourceSubscription.cancel();
+      } finally {
+        await drainFuture;
+      }
     });
   }
 
@@ -845,7 +856,7 @@ class ChatActions {
     required Conversation conversation,
   }) async {
     final claimToken = ++_sendInFlightClaimSerial;
-    if (_sendInFlightClaims.containsKey(conversation.id)) {
+    if (isSendInFlight(conversation.id)) {
       return ChatActionResult.inFlight();
     }
     _sendInFlightClaims[conversation.id] = claimToken;
@@ -1077,7 +1088,7 @@ class ChatActions {
     bool allowImagesApiRouting = true,
   }) async {
     final claimToken = ++_sendInFlightClaimSerial;
-    if (_sendInFlightClaims.containsKey(conversation.id)) {
+    if (isSendInFlight(conversation.id)) {
       return ChatActionResult.inFlight();
     }
     _sendInFlightClaims[conversation.id] = claimToken;
@@ -1333,6 +1344,10 @@ class ChatActions {
     required Conversation conversation,
     bool allowImagesApiRouting = true,
   }) async {
+    if (isSendInFlight(conversation.id)) {
+      return ChatActionResult.inFlight();
+    }
+
     final settings = contextProvider.read<SettingsProvider>();
     final assistantProvider = contextProvider.read<AssistantProvider>();
     ToolApprovalService? approvalService;
@@ -1456,7 +1471,23 @@ class ChatActions {
   }
 
   /// Cancel the active streaming for the conversation with id [cid].
-  Future<void> cancelStreamingById(String cid) async {
+  Future<void> cancelStreamingById(String cid) {
+    final existing = _cancelStreamingFutures[cid];
+    if (existing != null) return existing;
+
+    late final Future<void> operation;
+    operation = Future<void>.microtask(() => _cancelStreamingByIdOnce(cid))
+        .whenComplete(() {
+          if (identical(_cancelStreamingFutures[cid], operation)) {
+            _cancelStreamingFutures.remove(cid);
+            _setConversationLoading(cid, false);
+          }
+        });
+    _cancelStreamingFutures[cid] = operation;
+    return operation;
+  }
+
+  Future<void> _cancelStreamingByIdOnce(String cid) async {
     // Cancel pending tool approval requests for this conversation to prevent
     // deadlock. Scoped by conversation id: the static deletion entry points
     // (cancelActiveGenerationFor / cancelActiveGenerationsForAssistant) may
@@ -1485,6 +1516,27 @@ class ChatActions {
 
     // Cancel active stream for current conversation only
     final sub = _conversationStreams.remove(cid);
+
+    // End the visible streaming state immediately. The conversation remains
+    // internally busy through [_cancelStreamingFutures] until teardown ends.
+    final visibleStreaming = _activeAssistantMessages.cancellationTarget(
+      cid,
+      _messages,
+    );
+    if (visibleStreaming != null) {
+      streamController.markStreamingEnded(visibleStreaming.id);
+      streamController.cleanupTimers(visibleStreaming.id);
+      final index = _messages.indexWhere((m) => m.id == visibleStreaming.id);
+      final visibleMessage = index == -1 ? visibleStreaming : _messages[index];
+      if (chatController.publishTerminalMessage(visibleMessage)) {
+        onMessagesChanged?.call();
+      }
+      streamController.removeStreamingNotifier(visibleStreaming.id);
+    } else {
+      chatController.publishGenerationState(cid, isGenerating: false);
+    }
+    onLoadingChanged?.call(cid, false);
+
     if (sub != null) {
       await _cancelSubscriptionWithTimeout(sub);
     }
@@ -1517,7 +1569,6 @@ class ChatActions {
           onMessagesChanged?.call();
         }
         streamController.removeStreamingNotifier(streaming.id);
-        _setConversationLoading(cid, false);
       }
 
       // If streaming output included inline base64 images, sanitize them even on manual cancel
@@ -1529,7 +1580,6 @@ class ChatActions {
       await _cancelIosBackgroundGeneration();
     } else {
       chatController.publishGenerationState(cid, isGenerating: false);
-      _setConversationLoading(cid, false);
     }
   }
 

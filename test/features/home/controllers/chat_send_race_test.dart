@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,12 +12,16 @@ import 'package:provider/provider.dart';
 import '../../../support/business_test_harness.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_input_data.dart';
+import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart'
+    show ToolUIPart;
 import 'package:Kelivo/features/home/controllers/home_page_controller.dart';
 import 'package:Kelivo/features/home/controllers/scroll_controller.dart';
+import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_bar.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -238,6 +243,74 @@ void main() {
         controller.chatController.isConversationLoading(convo.id),
         isFalse,
       );
+    });
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('single-flight cancel hides loading before slow teardown', (
+    tester,
+  ) async {
+    final controller = await pumpHarness(tester);
+    await tester.runAsync(() async {
+      final convo = await openConversation(controller);
+      controller.chatController.setConversationLoading(convo.id, true);
+      final releaseCancel = Completer<void>();
+      var cancelCalls = 0;
+      final source = StreamController<void>(
+        onCancel: () async {
+          cancelCalls++;
+          await releaseCancel.future;
+          throw StateError('cancel failed');
+        },
+      );
+      controller.chatController.setStreamSubscription(
+        convo.id,
+        source.stream.listen((_) {}),
+      );
+
+      final firstCancel = controller.cancelStreaming();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.isCurrentConversationLoading, isFalse);
+      expect(controller.chatController.isConversationLoading(convo.id), isTrue);
+      expect(controller.loadingConversationIds, isNot(contains(convo.id)));
+
+      final recoveredMessage = ChatMessage(
+        id: 'stopping-assistant',
+        role: 'assistant',
+        content: '',
+        conversationId: convo.id,
+      );
+      const recoveredPart = ToolUIPart(
+        id: 'ask-user',
+        toolName: AskUserToolNames.askUser,
+        arguments: <String, dynamic>{},
+        loading: true,
+      );
+      await controller.submitRecoveredAskUserAnswer(
+        recoveredMessage,
+        recoveredPart,
+        const AskUserResult.answer(<String, AskUserAnswerValue>{}),
+      );
+      expect(service.getToolEvents(recoveredMessage.id), isEmpty);
+      expect(controller.toolParts[recoveredMessage.id], isNull);
+
+      var secondCompleted = false;
+      final secondCancel = controller.cancelStreaming().whenComplete(
+        () => secondCompleted = true,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cancelCalls, 1);
+      expect(secondCompleted, isFalse);
+
+      releaseCancel.complete();
+      await Future.wait([firstCancel, secondCancel]);
+
+      expect(
+        controller.chatController.isConversationLoading(convo.id),
+        isFalse,
+      );
+      await source.close();
     });
     expect(tester.takeException(), isNull);
   });
