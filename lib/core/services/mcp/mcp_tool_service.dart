@@ -95,13 +95,13 @@ class McpToolService extends ChangeNotifier {
           );
     if (res == null) {
       if (route != null) {
-        final errMsg = mcpProvider.errorFor(route.server.id) ?? 'Unknown error';
+        final errMsg =
+            mcpProvider.errorFor(route.server.id) ??
+            'MCP server is unavailable.';
         return _renderToolErrorForModel(
           serverName: route.server.name,
           toolName: toolName,
-          arguments: arguments,
           errorMessage: errMsg,
-          schema: route.tool.schema,
         );
       }
       return '';
@@ -208,13 +208,12 @@ class McpToolService extends ChangeNotifier {
           arguments,
         );
         if (res == null) {
-          final errMsg = mcpProvider.errorFor(s.id) ?? 'Unknown error';
+          final errMsg =
+              mcpProvider.errorFor(s.id) ?? 'MCP server is unavailable.';
           return _renderToolErrorForModel(
             serverName: s.name,
             toolName: toolName,
-            arguments: arguments,
             errorMessage: errMsg,
-            schema: route.tool.schema,
           );
         }
         final buf = StringBuffer();
@@ -454,21 +453,14 @@ class McpToolService extends ChangeNotifier {
   String _renderToolErrorForModel({
     required String serverName,
     required String toolName,
-    required Map<String, dynamic> arguments,
     required String errorMessage,
-    Map<String, dynamic>? schema,
   }) {
-    // Provide a concise JSON for the model to self-correct and retry
     final map = <String, dynamic>{
       'type': 'tool_error',
-      'error': 'invalid_arguments',
+      'error': 'tool_unavailable',
       'message': errorMessage,
       'tool': toolName,
       'server': serverName,
-      'lastArguments': arguments,
-      if (schema != null && schema.isNotEmpty) 'parametersSchema': schema,
-      'instruction':
-          'Revise arguments to satisfy parametersSchema, then call the same tool again.',
     };
     return const JsonEncoder.withIndent('  ').convert(map);
   }

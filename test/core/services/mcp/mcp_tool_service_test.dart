@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mcp_client/mcp_client.dart' as mcp;
 
@@ -225,13 +227,64 @@ void main() {
       expect(provider.calls, hasLength(1));
     },
   );
+
+  test('unavailable tools are not reported as invalid arguments', () async {
+    final provider = _RecordingMcpProvider(
+      [
+        McpServerConfig(
+          id: 'server-id',
+          enabled: true,
+          name: 'Remote MCP',
+          transport: McpTransportType.http,
+          tools: [
+            McpToolConfig(
+              enabled: true,
+              name: 'get_self',
+              schema: const {'type': 'object', 'properties': {}},
+            ),
+          ],
+        ),
+      ],
+      errorMessage: 'connection failed',
+    );
+    final assistants = AssistantProvider(
+      preferences: createBusinessTestPreferences(),
+    );
+    final service = McpToolService();
+    addTearDown(provider.dispose);
+    addTearDown(assistants.dispose);
+    addTearDown(service.dispose);
+
+    await assistants.loaded;
+    final assistantId = await assistants.addAssistant(name: 'Test');
+    await assistants.updateAssistant(
+      assistants
+          .getById(assistantId)!
+          .copyWith(mcpServerIds: const ['server-id']),
+    );
+
+    final output = await service.callToolTextForAssistant(
+      provider,
+      assistants,
+      assistantId: assistantId,
+      toolName: 'get_self',
+    );
+    final error = jsonDecode(output) as Map<String, dynamic>;
+
+    expect(error['error'], 'tool_unavailable');
+    expect(error['message'], 'connection failed');
+    expect(error, isNot(contains('lastArguments')));
+    expect(error, isNot(contains('parametersSchema')));
+    expect(error, isNot(contains('instruction')));
+  });
 }
 
 class _RecordingMcpProvider extends McpProvider {
-  _RecordingMcpProvider(this._servers)
+  _RecordingMcpProvider(this._servers, {this.errorMessage})
     : super(preferences: createBusinessTestPreferences());
 
   final List<McpServerConfig> _servers;
+  final String? errorMessage;
   final List<({String serverId, String toolName})> calls = [];
 
   List<McpServerConfig> get serversForTest => _servers;
@@ -243,12 +296,16 @@ class _RecordingMcpProvider extends McpProvider {
   Future<void> connect(String id) async {}
 
   @override
+  String? errorFor(String id) => errorMessage ?? super.errorFor(id);
+
+  @override
   Future<mcp.CallToolResult?> callTool(
     String serverId,
     String toolName,
     Map<String, dynamic> args,
   ) async {
     calls.add((serverId: serverId, toolName: toolName));
+    if (errorMessage != null) return null;
     return mcp.CallToolResult([mcp.TextContent(text: '$serverId:$toolName')]);
   }
 }
