@@ -484,8 +484,11 @@ class SseClientTransport implements ClientTransport {
             response.headers.value('Retry-After'),
           ),
           body: responseBody,
+          wwwAuthenticate: response.headers['WWW-Authenticate'] ?? const [],
           sessionIdPresent: sessionIdPresent,
-          canRetryRequest: response.statusCode == 404 && sessionIdPresent,
+          canRetryRequest:
+              (response.statusCode == 404 && sessionIdPresent) ||
+              response.statusCode == 401,
         );
       }
 

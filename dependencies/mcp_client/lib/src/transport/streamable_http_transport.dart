@@ -410,6 +410,7 @@ class StreamableHttpClientTransport implements ClientTransport {
           message: error.message,
           retryAfter: error.retryAfter,
           body: error.body,
+          wwwAuthenticate: error.wwwAuthenticate,
           sessionIdPresent: _sessionId?.isNotEmpty == true,
           isBackgroundRequest: true,
         );
@@ -524,8 +525,12 @@ class StreamableHttpClientTransport implements ClientTransport {
           '${body.isEmpty ? '' : ' — $body'}',
       retryAfter: McpHttpError.parseRetryAfter(response.headers['retry-after']),
       body: body,
+      wwwAuthenticate:
+          response.headers['www-authenticate'] == null
+              ? const []
+              : [response.headers['www-authenticate']!],
       sessionIdPresent: sessionIdPresent,
-      canRetryRequest: canRetryRequest,
+      canRetryRequest: canRetryRequest || response.statusCode == 401,
     );
   }
 

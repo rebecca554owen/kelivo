@@ -21,7 +21,10 @@ class McpPage extends StatelessWidget {
       case McpStatus.connected:
         return Colors.green;
       case McpStatus.connecting:
+      case McpStatus.authorizing:
         return cs.primary;
+      case McpStatus.needsAuthorization:
+        return Colors.orange;
       case McpStatus.error:
       case McpStatus.idle:
         return Colors.red;
@@ -215,6 +218,15 @@ class McpPage extends StatelessWidget {
                 final s = servers[index];
                 final st = mcp.statusFor(s.id);
                 final err = mcp.errorFor(s.id);
+                final statusText = switch (st) {
+                  McpStatus.connected => l10n.mcpPageStatusConnected,
+                  McpStatus.connecting => l10n.mcpPageStatusConnecting,
+                  McpStatus.needsAuthorization =>
+                    l10n.mcpPageStatusAuthorizationRequired,
+                  McpStatus.authorizing => l10n.mcpPageStatusAuthorizing,
+                  McpStatus.idle ||
+                  McpStatus.error => l10n.mcpPageStatusDisconnected,
+                };
 
                 Widget tagStyled(String text, {Color? color}) => Container(
                   padding: const EdgeInsets.symmetric(
@@ -300,7 +312,9 @@ class McpPage extends StatelessWidget {
                                     Positioned(
                                       right: 0,
                                       bottom: 0,
-                                      child: st == McpStatus.connecting
+                                      child:
+                                          st == McpStatus.connecting ||
+                                              st == McpStatus.authorizing
                                           ? SizedBox(
                                               width: 12,
                                               height: 12,
@@ -361,16 +375,8 @@ class McpPage extends StatelessWidget {
                                         runSpacing: 6,
                                         children: [
                                           tagStyled(
-                                            st == McpStatus.connected
-                                                ? l10n.mcpPageStatusConnected
-                                                : (st == McpStatus.connecting
-                                                      ? l10n.mcpPageStatusConnecting
-                                                      : l10n.mcpPageStatusDisconnected),
-                                            color: st == McpStatus.connected
-                                                ? Colors.green
-                                                : (st == McpStatus.connecting
-                                                      ? cs.primary
-                                                      : Colors.redAccent),
+                                            statusText,
+                                            color: _statusColor(context, st),
                                           ),
                                           tagStyled(
                                             s.transport ==
@@ -398,7 +404,10 @@ class McpPage extends StatelessWidget {
                                             ),
                                         ],
                                       ),
-                                      if (st == McpStatus.error &&
+                                      if ((st == McpStatus.error ||
+                                              st ==
+                                                  McpStatus
+                                                      .needsAuthorization) &&
                                           (err?.isNotEmpty ?? false)) ...[
                                         const SizedBox(height: 8),
                                         Row(
@@ -425,6 +434,37 @@ class McpPage extends StatelessWidget {
                                                 s.name,
                                               ),
                                               child: Text(l10n.mcpPageDetails),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      if (st ==
+                                          McpStatus.needsAuthorization) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Lucide.KeyRound,
+                                              size: 14,
+                                              color: Colors.orange,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                l10n.mcpPageOAuthRequired,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.orange,
+                                                ),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => context
+                                                  .read<McpProvider>()
+                                                  .authorize(s.id),
+                                              child: Text(
+                                                l10n.mcpPageOAuthSignIn,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -536,6 +576,8 @@ class McpPage extends StatelessWidget {
                                     transport: prev.transport,
                                     url: prev.url,
                                     headers: prev.headers,
+                                    oauth: prev.oauth,
+                                    oauthClient: prev.oauthClient,
                                   );
                                   // Try to refresh tools when back online
                                   try {

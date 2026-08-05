@@ -5057,11 +5057,35 @@ abstract class AppLocalizations {
   /// **'Disconnected'**
   String get mcpPageStatusDisconnected;
 
+  /// No description provided for @mcpPageStatusAuthorizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization required'**
+  String get mcpPageStatusAuthorizationRequired;
+
+  /// No description provided for @mcpPageStatusAuthorizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorizing…'**
+  String get mcpPageStatusAuthorizing;
+
   /// No description provided for @mcpPageStatusDisabled.
   ///
   /// In en, this message translates to:
   /// **'Disabled'**
   String get mcpPageStatusDisabled;
+
+  /// No description provided for @mcpPageOAuthRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'OAuth sign-in is required'**
+  String get mcpPageOAuthRequired;
+
+  /// No description provided for @mcpPageOAuthSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with OAuth'**
+  String get mcpPageOAuthSignIn;
 
   /// No description provided for @mcpPageToolsCount.
   ///

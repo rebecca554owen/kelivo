@@ -178,6 +178,26 @@ void main() {
                 'transport': 'http',
                 'url': 'https://restored.example.test/mcp',
                 'tools': <Object?>[],
+                'oauth': {
+                  'clientId': 'restored-client',
+                  'authorizationServer': 'https://auth.example.test',
+                  'authorizationEndpoint':
+                      'https://auth.example.test/authorize',
+                  'tokenEndpoint': 'https://auth.example.test/token',
+                  'serverUrl': 'https://restored.example.test/mcp',
+                  'resource': 'https://restored.example.test/mcp',
+                  'tokenEndpointAuthMethod': 'none',
+                  'accessToken': 'restored-access-token',
+                  'tokenType': 'Bearer',
+                  'refreshToken': 'restored-refresh-token',
+                  'expiresAt': 1893456000000,
+                },
+                'oauthClient': {
+                  'clientId': 'configured-client',
+                  'clientSecret': 'configured-secret',
+                  'tokenEndpointAuthMethod': 'client_secret_post',
+                  'authorizationServer': 'https://auth.example.test',
+                },
               },
             ]),
           });
@@ -254,9 +274,15 @@ void main() {
             ),
           );
 
+          final restoredSettings = await BusinessRestoreService(
+            targetRepository,
+          ).exportSettings();
+          expect(restoredSettings, expectedSettings);
+          final restoredMcp =
+              jsonDecode(restoredSettings['mcp_servers_v1'] as String) as List;
           expect(
-            await BusinessRestoreService(targetRepository).exportSettings(),
-            expectedSettings,
+            ((restoredMcp.single as Map)['oauth'] as Map)['accessToken'],
+            'restored-access-token',
           );
           final chatCount = await targetDatabase
               .customSelect('SELECT COUNT(*) AS total FROM conversation_rows;')

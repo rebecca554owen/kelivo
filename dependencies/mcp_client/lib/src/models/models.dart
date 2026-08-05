@@ -917,11 +917,14 @@ class McpHttpError extends McpError {
   final Duration? retryAfter;
   final String? body;
 
+  /// The WWW-Authenticate challenge values returned by the failed request.
+  final List<String> wwwAuthenticate;
+
   /// Whether the transport itself attached a non-empty session identifier.
   final bool sessionIdPresent;
 
   /// True only when the server rejected the request before accepting it.
-  /// A caller may retry such a request after creating a new session.
+  /// A caller may retry after repairing the rejected session or credentials.
   final bool canRetryRequest;
 
   /// Background GET failures are not tied to a JSON-RPC request.
@@ -932,10 +935,12 @@ class McpHttpError extends McpError {
     required String message,
     this.retryAfter,
     this.body,
+    List<String> wwwAuthenticate = const [],
     this.sessionIdPresent = false,
     this.canRetryRequest = false,
     this.isBackgroundRequest = false,
-  }) : super(message);
+  }) : wwwAuthenticate = List.unmodifiable(wwwAuthenticate),
+       super(message);
 
   static Duration? parseRetryAfter(String? value, {DateTime? now}) {
     if (value == null || value.isEmpty) return null;

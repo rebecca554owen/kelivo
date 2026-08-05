@@ -523,6 +523,7 @@ final class BusinessSettingsRouter {
           payload,
           strings: const {'id', 'name', 'transport'},
           booleans: const {'enabled'},
+          maps: const {'oauth', 'oauthClient'},
           objectLists: const {'tools'},
         );
         _validateMcpChildren(kind, payload);
@@ -722,6 +723,44 @@ final class BusinessSettingsRouter {
           booleans: const {'required'},
         );
       }
+    }
+    final oauth = payload['oauth'];
+    if (oauth is Map) {
+      _validateKnownFields(
+        kind,
+        oauth.map((key, value) => MapEntry(key.toString(), value)),
+        strings: const {
+          'clientId',
+          'clientSecret',
+          'authorizationServer',
+          'authorizationEndpoint',
+          'tokenEndpoint',
+          'registrationEndpoint',
+          'serverUrl',
+          'resource',
+          'scope',
+          'tokenEndpointAuthMethod',
+          'registrationSource',
+          'accessToken',
+          'tokenType',
+          'refreshToken',
+        },
+        integers: const {'expiresAt'},
+      );
+    }
+    final oauthClient = payload['oauthClient'];
+    if (oauthClient is Map) {
+      _validateKnownFields(
+        kind,
+        oauthClient.map((key, value) => MapEntry(key.toString(), value)),
+        strings: const {
+          'clientId',
+          'clientSecret',
+          'tokenEndpointAuthMethod',
+          'authorizationServer',
+          'registrationSource',
+        },
+      );
     }
   }
 

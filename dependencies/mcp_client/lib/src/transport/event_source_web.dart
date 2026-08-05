@@ -71,6 +71,10 @@ class EventSource implements stub.EventSource {
             _response!.headers['retry-after'],
           ),
           body: body,
+          wwwAuthenticate:
+              _response!.headers['www-authenticate'] == null
+                  ? const []
+                  : [_response!.headers['www-authenticate']!],
           isBackgroundRequest: true,
         );
       }

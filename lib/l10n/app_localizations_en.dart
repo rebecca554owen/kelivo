@@ -2696,7 +2696,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpPageStatusDisconnected => 'Disconnected';
 
   @override
+  String get mcpPageStatusAuthorizationRequired => 'Authorization required';
+
+  @override
+  String get mcpPageStatusAuthorizing => 'Authorizing…';
+
+  @override
   String get mcpPageStatusDisabled => 'Disabled';
+
+  @override
+  String get mcpPageOAuthRequired => 'OAuth sign-in is required';
+
+  @override
+  String get mcpPageOAuthSignIn => 'Sign in with OAuth';
 
   @override
   String mcpPageToolsCount(int enabled, int total) {

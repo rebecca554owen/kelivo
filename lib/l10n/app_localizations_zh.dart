@@ -2601,7 +2601,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mcpPageStatusDisconnected => '未连接';
 
   @override
+  String get mcpPageStatusAuthorizationRequired => '需要授权';
+
+  @override
+  String get mcpPageStatusAuthorizing => '授权中…';
+
+  @override
   String get mcpPageStatusDisabled => '已禁用';
+
+  @override
+  String get mcpPageOAuthRequired => '需要 OAuth 登录';
+
+  @override
+  String get mcpPageOAuthSignIn => 'OAuth 登录';
 
   @override
   String mcpPageToolsCount(int enabled, int total) {
@@ -8309,7 +8321,19 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get mcpPageStatusDisconnected => '未连接';
 
   @override
+  String get mcpPageStatusAuthorizationRequired => '需要授权';
+
+  @override
+  String get mcpPageStatusAuthorizing => '授权中…';
+
+  @override
   String get mcpPageStatusDisabled => '已禁用';
+
+  @override
+  String get mcpPageOAuthRequired => '需要 OAuth 登录';
+
+  @override
+  String get mcpPageOAuthSignIn => 'OAuth 登录';
 
   @override
   String mcpPageToolsCount(int enabled, int total) {
@@ -14016,7 +14040,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get mcpPageStatusDisconnected => '未連線';
 
   @override
+  String get mcpPageStatusAuthorizationRequired => '需要授權';
+
+  @override
+  String get mcpPageStatusAuthorizing => '授權中…';
+
+  @override
   String get mcpPageStatusDisabled => '已停用';
+
+  @override
+  String get mcpPageOAuthRequired => '需要 OAuth 登入';
+
+  @override
+  String get mcpPageOAuthSignIn => 'OAuth 登入';
 
   @override
   String mcpPageToolsCount(int enabled, int total) {

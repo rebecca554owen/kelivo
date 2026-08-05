@@ -111,7 +111,8 @@ class DesktopMcpPane extends StatelessWidget {
                             toolsTotal: s.tools.length,
                             status: status,
                             showError:
-                                status == McpStatus.error &&
+                                (status == McpStatus.error ||
+                                    status == McpStatus.needsAuthorization) &&
                                 (error?.isNotEmpty ?? false),
                             onTap: () async {
                               await showDesktopMcpEditDialog(
@@ -121,6 +122,9 @@ class DesktopMcpPane extends StatelessWidget {
                             },
                             onReconnect: () async {
                               await context.read<McpProvider>().reconnect(s.id);
+                            },
+                            onAuthorize: () async {
+                              await context.read<McpProvider>().authorize(s.id);
                             },
                             onDelete: () async {
                               final mcpProvider = context.read<McpProvider>();
@@ -172,6 +176,7 @@ class _ServerCard extends StatefulWidget {
     required this.status,
     required this.onTap,
     required this.onReconnect,
+    required this.onAuthorize,
     required this.onDelete,
     required this.onDetails,
     required this.showError,
@@ -184,6 +189,7 @@ class _ServerCard extends StatefulWidget {
   final McpStatus status;
   final VoidCallback onTap;
   final VoidCallback onReconnect;
+  final VoidCallback onAuthorize;
   final VoidCallback onDelete;
   final VoidCallback onDetails;
   final bool showError;
@@ -218,6 +224,14 @@ class _ServerCardState extends State<_ServerCard> {
       case McpStatus.connecting:
         statusColor = cs.primary;
         statusText = l10n.mcpPageStatusConnecting;
+        break;
+      case McpStatus.needsAuthorization:
+        statusColor = Colors.orange;
+        statusText = l10n.mcpPageStatusAuthorizationRequired;
+        break;
+      case McpStatus.authorizing:
+        statusColor = cs.primary;
+        statusText = l10n.mcpPageStatusAuthorizing;
         break;
       case McpStatus.error:
       case McpStatus.idle:
@@ -299,7 +313,9 @@ class _ServerCardState extends State<_ServerCard> {
                   Positioned(
                     right: -2,
                     bottom: -2,
-                    child: widget.status == McpStatus.connecting
+                    child:
+                        widget.status == McpStatus.connecting ||
+                            widget.status == McpStatus.authorizing
                         ? SizedBox(
                             width: 12,
                             height: 12,
@@ -386,6 +402,32 @@ class _ServerCardState extends State<_ServerCard> {
                               ),
                             ),
                             child: Text(l10n.mcpPageDetails),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (widget.status == McpStatus.needsAuthorization) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            lucide.Lucide.KeyRound,
+                            size: 14,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l10n.mcpPageOAuthRequired,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: widget.onAuthorize,
+                            child: Text(l10n.mcpPageOAuthSignIn),
                           ),
                         ],
                       ),
