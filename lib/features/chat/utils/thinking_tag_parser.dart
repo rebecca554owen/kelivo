@@ -12,7 +12,7 @@ class ThinkingTagParseResult {
 
 class ThinkingTagParser {
   static final RegExp _openTagRe = RegExp(
-    r'<(think|thought)>',
+    r'<(think|thinking|thought)>|<\|channel>thought',
     caseSensitive: false,
   );
 
@@ -34,8 +34,8 @@ class ThinkingTagParser {
 
       final openStart = cursor + openMatch.start;
       final openEnd = cursor + openMatch.end;
-      final tagName = (openMatch.group(1) ?? '').toLowerCase();
-      final closeTag = '</$tagName>';
+      final tagName = openMatch.group(1)?.toLowerCase();
+      final closeTag = tagName == null ? '<channel|>' : '</$tagName>';
       final closeStart = input.toLowerCase().indexOf(closeTag, openEnd);
 
       if (closeStart == -1) {
