@@ -1529,10 +1529,17 @@ class _UploadManager extends StatefulWidget {
   State<_UploadManager> createState() => _UploadManagerState();
 }
 
+enum _StorageImageSourceFilter { all, userUpload, assistant }
+
+enum _StorageEntrySort { newest, oldest, largest, smallest }
+
 class _UploadManagerState extends State<_UploadManager> {
   bool _loading = false;
   List<StorageFileEntry> _entries = const <StorageFileEntry>[];
+  List<StorageFileEntry> _visibleEntries = const <StorageFileEntry>[];
   final Set<String> _selected = <String>{};
+  _StorageImageSourceFilter _sourceFilter = _StorageImageSourceFilter.all;
+  _StorageEntrySort _sort = _StorageEntrySort.newest;
 
   bool get _selectMode => _selected.isNotEmpty;
 
@@ -1550,7 +1557,10 @@ class _UploadManagerState extends State<_UploadManager> {
       setState(() {
         _selected.clear();
         _entries = const <StorageFileEntry>[];
+        _visibleEntries = const <StorageFileEntry>[];
         _loading = false;
+        _sourceFilter = _StorageImageSourceFilter.all;
+        _sort = _StorageEntrySort.newest;
       });
       _load();
     }
@@ -1566,12 +1576,55 @@ class _UploadManagerState extends State<_UploadManager> {
       if (!mounted) return;
       setState(() {
         _entries = list;
+        _visibleEntries = _buildVisibleEntries();
         final paths = _entries.map((e) => e.path).toSet();
         _selected.removeWhere((p) => !paths.contains(p));
       });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<StorageFileEntry> _buildVisibleEntries() {
+    if (!widget.images) return _entries;
+
+    final entries = _entries.where((entry) {
+      return switch (_sourceFilter) {
+        _StorageImageSourceFilter.all => true,
+        _StorageImageSourceFilter.userUpload =>
+          entry.source == StorageFileSource.userUpload,
+        _StorageImageSourceFilter.assistant =>
+          entry.source == StorageFileSource.assistant,
+      };
+    }).toList();
+
+    entries.sort((a, b) {
+      final order = switch (_sort) {
+        _StorageEntrySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
+        _StorageEntrySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
+        _StorageEntrySort.largest => b.bytes.compareTo(a.bytes),
+        _StorageEntrySort.smallest => a.bytes.compareTo(b.bytes),
+      };
+      return order != 0 ? order : a.path.compareTo(b.path);
+    });
+    return entries;
+  }
+
+  void _setSourceFilter(_StorageImageSourceFilter filter) {
+    if (_sourceFilter == filter) return;
+    setState(() {
+      _sourceFilter = filter;
+      _visibleEntries = _buildVisibleEntries();
+      _selected.clear();
+    });
+  }
+
+  void _setSort(_StorageEntrySort sort) {
+    if (_sort == sort) return;
+    setState(() {
+      _sort = sort;
+      _visibleEntries = _buildVisibleEntries();
+    });
   }
 
   void _toggleSelect(String path) {
@@ -1584,11 +1637,11 @@ class _UploadManagerState extends State<_UploadManager> {
     });
   }
 
-  void _selectAll() {
+  void _selectAll(Iterable<StorageFileEntry> entries) {
     setState(() {
       _selected
         ..clear()
-        ..addAll(_entries.map((e) => e.path));
+        ..addAll(entries.map((e) => e.path));
     });
   }
 
@@ -1637,8 +1690,11 @@ class _UploadManagerState extends State<_UploadManager> {
     await widget.refreshReport();
   }
 
-  Future<void> _openImageViewer(int initialIndex) async {
-    final images = _entries.map((e) => e.path).toList(growable: false);
+  Future<void> _openImageViewer(
+    List<StorageFileEntry> entries,
+    int initialIndex,
+  ) async {
+    final images = entries.map((e) => e.path).toList(growable: false);
     final route = PlatformUtils.isDesktopTarget
         ? PageRouteBuilder(
             pageBuilder: (_, __, ___) =>
@@ -1701,6 +1757,7 @@ class _UploadManagerState extends State<_UploadManager> {
       );
     }
 
+    final entries = _visibleEntries;
     final actions = Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -1711,7 +1768,8 @@ class _UploadManagerState extends State<_UploadManager> {
               : l10n.storageSpaceSelectAll,
           icon: _selectMode ? Lucide.XCircle : Lucide.CheckSquare,
           backgroundColor: cs.primary,
-          onTap: _selectMode ? _clearSelection : _selectAll,
+          enabled: entries.isNotEmpty,
+          onTap: _selectMode ? _clearSelection : () => _selectAll(entries),
         ),
         IosTileButton(
           label: l10n.homePageDelete,
@@ -1726,6 +1784,15 @@ class _UploadManagerState extends State<_UploadManager> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.images) ...[
+          _StorageImageOrganizer(
+            sourceFilter: _sourceFilter,
+            sort: _sort,
+            onSourceChanged: _setSourceFilter,
+            onSortChanged: _setSort,
+          ),
+          const SizedBox(height: 12),
+        ],
         actions,
         const SizedBox(height: 12),
         Expanded(
@@ -1737,7 +1804,7 @@ class _UploadManagerState extends State<_UploadManager> {
                   child: Text(
                     _selectMode
                         ? l10n.storageSpaceSelectedCount(_selected.length)
-                        : l10n.storageSpaceUploadsCount(_entries.length),
+                        : l10n.storageSpaceUploadsCount(entries.length),
                     style: TextStyle(
                       fontSize: 12.5,
                       color: cs.onSurface.withValues(alpha: 0.65),
@@ -1745,7 +1812,19 @@ class _UploadManagerState extends State<_UploadManager> {
                   ),
                 ),
               ),
-              if (widget.images)
+              if (entries.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Text(
+                      l10n.storageSpaceNoUploads,
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ),
+                )
+              else if (widget.images)
                 SliverPadding(
                   padding: const EdgeInsets.only(bottom: 16),
                   sliver: SliverGrid(
@@ -1757,7 +1836,7 @@ class _UploadManagerState extends State<_UploadManager> {
                           childAspectRatio: 1,
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
-                      final e = _entries[index];
+                      final e = entries[index];
                       final selected = _selected.contains(e.path);
                       return _ImageTile(
                         path: e.path,
@@ -1767,18 +1846,18 @@ class _UploadManagerState extends State<_UploadManager> {
                           if (_selectMode) {
                             _toggleSelect(e.path);
                           } else {
-                            _openImageViewer(index);
+                            _openImageViewer(entries, index);
                           }
                         },
                         onLongPress: () => _toggleSelect(e.path),
                       );
-                    }, childCount: _entries.length),
+                    }, childCount: entries.length),
                   ),
                 )
               else
                 SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
-                    final e = _entries[index];
+                    final e = entries[index];
                     final selected = _selected.contains(e.path);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -1797,9 +1876,151 @@ class _UploadManagerState extends State<_UploadManager> {
                         onToggle: () => _toggleSelect(e.path),
                       ),
                     );
-                  }, childCount: _entries.length),
+                  }, childCount: entries.length),
                 ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StorageImageOrganizer extends StatelessWidget {
+  const _StorageImageOrganizer({
+    required this.sourceFilter,
+    required this.sort,
+    required this.onSourceChanged,
+    required this.onSortChanged,
+  });
+
+  final _StorageImageSourceFilter sourceFilter;
+  final _StorageEntrySort sort;
+  final ValueChanged<_StorageImageSourceFilter> onSourceChanged;
+  final ValueChanged<_StorageEntrySort> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      children: [
+        _StorageChoiceRow<_StorageImageSourceFilter>(
+          label: l10n.storageSpaceSourceLabel,
+          value: sourceFilter,
+          options: [
+            (_StorageImageSourceFilter.all, l10n.storageSpaceSourceAll),
+            (
+              _StorageImageSourceFilter.userUpload,
+              l10n.storageSpaceSourceUserUpload,
+            ),
+            (
+              _StorageImageSourceFilter.assistant,
+              l10n.storageSpaceSourceAssistant,
+            ),
+          ],
+          onChanged: onSourceChanged,
+        ),
+        const SizedBox(height: 8),
+        _StorageChoiceRow<_StorageEntrySort>(
+          label: l10n.storageSpaceSortLabel,
+          value: sort,
+          options: [
+            (_StorageEntrySort.newest, l10n.storageSpaceSortNewest),
+            (_StorageEntrySort.oldest, l10n.storageSpaceSortOldest),
+            (_StorageEntrySort.largest, l10n.storageSpaceSortLargest),
+            (_StorageEntrySort.smallest, l10n.storageSpaceSortSmallest),
+          ],
+          onChanged: onSortChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class _StorageChoiceRow<T> extends StatelessWidget {
+  const _StorageChoiceRow({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String label;
+  final T value;
+  final List<(T, String)> options;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final shellColor = cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.05);
+    final selectedColor = cs.primary.withValues(alpha: isDark ? 0.22 : 0.13);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 48,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: AppFontWeights.semibold,
+              color: cs.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: shellColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (int index = 0; index < options.length; index++) ...[
+                      Semantics(
+                        button: true,
+                        selected: options[index].$1 == value,
+                        child: IosCardPress(
+                          onTap: () => onChanged(options[index].$1),
+                          haptics: false,
+                          pressedScale: 1.0,
+                          borderRadius: BorderRadius.circular(8),
+                          baseColor: options[index].$1 == value
+                              ? selectedColor
+                              : Colors.transparent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            options[index].$2,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: AppFontWeights.semibold,
+                              color: options[index].$1 == value
+                                  ? cs.primary
+                                  : cs.onSurface.withValues(alpha: 0.72),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (index != options.length - 1) const SizedBox(width: 2),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],

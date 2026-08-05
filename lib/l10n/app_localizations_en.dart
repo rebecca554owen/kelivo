@@ -292,6 +292,33 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get storageSpaceSourceLabel => 'Source';
+
+  @override
+  String get storageSpaceSourceAll => 'All';
+
+  @override
+  String get storageSpaceSourceUserUpload => 'User uploads';
+
+  @override
+  String get storageSpaceSourceAssistant => 'Assistant';
+
+  @override
+  String get storageSpaceSortLabel => 'Sort';
+
+  @override
+  String get storageSpaceSortNewest => 'Newest';
+
+  @override
+  String get storageSpaceSortOldest => 'Oldest';
+
+  @override
+  String get storageSpaceSortLargest => 'Largest';
+
+  @override
+  String get storageSpaceSortSmallest => 'Smallest';
+
+  @override
   String get settingsPageAboutSection => 'About';
 
   @override

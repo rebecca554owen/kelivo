@@ -163,6 +163,15 @@
       }
     }
   },
+  "storageSpaceSourceLabel": "Source",
+  "storageSpaceSourceAll": "All",
+  "storageSpaceSourceUserUpload": "User uploads",
+  "storageSpaceSourceAssistant": "Assistant",
+  "storageSpaceSortLabel": "Sort",
+  "storageSpaceSortNewest": "Newest",
+  "storageSpaceSortOldest": "Oldest",
+  "storageSpaceSortLargest": "Largest",
+  "storageSpaceSortSmallest": "Smallest",
   "settingsPageAboutSection": "About",
   "settingsPageAbout": "About",
   "settingsPageStatistics": "Statistics",

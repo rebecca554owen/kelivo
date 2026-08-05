@@ -286,6 +286,33 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get storageSpaceSourceLabel => '来源';
+
+  @override
+  String get storageSpaceSourceAll => '全部';
+
+  @override
+  String get storageSpaceSourceUserUpload => '用户上传';
+
+  @override
+  String get storageSpaceSourceAssistant => '助手发出';
+
+  @override
+  String get storageSpaceSortLabel => '排序';
+
+  @override
+  String get storageSpaceSortNewest => '最新';
+
+  @override
+  String get storageSpaceSortOldest => '最旧';
+
+  @override
+  String get storageSpaceSortLargest => '最大';
+
+  @override
+  String get storageSpaceSortSmallest => '最小';
+
+  @override
   String get settingsPageAboutSection => '关于';
 
   @override
@@ -6061,6 +6088,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get storageSpaceSourceLabel => '来源';
+
+  @override
+  String get storageSpaceSourceAll => '全部';
+
+  @override
+  String get storageSpaceSourceUserUpload => '用户上传';
+
+  @override
+  String get storageSpaceSourceAssistant => '助手发出';
+
+  @override
+  String get storageSpaceSortLabel => '排序';
+
+  @override
+  String get storageSpaceSortNewest => '最新';
+
+  @override
+  String get storageSpaceSortOldest => '最旧';
+
+  @override
+  String get storageSpaceSortLargest => '最大';
+
+  @override
+  String get storageSpaceSortSmallest => '最小';
+
+  @override
   String get settingsPageAboutSection => '关于';
 
   @override
@@ -11834,6 +11888,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String storageSpaceUploadsCount(int count) {
     return '共 $count 項';
   }
+
+  @override
+  String get storageSpaceSourceLabel => '來源';
+
+  @override
+  String get storageSpaceSourceAll => '全部';
+
+  @override
+  String get storageSpaceSourceUserUpload => '使用者上傳';
+
+  @override
+  String get storageSpaceSourceAssistant => '助理傳送';
+
+  @override
+  String get storageSpaceSortLabel => '排序';
+
+  @override
+  String get storageSpaceSortNewest => '最新';
+
+  @override
+  String get storageSpaceSortOldest => '最舊';
+
+  @override
+  String get storageSpaceSortLargest => '最大';
+
+  @override
+  String get storageSpaceSortSmallest => '最小';
 
   @override
   String get settingsPageAboutSection => '關於';

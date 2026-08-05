@@ -71,16 +71,20 @@ class StorageUsageReport {
   });
 }
 
+enum StorageFileSource { userUpload, assistant }
+
 class StorageFileEntry {
   final String path;
   final String name;
   final int bytes;
   final DateTime modifiedAt;
+  final StorageFileSource source;
   const StorageFileEntry({
     required this.path,
     required this.name,
     required this.bytes,
     required this.modifiedAt,
+    required this.source,
   });
 }
 
@@ -538,6 +542,7 @@ abstract final class StorageUsageService {
       Directory d, {
       required bool includeImages,
       required bool includeNonImages,
+      required StorageFileSource source,
     }) async {
       if (!await d.exists()) return;
       try {
@@ -564,6 +569,7 @@ abstract final class StorageUsageService {
               name: name,
               bytes: bytes,
               modifiedAt: modifiedAt,
+              source: source,
             ),
           );
         }
@@ -573,9 +579,19 @@ abstract final class StorageUsageService {
     }
 
     // Chat attachments live under upload/. Inline/generated images live under images/.
-    await addFromDir(dir, includeImages: images, includeNonImages: !images);
+    await addFromDir(
+      dir,
+      includeImages: images,
+      includeNonImages: !images,
+      source: StorageFileSource.userUpload,
+    );
     if (images) {
-      await addFromDir(imagesDir, includeImages: true, includeNonImages: false);
+      await addFromDir(
+        imagesDir,
+        includeImages: true,
+        includeNonImages: false,
+        source: StorageFileSource.assistant,
+      );
     }
     out.sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
     return out;

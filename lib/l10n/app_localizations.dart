@@ -604,6 +604,60 @@ abstract class AppLocalizations {
   /// **'{count} items'**
   String storageSpaceUploadsCount(int count);
 
+  /// No description provided for @storageSpaceSourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get storageSpaceSourceLabel;
+
+  /// No description provided for @storageSpaceSourceAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get storageSpaceSourceAll;
+
+  /// No description provided for @storageSpaceSourceUserUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'User uploads'**
+  String get storageSpaceSourceUserUpload;
+
+  /// No description provided for @storageSpaceSourceAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get storageSpaceSourceAssistant;
+
+  /// No description provided for @storageSpaceSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get storageSpaceSortLabel;
+
+  /// No description provided for @storageSpaceSortNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get storageSpaceSortNewest;
+
+  /// No description provided for @storageSpaceSortOldest.
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest'**
+  String get storageSpaceSortOldest;
+
+  /// No description provided for @storageSpaceSortLargest.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest'**
+  String get storageSpaceSortLargest;
+
+  /// No description provided for @storageSpaceSortSmallest.
+  ///
+  /// In en, this message translates to:
+  /// **'Smallest'**
+  String get storageSpaceSortSmallest;
+
   /// No description provided for @settingsPageAboutSection.
   ///
   /// In en, this message translates to:

@@ -261,4 +261,22 @@ void main() {
       isEmpty,
     );
   });
+
+  test(
+    'image entries distinguish user uploads from assistant images',
+    () async {
+      final uploadDir = Directory(p.join(tempDir.path, 'upload'));
+      final imagesDir = Directory(p.join(tempDir.path, 'images'));
+      await uploadDir.create();
+      await imagesDir.create();
+      await _writeSizedFile(uploadDir, 'uploaded.png', 10);
+      await _writeSizedFile(imagesDir, 'assistant.png', 20);
+
+      final entries = await StorageUsageService.listUploadEntries(images: true);
+      final sources = {for (final entry in entries) entry.name: entry.source};
+
+      expect(sources['uploaded.png'], StorageFileSource.userUpload);
+      expect(sources['assistant.png'], StorageFileSource.assistant);
+    },
+  );
 }
