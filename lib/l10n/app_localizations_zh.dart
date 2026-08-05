@@ -2574,6 +2574,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatInputBarMoreTooltip => '更多';
 
   @override
+  String get chatInputBarVoiceInputTooltip => '语音输入';
+
+  @override
+  String get chatInputBarVoiceCancelTooltip => '取消录音';
+
+  @override
+  String get chatInputBarVoiceStopTooltip => '停止并转为文字';
+
+  @override
+  String get chatInputBarVoiceSendTooltip => '转文字并发送';
+
+  @override
+  String get chatInputBarVoiceDemoText => '你好，这是一段语音输入的演示文本。';
+
+  @override
   String get chatInputBarImageProcessing => '正在处理图片';
 
   @override
@@ -8376,6 +8391,21 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get chatInputBarMoreTooltip => '更多';
 
   @override
+  String get chatInputBarVoiceInputTooltip => '语音输入';
+
+  @override
+  String get chatInputBarVoiceCancelTooltip => '取消录音';
+
+  @override
+  String get chatInputBarVoiceStopTooltip => '停止并转为文字';
+
+  @override
+  String get chatInputBarVoiceSendTooltip => '转文字并发送';
+
+  @override
+  String get chatInputBarVoiceDemoText => '你好，这是一段语音输入的演示文本。';
+
+  @override
   String get chatInputBarImageProcessing => '正在处理图片';
 
   @override
@@ -14175,6 +14205,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputBarMoreTooltip => '更多';
+
+  @override
+  String get chatInputBarVoiceInputTooltip => '語音輸入';
+
+  @override
+  String get chatInputBarVoiceCancelTooltip => '取消錄音';
+
+  @override
+  String get chatInputBarVoiceStopTooltip => '停止並轉為文字';
+
+  @override
+  String get chatInputBarVoiceSendTooltip => '轉文字並發送';
+
+  @override
+  String get chatInputBarVoiceDemoText => '你好，這是一段語音輸入的演示文本。';
 
   @override
   String get chatInputBarImageProcessing => '正在處理圖片';

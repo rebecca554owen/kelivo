@@ -5003,6 +5003,36 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get chatInputBarMoreTooltip;
 
+  /// No description provided for @chatInputBarVoiceInputTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice input'**
+  String get chatInputBarVoiceInputTooltip;
+
+  /// No description provided for @chatInputBarVoiceCancelTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard recording'**
+  String get chatInputBarVoiceCancelTooltip;
+
+  /// No description provided for @chatInputBarVoiceStopTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop and transcribe to input'**
+  String get chatInputBarVoiceStopTooltip;
+
+  /// No description provided for @chatInputBarVoiceSendTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribe and send'**
+  String get chatInputBarVoiceSendTooltip;
+
+  /// No description provided for @chatInputBarVoiceDemoText.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, this is a voice input demo.'**
+  String get chatInputBarVoiceDemoText;
+
   /// No description provided for @chatInputBarImageProcessing.
   ///
   /// In en, this message translates to:

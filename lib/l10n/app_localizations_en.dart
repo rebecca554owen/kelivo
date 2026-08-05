@@ -2669,6 +2669,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputBarMoreTooltip => 'Add';
 
   @override
+  String get chatInputBarVoiceInputTooltip => 'Voice input';
+
+  @override
+  String get chatInputBarVoiceCancelTooltip => 'Discard recording';
+
+  @override
+  String get chatInputBarVoiceStopTooltip => 'Stop and transcribe to input';
+
+  @override
+  String get chatInputBarVoiceSendTooltip => 'Transcribe and send';
+
+  @override
+  String get chatInputBarVoiceDemoText => 'Hello, this is a voice input demo.';
+
+  @override
   String get chatInputBarImageProcessing => 'Processing image';
 
   @override

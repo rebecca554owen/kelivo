@@ -192,9 +192,16 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late TextEditingController _controller;
   bool _isExpanded = false; // Track expand/collapse state for input field
+  // Voice input (UI demo only): recording state + waveform animation
+  bool _isRecordingVoice = false;
+  late final AnimationController _voiceWaveController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+  Timer? _voiceTypingTimer;
   final List<_DraftImage> _images = <_DraftImage>[];
   final Queue<_ImageProcessingTask> _imageProcessingQueue =
       Queue<_ImageProcessingTask>();
@@ -509,6 +516,8 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _voiceTypingTimer?.cancel();
+    _voiceWaveController.dispose();
     for (final timer in _repeatTimers.values) {
       try {
         timer?.cancel();
@@ -544,6 +553,108 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   /// Whether to show the expand/collapse button (when text has 3+ lines).
   bool get _showExpandButton => _lineCount >= 3;
+
+  // ---------------------------------------------------------------------------
+  // Voice input (front-end demo only — no real recording/transcription yet)
+  // ---------------------------------------------------------------------------
+
+  void _startVoiceInput() {
+    if (_composerLocked || widget.loading) return;
+    _voiceTypingTimer?.cancel();
+    setState(() => _isRecordingVoice = true);
+    _voiceWaveController.repeat();
+    // Hide the keyboard while recording, like the Claude app
+    widget.focusNode?.unfocus();
+  }
+
+  void _cancelVoiceInput() {
+    _voiceWaveController.stop();
+    setState(() => _isRecordingVoice = false);
+  }
+
+  /// Stop recording and simulate speech-to-text by typing a demo transcript
+  /// into the field. When [sendAfter] is true, send it once typing completes.
+  void _finishVoiceInput({required bool sendAfter}) {
+    final demo = AppLocalizations.of(context)!.chatInputBarVoiceDemoText;
+    _voiceWaveController.stop();
+    setState(() => _isRecordingVoice = false);
+    _voiceTypingTimer?.cancel();
+    final existing = _controller.text;
+    final base = existing.isEmpty ? '' : '$existing ';
+    var i = 0;
+    _voiceTypingTimer = Timer.periodic(const Duration(milliseconds: 28), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      i++;
+      final text = base + demo.substring(0, i.clamp(0, demo.length));
+      _controller.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+      setState(() {});
+      _ensureCaretVisible();
+      if (i >= demo.length) {
+        t.cancel();
+        if (sendAfter) unawaited(_handleSend());
+      }
+    });
+  }
+
+  /// Bottom row shown while recording: cancel (X) — waveform — stop — send.
+  Widget _buildVoiceRecordingRow(BuildContext context, ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      key: const ValueKey('voice'),
+      children: [
+        _CompactIconButton(
+          tooltip: l10n.chatInputBarVoiceCancelTooltip,
+          icon: Lucide.X,
+          onTap: _cancelVoiceInput,
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8, right: 2),
+            // Match the normal action row height (32) so the input bar
+            // doesn't jump when switching in/out of recording state
+            child: SizedBox(
+              height: 32,
+              child: _VoiceWaveform(
+                animation: _voiceWaveController,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        ),
+        // Stop: finish recording and transcribe into the input field
+        _CompactIconButton(
+          tooltip: l10n.chatInputBarVoiceStopTooltip,
+          icon: Lucide.Square,
+          onTap: () => _finishVoiceInput(sendAfter: false),
+          childBuilder: (c) => Center(
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: c,
+                borderRadius: BorderRadius.circular(3.5),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Send: transcribe and send the message right away
+        _CompactSendButton(
+          enabled: true,
+          onSend: () => _finishVoiceInput(sendAfter: true),
+          color: theme.colorScheme.primary,
+          icon: Lucide.Check,
+          tooltip: l10n.chatInputBarVoiceSendTooltip,
+        ),
+      ],
+    );
+  }
 
   Future<void> _handleSend() async {
     if (_isSubmitting || _hasUnreadyImages) return;
@@ -2115,7 +2226,9 @@ class _ChatInputBarState extends State<ChatInputBar>
                                             controller: _controller,
                                             focusNode: widget.focusNode,
                                             onChanged: _onTextChanged,
-                                            readOnly: _composerLocked,
+                                            readOnly:
+                                                _composerLocked ||
+                                                _isRecordingVoice,
                                             minLines: 1,
                                             maxLines: _isExpanded ? 25 : 5,
                                             // On mobile, optionally show "Send" on the return key and submit on tap.
@@ -2200,71 +2313,115 @@ class _ChatInputBarState extends State<ChatInputBar>
                               AppSpacing.xs,
                               AppSpacing.xs,
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Responsive left action bar that overflows into a + menu on desktop
-                                Expanded(
-                                  child: _buildResponsiveLeftActions(context),
-                                ),
-                                Row(
-                                  children: [
-                                    if (widget.showMoreButton) ...[
-                                      _CompactIconButton(
-                                        tooltip: AppLocalizations.of(
-                                          context,
-                                        )!.chatInputBarMoreTooltip,
-                                        icon: Lucide.Plus,
-                                        active: widget.moreOpen,
-                                        onTap: _composerLocked
-                                            ? null
-                                            : widget.onMore,
-                                        childBuilder: (c) => AnimatedSwitcher(
-                                          duration: const Duration(
-                                            milliseconds: 200,
-                                          ),
-                                          transitionBuilder: (child, anim) =>
-                                              RotationTransition(
-                                                turns: Tween<double>(
-                                                  begin: 0.85,
-                                                  end: 1,
-                                                ).animate(anim),
-                                                child: FadeTransition(
-                                                  opacity: anim,
-                                                  child: child,
-                                                ),
-                                              ),
-                                          child: Icon(
-                                            widget.moreOpen
-                                                ? Lucide.X
-                                                : Lucide.Plus,
-                                            key: ValueKey(
-                                              widget.moreOpen ? 'close' : 'add',
-                                            ),
-                                            size: 20,
-                                            color: c,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 260),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, anim) =>
+                                  FadeTransition(
+                                    opacity: anim,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0, 0.35),
+                                        end: Offset.zero,
+                                      ).animate(anim),
+                                      child: child,
+                                    ),
+                                  ),
+                              child: _isRecordingVoice
+                                  ? _buildVoiceRecordingRow(context, theme)
+                                  : Row(
+                                      key: const ValueKey('actions'),
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Responsive left action bar that overflows into a + menu on desktop
+                                        Expanded(
+                                          child: _buildResponsiveLeftActions(
+                                            context,
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    _CompactSendButton(
-                                      enabled:
-                                          (hasText || hasImages || hasDocs) &&
-                                          !_hasUnreadyImages &&
-                                          !widget.loading,
-                                      loading: widget.loading,
-                                      onSend: _handleSend,
-                                      onStop: widget.loading
-                                          ? widget.onStop
-                                          : null,
-                                      color: theme.colorScheme.primary,
-                                      icon: Lucide.ArrowUp,
-                                      tooltip: widget.sendButtonTooltip,
+                                        Row(
+                                          children: [
+                                            if (widget.showMoreButton) ...[
+                                              _CompactIconButton(
+                                                tooltip: AppLocalizations.of(
+                                                  context,
+                                                )!.chatInputBarMoreTooltip,
+                                                icon: Lucide.Plus,
+                                                active: widget.moreOpen,
+                                                onTap: _composerLocked
+                                                    ? null
+                                                    : widget.onMore,
+                                                childBuilder: (c) =>
+                                                    AnimatedSwitcher(
+                                                      duration: const Duration(
+                                                        milliseconds: 200,
+                                                      ),
+                                                      transitionBuilder:
+                                                          (
+                                                            child,
+                                                            anim,
+                                                          ) => RotationTransition(
+                                                            turns:
+                                                                Tween<double>(
+                                                                  begin: 0.85,
+                                                                  end: 1,
+                                                                ).animate(anim),
+                                                            child:
+                                                                FadeTransition(
+                                                                  opacity: anim,
+                                                                  child: child,
+                                                                ),
+                                                          ),
+                                                      child: Icon(
+                                                        widget.moreOpen
+                                                            ? Lucide.X
+                                                            : Lucide.Plus,
+                                                        key: ValueKey(
+                                                          widget.moreOpen
+                                                              ? 'close'
+                                                              : 'add',
+                                                        ),
+                                                        size: 20,
+                                                        color: c,
+                                                      ),
+                                                    ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                            ],
+                                            _CompactIconButton(
+                                              tooltip: AppLocalizations.of(
+                                                context,
+                                              )!.chatInputBarVoiceInputTooltip,
+                                              icon: Lucide.Mic,
+                                              onTap:
+                                                  _composerLocked ||
+                                                      widget.loading
+                                                  ? null
+                                                  : _startVoiceInput,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            _CompactSendButton(
+                                              enabled:
+                                                  (hasText ||
+                                                      hasImages ||
+                                                      hasDocs) &&
+                                                  !_hasUnreadyImages &&
+                                                  !widget.loading,
+                                              loading: widget.loading,
+                                              onSend: _handleSend,
+                                              onStop: widget.loading
+                                                  ? widget.onStop
+                                                  : null,
+                                              color: theme.colorScheme.primary,
+                                              icon: Lucide.ArrowUp,
+                                              tooltip: widget.sendButtonTooltip,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ],
                             ),
                           ),
                         ],
@@ -2646,4 +2803,63 @@ class _CompactSendButton extends StatelessWidget {
       child: Semantics(tooltip: tooltip!, child: button),
     );
   }
+}
+
+// Animated fake waveform shown while the voice-input UI demo is recording.
+class _VoiceWaveform extends StatelessWidget {
+  const _VoiceWaveform({required this.animation, required this.color});
+
+  final Animation<double> animation;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => CustomPaint(
+        painter: _VoiceWaveformPainter(t: animation.value, color: color),
+      ),
+    );
+  }
+}
+
+class _VoiceWaveformPainter extends CustomPainter {
+  _VoiceWaveformPainter({required this.t, required this.color});
+
+  /// Animation progress in [0, 1), looping.
+  final double t;
+  final Color color;
+
+  static const double _barWidth = 3;
+  static const double _barGap = 3.5;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final count = (size.width / (_barWidth + _barGap)).floor();
+    if (count <= 0) return;
+    final centerY = size.height / 2;
+    final maxH = size.height * 0.92;
+    final phase = t * 2 * math.pi;
+    for (var i = 0; i < count; i++) {
+      // Two detuned sines per bar give an organic, voice-like movement.
+      final v =
+          (math.sin(phase * 2.0 + i * 0.55) +
+              math.sin(phase * 3.3 + i * 1.31)) /
+          2;
+      final h = maxH * (0.12 + 0.88 * v.abs());
+      final x = i * (_barWidth + _barGap);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, centerY - h / 2, _barWidth, h),
+          const Radius.circular(_barWidth / 2),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_VoiceWaveformPainter oldDelegate) =>
+      oldDelegate.t != t || oldDelegate.color != color;
 }
