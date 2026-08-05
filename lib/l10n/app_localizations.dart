@@ -8390,6 +8390,18 @@ abstract class AppLocalizations {
   /// **'Start TTS automatically after an assistant reply finishes.'**
   String get ttsSettingsAutoPlayDescription;
 
+  /// No description provided for @ttsSettingsCacheReplayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse Audio for Replay'**
+  String get ttsSettingsCacheReplayTitle;
+
+  /// No description provided for @ttsSettingsCacheReplayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay generated network audio without requesting the TTS service again.'**
+  String get ttsSettingsCacheReplayDescription;
+
   /// No description provided for @ttsSettingsTextSelectionSection.
   ///
   /// In en, this message translates to:

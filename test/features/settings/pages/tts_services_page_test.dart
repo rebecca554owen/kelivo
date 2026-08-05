@@ -119,6 +119,7 @@ void main() {
 
     expect(find.text('TTS Settings'), findsOneWidget);
     expect(find.text('Auto-play Assistant Replies'), findsOneWidget);
+    expect(find.text('Reuse Audio for Replay'), findsOneWidget);
     expect(find.text('Text Selection'), findsOneWidget);
   });
 }

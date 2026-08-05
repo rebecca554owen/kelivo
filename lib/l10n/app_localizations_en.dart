@@ -4535,6 +4535,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Start TTS automatically after an assistant reply finishes.';
 
   @override
+  String get ttsSettingsCacheReplayTitle => 'Reuse Audio for Replay';
+
+  @override
+  String get ttsSettingsCacheReplayDescription =>
+      'Replay generated network audio without requesting the TTS service again.';
+
+  @override
   String get ttsSettingsTextSelectionSection => 'Text Selection';
 
   @override

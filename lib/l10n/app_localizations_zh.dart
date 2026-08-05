@@ -4351,6 +4351,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsSettingsAutoPlayDescription => '助手回复生成完成后自动开始 TTS 播放。';
 
   @override
+  String get ttsSettingsCacheReplayTitle => '使用缓存复播';
+
+  @override
+  String get ttsSettingsCacheReplayDescription => '重新播放网络语音时使用已生成的音频，不再请求语音服务。';
+
+  @override
   String get ttsSettingsTextSelectionSection => '文本选择';
 
   @override
@@ -10120,6 +10126,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ttsSettingsAutoPlayDescription => '助手回复生成完成后自动开始 TTS 播放。';
 
   @override
+  String get ttsSettingsCacheReplayTitle => '使用缓存复播';
+
+  @override
+  String get ttsSettingsCacheReplayDescription => '重新播放网络语音时使用已生成的音频，不再请求语音服务。';
+
+  @override
   String get ttsSettingsTextSelectionSection => '文本选择';
 
   @override
@@ -15885,6 +15897,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get ttsSettingsAutoPlayDescription => '助理回覆產生完成後自動開始 TTS 播放。';
+
+  @override
+  String get ttsSettingsCacheReplayTitle => '使用快取重播';
+
+  @override
+  String get ttsSettingsCacheReplayDescription => '重新播放網路語音時使用已產生的音訊，不再請求語音服務。';
 
   @override
   String get ttsSettingsTextSelectionSection => '文字選擇';

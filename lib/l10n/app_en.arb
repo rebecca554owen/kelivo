@@ -1894,6 +1894,8 @@
   "ttsSettingsPlaybackSection": "Playback",
   "ttsSettingsAutoPlayTitle": "Auto-play Assistant Replies",
   "ttsSettingsAutoPlayDescription": "Start TTS automatically after an assistant reply finishes.",
+  "ttsSettingsCacheReplayTitle": "Reuse Audio for Replay",
+  "ttsSettingsCacheReplayDescription": "Replay generated network audio without requesting the TTS service again.",
   "ttsSettingsTextSelectionSection": "Text Selection",
   "ttsSettingsTextSelectionFallbackDescription": "If no matching text is found, the full reply is played.",
   "ttsSettingsTextSelectionFullTextTitle": "Full text",

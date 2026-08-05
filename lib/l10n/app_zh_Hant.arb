@@ -1504,6 +1504,8 @@
   "ttsSettingsPlaybackSection": "播放",
   "ttsSettingsAutoPlayTitle": "自動播放助理回覆",
   "ttsSettingsAutoPlayDescription": "助理回覆產生完成後自動開始 TTS 播放。",
+  "ttsSettingsCacheReplayTitle": "使用快取重播",
+  "ttsSettingsCacheReplayDescription": "重新播放網路語音時使用已產生的音訊，不再請求語音服務。",
   "ttsSettingsTextSelectionSection": "文字選擇",
   "ttsSettingsTextSelectionFallbackDescription": "沒有符合內容時將播放完整回覆。",
   "ttsSettingsTextSelectionFullTextTitle": "全文",

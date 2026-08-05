@@ -1514,6 +1514,8 @@
   "ttsSettingsPlaybackSection": "播放",
   "ttsSettingsAutoPlayTitle": "自动播放助手回复",
   "ttsSettingsAutoPlayDescription": "助手回复生成完成后自动开始 TTS 播放。",
+  "ttsSettingsCacheReplayTitle": "使用缓存复播",
+  "ttsSettingsCacheReplayDescription": "重新播放网络语音时使用已生成的音频，不再请求语音服务。",
   "ttsSettingsTextSelectionSection": "文本选择",
   "ttsSettingsTextSelectionFallbackDescription": "没有匹配内容时将播放完整回复。",
   "ttsSettingsTextSelectionFullTextTitle": "全文",

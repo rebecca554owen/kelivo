@@ -24,6 +24,8 @@ class TtsProvider extends ChangeNotifier {
   static const String _pitchKey = 'tts_pitch_v1';
   static const String _engineKey = 'tts_engine_v1';
   static const String _langKey = 'tts_language_v1';
+  static const String _cacheNetworkAudioForReplayKey =
+      'tts_cache_network_audio_for_replay_v1';
   static const int _systemChunkMaxLength = 360;
   static const int _networkChunkMaxLength = 220;
   static const int _networkPrefetchCount = 3;
@@ -56,6 +58,7 @@ class TtsProvider extends ChangeNotifier {
   // Settings
   double _speechRate = 0.5; // flutter_tts platform value, 0.5 is normal.
   double _pitch = 1.0;
+  bool _cacheNetworkAudioForReplay = false;
   String? _engineId;
   String? _languageTag;
 
@@ -80,6 +83,7 @@ class TtsProvider extends ChangeNotifier {
   String? get error => _error;
   double get speechRate => _speechRate;
   double get pitch => _pitch;
+  bool get cacheNetworkAudioForReplay => _cacheNetworkAudioForReplay;
   String? get engineId => _engineId;
   String? get languageTag => _languageTag;
   TtsPlaybackState get playbackState => _playbackState;
@@ -101,6 +105,8 @@ class TtsProvider extends ChangeNotifier {
       _pitch = (preferences.getDouble(_pitchKey) ?? 1.0)
           .clamp(0.5, 2.0)
           .toDouble();
+      _cacheNetworkAudioForReplay =
+          preferences.getBool(_cacheNetworkAudioForReplayKey) ?? false;
       _engineId = preferences.getString(_engineKey);
       _languageTag = preferences.getString(_langKey);
       _playbackState = _playbackState.copyWith(
@@ -333,6 +339,13 @@ class TtsProvider extends ChangeNotifier {
     await preferences.setDouble(_pitchKey, _pitch);
   }
 
+  Future<void> setCacheNetworkAudioForReplay(bool value) async {
+    if (_cacheNetworkAudioForReplay == value) return;
+    _cacheNetworkAudioForReplay = value;
+    notifyListeners();
+    await preferences.setBool(_cacheNetworkAudioForReplayKey, value);
+  }
+
   Future<List<String>> listEngines() async {
     try {
       final res = await _tts.getEngines;
@@ -394,6 +407,7 @@ class TtsProvider extends ChangeNotifier {
     String text, {
     TtsServiceOptions? networkService,
     bool flush = true,
+    bool reuseResolvedNetworkAudio = false,
   }) async {
     final content = _stripMarkdown(text).trim();
     if (content.isEmpty) return;
@@ -404,7 +418,7 @@ class TtsProvider extends ChangeNotifier {
     final session = ++_sessionId;
     _usingNetwork = networkService != null;
     _networkCache.clear();
-    _resolvedNetworkChunks.clear();
+    if (!reuseResolvedNetworkAudio) _resolvedNetworkChunks.clear();
     _chunks
       ..clear()
       ..addAll(
@@ -496,11 +510,26 @@ class TtsProvider extends ChangeNotifier {
     if (!_initialized) return;
     final content = _lastReplayContent;
     if (content == null || content.isEmpty) return;
+    final networkService = _lastReplayNetworkService;
     await _speakQueued(
       content,
-      networkService: _lastReplayNetworkService,
+      networkService: networkService,
       flush: true,
+      reuseResolvedNetworkAudio:
+          _cacheNetworkAudioForReplay &&
+          networkService != null &&
+          _hasCompleteResolvedNetworkAudio(),
     );
+  }
+
+  bool _hasCompleteResolvedNetworkAudio() {
+    if (_chunks.isEmpty || _resolvedNetworkChunks.length != _chunks.length) {
+      return false;
+    }
+    for (var i = 0; i < _chunks.length; i++) {
+      if (!_resolvedNetworkChunks.containsKey(i)) return false;
+    }
+    return true;
   }
 
   Future<void> stop() async {
@@ -636,6 +665,8 @@ class TtsProvider extends ChangeNotifier {
     int index,
   ) {
     return _networkCache.putIfAbsent(index, () {
+      final resolved = _resolvedNetworkChunks[index];
+      if (resolved != null) return Future<NetworkTtsResult>.value(resolved);
       return NetworkTtsService.synthesize(
         options: service,
         text: _chunks[index].text,
