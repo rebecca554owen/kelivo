@@ -26,6 +26,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import 'package:record/record.dart';
 import '../../../utils/app_directories.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import '../../../desktop/desktop_context_menu.dart';
@@ -192,15 +193,19 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+    with WidgetsBindingObserver {
   late TextEditingController _controller;
   bool _isExpanded = false; // Track expand/collapse state for input field
-  // Voice input (UI demo only): recording state + waveform animation
+  // Voice input (UI only, no transcription): recording state + live mic levels
   bool _isRecordingVoice = false;
-  late final AnimationController _voiceWaveController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1600),
-  );
+  AudioRecorder? _voiceRecorder; // created fresh per recording session
+  final List<double> _voiceLevels = <double>[];
+  static const int _maxVoiceLevels = 400;
+  Timer? _voiceLevelTimer;
+  bool _voiceRecorderActive = false;
+  bool _voiceSampling = false;
+  int _voiceIdleTick = 0;
+  String? _voiceRecordingPath;
   Timer? _voiceTypingTimer;
   final List<_DraftImage> _images = <_DraftImage>[];
   final Queue<_ImageProcessingTask> _imageProcessingQueue =
@@ -517,7 +522,10 @@ class _ChatInputBarState extends State<ChatInputBar>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _voiceTypingTimer?.cancel();
-    _voiceWaveController.dispose();
+    _voiceLevelTimer?.cancel();
+    final voiceRecorder = _voiceRecorder;
+    _voiceRecorder = null;
+    if (voiceRecorder != null) unawaited(voiceRecorder.dispose());
     for (final timer in _repeatTimers.values) {
       try {
         timer?.cancel();
@@ -555,29 +563,126 @@ class _ChatInputBarState extends State<ChatInputBar>
   bool get _showExpandButton => _lineCount >= 3;
 
   // ---------------------------------------------------------------------------
-  // Voice input (front-end demo only — no real recording/transcription yet)
+  // Voice input (UI only — real mic levels drive the waveform, no transcription)
   // ---------------------------------------------------------------------------
 
-  void _startVoiceInput() {
+  Future<void> _startVoiceInput() async {
     if (_composerLocked || widget.loading) return;
     _voiceTypingTimer?.cancel();
-    setState(() => _isRecordingVoice = true);
-    _voiceWaveController.repeat();
+    setState(() {
+      _isRecordingVoice = true;
+      _voiceLevels.clear();
+    });
     // Hide the keyboard while recording, like the Claude app
     widget.focusNode?.unfocus();
+    _voiceRecorderActive = false;
+    // Fresh recorder per session — reusing one after stop() is flaky on
+    // desktop debug builds (second session reports silence / hangs).
+    final recorder = AudioRecorder();
+    _voiceRecorder = recorder;
+    try {
+      if (await recorder.hasPermission()) {
+        final dir = await AppDirectories.getCacheDirectory();
+        final path = p.join(
+          dir.path,
+          'voice_input_${DateTime.now().millisecondsSinceEpoch}.m4a',
+        );
+        await recorder.start(const RecordConfig(), path: path);
+        _voiceRecordingPath = path;
+        _voiceRecorderActive = true;
+      }
+    } catch (_) {
+      // No mic / unsupported platform: fall back to a synthetic wave
+      _voiceRecorderActive = false;
+    }
+    if (!mounted || !_isRecordingVoice) {
+      await _stopVoiceRecorder();
+      return;
+    }
+    _voiceIdleTick = 0;
+    _voiceLevelTimer?.cancel();
+    _voiceLevelTimer = Timer.periodic(
+      const Duration(milliseconds: 60),
+      (_) => unawaited(_sampleVoiceLevel()),
+    );
+  }
+
+  Future<void> _sampleVoiceLevel() async {
+    if (_voiceSampling) return;
+    _voiceSampling = true;
+    try {
+      double level;
+      final recorder = _voiceRecorder;
+      if (_voiceRecorderActive && recorder != null) {
+        try {
+          final amp = await recorder.getAmplitude().timeout(
+            const Duration(milliseconds: 150),
+          );
+          final db = amp.current; // dBFS, typically -50..-10 for speech
+          // Map ~-45dB (room noise) -> 0 and ~-10dB (loud speech) -> 1, then
+          // apply a contrast curve so quiet ambient noise stays near zero.
+          final n = db.isFinite ? ((db + 45) / 35).clamp(0.0, 1.0) : 0.0;
+          level = math.pow(n, 1.35).toDouble();
+        } catch (_) {
+          level = 0.0;
+        }
+      } else {
+        // Synthetic fallback (permission denied / no mic)
+        _voiceIdleTick++;
+        final ph = _voiceIdleTick * 0.24;
+        level =
+            (0.16 +
+                    0.1 * math.sin(ph * 2.0) * math.sin(ph * 0.7) +
+                    0.06 * math.sin(ph * 3.3))
+                .clamp(0.03, 1.0);
+      }
+      if (!mounted || !_isRecordingVoice) return;
+      // Smooth towards the new sample so bars don't jitter
+      final prev = _voiceLevels.isEmpty ? 0.03 : _voiceLevels.last;
+      _voiceLevels.add(prev + (level - prev) * 0.55);
+      if (_voiceLevels.length > _maxVoiceLevels) _voiceLevels.removeAt(0);
+      setState(() {});
+    } finally {
+      _voiceSampling = false;
+    }
+  }
+
+  Future<void> _stopVoiceRecorder() async {
+    _voiceLevelTimer?.cancel();
+    _voiceLevelTimer = null;
+    final path = _voiceRecordingPath;
+    _voiceRecordingPath = null;
+    final recorder = _voiceRecorder;
+    _voiceRecorder = null;
+    if (recorder != null) {
+      _voiceRecorderActive = false;
+      try {
+        // cancel() discards the recording (we only need live levels)
+        await recorder.cancel();
+      } catch (_) {}
+      try {
+        await recorder.dispose();
+      } catch (_) {}
+    }
+    if (path != null) {
+      try {
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+    }
   }
 
   void _cancelVoiceInput() {
-    _voiceWaveController.stop();
     setState(() => _isRecordingVoice = false);
+    unawaited(_stopVoiceRecorder());
   }
 
   /// Stop recording and simulate speech-to-text by typing a demo transcript
   /// into the field. When [sendAfter] is true, send it once typing completes.
   void _finishVoiceInput({required bool sendAfter}) {
     final demo = AppLocalizations.of(context)!.chatInputBarVoiceDemoText;
-    _voiceWaveController.stop();
     setState(() => _isRecordingVoice = false);
+    unawaited(_stopVoiceRecorder());
     _voiceTypingTimer?.cancel();
     final existing = _controller.text;
     final base = existing.isEmpty ? '' : '$existing ';
@@ -621,7 +726,7 @@ class _ChatInputBarState extends State<ChatInputBar>
             child: SizedBox(
               height: 32,
               child: _VoiceWaveform(
-                animation: _voiceWaveController,
+                levels: _voiceLevels,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
               ),
             ),
@@ -2805,29 +2910,26 @@ class _CompactSendButton extends StatelessWidget {
   }
 }
 
-// Animated fake waveform shown while the voice-input UI demo is recording.
+// Scrolling waveform driven by real mic amplitude samples (newest on the right).
 class _VoiceWaveform extends StatelessWidget {
-  const _VoiceWaveform({required this.animation, required this.color});
+  const _VoiceWaveform({required this.levels, required this.color});
 
-  final Animation<double> animation;
+  final List<double> levels;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) => CustomPaint(
-        painter: _VoiceWaveformPainter(t: animation.value, color: color),
-      ),
+    return CustomPaint(
+      painter: _VoiceWaveformPainter(levels: levels, color: color),
     );
   }
 }
 
 class _VoiceWaveformPainter extends CustomPainter {
-  _VoiceWaveformPainter({required this.t, required this.color});
+  _VoiceWaveformPainter({required this.levels, required this.color});
 
-  /// Animation progress in [0, 1), looping.
-  final double t;
+  /// Normalized mic levels in [0, 1]; the last entry is the newest sample.
+  final List<double> levels;
   final Color color;
 
   static const double _barWidth = 3;
@@ -2836,19 +2938,41 @@ class _VoiceWaveformPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
-    final count = (size.width / (_barWidth + _barGap)).floor();
+    const step = _barWidth + _barGap;
+    final count = ((size.width + _barGap) / step).floor();
     if (count <= 0) return;
     final centerY = size.height / 2;
     final maxH = size.height * 0.92;
-    final phase = t * 2 * math.pi;
-    for (var i = 0; i < count; i++) {
-      // Two detuned sines per bar give an organic, voice-like movement.
-      final v =
-          (math.sin(phase * 2.0 + i * 0.55) +
-              math.sin(phase * 3.3 + i * 1.31)) /
-          2;
-      final h = maxH * (0.12 + 0.88 * v.abs());
-      final x = i * (_barWidth + _barGap);
+    // Center the bar row so both ends get the same inset — the capsule
+    // caps are then symmetric regardless of the exact width.
+    final leftInset = (size.width - (count * step - _barGap)) / 2;
+    // Samples are right-aligned onto the bar slots: the newest sample sits
+    // at the right edge and older samples scroll left, like a real recorder.
+    final visible = math.min(count, levels.length);
+    final first = levels.length - visible;
+    for (var i = 0; i < visible; i++) {
+      final level = levels[first + i].clamp(0.0, 1.0);
+      final slot = count - visible + i;
+      final x = leftInset + slot * step;
+      // True capsule silhouette: a rectangle with fully-rounded ends, i.e.
+      // the corner radius equals half the max bar height. Bars inside the
+      // cap are shortened along the semicircle but still follow the volume.
+      final radius = maxH / 2;
+      final dCenter =
+          math.min(x, size.width - (x + _barWidth)) +
+          _barWidth / 2; // bar center distance to the nearest edge
+      double envelope = 1.0;
+      if (dCenter < radius) {
+        envelope =
+            math.sqrt(
+              math.max(
+                0.0,
+                radius * radius - (radius - dCenter) * (radius - dCenter),
+              ),
+            ) /
+            radius;
+      }
+      final h = math.max(2.0, maxH * level * envelope);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(x, centerY - h / 2, _barWidth, h),
@@ -2860,6 +2984,5 @@ class _VoiceWaveformPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_VoiceWaveformPainter oldDelegate) =>
-      oldDelegate.t != t || oldDelegate.color != color;
+  bool shouldRepaint(_VoiceWaveformPainter oldDelegate) => true;
 }
