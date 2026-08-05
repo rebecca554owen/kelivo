@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,6 +13,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../../theme/theme_factory.dart';
 import '../../../utils/brand_assets.dart';
+import 'search_api_keys_page.dart';
 
 class SearchServiceEditorResult {
   const SearchServiceEditorResult.saved(this.service) : deleted = false;
@@ -64,6 +66,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
   final _formKey = GlobalKey<FormState>();
   final _controllers = <String, TextEditingController>{};
   final _queryController = TextEditingController();
+  List<String> _extraApiKeys = [];
 
   late final String _serviceId;
   late String _selectedType;
@@ -349,6 +352,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           obscure: true,
           validator: requiredApiKey,
         ),
+        _buildMultiKeyEntry(context),
         field(
           key: 'url',
           label: l10n.searchServicesFieldCustomUrlOptional,
@@ -365,6 +369,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           obscure: true,
           validator: requiredApiKey,
         ),
+        _buildMultiKeyEntry(context),
         field(
           key: 'url',
           label: l10n.searchServicesFieldCustomUrlOptional,
@@ -410,6 +415,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           obscure: true,
           validator: requiredApiKey,
         ),
+        _buildMultiKeyEntry(context),
         field(
           key: 'gl',
           label: l10n.searchServicesDialogCountryOptional,
@@ -449,6 +455,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           obscure: true,
           validator: requiredApiKey,
         ),
+        _buildMultiKeyEntry(context),
         field(
           key: 'sitesInclude',
           label: l10n.searchServicesDialogSitesIncludeOptional,
@@ -484,6 +491,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           obscure: true,
           validator: requiredApiKey,
         ),
+        _buildMultiKeyEntry(context),
         field(
           key: 'model',
           label: l10n.searchServicesDialogModel,
@@ -516,7 +524,93 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         obscure: true,
         validator: requiredApiKey,
       ),
+      _buildMultiKeyEntry(context),
     ];
+  }
+
+  Widget _buildMultiKeyEntry(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final count = (_text('apiKey').isEmpty ? 0 : 1) + _extraApiKeys.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.searchServiceEditorMultiKeyTitle,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: AppFontWeights.semibold,
+            color: cs.onSurface.withValues(alpha: 0.72),
+          ),
+        ),
+        const SizedBox(height: 7),
+        InkWell(
+          key: const ValueKey('search-service-multikey-entry'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: _openApiKeysPage,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white12 : const Color(0xFFF2F3F5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Lucide.KeyRound, size: 18, color: cs.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    count == 0
+                        ? l10n.searchServiceEditorMultiKeyNone
+                        : l10n.searchServiceEditorMultiKeyCount('$count'),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: AppFontWeights.medium,
+                      color: count == 0
+                          ? cs.onSurface.withValues(alpha: 0.58)
+                          : cs.onSurface.withValues(alpha: 0.92),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Lucide.ChevronRight,
+                  size: 18,
+                  color: cs.onSurface.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openApiKeysPage() {
+    FocusScope.of(context).unfocus();
+    Navigator.of(context)
+        .push<List<String>>(
+          MaterialPageRoute(
+            builder: (_) => SearchApiKeysPage(
+              service: _currentService(),
+              commonOptions: widget.commonOptions,
+            ),
+          ),
+        )
+        .then((pool) {
+          if (pool == null || !mounted) return;
+          final primary = pool.isEmpty ? '' : pool.first;
+          final extras = pool.length <= 1
+              ? const <String>[]
+              : List<String>.of(pool.sublist(1));
+          // Leaving the page without edits must not mark the form dirty.
+          if (primary == _text('apiKey') && listEquals(extras, _extraApiKeys)) {
+            return;
+          }
+          _controller('apiKey').text = primary;
+          _extraApiKeys = extras;
+          _markDirty();
+        });
   }
 
   Widget _buildUsageCard(BuildContext context) {
@@ -920,6 +1014,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
   }
 
   void _initializeControllers(SearchServiceOptions service) {
+    _extraApiKeys = List<String>.of(service.extraApiKeys);
     if (service is DuckDuckGoOptions) {
       _putController('region', service.region);
     } else if (service is TavilyOptions) {
@@ -1001,15 +1096,21 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           id: _serviceId,
           apiKey: _text('apiKey'),
           url: _text('url'),
+          extraApiKeys: _extraApiKeys,
         );
       case 'exa':
         return ExaOptions(
           id: _serviceId,
           apiKey: _text('apiKey'),
           url: _text('url'),
+          extraApiKeys: _extraApiKeys,
         );
       case 'zhipu':
-        return ZhipuOptions(id: _serviceId, apiKey: _text('apiKey'));
+        return ZhipuOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+        );
       case 'searxng':
         return SearXNGOptions(
           id: _serviceId,
@@ -1020,19 +1121,40 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           password: _controller('password').text,
         );
       case 'linkup':
-        return LinkUpOptions(id: _serviceId, apiKey: _text('apiKey'));
+        return LinkUpOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+        );
       case 'brave':
-        return BraveOptions(id: _serviceId, apiKey: _text('apiKey'));
+        return BraveOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+        );
       case 'metaso':
-        return MetasoOptions(id: _serviceId, apiKey: _text('apiKey'));
+        return MetasoOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+        );
       case 'ollama':
-        return OllamaOptions(id: _serviceId, apiKey: _text('apiKey'));
+        return OllamaOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+        );
       case 'jina':
-        return JinaOptions(id: _serviceId, apiKey: _text('apiKey'));
+        return JinaOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+        );
       case 'perplexity':
         return PerplexityOptions(
           id: _serviceId,
           apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
           country: initial is PerplexityOptions ? initial.country : null,
           searchDomainFilter: initial is PerplexityOptions
               ? initial.searchDomainFilter
@@ -1045,6 +1167,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         return BochaOptions(
           id: _serviceId,
           apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
           freshness: initial is BochaOptions ? initial.freshness : null,
           summary: initial is BochaOptions ? initial.summary : true,
           include: initial is BochaOptions ? initial.include : null,
@@ -1054,6 +1177,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         return SerperOptions(
           id: _serviceId,
           apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
           gl: _text('gl'),
           hl: _text('hl'),
           tbs: _text('tbs'),
@@ -1063,6 +1187,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         return QueritOptions(
           id: _serviceId,
           apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
           sitesInclude: _text('sitesInclude'),
           sitesExclude: _text('sitesExclude'),
           timeRange: _text('timeRange'),
@@ -1073,6 +1198,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         return GrokOptions(
           id: _serviceId,
           apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
           model: _text('model'),
           reasoningEffort: _text('reasoningEffort'),
           customUrl: _text('customUrl'),

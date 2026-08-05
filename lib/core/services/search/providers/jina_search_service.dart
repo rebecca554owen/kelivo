@@ -30,7 +30,8 @@ class JinaSearchService extends SearchService<JinaOptions> {
             .post(
               Uri.parse('https://s.jina.ai/'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 // Speed up and reduce payload: omit page content in response

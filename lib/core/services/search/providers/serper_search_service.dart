@@ -43,7 +43,9 @@ class SerperSearchService extends SearchService<SerperOptions> {
             .post(
               Uri.parse(endpoint),
               headers: {
-                'X-API-KEY': serviceOptions.apiKey,
+                'X-API-KEY': serviceOptions.effectiveApiKey(
+                  serviceOptions.apiKey,
+                ),
                 'Content-Type': 'application/json',
               },
               body: jsonEncode(body),

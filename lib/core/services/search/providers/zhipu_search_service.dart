@@ -34,7 +34,8 @@ class ZhipuSearchService extends SearchService<ZhipuOptions> {
             .post(
               Uri.parse('https://open.bigmodel.cn/api/paas/v4/web_search'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Content-Type': 'application/json',
               },
               body: body,

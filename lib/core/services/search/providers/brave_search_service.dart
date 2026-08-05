@@ -33,7 +33,9 @@ class BraveSearchService extends SearchService<BraveOptions> {
               Uri.parse(url),
               headers: {
                 'Accept': 'application/json',
-                'X-Subscription-Token': serviceOptions.apiKey,
+                'X-Subscription-Token': serviceOptions.effectiveApiKey(
+                  serviceOptions.apiKey,
+                ),
               },
             )
             .timeout(Duration(milliseconds: commonOptions.timeout)),

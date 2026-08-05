@@ -4,6 +4,7 @@ import '../../icons/lucide_adapter.dart' as lucide;
 import '../../l10n/app_localizations.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/search/search_service.dart';
+import '../../core/services/search/search_api_key_rotator.dart';
 import '../../utils/brand_assets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:uuid/uuid.dart';
@@ -1149,10 +1150,18 @@ class _EditServiceDialog extends StatefulWidget {
 
 class _EditServiceDialogState extends State<_EditServiceDialog> {
   final Map<String, TextEditingController> _controllers = {};
+  late List<String> _extraApiKeys;
   @override
   void initState() {
     super.initState();
+    _extraApiKeys = List<String>.of(widget.service.extraApiKeys);
     _initControllers();
+    // Keep the multi-key tile count in sync as the primary key is edited.
+    _controllers['apiKey']?.addListener(_onPrimaryKeyChanged);
+  }
+
+  void _onPrimaryKeyChanged() {
+    if (mounted) setState(() {});
   }
 
   void _initControllers() {
@@ -1221,6 +1230,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
 
   @override
   void dispose() {
+    _controllers['apiKey']?.removeListener(_onPrimaryKeyChanged);
     for (final c in _controllers.values) {
       c.dispose();
     }
@@ -1299,6 +1309,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           decoration: deco(l10n.searchServicesDialogApiKey),
         ),
         const SizedBox(height: 12),
+        _multiKeyTile(),
+        const SizedBox(height: 12),
         TextField(
           controller: _controllers['url'],
           decoration: _deskInputDecoration(context).copyWith(
@@ -1313,6 +1325,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           controller: _controllers['apiKey'],
           decoration: deco('API Key'),
         ),
+        const SizedBox(height: 12),
+        _multiKeyTile(),
         const SizedBox(height: 12),
         TextField(
           controller: _controllers['url'],
@@ -1335,6 +1349,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           controller: _controllers['apiKey'],
           decoration: deco('API Key'),
         ),
+        const SizedBox(height: 12),
+        _multiKeyTile(),
       ];
     } else if (s is GrokOptions) {
       return [
@@ -1342,6 +1358,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           controller: _controllers['apiKey'],
           decoration: deco('API Key'),
         ),
+        const SizedBox(height: 12),
+        _multiKeyTile(),
         const SizedBox(height: 12),
         TextField(
           controller: _controllers['model'],
@@ -1381,6 +1399,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           decoration: deco('API Key'),
         ),
         const SizedBox(height: 12),
+        _multiKeyTile(),
+        const SizedBox(height: 12),
         TextField(
           controller: _controllers['gl'],
           decoration: deco(l10n.searchServicesDialogCountryOptional),
@@ -1408,6 +1428,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           controller: _controllers['apiKey'],
           decoration: deco(l10n.searchServicesDialogApiKey),
         ),
+        const SizedBox(height: 12),
+        _multiKeyTile(),
         const SizedBox(height: 12),
         TextField(
           controller: _controllers['sitesInclude'],
@@ -1473,6 +1495,82 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     return [];
   }
 
+  Widget _multiKeyTile() {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final primary = _controllers['apiKey']?.text.trim() ?? '';
+    final count = (primary.isEmpty ? 0 : 1) + _extraApiKeys.length;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _openMultiKeyDialog,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.2),
+              width: 0.8,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(lucide.Lucide.KeyRound, size: 16, color: cs.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.searchServiceEditorMultiKeyTitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: AppFontWeights.semibold,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              Text(
+                count == 0
+                    ? l10n.searchServiceEditorMultiKeyNone
+                    : l10n.searchServiceEditorMultiKeyCount('$count'),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: count == 0
+                      ? cs.onSurface.withValues(alpha: 0.55)
+                      : cs.primary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                lucide.Lucide.ChevronRight,
+                size: 16,
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openMultiKeyDialog() async {
+    final current = _updateService();
+    final pool = await showDialog<List<String>>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => _MultiKeyManageDialog(service: current),
+    );
+    if (pool != null && mounted) {
+      setState(() {
+        _controllers['apiKey']?.text = pool.isEmpty ? '' : pool.first;
+        _extraApiKeys = pool.length <= 1
+            ? <String>[]
+            : List<String>.of(pool.sublist(1));
+      });
+    }
+  }
+
   SearchServiceOptions _updateService() {
     final s = widget.service;
     if (s is TavilyOptions) {
@@ -1480,6 +1578,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         id: s.id,
         apiKey: _controllers['apiKey']!.text,
         url: _controllers['url']!.text.trim(),
+        extraApiKeys: _extraApiKeys,
       );
     }
     if (s is DuckDuckGoOptions) {
@@ -1494,10 +1593,15 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         id: s.id,
         apiKey: _controllers['apiKey']!.text,
         url: _controllers['url']!.text.trim(),
+        extraApiKeys: _extraApiKeys,
       );
     }
     if (s is ZhipuOptions) {
-      return ZhipuOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return ZhipuOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
     }
     if (s is SearXNGOptions) {
       return SearXNGOptions(
@@ -1510,25 +1614,60 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       );
     }
     if (s is LinkUpOptions) {
-      return LinkUpOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return LinkUpOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
     }
     if (s is BraveOptions) {
-      return BraveOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return BraveOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
     }
     if (s is MetasoOptions) {
-      return MetasoOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return MetasoOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
     }
     if (s is JinaOptions) {
-      return JinaOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return JinaOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
     }
     if (s is OllamaOptions) {
-      return OllamaOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return OllamaOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
     }
     if (s is PerplexityOptions) {
-      return PerplexityOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return PerplexityOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+        country: s.country,
+        searchDomainFilter: s.searchDomainFilter,
+        maxTokensPerPage: s.maxTokensPerPage,
+      );
     }
     if (s is BochaOptions) {
-      return BochaOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+      return BochaOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+        freshness: s.freshness,
+        summary: s.summary,
+        include: s.include,
+        exclude: s.exclude,
+      );
     }
     if (s is SerperOptions) {
       final page = int.tryParse(_controllers['page']!.text.trim());
@@ -1539,6 +1678,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         hl: _controllers['hl']!.text.trim(),
         tbs: _controllers['tbs']!.text.trim(),
         page: page == null || page < 1 ? 1 : page,
+        extraApiKeys: _extraApiKeys,
       );
     }
     if (s is QueritOptions) {
@@ -1550,6 +1690,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         timeRange: (_controllers['timeRange']?.text ?? '').trim(),
         countries: (_controllers['countries']?.text ?? '').trim(),
         languages: (_controllers['languages']?.text ?? '').trim(),
+        extraApiKeys: _extraApiKeys,
       );
     }
     if (s is GrokOptions) {
@@ -1560,9 +1701,245 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         reasoningEffort: _controllers['reasoningEffort']!.text,
         customUrl: _controllers['customUrl']!.text.trim(),
         systemPrompt: _controllers['systemPrompt']!.text,
+        extraApiKeys: _extraApiKeys,
       );
     }
     return s;
+  }
+}
+
+class _MultiKeyManageDialog extends StatefulWidget {
+  const _MultiKeyManageDialog({required this.service});
+
+  final SearchServiceOptions service;
+
+  @override
+  State<_MultiKeyManageDialog> createState() => _MultiKeyManageDialogState();
+}
+
+class _MultiKeyManageDialogState extends State<_MultiKeyManageDialog> {
+  late final List<String> _keys = SearchApiKeyRotator.rotationPool(
+    widget.service.primaryApiKey,
+    widget.service.extraApiKeys,
+  );
+  final _addController = TextEditingController();
+  final Set<int> _revealed = {};
+  ({int added, int skipped})? _batchFeedback;
+
+  @override
+  void dispose() {
+    _addController.dispose();
+    super.dispose();
+  }
+
+  void _addKeys() {
+    final parsed = SearchApiKeyRotator.parseBatch(_addController.text);
+    if (parsed.isEmpty) return;
+    final existing = _keys.toSet();
+    final fresh = parsed.where((key) => !existing.contains(key)).toList();
+    setState(() {
+      _keys.addAll(fresh);
+      _addController.clear();
+      _batchFeedback = (
+        added: fresh.length,
+        skipped: parsed.length - fresh.length,
+      );
+    });
+  }
+
+  void _removeKey(int index) {
+    setState(() {
+      _keys.removeAt(index);
+      _revealed.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final feedback = _batchFeedback;
+    return Dialog(
+      backgroundColor: cs.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 520),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.searchServiceEditorMultiKeyTitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: AppFontWeights.emphasis,
+                      ),
+                    ),
+                  ),
+                  _SmallIconBtn(
+                    icon: lucide.Lucide.X,
+                    onTap: () =>
+                        Navigator.of(context).pop(List<String>.of(_keys)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.searchApiKeysPageDescription,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (_keys.isNotEmpty)
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _keys.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      thickness: 0.6,
+                      indent: 28,
+                      color: cs.outlineVariant.withValues(alpha: 0.18),
+                    ),
+                    itemBuilder: (context, index) =>
+                        _buildKeyRow(context, index),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.searchApiKeysPageEmpty,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _addController,
+                minLines: 1,
+                maxLines: 3,
+                onChanged: (_) {
+                  if (_batchFeedback != null) {
+                    setState(() => _batchFeedback = null);
+                  }
+                },
+                decoration: _deskInputDecoration(
+                  context,
+                ).copyWith(hintText: l10n.searchApiKeysPageBatchHint),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: feedback == null
+                        ? const SizedBox.shrink()
+                        : Text(
+                            l10n.searchApiKeysPageBatchResult(
+                              '${feedback.added}',
+                              '${feedback.skipped}',
+                            ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: feedback.added > 0
+                                  ? cs.primary
+                                  : cs.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                  ),
+                  _DeskIosButton(
+                    label: l10n.searchApiKeysPageAdd,
+                    filled: true,
+                    dense: true,
+                    onTap: _addKeys,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKeyRow(BuildContext context, int index) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final key = _keys[index];
+    final revealed = _revealed.contains(index);
+    final isPrimary = index == 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            lucide.Lucide.KeyRound,
+            size: 15,
+            color: isPrimary ? cs.primary : cs.onSurface.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    revealed ? key : SearchApiKeyRotator.mask(key),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurface.withValues(alpha: 0.88),
+                    ),
+                  ),
+                ),
+                if (isPrimary) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      l10n.searchApiKeysPagePrimaryBadge,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: AppFontWeights.semibold,
+                        color: cs.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          _SmallIconBtn(
+            icon: revealed ? lucide.Lucide.EyeOff : lucide.Lucide.Eye,
+            onTap: () => setState(() {
+              revealed ? _revealed.remove(index) : _revealed.add(index);
+            }),
+          ),
+          _SmallIconBtn(
+            icon: lucide.Lucide.Trash2,
+            onTap: () => _removeKey(index),
+          ),
+        ],
+      ),
+    );
   }
 }
 

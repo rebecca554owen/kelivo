@@ -45,7 +45,8 @@ class PerplexitySearchService extends SearchService<PerplexityOptions> {
             .post(
               Uri.parse('https://api.perplexity.ai/search'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Content-Type': 'application/json',
               },
               body: jsonEncode(body),

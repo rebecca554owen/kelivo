@@ -34,7 +34,8 @@ class ExaSearchService extends SearchService<ExaOptions> {
             .post(
               Uri.parse(serviceOptions.resolvedUrl),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Content-Type': 'application/json',
               },
               body: body,

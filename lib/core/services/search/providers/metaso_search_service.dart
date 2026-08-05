@@ -35,7 +35,8 @@ class MetasoSearchService extends SearchService<MetasoOptions> {
             .post(
               Uri.parse('https://metaso.cn/api/v1/search'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
               },

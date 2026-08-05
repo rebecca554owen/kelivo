@@ -7118,6 +7118,60 @@ abstract class AppLocalizations {
   /// **'This provider does not require additional configuration.'**
   String get searchServiceEditorNoConfiguration;
 
+  /// No description provided for @searchServiceEditorMultiKeyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-key rotation'**
+  String get searchServiceEditorMultiKeyTitle;
+
+  /// No description provided for @searchServiceEditorMultiKeyNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured'**
+  String get searchServiceEditorMultiKeyNone;
+
+  /// No description provided for @searchApiKeysPageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Keys rotate in the order listed; the first is the primary key. Usage is not queried to avoid provider rate limiting.'**
+  String get searchApiKeysPageDescription;
+
+  /// No description provided for @searchApiKeysPagePrimaryBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary'**
+  String get searchApiKeysPagePrimaryBadge;
+
+  /// No description provided for @searchApiKeysPageBatchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste one or more keys — one per line or comma-separated'**
+  String get searchApiKeysPageBatchHint;
+
+  /// No description provided for @searchApiKeysPageBatchResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {added}, skipped {skipped} duplicate(s)'**
+  String searchApiKeysPageBatchResult(String added, String skipped);
+
+  /// No description provided for @searchApiKeysPageAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get searchApiKeysPageAdd;
+
+  /// No description provided for @searchApiKeysPageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No keys configured yet.'**
+  String get searchApiKeysPageEmpty;
+
+  /// No description provided for @searchServiceEditorMultiKeyCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} keys'**
+  String searchServiceEditorMultiKeyCount(String count);
+
   /// No description provided for @searchServiceEditorUsageTitle.
   ///
   /// In en, this message translates to:

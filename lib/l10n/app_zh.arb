@@ -1249,6 +1249,17 @@
   "searchServiceEditorProviderTypeTitle": "搜索提供商",
   "searchServiceEditorConfigurationTitle": "服务配置",
   "searchServiceEditorNoConfiguration": "此提供商无需额外配置。",
+  "searchServiceEditorMultiKeyTitle": "多 Key 轮询",
+  "searchServiceEditorMultiKeyNone": "未配置",
+  "searchApiKeysPageDescription": "列表中的 Key 按顺序轮询使用，第一个为主 Key；不查额度，以防触发服务商风控。",
+
+  "searchApiKeysPagePrimaryBadge": "主",
+  "searchApiKeysPageBatchHint": "可一次粘贴多个 Key：每行一个，或用逗号分隔",
+  "searchApiKeysPageBatchResult": "已添加 {added} 个，跳过 {skipped} 个重复",
+  "searchApiKeysPageAdd": "添加",
+  "searchApiKeysPageEmpty": "尚未配置任何 Key。",
+  "searchServiceEditorMultiKeyCount": "共 {count} 个 Key",
+
   "searchServiceEditorUsageTitle": "账户用量",
   "searchServiceEditorUsageNotQueried": "尚未查询用量。",
   "searchServiceEditorUsageQuery": "查询用量",

@@ -35,7 +35,8 @@ class LinkUpSearchService extends SearchService<LinkUpOptions> {
             .post(
               Uri.parse('https://api.linkup.so/v1/search'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Content-Type': 'application/json',
               },
               body: body,

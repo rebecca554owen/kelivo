@@ -33,7 +33,8 @@ class OllamaSearchService extends SearchService<OllamaOptions> {
             .post(
               Uri.parse('https://ollama.com/api/web_search'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Content-Type': 'application/json',
               },
               body: body,

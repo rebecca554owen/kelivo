@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:Kelivo/core/services/search/search_service.dart';
 import 'package:Kelivo/core/services/search/search_service_usage_service.dart';
+import 'package:Kelivo/features/search/pages/search_api_keys_page.dart';
 import 'package:Kelivo/features/search/pages/search_service_editor_page.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -149,7 +150,11 @@ void main() {
       onResult: (_) {},
     );
 
-    await tester.ensureVisible(_testQueryField());
+    await tester.dragUntilVisible(
+      _testQueryField(),
+      find.byType(ListView),
+      const Offset(0, -240),
+    );
     await tester.enterText(_testQueryField(), 'first');
     await tester.pump();
     await tester.tap(find.byIcon(Lucide.Play));
@@ -298,26 +303,42 @@ void main() {
       onResult: (_) {},
     );
 
-    await tester.ensureVisible(_testQueryField());
+    await tester.dragUntilVisible(
+      _testQueryField(),
+      find.byType(ListView),
+      const Offset(0, -240),
+    );
     await tester.enterText(_testQueryField(), 'links');
     await tester.pump();
     await tester.tap(find.byIcon(Lucide.Play));
     await tester.pumpAndSettle();
     expect(searchCount, 1);
 
-    await tester.ensureVisible(find.text('No scheme'));
+    await tester.dragUntilVisible(
+      find.text('No scheme'),
+      find.byType(ListView),
+      const Offset(0, -240),
+    );
     await tester.tap(find.text('No scheme'));
     await tester.pump();
     expect(launchedUrl, 'https://example.com/path');
 
     launchedUrl = null;
-    await tester.ensureVisible(find.text('Host port'));
+    await tester.dragUntilVisible(
+      find.text('Host port'),
+      find.byType(ListView),
+      const Offset(0, -240),
+    );
     await tester.tap(find.text('Host port'));
     await tester.pump();
     expect(launchedUrl, 'https://localhost:3000/status');
 
     launchedUrl = null;
-    await tester.ensureVisible(find.text('Unsafe scheme'));
+    await tester.dragUntilVisible(
+      find.text('Unsafe scheme'),
+      find.byType(ListView),
+      const Offset(0, -240),
+    );
     await tester.tap(find.text('Unsafe scheme'));
     await tester.pump();
     expect(launchedUrl, isNull);
@@ -426,6 +447,142 @@ void main() {
 
     expect(find.text('余额 123.46'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('manages the full key pool on the API keys page', (tester) async {
+    SearchServiceEditorResult? result;
+    await _pumpEditor(
+      tester,
+      initialService: TavilyOptions(id: 'tavily', apiKey: 'primary-key'),
+      onResult: (value) => result = value,
+    );
+
+    expect(find.text('1 keys'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('search-service-multikey-entry')),
+    );
+    await tester.pumpAndSettle();
+
+    final page = find.byType(SearchApiKeysPage);
+    expect(page, findsOneWidget);
+    // The primary key is auto-imported as the first row.
+    expect(find.text('prim••••-key'), findsOneWidget);
+    expect(find.text('Primary'), findsOneWidget);
+
+    // Batch paste: newline and comma separated keys.
+    await tester.enterText(
+      find.byKey(const ValueKey('search-api-keys-batch-field')),
+      'tvly-a\ntvly-b,tvly-c',
+    );
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle();
+    expect(find.text('Added 3, skipped 0 duplicate(s)'), findsOneWidget);
+
+    // Duplicates of existing keys are skipped.
+    await tester.enterText(
+      find.byKey(const ValueKey('search-api-keys-batch-field')),
+      'primary-key',
+    );
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle();
+    expect(find.text('Added 0, skipped 1 duplicate(s)'), findsOneWidget);
+    expect(
+      find.descendant(of: page, matching: find.byIcon(Lucide.Trash2)),
+      findsNWidgets(4),
+    );
+
+    await tester.tap(
+      find.descendant(of: page, matching: find.byIcon(Lucide.ArrowLeft)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('4 keys'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Lucide.Check));
+    await tester.pumpAndSettle();
+
+    final saved = result?.service;
+    expect(saved, isA<TavilyOptions>());
+    expect((saved as TavilyOptions?)?.apiKey, 'primary-key');
+    expect(saved?.extraApiKeys, ['tvly-a', 'tvly-b', 'tvly-c']);
+  });
+
+  testWidgets('deleting the primary key promotes the next one', (tester) async {
+    SearchServiceEditorResult? result;
+    await _pumpEditor(
+      tester,
+      initialService: TavilyOptions(
+        id: 'tavily',
+        apiKey: 'primary-key',
+        extraApiKeys: const ['k2', 'k3'],
+      ),
+      onResult: (value) => result = value,
+    );
+
+    expect(find.text('3 keys'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('search-service-multikey-entry')),
+    );
+    await tester.pumpAndSettle();
+
+    final page = find.byType(SearchApiKeysPage);
+    await tester.tap(
+      find.descendant(of: page, matching: find.byIcon(Lucide.Trash2)).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: page, matching: find.byIcon(Lucide.Trash2)),
+      findsNWidgets(2),
+    );
+
+    await tester.tap(
+      find.descendant(of: page, matching: find.byIcon(Lucide.ArrowLeft)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Lucide.Check));
+    await tester.pumpAndSettle();
+
+    final saved = result?.service;
+    expect(saved, isA<TavilyOptions>());
+    expect((saved as TavilyOptions?)?.apiKey, 'k2');
+    expect(saved?.extraApiKeys, ['k3']);
+  });
+
+  testWidgets('leaving the keys page untouched does not mark the form dirty', (
+    tester,
+  ) async {
+    SearchServiceEditorResult? result;
+    await _pumpEditor(
+      tester,
+      initialService: TavilyOptions(
+        id: 'tavily',
+        apiKey: 'primary-key',
+        extraApiKeys: const ['k2'],
+      ),
+      onResult: (value) => result = value,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('search-service-multikey-entry')),
+    );
+    await tester.pumpAndSettle();
+
+    final page = find.byType(SearchApiKeysPage);
+    expect(page, findsOneWidget);
+
+    // Leave without changing anything.
+    await tester.tap(
+      find.descendant(of: page, matching: find.byIcon(Lucide.ArrowLeft)),
+    );
+    await tester.pumpAndSettle();
+
+    // Navigating back from the editor must not ask to discard changes.
+    await tester.tap(find.byIcon(Lucide.ArrowLeft));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(result, isNull);
   });
 }
 

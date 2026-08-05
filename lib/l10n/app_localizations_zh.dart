@@ -3676,6 +3676,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServiceEditorNoConfiguration => '此提供商无需额外配置。';
 
   @override
+  String get searchServiceEditorMultiKeyTitle => '多 Key 轮询';
+
+  @override
+  String get searchServiceEditorMultiKeyNone => '未配置';
+
+  @override
+  String get searchApiKeysPageDescription =>
+      '列表中的 Key 按顺序轮询使用，第一个为主 Key；不查额度，以防触发服务商风控。';
+
+  @override
+  String get searchApiKeysPagePrimaryBadge => '主';
+
+  @override
+  String get searchApiKeysPageBatchHint => '可一次粘贴多个 Key：每行一个，或用逗号分隔';
+
+  @override
+  String searchApiKeysPageBatchResult(String added, String skipped) {
+    return '已添加 $added 个，跳过 $skipped 个重复';
+  }
+
+  @override
+  String get searchApiKeysPageAdd => '添加';
+
+  @override
+  String get searchApiKeysPageEmpty => '尚未配置任何 Key。';
+
+  @override
+  String searchServiceEditorMultiKeyCount(String count) {
+    return '共 $count 个 Key';
+  }
+
+  @override
   String get searchServiceEditorUsageTitle => '账户用量';
 
   @override
@@ -9396,6 +9428,38 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServiceEditorNoConfiguration => '此提供商无需额外配置。';
 
   @override
+  String get searchServiceEditorMultiKeyTitle => '多 Key 轮询';
+
+  @override
+  String get searchServiceEditorMultiKeyNone => '未配置';
+
+  @override
+  String get searchApiKeysPageDescription =>
+      '列表中的 Key 按顺序轮询使用，第一个为主 Key；不查额度，以防触发服务商风控。';
+
+  @override
+  String get searchApiKeysPagePrimaryBadge => '主';
+
+  @override
+  String get searchApiKeysPageBatchHint => '可一次粘贴多个 Key：每行一个，或用逗号分隔';
+
+  @override
+  String searchApiKeysPageBatchResult(String added, String skipped) {
+    return '已添加 $added 个，跳过 $skipped 个重复';
+  }
+
+  @override
+  String get searchApiKeysPageAdd => '添加';
+
+  @override
+  String get searchApiKeysPageEmpty => '尚未配置任何 Key。';
+
+  @override
+  String searchServiceEditorMultiKeyCount(String count) {
+    return '共 $count 个 Key';
+  }
+
+  @override
   String get searchServiceEditorUsageTitle => '账户用量';
 
   @override
@@ -15112,6 +15176,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServiceEditorNoConfiguration => '此提供商無需額外設定。';
+
+  @override
+  String get searchServiceEditorMultiKeyTitle => '多 Key 輪詢';
+
+  @override
+  String get searchServiceEditorMultiKeyNone => '未設定';
+
+  @override
+  String get searchApiKeysPageDescription =>
+      '列表中的 Key 依序輪詢使用，第一個為主 Key；不查額度，以防觸發服務商風控。';
+
+  @override
+  String get searchApiKeysPagePrimaryBadge => '主';
+
+  @override
+  String get searchApiKeysPageBatchHint => '可一次貼上多個 Key：每行一個，或以逗號分隔';
+
+  @override
+  String searchApiKeysPageBatchResult(String added, String skipped) {
+    return '已新增 $added 個，略過 $skipped 個重複';
+  }
+
+  @override
+  String get searchApiKeysPageAdd => '新增';
+
+  @override
+  String get searchApiKeysPageEmpty => '尚未設定任何 Key。';
+
+  @override
+  String searchServiceEditorMultiKeyCount(String count) {
+    return '共 $count 個 Key';
+  }
 
   @override
   String get searchServiceEditorUsageTitle => '帳戶用量';

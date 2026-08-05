@@ -43,7 +43,8 @@ class BochaSearchService extends SearchService<BochaOptions> {
             .post(
               Uri.parse('https://api.bochaai.com/v1/web-search'),
               headers: {
-                'Authorization': 'Bearer ${serviceOptions.apiKey}',
+                'Authorization':
+                    'Bearer ${serviceOptions.effectiveApiKey(serviceOptions.apiKey)}',
                 'Content-Type': 'application/json',
               },
               body: jsonEncode(body),

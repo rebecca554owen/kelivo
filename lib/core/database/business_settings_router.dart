@@ -805,6 +805,7 @@ final class BusinessSettingsRouter {
           payload,
           requiredStrings: const {'apiKey'},
           strings: const {'url'},
+          stringLists: const {'apiKeys'},
         );
       case 'zhipu':
       case 'linkup':
@@ -812,7 +813,12 @@ final class BusinessSettingsRouter {
       case 'metaso':
       case 'ollama':
       case 'jina':
-        _validateKnownFields(kind, payload, requiredStrings: const {'apiKey'});
+        _validateKnownFields(
+          kind,
+          payload,
+          requiredStrings: const {'apiKey'},
+          stringLists: const {'apiKeys'},
+        );
       case 'searxng':
         _validateKnownFields(
           kind,
@@ -830,6 +836,7 @@ final class BusinessSettingsRouter {
           strings: const {'country'},
           integers: const {'maxTokensPerPage'},
           lists: const {'searchDomainFilter'},
+          stringLists: const {'apiKeys'},
         );
       case 'bocha':
         _validateKnownFields(
@@ -838,6 +845,7 @@ final class BusinessSettingsRouter {
           requiredStrings: const {'apiKey'},
           strings: const {'freshness', 'include', 'exclude'},
           booleans: const {'summary'},
+          stringLists: const {'apiKeys'},
         );
       case 'serper':
         _validateKnownFields(
@@ -846,12 +854,14 @@ final class BusinessSettingsRouter {
           requiredStrings: const {'apiKey'},
           strings: const {'gl', 'hl', 'tbs'},
           integers: const {'page'},
+          stringLists: const {'apiKeys'},
         );
       case 'grok':
         _validateKnownFields(
           kind,
           payload,
           strings: const {'apiKey', 'model', 'customUrl', 'systemPrompt'},
+          stringLists: const {'apiKeys'},
         );
       case 'querit':
         _validateKnownFields(
@@ -865,6 +875,7 @@ final class BusinessSettingsRouter {
             'countries',
             'languages',
           },
+          stringLists: const {'apiKeys'},
         );
     }
   }
