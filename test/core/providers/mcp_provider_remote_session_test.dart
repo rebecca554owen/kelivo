@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:Kelivo/core/providers/mcp_provider.dart';
 import 'package:Kelivo/core/services/mcp/mcp_oauth_callback.dart';
 import 'package:Kelivo/core/services/mcp/mcp_oauth_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -363,12 +364,15 @@ void main() {
   );
 
   test(
-    'authorization results are scoped to the current server generation',
+    'authorization stays generation-scoped and desktop retries the first connect',
     () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
       const issuer = 'https://auth.example.test';
       const resourceMetadata = 'https://metadata.example.test/resource';
       final server = await _MockMcpServer.start(
         expectedAuthorization: 'Bearer access-2',
+        failFirstInitialize: true,
       );
       final callbacks = <_FakeOAuthCallback>[];
       final launched = <Uri>[];
@@ -475,6 +479,7 @@ void main() {
           ),
         );
         expect(await secondAuthorization, isTrue);
+        expect(server.count('initialize'), 2);
 
         callbacks[0].complete(
           callbacks[0].redirectUri.replace(
@@ -1207,6 +1212,7 @@ final class _FakeOAuthCallback implements McpOAuthCallback {
 class _MockMcpServer {
   final HttpServer _server;
   final bool failInitialize;
+  final bool failFirstInitialize;
   final bool failFirstToolsList;
   final bool sendToolsChangedBurst;
   final bool dropFirstToolResponse;
@@ -1239,6 +1245,7 @@ class _MockMcpServer {
   _MockMcpServer._(
     this._server, {
     required this.failInitialize,
+    required this.failFirstInitialize,
     required this.failFirstToolsList,
     required this.sendToolsChangedBurst,
     required this.dropFirstToolResponse,
@@ -1255,6 +1262,7 @@ class _MockMcpServer {
 
   static Future<_MockMcpServer> start({
     bool failInitialize = false,
+    bool failFirstInitialize = false,
     bool failFirstToolsList = false,
     bool sendToolsChangedBurst = false,
     bool dropFirstToolResponse = false,
@@ -1270,6 +1278,7 @@ class _MockMcpServer {
     return _MockMcpServer._(
       server,
       failInitialize: failInitialize,
+      failFirstInitialize: failFirstInitialize,
       failFirstToolsList: failFirstToolsList,
       sendToolsChangedBurst: sendToolsChangedBurst,
       dropFirstToolResponse: dropFirstToolResponse,
@@ -1366,6 +1375,11 @@ class _MockMcpServer {
       return;
     }
     if (failInitialize) {
+      request.response.statusCode = HttpStatus.internalServerError;
+      await request.response.close();
+      return;
+    }
+    if (failFirstInitialize && count('initialize') == 1) {
       request.response.statusCode = HttpStatus.internalServerError;
       await request.response.close();
       return;

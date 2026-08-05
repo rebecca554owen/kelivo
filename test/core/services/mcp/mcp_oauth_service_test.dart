@@ -28,10 +28,13 @@ void main() {
           ),
         );
         final response = await request.close();
-        await response.drain<void>();
+        final responseBody = await utf8.decodeStream(response);
 
         expect((await waiting).queryParameters['code'], 'code');
         expect(callback.redirectUri, redirectUri);
+        expect(responseBody, contains('You may close this window'));
+        expect(responseBody, isNot(contains('kelivo://oauth-return')));
+        expect(responseBody, isNot(contains('Authorization complete')));
       } finally {
         client.close(force: true);
         await callback.close();

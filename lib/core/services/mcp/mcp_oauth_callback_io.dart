@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'mcp_oauth_callback_types.dart';
 
+const _oauthReturnUri = 'kelivo://oauth-return';
+
 Future<McpOAuthCallback> openMcpOAuthCallback() async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   return _IoMcpOAuthCallback(server);
@@ -41,10 +43,9 @@ final class _IoMcpOAuthCallback implements McpOAuthCallback {
       request.response
         ..statusCode = HttpStatus.ok
         ..headers.contentType = ContentType.html
+        ..headers.set(HttpHeaders.cacheControlHeader, 'no-store')
         ..write(
-          '''<!doctype html>
-<html><head><meta charset="utf-8"><title>Kelivo</title></head>
-<body><p>Authorization received. You may close this window and return to Kelivo.</p></body></html>''',
+          _callbackPage(returnToApp: Platform.isAndroid || Platform.isIOS),
         );
       await request.response.close();
       if (!callback.isCompleted) {
@@ -66,3 +67,11 @@ final class _IoMcpOAuthCallback implements McpOAuthCallback {
     await _server.close(force: true);
   }
 }
+
+String _callbackPage({required bool returnToApp}) =>
+    '''<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Kelivo</title></head>
+<body><p>${returnToApp ? 'Authorization received. Returning to Kelivo...' : 'Authorization received. You may close this window and return to Kelivo.'}</p>
+${returnToApp ? '<p><a href="$_oauthReturnUri">Return to Kelivo</a></p>' : ''}
+${returnToApp ? "<script>window.close(); setTimeout(function () { window.location.replace('$_oauthReturnUri'); }, 50);</script>" : ''}
+</body></html>''';

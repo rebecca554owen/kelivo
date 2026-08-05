@@ -1041,6 +1041,20 @@ class McpProvider extends ChangeNotifier {
       );
       if (!persisted) return false;
       state.reRegisterDynamicClient = false;
+      final connected = await _connect(server.id);
+      if (connected ||
+          !_isDesktopPlatform() ||
+          state.status != McpStatus.error ||
+          _activeCooldown(state) != null ||
+          !_authorizationIsCurrent(server, state, generation)) {
+        return connected;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (state.status != McpStatus.error ||
+          _activeCooldown(state) != null ||
+          !_authorizationIsCurrent(server, state, generation)) {
+        return false;
+      }
       return _connect(server.id);
     } catch (error) {
       if (!_authorizationIsCurrent(server, state, generation)) return false;

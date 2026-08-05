@@ -64,6 +64,17 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
     super.applicationDidBecomeActive(application)
     backgroundGenerationHandler.dismissFinishedLiveActivityIfNeeded()
   }
+
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if url.scheme == "kelivo" && url.host == "oauth-return" {
+      return true
+    }
+    return super.application(app, open: url, options: options)
+  }
 }
 
 private final class IosBackgroundGenerationHandler {

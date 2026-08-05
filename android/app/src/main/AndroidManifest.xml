@@ -41,6 +41,19 @@
                 <data android:mimeType="text/plain"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name=".OAuthReturnActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="kelivo" android:host="oauth-return"/>
+            </intent-filter>
+        </activity>
         <!-- Foreground service to keep Flutter isolate alive for background generation -->
         <service
             android:name="de.julianassmann.flutter_background.IsolateHolderService"
