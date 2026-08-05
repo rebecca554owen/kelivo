@@ -36,6 +36,8 @@ class TtsProvider extends ChangeNotifier {
   final List<TtsTextChunk> _chunks = <TtsTextChunk>[];
   final Map<int, Future<NetworkTtsResult>> _networkCache =
       <int, Future<NetworkTtsResult>>{};
+  final Map<int, NetworkTtsResult> _resolvedNetworkChunks =
+      <int, NetworkTtsResult>{};
 
   TtsPlaybackTimeline _timeline = TtsPlaybackTimeline(const <TtsTextChunk>[]);
   TtsPlaybackState _playbackState = const TtsPlaybackState();
@@ -82,6 +84,8 @@ class TtsProvider extends ChangeNotifier {
   String? get languageTag => _languageTag;
   TtsPlaybackState get playbackState => _playbackState;
   Duration get seekStep => _seekStep;
+  bool get canSaveNetworkAudio =>
+      _lastReplayNetworkService != null && _chunks.isNotEmpty;
 
   TtsProvider({required this.preferences}) {
     _init();
@@ -400,6 +404,7 @@ class TtsProvider extends ChangeNotifier {
     final session = ++_sessionId;
     _usingNetwork = networkService != null;
     _networkCache.clear();
+    _resolvedNetworkChunks.clear();
     _chunks
       ..clear()
       ..addAll(
@@ -590,6 +595,7 @@ class TtsProvider extends ChangeNotifier {
         );
         final result = await _networkResultFor(service, session, chunkIndex);
         if (session != _sessionId) break;
+        _resolvedNetworkChunks[chunkIndex] = result;
         if (_currentChunkIndex != chunkIndex) continue;
         final seekOffset = _pendingNetworkSeekOffset;
         _pendingNetworkSeekOffset = Duration.zero;
@@ -877,6 +883,7 @@ class TtsProvider extends ChangeNotifier {
   void _stopInternal({bool updateState = false}) {
     _chunks.clear();
     _networkCache.clear();
+    _resolvedNetworkChunks.clear();
     _currentChunkIndex = 0;
     _currentChunkTextOffset = 0;
     _currentChunkPosition = Duration.zero;
@@ -973,6 +980,67 @@ class TtsProvider extends ChangeNotifier {
       default:
         return 'mp3';
     }
+  }
+
+  Future<(Uint8List, String)?> synthesizeAllAndCollect() async {
+    final cached = _collectResolvedNetworkAudio();
+    if (cached != null) return cached;
+
+    final service = _lastReplayNetworkService;
+    if (service == null || _chunks.isEmpty) return null;
+
+    final session = _sessionId;
+    for (var i = 0; i < _chunks.length; i++) {
+      if (_resolvedNetworkChunks[i] != null) continue;
+      final result = await _networkResultFor(service, session, i);
+      if (session != _sessionId) return null;
+      _resolvedNetworkChunks[i] = result;
+    }
+    return _collectResolvedNetworkAudio();
+  }
+
+  (Uint8List, String)? _collectResolvedNetworkAudio() {
+    if (_chunks.isEmpty || _resolvedNetworkChunks.length != _chunks.length) {
+      return null;
+    }
+
+    final results = <NetworkTtsResult>[];
+    for (var i = 0; i < _chunks.length; i++) {
+      final result = _resolvedNetworkChunks[i];
+      if (result == null) return null;
+      results.add(result);
+    }
+
+    final extension = _extForMime(results.first.mime);
+    for (final result in results.skip(1)) {
+      if (_extForMime(result.mime) != extension) {
+        throw StateError('TTS audio chunks use different formats.');
+      }
+    }
+    if (extension == 'wav') {
+      return (
+        combineWavAudio(results.map((result) => result.bytes).toList()),
+        extension,
+      );
+    }
+    if (results.length == 1) return (results.single.bytes, extension);
+
+    final parts = <Uint8List>[];
+    var totalSize = 0;
+
+    for (final result in results) {
+      parts.add(result.bytes);
+      totalSize += result.bytes.length;
+    }
+    if (totalSize == 0) return null;
+
+    final output = Uint8List(totalSize);
+    var offset = 0;
+    for (final part in parts) {
+      output.setRange(offset, offset + part.length, part);
+      offset += part.length;
+    }
+    return (output, extension);
   }
 
   Future<TtsServiceOptions?> _getSelectedNetworkService() async {

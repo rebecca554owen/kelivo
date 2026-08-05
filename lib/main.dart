@@ -799,6 +799,7 @@ class MyApp extends StatelessWidget {
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'Kelivo',
+                navigatorKey: rootNavigatorKey,
                 // App UI language; null = follow system (respects iOS per-app language)
                 locale: settings.appLocaleForMaterialApp,
                 supportedLocales: AppLocalizations.supportedLocales,

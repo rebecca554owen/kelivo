@@ -4608,6 +4608,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsFloatingCollapseTooltip => 'Collapse playback controls';
 
   @override
+  String get ttsFloatingSaveTooltip => 'Save audio';
+
+  @override
+  String get ttsSaveDialogTitle => 'Save TTS audio';
+
+  @override
+  String get ttsSaveSuccess => 'Audio saved successfully.';
+
+  @override
+  String get ttsSaveNothing => 'No audio is available to save.';
+
+  @override
+  String ttsSaveFailed(String message) {
+    return 'Failed to save audio: $message';
+  }
+
+  @override
   String imageViewerPageShareFailedOpenFile(String message) {
     return 'Unable to share, tried to open file: $message';
   }

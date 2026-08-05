@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 enum NotificationType { success, error, info, warning }
 
 class AppNotification {
@@ -35,12 +37,19 @@ class AppSnackBarManager extends ChangeNotifier {
   List<NotificationEntry> get activeToasts => List.unmodifiable(_activeToasts);
 
   void show(BuildContext context, AppNotification notification) {
+    final navigator =
+        Navigator.maybeOf(context) ?? rootNavigatorKey.currentState;
+    if (navigator == null) {
+      throw FlutterError(
+        'No Navigator is available to show an app notification.',
+      );
+    }
     final entry = NotificationEntry(
       key: UniqueKey(),
       notification: notification,
       animationController: AnimationController(
         duration: const Duration(milliseconds: 300),
-        vsync: Navigator.of(context),
+        vsync: navigator,
       ),
       slideAnimation: null,
       fadeAnimation: null,

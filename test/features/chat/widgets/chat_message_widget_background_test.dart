@@ -795,8 +795,10 @@ void main() {
 
       await tester.tap(find.byTooltip('Replay'));
       await tester.pump();
+      await tester.tap(find.byTooltip('Replay'));
+      await tester.pump();
 
-      expect(ttsProvider.spokenTexts, ['Replay this line']);
+      expect(ttsProvider.spokenTexts, ['Replay this line', 'Replay this line']);
       expect(find.byTooltip('Replay'), findsOneWidget);
     });
 

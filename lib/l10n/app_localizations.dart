@@ -8522,6 +8522,36 @@ abstract class AppLocalizations {
   /// **'Collapse playback controls'**
   String get ttsFloatingCollapseTooltip;
 
+  /// No description provided for @ttsFloatingSaveTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Save audio'**
+  String get ttsFloatingSaveTooltip;
+
+  /// No description provided for @ttsSaveDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save TTS audio'**
+  String get ttsSaveDialogTitle;
+
+  /// No description provided for @ttsSaveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio saved successfully.'**
+  String get ttsSaveSuccess;
+
+  /// No description provided for @ttsSaveNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'No audio is available to save.'**
+  String get ttsSaveNothing;
+
+  /// No description provided for @ttsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save audio: {message}'**
+  String ttsSaveFailed(String message);
+
   /// No description provided for @imageViewerPageShareFailedOpenFile.
   ///
   /// In en, this message translates to:

@@ -1916,6 +1916,18 @@
   "ttsFloatingCloseTooltip": "Close player",
   "ttsFloatingExpandTooltip": "Expand playback controls",
   "ttsFloatingCollapseTooltip": "Collapse playback controls",
+  "ttsFloatingSaveTooltip": "Save audio",
+  "ttsSaveDialogTitle": "Save TTS audio",
+  "ttsSaveSuccess": "Audio saved successfully.",
+  "ttsSaveNothing": "No audio is available to save.",
+  "ttsSaveFailed": "Failed to save audio: {message}",
+  "@ttsSaveFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "imageViewerPageShareFailedOpenFile": "Unable to share, tried to open file: {message}",
   "@imageViewerPageShareFailedOpenFile": {
     "placeholders": {

@@ -2,13 +2,14 @@ import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/core/services/tts/tts_playback_models.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/app_overlays.dart';
+import 'package:Kelivo/shared/widgets/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 import 'package:provider/provider.dart';
 
 class _FakeTtsProvider extends ChangeNotifier implements TtsProvider {
-  _FakeTtsProvider({TtsPlaybackState? state})
+  _FakeTtsProvider({TtsPlaybackState? state, this.canSaveNetworkAudio = false})
     : _state =
           state ??
           const TtsPlaybackState(
@@ -26,6 +27,9 @@ class _FakeTtsProvider extends ChangeNotifier implements TtsProvider {
   int speedCount = 0;
   int stopCount = 0;
   final TtsPlaybackState _state;
+
+  @override
+  final bool canSaveNetworkAudio;
 
   @override
   TtsPlaybackState get playbackState => _state;
@@ -76,6 +80,7 @@ void main() {
       ChangeNotifierProvider<TtsProvider>.value(
         value: tts,
         child: MaterialApp(
+          navigatorKey: rootNavigatorKey,
           locale: const Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -104,6 +109,14 @@ void main() {
 
     expect(find.bySemanticsLabel('语音播放器'), findsOneWidget);
     final player = find.byKey(const ValueKey('ttsFloatingPlayerSurface'));
+    showAppSnackBar(
+      tester.element(player),
+      message: 'Saved',
+      duration: Duration.zero,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
     final beforeDrag = tester.getTopLeft(player);
     await tester.drag(player, const Offset(-18, 24));
     await tester.pump();
@@ -164,6 +177,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final tts = _FakeTtsProvider(
+      canSaveNetworkAudio: true,
       state: const TtsPlaybackState(
         status: TtsPlaybackStatus.ended,
         position: Duration(minutes: 2),
@@ -177,6 +191,7 @@ void main() {
       ChangeNotifierProvider<TtsProvider>.value(
         value: tts,
         child: MaterialApp(
+          navigatorKey: rootNavigatorKey,
           locale: const Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -192,6 +207,11 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.bySemanticsLabel('语音播放器'), findsOneWidget);
     expect(find.byTooltip('重新播放'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('展开播放控制'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('保存音频'), findsOneWidget);
 
     await tester.tap(find.byTooltip('重新播放'));
 

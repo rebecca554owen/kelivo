@@ -4421,6 +4421,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsFloatingCollapseTooltip => '收起播放控制';
 
   @override
+  String get ttsFloatingSaveTooltip => '保存音频';
+
+  @override
+  String get ttsSaveDialogTitle => '保存 TTS 音频';
+
+  @override
+  String get ttsSaveSuccess => '音频已保存';
+
+  @override
+  String get ttsSaveNothing => '暂无可保存的音频';
+
+  @override
+  String ttsSaveFailed(String message) {
+    return '保存音频失败：$message';
+  }
+
+  @override
   String imageViewerPageShareFailedOpenFile(String message) {
     return '无法分享，已尝试打开文件: $message';
   }
@@ -10173,6 +10190,23 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ttsFloatingCollapseTooltip => '收起播放控制';
 
   @override
+  String get ttsFloatingSaveTooltip => '保存音频';
+
+  @override
+  String get ttsSaveDialogTitle => '保存 TTS 音频';
+
+  @override
+  String get ttsSaveSuccess => '音频已保存';
+
+  @override
+  String get ttsSaveNothing => '暂无可保存的音频';
+
+  @override
+  String ttsSaveFailed(String message) {
+    return '保存音频失败：$message';
+  }
+
+  @override
   String imageViewerPageShareFailedOpenFile(String message) {
     return '无法分享，已尝试打开文件: $message';
   }
@@ -15921,6 +15955,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get ttsFloatingCollapseTooltip => '收起播放控制';
+
+  @override
+  String get ttsFloatingSaveTooltip => '儲存音訊';
+
+  @override
+  String get ttsSaveDialogTitle => '儲存 TTS 音訊';
+
+  @override
+  String get ttsSaveSuccess => '音訊已儲存';
+
+  @override
+  String get ttsSaveNothing => '暫無可儲存的音訊';
+
+  @override
+  String ttsSaveFailed(String message) {
+    return '儲存音訊失敗：$message';
+  }
 
   @override
   String imageViewerPageShareFailedOpenFile(String message) {
