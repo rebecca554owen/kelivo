@@ -868,9 +868,7 @@ class _ModelCard extends StatelessWidget {
           ? l10n.defaultModelPageNotEnabled
           : l10n.defaultModelPageUseCurrentModel;
     }
-    final baseBg = isDark
-        ? Colors.white10
-        : Colors.white.withValues(alpha: 0.96);
+    final baseBg = context.appColors.surfaceCard;
     return Container(
       decoration: BoxDecoration(
         color: baseBg,
@@ -1030,7 +1028,7 @@ class _BrandAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1),
+        color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,

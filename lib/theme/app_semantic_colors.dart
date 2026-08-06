@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 /// so custom/seed-generated themes get sensible values automatically.
 class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   final Color surfaceFill;
+  final Color surfaceCard;
   final Color success;
   final Color successContainer;
   final Color onSuccessContainer;
@@ -18,6 +19,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 
   const AppSemanticColors({
     required this.surfaceFill,
+    required this.surfaceCard,
     required this.success,
     required this.successContainer,
     required this.onSuccessContainer,
@@ -35,11 +37,26 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     return Color.alphaBlend(cs.onSurface.withValues(alpha: alpha), cs.surface);
   }
 
+  /// iOS-style section card background.
+  /// Replaces the old `isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96)` idiom.
+  static Color _deriveSurfaceCard(ColorScheme cs) {
+    return cs.brightness == Brightness.dark
+        ? Color.alphaBlend(
+            const Color(0xFFFFFFFF).withValues(alpha: 0.10),
+            cs.surface,
+          )
+        : Color.alphaBlend(
+            const Color(0xFFFFFFFF).withValues(alpha: 0.96),
+            cs.surface,
+          );
+  }
+
   factory AppSemanticColors.light(ColorScheme cs) {
     const successBase = Color(0xFF2E7D32);
     const warningBase = Color(0xFFF57C00);
     return AppSemanticColors(
       surfaceFill: _deriveSurfaceFill(cs),
+      surfaceCard: _deriveSurfaceCard(cs),
       success: successBase.harmonizeWith(cs.primary),
       successContainer: const Color(0xFFA5D6A7).harmonizeWith(cs.primary),
       onSuccessContainer: const Color(0xFF1B5E20),
@@ -65,6 +82,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     const warningBase = Color(0xFFFFB74D);
     return AppSemanticColors(
       surfaceFill: _deriveSurfaceFill(cs),
+      surfaceCard: _deriveSurfaceCard(cs),
       success: successBase.harmonizeWith(cs.primary),
       successContainer: const Color(0xFF1B5E20).harmonizeWith(cs.primary),
       onSuccessContainer: const Color(0xFFC8E6C9),
@@ -88,6 +106,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   @override
   AppSemanticColors copyWith({
     Color? surfaceFill,
+    Color? surfaceCard,
     Color? success,
     Color? successContainer,
     Color? onSuccessContainer,
@@ -99,6 +118,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   }) {
     return AppSemanticColors(
       surfaceFill: surfaceFill ?? this.surfaceFill,
+      surfaceCard: surfaceCard ?? this.surfaceCard,
       success: success ?? this.success,
       successContainer: successContainer ?? this.successContainer,
       onSuccessContainer: onSuccessContainer ?? this.onSuccessContainer,
@@ -118,6 +138,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
         : other.chartSeries.length;
     return AppSemanticColors(
       surfaceFill: Color.lerp(surfaceFill, other.surfaceFill, t)!,
+      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
       success: Color.lerp(success, other.success, t)!,
       successContainer: Color.lerp(successContainer, other.successContainer, t)!,
       onSuccessContainer:

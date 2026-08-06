@@ -10,6 +10,7 @@ import '../../shared/widgets/snackbar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showDesktopMcpJsonEditDialog(BuildContext context) async {
   final cs = Theme.of(context).colorScheme;
@@ -83,7 +84,6 @@ class _DesktopMcpJsonEditDialogState extends State<_DesktopMcpJsonEditDialog> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Resolve user-preferred code font family (Google/local/system)
     final settings = context.watch<SettingsProvider>();
     String resolveCodeFont() {
@@ -140,7 +140,7 @@ class _DesktopMcpJsonEditDialogState extends State<_DesktopMcpJsonEditDialog> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.white,
+                    color: context.appColors.surfaceCard,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: cs.outlineVariant.withValues(alpha: 0.3),

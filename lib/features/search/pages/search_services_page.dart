@@ -599,7 +599,7 @@ class _BrandBadge extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Use BrandAssets to get the icon path
     final asset = BrandAssets.assetForName(name);
-    final bg = isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1);
+    final bg = cs.primary.withValues(alpha: isDark ? 0.18 : 0.1);
     if (asset != null) {
       if (asset.endsWith('.svg')) {
         final isColorful = asset.contains('color');
@@ -770,9 +770,7 @@ Widget _iosSectionCard({required List<Widget> children}) {
       final theme = Theme.of(context);
       final cs = theme.colorScheme;
       final isDark = theme.brightness == Brightness.dark;
-      final Color bg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
+      final Color bg = context.appColors.surfaceCard;
       return Container(
         decoration: BoxDecoration(
           color: bg,

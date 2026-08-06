@@ -132,9 +132,7 @@ class _AssistantRegexTabState extends State<AssistantRegexTab> {
                 child: IosCardPress(
                   onTap: () => _addOrEdit(),
                   borderRadius: BorderRadius.circular(12),
-                  baseColor: isDark
-                      ? Colors.white10
-                      : cs.primary.withValues(alpha: 0.12),
+                  baseColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.12),
                   pressedBlendStrength: 0.18,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -341,9 +339,7 @@ class _AssistantRegexDesktopPaneState extends State<AssistantRegexDesktopPane> {
                 IosCardPress(
                   onTap: () => _addOrEdit(),
                   borderRadius: BorderRadius.circular(12),
-                  baseColor: isDark
-                      ? Colors.white10
-                      : cs.primary.withValues(alpha: 0.12),
+                  baseColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.12),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
@@ -450,7 +446,7 @@ class _RegexRuleCardState extends State<_RegexRuleCard> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final bg = context.appColors.surfaceCard;
     final borderBase = cs.outlineVariant.withValues(
       alpha: isDark ? 0.08 : 0.06,
     );

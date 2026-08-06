@@ -7,6 +7,7 @@ import '../../icons/lucide_adapter.dart' as lucide;
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/snackbar.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showDesktopMcpTimeoutDialog(BuildContext context) async {
   final cs = Theme.of(context).colorScheme;
@@ -104,7 +105,7 @@ class _DesktopMcpTimeoutDialogState extends State<_DesktopMcpTimeoutDialog> {
               decoration: InputDecoration(
                 suffixText: 's',
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(

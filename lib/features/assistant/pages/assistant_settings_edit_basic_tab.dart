@@ -136,9 +136,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Identity card (avatar + name) - iOS style
         Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white10
-                : Colors.white.withValues(alpha: 0.96),
+            color: context.appColors.surfaceCard,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
@@ -279,9 +277,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Chat model card (moved down, styled like DefaultModelPage)
         Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white10
-                : Colors.white.withValues(alpha: 0.96),
+            color: context.appColors.surfaceCard,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
@@ -417,9 +413,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         // Chat background (separate iOS card)
         Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white10
-                : Colors.white.withValues(alpha: 0.96),
+            color: context.appColors.surfaceCard,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
@@ -1449,7 +1443,7 @@ class _ValuePill extends StatelessWidget {
           : HitTestBehavior.deferToChild,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.10),
+          color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.10),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: cs.primary.withValues(alpha: isDark ? 0.28 : 0.22),

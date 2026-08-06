@@ -267,9 +267,7 @@ class McpPage extends StatelessWidget {
                             : Colors.transparent;
                         return Container(
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.white.withValues(alpha: 0.96),
+                            color: context.appColors.surfaceCard,
                             // Soften the list card corners a bit
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(

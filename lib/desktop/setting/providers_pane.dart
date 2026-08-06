@@ -3701,9 +3701,7 @@ class _DesktopProviderDetailPaneState
                             aspectRatio: 1,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? Colors.white10
-                                    : cs.primary.withValues(alpha: 0.1),
+                                color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
                                 shape: BoxShape.circle,
                                 border: selected
                                     ? Border.all(color: cs.primary, width: 2)
@@ -6215,7 +6213,7 @@ class _BrandCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.10),
+        color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.10),
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,

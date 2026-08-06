@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/haptics.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// iOS-style icon button: no ripple, color tween on press, no scale.
 class IosIconButton extends StatefulWidget {
@@ -205,10 +206,9 @@ class _IosCardPressState extends State<IosCardPress> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final Color base =
-        widget.baseColor ?? (isDark ? Colors.white10 : cs.surface);
+        widget.baseColor ?? (context.appColors.surfaceCard);
     final double k = widget.pressedBlendStrength ?? (isDark ? 0.14 : 0.12);
     final Color pressTarget =
         Color.lerp(base, isDark ? Colors.white : Colors.black, k) ?? base;

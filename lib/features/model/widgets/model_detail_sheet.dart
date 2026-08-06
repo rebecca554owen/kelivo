@@ -387,7 +387,6 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   }
 
   List<Widget> _buildBasic(BuildContext context, AppLocalizations l10n) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return [
       Padding(
@@ -416,7 +415,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
                   : null,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 hintText: l10n.modelDetailSheetModelIdHint,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -480,7 +479,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
               },
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(
@@ -1155,7 +1154,6 @@ class _HeaderRow extends StatelessWidget {
   final VoidCallback onDelete;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Padding(
@@ -1170,7 +1168,7 @@ class _HeaderRow extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.modelDetailSheetHeaderKeyHint,
                     filled: true,
-                    fillColor: isDark ? Colors.white10 : Colors.white,
+                    fillColor: context.appColors.surfaceCard,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
@@ -1208,7 +1206,7 @@ class _HeaderRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.modelDetailSheetHeaderValueHint,
               filled: true,
-              fillColor: isDark ? Colors.white10 : Colors.white,
+              fillColor: context.appColors.surfaceCard,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
@@ -1244,7 +1242,6 @@ class _BodyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1258,7 +1255,7 @@ class _BodyRow extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.modelDetailSheetBodyKeyHint,
                     filled: true,
-                    fillColor: isDark ? Colors.white10 : Colors.white,
+                    fillColor: context.appColors.surfaceCard,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
@@ -1304,7 +1301,7 @@ class _BodyRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.modelDetailSheetBodyJsonHint,
               filled: true,
-              fillColor: isDark ? Colors.white10 : Colors.white,
+              fillColor: context.appColors.surfaceCard,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(

@@ -374,11 +374,8 @@ class _InstructionInjectionPageState extends State<InstructionInjectionPage> {
                                         onTap: () =>
                                             _showAddEditSheet(item: item),
                                         builder: (pressed, overlay) {
-                                          final baseBg = isDark
-                                              ? Colors.white10
-                                              : Colors.white.withValues(
-                                                  alpha: 0.96,
-                                                );
+                                          final baseBg =
+                                              context.appColors.surfaceCard;
                                           return Container(
                                             decoration: BoxDecoration(
                                               color: Color.alphaBlend(

@@ -10,6 +10,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showMcpJsonEditSheet(BuildContext context) async {
   final cs = Theme.of(context).colorScheme;
@@ -79,7 +80,6 @@ class _McpJsonEditSheetState extends State<_McpJsonEditSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Resolve user-preferred code font family (Google/local/system)
     final settings = context.watch<SettingsProvider>();
     String resolveCodeFont() {
@@ -160,7 +160,7 @@ class _McpJsonEditSheetState extends State<_McpJsonEditSheet> {
                 ),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.white,
+                    color: context.appColors.surfaceCard,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: cs.outlineVariant.withValues(alpha: 0.3),

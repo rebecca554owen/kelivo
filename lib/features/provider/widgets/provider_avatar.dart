@@ -168,9 +168,7 @@ class ProviderAvatar extends StatelessWidget {
     }
     final mono = isDark && BrandAssets.assetNeedsDarkInvert(asset);
     return CircleAvatar(
-      backgroundColor: isDark
-          ? Colors.white10
-          : cs.primary.withValues(alpha: 0.1),
+      backgroundColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
       child: asset.endsWith('.svg')
           ? SvgPicture.asset(
               asset,
@@ -224,7 +222,7 @@ class ProviderAvatar extends StatelessWidget {
   ) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1);
+    final bg = cs.primary.withValues(alpha: isDark ? 0.18 : 0.1);
     // 缓存命中时同步渲染，避免每次 rebuild 都经历 FutureBuilder 的 loading 态。
     final cached = _peekLobehubPath(iconName);
     if (cached != null) {
@@ -269,9 +267,7 @@ class ProviderAvatar extends StatelessWidget {
     final isSvg = asset.endsWith('.svg');
     final needsMono = isDark && BrandAssets.assetNeedsDarkInvert(asset);
     return CircleAvatar(
-      backgroundColor: isDark
-          ? Colors.white10
-          : cs.primary.withValues(alpha: 0.1),
+      backgroundColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
       child: isSvg
           ? SvgPicture.asset(
               asset,

@@ -3079,15 +3079,13 @@ class _CompactSendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final bg = (enabled || loading)
         ? color
-        : (isDark
-              ? Colors.white12
-              : Colors.grey.shade300.withValues(alpha: 0.84));
+        : cs.onSurface.withValues(alpha: 0.12);
     final fg = (enabled || loading)
-        ? (isDark ? Colors.black : Colors.white)
-        : (isDark ? Colors.white70 : Colors.grey.shade600);
+        ? cs.onPrimary
+        : cs.onSurface.withValues(alpha: 0.38);
 
     final button = Material(
       color: bg,

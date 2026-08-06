@@ -734,11 +734,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                           aspectRatio: 1,
                                           child: Container(
                                             decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.white10
-                                                  : cs.primary.withValues(
-                                                      alpha: 0.1,
-                                                    ),
+                                              color: cs.primary.withValues(
+                                                alpha: isDark ? 0.18 : 0.10,
+                                              ),
                                               shape: BoxShape.circle,
                                               border: selected
                                                   ? Border.all(
@@ -1613,7 +1611,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     Widget? suffix,
     ValueChanged<String>? onChanged,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1637,7 +1634,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: isDark ? Colors.white10 : Colors.white,
+            fillColor: context.appColors.surfaceCard,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -2164,7 +2161,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     List<Widget>? actions,
     ValueChanged<String>? onChanged,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2196,7 +2192,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             hintText: hint,
             filled: true,
             alignLabelWithHint: true,
-            fillColor: isDark ? Colors.white10 : Colors.white,
+            fillColor: context.appColors.surfaceCard,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -4417,9 +4413,7 @@ class _BrandAvatar extends StatelessWidget {
             RegExp(r'openrouter').hasMatch(lower));
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: isDark
-          ? Colors.white10
-          : cs.primary.withValues(alpha: 0.1),
+      backgroundColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
       child: asset == null
           ? Text(
               name.isNotEmpty ? name.characters.first.toUpperCase() : '?',

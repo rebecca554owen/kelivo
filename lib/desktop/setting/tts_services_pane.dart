@@ -12,6 +12,7 @@ import '../../features/settings/pages/tts_settings_page.dart';
 import '../../features/settings/widgets/asr_services_section.dart';
 import '../../features/settings/widgets/voice_service_widgets.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// Desktop: TTS (语音服务) right-side pane
 /// Adapts mobile TTS page to desktop with hoverable list card style
@@ -168,9 +169,7 @@ class _NetworkServiceCardState extends State<_NetworkServiceCard> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark
-        ? Colors.white10
-        : Colors.white.withValues(alpha: 0.96);
+    final baseBg = context.appColors.surfaceCard;
     final borderColor = _hover || widget.selected
         ? cs.primary.withValues(alpha: isDark ? 0.35 : 0.45)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08);
@@ -467,9 +466,7 @@ class _SystemTtsCardState extends State<_SystemTtsCard> {
     final l10n = AppLocalizations.of(context)!;
     final tts = context.watch<TtsProvider>();
 
-    final baseBg = isDark
-        ? Colors.white10
-        : Colors.white.withValues(alpha: 0.96);
+    final baseBg = context.appColors.surfaceCard;
     final borderColor = _hover
         ? cs.primary.withValues(alpha: isDark ? 0.35 : 0.45)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08);

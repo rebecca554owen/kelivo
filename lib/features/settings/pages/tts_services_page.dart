@@ -357,9 +357,7 @@ Widget _iosSectionCard({required List<Widget> children}) {
       final theme = Theme.of(context);
       final cs = theme.colorScheme;
       final isDark = theme.brightness == Brightness.dark;
-      final Color bg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
+      final Color bg = context.appColors.surfaceCard;
       return Container(
         decoration: BoxDecoration(
           color: bg,
@@ -443,7 +441,7 @@ class _AvatarBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1);
+    final baseBg = cs.primary.withValues(alpha: isDark ? 0.18 : 0.1);
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -480,7 +478,7 @@ class _AvatarBrandBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1);
+    final baseBg = cs.primary.withValues(alpha: isDark ? 0.18 : 0.1);
     final asset =
         BrandAssets.assetForName(name) ??
         BrandAssets.assetForName(name.split(' ').first);

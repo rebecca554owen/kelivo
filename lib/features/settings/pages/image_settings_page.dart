@@ -9,6 +9,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class ImageSettingsPage extends StatelessWidget {
   const ImageSettingsPage({super.key});
@@ -109,7 +110,7 @@ class _SettingsSection extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final bg = context.appColors.surfaceCard;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

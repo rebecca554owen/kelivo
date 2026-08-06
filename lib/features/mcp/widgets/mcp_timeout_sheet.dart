@@ -7,6 +7,7 @@ import '../../../core/providers/mcp_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showMcpTimeoutSheet(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
@@ -24,7 +25,6 @@ Future<void> showMcpTimeoutSheet(BuildContext context) async {
     ),
     builder: (ctx) {
       final cs = Theme.of(ctx).colorScheme;
-      final isDark = Theme.of(ctx).brightness == Brightness.dark;
       final bottom = MediaQuery.of(ctx).viewInsets.bottom;
 
       Future<void> handleSave() async {
@@ -87,7 +87,7 @@ Future<void> showMcpTimeoutSheet(BuildContext context) async {
                 hintText: l10n.mcpTimeoutSecondsLabel,
                 suffixText: 's',
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -119,9 +119,7 @@ Future<void> showMcpTimeoutSheet(BuildContext context) async {
                 Expanded(
                   child: CupertinoButton(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    color: isDark
-                        ? Colors.white10
-                        : cs.surfaceContainerHighest.withValues(alpha: 0.85),
+                    color: context.appColors.surfaceFill,
                     borderRadius: BorderRadius.circular(12),
                     onPressed: () => Navigator.of(ctx).maybePop(),
                     child: Text(

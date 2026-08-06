@@ -1563,7 +1563,6 @@ class _BorderInputState extends State<_BorderInput> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // hover to change border color (not background)
     final baseBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
@@ -1595,7 +1594,7 @@ class _BorderInputState extends State<_BorderInput> {
         decoration: InputDecoration(
           isDense: true,
           filled: true,
-          fillColor: isDark ? Colors.white10 : Colors.white,
+          fillColor: context.appColors.surfaceCard,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 6,
             vertical: 8,
@@ -1960,9 +1959,7 @@ Future<String?> _showDesktopFontChooserDialog(
                     Expanded(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white10
-                              : Colors.black.withValues(alpha: 0.03),
+                          color: context.appColors.surfaceFill,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: ListView.builder(

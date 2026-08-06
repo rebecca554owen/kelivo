@@ -1431,11 +1431,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                       return l10n.sideDrawerSearchHint;
                                     })(),
                                     filled: true,
-                                    fillColor: isDark
-                                        ? Colors.white10
-                                        : Colors.grey.shade200.withValues(
-                                            alpha: 0.80,
-                                          ),
+                                    fillColor: context.appColors.surfaceFill,
                                     isDense: true,
                                     isCollapsed: true,
                                     prefixIcon: Padding(
@@ -1685,9 +1681,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                   ? ''
                                                   : _mobileSearchHint(),
                                               filled: true,
-                                              fillColor: isDark
-                                                  ? Colors.white10
-                                                  : Colors.grey.shade200
+                                              fillColor: context.appColors.surfaceFill
                                                         .withValues(
                                                           alpha: 0.80,
                                                         ),
@@ -3872,9 +3866,7 @@ class _DesktopSidebarTabsState extends State<_DesktopSidebarTabs> {
             final double segW = (constraints.maxWidth - pad * 2) / 2;
             return Container(
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white10
-                    : Colors.grey.shade200.withValues(alpha: 0.80),
+                color: context.appColors.surfaceFill,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Stack(

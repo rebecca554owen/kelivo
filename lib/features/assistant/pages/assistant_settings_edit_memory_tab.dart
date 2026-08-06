@@ -295,7 +295,7 @@ class _MemoryTab extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           // Match Settings page: Light uses translucent white; Dark uses subtle white10
-          color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
+          color: context.appColors.surfaceCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
@@ -412,9 +412,7 @@ class _MemoryTab extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
             child: Container(
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white10
-                    : Colors.white.withValues(alpha: 0.96),
+                color: context.appColors.surfaceCard,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(
@@ -509,9 +507,7 @@ class _MemoryTab extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white10
-                          : Colors.white.withValues(alpha: 0.96),
+                      color: context.appColors.surfaceCard,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: cs.outlineVariant.withValues(

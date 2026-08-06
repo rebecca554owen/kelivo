@@ -121,7 +121,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
+        color: context.appColors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
@@ -152,7 +152,6 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
     required TextEditingController controller,
     String? hint,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +170,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
             hintText: hint,
             filled: true,
             // Match provider sheet input background
-            fillColor: isDark ? Colors.white10 : Colors.white,
+            fillColor: context.appColors.surfaceCard,
             // Match provider sheet border styles
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

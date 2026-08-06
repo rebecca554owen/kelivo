@@ -331,9 +331,7 @@ class _AsrServiceCardState extends State<_AsrServiceCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     final displayName = _serviceDisplayName(l10n, widget.service);
-    final background = isDark
-        ? Colors.white10
-        : Colors.white.withValues(alpha: 0.96);
+    final background = context.appColors.surfaceCard;
     final border = _hovered || widget.selected
         ? cs.primary.withValues(alpha: isDark ? 0.35 : 0.45)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08);

@@ -163,9 +163,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                                       ? 0.12
                                       : 0.10,
                                 )
-                              : (Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white10
-                                    : cs.surface);
+                              : context.appColors.surfaceCard;
                           final borderColor = isSelected
                               ? cs.primary.withValues(alpha: 0.45)
                               : cs.outlineVariant.withValues(alpha: 0.25);

@@ -227,9 +227,7 @@ class _QuickPhrasesPageState extends State<QuickPhrasesPage> {
                           pressedScale: 0.98,
                           onTap: () => _showAddEditSheet(phrase: phrase),
                           builder: (pressed, overlay) {
-                            final baseBg = isDark
-                                ? Colors.white10
-                                : Colors.white.withValues(alpha: 0.96);
+                            final baseBg = context.appColors.surfaceCard;
                             return Container(
                               decoration: BoxDecoration(
                                 color: Color.alphaBlend(overlay, baseBg),

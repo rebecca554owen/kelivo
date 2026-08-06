@@ -357,9 +357,7 @@ class _QuickPhraseTab extends StatelessWidget {
                       onTap: () => _showAddEditSheet(context, phrase: phrase),
                       pressedScale: 0.98,
                       builder: (pressed) {
-                        final bg = isDark
-                            ? Colors.white10
-                            : Colors.white.withValues(alpha: 0.96);
+                        final bg = context.appColors.surfaceCard;
                         final overlay = isDark
                             ? Colors.white.withValues(alpha: 0.06)
                             : Colors.black.withValues(alpha: 0.05);

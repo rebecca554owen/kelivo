@@ -516,9 +516,7 @@ Widget _sectionCard({required List<Widget> children}) {
     builder: (context) {
       final cs = Theme.of(context).colorScheme;
       final isDark = Theme.of(context).brightness == Brightness.dark;
-      final baseBg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
+      final baseBg = context.appColors.surfaceCard;
       return Container(
         decoration: BoxDecoration(
           color: baseBg,

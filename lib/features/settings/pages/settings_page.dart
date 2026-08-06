@@ -24,6 +24,7 @@ import '../../../core/services/storage/storage_usage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -432,9 +433,7 @@ Widget _iosSectionCard({required List<Widget> children}) {
       final cs = theme.colorScheme;
       final isDark = theme.brightness == Brightness.dark;
       // Light: white with slight transparency; Dark: subtle translucent dark
-      final Color bg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
+      final Color bg = context.appColors.surfaceCard;
       return Container(
         decoration: BoxDecoration(
           color: bg,

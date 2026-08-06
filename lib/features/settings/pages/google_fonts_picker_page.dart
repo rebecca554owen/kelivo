@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class GoogleFontsPickerPage extends StatefulWidget {
   const GoogleFontsPickerPage({super.key, required this.title});
@@ -48,9 +49,7 @@ class _GoogleFontsPickerPageState extends State<GoogleFontsPickerPage> {
                 hintText: l10n.fontPickerFilterHint,
                 isDense: true,
                 filled: true,
-                fillColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white10
-                    : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 10,

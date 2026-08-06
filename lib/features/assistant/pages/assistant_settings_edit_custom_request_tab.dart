@@ -21,7 +21,7 @@ class _CustomRequestTab extends StatelessWidget {
       ), // Increased right padding
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? Colors.white10 : cs.surface,
+          color: context.appColors.surfaceCard,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
           boxShadow: isDark ? [] : AppShadows.soft,

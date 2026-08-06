@@ -227,10 +227,9 @@ class _PromptTabState extends State<_PromptTab> {
     }
 
     // System Prompt Card (no border, iOS style)
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sysCard = Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
+        color: context.appColors.surfaceCard,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -341,7 +340,7 @@ class _PromptTabState extends State<_PromptTab> {
     // Template Card with preview (no border, iOS style)
     final tmplCard = Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
+        color: context.appColors.surfaceCard,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -460,7 +459,6 @@ class _PromptTabState extends State<_PromptTab> {
     // Preset conversation card
     Widget presetCard() {
       final a = ap.getById(widget.assistantId)!;
-      final isDark = Theme.of(context).brightness == Brightness.dark;
       final items = a.presetMessages;
       final isDesktop =
           Theme.of(context).platform == TargetPlatform.macOS ||
@@ -568,9 +566,7 @@ class _PromptTabState extends State<_PromptTab> {
         );
       }
 
-      final baseBg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
+      final baseBg = context.appColors.surfaceCard;
 
       return Container(
         decoration: BoxDecoration(
@@ -806,9 +802,7 @@ class _PresetMessageCardState extends State<_PresetMessageCard> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark
-        ? Colors.white10
-        : Colors.white.withValues(alpha: 0.96);
+    final baseBg = context.appColors.surfaceCard;
     final borderColor = _hover
         ? cs.primary.withValues(alpha: isDark ? 0.35 : 0.45)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08);

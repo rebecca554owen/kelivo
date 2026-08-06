@@ -968,7 +968,7 @@ class _IosSectionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final bg = context.appColors.surfaceCard;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -2031,9 +2031,7 @@ class _IosOutlineButtonState extends State<_IosOutlineButton> {
     final cs = Theme.of(context).colorScheme;
     final bg = context.appColors.surfaceFill;
     final overlay = _pressed
-        ? (Theme.of(context).brightness == Brightness.dark
-              ? Colors.white12
-              : Colors.black12)
+        ? cs.onSurface.withValues(alpha: 0.12)
         : Colors.transparent;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

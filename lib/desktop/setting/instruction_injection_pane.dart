@@ -345,9 +345,7 @@ class _InstructionInjectionCardState extends State<_InstructionInjectionCard> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark
-        ? Colors.white10
-        : Colors.white.withValues(alpha: 0.96);
+    final baseBg = context.appColors.surfaceCard;
     final borderColor = _hover
         ? cs.primary.withValues(alpha: isDark ? 0.5 : 0.7)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08);

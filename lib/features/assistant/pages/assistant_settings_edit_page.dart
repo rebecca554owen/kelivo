@@ -446,7 +446,7 @@ class _AssistantOutlineHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
+        color: context.appColors.surfaceCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: cs.outlineVariant.withValues(alpha: isDark ? 0.1 : 0.08),
@@ -777,7 +777,7 @@ class _AssistantTabLayoutTile extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final bg = context.appColors.surfaceCard;
     final fg = visible
         ? cs.onSurface.withValues(alpha: 0.9)
         : cs.onSurface.withValues(alpha: 0.42);
@@ -1048,7 +1048,7 @@ class _BrandAvatarLike extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1),
+            color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -1064,7 +1064,7 @@ class _BrandAvatarLike extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1),
+            color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -1081,7 +1081,7 @@ class _BrandAvatarLike extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1),
+        color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
@@ -1155,9 +1155,7 @@ Widget _iosSectionCard({required List<Widget> children}) {
       final theme = Theme.of(context);
       final cs = theme.colorScheme;
       final isDark = theme.brightness == Brightness.dark;
-      final Color bg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
+      final Color bg = context.appColors.surfaceCard;
       return Container(
         decoration: BoxDecoration(
           color: bg,
