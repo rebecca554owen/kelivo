@@ -213,9 +213,12 @@ class _ChatInputBarState extends State<ChatInputBar>
       Queue<_ImageProcessingTask>();
   final Set<int> _processingImageIds = <int>{};
   final Set<int> _failedImageIds = <int>{};
+  final Set<int> _pendingTextPasteIds = <int>{};
   static const int _maxConcurrentImageTasks = 2;
   int _activeImageTasks = 0;
   int _nextImageId = 0;
+  int _nextTextPasteId = 0;
+  Future<void> _textPasteWriteTail = Future<void>.value();
   final List<DocumentAttachment> _docs =
       <DocumentAttachment>[]; // files to upload
   final Map<LogicalKeyboardKey, Timer?> _repeatTimers = {};
@@ -231,6 +234,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   static const double _documentPreviewHeight = 48;
   static const double _imagePreviewHeight = 64;
   static const double _imageRemoveButtonSize = 18;
+  static const int _maxInlinePasteCharacters = 5000;
   // Suppress context menu briefly after app resume to avoid flickering
   bool _suppressContextMenu = false;
   bool _isSubmitting = false;
@@ -305,7 +309,9 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   bool get _hasDraftMedia => _images.isNotEmpty || _docs.isNotEmpty;
   bool get _hasUnreadyImages =>
-      _processingImageIds.isNotEmpty || _failedImageIds.isNotEmpty;
+      _processingImageIds.isNotEmpty ||
+      _failedImageIds.isNotEmpty ||
+      _pendingTextPasteIds.isNotEmpty;
 
   // Instance method for onChanged to avoid recreating the callback on every build
   void _onTextChanged(String _) => setState(() {});
@@ -436,11 +442,15 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 
   void _clearFiles() {
-    setState(() => _docs.clear());
+    setState(() {
+      _pendingTextPasteIds.clear();
+      _docs.clear();
+    });
   }
 
   void _restoreInput(ChatInputData input) {
     setState(() {
+      _pendingTextPasteIds.clear();
       _discardImageState(_images.map((image) => image.id));
       _images
         ..clear()
@@ -472,6 +482,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   void _clearDraft() {
     setState(() {
       _controller.clear();
+      _pendingTextPasteIds.clear();
       _discardImageState(_images.map((image) => image.id));
       _images.clear();
       _docs.clear();
@@ -537,6 +548,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     _imageProcessingQueue.clear();
     _processingImageIds.clear();
     _failedImageIds.clear();
+    _pendingTextPasteIds.clear();
     widget.mediaController?._unbind(this);
     if (widget.controller == null) {
       _controller.dispose();
@@ -1061,8 +1073,17 @@ class _ChatInputBarState extends State<ChatInputBar>
       );
     }
 
-    // Other platforms: keep default behavior.
-    final items = <ContextMenuButtonItem>[...state.contextMenuButtonItems];
+    final items = state.contextMenuButtonItems
+        .map((item) {
+          if (item.type != ContextMenuButtonType.paste) return item;
+          return item.copyWith(
+            onPressed: () {
+              unawaited(_handlePasteFromClipboard());
+              state.hideToolbar();
+            },
+          );
+        })
+        .toList(growable: false);
     return AdaptiveTextSelectionToolbar.buttonItems(
       anchors: state.contextMenuAnchors,
       buttonItems: items,
@@ -1320,26 +1341,7 @@ class _ChatInputBarState extends State<ChatInputBar>
           try {
             final String? text = await reader.readValue(Formats.plainText);
             if (text != null && text.isNotEmpty) {
-              final value = _controller.value;
-              final sel = value.selection;
-              if (!sel.isValid) {
-                _controller.text = value.text + text;
-                _controller.selection = TextSelection.collapsed(
-                  offset: _controller.text.length,
-                );
-              } else {
-                final start = sel.start;
-                final end = sel.end;
-                final newText = value.text.replaceRange(start, end, text);
-                _controller.value = value.copyWith(
-                  text: newText,
-                  selection: TextSelection.collapsed(
-                    offset: start + text.length,
-                  ),
-                  composing: TextRange.empty,
-                );
-              }
-              setState(() {});
+              await _handlePastedText(text);
               return;
             }
           } catch (_) {}
@@ -1399,25 +1401,109 @@ class _ChatInputBarState extends State<ChatInputBar>
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text ?? '';
       if (text.isEmpty) return;
-      final value = _controller.value;
-      final sel = value.selection;
-      if (!sel.isValid) {
-        _controller.text = value.text + text;
-        _controller.selection = TextSelection.collapsed(
-          offset: _controller.text.length,
-        );
-      } else {
-        final start = sel.start;
-        final end = sel.end;
-        final newText = value.text.replaceRange(start, end, text);
-        _controller.value = value.copyWith(
-          text: newText,
-          selection: TextSelection.collapsed(offset: start + text.length),
-          composing: TextRange.empty,
-        );
-      }
-      setState(() {});
+      await _handlePastedText(text);
     } catch (_) {}
+  }
+
+  Future<void> _handlePastedText(String text) async {
+    final isLongPaste =
+        text.characters.take(_maxInlinePasteCharacters + 1).length >
+        _maxInlinePasteCharacters;
+    if (!isLongPaste) {
+      _insertPastedText(text);
+      return;
+    }
+
+    if (!mounted) return;
+    final pasteId = _nextTextPasteId++;
+    setState(() => _pendingTextPasteIds.add(pasteId));
+    final previousWrite = _textPasteWriteTail;
+    final writeDone = Completer<void>();
+    _textPasteWriteTail = writeDone.future;
+
+    try {
+      await previousWrite;
+      if (!mounted || !_pendingTextPasteIds.contains(pasteId)) return;
+
+      File? file;
+      DocumentAttachment? attachment;
+      try {
+        final dir = await AppDirectories.getUploadDirectory();
+        await dir.create(recursive: true);
+        file = await _reservePastedTextFile(dir);
+        await file.writeAsString(text, flush: true);
+        attachment = DocumentAttachment(
+          path: file.path,
+          fileName: p.basename(file.path),
+          mime: 'text/plain',
+        );
+      } catch (_) {}
+
+      if (attachment != null &&
+          mounted &&
+          _pendingTextPasteIds.contains(pasteId)) {
+        setState(() {
+          _pendingTextPasteIds.remove(pasteId);
+          _docs.add(attachment!);
+        });
+        return;
+      }
+
+      await _deleteUnclaimedPastedText(file);
+      if (!mounted || !_pendingTextPasteIds.contains(pasteId)) return;
+      setState(() => _pendingTextPasteIds.remove(pasteId));
+      _insertPastedText(text);
+    } finally {
+      writeDone.complete();
+    }
+  }
+
+  void _insertPastedText(String text) {
+    if (!mounted) return;
+    final value = _controller.value;
+    final selection = value.selection;
+    if (!selection.isValid) {
+      _controller.text = value.text + text;
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
+    } else {
+      final start = selection.start;
+      final end = selection.end;
+      final newText = value.text.replaceRange(start, end, text);
+      _controller.value = value.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + text.length),
+        composing: TextRange.empty,
+      );
+    }
+    setState(() {});
+  }
+
+  Future<File> _reservePastedTextFile(Directory dir) async {
+    final baseName = 'pasted_${DateTime.now().millisecondsSinceEpoch}';
+    var counter = 0;
+    while (true) {
+      final suffix = counter == 0 ? '' : '($counter)';
+      final file = File(p.join(dir.path, '$baseName$suffix.txt'));
+      try {
+        return await file.create(exclusive: true);
+      } on FileSystemException {
+        if (!await file.exists()) rethrow;
+        counter++;
+      }
+    }
+  }
+
+  Future<void> _deleteUnclaimedPastedText(File? file) async {
+    if (file == null) return;
+    try {
+      if (await file.exists()) await file.delete();
+    } catch (error) {
+      debugPrint(
+        '[ChatInputBar] Failed to delete unclaimed pasted text ${file.path}: $error',
+      );
+    }
   }
 
   // Copy arbitrary files to upload directory (without deleting the source),

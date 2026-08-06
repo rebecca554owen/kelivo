@@ -10,22 +10,37 @@ import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/utils/image_compressor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+// ignore: depend_on_referenced_packages
+import 'package:irondash_message_channel/irondash_message_channel.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// ignore: depend_on_referenced_packages, implementation_imports
+import 'package:super_native_extensions/src/native/context.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.path);
 
   final String path;
+  Completer<void>? appDataGate;
+  int startedAppDataRequests = 0;
+  int completedAppDataRequests = 0;
+
+  Future<String> _getAppDataPath() async {
+    startedAppDataRequests++;
+    await appDataGate?.future;
+    completedAppDataRequests++;
+    return path;
+  }
 
   @override
-  Future<String?> getApplicationDocumentsPath() async => path;
+  Future<String?> getApplicationDocumentsPath() => _getAppDataPath();
 
   @override
-  Future<String?> getApplicationSupportPath() async => path;
+  Future<String?> getApplicationSupportPath() => _getAppDataPath();
 
   @override
   Future<String?> getApplicationCachePath() async => '$path/cache';
@@ -43,6 +58,7 @@ const _config = ImageCompressConfig(
 
 void main() {
   late PathProviderPlatform previousPathProvider;
+  late _FakePathProviderPlatform fakePathProvider;
   late Directory appSupportDir;
   late Directory userDir;
 
@@ -55,9 +71,8 @@ void main() {
     userDir = await Directory.systemTemp.createTemp(
       'kelivo_input_cleanup_user_',
     );
-    PathProviderPlatform.instance = _FakePathProviderPlatform(
-      appSupportDir.path,
-    );
+    fakePathProvider = _FakePathProviderPlatform(appSupportDir.path);
+    PathProviderPlatform.instance = fakePathProvider;
   });
 
   tearDown(() async {
@@ -130,6 +145,142 @@ void main() {
       ),
     );
   }
+
+  testWidgets('超过 5000 个字符的粘贴内容转为文本附件', (tester) async {
+    final nativeClipboardContext = MockMessageChannelContext()
+      ..registerMockMethodCallHandler('ClipboardReader', (_) {
+        throw PlatformException(code: 'unavailable-in-widget-test');
+      });
+    setContextOverride(nativeClipboardContext);
+
+    var clipboardText = '';
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.getData') {
+        return <String, dynamic>{'text': clipboardText};
+      }
+      return null;
+    });
+    const clipboardFilesChannel = MethodChannel('app.clipboard');
+    messenger.setMockMethodCallHandler(
+      clipboardFilesChannel,
+      (_) async => null,
+    );
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      messenger.setMockMethodCallHandler(clipboardFilesChannel, null);
+    });
+
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    ChatInputData? submitted;
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        onSend: (input) async {
+          submitted = input;
+          return ChatInputSubmissionResult.rejected;
+        },
+      ),
+    );
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    clipboardText = List.filled(5000, 'a').join();
+    await _invokePasteShortcut(tester, focusNode);
+    expect(
+      await pumpUntil(tester, () => controller.text == clipboardText),
+      isTrue,
+    );
+    expect(mediaController.snapshotInput(controller.text).documents, isEmpty);
+
+    controller.text = 'keep';
+    final firstLongPaste = List.filled(5001, 'b').join();
+    final secondLongPaste = List.filled(5001, 'c').join();
+    clipboardText = firstLongPaste;
+    final firstWriteGate = Completer<void>();
+    fakePathProvider.appDataGate = firstWriteGate;
+    final startedRequestsBeforePaste = fakePathProvider.startedAppDataRequests;
+    await _invokePasteShortcut(tester, focusNode);
+    expect(
+      fakePathProvider.startedAppDataRequests,
+      greaterThan(startedRequestsBeforePaste),
+    );
+
+    fakePathProvider.appDataGate = null;
+    clipboardText = secondLongPaste;
+    await _invokePasteShortcut(tester, focusNode);
+    expect(mediaController.hasUnreadyImages, isTrue);
+    expect(mediaController.snapshotInput(controller.text).documents, isEmpty);
+
+    await tester.tap(find.byIcon(Lucide.ArrowUp));
+    await tester.pump();
+    expect(submitted, isNull);
+
+    firstWriteGate.complete();
+    expect(
+      await pumpUntil(
+        tester,
+        () =>
+            mediaController.snapshotInput(controller.text).documents.length ==
+            2,
+      ),
+      isTrue,
+    );
+
+    final input = mediaController.snapshotInput(controller.text);
+    final firstAttachment = input.documents[0];
+    final secondAttachment = input.documents[1];
+    expect(controller.text, 'keep');
+    final pastedFileName = RegExp(r'^pasted_\d+(?:\(\d+\))?\.txt$');
+    expect(firstAttachment.fileName, matches(pastedFileName));
+    expect(secondAttachment.fileName, matches(pastedFileName));
+    expect(firstAttachment.path, isNot(secondAttachment.path));
+    expect(firstAttachment.mime, 'text/plain');
+    expect(secondAttachment.mime, 'text/plain');
+    expect(
+      await tester.runAsync(() => File(firstAttachment.path).readAsString()),
+      firstLongPaste,
+    );
+    expect(
+      await tester.runAsync(() => File(secondAttachment.path).readAsString()),
+      secondLongPaste,
+    );
+
+    final uploadDir = Directory('${appSupportDir.path}/upload');
+    final existingPaths = await tester.runAsync(
+      () => uploadDir.list().map((entry) => entry.path).toSet(),
+    );
+
+    final disposeGate = Completer<void>();
+    fakePathProvider.appDataGate = disposeGate;
+    final completedRequestsBeforeDispose =
+        fakePathProvider.completedAppDataRequests;
+    clipboardText = List.filled(5001, 'd').join();
+    await _invokePasteShortcut(tester, focusNode);
+    expect(mediaController.hasUnreadyImages, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.runAsync(() async {
+      disposeGate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    expect(
+      fakePathProvider.completedAppDataRequests,
+      greaterThan(completedRequestsBeforeDispose),
+    );
+    final remainingPaths = await tester.runAsync(
+      () => uploadDir.list().map((entry) => entry.path).toSet(),
+    );
+    expect(remainingPaths, existingPaths);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
 
   testWidgets('发送后保留用户源文件，提交的是压缩副本', (tester) async {
     late File source;
@@ -466,6 +617,33 @@ void main() {
     controller.dispose();
     focusNode.dispose();
   });
+}
+
+Future<void> _invokePasteShortcut(
+  WidgetTester tester,
+  FocusNode focusNode,
+) async {
+  final focus = tester
+      .widgetList<Focus>(
+        find.ancestor(of: find.byType(TextField), matching: find.byType(Focus)),
+      )
+      .firstWhere((widget) => widget.onKeyEvent != null);
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.runAsync(() async {
+    expect(
+      focus.onKeyEvent!(
+        focusNode,
+        const KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.keyV,
+          logicalKey: LogicalKeyboardKey.keyV,
+          timeStamp: Duration.zero,
+        ),
+      ),
+      KeyEventResult.handled,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  });
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
 }
 
 Future<void> _forceDelete(Directory dir) async {
