@@ -5,5 +5,5 @@ import 'mcp_oauth_callback_types.dart';
 
 export 'mcp_oauth_callback_types.dart';
 
-Future<McpOAuthCallback> openMcpOAuthCallback() =>
-    implementation.openMcpOAuthCallback();
+Future<McpOAuthCallback> openMcpOAuthCallback(Uri authorizationServer) =>
+    implementation.openMcpOAuthCallback(authorizationServer);
