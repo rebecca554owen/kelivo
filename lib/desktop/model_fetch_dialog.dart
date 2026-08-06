@@ -21,7 +21,7 @@ Future<void> showModelFetchDialog(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'model-fetch-dialog',
-    barrierColor: Colors.black.withValues(alpha: 0.25),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     pageBuilder: (ctx, _, __) {
       return _ModelFetchDialogBody(
         providerKey: providerKey,
@@ -709,14 +709,10 @@ class _TactileRowState extends State<_TactileRow> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final overlay = () {
       if (_pressed) {
-        return isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.black.withValues(alpha: 0.06);
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06);
       }
       if (_hovered) {
-        return isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : Colors.black.withValues(alpha: 0.03);
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.04 : 0.03);
       }
       return Colors.transparent;
     }();

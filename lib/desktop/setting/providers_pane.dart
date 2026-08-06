@@ -805,9 +805,7 @@ class _DesktopProvidersSearchField extends StatelessWidget {
           minHeight: 34,
         ),
         filled: true,
-        fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.12)
-            : Colors.black.withValues(alpha: 0.08),
+        fillColor: cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.08),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -852,9 +850,7 @@ class _DesktopProviderGroupHeaderRowState
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
         : Colors.transparent;
 
     return MouseRegion(
@@ -2648,9 +2644,7 @@ class _DesktopProviderDetailPaneState
                                           TextEditingController();
                                       final ok = await showDialog<bool>(
                                         context: ctx,
-                                        barrierColor: Colors.black.withValues(
-                                          alpha: 0.12,
-                                        ),
+                                        barrierColor: cs.scrim.withValues(alpha: 0.12),
                                         builder: (dctx) => AlertDialog(
                                           title: Text(
                                             l10n.providerGroupsCreateDialogTitle,
@@ -2701,9 +2695,7 @@ class _DesktopProviderDetailPaneState
                                       showDialog<void>(
                                         context: ctx,
                                         barrierDismissible: true,
-                                        barrierColor: Colors.black.withValues(
-                                          alpha: 0.12,
-                                        ),
+                                        barrierColor: cs.scrim.withValues(alpha: 0.12),
                                         builder: (_) =>
                                             const _DesktopProviderGroupsDialog(),
                                       ),
@@ -3541,7 +3533,7 @@ class _DesktopProviderDetailPaneState
     String value = '';
     final ok = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.16),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.16),
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         bool valid(String s) => s.trim().isNotEmpty;
@@ -5374,9 +5366,7 @@ class _IconBtnState extends State<_IconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -5426,9 +5416,7 @@ class _IconTextBtnState extends State<_IconTextBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -5483,7 +5471,7 @@ class _DesktopProviderGroupsDialogState
     final controller = TextEditingController(text: initialText);
     final ok = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.12),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.12),
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: TextField(
@@ -5550,7 +5538,7 @@ class _DesktopProviderGroupsDialogState
     final l10n = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.12),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.12),
       builder: (ctx) => AlertDialog(
         title: Text(l10n.providerGroupsDeleteConfirmTitle),
         content: Text(l10n.providerGroupsDeleteConfirmContent),
@@ -5832,9 +5820,7 @@ class _DesktopDragHandleState extends State<_DesktopDragHandle> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
@@ -6031,9 +6017,7 @@ class _DesktopProviderShareDialogState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : Colors.black.withValues(alpha: 0.03),
+                  color: cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.03),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: cs.outlineVariant.withValues(alpha: 0.25),
@@ -6371,12 +6355,8 @@ class _AddFullWidthButtonState extends State<_AddFullWidthButton> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.black.withValues(alpha: 0.06);
+    final baseBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
     final bg = _hover ? hoverBg : baseBg;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -6924,9 +6904,7 @@ class _CardPressState extends State<_CardPress> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final overlay = _pressed
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
+        ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
         : Colors.transparent;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

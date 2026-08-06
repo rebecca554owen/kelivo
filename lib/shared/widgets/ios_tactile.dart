@@ -94,13 +94,9 @@ class _IosIconButtonState extends State<IosIconButton> {
 
     // Subtle hover background for desktop/web
     final Color bgTarget = _pressed
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.12)
-              : Colors.black.withValues(alpha: 0.08))
+        ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.12 : 0.08))
         : (_hovered
-              ? (isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.06))
+              ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06))
               : Colors.transparent);
 
     final content = Semantics(

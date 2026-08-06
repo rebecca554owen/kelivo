@@ -21,7 +21,7 @@ Future<void> showUserProfileDialog(BuildContext context) async {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'user-profile-dialog',
-    barrierColor: Colors.black.withValues(alpha: 0.25),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     pageBuilder: (ctx, _, __) {
       return const _UserProfileDialogBody();
     },

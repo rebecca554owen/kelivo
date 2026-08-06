@@ -474,9 +474,7 @@ class _ThemeModeSegmentedState extends State<_ThemeModeSegmented> {
       (ThemeMode.system, l10n.settingsPageSystemMode, lucide.Lucide.Monitor),
     ];
 
-    final trackBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
+    final trackBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04);
     return Container(
       decoration: BoxDecoration(
         color: trackBg,
@@ -510,9 +508,7 @@ class _ThemeModeSegmentedState extends State<_ThemeModeSegmented> {
                         );
                       }
                       if (_hover == i) {
-                        return isDark
-                            ? Colors.white.withValues(alpha: 0.10)
-                            : Colors.black.withValues(alpha: 0.06);
+                        return cs.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
                       }
                       return Colors.transparent;
                     }(),
@@ -808,9 +804,7 @@ class _SimpleOptionTileState extends State<_SimpleOptionTile> {
     final bg = widget.selected
         ? cs.primary.withValues(alpha: 0.12)
         : (_hover
-              ? (isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.04))
+              ? (cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.04))
               : Colors.transparent);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -1021,9 +1015,7 @@ class _HoverDropdownButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = hovered || open
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
         : Colors.transparent;
     final angle = open ? 3.1415926 : 0.0;
     return MouseRegion(
@@ -1126,9 +1118,7 @@ class _OverlayMenuItemState extends State<_OverlayMenuItem> {
     final bg = widget.selected
         ? cs.primary.withValues(alpha: 0.08)
         : (_hover
-              ? (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04))
+              ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
               : Colors.transparent);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -1191,9 +1181,7 @@ class _OverlayItemState extends State<_OverlayItem> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
         ? Color.alphaBlend(
-            (isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.04)),
+            (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04)),
             widget.background,
           )
         : widget.background;
@@ -1424,9 +1412,7 @@ class _LanguageDropdownItemState extends State<_LanguageDropdownItem> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: _hover
-                ? (isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.04))
+                ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
@@ -1727,9 +1713,7 @@ class _DesktopFontDropdownButtonState
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -2035,9 +2019,7 @@ class _FontRowItemState extends State<_FontRowItem> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
         : Colors.transparent;
     final sample = 'Aa字';
     return MouseRegion(

@@ -1473,9 +1473,7 @@ class _GlassCircleButtonState extends State<_GlassCircleButton> {
     final glassBase = isDark
         ? Colors.black.withValues(alpha: 0.06)
         : Colors.white.withValues(alpha: 0.06);
-    final overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)
         : glassBase;

@@ -926,7 +926,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'context-menu',
-      barrierColor: Colors.black.withValues(alpha: 0.08),
+      barrierColor: cs.scrim.withValues(alpha: 0.08),
       pageBuilder: (ctx, _, __) {
         return Stack(
           children: [
@@ -1522,9 +1522,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                   errorBuilder: (_, __, ___) => Container(
                     width: 112,
                     height: 112,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.06),
+                    color: cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.06),
                     child: Icon(
                       Icons.broken_image,
                       color: cs.onSurface.withValues(alpha: 0.45),
@@ -5211,9 +5209,7 @@ class _SourcesSummaryCard extends StatelessWidget {
     return IosCardPress(
       borderRadius: BorderRadius.circular(20),
       border: Border.all(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.16)
-            : Colors.black.withValues(alpha: 0.10),
+        color: cs.onSurface.withValues(alpha: isDark ? 0.16 : 0.10),
         width: 0.8,
       ),
       baseColor: Colors.transparent,
@@ -5308,9 +5304,7 @@ class _SourceFavicon extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.14)
-        : Colors.black.withValues(alpha: 0.06);
+    final borderColor = cs.onSurface.withValues(alpha: isDark ? 0.14 : 0.06);
 
     return Container(
       width: _SourceFaviconStack._iconSize,

@@ -50,7 +50,7 @@ Future<bool?> _openDialog(
   await showGeneralDialog<bool>(
     context: context,
     barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.25),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     barrierLabel: 'model-edit-dialog',
     pageBuilder: (ctx, _, __) => _ModelEditDialogBody(
       providerKey: providerKey,
@@ -1552,9 +1552,7 @@ class _SegTabBarState extends State<_SegTabBar> {
               final Color bg = selected
                   ? cs.primary.withValues(alpha: 0.14)
                   : hovered
-                  ? (isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.03))
+                  ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.03))
                   : Colors.transparent;
               final Color fg = selected
                   ? cs.primary

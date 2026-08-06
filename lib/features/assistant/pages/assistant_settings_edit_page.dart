@@ -1644,9 +1644,7 @@ class _DesktopAssistantMenuState extends State<_DesktopAssistantMenu> {
           final bg = selected
               ? cs.primary.withValues(alpha: 0.10)
               : (_hover == i
-                    ? (isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : Colors.black.withValues(alpha: 0.04))
+                    ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
                     : Colors.transparent);
           final fg = selected
               ? cs.primary
@@ -2305,12 +2303,8 @@ class _DesktopAssistantBasicPaneState
                       pressedScale: 0.98,
                       builder: (pressed) {
                         final base = context.appColors.surfaceFill;
-                        final pressOv = isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : Colors.black.withValues(alpha: 0.05);
-                        final hoverOv = isDark
-                            ? Colors.white.withValues(alpha: 0.04)
-                            : Colors.black.withValues(alpha: 0.04);
+                        final pressOv = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
+                        final hoverOv = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.04);
                         final bgColor = pressed
                             ? Color.alphaBlend(pressOv, base)
                             : (_hoverChatModel
@@ -2396,12 +2390,8 @@ class _DesktopAssistantBasicPaneState
                         pressedScale: 0.98,
                         builder: (pressed) {
                           final base = context.appColors.surfaceFill;
-                          final pressOv = isDark
-                              ? Colors.white.withValues(alpha: 0.06)
-                              : Colors.black.withValues(alpha: 0.05);
-                          final hoverOv = isDark
-                              ? Colors.white.withValues(alpha: 0.04)
-                              : Colors.black.withValues(alpha: 0.04);
+                          final pressOv = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
+                          final hoverOv = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.04);
                           final bg = pressed
                               ? Color.alphaBlend(pressOv, base)
                               : (_hoverBgChooser

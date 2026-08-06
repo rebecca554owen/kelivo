@@ -45,9 +45,7 @@ class _IosTileButtonState extends State<IosTileButton> {
     final Color baseBg = tinted
         ? (isDark ? tint.withValues(alpha: 0.20) : tint.withValues(alpha: 0.12))
         : (context.appColors.surfaceFill);
-    final overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final pressedBg = Color.alphaBlend(overlay, baseBg);
     // Use primary (or provided foreground) for text/icon when tinted; otherwise neutral onSurface
     final Color defaultFg =

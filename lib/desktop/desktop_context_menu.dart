@@ -69,7 +69,7 @@ Future<void> showDesktopContextMenuAt(
     context: context,
     barrierLabel: 'context-menu',
     barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.06),
+    barrierColor: cs.scrim.withValues(alpha: 0.06),
     pageBuilder: (ctx, _, __) {
       return Material(
         type: MaterialType.transparency,
@@ -264,9 +264,7 @@ class _GlassMenuItemState extends State<_GlassMenuItem> {
         ? Theme.of(context).colorScheme.error
         : cs.onSurface.withValues(alpha: 0.9);
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

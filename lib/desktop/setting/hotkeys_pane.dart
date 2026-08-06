@@ -268,9 +268,7 @@ class _ShortcutEditorState extends State<_ShortcutEditor> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final border = cs.outlineVariant.withValues(alpha: 0.35);
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.04)
-        : Colors.black.withValues(alpha: 0.03);
+    final bg = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.03);
     return KeyboardListener(
       focusNode: widget.focusNode,
       onKeyEvent: (KeyEvent e) {
@@ -426,9 +424,7 @@ class _SmallIconBtnState extends State<_SmallIconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

@@ -1083,9 +1083,7 @@ class _WorldBookEntryEditDialogState extends State<_WorldBookEntryEditDialog> {
     required bool isDark,
     required Widget child,
   }) {
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : Colors.black.withValues(alpha: 0.03);
+    final bg = cs.onSurface.withValues(alpha: isDark ? 0.05 : 0.03);
     final border = cs.outlineVariant.withValues(alpha: 0.12);
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1550,9 +1548,7 @@ class _SmallIconBtnState extends State<_SmallIconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     final btn = MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -1607,9 +1603,7 @@ class _DeskIosButtonState extends State<_DeskIosButton> {
     final bg = widget.filled
         ? (_hover ? cs.primary.withValues(alpha: 0.92) : cs.primary)
         : (_hover
-              ? (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.05))
+              ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
               : Colors.transparent);
     final borderColor = widget.filled
         ? Colors.transparent

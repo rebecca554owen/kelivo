@@ -165,7 +165,7 @@ class _PromptTabState extends State<_PromptTab> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'system-prompt-editor',
-      barrierColor: Colors.black.withValues(alpha: 0.12),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.12),
       pageBuilder: (ctx, _, __) {
         return _SystemPromptDesktopDialog(initial: initial);
       },

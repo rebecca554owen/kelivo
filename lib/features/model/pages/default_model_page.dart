@@ -932,9 +932,7 @@ class _ModelCard extends StatelessWidget {
               onTap: onPick,
               builder: (pressed) {
                 final bg = context.appColors.surfaceFill;
-                final overlay = isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.05);
+                final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
                 final pressedBg = Color.alphaBlend(overlay, bg);
                 return AnimatedScale(
                   scale: pressed ? 0.98 : 1.0,

@@ -358,9 +358,7 @@ class _QuickPhraseTab extends StatelessWidget {
                       pressedScale: 0.98,
                       builder: (pressed) {
                         final bg = context.appColors.surfaceCard;
-                        final overlay = isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : Colors.black.withValues(alpha: 0.05);
+                        final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
                         final pressedBg = Color.alphaBlend(overlay, bg);
                         return Container(
                           decoration: BoxDecoration(
@@ -472,9 +470,7 @@ class _GlassCircleButtonQPState extends State<_GlassCircleButtonQP> {
     final glassBase = isDark
         ? Colors.black.withValues(alpha: 0.06)
         : Colors.white.withValues(alpha: 0.06);
-    final overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)
         : glassBase;

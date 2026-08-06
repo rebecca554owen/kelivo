@@ -140,9 +140,7 @@ class _DesktopMcpTimeoutDialogState extends State<_DesktopMcpTimeoutDialog> {
                   onTap: () => Navigator.of(context).maybePop(),
                   background: Colors.transparent,
                   foreground: cs.onSurface,
-                  hoverBackground: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.05),
+                  hoverBackground: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05),
                 ),
                 const SizedBox(width: 8),
                 _ActionBtn(
@@ -177,9 +175,7 @@ class _SmallIconBtnState extends State<_SmallIconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     final btn = Container(
       width: 28,
@@ -220,9 +216,7 @@ class _TextBtnState extends State<_TextBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

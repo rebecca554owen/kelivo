@@ -277,7 +277,7 @@ extension _ConsoleDialogExt on _HtmlPreviewDialogState {
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.25),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
       barrierLabel: 'console-logs',
       pageBuilder: (ctx, _, __) => _ConsoleDialog(
         title: l10n.messageWebViewConsoleLogs,

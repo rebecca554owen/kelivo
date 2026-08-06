@@ -95,7 +95,7 @@ Future<String?> showAssistantMoveSelector(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'assistant-move-selector',
-    barrierColor: Colors.black.withValues(alpha: 0.15),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.15),
     pageBuilder: (ctx, _, __) {
       final l10n = AppLocalizations.of(ctx)!;
       final cs = Theme.of(ctx).colorScheme;
@@ -329,9 +329,7 @@ class _SmallIconBtn2State extends State<_SmallIconBtn2> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -368,9 +366,7 @@ class _DeskAssistantRowState extends State<_DeskAssistantRow> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

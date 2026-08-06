@@ -17,7 +17,7 @@ Future<String?> showDesktopAddProviderDialog(BuildContext context) async {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'add-provider-dialog',
-    barrierColor: Colors.black.withValues(alpha: 0.25),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     pageBuilder: (ctx, _, __) => const _AddProviderDialogBody(),
     transitionBuilder: (ctx, anim, _, child) {
       final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
@@ -633,9 +633,7 @@ class _SmallSegTabBarState extends State<_SmallSegTabBar> {
               final Color bg = selected
                   ? cs.primary.withValues(alpha: 0.14)
                   : hovered
-                  ? (isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.03))
+                  ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.03))
                   : Colors.transparent;
               final Color fg = selected
                   ? cs.primary

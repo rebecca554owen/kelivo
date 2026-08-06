@@ -652,9 +652,7 @@ class _DeskIosButtonState extends State<_DeskIosButton> {
         : cs.onSurface.withValues(alpha: 0.9);
     final bg = widget.filled
         ? cs.primary
-        : (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05));
+        : (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05));
     final borderColor = widget.filled
         ? Colors.transparent
         : cs.outlineVariant.withValues(alpha: isDark ? 0.22 : 0.18);

@@ -4704,9 +4704,7 @@ class _PromptCachingTtlSegmentedControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.05);
+    final background = cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.05);
 
     return Semantics(
       label: semanticLabel,

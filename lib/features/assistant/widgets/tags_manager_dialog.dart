@@ -15,7 +15,7 @@ Future<void> showAssistantTagsManagerDialog(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'tags-manager',
-    barrierColor: Colors.black.withValues(alpha: 0.15),
+    barrierColor: cs.scrim.withValues(alpha: 0.15),
     pageBuilder: (ctx, _, __) {
       // Use a full-screen tap area to allow closing by tapping outside the dialog.
       return GestureDetector(
@@ -278,9 +278,7 @@ class _SmallIconBtnState extends State<_SmallIconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

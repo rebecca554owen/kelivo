@@ -1638,9 +1638,7 @@ Widget _sheetOption(
                 base)
           : base;
       final bgTarget = pressed
-          ? (isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.05))
+          ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
           : Colors.transparent;
       return TweenAnimationBuilder<Color?>(
         tween: ColorTween(end: target),

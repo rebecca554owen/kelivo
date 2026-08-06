@@ -1486,9 +1486,7 @@ class _ProviderChipState extends State<_ProviderChip> {
               ? cs.primary.withValues(alpha: 0.08)
               : cs.primary.withValues(alpha: 0.05))
         : cs.surface;
-    final Color overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final Color overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final Color bg = _pressed ? Color.alphaBlend(overlay, baseBg) : baseBg;
     // Slightly stronger border when selected; keep label color unchanged for subtlety
     final Color borderColor =
@@ -1655,7 +1653,7 @@ Future<ModelSelection?> _showDesktopModelSelector(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'model-select-desktop',
-    barrierColor: Colors.black.withValues(alpha: 0.25),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     pageBuilder: (ctx, _, __) => _DesktopModelSelectDialogBody(
       limitProviderKey: limitProviderKey,
       initialProviderKey: initialProviderKey,

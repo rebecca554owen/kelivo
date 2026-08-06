@@ -232,9 +232,7 @@ class _AppHeaderCardState extends State<_AppHeaderCard> {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseBg = Theme.of(context).colorScheme.surfaceContainerHigh;
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04);
     final overlay = _hover ? hoverBg : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -446,9 +444,7 @@ class _DeskNavRowState extends State<_DeskNavRow> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final bg = _hover ? hoverBg : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -517,9 +513,7 @@ class _DeskNavRowSvgState extends State<_DeskNavRowSvg> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final bg = _hover ? hoverBg : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

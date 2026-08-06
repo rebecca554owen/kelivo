@@ -466,9 +466,7 @@ class _SmallIconBtnState extends State<_SmallIconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -644,9 +642,7 @@ Future<bool?> _confirmDelete(BuildContext context) async {
                               states,
                             ) {
                               if (states.contains(WidgetState.hovered)) {
-                                return isDark
-                                    ? Colors.white.withValues(alpha: 0.06)
-                                    : Colors.black.withValues(alpha: 0.05);
+                                return cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
                               }
                               return Colors.transparent;
                             }),

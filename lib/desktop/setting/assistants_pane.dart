@@ -117,9 +117,7 @@ class _AddAssistantButtonState extends State<_AddAssistantButton> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -338,7 +336,7 @@ Future<bool?> _confirmDeleteDesktop(BuildContext context) async {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'assistant-delete',
-    barrierColor: Colors.black.withValues(alpha: 0.15),
+    barrierColor: cs.scrim.withValues(alpha: 0.15),
     transitionDuration: const Duration(milliseconds: 160),
     pageBuilder: (ctx, _, __) {
       final dialog = Material(
@@ -485,9 +483,7 @@ class _DeskIosButtonState extends State<_DeskIosButton> {
         : (isDark ? cs.onSurface.withValues(alpha: 0.10) : Colors.transparent);
     final hoverBg = widget.filled
         ? baseColor.withValues(alpha: 0.92)
-        : (isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.04));
+        : (cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.04));
     final bg = _hover ? hoverBg : baseBg;
     final borderColor = widget.filled
         ? Colors.transparent
