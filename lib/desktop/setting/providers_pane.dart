@@ -765,7 +765,7 @@ class _DesktopProvidersSearchField extends StatelessWidget {
       controller: controller,
       onChanged: onChanged,
       style: TextStyle(
-        color: isDark ? Colors.white : Colors.black87,
+        color: cs.onSurface,
         fontSize: 14,
       ),
       cursorColor: cs.primary,
@@ -1449,8 +1449,8 @@ class _DesktopProviderDetailPaneState
                               color: _eyeHover
                                   ? (Theme.of(context).brightness ==
                                             Brightness.dark
-                                        ? Colors.white.withValues(alpha: 0.06)
-                                        : Colors.black.withValues(alpha: 0.04))
+                                        ? cs.onSurface.withValues(alpha: 0.06)
+                                        : cs.onSurface.withValues(alpha: 0.04))
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -3708,8 +3708,8 @@ class _DesktopProviderDetailPaneState
                                         opt.asset,
                                         fit: BoxFit.contain,
                                         colorFilter: needsMono
-                                            ? const ColorFilter.mode(
-                                                Colors.white,
+                                            ? ColorFilter.mode(
+                                                cs.onSurface,
                                                 BlendMode.srcIn,
                                               )
                                             : null,
@@ -3717,7 +3717,7 @@ class _DesktopProviderDetailPaneState
                                     : Image.asset(
                                         opt.asset,
                                         fit: BoxFit.contain,
-                                        color: needsMono ? Colors.white : null,
+                                        color: needsMono ? cs.onSurface : null,
                                         colorBlendMode: needsMono
                                             ? BlendMode.srcIn
                                             : null,
@@ -5072,7 +5072,6 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
     _entry = OverlayEntry(
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final content = Material(
           color: Colors.transparent,
           child: Container(
@@ -5082,7 +5081,7 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
                     ctx,
                     listen: false,
                   ).usePureBackground)
-                  ? (isDark ? Colors.black : Colors.white)
+                  ? cs.surface
                   : (Theme.of(context).colorScheme.surfaceContainerHigh),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -5091,7 +5090,7 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: cs.shadow.withValues(alpha: 0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -5209,7 +5208,6 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
     _entry = OverlayEntry(
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return Stack(
           children: [
             Positioned.fill(
@@ -5236,7 +5234,7 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
                           ctx,
                           listen: false,
                         ).usePureBackground)
-                        ? (isDark ? Colors.black : Colors.white)
+                        ? cs.surface
                         : (Theme.of(context).colorScheme.surfaceContainerHigh),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
@@ -5245,7 +5243,7 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: cs.shadow.withValues(alpha: 0.05),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -5994,7 +5992,7 @@ class _DesktopProviderShareDialogState
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.white, // color-gate: ignore (QR scannability)
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -6097,7 +6095,7 @@ class _DialogActionButtonState extends State<_DialogActionButton> {
     final enabled = widget.onTap != null;
     final baseBg = widget.filled ? cs.primary : Colors.transparent;
     final hoverOverlay = widget.filled
-        ? Colors.white.withValues(alpha: isDark ? 0.08 : 0.10)
+        ? cs.onPrimary.withValues(alpha: isDark ? 0.08 : 0.10)
         : cs.primary.withValues(alpha: isDark ? 0.12 : 0.10);
     final bg = Color.alphaBlend(
       (_hover ? hoverOverlay : Colors.transparent),
@@ -6235,10 +6233,10 @@ class _ProviderListRowState extends State<_ProviderListRow> {
   bool _hover = false;
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hoverBg = _hover && !widget.selected
-        ? Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04)
+        ? cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04)
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -6413,9 +6411,7 @@ class _DesktopIosSectionCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final Color base = cs.surface;
-    final Color bg = isDark
-        ? Color.lerp(base, Colors.white, 0.06)!
-        : Color.lerp(base, Colors.black, 0.04)!;
+    final Color bg = Color.lerp(base, cs.onSurface, isDark ? 0.06 : 0.04)!;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -6629,8 +6625,8 @@ class _ModelGroupAccordionState extends State<_ModelGroupAccordion> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.03)
-                        : Colors.black.withValues(alpha: 0.02),
+                        ? cs.onSurface.withValues(alpha: 0.03)
+                        : cs.onSurface.withValues(alpha: 0.02),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),

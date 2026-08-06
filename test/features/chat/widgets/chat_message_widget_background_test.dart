@@ -142,7 +142,12 @@ void main() {
       expect(capsule.baseColor, Colors.transparent);
       expect(
         capsule.border,
-        Border.all(color: Colors.black.withValues(alpha: 0.10), width: 0.8),
+        Border.all(
+          color: ThemeData.light().colorScheme.onSurface.withValues(
+            alpha: 0.10,
+          ),
+          width: 0.8,
+        ),
       );
       expect(
         capsule.padding,

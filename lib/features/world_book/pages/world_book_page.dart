@@ -2087,7 +2087,7 @@ class _IosFilledButtonState extends State<_IosFilledButton> {
     final cs = Theme.of(context).colorScheme;
     final bg = widget.enabled ? cs.primary : cs.primary.withValues(alpha: 0.4);
     final overlay = _pressed
-        ? Colors.black.withValues(alpha: 0.12)
+        ? cs.onPrimary.withValues(alpha: 0.12)
         : Colors.transparent;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

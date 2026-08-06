@@ -674,7 +674,14 @@ Future<bool?> _confirmDelete(BuildContext context) async {
                               states,
                             ) {
                               if (states.contains(WidgetState.hovered)) {
-                                return Color.lerp(cs.error, Colors.white, 0.08);
+                                final isDark =
+                                    Theme.of(context).brightness ==
+                                    Brightness.dark;
+                                return Color.lerp(
+                                  cs.error,
+                                  isDark ? cs.onSurface : cs.surface,
+                                  0.08,
+                                );
                               }
                               return cs.error;
                             }),

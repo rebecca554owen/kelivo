@@ -55,9 +55,8 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
     final cs = Theme.of(context).colorScheme;
     final brightness = Theme.of(context).brightness;
     final sp = context.watch<SettingsProvider>();
-    final isDark = brightness == Brightness.dark;
     final Color bg = sp.usePureBackground
-        ? (isDark ? Colors.black : Colors.white)
+        ? cs.surface
         : cs.surfaceContainerHighest;
     return Container(
       height: 40,

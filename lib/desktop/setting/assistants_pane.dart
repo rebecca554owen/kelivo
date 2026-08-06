@@ -351,7 +351,7 @@ Future<bool?> _confirmDeleteDesktop(BuildContext context) async {
                   borderRadius: BorderRadius.circular(14),
                   side: BorderSide(
                     color: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.08)
+                        ? cs.onSurface.withValues(alpha: 0.08)
                         : cs.outlineVariant.withValues(alpha: 0.25),
                   ),
                 ),

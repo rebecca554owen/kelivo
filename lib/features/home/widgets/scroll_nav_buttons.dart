@@ -44,7 +44,9 @@ class ScrollNavButtonsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDark ? Colors.white : Colors.black87;
+    final iconColor = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: isDark ? 1.0 : 0.87);
     final buttonDiameter = iconSize + buttonPadding * 2;
     final hoverHeight = buttonDiameter * 4 + buttonSpacing * 3 + 24;
     final hoverWidth = buttonDiameter + 24;
@@ -149,25 +151,17 @@ class _GlassyCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.black.withValues(alpha: 0.4)
-            : Colors.white.withValues(alpha: 0.85),
+        color: cs.surface.withValues(alpha: isDark ? 0.4 : 0.85),
         shape: BoxShape.circle,
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.12)
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.20),
+              ? cs.onSurface.withValues(alpha: 0.12)
+              : cs.outline.withValues(alpha: 0.20),
           width: 1,
         ),
-        //  boxShadow: [
-        //    BoxShadow(
-        //      color: Colors.black.withOpacity(0.01),
-        //      blurRadius: 8,
-        //      offset: const Offset(0, 2),
-        //    ),
-        // ],
       ),
       child: Material(
         type: MaterialType.transparency,

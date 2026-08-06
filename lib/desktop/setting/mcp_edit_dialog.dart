@@ -777,12 +777,12 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
                         states,
                       ) {
                         if (states.contains(WidgetState.hovered)) {
+                          final isDark =
+                              Theme.of(context).brightness == Brightness.dark;
                           return Color.lerp(
                             cs.primary,
-                            Colors.white,
-                            Theme.of(context).brightness == Brightness.dark
-                                ? 0.06
-                                : 0.08,
+                            isDark ? cs.onSurface : cs.surface,
+                            isDark ? 0.06 : 0.08,
                           );
                         }
                         return cs.primary;
@@ -935,9 +935,7 @@ class _SegChoiceBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
     const double outerHeight = 44;
     const double innerPadding = 4;
@@ -960,9 +958,7 @@ class _SegChoiceBar extends StatelessWidget {
         final double rowWidth =
             segWidth * labels.length + gap * (labels.length - 1);
 
-        final Color shellBg = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+        final Color shellBg = context.appColors.surfaceCard;
 
         List<Widget> children = [];
         for (int index = 0; index < labels.length; index++) {
@@ -1043,9 +1039,7 @@ class _SegTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
     const double outerHeight = 44;
     const double innerPadding = 4;
@@ -1068,9 +1062,7 @@ class _SegTabBar extends StatelessWidget {
         final double rowWidth =
             segWidth * tabs.length + gap * (tabs.length - 1);
 
-        final Color shellBg = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+        final Color shellBg = context.appColors.surfaceCard;
 
         List<Widget> children = [];
         for (int index = 0; index < tabs.length; index++) {

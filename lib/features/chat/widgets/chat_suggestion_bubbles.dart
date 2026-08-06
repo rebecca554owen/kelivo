@@ -26,11 +26,9 @@ class ChatSuggestionBubbles extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final baseColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
+        ? cs.onSurface.withValues(alpha: 0.08)
         : cs.primaryContainer.withValues(alpha: 0.42);
-    final textColor = isDark
-        ? cs.onSurface.withValues(alpha: 0.92)
-        : cs.onSurface.withValues(alpha: 0.88);
+    final textColor = cs.onSurface.withValues(alpha: isDark ? 0.92 : 0.88);
 
     return Wrap(
       spacing: 8,

@@ -517,7 +517,7 @@ class _BrandBadge extends StatelessWidget {
       if (asset.endsWith('.svg')) {
         final isColorful = asset.contains('color');
         final ColorFilter? tint = (isDark && !isColorful)
-            ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null;
         return Container(
           width: size,

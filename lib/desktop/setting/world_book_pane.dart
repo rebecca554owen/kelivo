@@ -629,9 +629,7 @@ class _EntriesPanel extends StatelessWidget {
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.16 : 0.12,
     );
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.04)
-        : context.appColors.surfaceFill;
+    final bg = context.appColors.surfaceFill;
 
     if (entries.isEmpty) {
       return Container(
@@ -698,7 +696,7 @@ class _EntryRowState extends State<_EntryRow> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = (isDark ? Colors.white : Colors.black).withValues(
+    final hoverBg = cs.onSurface.withValues(
       alpha: isDark ? 0.08 : 0.04,
     );
 

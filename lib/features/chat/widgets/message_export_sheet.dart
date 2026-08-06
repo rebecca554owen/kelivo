@@ -2974,7 +2974,7 @@ Future<void> _runWithExportingOverlay(
       child: Material(
         color: cs.surface,
         elevation: 6,
-        shadowColor: Colors.black.withValues(alpha: 0.2),
+        shadowColor: cs.shadow.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),

@@ -282,9 +282,7 @@ class _LogFilesList extends StatelessWidget {
       );
     }
 
-    final Color tileBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.white;
+    final Color tileBg = context.appColors.surfaceCard;
     final Color border = cs.outlineVariant.withValues(
       alpha: isDark ? 0.26 : 0.38,
     );
@@ -663,16 +661,14 @@ class _RequestLogSummaryBar extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
-    final Color bg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.white;
+    final Color bg = context.appColors.surfaceCard;
     final Color border = cs.outlineVariant.withValues(
       alpha: isDark ? 0.26 : 0.38,
     );
 
     final Color errorPillBg = Color.alphaBlend(
       cs.error.withValues(alpha: isDark ? 0.18 : 0.12),
-      isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
+      context.appColors.surfaceCard,
     );
     final Color errorPillFg = cs.error.withValues(alpha: isDark ? 0.92 : 0.88);
 
@@ -769,9 +765,7 @@ class _RequestLogCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final Color tileBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.white;
+    final Color tileBg = context.appColors.surfaceCard;
     final Color border = cs.outlineVariant.withValues(
       alpha: isDark ? 0.26 : 0.38,
     );
@@ -988,16 +982,16 @@ class _StatusPill extends StatelessWidget {
 
     final Color bg = () {
       if (isError || code >= 400) {
-        final Color base = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+        final Color base = context.appColors.surfaceCard;
         return Color.alphaBlend(
           cs.error.withValues(alpha: isDark ? 0.18 : 0.12),
           base,
         );
       }
       if (ok) {
-        return const Color(0xFF10B981).withValues(alpha: isDark ? 0.26 : 0.18);
+        return context.appColors.success.withValues(
+          alpha: isDark ? 0.26 : 0.18,
+        );
       }
       if (warn) {
         return cs.tertiaryContainer.withValues(alpha: isDark ? 0.50 : 0.55);
@@ -1010,7 +1004,7 @@ class _StatusPill extends StatelessWidget {
         return cs.error.withValues(alpha: isDark ? 0.92 : 0.88);
       }
       if (ok) {
-        return const Color(0xFF10B981);
+        return context.appColors.success;
       }
       if (warn) {
         return cs.onTertiaryContainer.withValues(alpha: 0.92);
@@ -1327,9 +1321,7 @@ class _ErrorHeroCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
-    final Color base = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.white;
+    final Color base = context.appColors.surfaceCard;
     final Color bg = Color.alphaBlend(
       cs.error.withValues(alpha: isDark ? 0.14 : 0.08),
       base,
@@ -1411,9 +1403,7 @@ class _SectionCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final Color bg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.white;
+    final Color bg = context.appColors.surfaceCard;
     final Color border = cs.outlineVariant.withValues(
       alpha: isDark ? 0.26 : 0.38,
     );
@@ -1467,9 +1457,7 @@ class _CodeBlock extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final Color neutralBg = isDark
-        ? Colors.black.withValues(alpha: 0.16)
-        : context.appColors.surfaceFill;
+    final Color neutralBg = context.appColors.surfaceFill;
     final Color bg = () {
       if (tone == _CodeTone.error) {
         return Color.alphaBlend(
@@ -1570,7 +1558,6 @@ class _SegTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     const double outerHeight = 44;
     const double innerPadding = 4;
@@ -1596,9 +1583,7 @@ class _SegTabBar extends StatelessWidget {
             final double rowWidth =
                 segWidth * tabs.length + gap * (tabs.length - 1);
 
-            final Color shellBg = isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white;
+            final Color shellBg = context.appColors.surfaceCard;
 
             List<Widget> children = [];
             for (int index = 0; index < tabs.length; index++) {
@@ -1618,11 +1603,7 @@ class _SegTabBar extends StatelessWidget {
                           ? cs.primary
                           : cs.onSurface.withValues(alpha: 0.82);
                       final Color targetTextColor = pressed
-                          ? Color.lerp(
-                                  baseTextColor,
-                                  isDark ? Colors.white : Colors.black,
-                                  0.12,
-                                ) ??
+                          ? Color.lerp(baseTextColor, cs.onSurface, 0.12) ??
                                 baseTextColor
                           : baseTextColor;
 
@@ -1735,9 +1716,7 @@ class _LogSettingsSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
 
-    final Color tileBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.white;
+    final Color tileBg = context.appColors.surfaceCard;
     final Color border = cs.outlineVariant.withValues(
       alpha: isDark ? 0.26 : 0.38,
     );

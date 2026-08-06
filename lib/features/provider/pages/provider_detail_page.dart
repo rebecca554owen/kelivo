@@ -754,8 +754,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                       opt.asset,
                                                       fit: BoxFit.contain,
                                                       colorFilter: needsMono
-                                                          ? const ColorFilter.mode(
-                                                              Colors.white,
+                                                          ? ColorFilter.mode(
+                                                              cs.onSurface,
                                                               BlendMode.srcIn,
                                                             )
                                                           : null,
@@ -764,7 +764,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                                       opt.asset,
                                                       fit: BoxFit.contain,
                                                       color: needsMono
-                                                          ? Colors.white
+                                                          ? cs.onSurface
                                                           : null,
                                                       colorBlendMode: needsMono
                                                           ? BlendMode.srcIn
@@ -1014,12 +1014,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 },
                 builder: (pressed) {
                   final base = Theme.of(context).colorScheme.onSurface;
-                  final isDark =
-                      Theme.of(context).brightness == Brightness.dark;
                   final target = pressed
                       ? (Color.lerp(
                               base,
-                              isDark ? Colors.black : Colors.white,
+                              Theme.of(context).colorScheme.surface,
                               0.55,
                             ) ??
                             base)
@@ -1136,14 +1134,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               builder: (pressed) {
                 final cs2 = Theme.of(context).colorScheme;
                 final base = cs2.onSurface;
-                final isDark = Theme.of(context).brightness == Brightness.dark;
                 final target = pressed
-                    ? (Color.lerp(
-                            base,
-                            isDark ? Colors.black : Colors.white,
-                            0.55,
-                          ) ??
-                          base)
+                    ? (Color.lerp(base, cs2.surface, 0.55) ?? base)
                     : base;
                 return TweenAnimationBuilder<Color?>(
                   tween: ColorTween(end: target),
@@ -1690,11 +1682,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         });
       },
       builder: (pressed) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final base = cs.onSurface;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -1747,10 +1737,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final Color base = cs.surface;
-    final Color bg = isDark
-        ? Color.lerp(base, Colors.white, 0.06)!
-        : Color.lerp(base, Colors.white, 0.92)!;
+    final Color bg = context.appColors.surfaceCard;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -1759,9 +1746,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
           width: 0.6,
         ),
-        // boxShadow: [
-        //   if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 1)),
-        // ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
@@ -1778,11 +1762,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     return _TactileRow(
       onTap: onTap,
       builder: (pressed) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final base = cs.onSurface;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -1820,11 +1802,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     return _TactileRow(
       onTap: null,
       builder: (pressed) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final base = cs.onSurface;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -1903,10 +1883,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       builder: (pressed) {
         final cs = Theme.of(context).colorScheme;
         final base = cs.onSurface;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -1955,10 +1933,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       builder: (pressed) {
         final cs = Theme.of(context).colorScheme;
         final base = cs.onSurface;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -2055,10 +2031,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       onTap: () => Navigator.of(ctx).pop(k),
       builder: (pressed) {
         final base = cs.onSurface;
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -4429,7 +4403,7 @@ class _BrandAvatar extends StatelessWidget {
                     width: size * 0.7,
                     height: size * 0.7,
                     colorFilter: mono
-                        ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                        ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
                         : null,
                   )
                 : Image.asset(
@@ -4437,7 +4411,7 @@ class _BrandAvatar extends StatelessWidget {
                     width: size * 0.7,
                     height: size * 0.7,
                     fit: BoxFit.contain,
-                    color: mono ? Colors.white : null,
+                    color: mono ? cs.onSurface : null,
                     colorBlendMode: mono ? BlendMode.srcIn : null,
                   )),
     );

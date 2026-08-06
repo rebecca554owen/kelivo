@@ -421,7 +421,7 @@ class _BrandIconBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06);
+    final bg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.06);
     final asset =
         BrandAssets.assetForName(nameHint) ??
         BrandAssets.assetForName(nameHint.split(' ').first);
@@ -722,7 +722,7 @@ class _CircleIconBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06);
+    final bg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.06);
     return Container(
       width: size,
       height: size,

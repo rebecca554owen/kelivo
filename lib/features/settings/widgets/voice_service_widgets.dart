@@ -93,7 +93,6 @@ class _VoiceServiceHeaderIconButtonState
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final alpha = _pressed ? 0.10 : (_hovered ? 0.06 : 0.0);
     return Tooltip(
       message: widget.tooltip,
@@ -118,9 +117,7 @@ class _VoiceServiceHeaderIconButtonState
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: (isDark ? Colors.white : Colors.black).withValues(
-                  alpha: alpha,
-                ),
+                color: cs.onSurface.withValues(alpha: alpha),
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
@@ -307,11 +304,8 @@ class _VoiceServiceSmallIconButtonState
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final base = widget.destructive ? cs.error : cs.onSurface;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = _pressed || _hovered
-        ? (isDark ? Colors.white : Colors.black).withValues(
-            alpha: _pressed ? 0.09 : 0.05,
-          )
+        ? cs.onSurface.withValues(alpha: _pressed ? 0.09 : 0.05)
         : Colors.transparent;
     return Tooltip(
       message: widget.tooltip,
@@ -437,7 +431,6 @@ class _VoiceServiceSelectButtonState<T>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
@@ -459,7 +452,7 @@ class _VoiceServiceSelectButtonState<T>
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: _hovered
-                ? (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05)
+                ? cs.onSurface.withValues(alpha: 0.05)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
@@ -565,11 +558,10 @@ class _VoiceServiceDialogOptionState extends State<_VoiceServiceDialogOption> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = widget.selected
         ? cs.primary.withValues(alpha: 0.08)
         : _hovered
-        ? (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04)
+        ? cs.onSurface.withValues(alpha: 0.04)
         : Colors.transparent;
     return MouseRegion(
       cursor: SystemMouseCursors.click,

@@ -340,7 +340,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.08)
+                  ? cs.onSurface.withValues(alpha: 0.08)
                   : cs.outlineVariant.withValues(alpha: 0.25),
             ),
           ),
@@ -1541,9 +1541,7 @@ class _SegTabBarState extends State<_SegTabBar> {
                 (innerAvailWidth - gap * (tabs.length - 1)) / tabs.length;
             final double rowWidth =
                 segWidth * tabs.length + gap * (tabs.length - 1);
-            final Color shellBg = isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white;
+            final Color shellBg = context.appColors.surfaceCard;
 
             List<Widget> children = [];
             for (int index = 0; index < tabs.length; index++) {

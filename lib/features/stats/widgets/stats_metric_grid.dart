@@ -94,7 +94,7 @@ class _MetricTile extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
+            ? cs.onSurface.withValues(alpha: 0.06)
             : cs.surfaceContainerHighest.withValues(alpha: 0.38),
         borderRadius: BorderRadius.circular(10),
       ),

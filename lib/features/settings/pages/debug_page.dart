@@ -240,7 +240,7 @@ class _DebugSectionCard extends StatelessWidget {
         border: Border.all(
           width: 0.5,
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
+              ? cs.onSurface.withValues(alpha: 0.06)
               : cs.outlineVariant.withValues(alpha: 0.12),
         ),
       ),

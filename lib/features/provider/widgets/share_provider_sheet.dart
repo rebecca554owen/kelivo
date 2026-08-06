@@ -118,7 +118,7 @@ Future<void> showShareProviderSheet(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             // Always use white background to ensure visibility in dark mode
-                            color: Colors.white,
+                            color: Colors.white, // color-gate: ignore (QR scannability)
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: cs.outlineVariant.withValues(alpha: 0.2),

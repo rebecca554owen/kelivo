@@ -435,13 +435,12 @@ class _LanguageDropdownState extends State<_LanguageDropdown> {
 
     _entry = OverlayEntry(
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final usePure = Provider.of<SettingsProvider>(
           ctx,
           listen: false,
         ).usePureBackground;
         final bgColor = usePure
-            ? (isDark ? Colors.black : Colors.white)
+            ? Theme.of(ctx).colorScheme.surface
             : (Theme.of(context).colorScheme.surfaceContainerHigh);
 
         return Stack(
@@ -663,7 +662,7 @@ class _LangDropdownOverlayState extends State<_LangDropdownOverlay>
               border: Border.all(color: borderColor, width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.32 : 0.08),
+                  color: cs.shadow.withValues(alpha: isDark ? 0.32 : 0.08),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -840,9 +839,8 @@ class _TranslateButtonState extends State<_TranslateButton> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
-    final fg = isDark ? Colors.black : Colors.white;
+    final fg = cs.onPrimary;
     final base = cs.primary;
     final bg = _hover ? base.withValues(alpha: 0.92) : base;
 

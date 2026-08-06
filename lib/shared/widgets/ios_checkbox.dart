@@ -12,7 +12,7 @@ class IosCheckbox extends StatefulWidget {
     this.size = 22,
     this.activeColor,
     this.borderColor,
-    this.checkmarkColor = CupertinoColors.white,
+    this.checkmarkColor,
     this.semanticLabel,
     this.enableHaptics = true,
     this.hitTestSize = 32,
@@ -28,7 +28,7 @@ class IosCheckbox extends StatefulWidget {
   final double borderWidth;
   final Color? activeColor;
   final Color? borderColor;
-  final Color checkmarkColor;
+  final Color? checkmarkColor;
 
   // Accessibility
   final String? semanticLabel;
@@ -45,16 +45,11 @@ class _IosCheckboxState extends State<IosCheckbox> {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = CupertinoTheme.brightnessOf(context);
     final materialTheme = Theme.of(context);
     final cs = materialTheme.colorScheme;
     final activeColor =
         widget.activeColor ?? CupertinoTheme.of(context).primaryColor;
-    final borderColor =
-        widget.borderColor ??
-        (brightness == Brightness.dark
-            ? CupertinoColors.systemGrey3
-            : CupertinoColors.systemGrey4);
+    final borderColor = widget.borderColor ?? cs.outlineVariant;
 
     final bool enabled = widget.onChanged != null;
     final Color bgColor = widget.value
@@ -67,15 +62,15 @@ class _IosCheckboxState extends State<IosCheckbox> {
     Color contrastOn(Color bg) {
       final b = ThemeData.estimateBrightnessForColor(bg);
       return b == Brightness.dark
-          ? CupertinoColors.white
+          ? CupertinoColors.white // color-gate: ignore (contrast vs caller color)
           : CupertinoColors.black;
     }
 
     final bool usesThemePrimary = widget.activeColor == null;
     final Color computedOnPrimary = cs.onPrimary;
-    final Color dynamicCheck = usesThemePrimary
-        ? computedOnPrimary
-        : contrastOn(activeColor);
+    final Color dynamicCheck =
+        widget.checkmarkColor ??
+        (usesThemePrimary ? computedOnPrimary : contrastOn(activeColor));
     final Color effectiveCheckColor = dynamicCheck.withValues(
       alpha: (widget.onChanged != null) ? 1.0 : 0.5,
     );

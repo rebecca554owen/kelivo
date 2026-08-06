@@ -342,14 +342,14 @@ class _SettingsCard extends StatelessWidget {
     final sp = context.watch<SettingsProvider>();
     return Material(
       color: sp.usePureBackground
-          ? (isDark ? Colors.black : Colors.white)
+          ? cs.surface
           : (Theme.of(context).colorScheme.surfaceContainerHigh),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
           width: 0.5,
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
+              ? cs.onSurface.withValues(alpha: 0.06)
               : cs.outlineVariant.withValues(alpha: 0.12),
         ),
       ),
@@ -630,7 +630,7 @@ class _ThemeDotState extends State<_ThemeDot> {
             border: Border.all(
               color: widget.selected
                   ? cs.onSurface.withValues(alpha: 0.85)
-                  : Colors.white,
+                  : cs.surface,
               width: widget.selected ? 2 : 2,
             ),
           ),
@@ -1313,7 +1313,7 @@ class _LanguageDropdownState extends State<_LanguageDropdown> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: cs.shadow.withValues(alpha: 0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -3122,13 +3122,12 @@ class _SendShortcutDropdownState extends State<_SendShortcutDropdown> {
 
     _entry = OverlayEntry(
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final usePure = Provider.of<SettingsProvider>(
           ctx,
           listen: false,
         ).usePureBackground;
         final bgColor = usePure
-            ? (isDark ? Colors.black : Colors.white)
+            ? Theme.of(ctx).colorScheme.surface
             : (Theme.of(context).colorScheme.surfaceContainerHigh);
         final sp = Provider.of<SettingsProvider>(ctx, listen: false);
 
@@ -3305,7 +3304,7 @@ class _SendShortcutOverlayState extends State<_SendShortcutOverlay>
               border: Border.all(color: borderColor, width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.32 : 0.08),
+                  color: cs.shadow.withValues(alpha: isDark ? 0.32 : 0.08),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),

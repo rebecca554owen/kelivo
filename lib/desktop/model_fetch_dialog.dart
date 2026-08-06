@@ -171,7 +171,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
+                  ? cs.onSurface.withValues(alpha: 0.08)
                   : cs.outlineVariant.withValues(alpha: 0.25),
               width: 1,
             ),
@@ -766,7 +766,7 @@ class _BrandAvatar extends StatelessWidget {
       if (asset.endsWith('.svg')) {
         final isColorful = asset.contains('color');
         final ColorFilter? tint = (isDark && !isColorful)
-            ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null;
         inner = SvgPicture.asset(
           asset,

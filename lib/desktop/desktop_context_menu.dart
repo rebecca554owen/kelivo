@@ -91,7 +91,7 @@ Future<void> showDesktopContextMenuAt(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
+                                ? cs.onSurface.withValues(alpha: 0.08)
                                 : cs.outlineVariant.withValues(alpha: 0.2),
                             width: 1,
                           ),
@@ -103,11 +103,7 @@ Future<void> showDesktopContextMenuAt(
                           filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(
-                                      0xFF1C1C1E,
-                                    ).withValues(alpha: 0.66)
-                                  : Colors.white.withValues(alpha: 0.66),
+                              color: cs.surface.withValues(alpha: 0.66),
                             ),
                             child: ConstrainedBox(
                               constraints: BoxConstraints(

@@ -996,7 +996,7 @@ class _BrandAvatar extends StatelessWidget {
         final isColorful = asset.contains('color');
         final dark = Theme.of(context).brightness == Brightness.dark;
         final ColorFilter? tint = (dark && !isColorful)
-            ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null;
         inner = SvgPicture.asset(
           asset,

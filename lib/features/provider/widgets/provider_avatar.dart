@@ -129,7 +129,7 @@ class ProviderAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: isDark ? Colors.white24 : Colors.black12,
+          color: cs.onSurface.withValues(alpha: isDark ? 0.24 : 0.12),
           width: 0.5,
         ),
       ),
@@ -175,7 +175,7 @@ class ProviderAvatar extends StatelessWidget {
               width: size * 0.7,
               height: size * 0.7,
               colorFilter: mono
-                  ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                  ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
                   : null,
             )
           : Image.asset(
@@ -183,7 +183,7 @@ class ProviderAvatar extends StatelessWidget {
               width: size * 0.7,
               height: size * 0.7,
               fit: BoxFit.contain,
-              color: mono ? Colors.white : null,
+              color: mono ? cs.onSurface : null,
               colorBlendMode: mono ? BlendMode.srcIn : null,
             ),
     );
@@ -274,7 +274,7 @@ class ProviderAvatar extends StatelessWidget {
               width: size * 0.7,
               height: size * 0.7,
               colorFilter: needsMono
-                  ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                  ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
                   : null,
             )
           : Image.asset(
@@ -282,7 +282,7 @@ class ProviderAvatar extends StatelessWidget {
               width: size * 0.7,
               height: size * 0.7,
               fit: BoxFit.contain,
-              color: needsMono ? Colors.white : null,
+              color: needsMono ? cs.onSurface : null,
               colorBlendMode: needsMono ? BlendMode.srcIn : null,
             ),
     );

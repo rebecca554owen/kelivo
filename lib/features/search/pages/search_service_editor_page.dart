@@ -1730,7 +1730,7 @@ class _SearchBrandBadge extends StatelessWidget {
         width: childSize,
         height: childSize,
         colorFilter: isDark && !colorful
-            ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null,
       );
     } else {

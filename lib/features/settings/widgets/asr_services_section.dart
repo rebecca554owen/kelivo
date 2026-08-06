@@ -262,7 +262,6 @@ class _AsrServiceCardState extends State<_AsrServiceCard> {
 
   Widget _buildMobile(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     final displayName = _serviceDisplayName(l10n, widget.service);
     return VoiceServiceTactileRow(
@@ -271,7 +270,7 @@ class _AsrServiceCardState extends State<_AsrServiceCard> {
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         color: pressed
-            ? (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05)
+            ? cs.onSurface.withValues(alpha: 0.05)
             : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         child: Row(

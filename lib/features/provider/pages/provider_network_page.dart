@@ -348,7 +348,7 @@ class _ProxyTypeSheetField extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? (isDark
-                        ? Colors.white.withValues(alpha: 0.06)
+                        ? cs.onSurface.withValues(alpha: 0.06)
                         : cs.primary.withValues(alpha: 0.08))
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(14),

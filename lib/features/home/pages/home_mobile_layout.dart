@@ -370,7 +370,7 @@ class MobileBackgroundLayer extends StatelessWidget {
                   image: provider,
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
-                    Colors.black.withValues(alpha: 0.04),
+                    cs.shadow.withValues(alpha: 0.04),
                     BlendMode.srcATop,
                   ),
                 ),
@@ -509,21 +509,20 @@ class _ScrollButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ClipOval(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           decoration: BoxDecoration(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.white.withValues(alpha: 0.07),
+                ? cs.onSurface.withValues(alpha: 0.06)
+                : cs.surface.withValues(alpha: 0.07),
             shape: BoxShape.circle,
             border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.10)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.20),
+                  ? cs.onSurface.withValues(alpha: 0.10)
+                  : cs.outline.withValues(alpha: 0.20),
               width: 1,
             ),
           ),
@@ -538,7 +537,7 @@ class _ScrollButton extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 16,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: cs.onSurface.withValues(alpha: isDark ? 1.0 : 0.87),
                 ),
               ),
             ),
@@ -635,9 +634,7 @@ class _GlassCircleButtonState extends State<_GlassCircleButton> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final glassBase = isDark
-        ? Colors.black.withValues(alpha: 0.06)
-        : Colors.white.withValues(alpha: 0.06);
+    final glassBase = cs.surface.withValues(alpha: 0.06);
     final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)

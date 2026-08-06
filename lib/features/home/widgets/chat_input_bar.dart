@@ -262,7 +262,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         : configuredOpacity;
     final overlayAlpha = isDark ? (backgroundImageActive ? 0.09 : 0.07) : 0.02;
     final overlayTint = isDark
-        ? Colors.white.withValues(alpha: overlayAlpha)
+        ? theme.colorScheme.onSurface.withValues(alpha: overlayAlpha)
         : theme.colorScheme.primary.withValues(alpha: overlayAlpha);
     final baseAlpha = ((targetOpacity - overlayAlpha) / (1.0 - overlayAlpha))
         .clamp(0.0, 1.0)
@@ -2126,11 +2126,11 @@ class _ChatInputBarState extends State<ChatInputBar>
   Widget _buildInlineAttachmentPreviews(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final previewFill = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : theme.colorScheme.onSurface.withValues(alpha: 0.045);
+    final previewFill = theme.colorScheme.onSurface.withValues(
+      alpha: isDark ? 0.08 : 0.045,
+    );
     final previewBorder = isDark
-        ? Colors.white.withValues(alpha: 0.10)
+        ? theme.colorScheme.onSurface.withValues(alpha: 0.10)
         : theme.colorScheme.outline.withValues(alpha: 0.13);
 
     return Padding(
@@ -2167,9 +2167,9 @@ class _ChatInputBarState extends State<ChatInputBar>
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(9),
                           child: processing
-                              ? const ColoredBox(
-                                  color: Colors.black,
-                                  child: SizedBox(width: 64, height: 64),
+                              ? ColoredBox(
+                                  color: theme.colorScheme.scrim,
+                                  child: const SizedBox(width: 64, height: 64),
                                 )
                               : Image.file(
                                   File(image.path),
@@ -2201,9 +2201,8 @@ class _ChatInputBarState extends State<ChatInputBar>
                                     message: l10n.chatInputBarImageProcessing,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.32,
-                                        ),
+                                        color: theme.colorScheme.scrim
+                                            .withValues(alpha: 0.32),
                                         borderRadius: BorderRadius.circular(9),
                                       ),
                                       alignment: Alignment.center,
@@ -2214,7 +2213,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                           strokeWidth: 2,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
+                                                Colors.white, // color-gate: ignore (on scrim over photo)
                                               ),
                                         ),
                                       ),
@@ -2250,9 +2249,9 @@ class _ChatInputBarState extends State<ChatInputBar>
                         child: IosCardPress(
                           key: ValueKey('chat-input-image-remove:$idx'),
                           haptics: false,
-                          baseColor: isDark
-                              ? Colors.black.withValues(alpha: 0.50)
-                              : Colors.black.withValues(alpha: 0.46),
+                          baseColor: theme.colorScheme.scrim.withValues(
+                            alpha: isDark ? 0.50 : 0.46,
+                          ),
                           pressedScale: 0.94,
                           borderRadius: BorderRadius.circular(
                             _imageRemoveButtonSize / 2,
@@ -2266,7 +2265,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                             child: Icon(
                               Icons.close,
                               size: 11,
-                              color: Colors.white,
+                              color: Colors.white, // color-gate: ignore (on scrim over photo)
                             ),
                           ),
                         ),
@@ -2436,7 +2435,9 @@ class _ChatInputBarState extends State<ChatInputBar>
                         // Use previous gray border for better contrast on white
                         border: Border.all(
                           color: isDark
-                              ? Colors.white.withValues(alpha: 0.10)
+                              ? theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.10,
+                                )
                               : theme.colorScheme.outline.withValues(
                                   alpha: 0.20,
                                 ),
@@ -2803,8 +2804,8 @@ class _QueuedInputBanner extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.84),
+            ? theme.colorScheme.onSurface.withValues(alpha: 0.08)
+            : theme.colorScheme.surface.withValues(alpha: 0.84),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: theme.colorScheme.outline.withValues(alpha: 0.16),
@@ -2893,11 +2894,9 @@ class _ImageModePill extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final bg = (isDark ? Colors.black : Colors.white).withValues(
-      alpha: isDark ? 0.34 : 0.58,
-    );
+    final bg = scheme.surface.withValues(alpha: isDark ? 0.34 : 0.58);
     final border = isDark
-        ? Colors.white.withValues(alpha: 0.14)
+        ? scheme.onSurface.withValues(alpha: 0.14)
         : scheme.primary.withValues(alpha: 0.36);
     final fg = isDark ? scheme.onSurface : scheme.primary;
     final iconColor = isDark ? scheme.primaryContainer : scheme.primary;
@@ -3007,7 +3006,7 @@ class _CompactIconButton extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final fgColor = active
         ? theme.colorScheme.primary
-        : (isDark ? Colors.white70 : Colors.black54);
+        : theme.colorScheme.onSurface.withValues(alpha: isDark ? 0.70 : 0.54);
     final bool isDesktop =
         Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 

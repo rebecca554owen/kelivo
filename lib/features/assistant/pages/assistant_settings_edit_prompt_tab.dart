@@ -927,9 +927,9 @@ class _HoverTextButtonState extends State<_HoverTextButton> {
         ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
         : const EdgeInsets.symmetric(horizontal: 12, vertical: 10);
     final Color bg = (_hover || _press)
-        ? (isDark
-              ? Colors.white.withValues(alpha: _press ? 0.12 : 0.08)
-              : Colors.black.withValues(alpha: _press ? 0.08 : 0.06))
+        ? cs.onSurface.withValues(
+            alpha: isDark ? (_press ? 0.12 : 0.08) : (_press ? 0.08 : 0.06),
+          )
         : Colors.transparent;
 
     return MouseRegion(

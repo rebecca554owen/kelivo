@@ -888,8 +888,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final textBase = isDark ? Colors.white : Colors.black;
+    final textBase = cs.onSurface;
     final tokens = _query
         .trim()
         .toLowerCase()
@@ -1237,8 +1236,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final textBase = isDark ? Colors.white : Colors.black; // 纯黑（白天），夜间自动适配
+    final textBase = cs.onSurface; // 纯黑（白天），夜间自动适配
     final ap = context.watch<AssistantProvider>();
     final currentAssistantId = ap.currentAssistantId;
 
@@ -3175,8 +3173,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   Widget _buildAssistantsList(BuildContext context, {bool inlineMode = false}) {
     final ap2 = context.watch<AssistantProvider>();
     final tp = context.watch<TagProvider>();
-    final isDark2 = Theme.of(context).brightness == Brightness.dark;
-    final textBase2 = isDark2 ? Colors.white : Colors.black;
+    final textBase2 = Theme.of(context).colorScheme.onSurface;
 
     List<Assistant> assistants = ap2.assistants;
     // Apply search filter when:

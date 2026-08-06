@@ -1002,7 +1002,7 @@ class _HomePageState extends State<HomePage>
                     image: provider,
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withValues(alpha: 0.04),
+                      cs.shadow.withValues(alpha: 0.04),
                       BlendMode.srcATop,
                     ),
                   ),
@@ -1428,7 +1428,9 @@ class _HomePageState extends State<HomePage>
           if (_controller.isDragHovering)
             IgnorePointer(
               child: Container(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: Theme.of(context).colorScheme.scrim.withValues(
+                  alpha: 0.12,
+                ),
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(

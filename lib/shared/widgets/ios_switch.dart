@@ -5,6 +5,7 @@ import 'package:flutter/material.dart'
 import '../../core/services/haptics.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// A refined, iOS‑inspired switch with subtle animations
 /// tailored to the app's visual style.
@@ -57,23 +58,16 @@ class _IosSwitchState extends State<IosSwitch> {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = CupertinoTheme.brightnessOf(context);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     // Prefer Material color scheme primary to better match app theme; fall back to Cupertino default
-    final primary =
-        widget.activeColor ?? (Theme.of(context).colorScheme.primary);
+    final primary = widget.activeColor ?? cs.primary;
 
-    final bool isDark = brightness == Brightness.dark;
+    final bool isDark = theme.brightness == Brightness.dark;
     final bool isOn = widget.value;
 
     // Track color when OFF; dark mode uses a deeper fill
-    final Color offTrack =
-        widget.inactiveColor ??
-        (isDark
-            ? CupertinoDynamicColor.resolve(
-                CupertinoColors.systemGrey6,
-                context,
-              )
-            : const Color(0x14000000)); // subtle black overlay on light
+    final Color offTrack = widget.inactiveColor ?? context.appColors.surfaceFill;
 
     final bool enabled = widget.onChanged != null;
     final double radius = widget.height / 2;
@@ -92,11 +86,7 @@ class _IosSwitchState extends State<IosSwitch> {
       color: offTrack,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(
-        color:
-            (brightness == Brightness.dark
-                    ? CupertinoColors.systemGrey3
-                    : CupertinoColors.systemGrey4)
-                .withValues(alpha: enabled ? 0.65 : 0.35),
+        color: cs.outlineVariant.withValues(alpha: enabled ? 0.65 : 0.35),
         width: 1,
       ),
     );
@@ -108,16 +98,8 @@ class _IosSwitchState extends State<IosSwitch> {
     final Color thumb =
         widget.thumbColor ??
         (isDark
-            ? (isOn
-                  ? CupertinoDynamicColor.resolve(
-                      CupertinoColors.systemGrey6,
-                      context,
-                    )
-                  : CupertinoDynamicColor.resolve(
-                      CupertinoColors.systemGrey2,
-                      context,
-                    ))
-            : CupertinoColors.white);
+            ? (isOn ? cs.surfaceContainerHigh : cs.outline)
+            : cs.onPrimary);
 
     return Semantics(
       label: widget.semanticLabel,

@@ -321,7 +321,7 @@ class _ConversationTileDesktopState extends State<_ConversationTileDesktop> {
     final bg = context.appColors.surfaceFill;
     final border = cs.outlineVariant.withValues(alpha: 0.16);
     final hoveredBg = isDark
-        ? Colors.white24
+        ? cs.onSurface.withValues(alpha: 0.24)
         : cs.primary.withValues(alpha: 0.06);
 
     return Padding(

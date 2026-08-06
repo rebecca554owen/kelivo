@@ -563,7 +563,7 @@ class _RegexRuleCardState extends State<_RegexRuleCard> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
+                  ? cs.onSurface.withValues(alpha: 0.06)
                   : cs.primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: cs.primary.withValues(alpha: 0.35)),
@@ -603,9 +603,7 @@ class _GlassCircleButtonState extends State<_GlassCircleButton> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final glassBase = isDark
-        ? Colors.black.withValues(alpha: 0.06)
-        : Colors.white.withValues(alpha: 0.06);
+    final glassBase = cs.surface.withValues(alpha: 0.06);
     final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)

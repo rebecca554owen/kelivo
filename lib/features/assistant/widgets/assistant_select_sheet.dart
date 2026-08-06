@@ -122,7 +122,7 @@ Future<String?> showAssistantMoveSelector(
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.08)
+                            ? cs.onSurface.withValues(alpha: 0.08)
                             : cs.outlineVariant.withValues(alpha: 0.2),
                       ),
                     ),

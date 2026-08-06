@@ -623,9 +623,7 @@ class _SmallSegTabBarState extends State<_SmallSegTabBar> {
                 widget.tabs.length;
             final double rowWidth =
                 segWidth * widget.tabs.length + gap * (widget.tabs.length - 1);
-            final Color shellBg = isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white;
+            final Color shellBg = context.appColors.surfaceCard;
             List<Widget> children = [];
             for (int index = 0; index < widget.tabs.length; index++) {
               final bool selected = widget.controller.index == index;

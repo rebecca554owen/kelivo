@@ -85,7 +85,6 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
   }
 
   Color _defaultMenuBackground(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     SettingsProvider? sp;
     try {
       sp = Provider.of<SettingsProvider>(context, listen: false);
@@ -93,7 +92,7 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
       sp = null;
     }
     final usePure = sp?.usePureBackground ?? false;
-    if (usePure) return isDark ? Colors.black : Colors.white;
+    if (usePure) return Theme.of(context).colorScheme.surface;
     return Theme.of(context).colorScheme.surfaceContainerHigh;
   }
 
@@ -309,7 +308,7 @@ class _DesktopSelectOverlayState<T> extends State<_DesktopSelectOverlay<T>>
               border: Border.all(color: borderColor, width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.32 : 0.08),
+                  color: cs.shadow.withValues(alpha: isDark ? 0.32 : 0.08),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),

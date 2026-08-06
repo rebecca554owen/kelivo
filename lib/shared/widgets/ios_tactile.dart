@@ -67,9 +67,9 @@ class _IosIconButtonState extends State<IosIconButton> {
     final bool isDark = theme.brightness == Brightness.dark;
     final Color pressTarget =
         widget.pressedColor ??
-        (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.35) ?? base);
+        (Color.lerp(base, theme.colorScheme.onSurface, 0.35) ?? base);
     final Color hoverTarget =
-        Color.lerp(base, isDark ? Colors.black : Colors.white, 0.20) ?? base;
+        Color.lerp(base, theme.colorScheme.onSurface, 0.20) ?? base;
     final Color target = _pressed
         ? pressTarget
         : (_hovered ? hoverTarget : base);
@@ -207,9 +207,9 @@ class _IosCardPressState extends State<IosCardPress> {
         widget.baseColor ?? (context.appColors.surfaceCard);
     final double k = widget.pressedBlendStrength ?? (isDark ? 0.14 : 0.12);
     final Color pressTarget =
-        Color.lerp(base, isDark ? Colors.white : Colors.black, k) ?? base;
+        Color.lerp(base, theme.colorScheme.onSurface, k) ?? base;
     final Color hoverTarget =
-        Color.lerp(base, isDark ? Colors.white : Colors.black, k * 0.7) ?? base;
+        Color.lerp(base, theme.colorScheme.onSurface, k * 0.7) ?? base;
     final Color target = _pressed
         ? pressTarget
         : (_hovered ? hoverTarget : base);

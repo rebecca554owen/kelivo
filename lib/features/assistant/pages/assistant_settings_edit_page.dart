@@ -877,9 +877,8 @@ class _SegTabBar extends StatelessWidget {
             final double rowWidth =
                 segWidth * tabs.length + gap * (tabs.length - 1);
 
-            final Color shellBg = isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white; // 白底胶囊，无边框阴影
+            final Color shellBg =
+                context.appColors.surfaceCard; // 白底胶囊，无边框阴影
 
             List<Widget> children = [];
             for (int index = 0; index < tabs.length; index++) {
@@ -903,7 +902,11 @@ class _SegTabBar extends StatelessWidget {
                                 .primary // 选中文字：主题色
                           : cs.onSurface.withValues(alpha: 0.82); // 未选中：深灰
                       final Color targetTextColor = pressed
-                          ? Color.lerp(baseTextColor, Colors.white, 0.22) ??
+                          ? Color.lerp(
+                                  baseTextColor,
+                                  isDark ? cs.onSurface : cs.surface,
+                                  0.22,
+                                ) ??
                                 baseTextColor
                           : baseTextColor;
 
@@ -1042,7 +1045,7 @@ class _BrandAvatarLike extends StatelessWidget {
       if (asset.endsWith('.svg')) {
         final isColorful = asset.contains('color');
         final ColorFilter? tint = (isDark && !isColorful)
-            ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null;
         return Container(
           width: size,
@@ -1198,9 +1201,9 @@ class _AnimatedPressColor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final target = pressed
-        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        ? (Color.lerp(base, cs.surface, 0.55) ?? base)
         : base;
     return TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),

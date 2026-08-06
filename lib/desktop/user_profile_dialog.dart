@@ -126,7 +126,7 @@ class _UserProfileDialogBodyState extends State<_UserProfileDialogBody> {
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
+                  ? cs.onSurface.withValues(alpha: 0.08)
                   : cs.outlineVariant.withValues(alpha: 0.25),
               width: 1,
             ),

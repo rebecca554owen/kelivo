@@ -1146,7 +1146,7 @@ class _ImagePreviewSheetState extends State<_ImagePreviewSheet> {
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
+                        color: cs.shadow.withValues(alpha: 0.06),
                         blurRadius: 16,
                         offset: const Offset(0, -2),
                       ),

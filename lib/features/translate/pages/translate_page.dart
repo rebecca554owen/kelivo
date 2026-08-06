@@ -444,7 +444,7 @@ class _TranslatePageState extends State<TranslatePage> {
                                   width: 18,
                                   height: 18,
                                   colorFilter: ColorFilter.mode(
-                                    isDark ? Colors.black : Colors.white,
+                                    cs.onPrimary,
                                     BlendMode.srcIn,
                                   ),
                                 ),
@@ -452,7 +452,7 @@ class _TranslatePageState extends State<TranslatePage> {
                                 Text(
                                   l10n.chatMessageWidgetStopTooltip,
                                   style: TextStyle(
-                                    color: isDark ? Colors.black : Colors.white,
+                                    color: cs.onPrimary,
                                     fontWeight: AppFontWeights.emphasis,
                                   ),
                                 ),
@@ -465,13 +465,13 @@ class _TranslatePageState extends State<TranslatePage> {
                                 Icon(
                                   lucide.Lucide.Languages,
                                   size: 18,
-                                  color: isDark ? Colors.black : Colors.white,
+                                  color: cs.onPrimary,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   l10n.chatMessageWidgetTranslateTooltip,
                                   style: TextStyle(
-                                    color: isDark ? Colors.black : Colors.white,
+                                    color: cs.onPrimary,
                                     fontWeight: AppFontWeights.emphasis,
                                   ),
                                 ),

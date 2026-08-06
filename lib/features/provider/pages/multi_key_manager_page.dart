@@ -184,11 +184,9 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
       pressedScale: 1.00,
       onTap: _showStrategySheet,
       builder: (pressed) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final base = cs.onSurface;
         final target = pressed
-            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
-                  base)
+            ? (Color.lerp(base, cs.surface, 0.55) ?? base)
             : base;
         return TweenAnimationBuilder<Color?>(
           tween: ColorTween(end: target),
@@ -389,10 +387,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     // Blend with surface to better match page background while retaining a card feel
-    final Color base = cs.surface;
-    final Color bg = isDark
-        ? Color.lerp(base, Colors.white, 0.06)!
-        : Color.lerp(base, Colors.white, 0.92)!;
+    final Color bg = context.appColors.surfaceCard;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -401,14 +396,6 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
           color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
           width: 0.6,
         ),
-        // boxShadow: [
-        //   if (!isDark)
-        //     BoxShadow(
-        //       color: Colors.black.withOpacity(0.02),
-        //       blurRadius: 6,
-        //       offset: const Offset(0, 1),
-        //     ),
-        // ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
@@ -769,15 +756,8 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
                     onTap: () => Navigator.of(ctx).pop(s),
                     builder: (pressed) {
                       final base = cs.onSurface;
-                      final isDark =
-                          Theme.of(ctx).brightness == Brightness.dark;
                       final target = pressed
-                          ? (Color.lerp(
-                                  base,
-                                  isDark ? Colors.black : Colors.white,
-                                  0.55,
-                                ) ??
-                                base)
+                          ? (Color.lerp(base, cs.surface, 0.55) ?? base)
                           : base;
                       return TweenAnimationBuilder<Color?>(
                         tween: ColorTween(end: target),

@@ -1901,9 +1901,9 @@ class _AnimatedPressColor extends StatelessWidget {
   final Widget Function(Color color) builder;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final target = pressed
-        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        ? (Color.lerp(base, cs.surface, 0.55) ?? base)
         : base;
     return TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),
@@ -2277,9 +2277,7 @@ class _ActionCard extends StatelessWidget {
       builder: (pressed) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final overlay = pressed
-            ? (isDark
-                  ? Colors.black.withValues(alpha: 0.06)
-                  : Colors.white.withValues(alpha: 0.05))
+            ? cs.surface.withValues(alpha: isDark ? 0.06 : 0.05)
             : Colors.transparent;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 160),

@@ -97,7 +97,7 @@ class InteractiveDrawer extends StatefulWidget {
     this.drawerWidth,
     this.duration = const Duration(milliseconds: 250),
     this.curve = Curves.easeOutCubic,
-    this.scrimColor = Colors.black,
+    this.scrimColor,
     this.maxScrimOpacity = 0.5,
     this.barrierDismissible = true,
     this.elevation = 0.0,
@@ -129,7 +129,7 @@ class InteractiveDrawer extends StatefulWidget {
   final Curve curve;
 
   /// Scrim base color (applied INSIDE the child only).
-  final Color scrimColor;
+  final Color? scrimColor;
 
   /// Maximum scrim opacity (0 ~ 1).
   final double maxScrimOpacity;
@@ -270,7 +270,8 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
               IgnorePointer(
                 ignoring: !widget.barrierDismissible,
                 child: Container(
-                  color: widget.scrimColor.withValues(alpha: scrimOpacity),
+                  color: (widget.scrimColor ?? Theme.of(context).colorScheme.scrim)
+                      .withValues(alpha: scrimOpacity),
                 ),
               ),
           ],
