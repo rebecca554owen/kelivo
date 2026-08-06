@@ -9,6 +9,8 @@ import '../../core/services/tts/network_tts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../utils/brand_assets.dart';
 import '../../features/settings/pages/tts_settings_page.dart';
+import '../../features/settings/widgets/asr_services_section.dart';
+import '../../features/settings/widgets/voice_service_widgets.dart';
 import '../../theme/app_font_weights.dart';
 
 /// Desktop: TTS (语音服务) right-side pane
@@ -37,7 +39,6 @@ class _DesktopTtsServicesPaneState extends State<DesktopTtsServicesPane> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
@@ -49,36 +50,17 @@ class _DesktopTtsServicesPaneState extends State<DesktopTtsServicesPane> {
           child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 36,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            l10n.ttsServicesPageTitle,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: AppFontWeights.regular,
-                              color: cs.onSurface.withValues(alpha: 0.9),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Tooltip(
-                        message: l10n.ttsServicesPageSettingsTooltip,
-                        child: _SmallIconBtn(
-                          icon: lucide.Lucide.Settings2,
-                          onTap: () => _showTtsSettingsDialog(context),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      _SmallIconBtn(
-                        icon: lucide.Lucide.Plus,
-                        onTap: _handleAddNetworkService,
-                      ),
-                    ],
+                child: VoiceServiceSectionHeader(
+                  title: l10n.ttsServicesSectionTitle,
+                  addTooltip: l10n.ttsServicesPageAddTooltip,
+                  onAdd: _handleAddNetworkService,
+                  desktop: true,
+                  leadingAction: Tooltip(
+                    message: l10n.ttsServicesPageSettingsTooltip,
+                    child: _SmallIconBtn(
+                      icon: lucide.Lucide.Settings2,
+                      onTap: () => _showTtsSettingsDialog(context),
+                    ),
                   ),
                 ),
               ),
@@ -90,6 +72,9 @@ class _DesktopTtsServicesPaneState extends State<DesktopTtsServicesPane> {
 
               // Network TTS services list
               SliverToBoxAdapter(child: _NetworkTtsList()),
+              const SliverToBoxAdapter(
+                child: AsrServicesSection(desktop: true),
+              ),
             ],
           ),
         ),
@@ -819,209 +804,12 @@ class _SelectRow extends StatelessWidget {
   final ValueChanged<String> onSelected;
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                color: cs.onSurface.withValues(alpha: 0.9),
-              ),
-            ),
-          ),
-          _SelectButton(value: value, options: options, onSelected: onSelected),
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectButton extends StatefulWidget {
-  const _SelectButton({
-    required this.value,
-    required this.options,
-    required this.onSelected,
-  });
-  final String value;
-  final List<String> options;
-  final ValueChanged<String> onSelected;
-  @override
-  State<_SelectButton> createState() => _SelectButtonState();
-}
-
-class _SelectButtonState extends State<_SelectButton> {
-  bool _hover = false;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
-        : Colors.transparent;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: () async {
-          final picked = await _showOptionsDialog(
-            context,
-            widget.options,
-            widget.value,
-          );
-          if (picked != null) widget.onSelected(picked);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.12),
-              width: 0.6,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.value,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                lucide.Lucide.ChevronDown,
-                size: 16,
-                color: cs.onSurface.withValues(alpha: 0.8),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-Future<String?> _showOptionsDialog(
-  BuildContext context,
-  List<String> options,
-  String current,
-) async {
-  if (options.isEmpty) return null;
-  final cs = Theme.of(context).colorScheme;
-  String? result;
-  await showDialog<String>(
-    context: context,
-    barrierDismissible: true,
-    builder: (ctx) {
-      return Dialog(
-        backgroundColor: cs.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(ctx).size.height * 0.6,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < options.length; i++) ...[
-                      _DialogOption(
-                        label: options[i],
-                        selected: options[i] == current,
-                        onTap: () => Navigator.of(ctx).pop(options[i]),
-                      ),
-                      if (i != options.length - 1)
-                        Divider(
-                          height: 10,
-                          thickness: 0.6,
-                          indent: 4,
-                          endIndent: 4,
-                          color: cs.outlineVariant.withValues(alpha: 0.12),
-                        ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  ).then((v) => result = v);
-  return result;
-}
-
-class _DialogOption extends StatefulWidget {
-  const _DialogOption({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  @override
-  State<_DialogOption> createState() => _DialogOptionState();
-}
-
-class _DialogOptionState extends State<_DialogOption> {
-  bool _hover = false;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = widget.selected
-        ? cs.primary.withValues(alpha: 0.08)
-        : (_hover
-              ? (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04))
-              : Colors.transparent);
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: cs.onSurface.withValues(alpha: 0.9),
-                  ),
-                ),
-              ),
-              if (widget.selected)
-                Icon(lucide.Lucide.Check, size: 16, color: cs.primary),
-            ],
-          ),
-        ),
-      ),
+    return VoiceServiceSelectRow<String>(
+      label: label,
+      value: value,
+      options: options,
+      labelFor: (option) => option,
+      onSelected: onSelected,
     );
   }
 }

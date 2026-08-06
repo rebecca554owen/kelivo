@@ -8,6 +8,7 @@ final class BusinessSettingsMerger {
 
   static const _activeIdsByAssistantKey =
       'instruction_injections_active_ids_by_assistant_v1';
+  static const _asrServicesKey = 'asr_services_v1';
   static const _providerOrderKey = 'providers_order_v1';
   static const _pinnedModelsKey = 'pinned_models_v1';
   static const _relationshipMapKeys = <String>{
@@ -116,6 +117,12 @@ final class BusinessSettingsMerger {
               ? preferences[key]
               : const <String>[],
           imported,
+          key,
+        );
+      } else if (key == _asrServicesKey) {
+        preferences[key] = _mergeJsonObjectListsByIdPreferExisting(
+          preferences[key] as String?,
+          imported as String,
           key,
         );
       } else if (_relationshipMapKeys.contains(key)) {
@@ -268,6 +275,37 @@ final class BusinessSettingsMerger {
         : _jsonMap(existingRaw, 'relationship_map');
     final incoming = _jsonMap(incomingRaw, 'relationship_map');
     return jsonEncode(<String, dynamic>{...incoming, ...existing});
+  }
+
+  static String _mergeJsonObjectListsByIdPreferExisting(
+    String? existingRaw,
+    String incomingRaw,
+    String key,
+  ) {
+    List<Map<String, dynamic>> decode(String raw) {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List || decoded.any((entry) => entry is! Map)) {
+        throw FormatException(key);
+      }
+      return [
+        for (final entry in decoded) Map<String, dynamic>.from(entry as Map),
+      ];
+    }
+
+    final existing = existingRaw == null || existingRaw.isEmpty
+        ? <Map<String, dynamic>>[]
+        : decode(existingRaw);
+    final incoming = decode(incomingRaw);
+    final seenIds = <String>{
+      for (final service in existing)
+        if (service['id'] case final String id) id,
+    };
+    return jsonEncode([
+      ...existing,
+      for (final service in incoming)
+        if (service['id'] is! String || seenIds.add(service['id'] as String))
+          service,
+    ]);
   }
 
   static List<BusinessEntityValue> _mergeAssistantMemories(

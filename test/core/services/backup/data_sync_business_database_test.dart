@@ -114,9 +114,23 @@ void main() {
       final repository = BusinessRepository(database);
       File? backup;
       try {
-        await BusinessRestoreService(
-          repository,
-        ).overwrite(_businessFixture(secret: 'provider-secret'));
+        await BusinessRestoreService(repository).overwrite({
+          ..._businessFixture(secret: 'provider-secret'),
+          'asr_services_v1': jsonEncode([
+            {'id': 'system', 'kind': 'system'},
+            {
+              'id': 'local',
+              'kind': 'sherpa_onnx',
+              'modelDirectory': '/device/model',
+            },
+            {
+              'id': 'openai-asr',
+              'kind': 'openai_realtime',
+              'apiKey': 'asr-secret',
+            },
+          ]),
+          'asr_selected_service_id_v1': 'local',
+        });
         // Simulate stale rows written by an older or bypassing caller. The
         // portable exporter remains responsible for filtering them.
         await repository.setPreference('flutter_log_enabled_v1', true);
@@ -145,6 +159,12 @@ void main() {
         expect(settings['request_log_enabled_v1'], isTrue);
         expect(settings['log_save_output_v1'], isTrue);
         expect(settings['unknown_portable_key_v1'], ['one', 'two']);
+        final asrServices =
+            jsonDecode(settings['asr_services_v1'] as String) as List;
+        expect(asrServices.map((entry) => (entry as Map)['id']), [
+          'openai-asr',
+        ]);
+        expect(settings, isNot(contains('asr_selected_service_id_v1')));
         expect(settings, isNot(contains('prefs_only_residual')));
         expect(settings, isNot(contains('flutter_log_enabled_v1')));
         expect(settings, isNot(contains('restore_transient_v1')));
@@ -170,6 +190,10 @@ void main() {
         try {
           await BusinessRestoreService(sourceRepository).overwrite({
             ..._businessFixture(secret: 'restored-secret'),
+            'asr_services_v1': jsonEncode([
+              {'id': 'restored-cloud', 'kind': 'step'},
+            ]),
+            'asr_selected_service_id_v1': 'restored-cloud',
             'mcp_servers_v1': jsonEncode([
               {
                 'id': 'restored-mcp',
@@ -229,6 +253,11 @@ void main() {
             }),
             'providers_order_v1': ['old'],
             'old_only_key_v1': true,
+            'asr_services_v1': jsonEncode([
+              {'id': 'system', 'kind': 'system'},
+              {'id': 'local', 'kind': 'sherpa_onnx'},
+            ]),
+            'asr_selected_service_id_v1': 'local',
           });
           final businessPreferences = BusinessPreferences(targetRepository);
           await businessPreferences.load();

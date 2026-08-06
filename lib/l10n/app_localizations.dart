@@ -5027,11 +5027,11 @@ abstract class AppLocalizations {
   /// **'Transcribe and send'**
   String get chatInputBarVoiceSendTooltip;
 
-  /// No description provided for @chatInputBarVoiceDemoText.
+  /// No description provided for @chatInputBarVoiceTranscribing.
   ///
   /// In en, this message translates to:
-  /// **'Hello, this is a voice input demo.'**
-  String get chatInputBarVoiceDemoText;
+  /// **'Recognizing…'**
+  String get chatInputBarVoiceTranscribing;
 
   /// No description provided for @chatInputBarImageProcessing.
   ///
@@ -8195,8 +8195,14 @@ abstract class AppLocalizations {
   /// No description provided for @ttsServicesPageTitle.
   ///
   /// In en, this message translates to:
-  /// **'Text-to-Speech'**
+  /// **'Voice Services'**
   String get ttsServicesPageTitle;
+
+  /// No description provided for @ttsServicesSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text-to-Speech'**
+  String get ttsServicesSectionTitle;
 
   /// No description provided for @ttsServicesPageSettingsTooltip.
   ///
@@ -8209,6 +8215,318 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get ttsServicesPageAddTooltip;
+
+  /// No description provided for @asrServicesSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech Recognition'**
+  String get asrServicesSectionTitle;
+
+  /// No description provided for @asrServicesSectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn speech into text with an on-device, system, or cloud service.'**
+  String get asrServicesSectionDescription;
+
+  /// No description provided for @asrServicesAddTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add speech recognition service'**
+  String get asrServicesAddTooltip;
+
+  /// No description provided for @asrServicesEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No speech recognition service'**
+  String get asrServicesEmptyTitle;
+
+  /// No description provided for @asrServicesEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add one to show the microphone in the chat input.'**
+  String get asrServicesEmptySubtitle;
+
+  /// No description provided for @asrServicesOnDeviceGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device'**
+  String get asrServicesOnDeviceGroup;
+
+  /// No description provided for @asrServicesCloudGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud'**
+  String get asrServicesCloudGroup;
+
+  /// No description provided for @asrServicesSystemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get asrServicesSystemTitle;
+
+  /// No description provided for @asrServicesSystemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses the device\'s built-in recognizer'**
+  String get asrServicesSystemSubtitle;
+
+  /// No description provided for @asrServicesLocalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline Model'**
+  String get asrServicesLocalTitle;
+
+  /// No description provided for @asrServicesLocalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs offline on this device after download'**
+  String get asrServicesLocalSubtitle;
+
+  /// No description provided for @asrServicesOpenAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'OpenAI Realtime'**
+  String get asrServicesOpenAiTitle;
+
+  /// No description provided for @asrServicesOpenAiSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low-latency streaming transcription'**
+  String get asrServicesOpenAiSubtitle;
+
+  /// No description provided for @asrServicesDashScopeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DashScope'**
+  String get asrServicesDashScopeTitle;
+
+  /// No description provided for @asrServicesDashScopeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Qwen real-time transcription'**
+  String get asrServicesDashScopeSubtitle;
+
+  /// No description provided for @asrServicesVolcengineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Volcengine'**
+  String get asrServicesVolcengineTitle;
+
+  /// No description provided for @asrServicesVolcengineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Doubao streaming transcription'**
+  String get asrServicesVolcengineSubtitle;
+
+  /// No description provided for @asrServicesMimoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'MiMo'**
+  String get asrServicesMimoTitle;
+
+  /// No description provided for @asrServicesMimoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Segmented cloud transcription'**
+  String get asrServicesMimoSubtitle;
+
+  /// No description provided for @asrServicesStepTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Step'**
+  String get asrServicesStepTitle;
+
+  /// No description provided for @asrServicesStepSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Step Audio segmented transcription'**
+  String get asrServicesStepSubtitle;
+
+  /// No description provided for @asrServicesAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Speech Recognition'**
+  String get asrServicesAddTitle;
+
+  /// No description provided for @asrServicesEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Speech Recognition'**
+  String get asrServicesEditTitle;
+
+  /// No description provided for @asrServicesSelectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get asrServicesSelectedLabel;
+
+  /// No description provided for @asrServicesUnavailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get asrServicesUnavailableLabel;
+
+  /// No description provided for @asrServicesEditAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get asrServicesEditAction;
+
+  /// No description provided for @asrServicesDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get asrServicesDeleteAction;
+
+  /// No description provided for @asrServicesCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get asrServicesCancelAction;
+
+  /// No description provided for @asrServicesAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get asrServicesAddAction;
+
+  /// No description provided for @asrServicesSaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get asrServicesSaveAction;
+
+  /// No description provided for @asrServicesNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get asrServicesNameLabel;
+
+  /// No description provided for @asrServicesApiKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get asrServicesApiKeyLabel;
+
+  /// No description provided for @asrServicesEndpointLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoint'**
+  String get asrServicesEndpointLabel;
+
+  /// No description provided for @asrServicesModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get asrServicesModelLabel;
+
+  /// No description provided for @asrServicesResourceIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource ID'**
+  String get asrServicesResourceIdLabel;
+
+  /// No description provided for @asrServicesLanguageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get asrServicesLanguageLabel;
+
+  /// No description provided for @asrServicesAutomaticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get asrServicesAutomaticLabel;
+
+  /// No description provided for @asrServicesApiKeyRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an API key to use this service.'**
+  String get asrServicesApiKeyRequired;
+
+  /// No description provided for @asrServicesChooseModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get asrServicesChooseModelTitle;
+
+  /// No description provided for @asrServicesModelDownloadAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get asrServicesModelDownloadAction;
+
+  /// No description provided for @asrServicesModelUseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Use model'**
+  String get asrServicesModelUseAction;
+
+  /// No description provided for @asrServicesModelDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove download'**
+  String get asrServicesModelDeleteAction;
+
+  /// No description provided for @asrServicesModelDownloadedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded'**
+  String get asrServicesModelDownloadedLabel;
+
+  /// No description provided for @asrServicesModelDownloadingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get asrServicesModelDownloadingLabel;
+
+  /// No description provided for @asrServicesModelNotDownloadedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Not downloaded'**
+  String get asrServicesModelNotDownloadedLabel;
+
+  /// No description provided for @asrServicesDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Model download failed: {error}'**
+  String asrServicesDownloadFailed(String error);
+
+  /// No description provided for @asrServicesSystemChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get asrServicesSystemChecking;
+
+  /// No description provided for @asrServicesSystemAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get asrServicesSystemAvailable;
+
+  /// No description provided for @asrServicesSystemCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'System speech recognition is unavailable on this device.'**
+  String get asrServicesSystemCheckFailed;
+
+  /// No description provided for @asrServicesMicrophonePermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission was not granted.'**
+  String get asrServicesMicrophonePermissionDenied;
+
+  /// No description provided for @asrServicesNoSpeechDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'No speech was detected.'**
+  String get asrServicesNoSpeechDetected;
+
+  /// No description provided for @asrServicesRecognitionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech recognition failed: {error}'**
+  String asrServicesRecognitionFailed(String error);
 
   /// No description provided for @ttsServicesPageAddNotImplemented.
   ///

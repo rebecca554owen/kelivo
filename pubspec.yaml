@@ -86,6 +86,10 @@ dependencies:
   syncfusion_flutter_pdf: ^31.2.5
   audioplayers: ^6.5.1
   record: ^7.1.1
+  # 1.12.21+ ships macOS binaries with a higher deployment target. Keep the
+  # final macOS 11-compatible release until upstream restores compatibility.
+  sherpa_onnx: 1.12.20
+  speech_to_text: ^7.4.0
   html: ^0.15.6
   html2md: ^1.2.10
   http_parser: ^4.1.2
@@ -142,6 +146,13 @@ dependency_overrides:
   # Prevent the location from being accessed continuously on Windows
   permission_handler_windows:
     path: ./dependencies/flutter-permission-handler/permission_handler_windows
+  # Keep sherpa's federated native packages aligned with the Dart API. Their
+  # caret constraints otherwise resolve newer binaries (macOS 13.4/15.5).
+  sherpa_onnx_android: 1.12.20
+  sherpa_onnx_ios: 1.12.20
+  sherpa_onnx_linux: 1.12.20
+  sherpa_onnx_macos: 1.12.20
+  sherpa_onnx_windows: 1.12.20
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

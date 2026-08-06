@@ -1623,6 +1623,7 @@ class DataSync {
     );
     final settings = Map<String, Object>.from(exported.settings);
     settings.removeWhere((key, _) => BackupSettingsValidator.shouldIgnore(key));
+    BackupSettingsValidator.retainCloudAsrForExport(settings);
     return (
       settingsJson: jsonEncode(settings),
       entityRowIds: exported.entityRowIds,

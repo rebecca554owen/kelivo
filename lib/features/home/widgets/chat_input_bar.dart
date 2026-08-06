@@ -18,6 +18,7 @@ import 'dart:async';
 import 'dart:io';
 import '../../../core/models/chat_input_data.dart';
 import '../../../utils/clipboard_images.dart';
+import '../../../core/providers/asr_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/services/search/search_service.dart';
@@ -26,7 +27,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
-import 'package:record/record.dart';
+import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/app_directories.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import '../../../desktop/desktop_context_menu.dart';
@@ -103,6 +104,7 @@ class ChatInputBar extends StatefulWidget {
     this.modelIcon,
     this.controller,
     this.mediaController,
+    this.asrProvider,
     this.loading = false,
     this.hasQueuedInput = false,
     this.queuedPreviewText,
@@ -154,6 +156,7 @@ class ChatInputBar extends StatefulWidget {
   final Widget? modelIcon;
   final TextEditingController? controller;
   final ChatInputBarController? mediaController;
+  final AsrProvider? asrProvider;
   final bool loading;
   final bool hasQueuedInput;
   final String? queuedPreviewText;
@@ -196,17 +199,15 @@ class _ChatInputBarState extends State<ChatInputBar>
     with WidgetsBindingObserver {
   late TextEditingController _controller;
   bool _isExpanded = false; // Track expand/collapse state for input field
-  // Voice input (UI only, no transcription): recording state + live mic levels
-  bool _isRecordingVoice = false;
-  AudioRecorder? _voiceRecorder; // created fresh per recording session
+  // The ASR provider owns microphone capture. This widget only owns the
+  // composer presentation and an exact snapshot used by Cancel.
   final List<double> _voiceLevels = <double>[];
   static const int _maxVoiceLevels = 400;
   Timer? _voiceLevelTimer;
-  bool _voiceRecorderActive = false;
-  bool _voiceSampling = false;
-  int _voiceIdleTick = 0;
-  String? _voiceRecordingPath;
-  Timer? _voiceTypingTimer;
+  TextEditingValue? _voiceBaseValue;
+  bool _ownsVoiceSession = false;
+  bool _finishingVoice = false;
+  String? _lastReportedVoiceError;
   final List<_DraftImage> _images = <_DraftImage>[];
   final Queue<_ImageProcessingTask> _imageProcessingQueue =
       Queue<_ImageProcessingTask>();
@@ -493,6 +494,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     widget.mediaController?._bind(this);
+    widget.asrProvider?.addListener(_handleAsrChanged);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -515,17 +517,17 @@ class _ChatInputBarState extends State<ChatInputBar>
       // When going to background, hide any open toolbar
       _suppressContextMenu = true;
       widget.focusNode?.unfocus();
+      if (_ownsVoiceSession) unawaited(_cancelVoiceInput());
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _voiceTypingTimer?.cancel();
-    _voiceLevelTimer?.cancel();
-    final voiceRecorder = _voiceRecorder;
-    _voiceRecorder = null;
-    if (voiceRecorder != null) unawaited(voiceRecorder.dispose());
+    _stopVoiceLevelSampling();
+    final asr = widget.asrProvider;
+    asr?.removeListener(_handleAsrChanged);
+    if (_ownsVoiceSession && asr != null) unawaited(asr.cancel());
     for (final timer in _repeatTimers.values) {
       try {
         timer?.cancel();
@@ -545,6 +547,20 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   void didUpdateWidget(covariant ChatInputBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.asrProvider, widget.asrProvider)) {
+      _stopVoiceLevelSampling();
+      oldWidget.asrProvider?.removeListener(_handleAsrChanged);
+      if (_ownsVoiceSession && oldWidget.asrProvider != null) {
+        unawaited(oldWidget.asrProvider!.cancel());
+        final original = _voiceBaseValue;
+        if (original != null) _controller.value = original;
+        _voiceBaseValue = null;
+        _ownsVoiceSession = false;
+        _finishingVoice = false;
+        _voiceLevels.clear();
+      }
+      widget.asrProvider?.addListener(_handleAsrChanged);
+    }
   }
 
   String _hint(BuildContext context) {
@@ -563,160 +579,232 @@ class _ChatInputBarState extends State<ChatInputBar>
   bool get _showExpandButton => _lineCount >= 3;
 
   // ---------------------------------------------------------------------------
-  // Voice input (UI only — real mic levels drive the waveform, no transcription)
+  // Voice input
   // ---------------------------------------------------------------------------
 
   Future<void> _startVoiceInput() async {
-    if (_composerLocked || widget.loading) return;
-    _voiceTypingTimer?.cancel();
-    setState(() {
-      _isRecordingVoice = true;
-      _voiceLevels.clear();
-    });
-    // Hide the keyboard while recording, like the Claude app
-    widget.focusNode?.unfocus();
-    _voiceRecorderActive = false;
-    // Fresh recorder per session — reusing one after stop() is flaky on
-    // desktop debug builds (second session reports silence / hangs).
-    final recorder = AudioRecorder();
-    _voiceRecorder = recorder;
-    try {
-      if (await recorder.hasPermission()) {
-        final dir = await AppDirectories.getCacheDirectory();
-        final path = p.join(
-          dir.path,
-          'voice_input_${DateTime.now().millisecondsSinceEpoch}.m4a',
-        );
-        await recorder.start(const RecordConfig(), path: path);
-        _voiceRecordingPath = path;
-        _voiceRecorderActive = true;
-      }
-    } catch (_) {
-      // No mic / unsupported platform: fall back to a synthetic wave
-      _voiceRecorderActive = false;
-    }
-    if (!mounted || !_isRecordingVoice) {
-      await _stopVoiceRecorder();
+    final asr = widget.asrProvider;
+    final selected = context.read<SettingsProvider>().selectedAsrService;
+    if (_composerLocked ||
+        widget.loading ||
+        _ownsVoiceSession ||
+        asr == null ||
+        asr.isActive ||
+        selected == null ||
+        !asr.canUse(selected)) {
       return;
     }
-    _voiceIdleTick = 0;
+
+    _voiceBaseValue = _controller.value;
+    _ownsVoiceSession = true;
+    _finishingVoice = false;
+    _lastReportedVoiceError = null;
+    _voiceLevels.clear();
+    setState(() {});
+    widget.focusNode?.unfocus();
+
+    try {
+      await asr.start(selected);
+      if (mounted && _ownsVoiceSession && asr.isListening) {
+        _startVoiceLevelSampling();
+      }
+    } catch (error) {
+      _stopVoiceLevelSampling();
+      if (!mounted) return;
+      // Provider failures normally arrive through its listener first. This is
+      // the fallback for errors raised before the provider can publish state.
+      if (_ownsVoiceSession) {
+        final original = _voiceBaseValue;
+        if (original != null) _controller.value = original;
+        _voiceBaseValue = null;
+        _ownsVoiceSession = false;
+        _finishingVoice = false;
+        _voiceLevels.clear();
+        setState(() {});
+      }
+      if (_lastReportedVoiceError == null) _reportVoiceFailure(error);
+    }
+  }
+
+  void _handleAsrChanged() {
+    if (!mounted || !_ownsVoiceSession) return;
+    final asr = widget.asrProvider;
+    if (asr == null) return;
+
+    _applyVoiceTranscript(asr.transcript);
+    final error = asr.error;
+    if (error != null && error.trim().isNotEmpty) {
+      _stopVoiceLevelSampling();
+      _voiceBaseValue = null;
+      _ownsVoiceSession = false;
+      _finishingVoice = false;
+      _voiceLevels.clear();
+      _reportVoiceFailure(error);
+      scheduleMicrotask(asr.clearError);
+    } else if (!asr.isActive && !_finishingVoice) {
+      // Some system recognizers publish a final result and stop on their own.
+      _stopVoiceLevelSampling();
+      final detectedSpeech = asr.transcript.trim().isNotEmpty;
+      _voiceBaseValue = null;
+      _ownsVoiceSession = false;
+      _voiceLevels.clear();
+      if (!detectedSpeech) _reportNoSpeech();
+    }
+    setState(() {});
+    _ensureCaretVisible();
+  }
+
+  void _startVoiceLevelSampling() {
     _voiceLevelTimer?.cancel();
-    _voiceLevelTimer = Timer.periodic(
-      const Duration(milliseconds: 60),
-      (_) => unawaited(_sampleVoiceLevel()),
+    _voiceLevelTimer = Timer.periodic(const Duration(milliseconds: 60), (_) {
+      if (!mounted || !_ownsVoiceSession || _finishingVoice) return;
+      final asr = widget.asrProvider;
+      if (asr?.isListening != true) return;
+      final level = asr!.soundLevel.clamp(0.0, 1.0).toDouble();
+      final previous = _voiceLevels.isEmpty ? 0.03 : _voiceLevels.last;
+      _voiceLevels.add(previous + (level - previous) * 0.55);
+      if (_voiceLevels.length > _maxVoiceLevels) _voiceLevels.removeAt(0);
+      setState(() {});
+    });
+  }
+
+  void _stopVoiceLevelSampling() {
+    _voiceLevelTimer?.cancel();
+    _voiceLevelTimer = null;
+  }
+
+  void _applyVoiceTranscript(String transcript) {
+    final baseValue = _voiceBaseValue;
+    if (baseValue == null) return;
+    final text = _joinVoiceText(baseValue.text, transcript);
+    if (_controller.text == text) return;
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+      composing: TextRange.empty,
     );
   }
 
-  Future<void> _sampleVoiceLevel() async {
-    if (_voiceSampling) return;
-    _voiceSampling = true;
+  String _joinVoiceText(String base, String transcript) {
+    final spoken = transcript.trim();
+    if (spoken.isEmpty) return base;
+    if (base.isEmpty || RegExp(r'\s$').hasMatch(base)) return '$base$spoken';
+
+    final first = spoken.substring(0, 1);
+    final last = base.substring(base.length - 1);
+    final punctuation = RegExp(r'^[,.;:!?，。！？、；：)\]}>》」』】…]');
+    final cjk = RegExp(r'[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]');
+    final separator =
+        punctuation.hasMatch(first) || cjk.hasMatch(first) || cjk.hasMatch(last)
+        ? ''
+        : ' ';
+    return '$base$separator$spoken';
+  }
+
+  Future<void> _cancelVoiceInput() async {
+    if (!_ownsVoiceSession) return;
+    _stopVoiceLevelSampling();
+    final asr = widget.asrProvider;
+    final original = _voiceBaseValue;
+    _voiceBaseValue = null;
+    _ownsVoiceSession = false;
+    _finishingVoice = false;
+    _voiceLevels.clear();
+    if (original != null) _controller.value = original;
+    if (mounted) setState(() {});
     try {
-      double level;
-      final recorder = _voiceRecorder;
-      if (_voiceRecorderActive && recorder != null) {
-        try {
-          final amp = await recorder.getAmplitude().timeout(
-            const Duration(milliseconds: 150),
-          );
-          final db = amp.current; // dBFS, typically -50..-10 for speech
-          // Map ~-45dB (room noise) -> 0 and ~-10dB (loud speech) -> 1, then
-          // apply a contrast curve so quiet ambient noise stays near zero.
-          final n = db.isFinite ? ((db + 45) / 35).clamp(0.0, 1.0) : 0.0;
-          level = math.pow(n, 1.35).toDouble();
-        } catch (_) {
-          level = 0.0;
-        }
-      } else {
-        // Synthetic fallback (permission denied / no mic)
-        _voiceIdleTick++;
-        final ph = _voiceIdleTick * 0.24;
-        level =
-            (0.16 +
-                    0.1 * math.sin(ph * 2.0) * math.sin(ph * 0.7) +
-                    0.06 * math.sin(ph * 3.3))
-                .clamp(0.03, 1.0);
-      }
-      if (!mounted || !_isRecordingVoice) return;
-      // Smooth towards the new sample so bars don't jitter
-      final prev = _voiceLevels.isEmpty ? 0.03 : _voiceLevels.last;
-      _voiceLevels.add(prev + (level - prev) * 0.55);
-      if (_voiceLevels.length > _maxVoiceLevels) _voiceLevels.removeAt(0);
-      setState(() {});
-    } finally {
-      _voiceSampling = false;
+      await asr?.cancel();
+    } catch (error) {
+      if (mounted) _reportVoiceFailure(error);
     }
   }
 
-  Future<void> _stopVoiceRecorder() async {
-    _voiceLevelTimer?.cancel();
-    _voiceLevelTimer = null;
-    final path = _voiceRecordingPath;
-    _voiceRecordingPath = null;
-    final recorder = _voiceRecorder;
-    _voiceRecorder = null;
-    if (recorder != null) {
-      _voiceRecorderActive = false;
-      try {
-        // cancel() discards the recording (we only need live levels)
-        await recorder.cancel();
-      } catch (_) {}
-      try {
-        await recorder.dispose();
-      } catch (_) {}
-    }
-    if (path != null) {
-      try {
-        final f = File(path);
-        if (await f.exists()) await f.delete();
-      } catch (_) {}
-    }
-  }
+  Future<void> _finishVoiceInput({required bool sendAfter}) async {
+    final asr = widget.asrProvider;
+    if (!_ownsVoiceSession || _finishingVoice || asr == null) return;
+    _stopVoiceLevelSampling();
+    _finishingVoice = true;
+    setState(() {});
 
-  void _cancelVoiceInput() {
-    setState(() => _isRecordingVoice = false);
-    unawaited(_stopVoiceRecorder());
-  }
-
-  /// Stop recording and simulate speech-to-text by typing a demo transcript
-  /// into the field. When [sendAfter] is true, send it once typing completes.
-  void _finishVoiceInput({required bool sendAfter}) {
-    final demo = AppLocalizations.of(context)!.chatInputBarVoiceDemoText;
-    setState(() => _isRecordingVoice = false);
-    unawaited(_stopVoiceRecorder());
-    _voiceTypingTimer?.cancel();
-    final existing = _controller.text;
-    final base = existing.isEmpty ? '' : '$existing ';
-    var i = 0;
-    _voiceTypingTimer = Timer.periodic(const Duration(milliseconds: 28), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
-      i++;
-      final text = base + demo.substring(0, i.clamp(0, demo.length));
-      _controller.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
+    try {
+      final transcript = await asr.finish();
+      if (!mounted) return;
+      _applyVoiceTranscript(transcript);
+      final detectedSpeech = transcript.trim().isNotEmpty;
+      _voiceBaseValue = null;
+      _ownsVoiceSession = false;
+      _finishingVoice = false;
+      _voiceLevels.clear();
       setState(() {});
       _ensureCaretVisible();
-      if (i >= demo.length) {
-        t.cancel();
-        if (sendAfter) unawaited(_handleSend());
+      if (!detectedSpeech) {
+        _reportNoSpeech();
+      } else if (sendAfter && _controller.text.trim().isNotEmpty) {
+        await _handleSend();
       }
+    } catch (error) {
+      if (!mounted) return;
+      if (_ownsVoiceSession) {
+        _voiceBaseValue = null;
+        _ownsVoiceSession = false;
+        _voiceLevels.clear();
+        setState(() {});
+      }
+      if (_lastReportedVoiceError == null) _reportVoiceFailure(error);
+    } finally {
+      _finishingVoice = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _reportNoSpeech() {
+    if (!mounted) return;
+    showAppSnackBar(
+      context,
+      message: AppLocalizations.of(context)!.asrServicesNoSpeechDetected,
+      type: NotificationType.warning,
+    );
+  }
+
+  void _reportVoiceFailure(Object error) {
+    if (!mounted) return;
+    final raw = error
+        .toString()
+        .replaceFirst(RegExp(r'^\w+(?:<[^>]+>)?:\s*'), '')
+        .trim();
+    if (_lastReportedVoiceError == raw) return;
+    _lastReportedVoiceError = raw;
+    final lower = raw.toLowerCase();
+    final l10n = AppLocalizations.of(context)!;
+    final message =
+        lower.contains('microphone') &&
+            (lower.contains('permission') ||
+                lower.contains('denied') ||
+                lower.contains('not granted'))
+        ? l10n.asrServicesMicrophonePermissionDenied
+        : lower.contains('no speech') || lower.contains('silence')
+        ? l10n.asrServicesNoSpeechDetected
+        : lower.contains('system') && lower.contains('unavailable')
+        ? l10n.asrServicesSystemCheckFailed
+        : l10n.asrServicesRecognitionFailed(raw);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showAppSnackBar(context, message: message, type: NotificationType.error);
     });
   }
 
   /// Bottom row shown while recording: cancel (X) — waveform — stop — send.
   Widget _buildVoiceRecordingRow(BuildContext context, ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
+    final canFinish =
+        widget.asrProvider?.isListening == true && !_finishingVoice;
     return Row(
       key: const ValueKey('voice'),
       children: [
         _CompactIconButton(
           tooltip: l10n.chatInputBarVoiceCancelTooltip,
           icon: Lucide.X,
-          onTap: _cancelVoiceInput,
+          onTap: _finishingVoice ? null : () => unawaited(_cancelVoiceInput()),
         ),
         Expanded(
           child: Padding(
@@ -725,9 +813,31 @@ class _ChatInputBarState extends State<ChatInputBar>
             // doesn't jump when switching in/out of recording state
             child: SizedBox(
               height: 32,
-              child: _VoiceWaveform(
-                levels: _voiceLevels,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                layoutBuilder: (currentChild, previousChildren) => Stack(
+                  fit: StackFit.expand,
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                ),
+                child: _finishingVoice
+                    ? _VoiceTranscribingIndicator(
+                        key: const ValueKey('voice-transcribing-indicator'),
+                        label: l10n.chatInputBarVoiceTranscribing,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.72,
+                        ),
+                      )
+                    : _VoiceWaveform(
+                        key: const ValueKey('voice-waveform'),
+                        levels: _voiceLevels,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.85,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -736,7 +846,9 @@ class _ChatInputBarState extends State<ChatInputBar>
         _CompactIconButton(
           tooltip: l10n.chatInputBarVoiceStopTooltip,
           icon: Lucide.Square,
-          onTap: () => _finishVoiceInput(sendAfter: false),
+          onTap: canFinish
+              ? () => unawaited(_finishVoiceInput(sendAfter: false))
+              : null,
           childBuilder: (c) => Center(
             child: Container(
               width: 12,
@@ -751,8 +863,8 @@ class _ChatInputBarState extends State<ChatInputBar>
         const SizedBox(width: 8),
         // Send: transcribe and send the message right away
         _CompactSendButton(
-          enabled: true,
-          onSend: () => _finishVoiceInput(sendAfter: true),
+          enabled: canFinish,
+          onSend: () => unawaited(_finishVoiceInput(sendAfter: true)),
           color: theme.colorScheme.primary,
           icon: Lucide.Check,
           tooltip: l10n.chatInputBarVoiceSendTooltip,
@@ -762,7 +874,12 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 
   Future<void> _handleSend() async {
-    if (_isSubmitting || _hasUnreadyImages) return;
+    if (_isSubmitting ||
+        _hasUnreadyImages ||
+        _ownsVoiceSession ||
+        _finishingVoice) {
+      return;
+    }
     final text = _controller.text.trim();
     if (text.isEmpty && _images.isEmpty && _docs.isEmpty) return;
     _isSubmitting = true;
@@ -2142,6 +2259,14 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final settings = context.watch<SettingsProvider>();
+    final selectedAsrService = settings.selectedAsrService;
+    final asr = widget.asrProvider;
+    final showVoiceInput =
+        asr != null &&
+        selectedAsrService != null &&
+        asr.canUse(selectedAsrService) &&
+        !asr.isActive;
     final isDark = theme.brightness == Brightness.dark;
     final inputFillColor = _inputFillColor(
       theme: theme,
@@ -2333,7 +2458,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                             onChanged: _onTextChanged,
                                             readOnly:
                                                 _composerLocked ||
-                                                _isRecordingVoice,
+                                                _ownsVoiceSession,
                                             minLines: 1,
                                             maxLines: _isExpanded ? 25 : 5,
                                             // On mobile, optionally show "Send" on the return key and submit on tap.
@@ -2433,7 +2558,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                                       child: child,
                                     ),
                                   ),
-                              child: _isRecordingVoice
+                              child: _ownsVoiceSession
                                   ? _buildVoiceRecordingRow(context, theme)
                                   : Row(
                                       key: const ValueKey('actions'),
@@ -2495,18 +2620,22 @@ class _ChatInputBarState extends State<ChatInputBar>
                                               ),
                                               const SizedBox(width: 8),
                                             ],
-                                            _CompactIconButton(
-                                              tooltip: AppLocalizations.of(
-                                                context,
-                                              )!.chatInputBarVoiceInputTooltip,
-                                              icon: Lucide.Mic,
-                                              onTap:
-                                                  _composerLocked ||
-                                                      widget.loading
-                                                  ? null
-                                                  : _startVoiceInput,
-                                            ),
-                                            const SizedBox(width: 8),
+                                            if (showVoiceInput) ...[
+                                              _CompactIconButton(
+                                                tooltip: AppLocalizations.of(
+                                                  context,
+                                                )!.chatInputBarVoiceInputTooltip,
+                                                icon: Lucide.Mic,
+                                                onTap:
+                                                    _composerLocked ||
+                                                        widget.loading
+                                                    ? null
+                                                    : () => unawaited(
+                                                        _startVoiceInput(),
+                                                      ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                            ],
                                             _CompactSendButton(
                                               enabled:
                                                   (hasText ||
@@ -2912,7 +3041,7 @@ class _CompactSendButton extends StatelessWidget {
 
 // Scrolling waveform driven by real mic amplitude samples (newest on the right).
 class _VoiceWaveform extends StatelessWidget {
-  const _VoiceWaveform({required this.levels, required this.color});
+  const _VoiceWaveform({super.key, required this.levels, required this.color});
 
   final List<double> levels;
   final Color color;
@@ -2921,6 +3050,62 @@ class _VoiceWaveform extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: _VoiceWaveformPainter(levels: levels, color: color),
+    );
+  }
+}
+
+class _VoiceTranscribingIndicator extends StatefulWidget {
+  const _VoiceTranscribingIndicator({
+    super.key,
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  State<_VoiceTranscribingIndicator> createState() =>
+      _VoiceTranscribingIndicatorState();
+}
+
+class _VoiceTranscribingIndicatorState
+    extends State<_VoiceTranscribingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RotationTransition(
+            turns: _controller,
+            child: Icon(Lucide.Loader, size: 15, color: widget.color),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            widget.label,
+            style: TextStyle(fontSize: 12, color: widget.color),
+          ),
+        ],
+      ),
     );
   }
 }

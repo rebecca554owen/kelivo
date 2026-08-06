@@ -73,5 +73,28 @@ void main() {
         throwsA(isA<FormatException>()),
       );
     });
+
+    test('portable ASR export contains cloud providers only', () {
+      final settings = <String, dynamic>{
+        'asr_services_v1': jsonEncode([
+          {'id': 'system', 'kind': 'system'},
+          {
+            'id': 'local',
+            'kind': 'sherpa_onnx',
+            'modelDirectory': '/device/sandbox/model',
+          },
+          {'id': 'openai', 'kind': 'openai_realtime'},
+          {'id': 'step', 'kind': 'step'},
+        ]),
+        'asr_selected_service_id_v1': 'local',
+      };
+
+      BackupSettingsValidator.retainCloudAsrForExport(settings);
+
+      final services =
+          jsonDecode(settings['asr_services_v1'] as String) as List;
+      expect(services.map((entry) => (entry as Map)['id']), ['openai', 'step']);
+      expect(settings, isNot(contains('asr_selected_service_id_v1')));
+    });
   });
 }

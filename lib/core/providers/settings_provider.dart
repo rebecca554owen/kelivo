@@ -12,6 +12,7 @@ import 'package:path/path.dart' as p;
 import '../services/search/search_service.dart';
 import '../services/tts/network_tts.dart';
 import '../services/tts/tts_text_selection.dart';
+import '../services/asr/asr_service_options.dart';
 import '../services/network/request_logger.dart';
 import '../services/logging/flutter_logger.dart';
 import '../services/learning_mode_store.dart';
@@ -285,6 +286,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _ttsAutoPlayAssistantRepliesKey =
       'tts_auto_play_assistant_replies_v1';
   static const String _ttsTextSelectionModeKey = 'tts_text_selection_mode_v1';
+  static const String _asrServicesKey = 'asr_services_v1';
+  static const String _asrSelectedServiceIdKey = 'asr_selected_service_id_v1';
   // Desktop UI
   static const String _desktopSidebarWidthKey = 'desktop_sidebar_width_v1';
   static const String _desktopSidebarOpenKey = 'desktop_sidebar_open_v1';
@@ -305,6 +308,20 @@ class SettingsProvider extends ChangeNotifier {
       (_ttsServiceSelected >= 0 && _ttsServiceSelected < _ttsServices.length)
       ? _ttsServices[_ttsServiceSelected]
       : null;
+
+  // ASR is opt-in. An empty list intentionally keeps voice input hidden.
+  List<AsrServiceOptions> _asrServices = const <AsrServiceOptions>[];
+  String? _selectedAsrServiceId;
+  List<AsrServiceOptions> get asrServices => _asrServices;
+  String? get selectedAsrServiceId => _selectedAsrServiceId;
+  AsrServiceOptions? get selectedAsrService {
+    final selectedId = _selectedAsrServiceId;
+    if (selectedId == null) return null;
+    for (final service in _asrServices) {
+      if (service.id == selectedId) return service;
+    }
+    return null;
+  }
 
   List<String> _providersOrder = const [];
   List<String> get providersOrder => _providersOrder;
@@ -1114,6 +1131,38 @@ class SettingsProvider extends ChangeNotifier {
     _ttsTextSelectionMode = TtsTextSelectionModeStorage.fromStorageValue(
       prefs.getString(_ttsTextSelectionModeKey),
     );
+    // ASR has no implicit system default: users explicitly add a provider.
+    final decodedAsrServices = <AsrServiceOptions>[];
+    try {
+      final raw = prefs.getString(_asrServicesKey) ?? '';
+      if (raw.isNotEmpty) {
+        final list = jsonDecode(raw) as List<dynamic>;
+        for (final value in list) {
+          try {
+            decodedAsrServices.add(
+              AsrServiceOptions.fromJson(
+                Map<String, dynamic>.from(value as Map),
+              ),
+            );
+          } catch (_) {
+            // Preserve other valid services when one legacy row is malformed.
+          }
+        }
+      }
+    } catch (_) {}
+    _asrServices = List<AsrServiceOptions>.unmodifiable(decodedAsrServices);
+    final storedAsrId = prefs.getString(_asrSelectedServiceIdKey);
+    _selectedAsrServiceId =
+        decodedAsrServices.any((service) => service.id == storedAsrId)
+        ? storedAsrId
+        : (decodedAsrServices.isEmpty ? null : decodedAsrServices.first.id);
+    if (_selectedAsrServiceId != storedAsrId) {
+      if (_selectedAsrServiceId == null) {
+        await prefs.remove(_asrSelectedServiceIdKey);
+      } else {
+        await prefs.setString(_asrSelectedServiceIdKey, _selectedAsrServiceId!);
+      }
+    }
     // webdav config
     final webdavStr = prefs.getString(_webDavConfigKey);
     if (webdavStr != null && webdavStr.isNotEmpty) {
@@ -1298,6 +1347,42 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_ttsTextSelectionModeKey, mode.storageValue);
+  }
+
+  Future<void> setAsrServices(List<AsrServiceOptions> value) async {
+    _asrServices = List<AsrServiceOptions>.unmodifiable(value);
+    if (!_asrServices.any((service) => service.id == _selectedAsrServiceId)) {
+      _selectedAsrServiceId = _asrServices.isEmpty
+          ? null
+          : _asrServices.first.id;
+    }
+    final prefs = _preferences;
+    await prefs.setString(
+      _asrServicesKey,
+      jsonEncode(_asrServices.map((service) => service.toJson()).toList()),
+    );
+    await _persistSelectedAsrServiceId(prefs);
+    notifyListeners();
+  }
+
+  Future<void> setSelectedAsrServiceId(String? id) async {
+    final normalized =
+        id != null && _asrServices.any((service) => service.id == id)
+        ? id
+        : null;
+    if (_selectedAsrServiceId == normalized) return;
+    _selectedAsrServiceId = normalized;
+    await _persistSelectedAsrServiceId(_preferences);
+    notifyListeners();
+  }
+
+  Future<void> _persistSelectedAsrServiceId(BusinessPreferences prefs) async {
+    final selectedId = _selectedAsrServiceId;
+    if (selectedId == null) {
+      await prefs.remove(_asrSelectedServiceIdKey);
+    } else {
+      await prefs.setString(_asrSelectedServiceIdKey, selectedId);
+    }
   }
 
   // ===== User Font Settings =====
@@ -4129,6 +4214,8 @@ Requirements:
     copy._ttsServiceSelected = _ttsServiceSelected;
     copy._ttsAutoPlayAssistantReplies = _ttsAutoPlayAssistantReplies;
     copy._ttsTextSelectionMode = _ttsTextSelectionMode;
+    copy._asrServices = _asrServices;
+    copy._selectedAsrServiceId = _selectedAsrServiceId;
     // Copy other fields
     copy._providersOrder = _providersOrder;
     copy._themeMode = _themeMode;

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/assistant.dart';
+import '../../../core/providers/asr_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
@@ -112,6 +113,7 @@ class ChatInputSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final asr = context.watch<AsrProvider>();
     final ap = context.watch<AssistantProvider>();
     final a = ap.currentAssistant;
     final assistantId = a?.id;
@@ -149,6 +151,7 @@ class ChatInputSection extends StatelessWidget {
       focusNode: inputFocus,
       controller: inputController,
       mediaController: mediaController,
+      asrProvider: asr,
       onConfigureReasoning: onConfigureReasoning,
       reasoningActive: isReasoningEnabled(
         (context.watch<AssistantProvider>().currentAssistant?.thinkingBudget) ??

@@ -62,6 +62,8 @@ final class BusinessKeyRegistry {
     'tts_engine_v1',
     'tts_language_v1',
     'tts_cache_network_audio_for_replay_v1',
+    'asr_services_v1',
+    'asr_selected_service_id_v1',
     'webdav_config_v1',
     's3_config_v1',
     'backup_reminder_enabled_v1',

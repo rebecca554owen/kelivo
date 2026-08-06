@@ -32,6 +32,10 @@ void main() {
           BusinessKeyDisposition.preference,
         );
         expect(
+          BusinessKeyRegistry.classify('asr_services_v1'),
+          BusinessKeyDisposition.preference,
+        );
+        expect(
           BusinessKeyRegistry.classify('providers_order_v1'),
           BusinessKeyDisposition.providerOrder,
         );

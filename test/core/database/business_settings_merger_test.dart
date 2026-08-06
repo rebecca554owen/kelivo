@@ -386,6 +386,36 @@ void main() {
     expect(merged['theme_mode_v1'], 'light');
   });
 
+  test('ASR merge adds cloud providers without changing device providers', () {
+    final merged = BusinessSettingsMerger.merge(
+      {
+        'asr_services_v1': jsonEncode([
+          {'id': 'system', 'kind': 'system'},
+          {'id': 'local', 'kind': 'sherpa_onnx'},
+          {'id': 'shared-cloud', 'kind': 'dashscope', 'name': 'Local name'},
+        ]),
+        'asr_selected_service_id_v1': 'local',
+      },
+      {
+        'asr_services_v1': jsonEncode([
+          {'id': 'shared-cloud', 'kind': 'dashscope', 'name': 'Backup name'},
+          {'id': 'incoming-cloud', 'kind': 'step'},
+        ]),
+        'asr_selected_service_id_v1': 'incoming-cloud',
+      },
+    );
+
+    final services = jsonDecode(merged['asr_services_v1']! as String) as List;
+    expect(services.map((entry) => (entry as Map)['id']), [
+      'system',
+      'local',
+      'shared-cloud',
+      'incoming-cloud',
+    ]);
+    expect((services[2] as Map)['name'], 'Local name');
+    expect(merged['asr_selected_service_id_v1'], 'local');
+  });
+
   test('merges pinned models into an empty target snapshot', () {
     final merged = BusinessSettingsMerger.merge(const {}, {
       'pinned_models_v1': <String>['provider/model'],

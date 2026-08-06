@@ -11,6 +11,8 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../core/services/haptics.dart';
 import 'tts_settings_page.dart';
+import '../widgets/asr_services_section.dart';
+import '../widgets/voice_service_widgets.dart';
 import '../../../theme/app_font_weights.dart';
 
 class TtsServicesPage extends StatelessWidget {
@@ -48,16 +50,6 @@ class TtsServicesPage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 6),
-          Tooltip(
-            message: l10n.ttsServicesPageAddTooltip,
-            child: _TactileIconButton(
-              icon: Lucide.Plus,
-              color: cs.onSurface,
-              size: 22,
-              onTap: () => _handleAddNetworkTts(context),
-            ),
-          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -80,7 +72,12 @@ class TtsServicesPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
-              _header(context, l10n.ttsServicesPageTitle, first: true),
+              VoiceServiceSectionHeader(
+                title: l10n.ttsServicesSectionTitle,
+                addTooltip: l10n.ttsServicesPageAddTooltip,
+                onAdd: () => _handleAddNetworkTts(context),
+                first: true,
+              ),
               _iosSectionCard(
                 children: [
                   // System TTS as first row
@@ -196,6 +193,7 @@ class TtsServicesPage extends StatelessWidget {
                   ],
                 ],
               ),
+              const AsrServicesSection(),
             ],
           );
         },

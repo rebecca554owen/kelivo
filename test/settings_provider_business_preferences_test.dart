@@ -8,6 +8,7 @@ import 'package:Kelivo/core/database/business_preferences.dart';
 import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/database/business_settings_router.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'package:Kelivo/core/services/asr/asr_service_options.dart';
 import 'package:Kelivo/core/services/search/search_service.dart';
 
 void main() {
@@ -156,12 +157,62 @@ void main() {
       final settings = SettingsProvider(preferences);
       await settings.loaded;
 
+      await settings.setAsrServices(<AsrServiceOptions>[
+        SystemAsrOptions(id: 'copy-system'),
+      ]);
+
       await repository.setPreference('search_enabled_v1', true);
       final copy = settings.copyWith(searchAutoTestOnLaunch: true);
       await copy.loaded;
 
       expect(copy.searchEnabled, settings.searchEnabled);
       expect(copy.searchAutoTestOnLaunch, isTrue);
+      expect(copy.selectedAsrServiceId, 'copy-system');
+    },
+  );
+
+  test('ASR is opt-in and persists services with a stable selection', () async {
+    final settings = SettingsProvider(BusinessPreferences(repository));
+    await settings.loaded;
+
+    expect(settings.asrServices, isEmpty);
+    expect(settings.selectedAsrService, isNull);
+
+    final system = SystemAsrOptions(id: 'system-asr', localeId: 'zh_CN');
+    final openAi = OpenAiRealtimeAsrOptions(
+      id: 'openai-asr',
+      apiKey: 'test-key',
+    );
+    await settings.setAsrServices(<AsrServiceOptions>[system, openAi]);
+    expect(settings.selectedAsrServiceId, system.id);
+    await settings.setSelectedAsrServiceId(openAi.id);
+
+    final reloaded = SettingsProvider(BusinessPreferences(repository));
+    await reloaded.loaded;
+
+    expect(reloaded.asrServices, hasLength(2));
+    expect(reloaded.selectedAsrServiceId, openAi.id);
+    expect(reloaded.selectedAsrService, isA<OpenAiRealtimeAsrOptions>());
+    expect(
+      (reloaded.selectedAsrService! as OpenAiRealtimeAsrOptions).apiKey,
+      'test-key',
+    );
+  });
+
+  test(
+    'removing the selected ASR falls back to the first remaining service',
+    () async {
+      final settings = SettingsProvider(BusinessPreferences(repository));
+      await settings.loaded;
+      final first = SystemAsrOptions(id: 'first');
+      final second = MimoAsrOptions(id: 'second', apiKey: 'test-key');
+      await settings.setAsrServices(<AsrServiceOptions>[first, second]);
+      await settings.setSelectedAsrServiceId(second.id);
+
+      await settings.setAsrServices(<AsrServiceOptions>[first]);
+      expect(settings.selectedAsrServiceId, first.id);
+      await settings.setAsrServices(const <AsrServiceOptions>[]);
+      expect(settings.selectedAsrServiceId, isNull);
     },
   );
 }
