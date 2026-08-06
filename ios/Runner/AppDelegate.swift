@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import AuthenticationServices
 import BackgroundTasks
 import UserNotifications
 import ActivityKit
@@ -11,6 +12,7 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
 @objc class AppDelegate: FlutterAppDelegate {
   private let fileSaveHandler = NativeFileSaveHandler()
   private let backgroundGenerationHandler = IosBackgroundGenerationHandler()
+  private let mcpOAuthHandler = IosMcpOAuthHandler()
 
   override func application(
     _ application: UIApplication,
@@ -56,6 +58,12 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
       iosBackgroundChannel.setMethodCallHandler { [weak self] call, result in
         self?.backgroundGenerationHandler.handle(call: call, result: result)
       }
+
+      let mcpOAuthChannel = FlutterMethodChannel(name: "app.mcp_oauth", binaryMessenger: controller.binaryMessenger)
+      mcpOAuthHandler.presentationAnchor = window
+      mcpOAuthChannel.setMethodCallHandler { [weak self] call, result in
+        self?.mcpOAuthHandler.handle(call: call, result: result)
+      }
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -74,6 +82,76 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
       return true
     }
     return super.application(app, open: url, options: options)
+  }
+}
+
+private final class IosMcpOAuthHandler: NSObject, ASWebAuthenticationPresentationContextProviding {
+  weak var presentationAnchor: UIWindow?
+  private var session: ASWebAuthenticationSession?
+
+  func handle(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "authenticate":
+      guard session == nil else {
+        result(FlutterError(code: "authorization_in_progress", message: "An authorization session is already in progress.", details: nil))
+        return
+      }
+      let arguments = call.arguments as? [String: Any]
+      guard
+        let urlString = arguments?["url"] as? String,
+        let url = URL(string: urlString),
+        let callbackScheme = arguments?["callbackScheme"] as? String,
+        !callbackScheme.isEmpty
+      else {
+        result(FlutterError(code: "invalid_arguments", message: "A valid authorization URL and callback scheme are required.", details: nil))
+        return
+      }
+
+      let authenticationSession = ASWebAuthenticationSession(
+        url: url,
+        callbackURLScheme: callbackScheme
+      ) { [weak self] callbackURL, error in
+        self?.session = nil
+        if let callbackURL {
+          result(callbackURL.absoluteString)
+          return
+        }
+        let nsError = error as NSError?
+        let cancelled = nsError?.domain == ASWebAuthenticationSessionErrorDomain && nsError?.code == 1
+        result(
+          FlutterError(
+            code: cancelled ? "authorization_cancelled" : "authorization_failed",
+            message: error?.localizedDescription ?? "Authorization did not return a callback URL.",
+            details: nil
+          )
+        )
+      }
+      authenticationSession.presentationContextProvider = self
+      authenticationSession.prefersEphemeralWebBrowserSession = false
+      session = authenticationSession
+      if !authenticationSession.start() {
+        session = nil
+        result(FlutterError(code: "authorization_failed", message: "Could not start the authorization session.", details: nil))
+      }
+    case "cancel":
+      session?.cancel()
+      session = nil
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+    if let presentationAnchor {
+      return presentationAnchor
+    }
+    for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+      if let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first {
+        return window
+      }
+    }
+    return UIWindow()
   }
 }
 

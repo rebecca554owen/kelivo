@@ -40,6 +40,7 @@ final class McpOAuthClientRegistration {
     this.clientSecret,
     this.tokenEndpointAuthMethod = 'none',
     this.authorizationServer,
+    this.redirectUri,
     this.registrationSource = McpOAuthClientRegistrationSource.preRegistered,
   });
 
@@ -47,6 +48,7 @@ final class McpOAuthClientRegistration {
   final String? clientSecret;
   final String tokenEndpointAuthMethod;
   final String? authorizationServer;
+  final String? redirectUri;
   final McpOAuthClientRegistrationSource registrationSource;
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +56,7 @@ final class McpOAuthClientRegistration {
     if (clientSecret != null) 'clientSecret': clientSecret,
     'tokenEndpointAuthMethod': tokenEndpointAuthMethod,
     if (authorizationServer != null) 'authorizationServer': authorizationServer,
+    if (redirectUri != null) 'redirectUri': redirectUri,
     'registrationSource': registrationSource.name,
   };
 
@@ -69,6 +72,7 @@ final class McpOAuthClientRegistration {
         tokenEndpointAuthMethod:
             json['tokenEndpointAuthMethod'] as String? ?? 'none',
         authorizationServer: json['authorizationServer'] as String?,
+        redirectUri: json['redirectUri'] as String?,
         registrationSource: _registrationSource(
           json['registrationSource'],
           fallback: _looksLikeClientMetadataDocumentId(clientId)
@@ -96,6 +100,7 @@ final class McpOAuthState {
     this.scope,
     this.tokenEndpointAuthMethod = 'none',
     this.registrationSource = McpOAuthClientRegistrationSource.dcr,
+    this.redirectUri,
     this.tokenType = 'Bearer',
     this.refreshToken,
     this.expiresAt,
@@ -112,6 +117,7 @@ final class McpOAuthState {
   final String? scope;
   final String tokenEndpointAuthMethod;
   final McpOAuthClientRegistrationSource registrationSource;
+  final String? redirectUri;
   final String accessToken;
   final String tokenType;
   final String? refreshToken;
@@ -139,6 +145,7 @@ final class McpOAuthState {
     if (scope != null) 'scope': scope,
     'tokenEndpointAuthMethod': tokenEndpointAuthMethod,
     'registrationSource': registrationSource.name,
+    if (redirectUri != null) 'redirectUri': redirectUri,
     'accessToken': accessToken,
     'tokenType': tokenType,
     if (refreshToken != null) 'refreshToken': refreshToken,
@@ -173,6 +180,7 @@ final class McpOAuthState {
                   ? McpOAuthClientRegistrationSource.cimd
                   : McpOAuthClientRegistrationSource.dcr),
         ),
+        redirectUri: json['redirectUri'] as String?,
         accessToken: json['accessToken'] as String,
         tokenType: json['tokenType'] as String? ?? 'Bearer',
         refreshToken: json['refreshToken'] as String?,
@@ -207,8 +215,6 @@ final class McpOAuthDiscovery {
   final bool authorizationResponseIssParameterSupported;
   final bool clientIdMetadataDocumentSupported;
 }
-
-typedef McpOAuthUrlLauncher = Future<bool> Function(Uri uri);
 
 final class McpOAuthService {
   McpOAuthService({
@@ -495,19 +501,24 @@ final class McpOAuthService {
     List<String> additionalScopes = const [],
     McpOAuthClientRegistration? clientRegistration,
   }) async {
-    final callback = await _callbackFactory();
+    McpOAuthCallback? callback;
     try {
       final discovery = await discover(
         serverUrl,
         headers: headers,
         wwwAuthenticate: wwwAuthenticate,
       );
+      callback = await _callbackFactory(discovery.authorizationServer);
       final scopes = _unionScopes(discovery.scopes, additionalScopes);
       var registration = clientRegistration;
       if (registration?.registrationSource ==
               McpOAuthClientRegistrationSource.dcr &&
-          registration?.authorizationServer !=
-              discovery.authorizationServer.toString()) {
+          (registration?.authorizationServer !=
+                  discovery.authorizationServer.toString() ||
+              !_registrationRedirectUriMatches(
+                registration?.redirectUri,
+                callback.redirectUri,
+              ))) {
         registration = null;
       }
       registration ??= await _dynamicallyRegisterClient(
@@ -546,10 +557,16 @@ final class McpOAuthService {
         },
       );
 
-      if (!await _launchAuthorizationUrl(authorizationUrl)) {
-        throw const McpOAuthException('could not open the authorization URL');
+      final callbackUri = await callback.authorize(
+        authorizationUrl,
+        _callbackTimeout,
+        _launchAuthorizationUrl,
+      );
+      if (!_sameRedirectTarget(callbackUri, callback.redirectUri)) {
+        throw const McpOAuthException(
+          'authorization callback redirect URI mismatch',
+        );
       }
-      final callbackUri = await callback.waitForCallback(_callbackTimeout);
       final returnedState = callbackUri.queryParameters['state'];
       if (returnedState != state) {
         throw const McpOAuthException('authorization callback state mismatch');
@@ -602,8 +619,15 @@ final class McpOAuthService {
         'timed out waiting for authorization',
         kind: McpOAuthFailureKind.transient,
       );
+    } on McpOAuthCallbackException catch (error) {
+      throw McpOAuthException(
+        error.message,
+        kind: error.cancelled
+            ? McpOAuthFailureKind.authorizationRequired
+            : McpOAuthFailureKind.transient,
+      );
     } finally {
-      await callback.close();
+      await callback?.close();
     }
   }
 
@@ -620,6 +644,7 @@ final class McpOAuthService {
       clientSecret: state.clientSecret,
       tokenEndpointAuthMethod: state.tokenEndpointAuthMethod,
       authorizationServer: state.authorizationServer,
+      redirectUri: state.redirectUri,
       registrationSource: state.registrationSource,
     );
     _validateClientRegistration(registration);
@@ -645,6 +670,7 @@ final class McpOAuthService {
       scope: token['scope'] is String ? token['scope'] as String : state.scope,
       tokenEndpointAuthMethod: state.tokenEndpointAuthMethod,
       registrationSource: state.registrationSource,
+      redirectUri: state.redirectUri,
       accessToken: token['access_token'] as String,
       tokenType: token['token_type'] as String? ?? 'Bearer',
       refreshToken: token['refresh_token'] as String? ?? state.refreshToken,
@@ -691,6 +717,7 @@ final class McpOAuthService {
       tokenEndpointAuthMethod:
           registration['token_endpoint_auth_method'] as String? ?? 'none',
       authorizationServer: discovery.authorizationServer.toString(),
+      redirectUri: redirectUri.toString(),
       registrationSource: McpOAuthClientRegistrationSource.dcr,
     );
   }
@@ -752,6 +779,7 @@ final class McpOAuthService {
         : (scopes.isEmpty ? null : scopes.join(' ')),
     tokenEndpointAuthMethod: registration.tokenEndpointAuthMethod,
     registrationSource: registration.registrationSource,
+    redirectUri: registration.redirectUri,
     accessToken: token['access_token'] as String,
     tokenType: token['token_type'] as String? ?? 'Bearer',
     refreshToken: token['refresh_token'] as String?,
@@ -1219,6 +1247,39 @@ final class McpOAuthService {
       left.scheme.toLowerCase() == right.scheme.toLowerCase() &&
       left.host.toLowerCase() == right.host.toLowerCase() &&
       _effectivePort(left) == _effectivePort(right);
+
+  static bool _sameRedirectTarget(Uri received, Uri expected) =>
+      received.scheme == expected.scheme &&
+      received.hasAuthority == expected.hasAuthority &&
+      received.userInfo == expected.userInfo &&
+      received.host == expected.host &&
+      received.hasPort == expected.hasPort &&
+      (!received.hasPort || received.port == expected.port) &&
+      received.path == expected.path &&
+      received.fragment == expected.fragment;
+
+  static bool _registrationRedirectUriMatches(
+    String? registeredRedirectUri,
+    Uri currentRedirectUri,
+  ) {
+    if (registeredRedirectUri == currentRedirectUri.toString()) return true;
+    final registered = Uri.tryParse(registeredRedirectUri ?? '');
+    if (registered == null ||
+        !_isLoopbackRedirect(registered) ||
+        !_isLoopbackRedirect(currentRedirectUri)) {
+      return false;
+    }
+    return registered.scheme == currentRedirectUri.scheme &&
+        registered.hasAuthority == currentRedirectUri.hasAuthority &&
+        registered.userInfo == currentRedirectUri.userInfo &&
+        registered.host == currentRedirectUri.host &&
+        registered.path == currentRedirectUri.path &&
+        registered.query == currentRedirectUri.query &&
+        registered.fragment == currentRedirectUri.fragment;
+  }
+
+  static bool _isLoopbackRedirect(Uri uri) =>
+      uri.scheme == 'http' && (uri.host == '127.0.0.1' || uri.host == '::1');
 
   static int _effectivePort(Uri uri) => uri.hasPort
       ? uri.port

@@ -13,34 +13,37 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test(
-    'loopback callback keeps its redirect URI after receiving code',
-    () async {
-      final callback = await openMcpOAuthCallback();
-      final redirectUri = callback.redirectUri;
-      final client = HttpClient();
+  test('loopback callback listens before waitForCallback is called', () async {
+    final callback = await openMcpOAuthCallback(
+      Uri.parse('https://auth.example.com'),
+    );
+    final redirectUri = callback.redirectUri;
+    final client = HttpClient();
 
-      try {
-        final waiting = callback.waitForCallback(const Duration(seconds: 2));
-        final request = await client.getUrl(
-          redirectUri.replace(
-            queryParameters: const {'code': 'code', 'state': 'state'},
-          ),
-        );
-        final response = await request.close();
-        final responseBody = await utf8.decodeStream(response);
+    try {
+      final request = await client.getUrl(
+        redirectUri.replace(
+          queryParameters: const {'code': 'code', 'state': 'state'},
+        ),
+      );
+      final response = await request.close().timeout(
+        const Duration(seconds: 2),
+      );
+      final responseBody = await utf8.decodeStream(response);
+      final callbackUri = await callback.waitForCallback(
+        const Duration(seconds: 2),
+      );
 
-        expect((await waiting).queryParameters['code'], 'code');
-        expect(callback.redirectUri, redirectUri);
-        expect(responseBody, contains('You may close this window'));
-        expect(responseBody, isNot(contains('kelivo://oauth-return')));
-        expect(responseBody, isNot(contains('Authorization complete')));
-      } finally {
-        client.close(force: true);
-        await callback.close();
-      }
-    },
-  );
+      expect(callbackUri.queryParameters['code'], 'code');
+      expect(callback.redirectUri, redirectUri);
+      expect(responseBody, contains('You may close this window'));
+      expect(responseBody, isNot(contains('kelivo://oauth-return')));
+      expect(responseBody, isNot(contains('Authorization complete')));
+    } finally {
+      client.close(force: true);
+      await callback.close();
+    }
+  });
 
   test('completes MCP OAuth discovery, PKCE, DCR, token, and refresh', () async {
     const serverUrl = 'https://mcp.example.com/tenant/mcp';
@@ -132,7 +135,10 @@ void main() {
     });
     final service = McpOAuthService(
       httpClient: client,
-      callbackFactory: () async => callback,
+      callbackFactory: (authorizationServer) async {
+        expect(authorizationServer.toString(), issuer);
+        return callback;
+      },
       launchAuthorizationUrl: (uri) async {
         launchedUrl = uri;
         scheduleMicrotask(
@@ -162,11 +168,13 @@ void main() {
     expect(state.accessToken, 'access-1');
     expect(state.refreshToken, 'refresh-1');
     expect(state.registrationSource, McpOAuthClientRegistrationSource.dcr);
+    expect(state.redirectUri, callback.redirectUri.toString());
     expect(callback.closed, isTrue);
 
     final refreshed = await service.refresh(state);
     expect(refreshed.accessToken, 'access-2');
     expect(refreshed.refreshToken, 'refresh-1');
+    expect(refreshed.redirectUri, callback.redirectUri.toString());
     expect(tokenRequests, 2);
     service.dispose();
   });
@@ -395,7 +403,7 @@ void main() {
         }
         return http.Response('not found', 404);
       }),
-      callbackFactory: () async => callback,
+      callbackFactory: (authorizationServer) async => callback,
       launchAuthorizationUrl: (uri) async {
         scheduleMicrotask(
           () => callback.complete(
@@ -416,9 +424,10 @@ void main() {
       serverUrl: serverUrl,
       serverName: 'Migrated MCP',
       wwwAuthenticate: const ['Bearer resource_metadata="$metadataUrl"'],
-      clientRegistration: const McpOAuthClientRegistration(
+      clientRegistration: McpOAuthClientRegistration(
         clientId: 'old-client',
         authorizationServer: oldIssuer,
+        redirectUri: callback.redirectUri.toString(),
         registrationSource: McpOAuthClientRegistrationSource.dcr,
       ),
     );
@@ -427,6 +436,98 @@ void main() {
     expect(state.clientId, 'new-client');
     expect(state.authorizationServer, issuer);
     expect(state.registrationSource, McpOAuthClientRegistrationSource.dcr);
+  });
+
+  test('DCR credentials ignore only loopback port changes', () async {
+    const serverUrl = 'https://mcp.example.com/mcp';
+    const metadataUrl = 'https://mcp.example.com/oauth-resource';
+    const issuer = 'https://auth.example.com';
+    late _FakeCallback callback;
+    var registrations = 0;
+    final service = McpOAuthService(
+      httpClient: MockClient((request) async {
+        if (request.url.toString() == metadataUrl) {
+          return http.Response(
+            jsonEncode({
+              'resource': serverUrl,
+              'authorization_servers': [issuer],
+            }),
+            200,
+          );
+        }
+        if (request.url.toString() ==
+            '$issuer/.well-known/oauth-authorization-server') {
+          return http.Response(
+            jsonEncode({
+              'issuer': issuer,
+              'authorization_endpoint': '$issuer/authorize',
+              'token_endpoint': '$issuer/token',
+              'registration_endpoint': '$issuer/register',
+              'code_challenge_methods_supported': ['S256'],
+            }),
+            200,
+          );
+        }
+        if (request.url.toString() == '$issuer/register') {
+          registrations++;
+          return http.Response(jsonEncode({'client_id': 'new-client'}), 201);
+        }
+        if (request.url.toString() == '$issuer/token') {
+          return http.Response(
+            jsonEncode({'access_token': 'access', 'token_type': 'Bearer'}),
+            200,
+          );
+        }
+        return http.Response('not found', 404);
+      }),
+      callbackFactory: (authorizationServer) async =>
+          callback = _FakeCallback(),
+      launchAuthorizationUrl: (uri) async {
+        scheduleMicrotask(
+          () => callback.complete(
+            callback.redirectUri.replace(
+              queryParameters: {
+                'code': 'code',
+                'state': uri.queryParameters['state']!,
+              },
+            ),
+          ),
+        );
+        return true;
+      },
+    );
+    addTearDown(service.dispose);
+
+    final reusedState = await service.authorize(
+      serverUrl: serverUrl,
+      serverName: 'Migrated MCP',
+      wwwAuthenticate: const ['Bearer resource_metadata="$metadataUrl"'],
+      clientRegistration: const McpOAuthClientRegistration(
+        clientId: 'old-client',
+        authorizationServer: issuer,
+        redirectUri: 'http://127.0.0.1:12345/oauth/callback',
+        registrationSource: McpOAuthClientRegistrationSource.dcr,
+      ),
+    );
+
+    expect(registrations, 0);
+    expect(reusedState.clientId, 'old-client');
+
+    final replacedState = await service.authorize(
+      serverUrl: serverUrl,
+      serverName: 'Migrated MCP',
+      wwwAuthenticate: const ['Bearer resource_metadata="$metadataUrl"'],
+      clientRegistration: const McpOAuthClientRegistration(
+        clientId: 'old-client',
+        authorizationServer: issuer,
+        redirectUri: 'http://127.0.0.1:12345/old-callback',
+        registrationSource: McpOAuthClientRegistrationSource.dcr,
+      ),
+    );
+
+    expect(registrations, 1);
+    expect(replacedState.clientId, 'new-client');
+    expect(replacedState.redirectUri, callback.redirectUri.toString());
   });
 
   test('OAuth discovery rejects non-public resolved addresses', () async {
@@ -463,6 +564,90 @@ void main() {
       validateMcpOAuthPublicUri(Uri.parse('https://198.18.0.23/oauth')),
       throwsA(isA<SocketException>()),
     );
+  });
+
+  test('authorization callback requires the exact redirect target', () async {
+    const serverUrl = 'https://mcp.example.com/mcp';
+    const metadataUrl = 'https://mcp.example.com/meta';
+    const issuer = 'https://auth.example.com';
+    const mismatchedCallbacks = [
+      'https://127.0.0.1:54321/oauth/callback',
+      'http://localhost:54321/oauth/callback',
+      'http://127.0.0.1:54322/oauth/callback',
+      'http://127.0.0.1:54321/oauth/other',
+    ];
+
+    for (final callbackBase in mismatchedCallbacks) {
+      final callback = _FakeCallback();
+      var tokenRequests = 0;
+      final service = McpOAuthService(
+        httpClient: MockClient((request) async {
+          if (request.url.toString() == metadataUrl) {
+            return http.Response(
+              jsonEncode({
+                'resource': serverUrl,
+                'authorization_servers': [issuer],
+              }),
+              200,
+            );
+          }
+          if (request.url.toString() ==
+              '$issuer/.well-known/oauth-authorization-server') {
+            return http.Response(
+              jsonEncode({
+                'issuer': issuer,
+                'authorization_endpoint': '$issuer/authorize',
+                'token_endpoint': '$issuer/token',
+                'code_challenge_methods_supported': ['S256'],
+              }),
+              200,
+            );
+          }
+          if (request.url.toString() == '$issuer/token') {
+            tokenRequests++;
+          }
+          return http.Response('not found', 404);
+        }),
+        callbackFactory: (authorizationServer) async => callback,
+        launchAuthorizationUrl: (uri) async {
+          scheduleMicrotask(
+            () => callback.complete(
+              Uri.parse(callbackBase).replace(
+                queryParameters: {
+                  'code': 'code',
+                  'state': uri.queryParameters['state']!,
+                },
+              ),
+            ),
+          );
+          return true;
+        },
+      );
+
+      try {
+        await expectLater(
+          service.authorize(
+            serverUrl: serverUrl,
+            serverName: 'Test',
+            wwwAuthenticate: const ['Bearer resource_metadata="$metadataUrl"'],
+            clientRegistration: const McpOAuthClientRegistration(
+              clientId: 'pre-registered-client',
+            ),
+          ),
+          throwsA(
+            isA<McpOAuthException>().having(
+              (error) => error.message,
+              'message',
+              contains('redirect URI mismatch'),
+            ),
+          ),
+          reason: callbackBase,
+        );
+        expect(tokenRequests, 0, reason: callbackBase);
+      } finally {
+        service.dispose();
+      }
+    }
   });
 
   test('authorization callback validates all issuer parameter cases', () async {
@@ -529,7 +714,7 @@ void main() {
           }
           return http.Response('not found', 404);
         }),
-        callbackFactory: () async => callback,
+        callbackFactory: (authorizationServer) async => callback,
         launchAuthorizationUrl: (uri) async {
           scheduleMicrotask(() {
             callback.complete(
@@ -696,6 +881,18 @@ final class _FakeCallback implements McpOAuthCallback {
   bool closed = false;
 
   void complete(Uri uri) => _callback.complete(uri);
+
+  @override
+  Future<Uri> authorize(
+    Uri authorizationUrl,
+    Duration timeout,
+    McpOAuthUrlLauncher launchAuthorizationUrl,
+  ) async {
+    if (!await launchAuthorizationUrl(authorizationUrl)) {
+      throw const McpOAuthCallbackException('launch failed');
+    }
+    return waitForCallback(timeout);
+  }
 
   @override
   Future<Uri> waitForCallback(Duration timeout) => _callback.future;

@@ -421,7 +421,7 @@ void main() {
           }
           return http.Response('not found', 404);
         }),
-        callbackFactory: () async {
+        callbackFactory: (authorizationServer) async {
           final callback = _FakeOAuthCallback();
           callbacks.add(callback);
           return callback;
@@ -560,7 +560,8 @@ void main() {
           }
           return http.Response('not found', 404);
         }),
-        callbackFactory: () async => activeCallback = _FakeOAuthCallback(),
+        callbackFactory: (authorizationServer) async =>
+            activeCallback = _FakeOAuthCallback(),
         launchAuthorizationUrl: (uri) async {
           final callback = activeCallback!;
           scheduleMicrotask(
@@ -1201,6 +1202,18 @@ final class _FakeOAuthCallback implements McpOAuthCallback {
   bool get isCompleted => _callback.isCompleted;
 
   void complete(Uri uri) => _callback.complete(uri);
+
+  @override
+  Future<Uri> authorize(
+    Uri authorizationUrl,
+    Duration timeout,
+    McpOAuthUrlLauncher launchAuthorizationUrl,
+  ) async {
+    if (!await launchAuthorizationUrl(authorizationUrl)) {
+      throw const McpOAuthCallbackException('launch failed');
+    }
+    return waitForCallback(timeout);
+  }
 
   @override
   Future<Uri> waitForCallback(Duration timeout) => _callback.future;

@@ -1104,6 +1104,7 @@ class McpProvider extends ChangeNotifier {
       clientSecret: oauth.clientSecret,
       tokenEndpointAuthMethod: oauth.tokenEndpointAuthMethod,
       authorizationServer: oauth.authorizationServer,
+      redirectUri: oauth.redirectUri,
       registrationSource: oauth.registrationSource,
     );
   }
@@ -1148,6 +1149,7 @@ class McpProvider extends ChangeNotifier {
         clientSecret: oauth.clientSecret,
         tokenEndpointAuthMethod: oauth.tokenEndpointAuthMethod,
         authorizationServer: oauth.authorizationServer,
+        redirectUri: oauth.redirectUri,
         registrationSource: oauth.registrationSource,
       );
     } else if (configuredClient != null &&
@@ -1159,6 +1161,7 @@ class McpProvider extends ChangeNotifier {
         clientSecret: configuredClient.clientSecret,
         tokenEndpointAuthMethod: configuredClient.tokenEndpointAuthMethod,
         authorizationServer: oauth.authorizationServer,
+        redirectUri: configuredClient.redirectUri,
         registrationSource: configuredClient.registrationSource,
       );
     } else {
@@ -1625,6 +1628,7 @@ class McpProvider extends ChangeNotifier {
       clientSecret: existing.clientSecret,
       tokenEndpointAuthMethod: incoming.tokenEndpointAuthMethod,
       authorizationServer: incoming.authorizationServer,
+      redirectUri: incoming.redirectUri ?? existing.redirectUri,
       registrationSource: incoming.registrationSource,
     );
   }
