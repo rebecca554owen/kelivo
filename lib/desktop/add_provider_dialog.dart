@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../icons/lucide_adapter.dart' as lucide;
 import '../core/providers/settings_provider.dart';
 import '../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<String?> showDesktopAddProviderDialog(BuildContext context) async {
   String? result;
@@ -102,13 +103,12 @@ class _AddProviderDialogBodyState extends State<_AddProviderDialogBody>
   }
 
   InputDecoration _deskInputDecoration(BuildContext context, {String? hint}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       isDense: true,
       hintText: hint,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+      fillColor: context.appColors.surfaceFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(
@@ -152,9 +152,7 @@ class _AddProviderDialogBodyState extends State<_AddProviderDialogBody>
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white10
-            : const Color(0xFFF7F7F9),
+        color: context.appColors.surfaceFill,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

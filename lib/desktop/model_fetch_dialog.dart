@@ -10,6 +10,7 @@ import '../utils/brand_assets.dart';
 import '../utils/model_grouping.dart';
 import '../shared/widgets/model_tag_wrap.dart';
 import '../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showModelFetchDialog(
   BuildContext context, {
@@ -228,9 +229,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                               hintText: l10n.providerDetailPageFilterHint,
                               isDense: true,
                               filled: true,
-                              fillColor: isDark
-                                  ? Colors.white10
-                                  : const Color(0xFFF2F3F5),
+                              fillColor: context.appColors.surfaceFill,
                               prefixIcon: Icon(
                                 lucide.Lucide.Search,
                                 size: 18,
@@ -494,9 +493,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                 );
                 return Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    color: context.appColors.surfaceFill,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(

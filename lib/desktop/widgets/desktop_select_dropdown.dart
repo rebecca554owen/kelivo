@@ -94,7 +94,7 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
     }
     final usePure = sp?.usePureBackground ?? false;
     if (usePure) return isDark ? Colors.black : Colors.white;
-    return isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    return Theme.of(context).colorScheme.surfaceContainerHigh;
   }
 
   void _openMenu() {
@@ -143,7 +143,6 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final label = _labelForValue(widget.value);
 
     final baseBorder = cs.outlineVariant.withValues(alpha: 0.18);
@@ -152,7 +151,7 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
 
     final fillColor =
         widget.triggerFillColor ??
-        (isDark ? const Color(0xFF141414) : Colors.white);
+        (Theme.of(context).colorScheme.surfaceContainerHigh);
 
     return CompositedTransformTarget(
       link: _link,

@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class ProviderNetworkPage extends StatefulWidget {
   const ProviderNetworkPage({
@@ -197,12 +198,11 @@ class _ProviderNetworkPageState extends State<ProviderNetworkPage> {
 }
 
 InputDecoration _proxyInputDecoration(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   return InputDecoration(
     isDense: true,
     filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+    fillColor: context.appColors.surfaceFill,
     hintStyle: TextStyle(
       fontSize: 14,
       color: cs.onSurface.withValues(alpha: 0.5),
@@ -242,8 +242,7 @@ class _ProxyTypeSheetField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fillColor = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final fillColor = context.appColors.surfaceFill;
 
     String labelOf(String currentValue) {
       switch (currentValue) {

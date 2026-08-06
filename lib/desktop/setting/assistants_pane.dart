@@ -206,9 +206,7 @@ Future<String?> _showAddAssistantDesktopDialog(BuildContext context) async {
                       decoration: InputDecoration(
                         hintText: l10n.assistantSettingsAddSheetHint,
                         filled: true,
-                        fillColor: Theme.of(ctx).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF7F7F9),
+                        fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(

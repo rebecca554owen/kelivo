@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class MessageEditPage extends StatefulWidget {
   const MessageEditPage({super.key, required this.message});
@@ -61,9 +62,7 @@ class _MessageEditPageState extends State<MessageEditPage> {
             decoration: InputDecoration(
               hintText: l10n.messageEditPageHint,
               filled: true,
-              fillColor: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white10
-                  : const Color(0xFFF2F3F5),
+              fillColor: context.appColors.surfaceFill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Colors.transparent),

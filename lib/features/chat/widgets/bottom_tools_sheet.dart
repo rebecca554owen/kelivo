@@ -13,6 +13,7 @@ import '../../instruction_injection/pages/instruction_injection_page.dart';
 import '../../world_book/pages/world_book_page.dart';
 import '../../model/widgets/ocr_prompt_sheet.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class BottomToolsSheet extends StatelessWidget {
   const BottomToolsSheet({
@@ -43,8 +44,7 @@ class BottomToolsSheet extends StatelessWidget {
       required String label,
       VoidCallback? onTap,
     }) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      final cardColor = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+      final cardColor = context.appColors.surfaceFill;
       return Expanded(
         child: SizedBox(
           height: 72,

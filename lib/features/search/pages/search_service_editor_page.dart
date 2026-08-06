@@ -14,6 +14,7 @@ import '../../../theme/app_font_weights.dart';
 import '../../../theme/theme_factory.dart';
 import '../../../utils/brand_assets.dart';
 import 'search_api_keys_page.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class SearchServiceEditorResult {
   const SearchServiceEditorResult.saved(this.service) : deleted = false;
@@ -524,7 +525,6 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
   Widget _buildMultiKeyEntry(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final count = (_text('apiKey').isEmpty ? 0 : 1) + _extraApiKeys.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +545,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white12 : const Color(0xFFF2F3F5),
+              color: context.appColors.surfaceFill,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -1518,7 +1518,7 @@ class _ProviderTypeChipState extends State<_ProviderTypeChip> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = widget.selected
         ? cs.primary.withValues(alpha: isDark ? 0.2 : 0.12)
-        : (isDark ? Colors.white10 : const Color(0xFFF2F3F5));
+        : (context.appColors.surfaceFill);
     final overlay = _pressed
         ? cs.onSurface.withValues(alpha: 0.08)
         : (_hovered
@@ -1901,8 +1901,7 @@ InputDecoration _inputDecoration(
   Widget? suffix,
 }) {
   final cs = Theme.of(context).colorScheme;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final fieldBg = isDark ? Colors.white12 : const Color(0xFFF2F3F5);
+  final fieldBg = context.appColors.surfaceFill;
   return InputDecoration(
     hintText: hint,
     isDense: true,

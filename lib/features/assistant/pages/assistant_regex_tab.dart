@@ -13,6 +13,7 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../core/services/haptics.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class AssistantRegexTab extends StatefulWidget {
   const AssistantRegexTab({super.key, required this.assistantId});
@@ -1189,7 +1190,6 @@ class _RegexTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextField(
       controller: controller,
       autofocus: autofocus,
@@ -1202,7 +1202,7 @@ class _RegexTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+        fillColor: context.appColors.surfaceFill,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -1244,7 +1244,7 @@ class _ScopeChoiceCardState extends State<_ScopeChoiceCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = widget.selected
         ? cs.primary.withValues(alpha: 0.16)
-        : (isDark ? Colors.white10 : const Color(0xFFF2F3F5));
+        : (context.appColors.surfaceFill);
     final borderBase = widget.selected
         ? cs.primary.withValues(alpha: 0.55)
         : cs.outlineVariant.withValues(alpha: isDark ? 0.14 : 0.12);

@@ -68,6 +68,7 @@ import '../features/provider/widgets/share_provider_sheet.dart'
     show encodeProviderConfig;
 import '../utils/clipboard_images.dart';
 import '../utils/provider_grouping_logic.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 part 'setting/assistants_pane.dart';
 part 'setting/providers_pane.dart';

@@ -10,6 +10,7 @@ import '../../features/model/utils/ocr_model_capability.dart';
 import '../../utils/brand_assets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopDefaultModelPane extends StatelessWidget {
   const DesktopDefaultModelPane({super.key});
@@ -913,7 +914,7 @@ class _ModelCardState extends State<_ModelCard> {
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.08 : 0.06,
     );
-    final rowBase = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final rowBase = context.appColors.surfaceFill;
     final hoverOverlay = isDark
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.05);
@@ -1268,12 +1269,11 @@ Widget _promptEditor(
 }
 
 InputDecoration _deskInputDecoration(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   return InputDecoration(
     isDense: false,
     filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+    fillColor: context.appColors.surfaceFill,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(

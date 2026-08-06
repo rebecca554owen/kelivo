@@ -48,6 +48,7 @@ import '../../../features/search/services/global_session_search_service.dart';
 import '../controllers/chat_actions.dart';
 import 'assistant_avatar.dart';
 import 'assistant_entry_actions.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class SideDrawer extends StatefulWidget {
   const SideDrawer({
@@ -486,7 +487,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     row(
                       icon: Lucide.Trash,
                       label: l10n.sideDrawerMenuDelete,
-                      color: Colors.redAccent,
+                      color: Theme.of(context).colorScheme.error,
                       action: () async {
                         final confirmed = await _confirmDeleteConversation(
                           context,
@@ -548,7 +549,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(
                 l10n.sideDrawerMenuDelete,
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           ],
@@ -895,9 +896,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         .split(RegExp(r'\s+'))
         .where((e) => e.isNotEmpty)
         .toList();
-    final highlightColor = isDark
-        ? const Color(0xFFB8860B).withValues(alpha: 0.55)
-        : const Color(0xFFFFD700).withValues(alpha: 0.55);
+    final highlightColor = context.appColors.searchHighlight;
 
     if (_globalSearchLoading) {
       return Align(
@@ -2697,9 +2696,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       decoration: InputDecoration(
                         hintText: l10n.sideDrawerEmojiDialogHint,
                         filled: true,
-                        fillColor: Theme.of(ctx).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF2F3F5),
+                        fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.transparent),
@@ -2809,9 +2806,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 decoration: InputDecoration(
                   hintText: l10n.sideDrawerImageUrlDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.transparent),
@@ -2936,9 +2931,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 decoration: InputDecoration(
                   hintText: l10n.sideDrawerQQAvatarInputHint,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.transparent),
@@ -3089,7 +3082,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       context: context,
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         String value = controller.text;
         bool valid(String v) => v.trim().isNotEmpty && v.trim() != initial;
         return StatefulBuilder(
@@ -3118,9 +3110,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       labelText: l10n.sideDrawerNicknameLabel,
                       hintText: l10n.sideDrawerNicknameHint,
                       filled: true,
-                      fillColor: isDark
-                          ? Colors.white10
-                          : const Color(0xFFF2F3F5),
+                      fillColor: context.appColors.surfaceFill,
                       counterText: '',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -3362,11 +3352,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 ? l10n.sideDrawerUpdateTitleWithBuild(ver, build)
                 : l10n.sideDrawerUpdateTitle(ver);
             final cs2 = Theme.of(context).colorScheme;
-            final isDark2 = Theme.of(context).brightness == Brightness.dark;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Material(
-                color: isDark2 ? Colors.white10 : const Color(0xFFF2F3F5),
+                color: context.appColors.surfaceFill,
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),

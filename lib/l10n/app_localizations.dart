@@ -8186,6 +8186,60 @@ abstract class AppLocalizations {
   /// **'Color Palettes'**
   String get themeSettingsPageColorPalettesSection;
 
+  /// No description provided for @themeSettingsPageCustomPaletteName.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get themeSettingsPageCustomPaletteName;
+
+  /// No description provided for @themeSettingsPageCustomColorsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Colors'**
+  String get themeSettingsPageCustomColorsSection;
+
+  /// No description provided for @themeSettingsPageCustomSeedColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed Color'**
+  String get themeSettingsPageCustomSeedColorTitle;
+
+  /// No description provided for @themeSettingsPageCustomSeedColorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a full palette from this color'**
+  String get themeSettingsPageCustomSeedColorSubtitle;
+
+  /// No description provided for @themeSettingsPageCustomPrimaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary Override'**
+  String get themeSettingsPageCustomPrimaryTitle;
+
+  /// No description provided for @themeSettingsPageCustomPrimarySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional; replaces the generated primary'**
+  String get themeSettingsPageCustomPrimarySubtitle;
+
+  /// No description provided for @themeSettingsPageCustomSurfaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Surface Override'**
+  String get themeSettingsPageCustomSurfaceTitle;
+
+  /// No description provided for @themeSettingsPageCustomSurfaceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional; ignored while Pure Background is on'**
+  String get themeSettingsPageCustomSurfaceSubtitle;
+
+  /// No description provided for @themeSettingsPageCustomColorReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get themeSettingsPageCustomColorReset;
+
   /// No description provided for @ttsServicesPageBackButton.
   ///
   /// In en, this message translates to:

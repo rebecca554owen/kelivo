@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class IosFormTextField extends StatelessWidget {
   const IosFormTextField({
@@ -57,7 +58,7 @@ class IosFormTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fieldBg = isDark ? Colors.white12 : const Color(0xFFF2F3F5);
+    final fieldBg = context.appColors.surfaceFill;
     final labelColor = cs.onSurface.withValues(alpha: 0.85);
     final valueColor = cs.onSurface.withValues(alpha: enabled ? 0.92 : 0.55);
     final hintColor = cs.onSurface.withValues(alpha: isDark ? 0.42 : 0.46);

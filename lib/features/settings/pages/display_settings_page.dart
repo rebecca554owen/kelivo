@@ -18,6 +18,7 @@ import '../../../core/services/haptics.dart';
 import 'package:file_picker/file_picker.dart';
 import 'google_fonts_picker_page.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 enum _FontTarget { app, code }
 
@@ -815,9 +816,7 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white12
-                            : const Color(0xFFF2F3F5),
+                        color: context.appColors.surfaceFill,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(

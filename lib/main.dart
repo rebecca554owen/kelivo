@@ -729,7 +729,23 @@ class MyApp extends StatelessWidget {
               });
 
               final useDyn = isAndroid && settings.useDynamicColor;
-              final palette = ThemePalettes.byId(settings.themePaletteId);
+              final palette =
+                  settings.themePaletteId == ThemePalettes.customPaletteId
+                  ? buildCustomPalette(
+                      seed: Color(
+                        settings.customSeedColor ??
+                            ThemePalettes
+                                .defaultPalette.light.primary
+                                .toARGB32(),
+                      ),
+                      primaryOverride: settings.customPrimaryOverride != null
+                          ? Color(settings.customPrimaryOverride!)
+                          : null,
+                      surfaceOverride: settings.customSurfaceOverride != null
+                          ? Color(settings.customSurfaceOverride!)
+                          : null,
+                    )
+                  : ThemePalettes.byId(settings.themePaletteId);
 
               final light = buildLightThemeForScheme(
                 palette.light,

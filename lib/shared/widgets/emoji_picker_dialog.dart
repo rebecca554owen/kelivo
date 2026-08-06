@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'emoji_text.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// A reusable emoji picker dialog used by both mobile and desktop.
 /// Returns the chosen emoji (single grapheme) or null if cancelled.
@@ -188,9 +189,7 @@ Future<String?> showEmojiPickerDialog(
                     decoration: InputDecoration(
                       hintText: hintText ?? l10n.assistantEditEmojiDialogHint,
                       filled: true,
-                      fillColor: Theme.of(ctx).brightness == Brightness.dark
-                          ? Colors.white10
-                          : const Color(0xFFF2F3F5),
+                      fillColor: ctx.appColors.surfaceFill,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: Colors.transparent),

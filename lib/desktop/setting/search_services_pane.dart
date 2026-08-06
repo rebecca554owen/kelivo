@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:uuid/uuid.dart';
 import '../../shared/widgets/ios_switch.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopSearchServicesPane extends StatefulWidget {
   const DesktopSearchServicesPane({super.key});
@@ -307,12 +308,12 @@ class _ServiceCardState extends State<_ServiceCard> {
       statusFg = cs.primary;
     } else if (conn == true) {
       statusText = l10n.searchServicesPageConnectedStatus;
-      statusBg = Colors.green.withValues(alpha: 0.12);
-      statusFg = Colors.green;
+      statusBg = context.appColors.success.withValues(alpha: 0.12);
+      statusFg = context.appColors.success;
     } else if (conn == false) {
       statusText = l10n.searchServicesPageFailedStatus;
-      statusBg = Colors.orange.withValues(alpha: 0.12);
-      statusFg = Colors.orange;
+      statusBg = context.appColors.warning.withValues(alpha: 0.12);
+      statusFg = context.appColors.warning;
     } else {
       statusText = l10n.searchServicesPageNotTestedStatus;
       statusBg = cs.onSurface.withValues(alpha: 0.06);
@@ -1497,7 +1498,6 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
 
   Widget _multiKeyTile() {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     final primary = _controllers['apiKey']?.text.trim() ?? '';
     final count = (primary.isEmpty ? 0 : 1) + _extraApiKeys.length;
@@ -1509,7 +1509,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+            color: context.appColors.surfaceFill,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1987,7 +1987,7 @@ class _ServiceTypeChipsState extends State<_ServiceTypeChips> {
         final name = _serviceTypeName(context, it.type);
         final bg = selected
             ? cs.primary.withValues(alpha: isDark ? 0.18 : 0.12)
-            : (isDark ? Colors.white12 : const Color(0xFFF7F7F9));
+            : (context.appColors.surfaceFill);
         final fg = selected ? cs.primary : cs.onSurface.withValues(alpha: 0.85);
         return GestureDetector(
           onTap: () => widget.onChanged(it.type),
@@ -2407,12 +2407,11 @@ class _DeskIosButtonState extends State<_DeskIosButton> {
 }
 
 InputDecoration _deskInputDecoration(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   return InputDecoration(
     isDense: false,
     filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+    fillColor: context.appColors.surfaceFill,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(

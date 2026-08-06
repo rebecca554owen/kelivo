@@ -343,7 +343,7 @@ class _SettingsCard extends StatelessWidget {
     return Material(
       color: sp.usePureBackground
           ? (isDark ? Colors.black : Colors.white)
-          : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
+          : (Theme.of(context).colorScheme.surfaceContainerHigh),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
@@ -1834,8 +1834,7 @@ Future<String?> _showDesktopFontChooserDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        final bg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+        final bg = Theme.of(context).colorScheme.surfaceContainerHigh;
         final cs2 = Theme.of(ctx).colorScheme;
         return Dialog(
           elevation: 0,
@@ -1926,9 +1925,7 @@ Future<String?> _showDesktopFontChooserDialog(
                         filled: true,
                         hintText: l10n.desktopFontFilterHint,
                         fillColor:
-                            Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF7F7F9),
+                            context.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
@@ -3155,7 +3152,7 @@ class _SendShortcutDropdownState extends State<_SendShortcutDropdown> {
         ).usePureBackground;
         final bgColor = usePure
             ? (isDark ? Colors.black : Colors.white)
-            : (isDark ? const Color(0xFF1C1C1E) : Colors.white);
+            : (Theme.of(context).colorScheme.surfaceContainerHigh);
         final sp = Provider.of<SettingsProvider>(ctx, listen: false);
 
         return Stack(
@@ -3192,7 +3189,6 @@ class _SendShortcutDropdownState extends State<_SendShortcutDropdown> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sp = context.watch<SettingsProvider>();
     final label = _labelFor(context, sp.desktopSendShortcut);
 
@@ -3215,7 +3211,7 @@ class _SendShortcutDropdownState extends State<_SendShortcutDropdown> {
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             constraints: const BoxConstraints(minWidth: 130, minHeight: 34),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF141414) : Colors.white,
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: borderColor, width: 1),
               boxShadow: _open

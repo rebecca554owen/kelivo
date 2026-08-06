@@ -14,6 +14,7 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import 'model_edit_state_helper.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<bool?> showModelDetailSheet(
   BuildContext context, {
@@ -967,7 +968,7 @@ class _SegmentedSingle extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+        color: context.appColors.surfaceFill,
         border: Border.all(
           color: Theme.of(
             context,
@@ -1042,7 +1043,7 @@ class _SegmentedMulti extends StatelessWidget {
         isSelected.isNotEmpty && isSelected.every((e) => e);
     final int selectedCount = isSelected.where((e) => e).length;
 
-    final base = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final base = context.appColors.surfaceFill;
     final sel = isDark
         ? cs.primary.withValues(alpha: 0.20)
         : cs.primary.withValues(alpha: 0.14);
@@ -1349,13 +1350,12 @@ class _ToolTile extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final bool isDisabled = onChanged == null;
     return Opacity(
       opacity: isDisabled ? 0.45 : 1.0,
       child: Material(
-        color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+        color: context.appColors.surfaceFill,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

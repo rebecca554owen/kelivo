@@ -11,6 +11,7 @@ import '../../../core/models/conversation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../home/controllers/chat_actions.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class ChatHistoryPage extends StatefulWidget {
   const ChatHistoryPage({super.key, this.assistantId});
@@ -35,7 +36,6 @@ class _ChatHistoryPageState extends State<ChatHistoryPage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chatService = context.watch<ChatService>();
     final List<Conversation> all = chatService
         .getAllConversations()
@@ -95,7 +95,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage>
                       onPressed: () => Navigator.of(ctx).pop(true),
                       child: Text(
                         l10n.chatHistoryPageDelete,
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                     ),
                   ],
@@ -155,9 +155,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage>
                           decoration: InputDecoration(
                             hintText: l10n.chatHistoryPageSearchHint,
                             filled: true,
-                            fillColor: isDark
-                                ? Colors.white10
-                                : const Color(0xFFF2F3F5),
+                            fillColor: context.appColors.surfaceFill,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 12,
@@ -312,8 +310,7 @@ class _ConversationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white12 : const Color(0xFFF7F7F9);
+    final bg = context.appColors.surfaceFill;
     final border = cs.outlineVariant.withValues(alpha: 0.16);
 
     return Padding(

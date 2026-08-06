@@ -353,9 +353,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   },
                   pressedScale: 0.98,
                   builder: (pressed) {
-                    final bg = isDark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5);
+                    final bg = context.appColors.surfaceFill;
                     final overlay = isDark
                         ? Colors.white.withValues(alpha: 0.06)
                         : Colors.black.withValues(alpha: 0.05);
@@ -463,9 +461,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                     onTap: () => _pickBackground(context, a),
                     pressedScale: 0.98,
                     builder: (pressed) {
-                      final bg = isDark
-                          ? Colors.white10
-                          : const Color(0xFFF2F3F5);
+                      final bg = context.appColors.surfaceFill;
                       final overlay = isDark
                           ? Colors.white.withValues(alpha: 0.06)
                           : Colors.black.withValues(alpha: 0.05);
@@ -1130,9 +1126,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   decoration: InputDecoration(
                     hintText: l10n.assistantEditMaxTokensHint,
                     filled: true,
-                    fillColor: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    fillColor: ctx.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -1656,9 +1650,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                       decoration: InputDecoration(
                         hintText: l10n.assistantEditEmojiDialogHint,
                         filled: true,
-                        fillColor: Theme.of(ctx).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF2F3F5),
+                        fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.transparent),
@@ -1767,9 +1759,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                 decoration: InputDecoration(
                   hintText: l10n.assistantEditImageUrlDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.transparent),
@@ -1891,9 +1881,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                 decoration: InputDecoration(
                   hintText: l10n.assistantEditQQAvatarDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.transparent),

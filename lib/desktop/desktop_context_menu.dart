@@ -259,9 +259,9 @@ class _GlassMenuItemState extends State<_GlassMenuItem> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fg = widget.danger ? Colors.red.shade600 : cs.onSurface;
+    final fg = widget.danger ? Theme.of(context).colorScheme.error : cs.onSurface;
     final ic = widget.danger
-        ? Colors.red.shade600
+        ? Theme.of(context).colorScheme.error
         : cs.onSurface.withValues(alpha: 0.9);
     final bg = _hover
         ? (isDark

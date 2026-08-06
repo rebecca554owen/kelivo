@@ -50,6 +50,7 @@ import '../../../utils/brand_assets.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../utils/assistant_edit_tab_layout.dart';
 import 'assistant_regex_tab.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 part 'assistant_settings_edit_basic_tab.dart';
 part 'assistant_settings_edit_prompt_tab.dart';
@@ -987,7 +988,6 @@ class _InputRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -998,7 +998,7 @@ class _InputRow extends StatelessWidget {
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+            color: context.appColors.surfaceFill,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: cs.outlineVariant.withValues(alpha: 0.35),
@@ -1397,7 +1397,6 @@ class _IosButtonState extends State<_IosButton> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Determine if this is a Material icon (needs more spacing)
     final isMaterialIcon =
@@ -1434,7 +1433,7 @@ class _IosButtonState extends State<_IosButton> {
           decoration: BoxDecoration(
             color: widget.filled
                 ? cs.primary
-                : (isDark ? Colors.white10 : const Color(0xFFF2F3F5)),
+                : (context.appColors.surfaceFill),
             borderRadius: BorderRadius.circular(12),
             border: widget.filled ? null : Border.all(color: borderColor),
           ),
@@ -1851,9 +1850,7 @@ class _DesktopAssistantBasicPaneState
                     labelText: l10n.assistantEditAssistantNameLabel,
                     isDense: true,
                     filled: true,
-                    fillColor: isDark
-                        ? Colors.white10
-                        : const Color(0xFFF7F7F9),
+                    fillColor: context.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
@@ -2187,9 +2184,7 @@ class _DesktopAssistantBasicPaneState
                           vertical: 20,
                         ),
                         filled: true,
-                        fillColor: isDark
-                            ? Colors.white10
-                            : const Color(0xFFF7F7F9),
+                        fillColor: context.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
@@ -2311,9 +2306,7 @@ class _DesktopAssistantBasicPaneState
                       },
                       pressedScale: 0.98,
                       builder: (pressed) {
-                        final base = isDark
-                            ? Colors.white10
-                            : const Color(0xFFF2F3F5);
+                        final base = context.appColors.surfaceFill;
                         final pressOv = isDark
                             ? Colors.white.withValues(alpha: 0.06)
                             : Colors.black.withValues(alpha: 0.05);
@@ -2404,9 +2397,7 @@ class _DesktopAssistantBasicPaneState
                         onTap: () => _pickBackground(context, a),
                         pressedScale: 0.98,
                         builder: (pressed) {
-                          final base = isDark
-                              ? Colors.white10
-                              : const Color(0xFFF2F3F5);
+                          final base = context.appColors.surfaceFill;
                           final pressOv = isDark
                               ? Colors.white.withValues(alpha: 0.06)
                               : Colors.black.withValues(alpha: 0.05);
@@ -2625,9 +2616,7 @@ class _DesktopAssistantBasicPaneState
             decoration: InputDecoration(
               hintText: l10n.assistantEditImageUrlDialogHint,
               filled: true,
-              fillColor: Theme.of(ctx).brightness == Brightness.dark
-                  ? Colors.white10
-                  : const Color(0xFFF2F3F5),
+              fillColor: ctx.appColors.surfaceFill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.transparent),
@@ -2732,9 +2721,7 @@ class _DesktopAssistantBasicPaneState
                 decoration: InputDecoration(
                   hintText: l10n.assistantEditQQAvatarDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.transparent),

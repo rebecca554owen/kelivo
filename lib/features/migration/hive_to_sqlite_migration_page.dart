@@ -15,6 +15,7 @@ import '../../shared/widgets/restart_app_action.dart';
 import '../../theme/app_font_weights.dart';
 import '../../utils/platform_utils.dart';
 import 'hive_to_sqlite_migration_service.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 typedef MobileBackupSaver =
     Future<bool> Function({required String sourcePath, String? fileName});
@@ -1005,7 +1006,6 @@ class _StatusDot extends StatelessWidget {
 
   final _TaskState state;
 
-  static const Color _success = Colors.green;
 
   @override
   Widget build(BuildContext context) {
@@ -1017,9 +1017,9 @@ class _StatusDot extends StatelessWidget {
         _TaskState.done => Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: _success, width: 1.55),
+            border: Border.all(color: context.appColors.success, width: 1.55),
           ),
-          child: const Icon(Lucide.Check, size: 13, color: _success),
+          child: Icon(Lucide.Check, size: 13, color: context.appColors.success),
         ),
         _TaskState.active => _SpinningStatusDot(color: cs.primary),
         _TaskState.pending => CustomPaint(
@@ -1258,13 +1258,13 @@ class _BackupFileCard extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.12),
+              color: context.appColors.success.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Lucide.databaseBackup,
               size: 17,
-              color: Colors.green,
+              color: context.appColors.success,
             ),
           ),
           const SizedBox(width: 11),

@@ -10,6 +10,7 @@ import '../../shared/widgets/ios_switch.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../core/providers/settings_provider.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopNetworkProxyPane extends StatefulWidget {
   const DesktopNetworkProxyPane({super.key});
@@ -311,7 +312,7 @@ class _DesktopNetworkProxyPaneState extends State<DesktopNetworkProxyPane> {
                       child: Text(
                         l10n.networkProxyTestSuccess,
                         style: TextStyle(
-                          color: Colors.green.shade600,
+                          color: context.appColors.success,
                           fontWeight: AppFontWeights.semibold,
                         ),
                       ),
@@ -538,12 +539,11 @@ Widget _sectionCard({required List<Widget> children}) {
 }
 
 InputDecoration _deskInputDecoration(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   return InputDecoration(
     isDense: true,
     filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+    fillColor: context.appColors.surfaceFill,
     hintStyle: TextStyle(
       fontSize: 14,
       color: cs.onSurface.withValues(alpha: 0.5),
@@ -602,8 +602,7 @@ class _ProxyTypeDropdownState extends State<_ProxyTypeDropdown> {
     final size = rb.size;
     _entry = OverlayEntry(
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        final bgColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+        final bgColor = Theme.of(context).colorScheme.surfaceContainerHigh;
         return Stack(
           children: [
             Positioned.fill(
@@ -639,7 +638,6 @@ class _ProxyTypeDropdownState extends State<_ProxyTypeDropdown> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseBorder = cs.outlineVariant.withValues(alpha: 0.18);
     final hoverBorder = cs.primary;
     final borderColor = _open || _hover ? hoverBorder : baseBorder;
@@ -673,7 +671,7 @@ class _ProxyTypeDropdownState extends State<_ProxyTypeDropdown> {
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
             constraints: const BoxConstraints(minWidth: 150, minHeight: 40),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF141414) : Colors.white,
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: borderColor, width: 1),
               boxShadow: _open

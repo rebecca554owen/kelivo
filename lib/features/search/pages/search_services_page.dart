@@ -11,6 +11,7 @@ import '../../../core/services/haptics.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../theme/app_font_weights.dart';
 import 'search_service_editor_page.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class SearchServicesPage extends StatefulWidget {
   const SearchServicesPage({super.key});
@@ -433,12 +434,12 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
       statusFg = cs.primary;
     } else if (conn == true) {
       statusText = l10n.searchServicesPageConnectedStatus;
-      statusBg = Colors.green.withValues(alpha: 0.12);
-      statusFg = Colors.green;
+      statusBg = context.appColors.success.withValues(alpha: 0.12);
+      statusFg = context.appColors.success;
     } else if (conn == false) {
       statusText = l10n.searchServicesPageFailedStatus;
-      statusBg = Colors.orange.withValues(alpha: 0.12);
-      statusFg = Colors.orange;
+      statusBg = context.appColors.warning.withValues(alpha: 0.12);
+      statusFg = context.appColors.warning;
     } else {
       statusText = l10n.searchServicesPageNotTestedStatus;
       statusBg = cs.onSurface.withValues(alpha: 0.06);

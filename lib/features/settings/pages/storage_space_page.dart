@@ -15,6 +15,7 @@ import '../../../utils/platform_utils.dart';
 import '../../chat/pages/image_viewer_page.dart';
 import 'log_viewer_page.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class StorageSpacePage extends StatefulWidget {
   const StorageSpacePage({super.key, this.embedded = false});
@@ -69,27 +70,26 @@ class _StorageSpacePageState extends State<StorageSpacePage> {
     return '$bytes B';
   }
 
-  Color _barColorFor(StorageUsageCategoryKey key, ColorScheme cs) {
-    switch (key) {
-      case StorageUsageCategoryKey.images:
-        return const Color(0xFF6366F1); // indigo
-      case StorageUsageCategoryKey.files:
-        return const Color(0xFFA855F7); // purple
-      case StorageUsageCategoryKey.chatData:
-        return const Color(0xFF22C55E);
-      case StorageUsageCategoryKey.legacyChatData:
-        return const Color(0xFFF59E0B);
-      case StorageUsageCategoryKey.restoreTraces:
-        return const Color(0xFF0EA5E9);
-      case StorageUsageCategoryKey.assistantData:
-        return const Color(0xFF3B82F6); // blue (distinct from chat green)
-      case StorageUsageCategoryKey.cache:
-        return const Color(0xFFEF4444); // red
-      case StorageUsageCategoryKey.logs:
-        return const Color(0xFFEAB308); // yellow
-      case StorageUsageCategoryKey.other:
-        return cs.onSurface.withValues(alpha: 0.22);
+  Color _barColorFor(
+    StorageUsageCategoryKey key,
+    ColorScheme cs,
+    AppSemanticColors appColors,
+  ) {
+    if (key == StorageUsageCategoryKey.other) {
+      return cs.onSurface.withValues(alpha: 0.22);
     }
+    const order = [
+      StorageUsageCategoryKey.images,
+      StorageUsageCategoryKey.files,
+      StorageUsageCategoryKey.chatData,
+      StorageUsageCategoryKey.legacyChatData,
+      StorageUsageCategoryKey.restoreTraces,
+      StorageUsageCategoryKey.assistantData,
+      StorageUsageCategoryKey.cache,
+      StorageUsageCategoryKey.logs,
+    ];
+    final series = appColors.chartSeries;
+    return series[order.indexOf(key) % series.length];
   }
 
   IconData _iconFor(StorageUsageCategoryKey key) {
@@ -663,12 +663,12 @@ class _StorageSpacePageState extends State<StorageSpacePage> {
                 _UsageBar(
                   categories: report.categories,
                   totalBytes: total,
-                  colorFor: (k) => _barColorFor(k, cs),
+                  colorFor: (k) => _barColorFor(k, cs, context.appColors),
                 ),
                 const SizedBox(height: 10),
                 _UsageLegend(
                   categories: report.categories,
-                  colorFor: (k) => _barColorFor(k, cs),
+                  colorFor: (k) => _barColorFor(k, cs, context.appColors),
                   titleFor: (k) => _titleFor(k, l10n),
                 ),
                 if (report.clearable.bytes > 0) ...[

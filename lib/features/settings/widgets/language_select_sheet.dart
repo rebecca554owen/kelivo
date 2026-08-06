@@ -237,7 +237,7 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
                               Icon(
                                 Lucide.X,
                                 size: 20,
-                                color: Colors.red.shade600,
+                                color: Theme.of(context).colorScheme.error,
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -245,7 +245,7 @@ class _LanguageSelectSheetState extends State<_LanguageSelectSheet> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: AppFontWeights.medium,
-                                  color: Colors.red.shade600,
+                                  color: Theme.of(context).colorScheme.error,
                                 ),
                               ),
                             ],

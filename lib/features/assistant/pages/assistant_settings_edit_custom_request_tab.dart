@@ -289,11 +289,10 @@ class _HeaderRowState extends State<_HeaderRow> {
 
   InputDecoration _dec(BuildContext context, String label) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+      fillColor: context.appColors.surfaceFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -403,11 +402,10 @@ class _BodyRowState extends State<_BodyRow> {
 
   InputDecoration _dec(BuildContext context, String label) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+      fillColor: context.appColors.surfaceFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,

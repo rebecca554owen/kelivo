@@ -4,6 +4,7 @@ import '../features/chat/models/message_edit_result.dart';
 import '../l10n/app_localizations.dart';
 import '../icons/lucide_adapter.dart';
 import '../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<MessageEditResult?> showMessageEditDesktopDialog(
   BuildContext context, {
@@ -43,7 +44,6 @@ class _MessageEditDesktopDialogState extends State<_MessageEditDesktopDialog> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     return Dialog(
       elevation: 12,
@@ -138,9 +138,7 @@ class _MessageEditDesktopDialogState extends State<_MessageEditDesktopDialog> {
                       decoration: InputDecoration(
                         hintText: l10n.messageEditPageHint,
                         filled: true,
-                        fillColor: isDark
-                            ? Colors.white10
-                            : const Color(0xFFF7F7F9),
+                        fillColor: context.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(

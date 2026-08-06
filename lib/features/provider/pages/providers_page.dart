@@ -22,6 +22,7 @@ import '../widgets/provider_avatar.dart';
 import '../widgets/provider_group_select_sheet.dart';
 import '../../../utils/provider_grouping_logic.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -668,7 +669,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               l10n.providerDetailPageDeleteButton,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -1224,9 +1225,9 @@ class _ProviderRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     final statusBg = enabled
-        ? Colors.green.withValues(alpha: 0.12)
-        : Colors.orange.withValues(alpha: 0.15);
-    final statusFg = enabled ? Colors.green : Colors.orange;
+        ? context.appColors.success.withValues(alpha: 0.12)
+        : context.appColors.warning.withValues(alpha: 0.15);
+    final statusFg = enabled ? context.appColors.success : context.appColors.warning;
 
     final row = _TactileRow(
       onTap: () {

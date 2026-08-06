@@ -81,9 +81,7 @@ class _QuickPhraseTab extends StatelessWidget {
                             labelText: l10n.quickPhraseTitleLabel,
                             filled: true,
                             fillColor:
-                                Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF2F3F5),
+                                ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
@@ -108,9 +106,7 @@ class _QuickPhraseTab extends StatelessWidget {
                             alignLabelWithHint: true,
                             filled: true,
                             fillColor:
-                                Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF2F3F5),
+                                ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
@@ -562,7 +558,6 @@ class _QuickPhraseEditSheetState extends State<_QuickPhraseEditSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
       top: false,
@@ -606,7 +601,7 @@ class _QuickPhraseEditSheetState extends State<_QuickPhraseEditSheet> {
               decoration: InputDecoration(
                 labelText: l10n.quickPhraseTitleLabel,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -635,7 +630,7 @@ class _QuickPhraseEditSheetState extends State<_QuickPhraseEditSheet> {
                 labelText: l10n.quickPhraseContentLabel,
                 alignLabelWithHint: true,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(

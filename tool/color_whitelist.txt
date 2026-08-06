@@ -1,0 +1,11 @@
+lib/shared/widgets/plantuml_block.dart
+lib/shared/widgets/mermaid_bridge_stub.dart
+lib/shared/widgets/mermaid_bridge_web.dart
+lib/shared/widgets/mermaid_bridge.dart
+lib/shared/widgets/mermaid_cache.dart
+lib/shared/widgets/mermaid_exporter.dart
+lib/shared/widgets/mermaid_image_cache.dart
+lib/shared/widgets/markdown_with_highlight.dart
+lib/shared/widgets/incremental_markdown_document.dart
+lib/features/chat/pages/image_viewer_page.dart
+lib/features/settings/pages/theme_settings_page.dart

@@ -15,6 +15,7 @@ import '../../../core/services/haptics.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class AssistantSettingsPage extends StatelessWidget {
   const AssistantSettingsPage({super.key});
@@ -436,7 +437,6 @@ Future<String?> _showAddAssistantSheet(BuildContext context) async {
     ),
     builder: (ctx) {
       final cs = Theme.of(ctx).colorScheme;
-      final isDark = Theme.of(ctx).brightness == Brightness.dark;
       final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
       return SafeArea(
         top: false,
@@ -478,7 +478,7 @@ Future<String?> _showAddAssistantSheet(BuildContext context) async {
                 decoration: InputDecoration(
                   hintText: l10n.assistantSettingsAddSheetHint,
                   filled: true,
-                  fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                  fillColor: context.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(

@@ -78,9 +78,7 @@ class _MemoryTab extends StatelessWidget {
                             hintText: l10n.assistantEditMemoryDialogHint,
                             filled: true,
                             fillColor:
-                                Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF7F7F9),
+                                ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -210,9 +208,7 @@ class _MemoryTab extends StatelessWidget {
                       decoration: InputDecoration(
                         hintText: l10n.assistantEditMemoryDialogHint,
                         filled: true,
-                        fillColor: Theme.of(ctx).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF7F7F9),
+                        fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -688,9 +684,7 @@ class _MemoryTab extends StatelessWidget {
                             hintText: l10n.assistantEditSummaryDialogHint,
                             filled: true,
                             fillColor:
-                                Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF7F7F9),
+                                ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -804,9 +798,7 @@ class _MemoryTab extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.assistantEditSummaryDialogHint,
                     filled: true,
-                    fillColor: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF7F7F9),
+                    fillColor: ctx.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderSide: BorderSide(
                         color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1063,9 +1055,7 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
                         hintText: l10n
                             .assistantEditRecentChatsSummaryFrequencyCustomHint,
                         filled: true,
-                        fillColor: Theme.of(ctx).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF7F7F9),
+                        fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1242,7 +1232,7 @@ class _FrequencyChipButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseBackground = selected
         ? cs.primary.withValues(alpha: isDark ? 0.22 : 0.12)
-        : (isDark ? Colors.white10 : const Color(0xFFF2F3F5));
+        : (context.appColors.surfaceFill);
     final borderColor = selected
         ? cs.primary.withValues(alpha: 0.38)
         : (emphasized

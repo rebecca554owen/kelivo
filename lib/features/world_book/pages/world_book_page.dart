@@ -17,6 +17,7 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class WorldBookPage extends StatefulWidget {
   const WorldBookPage({super.key});
@@ -313,7 +314,7 @@ class _WorldBookPageState extends State<WorldBookPage> {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(
                 l10n.worldBookDelete,
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           ],
@@ -1808,9 +1809,7 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
                                       height: 40,
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: isDark
-                                              ? Colors.white12
-                                              : const Color(0xFFF2F3F5),
+                                          color: context.appColors.surfaceFill,
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -1864,9 +1863,7 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
                                       message:
                                           l10n.worldBookEntryKeywordAddTooltip,
                                       child: IosCardPress(
-                                        baseColor: isDark
-                                            ? Colors.white12
-                                            : const Color(0xFFF2F3F5),
+                                        baseColor: context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(12),
                                         pressedScale: 0.98,
                                         haptics: false,
@@ -2032,9 +2029,7 @@ class _IosOutlineButtonState extends State<_IosOutlineButton> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bg = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white10
-        : const Color(0xFFF2F3F5);
+    final bg = context.appColors.surfaceFill;
     final overlay = _pressed
         ? (Theme.of(context).brightness == Brightness.dark
               ? Colors.white12

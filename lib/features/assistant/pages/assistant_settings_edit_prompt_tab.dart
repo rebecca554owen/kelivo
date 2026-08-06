@@ -994,7 +994,6 @@ class _SystemPromptMobileSheetState extends State<_SystemPromptMobileSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.96,
@@ -1026,7 +1025,7 @@ class _SystemPromptMobileSheetState extends State<_SystemPromptMobileSheet> {
             Expanded(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+                  color: context.appColors.surfaceFill,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1138,9 +1137,7 @@ class _SystemPromptDesktopDialogState
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white10
-                              : const Color(0xFFF7F7F9),
+                          color: context.appColors.surfaceFill,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1408,9 +1405,7 @@ Future<void> _showEditPresetDialog(
                       ? l10n.assistantEditPresetInputHintAssistant
                       : l10n.assistantEditPresetInputHintUser,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF7F7F9),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(

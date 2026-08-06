@@ -251,7 +251,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
                       onPressed: () => Navigator.of(ctx).pop(true),
                       child: Text(
                         l10n.providerDetailPageDeleteButton,
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                     ),
                   ],
@@ -2156,12 +2156,11 @@ class _DesktopProviderDetailPaneState
   }
 
   InputDecoration _inputDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+      fillColor: context.appColors.surfaceFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(
@@ -2237,12 +2236,11 @@ class _DesktopProviderDetailPaneState
   }
 
   InputDecoration _proxyInputDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+      fillColor: context.appColors.surfaceFill,
       hintStyle: TextStyle(
         fontSize: 14,
         color: cs.onSurface.withValues(alpha: 0.5),
@@ -2624,10 +2622,7 @@ class _DesktopProviderDetailPaneState
                                       options: groupOptions,
                                       maxLabelWidth: 150,
                                       triggerFillColor:
-                                          Theme.of(ctx).brightness ==
-                                              Brightness.dark
-                                          ? Colors.white10
-                                          : const Color(0xFFF7F7F9),
+                                          ctx.appColors.surfaceFill,
                                       onSelected: (v) async {
                                         if (v ==
                                             SettingsProvider
@@ -3149,10 +3144,7 @@ class _DesktopProviderDetailPaneState
                                             ),
                                           ],
                                           triggerFillColor:
-                                              Theme.of(ctx).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.white10
-                                              : const Color(0xFFF7F7F9),
+                                              ctx.appColors.surfaceFill,
                                           onSelected: (value) async {
                                             final old = spWatch
                                                 .getProviderConfig(
@@ -3214,10 +3206,7 @@ class _DesktopProviderDetailPaneState
                                         value: proxyTypeNow,
                                         options: proxyTypeOptions,
                                         triggerFillColor:
-                                            Theme.of(ctx).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white10
-                                            : const Color(0xFFF7F7F9),
+                                            ctx.appColors.surfaceFill,
                                         onSelected: (value) async {
                                           final old = spWatch.getProviderConfig(
                                             widget.providerKey,
@@ -3488,9 +3477,7 @@ class _DesktopProviderDetailPaneState
                 decoration: InputDecoration(
                   hintText: l10n.sideDrawerImageUrlDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx2).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx2.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Colors.transparent),
@@ -4549,7 +4536,7 @@ class _DesktopProviderDetailPaneState
             break;
           case _TestState.success:
             message = l10n.providerDetailPageTestSuccessMessage;
-            color = Colors.green;
+            color = context.appColors.success;
             break;
           case _TestState.error:
             message = errorMessage.isNotEmpty ? errorMessage : 'Error';
@@ -4593,9 +4580,7 @@ class _DesktopProviderDetailPaneState
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF7F7F9),
+                            color: ctx.appColors.surfaceFill,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: cs.outlineVariant.withValues(alpha: 0.12),
@@ -5108,7 +5093,7 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
                     listen: false,
                   ).usePureBackground)
                   ? (isDark ? Colors.black : Colors.white)
-                  : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
+                  : (Theme.of(context).colorScheme.surfaceContainerHigh),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: cs.outlineVariant.withValues(alpha: 0.12),
@@ -5262,7 +5247,7 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
                           listen: false,
                         ).usePureBackground)
                         ? (isDark ? Colors.black : Colors.white)
-                        : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
+                        : (Theme.of(context).colorScheme.surfaceContainerHigh),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: cs.outlineVariant.withValues(alpha: 0.12),
@@ -5348,10 +5333,7 @@ class _GreyCapsule extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF2F3F5);
+    final bg = context.appColors.surfaceFill;
     final fg = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -5583,7 +5565,7 @@ class _DesktopProviderGroupsDialogState
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               l10n.providerGroupsDeleteConfirmOk,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -5764,7 +5746,7 @@ class _DesktopProviderGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final bg = context.appColors.surfaceFill;
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.12 : 0.10,
     );
@@ -6345,7 +6327,7 @@ class _ProviderListRowState extends State<_ProviderListRow> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (widget.enabled ? Colors.green : Colors.orange)
+                  color: (widget.enabled ? context.appColors.success : context.appColors.warning)
                       .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                   // No border for left list status
@@ -6358,7 +6340,7 @@ class _ProviderListRowState extends State<_ProviderListRow> {
                         )!.providersPageDisabledStatus,
                   style: TextStyle(
                     fontSize: 11,
-                    color: widget.enabled ? Colors.green : Colors.orange,
+                    color: widget.enabled ? context.appColors.success : context.appColors.warning,
                     fontWeight: AppFontWeights.emphasis,
                   ),
                 ),
@@ -6455,7 +6437,7 @@ class _DesktopIosSectionCard extends StatelessWidget {
     final Color base = cs.surface;
     final Color bg = isDark
         ? Color.lerp(base, Colors.white, 0.06)!
-        : const Color(0xFFF7F7F9);
+        : Color.lerp(base, Colors.black, 0.04)!;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -6504,7 +6486,7 @@ class _DesktopKeyRow extends StatelessWidget {
     Color statusColor(ApiKeyStatus st) {
       switch (st) {
         case ApiKeyStatus.active:
-          return Colors.green;
+          return context.appColors.success;
         case ApiKeyStatus.disabled:
           return cs.onSurface.withValues(alpha: 0.6);
         case ApiKeyStatus.error:
@@ -6871,7 +6853,7 @@ class _ModelRow extends StatelessWidget {
                         ? lucide.Lucide.CheckCircle
                         : lucide.Lucide.XCircle,
                     size: 16,
-                    color: detectionResult! ? Colors.green : cs.error,
+                    color: detectionResult! ? context.appColors.success : cs.error,
                   ),
                 ),
               ),

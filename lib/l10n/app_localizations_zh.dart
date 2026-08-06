@@ -4247,6 +4247,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeSettingsPageColorPalettesSection => '配色方案';
 
   @override
+  String get themeSettingsPageCustomPaletteName => '自定义';
+
+  @override
+  String get themeSettingsPageCustomColorsSection => '自定义颜色';
+
+  @override
+  String get themeSettingsPageCustomSeedColorTitle => '种子颜色';
+
+  @override
+  String get themeSettingsPageCustomSeedColorSubtitle => '由此颜色生成整套配色';
+
+  @override
+  String get themeSettingsPageCustomPrimaryTitle => '主色覆盖';
+
+  @override
+  String get themeSettingsPageCustomPrimarySubtitle => '可选，覆盖生成的主色';
+
+  @override
+  String get themeSettingsPageCustomSurfaceTitle => '背景色覆盖';
+
+  @override
+  String get themeSettingsPageCustomSurfaceSubtitle => '可选，纯色背景开启时不生效';
+
+  @override
+  String get themeSettingsPageCustomColorReset => '重置';
+
+  @override
   String get ttsServicesPageBackButton => '返回';
 
   @override
@@ -10227,6 +10254,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get themeSettingsPageColorPalettesSection => '配色方案';
 
   @override
+  String get themeSettingsPageCustomPaletteName => '自定义';
+
+  @override
+  String get themeSettingsPageCustomColorsSection => '自定义颜色';
+
+  @override
+  String get themeSettingsPageCustomSeedColorTitle => '种子颜色';
+
+  @override
+  String get themeSettingsPageCustomSeedColorSubtitle => '由此颜色生成整套配色';
+
+  @override
+  String get themeSettingsPageCustomPrimaryTitle => '主色覆盖';
+
+  @override
+  String get themeSettingsPageCustomPrimarySubtitle => '可选，覆盖生成的主色';
+
+  @override
+  String get themeSettingsPageCustomSurfaceTitle => '背景色覆盖';
+
+  @override
+  String get themeSettingsPageCustomSurfaceSubtitle => '可选，纯色背景开启时不生效';
+
+  @override
+  String get themeSettingsPageCustomColorReset => '重置';
+
+  @override
   String get ttsServicesPageBackButton => '返回';
 
   @override
@@ -16203,6 +16257,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get themeSettingsPageColorPalettesSection => '配色方案';
+
+  @override
+  String get themeSettingsPageCustomPaletteName => '自定義';
+
+  @override
+  String get themeSettingsPageCustomColorsSection => '自定義顏色';
+
+  @override
+  String get themeSettingsPageCustomSeedColorTitle => '種子顏色';
+
+  @override
+  String get themeSettingsPageCustomSeedColorSubtitle => '由此顏色生成整套配色';
+
+  @override
+  String get themeSettingsPageCustomPrimaryTitle => '主色覆蓋';
+
+  @override
+  String get themeSettingsPageCustomPrimarySubtitle => '可選，覆蓋生成的主色';
+
+  @override
+  String get themeSettingsPageCustomSurfaceTitle => '背景色覆蓋';
+
+  @override
+  String get themeSettingsPageCustomSurfaceSubtitle => '可選，純色背景開啟時不生效';
+
+  @override
+  String get themeSettingsPageCustomColorReset => '重置';
 
   @override
   String get ttsServicesPageBackButton => '返回';

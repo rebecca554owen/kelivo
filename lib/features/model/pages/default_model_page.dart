@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../utils/brand_assets.dart';
 import '../../../core/services/haptics.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DefaultModelPage extends StatelessWidget {
   const DefaultModelPage({super.key});
@@ -289,9 +290,7 @@ class DefaultModelPage extends StatelessWidget {
                       decoration: InputDecoration(
                         hintText: l10n.defaultModelPageTitlePromptHint,
                         filled: true,
-                        fillColor: Theme.of(ctx).brightness == Brightness.dark
-                            ? Colors.white10
-                            : const Color(0xFFF2F3F5),
+                        fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
@@ -405,9 +404,7 @@ class DefaultModelPage extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.defaultModelPageTranslatePromptHint,
                     filled: true,
-                    fillColor: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    fillColor: ctx.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -520,9 +517,7 @@ class DefaultModelPage extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.defaultModelPageSummaryPromptHint,
                     filled: true,
-                    fillColor: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    fillColor: ctx.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -633,9 +628,7 @@ class DefaultModelPage extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.defaultModelPageCompressPromptHint,
                     filled: true,
-                    fillColor: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    fillColor: ctx.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -745,9 +738,7 @@ class DefaultModelPage extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.defaultModelPageSuggestionPromptHint,
                     filled: true,
-                    fillColor: Theme.of(ctx).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    fillColor: ctx.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -942,7 +933,7 @@ class _ModelCard extends StatelessWidget {
             _TactileRow(
               onTap: onPick,
               builder: (pressed) {
-                final bg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+                final bg = context.appColors.surfaceFill;
                 final overlay = isDark
                     ? Colors.white.withValues(alpha: 0.06)
                     : Colors.black.withValues(alpha: 0.05);

@@ -10,6 +10,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class _HeaderEntry {
   final TextEditingController key;
@@ -311,9 +312,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white10
-                  : const Color(0xFFF7F7F9),
+              color: context.appColors.surfaceFill,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -544,10 +543,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color:
-                                            Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white10
-                                            : const Color(0xFFF7F7F9),
+                                            context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: cs.outlineVariant.withValues(

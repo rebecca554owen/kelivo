@@ -11,6 +11,7 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class MultiKeyManagerPage extends StatefulWidget {
   const MultiKeyManagerPage({
@@ -247,7 +248,7 @@ class _MultiKeyManagerPageState extends State<MultiKeyManagerPage> {
     Color statusColor(ApiKeyStatus st) {
       switch (st) {
         case ApiKeyStatus.active:
-          return Colors.green;
+          return context.appColors.success;
         case ApiKeyStatus.disabled:
           return cs.onSurface.withValues(alpha: 0.6);
         case ApiKeyStatus.error:

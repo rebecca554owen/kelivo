@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 String backupReminderFrequencyLabel(AppLocalizations l10n, int days) {
   return switch (days) {
@@ -568,9 +569,7 @@ class _BackupReminderCustomDaysDialogState
               decoration: InputDecoration(
                 labelText: l10n.backupReminderCustomDaysLabel,
                 filled: true,
-                fillColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white10
-                    : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(

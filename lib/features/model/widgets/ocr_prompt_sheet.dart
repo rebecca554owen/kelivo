@@ -4,6 +4,7 @@ import 'package:Kelivo/theme/app_font_weights.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showOcrPromptSheet(BuildContext context) async {
   final cs = Theme.of(context).colorScheme;
@@ -57,9 +58,7 @@ Future<void> showOcrPromptSheet(BuildContext context) async {
                 decoration: InputDecoration(
                   hintText: l10n.defaultModelPageOcrPromptHint,
                   filled: true,
-                  fillColor: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(

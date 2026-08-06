@@ -442,7 +442,7 @@ class _LanguageDropdownState extends State<_LanguageDropdown> {
         ).usePureBackground;
         final bgColor = usePure
             ? (isDark ? Colors.black : Colors.white)
-            : (isDark ? const Color(0xFF1C1C1E) : Colors.white);
+            : (Theme.of(context).colorScheme.surfaceContainerHigh);
 
         return Stack(
           children: [
@@ -480,7 +480,6 @@ class _LanguageDropdownState extends State<_LanguageDropdown> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final baseBorder = cs.outlineVariant.withValues(alpha: 0.18);
     final hoverBorder = cs.primary; // hover/focus border
@@ -504,7 +503,7 @@ class _LanguageDropdownState extends State<_LanguageDropdown> {
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
             constraints: const BoxConstraints(minWidth: 150, minHeight: 40),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF141414) : Colors.white,
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: borderColor, width: 1),
               boxShadow: _open

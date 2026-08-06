@@ -34,6 +34,7 @@ import '../../provider/widgets/provider_balance_badge.dart';
 import '../../provider/widgets/provider_avatar.dart';
 import '../../../utils/model_grouping.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class ProviderDetailPage extends StatefulWidget {
   const ProviderDetailPage({
@@ -264,7 +265,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                           onPressed: () => Navigator.of(ctx).pop(true),
                           child: Text(
                             l10n.providerDetailPageDeleteButton,
-                            style: TextStyle(color: Colors.red),
+                            style: TextStyle(color: Theme.of(context).colorScheme.error),
                           ),
                         ),
                       ],
@@ -463,9 +464,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 decoration: InputDecoration(
                   hintText: l10n.sideDrawerImageUrlDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx2).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx2.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Colors.transparent),
@@ -545,9 +544,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   decoration: InputDecoration(
                     hintText: l10n.providerAvatarLobehubDialogHint,
                     filled: true,
-                    fillColor: Theme.of(ctx2).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF2F3F5),
+                    fillColor: ctx2.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Colors.transparent),
@@ -662,9 +659,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                         prefixIcon: const Icon(Lucide.Search, size: 18),
                         isDense: true,
                         filled: true,
-                        fillColor: isDark
-                            ? Colors.white10
-                            : const Color(0xFFF2F3F5),
+                        fillColor: context.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
@@ -2281,12 +2276,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     required EdgeInsetsGeometry padding,
     required double maxWidth,
   }) {
-    final toolbarColor = Theme.of(context).brightness == Brightness.dark
-        ? Color.alphaBlend(
-            Colors.white.withValues(alpha: 0.12),
-            colorScheme.surface,
-          )
-        : const Color(0xFFF2F3F5);
+    final toolbarColor = context.appColors.surfaceFill;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -3346,9 +3336,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                               hintText: l10n.providerDetailPageFilterHint,
                               filled: true,
                               fillColor:
-                                  Theme.of(ctx).brightness == Brightness.dark
-                                  ? Colors.white10
-                                  : const Color(0xFFF2F3F5),
+                                  ctx.appColors.surfaceFill,
                               prefixIcon: Icon(
                                 Lucide.Search,
                                 size: 20,
@@ -3538,12 +3526,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                             return Container(
                                               decoration: BoxDecoration(
                                                 color:
-                                                    Theme.of(
-                                                          context,
-                                                        ).brightness ==
-                                                        Brightness.dark
-                                                    ? Colors.white10
-                                                    : const Color(0xFFF2F3F5),
+                                                    context.appColors.surfaceFill,
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),
@@ -3957,7 +3940,7 @@ class _ModelCard extends StatelessWidget {
               child: Icon(
                 detectionResult! ? Lucide.CheckCircle : Lucide.XCircle,
                 size: 16,
-                color: detectionResult! ? Colors.green : cs.error,
+                color: detectionResult! ? context.appColors.success : cs.error,
               ),
             ),
           )
@@ -4277,7 +4260,7 @@ class _ConnectionTestDialogState extends State<_ConnectionTestDialog> {
     required bool success,
     required String message,
   }) {
-    final color = success ? Colors.green : cs.error;
+    final color = success ? context.appColors.success : cs.error;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,

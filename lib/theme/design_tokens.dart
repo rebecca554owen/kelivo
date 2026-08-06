@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  static const Color textMuted = Colors.black54;
-}
-
 class AppShadows {
   static List<BoxShadow> soft = [
     BoxShadow(

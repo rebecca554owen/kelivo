@@ -2,6 +2,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 
@@ -165,6 +166,7 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
+    extensions: <ThemeExtension<dynamic>>[AppSemanticColors.light(scheme)],
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
@@ -185,14 +187,14 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      foregroundColor: Colors.black,
+      foregroundColor: scheme.onSurface,
       titleTextStyle: TextStyle(
-        color: Colors.black,
+        color: scheme.onSurface,
         fontSize: 18,
         fontWeight: AppFontWeights.semibold,
       ).copyWith(fontFamilyFallback: fontFallback),
-      iconTheme: const IconThemeData(color: Colors.black),
-      actionsIconTheme: const IconThemeData(color: Colors.black),
+      iconTheme: IconThemeData(color: scheme.onSurface),
+      actionsIconTheme: IconThemeData(color: scheme.onSurface),
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
@@ -229,6 +231,7 @@ ThemeData buildLightThemeForScheme(
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
+    extensions: <ThemeExtension<dynamic>>[AppSemanticColors.light(scheme)],
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
@@ -250,14 +253,14 @@ ThemeData buildLightThemeForScheme(
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      foregroundColor: Colors.black,
+      foregroundColor: scheme.onSurface,
       titleTextStyle: TextStyle(
-        color: Colors.black,
+        color: scheme.onSurface,
         fontSize: 18,
         fontWeight: AppFontWeights.semibold,
       ).copyWith(fontFamilyFallback: fontFallback),
-      iconTheme: const IconThemeData(color: Colors.black),
-      actionsIconTheme: const IconThemeData(color: Colors.black),
+      iconTheme: IconThemeData(color: scheme.onSurface),
+      actionsIconTheme: IconThemeData(color: scheme.onSurface),
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
@@ -315,6 +318,7 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
+    extensions: <ThemeExtension<dynamic>>[AppSemanticColors.dark(scheme)],
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
@@ -335,14 +339,14 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      foregroundColor: Colors.white,
+      foregroundColor: scheme.onSurface,
       titleTextStyle: TextStyle(
-        color: Colors.white,
+        color: scheme.onSurface,
         fontSize: 18,
         fontWeight: AppFontWeights.semibold,
       ).copyWith(fontFamilyFallback: fontFallback),
-      iconTheme: const IconThemeData(color: Colors.white),
-      actionsIconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: IconThemeData(color: scheme.onSurface),
+      actionsIconTheme: IconThemeData(color: scheme.onSurface),
       systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
@@ -378,6 +382,7 @@ ThemeData buildDarkThemeForScheme(
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
+    extensions: <ThemeExtension<dynamic>>[AppSemanticColors.dark(scheme)],
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: scheme.inverseSurface,
@@ -399,14 +404,14 @@ ThemeData buildDarkThemeForScheme(
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      foregroundColor: Colors.white,
+      foregroundColor: scheme.onSurface,
       titleTextStyle: TextStyle(
-        color: Colors.white,
+        color: scheme.onSurface,
         fontSize: 18,
         fontWeight: AppFontWeights.semibold,
       ).copyWith(fontFamilyFallback: fontFallback),
-      iconTheme: const IconThemeData(color: Colors.white),
-      actionsIconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: IconThemeData(color: scheme.onSurface),
+      actionsIconTheme: IconThemeData(color: scheme.onSurface),
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,

@@ -5,6 +5,7 @@ import '../../../core/services/search/search_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// Full-page manager for a search service's API key rotation pool.
 ///
@@ -252,7 +253,6 @@ class _SearchApiKeysPageState extends State<SearchApiKeysPage> {
   Widget _buildAddCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final feedback = _batchFeedback;
     return _card(
       context,
@@ -280,7 +280,7 @@ class _SearchApiKeysPageState extends State<SearchApiKeysPage> {
                 hintText: l10n.searchApiKeysPageBatchHint,
                 isDense: true,
                 filled: true,
-                fillColor: isDark ? Colors.white12 : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 hintStyle: TextStyle(
                   fontSize: 13.5,
                   color: cs.onSurface.withValues(alpha: 0.55),

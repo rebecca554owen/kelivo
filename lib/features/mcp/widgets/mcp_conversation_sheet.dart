@@ -7,6 +7,7 @@ import '../../../theme/design_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showConversationMcpSheet(
   BuildContext context, {
@@ -210,10 +211,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                                         height: 42,
                                         decoration: BoxDecoration(
                                           color:
-                                              Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.white10
-                                              : const Color(0xFFF2F3F5),
+                                              context.appColors.surfaceFill,
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),

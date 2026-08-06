@@ -10,6 +10,7 @@ import '../core/services/chat/chat_service.dart';
 import '../core/models/conversation.dart';
 import '../theme/app_font_weights.dart';
 import '../features/home/controllers/chat_actions.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<String?> showChatHistoryDesktopDialog(
   BuildContext context, {
@@ -47,7 +48,6 @@ class _ChatHistoryDesktopDialogState extends State<_ChatHistoryDesktopDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final chatService = context.watch<ChatService>();
     final List<Conversation> all = chatService
@@ -135,7 +135,7 @@ class _ChatHistoryDesktopDialogState extends State<_ChatHistoryDesktopDialog> {
                                   onPressed: () => Navigator.of(ctx).pop(true),
                                   child: Text(
                                     l10n.chatHistoryPageDelete,
-                                    style: TextStyle(color: Colors.red),
+                                    style: TextStyle(color: Theme.of(context).colorScheme.error),
                                   ),
                                 ),
                               ],
@@ -190,9 +190,7 @@ class _ChatHistoryDesktopDialogState extends State<_ChatHistoryDesktopDialog> {
                             decoration: InputDecoration(
                               hintText: l10n.chatHistoryPageSearchHint,
                               filled: true,
-                              fillColor: isDark
-                                  ? Colors.white10
-                                  : const Color(0xFFF2F3F5),
+                              fillColor: context.appColors.surfaceFill,
                               isDense: true,
                               isCollapsed: true,
                               contentPadding: const EdgeInsets.symmetric(
@@ -320,7 +318,7 @@ class _ConversationTileDesktopState extends State<_ConversationTileDesktop> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white12 : const Color(0xFFF7F7F9);
+    final bg = context.appColors.surfaceFill;
     final border = cs.outlineVariant.withValues(alpha: 0.16);
     final hoveredBg = isDark
         ? Colors.white24

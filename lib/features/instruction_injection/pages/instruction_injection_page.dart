@@ -15,6 +15,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/services/haptics.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class InstructionInjectionPage extends StatefulWidget {
   const InstructionInjectionPage({super.key});
@@ -585,7 +586,6 @@ class _InstructionInjectionEditSheetState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
       top: false,
@@ -629,7 +629,7 @@ class _InstructionInjectionEditSheetState
               decoration: InputDecoration(
                 labelText: l10n.instructionInjectionNameLabel,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -657,7 +657,7 @@ class _InstructionInjectionEditSheetState
                 labelText: l10n.instructionInjectionGroupLabel,
                 hintText: l10n.instructionInjectionGroupHint,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -686,7 +686,7 @@ class _InstructionInjectionEditSheetState
                 labelText: l10n.instructionInjectionPromptLabel,
                 alignLabelWithHint: true,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(

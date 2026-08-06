@@ -62,6 +62,7 @@ import '../controllers/home_view_model.dart';
 import '../controllers/scroll_controller.dart' as scroll_ctrl;
 import 'home_mobile_layout.dart';
 import 'home_desktop_layout.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -345,7 +346,7 @@ class _SegmentButton extends StatelessWidget {
     final selectedBg = isDark
         ? cs.primary.withValues(alpha: 0.22)
         : cs.primary.withValues(alpha: 0.12);
-    final baseBg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final baseBg = context.appColors.surfaceFill;
 
     return IosCardPress(
       baseColor: selected ? selectedBg : baseBg,
@@ -384,10 +385,9 @@ class _DialogActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = primary
         ? cs.primary
-        : (isDark ? Colors.white10 : const Color(0xFFF2F3F5));
+        : (context.appColors.surfaceFill);
 
     return IosCardPress(
       baseColor: base,
@@ -1708,7 +1708,7 @@ class _HomePageState extends State<HomePage>
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               l10n.homePageDelete,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -1767,7 +1767,7 @@ class _HomePageState extends State<HomePage>
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               l10n.homePageDelete,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],

@@ -5,6 +5,7 @@ import '../../../core/services/haptics.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// Bottom sheet for mobile: compress context or clear context.
 class ContextManagementSheet extends StatelessWidget {
@@ -96,8 +97,7 @@ class _OptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final cardColor = context.appColors.surfaceFill;
     final radius = BorderRadius.circular(14);
 
     return IosCardPress(

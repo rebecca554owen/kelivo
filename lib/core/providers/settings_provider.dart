@@ -96,6 +96,9 @@ class SettingsProvider extends ChangeNotifier {
   static const String _compressPromptKey = 'compress_prompt_v1';
   static const String _themePaletteKey = 'theme_palette_v1';
   static const String _useDynamicColorKey = 'use_dynamic_color_v1';
+  static const String _customSeedColorKey = 'theme_custom_seed_v1';
+  static const String _customPrimaryOverrideKey = 'theme_custom_primary_v1';
+  static const String _customSurfaceOverrideKey = 'theme_custom_surface_v1';
   static const String _thinkingBudgetKey = 'thinking_budget_v1';
   static const String _titleGenerationThinkingEnabledKey =
       'title_generation_thinking_enabled_v1';
@@ -372,6 +375,14 @@ class SettingsProvider extends ChangeNotifier {
   bool _dynamicColorSupported = false; // runtime capability, not persisted
   bool get dynamicColorSupported => _dynamicColorSupported;
 
+  // Custom palette (seed color + optional role overrides), ARGB ints
+  int? _customSeedColor;
+  int? get customSeedColor => _customSeedColor;
+  int? _customPrimaryOverride;
+  int? get customPrimaryOverride => _customPrimaryOverride;
+  int? _customSurfaceOverride;
+  int? get customSurfaceOverride => _customSurfaceOverride;
+
   // When enabled, force pure white/black backgrounds regardless of theme color
   bool _usePureBackground = false;
   bool get usePureBackground => _usePureBackground;
@@ -624,6 +635,9 @@ class SettingsProvider extends ChangeNotifier {
     }
     _themePaletteId = prefs.getString(_themePaletteKey) ?? 'default';
     _useDynamicColor = prefs.getBool(_useDynamicColorKey) ?? true;
+    _customSeedColor = prefs.getInt(_customSeedColorKey);
+    _customPrimaryOverride = prefs.getInt(_customPrimaryOverrideKey);
+    _customSurfaceOverride = prefs.getInt(_customSurfaceOverrideKey);
     final cfgStr = prefs.getString(_providerConfigsKey);
     if (cfgStr != null && cfgStr.isNotEmpty) {
       try {
@@ -2281,6 +2295,38 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_displayUsePureBackgroundKey, v);
+  }
+
+  Future<void> setCustomSeedColor(int argb) async {
+    if (_customSeedColor == argb) return;
+    _customSeedColor = argb;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setInt(_customSeedColorKey, argb);
+  }
+
+  Future<void> setCustomPrimaryOverride(int? argb) async {
+    if (_customPrimaryOverride == argb) return;
+    _customPrimaryOverride = argb;
+    notifyListeners();
+    final prefs = _preferences;
+    if (argb == null) {
+      await prefs.remove(_customPrimaryOverrideKey);
+    } else {
+      await prefs.setInt(_customPrimaryOverrideKey, argb);
+    }
+  }
+
+  Future<void> setCustomSurfaceOverride(int? argb) async {
+    if (_customSurfaceOverride == argb) return;
+    _customSurfaceOverride = argb;
+    notifyListeners();
+    final prefs = _preferences;
+    if (argb == null) {
+      await prefs.remove(_customSurfaceOverrideKey);
+    } else {
+      await prefs.setInt(_customSurfaceOverrideKey, argb);
+    }
   }
 
   // Display: chat message background style (affects user/assistant bubbles)
@@ -4219,6 +4265,11 @@ Requirements:
     // Copy other fields
     copy._providersOrder = _providersOrder;
     copy._themeMode = _themeMode;
+    copy._themePaletteId = _themePaletteId;
+    copy._useDynamicColor = _useDynamicColor;
+    copy._customSeedColor = _customSeedColor;
+    copy._customPrimaryOverride = _customPrimaryOverride;
+    copy._customSurfaceOverride = _customSurfaceOverride;
     copy._providerConfigs = _providerConfigs;
     copy._pinnedModels.addAll(_pinnedModels);
     copy._currentModelProvider = _currentModelProvider;

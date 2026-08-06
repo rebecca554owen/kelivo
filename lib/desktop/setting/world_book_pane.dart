@@ -15,6 +15,7 @@ import '../../shared/widgets/ios_switch.dart';
 import '../../shared/widgets/snackbar.dart';
 import '../widgets/desktop_select_dropdown.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopWorldBookPane extends StatefulWidget {
   const DesktopWorldBookPane({super.key});
@@ -254,7 +255,7 @@ class _DesktopWorldBookPaneState extends State<DesktopWorldBookPane> {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(
                 l10n.worldBookDelete,
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           ],
@@ -1178,7 +1179,7 @@ class _WorldBookEntryEditDialogState extends State<_WorldBookEntryEditDialog> {
     required List<DesktopSelectOption<T>> options,
     required ValueChanged<T> onSelected,
   }) {
-    final fillColor = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final fillColor = context.appColors.surfaceFill;
     return DesktopSelectDropdown<T>(
       value: value,
       options: options,
@@ -1656,12 +1657,11 @@ class _DeskIosButtonState extends State<_DeskIosButton> {
 }
 
 InputDecoration _deskInputDecoration(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   return InputDecoration(
     isDense: false,
     filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+    fillColor: context.appColors.surfaceFill,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(

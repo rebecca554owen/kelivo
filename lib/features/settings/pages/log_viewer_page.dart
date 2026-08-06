@@ -16,6 +16,7 @@ import '../../../utils/app_directories.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../logs/request_log_parser.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// Mobile log viewer - shows list of log files and allows viewing/exporting
 class LogViewerPage extends StatefulWidget {
@@ -378,9 +379,7 @@ class _FileIcon extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final Color bg = isCurrent
         ? cs.primary.withValues(alpha: isDark ? 0.22 : 0.14)
-        : (isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : const Color(0xFFF2F3F5));
+        : context.appColors.surfaceFill;
     final Color fg = isCurrent
         ? cs.primary
         : cs.onSurface.withValues(alpha: 0.72);

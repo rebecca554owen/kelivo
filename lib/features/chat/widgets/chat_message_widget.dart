@@ -48,6 +48,7 @@ import 'citation_sources_sheet.dart';
 import 'chat_suggestion_bubbles.dart';
 import 'token_display_widget.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 final RegExp _urlSchemeRe = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:');
 
@@ -373,9 +374,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: theme.brightness == Brightness.dark
-                    ? Colors.white10
-                    : const Color(0xFFF7F7F9),
+                color: theme.extension<AppSemanticColors>()!.surfaceFill,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -399,9 +398,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: theme.brightness == Brightness.dark
-                    ? Colors.white10
-                    : const Color(0xFFF7F7F9),
+                color: theme.extension<AppSemanticColors>()!.surfaceFill,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -2836,7 +2833,7 @@ Widget _buildSharedChatSurface(
     case ChatMessageBackgroundStyle.solid:
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
           borderRadius: borderRadius,
           border: Border.all(
             color: cs.outlineVariant.withValues(alpha: 0.16),
@@ -2926,9 +2923,9 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fg = danger ? Colors.red.shade600 : cs.onSurface;
+    final fg = danger ? Theme.of(context).colorScheme.error : cs.onSurface;
     final ic = danger
-        ? Colors.red.shade600
+        ? Theme.of(context).colorScheme.error
         : cs.onSurface.withValues(alpha: 0.9);
     // iOS-style press effect: no ripple. Use transparent base and a subtle
     // pressed blend inside the blurred/glass menu container.

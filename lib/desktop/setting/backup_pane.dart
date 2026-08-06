@@ -24,6 +24,7 @@ import '../../features/backup/widgets/backup_reminder_helpers.dart';
 import '../../utils/platform_utils.dart';
 import '../widgets/desktop_select_dropdown.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopBackupPane extends StatefulWidget {
   const DesktopBackupPane({super.key});
@@ -1910,12 +1911,11 @@ Widget _sectionCard({required List<Widget> children}) {
 
 InputDecoration _deskInputDecoration(BuildContext context) {
   // Match provider dialog style (compact), but slightly shorter height and 14px font hint
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   final cs = Theme.of(context).colorScheme;
   return InputDecoration(
     isDense: true,
     filled: true,
-    fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+    fillColor: context.appColors.surfaceFill,
     hintStyle: TextStyle(
       fontSize: 14,
       color: cs.onSurface.withValues(alpha: 0.5),

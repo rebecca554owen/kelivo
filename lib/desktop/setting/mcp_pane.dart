@@ -9,6 +9,7 @@ import 'mcp_edit_dialog.dart' show showDesktopMcpEditDialog;
 import 'mcp_json_edit_dialog.dart' show showDesktopMcpJsonEditDialog;
 import 'mcp_timeout_dialog.dart' show showDesktopMcpTimeoutDialog;
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopMcpPane extends StatelessWidget {
   const DesktopMcpPane({super.key});
@@ -218,7 +219,7 @@ class _ServerCardState extends State<_ServerCard> {
     String statusText;
     switch (widget.status) {
       case McpStatus.connected:
-        statusColor = Colors.green;
+        statusColor = context.appColors.success;
         statusText = l10n.mcpPageStatusConnected;
         break;
       case McpStatus.connecting:
@@ -226,7 +227,7 @@ class _ServerCardState extends State<_ServerCard> {
         statusText = l10n.mcpPageStatusConnecting;
         break;
       case McpStatus.needsAuthorization:
-        statusColor = Colors.orange;
+        statusColor = context.appColors.warning;
         statusText = l10n.mcpPageStatusAuthorizationRequired;
         break;
       case McpStatus.authorizing:
@@ -235,7 +236,7 @@ class _ServerCardState extends State<_ServerCard> {
         break;
       case McpStatus.error:
       case McpStatus.idle:
-        statusColor = Colors.redAccent;
+        statusColor = Theme.of(context).colorScheme.error;
         statusText = l10n.mcpPageStatusDisconnected;
         break;
     }
@@ -300,7 +301,7 @@ class _ServerCardState extends State<_ServerCard> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+                      color: context.appColors.surfaceFill,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
@@ -384,13 +385,13 @@ class _ServerCardState extends State<_ServerCard> {
                           Icon(
                             lucide.Lucide.MessageCircleWarning,
                             size: 14,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               l10n.mcpPageConnectionFailed,
-                              style: TextStyle(fontSize: 12, color: Colors.red),
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.error),
                             ),
                           ),
                           TextButton(
@@ -410,18 +411,18 @@ class _ServerCardState extends State<_ServerCard> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             lucide.Lucide.KeyRound,
                             size: 14,
-                            color: Colors.orange,
+                            color: context.appColors.warning,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               l10n.mcpPageOAuthRequired,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.orange,
+                                color: context.appColors.warning,
                               ),
                             ),
                           ),
@@ -549,9 +550,7 @@ Future<void> _showErrorDetails(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white10
-                        : const Color(0xFFF7F7F9),
+                    color: context.appColors.surfaceFill,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: cs.outlineVariant.withValues(alpha: 0.2),

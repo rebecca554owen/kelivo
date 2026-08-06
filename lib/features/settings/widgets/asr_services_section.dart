@@ -17,6 +17,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../../utils/brand_assets.dart';
 import 'voice_service_widgets.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// The speech-recognition half of the Voice Services screen.
 ///
@@ -1328,7 +1329,7 @@ class _SystemConfiguration extends StatelessWidget {
         : l10n.asrServicesSystemSubtitle;
     final controlColor = desktop
         ? Colors.transparent
-        : (isDark ? Colors.white12 : const Color(0xFFF2F3F5));
+        : (context.appColors.surfaceFill);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1445,11 +1446,10 @@ class _LocalModelPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     final listColor = desktop
         ? Colors.transparent
-        : (isDark ? Colors.white12 : const Color(0xFFF2F3F5));
+        : (context.appColors.surfaceFill);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1835,8 +1835,7 @@ class _EditorFieldState extends State<_EditorField> {
       );
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fieldBg = isDark ? Colors.white12 : const Color(0xFFF2F3F5);
+    final fieldBg = context.appColors.surfaceFill;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
