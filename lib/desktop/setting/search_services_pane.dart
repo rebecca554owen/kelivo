@@ -2126,9 +2126,7 @@ class _ServiceTypeDropdownState extends State<_ServiceTypeDropdown> {
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(ctx).brightness == Brightness.dark
-                            ? const Color(0xFF1C1C1E)
-                            : Colors.white,
+                        color: cs.surfaceContainerHigh,
                         border: Border.all(
                           color: cs.outlineVariant.withValues(alpha: 0.12),
                           width: 0.5,

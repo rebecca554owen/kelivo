@@ -1106,9 +1106,7 @@ class _ProvidersSearchField extends StatelessWidget {
             minHeight: 34,
           ),
           filled: true,
-          fillColor: isDark
-              ? Colors.white.withValues(alpha: 0.12)
-              : const Color(0xFFEBEBEB),
+          fillColor: context.appColors.surfaceFill,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -1413,7 +1411,7 @@ class _SelectionBar extends StatelessWidget {
                   children: [
                     _GlassCircleButton(
                       icon: Lucide.Trash2,
-                      color: const Color(0xFFFF3B30),
+                      color: cs.error,
                       semanticLabel: l10n.providersPageDeleteAction,
                       onTap: onDelete,
                     ),

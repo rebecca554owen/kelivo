@@ -807,7 +807,7 @@ class _DesktopProvidersSearchField extends StatelessWidget {
         filled: true,
         fillColor: isDark
             ? Colors.white.withValues(alpha: 0.12)
-            : const Color(0xFFEBEBEB),
+            : Colors.black.withValues(alpha: 0.08),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

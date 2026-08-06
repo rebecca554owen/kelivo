@@ -872,9 +872,7 @@ class _InlineErrorPreview extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final Color base = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF6F7F9);
+    final Color base = context.appColors.surfaceFill;
     final Color bg = Color.alphaBlend(
       cs.error.withValues(alpha: isDark ? 0.12 : 0.07),
       base,
@@ -917,15 +915,15 @@ class _MethodPill extends StatelessWidget {
   const _MethodPill({required this.method});
   final String method;
 
-  Color _bg(ColorScheme cs, bool isDark) {
+  Color _bg(ColorScheme cs, AppSemanticColors app, bool isDark) {
     switch (method) {
       case 'GET':
-        return const Color(0xFF10B981).withValues(alpha: isDark ? 0.22 : 0.16);
+        return app.success.withValues(alpha: isDark ? 0.22 : 0.16);
       case 'POST':
-        return const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.22 : 0.16);
+        return cs.primary.withValues(alpha: isDark ? 0.22 : 0.16);
       case 'PUT':
       case 'PATCH':
-        return const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.22 : 0.16);
+        return app.warning.withValues(alpha: isDark ? 0.22 : 0.16);
       case 'DELETE':
         return cs.error.withValues(alpha: isDark ? 0.22 : 0.14);
       default:
@@ -933,15 +931,15 @@ class _MethodPill extends StatelessWidget {
     }
   }
 
-  Color _fg(ColorScheme cs, bool isDark) {
+  Color _fg(ColorScheme cs, AppSemanticColors app, bool isDark) {
     switch (method) {
       case 'GET':
-        return const Color(0xFF10B981);
+        return app.success;
       case 'POST':
-        return const Color(0xFF3B82F6);
+        return cs.primary;
       case 'PUT':
       case 'PATCH':
-        return const Color(0xFFF59E0B);
+        return app.warning;
       case 'DELETE':
         return cs.error;
       default:
@@ -957,7 +955,7 @@ class _MethodPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: _bg(cs, isDark),
+        color: _bg(cs, context.appColors, isDark),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -966,7 +964,7 @@ class _MethodPill extends StatelessWidget {
           fontSize: 12,
           fontWeight: AppFontWeights.heavy,
           letterSpacing: 0.2,
-          color: _fg(cs, isDark),
+          color: _fg(cs, context.appColors, isDark),
         ),
       ),
     );
@@ -1471,7 +1469,7 @@ class _CodeBlock extends StatelessWidget {
 
     final Color neutralBg = isDark
         ? Colors.black.withValues(alpha: 0.16)
-        : const Color(0xFFF6F7F9);
+        : context.appColors.surfaceFill;
     final Color bg = () {
       if (tone == _CodeTone.error) {
         return Color.alphaBlend(

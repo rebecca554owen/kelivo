@@ -190,7 +190,7 @@ class _BackupReminderTimeWheelPanelState
     final selectedTime = backupReminderTimeLabel(context, _selectedMinutes);
     final panelColor = widget.isDesktop
         ? cs.surface
-        : (isDark ? const Color(0xFF1F2023) : const Color(0xFFF8F9FA));
+        : cs.surfaceContainerHigh;
 
     final panel = Material(
       color: Colors.transparent,
@@ -460,9 +460,9 @@ class _BackupReminderTimeWheelPanelState
               onTap: widget.onCancel,
               haptics: false,
               borderRadius: BorderRadius.circular(13),
-              baseColor: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : const Color(0xFFE7E9EC),
+              baseColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.08 : 0.09,
+              ),
               padding: const EdgeInsets.symmetric(vertical: 11),
               child: Center(
                 child: Text(
@@ -482,9 +482,9 @@ class _BackupReminderTimeWheelPanelState
               onTap: _save,
               haptics: false,
               borderRadius: BorderRadius.circular(13),
-              baseColor: isDark
-                  ? Colors.white.withValues(alpha: 0.16)
-                  : const Color(0xFFDADDE2),
+              baseColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.16 : 0.14,
+              ),
               padding: const EdgeInsets.symmetric(vertical: 11),
               child: Center(
                 child: Text(

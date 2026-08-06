@@ -38,6 +38,27 @@ List<String> getPlatformFontFallback() {
 // Internal helper for theme building
 List<String> _getPlatformFontFallback() => getPlatformFontFallback();
 
+/// Derive neutral `surfaceContainer*` roles from the scheme's surface.
+///
+/// Palettes in this app only define the classic ColorScheme roles, leaving the
+/// M3 surface containers at their static (purple-tinted) defaults, which clash
+/// with non-purple palettes. Deriving them here keeps dialogs, menus, cards
+/// and other Material surfaces consistent with the active palette.
+ColorScheme _withDerivedSurfaceContainers(ColorScheme s) {
+  final dark = s.brightness == Brightness.dark;
+  const white = Color(0xFFFFFFFF);
+  const black = Color(0xFF000000);
+  Color over(Color c, double a) =>
+      Color.alphaBlend(c.withValues(alpha: a), s.surface);
+  return s.copyWith(
+    surfaceContainerLowest: dark ? over(black, 0.28) : over(white, 0.72),
+    surfaceContainerLow: dark ? over(white, 0.03) : over(white, 0.55),
+    surfaceContainer: dark ? over(white, 0.045) : over(white, 0.35),
+    surfaceContainerHigh: dark ? over(white, 0.06) : over(s.onSurface, 0.03),
+    surfaceContainerHighest: dark ? over(white, 0.09) : over(s.onSurface, 0.05),
+  );
+}
+
 TextTheme _withFontFallback(TextTheme base, List<String> fallback) {
   TextStyle? f(TextStyle? s) => s?.copyWith(fontFamilyFallback: fallback);
   return base.copyWith(
@@ -125,7 +146,7 @@ TextTheme _withFontFallback(TextTheme base, List<String> fallback) {
 
 ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
   final fontFallback = _getPlatformFontFallback();
-  final scheme =
+  final scheme = _withDerivedSurfaceContainers(
       (dynamicScheme?.harmonized()) ??
       const ColorScheme(
         brightness: Brightness.light,
@@ -159,7 +180,8 @@ ThemeData buildLightTheme(ColorScheme? dynamicScheme) {
         onInverseSurface: Color(0xFFF1F0F7),
         inversePrimary: Color(0xFFB6C4FF),
         surfaceTint: Color(0xFF4D5C92),
-      );
+      ),
+    );
   // _logColorScheme('Light ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
 
   final theme = ThemeData(
@@ -225,6 +247,7 @@ ThemeData buildLightThemeForScheme(
       onInverseSurface: const Color(0xFFFFFFFF),
     );
   }
+  scheme = _withDerivedSurfaceContainers(scheme);
   // Align logging behavior with buildLightTheme so diagnostics are consistent.
   // _logColorScheme('Light ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
   final theme = ThemeData(
@@ -277,7 +300,7 @@ ThemeData buildLightThemeForScheme(
 
 ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
   final fontFallback = _getPlatformFontFallback();
-  final scheme =
+  final scheme = _withDerivedSurfaceContainers(
       (dynamicScheme?.harmonized()) ??
       const ColorScheme(
         brightness: Brightness.dark,
@@ -311,7 +334,8 @@ ThemeData buildDarkTheme(ColorScheme? dynamicScheme) {
         onInverseSurface: Color(0xFF2F3036),
         inversePrimary: Color(0xFF4D5C92),
         surfaceTint: Color(0xFFB6C4FF),
-      );
+      ),
+    );
   // _logColorScheme('Dark ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
 
   final theme = ThemeData(
@@ -376,6 +400,7 @@ ThemeData buildDarkThemeForScheme(
       onInverseSurface: const Color(0xFF000000),
     );
   }
+  scheme = _withDerivedSurfaceContainers(scheme);
   // Align logging behavior with buildDarkTheme so diagnostics are consistent.
   // _logColorScheme('Dark ${dynamicScheme != null ? 'Dynamic' : 'Static'}', scheme);
   final theme = ThemeData(

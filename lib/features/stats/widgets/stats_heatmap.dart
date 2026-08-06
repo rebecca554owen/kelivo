@@ -419,9 +419,7 @@ class _HeatCell extends StatelessWidget {
     };
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = level == 0
-        ? isDark
-              ? Colors.white.withValues(alpha: 0.14)
-              : const Color(0xFFDDE2E8)
+        ? cs.onSurface.withValues(alpha: isDark ? 0.14 : 0.12)
         : cs.primary.withValues(alpha: alpha);
     return Container(
       width: size,
