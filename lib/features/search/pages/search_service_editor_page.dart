@@ -70,10 +70,7 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
 
   late final String _serviceId;
   late String _selectedType;
-  bool _dirty = false;
-  bool _allowPop = false;
   bool _leaving = false;
-  bool _discardDialogOpen = false;
   bool _testing = false;
   bool _usageLoading = false;
   int _testRequestGeneration = 0;
@@ -122,10 +119,6 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         : SearchService.getService(current).name;
 
     return PopScope<SearchServiceEditorResult?>(
-      canPop: _allowPop || !_dirty,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && !_leaving) _requestClose();
-      },
       child: Scaffold(
         backgroundColor: cs.surface,
         appBar: AppBar(
@@ -594,23 +587,27 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
             builder: (_) => SearchApiKeysPage(
               service: _currentService(),
               commonOptions: widget.commonOptions,
+              onPop: _applyApiKeyPool,
             ),
           ),
         )
         .then((pool) {
-          if (pool == null || !mounted) return;
-          final primary = pool.isEmpty ? '' : pool.first;
-          final extras = pool.length <= 1
-              ? const <String>[]
-              : List<String>.of(pool.sublist(1));
-          // Leaving the page without edits must not mark the form dirty.
-          if (primary == _text('apiKey') && listEquals(extras, _extraApiKeys)) {
-            return;
-          }
-          _controller('apiKey').text = primary;
-          _extraApiKeys = extras;
-          _markDirty();
+          if (pool != null) _applyApiKeyPool(pool);
         });
+  }
+
+  void _applyApiKeyPool(List<String> pool) {
+    if (!mounted) return;
+    final primary = pool.isEmpty ? '' : pool.first;
+    final extras = pool.length <= 1
+        ? const <String>[]
+        : List<String>.of(pool.sublist(1));
+    if (primary == _text('apiKey') && listEquals(extras, _extraApiKeys)) {
+      return;
+    }
+    _controller('apiKey').text = primary;
+    _extraApiKeys = extras;
+    _markDirty();
   }
 
   Widget _buildUsageCard(BuildContext context) {
@@ -884,7 +881,6 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
     _initializeControllers(next);
     setState(() {
       _selectedType = type;
-      _dirty = true;
       _testRequestGeneration++;
       _usageRequestGeneration++;
       _testing = false;
@@ -898,7 +894,6 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
 
   void _markDirty() {
     setState(() {
-      _dirty = true;
       _testRequestGeneration++;
       _usageRequestGeneration++;
       _testing = false;
@@ -971,46 +966,12 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
     }
   }
 
-  Future<void> _requestClose() async {
-    if (_leaving) return;
-    if (!_dirty) {
-      _popWithResult(null);
-      return;
-    }
-    if (_discardDialogOpen) return;
-    _discardDialogOpen = true;
-    final l10n = AppLocalizations.of(context)!;
-    final discard = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.searchServiceEditorDiscardTitle),
-        content: Text(l10n.searchServiceEditorDiscardMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.searchServiceEditorKeepEditing),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.searchServiceEditorDiscard),
-          ),
-        ],
-      ),
-    );
-    _discardDialogOpen = false;
-    if (discard == true && mounted) _popWithResult(null);
-  }
+  void _requestClose() => _popWithResult(null);
 
   void _popWithResult(SearchServiceEditorResult? result) {
     if (_leaving) return;
-    setState(() {
-      _leaving = true;
-      _allowPop = true;
-      _dirty = false;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).pop(result);
-    });
+    _leaving = true;
+    Navigator.of(context).pop(result);
   }
 
   void _initializeControllers(SearchServiceOptions service) {

@@ -363,32 +363,6 @@ void main() {
     expect((result!.service! as TavilyOptions).apiKey, 'new-key');
   });
 
-  testWidgets('protects unsaved input when navigating back', (tester) async {
-    SearchServiceEditorResult? result;
-    await _pumpEditor(
-      tester,
-      initialService: TavilyOptions(id: 'tavily', apiKey: 'old-key'),
-      onResult: (value) => result = value,
-    );
-
-    await tester.enterText(_apiKeyField(), 'draft-key');
-    await tester.tap(find.byIcon(Lucide.ArrowLeft));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Discard changes?'), findsOneWidget);
-    expect(
-      find.text('Your unsaved search service settings will be lost.'),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('Keep editing'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(find.text('Tavily'), findsWidgets);
-    expect(result, isNull);
-  });
-
   testWidgets('returns a delete action after confirmation', (tester) async {
     SearchServiceEditorResult? result;
     await _pumpEditor(
@@ -466,6 +440,10 @@ void main() {
 
     final page = find.byType(SearchApiKeysPage);
     expect(page, findsOneWidget);
+    final popScope = tester.widget<PopScope<List<String>>>(
+      find.descendant(of: page, matching: find.byType(PopScope<List<String>>)),
+    );
+    expect(popScope.canPop, isTrue);
     // The primary key is auto-imported as the first row.
     expect(find.text('prim••••-key'), findsOneWidget);
     expect(find.text('Primary'), findsOneWidget);
@@ -492,9 +470,7 @@ void main() {
       findsNWidgets(4),
     );
 
-    await tester.tap(
-      find.descendant(of: page, matching: find.byIcon(Lucide.ArrowLeft)),
-    );
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('4 keys'), findsOneWidget);
 
@@ -548,41 +524,6 @@ void main() {
     expect(saved, isA<TavilyOptions>());
     expect((saved as TavilyOptions?)?.apiKey, 'k2');
     expect(saved?.extraApiKeys, ['k3']);
-  });
-
-  testWidgets('leaving the keys page untouched does not mark the form dirty', (
-    tester,
-  ) async {
-    SearchServiceEditorResult? result;
-    await _pumpEditor(
-      tester,
-      initialService: TavilyOptions(
-        id: 'tavily',
-        apiKey: 'primary-key',
-        extraApiKeys: const ['k2'],
-      ),
-      onResult: (value) => result = value,
-    );
-
-    await tester.tap(
-      find.byKey(const ValueKey('search-service-multikey-entry')),
-    );
-    await tester.pumpAndSettle();
-
-    final page = find.byType(SearchApiKeysPage);
-    expect(page, findsOneWidget);
-
-    // Leave without changing anything.
-    await tester.tap(
-      find.descendant(of: page, matching: find.byIcon(Lucide.ArrowLeft)),
-    );
-    await tester.pumpAndSettle();
-
-    // Navigating back from the editor must not ask to discard changes.
-    await tester.tap(find.byIcon(Lucide.ArrowLeft));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(result, isNull);
   });
 }
 

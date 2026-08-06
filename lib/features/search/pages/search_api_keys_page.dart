@@ -19,10 +19,12 @@ class SearchApiKeysPage extends StatefulWidget {
     super.key,
     required this.service,
     required this.commonOptions,
+    required this.onPop,
   });
 
   final SearchServiceOptions service;
   final SearchCommonOptions commonOptions;
+  final ValueChanged<List<String>> onPop;
 
   @override
   State<SearchApiKeysPage> createState() => _SearchApiKeysPageState();
@@ -36,7 +38,6 @@ class _SearchApiKeysPageState extends State<SearchApiKeysPage> {
   final _addController = TextEditingController();
   final Set<int> _revealed = {};
   ({int added, int skipped})? _batchFeedback;
-  bool _allowPop = false;
 
   @override
   void dispose() {
@@ -67,13 +68,7 @@ class _SearchApiKeysPageState extends State<SearchApiKeysPage> {
   }
 
   void _popWithPool() {
-    if (_allowPop) return;
-    setState(() => _allowPop = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.of(context).pop(List<String>.unmodifiable(_keys));
-      }
-    });
+    Navigator.of(context).pop(List<String>.unmodifiable(_keys));
   }
 
   @override
@@ -81,9 +76,10 @@ class _SearchApiKeysPageState extends State<SearchApiKeysPage> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return PopScope<List<String>>(
-      canPop: _allowPop,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _popWithPool();
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop && result == null) {
+          widget.onPop(List<String>.unmodifiable(_keys));
+        }
       },
       child: Scaffold(
         backgroundColor: cs.surface,
