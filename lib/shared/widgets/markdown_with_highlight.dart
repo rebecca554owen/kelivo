@@ -2352,7 +2352,10 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
           Container(
             width: double.infinity,
             color: bodyBg,
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            // Keep the code's top and bottom insets equal: with the header
+            // now visually distinct from the body, a 0 top inset reads as
+            // lopsided against the 8px bottom inset.
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Stack(
               children: [
                 Column(
