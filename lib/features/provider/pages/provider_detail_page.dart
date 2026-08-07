@@ -4379,12 +4379,8 @@ class _BrandAvatar extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final asset = BrandAssets.assetForName(name);
-    final lower = name.toLowerCase();
-    final bool mono =
-        isDark &&
-        (RegExp(r'openai|gpt|o\\d').hasMatch(lower) ||
-            RegExp(r'grok|xai').hasMatch(lower) ||
-            RegExp(r'openrouter').hasMatch(lower));
+    final mono =
+        asset != null && isDark && BrandAssets.assetNeedsDarkInvert(asset);
     return CircleAvatar(
       radius: size / 2,
       backgroundColor: cs.primary.withValues(alpha: isDark ? 0.18 : 0.1),

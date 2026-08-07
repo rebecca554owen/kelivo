@@ -1043,8 +1043,8 @@ class _BrandAvatarLike extends StatelessWidget {
     final asset = BrandAssets.assetForName(name);
     if (asset != null) {
       if (asset.endsWith('.svg')) {
-        final isColorful = asset.contains('color');
-        final ColorFilter? tint = (isDark && !isColorful)
+        final ColorFilter? tint =
+            (isDark && BrandAssets.assetNeedsDarkInvert(asset))
             ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null;
         return Container(

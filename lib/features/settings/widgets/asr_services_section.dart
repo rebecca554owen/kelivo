@@ -450,6 +450,7 @@ class _ProviderBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final asset = _kindBrandAsset(kind);
     return Container(
       width: size,
@@ -462,7 +463,14 @@ class _ProviderBadge extends StatelessWidget {
       child: asset == null
           ? Icon(_kindIcon(kind), size: size * 0.5, color: cs.primary)
           : asset.endsWith('.svg')
-          ? SvgPicture.asset(asset, width: size * 0.56, height: size * 0.56)
+          ? SvgPicture.asset(
+              asset,
+              width: size * 0.56,
+              height: size * 0.56,
+              colorFilter: isDark && BrandAssets.assetNeedsDarkInvert(asset)
+                  ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                  : null,
+            )
           : Image.asset(
               asset,
               width: size * 0.56,

@@ -1724,12 +1724,11 @@ class _SearchBrandBadge extends StatelessWidget {
         ),
       );
     } else if (asset.endsWith('.svg')) {
-      final colorful = asset.contains('color');
       child = SvgPicture.asset(
         asset,
         width: childSize,
         height: childSize,
-        colorFilter: isDark && !colorful
+        colorFilter: isDark && BrandAssets.assetNeedsDarkInvert(asset)
             ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null,
       );

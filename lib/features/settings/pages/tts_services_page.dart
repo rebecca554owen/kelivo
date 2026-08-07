@@ -500,7 +500,15 @@ class _AvatarBrandBadge extends StatelessWidget {
                   ),
                 )
               : (asset.endsWith('.svg')
-                    ? SvgPicture.asset(asset, width: 20, height: 20)
+                    ? SvgPicture.asset(
+                        asset,
+                        width: 20,
+                        height: 20,
+                        colorFilter:
+                            isDark && BrandAssets.assetNeedsDarkInvert(asset)
+                            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                            : null,
+                      )
                     : Image.asset(
                         asset,
                         width: 20,

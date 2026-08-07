@@ -346,16 +346,22 @@ class BrandAssets {
   }
 
   static bool assetNeedsDarkInvert(String asset) {
-    return asset.contains('openai') ||
-        asset.contains('anthropic') ||
-        asset.contains('grok') ||
-        asset.contains('xai') ||
-        asset.contains('openrouter') ||
-        asset.contains('ollama') ||
-        asset.contains('github') ||
-        asset.contains('codex') ||
-        asset.contains('mimo');
+    final fileName = asset.trim().toLowerCase().split('/').last;
+    return _darkAdaptiveAssets.contains(fileName);
   }
+
+  static const Set<String> _darkAdaptiveAssets = <String>{
+    'openai.svg',
+    'anthropic.svg',
+    'grok.svg',
+    'xai.svg',
+    'openrouter.svg',
+    'ollama.svg',
+    'github.svg',
+    'linkup.svg',
+    'mimo.svg',
+    'codex.svg',
+  };
 
   // Build the LobeHub static SVG CDN URL from an icon name (e.g. 'openai').
   static String lobehubIconUrl(String name) {

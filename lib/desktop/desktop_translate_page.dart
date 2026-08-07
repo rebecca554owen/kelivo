@@ -944,7 +944,15 @@ class _ModelPickerButton extends StatelessWidget {
               if (asset != null)
                 () {
                   if (asset!.toLowerCase().endsWith('.svg')) {
-                    return SvgPicture.asset(asset!, width: 18, height: 18);
+                    return SvgPicture.asset(
+                      asset!,
+                      width: 18,
+                      height: 18,
+                      colorFilter:
+                          isDark && BrandAssets.assetNeedsDarkInvert(asset!)
+                          ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                          : null,
+                    );
                   }
                   return Image.asset(asset!, width: 18, height: 18);
                 }()

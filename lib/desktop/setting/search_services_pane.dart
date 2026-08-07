@@ -622,6 +622,9 @@ class _BrandBadge extends StatelessWidget {
             asset,
             width: size * 0.62,
             height: size * 0.62,
+            colorFilter: isDark && BrandAssets.assetNeedsDarkInvert(asset)
+                ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                : null,
           ),
         );
       } else {

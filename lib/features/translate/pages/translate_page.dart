@@ -303,14 +303,27 @@ class _TranslatePageState extends State<TranslatePage> {
               ),
             ),
           ),
-          // Model brand icon (keep original colors)
+          // Model brand icon
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: IosIconButton(
               padding: const EdgeInsets.all(8),
               builder: (color) {
                 if (asset != null && asset.toLowerCase().endsWith('.svg')) {
-                  return SvgPicture.asset(asset, width: 22, height: 22);
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+                  return SvgPicture.asset(
+                    asset,
+                    width: 22,
+                    height: 22,
+                    colorFilter:
+                        isDark && BrandAssets.assetNeedsDarkInvert(asset)
+                        ? ColorFilter.mode(
+                            Theme.of(context).colorScheme.onSurface,
+                            BlendMode.srcIn,
+                          )
+                        : null,
+                  );
                 }
                 if (asset != null) {
                   return Image.asset(asset, width: 22, height: 22);

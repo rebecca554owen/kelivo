@@ -36,9 +36,9 @@ class CurrentModelIcon extends StatelessWidget {
     Widget inner;
     if (asset != null) {
       if (asset.endsWith('.svg')) {
-        final isColorful = asset.contains('color');
         final ColorFilter? tint =
-            (Theme.of(context).brightness == Brightness.dark && !isColorful)
+            (Theme.of(context).brightness == Brightness.dark &&
+                BrandAssets.assetNeedsDarkInvert(asset))
             ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
             : null;
         inner = SvgPicture.asset(

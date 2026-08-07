@@ -572,10 +572,9 @@ class _BrandIcon extends StatelessWidget {
         asset,
         width: 16,
         height: 16,
-        // Keep original colors if provided; otherwise tint to onSurface subtly
-        colorFilter: asset.contains('color')
-            ? null
-            : ColorFilter.mode(color, BlendMode.srcIn),
+        colorFilter: BrandAssets.assetNeedsDarkInvert(asset)
+            ? ColorFilter.mode(color, BlendMode.srcIn)
+            : null,
       );
     }
     return Image.asset(

@@ -352,6 +352,10 @@ class HomeDesktopScaffold extends StatelessWidget {
                       width: 16,
                       height: 16,
                       key: ValueKey('brand:$brandAsset'),
+                      colorFilter:
+                          isDark && BrandAssets.assetNeedsDarkInvert(brandAsset)
+                          ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                          : null,
                     )
                   : Image.asset(
                       brandAsset,

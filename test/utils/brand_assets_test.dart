@@ -9,5 +9,28 @@ void main() {
       expect(asset, 'assets/icons/metaso-color.svg');
       expect(BrandAssets.selectableAssetOrNull(asset!), asset);
     });
+
+    test('distinguishes monochrome SVGs from colored brand assets', () {
+      expect(
+        BrandAssets.assetNeedsDarkInvert('assets/icons/openai.svg'),
+        isTrue,
+      );
+      expect(
+        BrandAssets.assetNeedsDarkInvert('assets/icons/linkup.svg'),
+        isTrue,
+      );
+      expect(
+        BrandAssets.assetNeedsDarkInvert('assets/icons/serper.svg'),
+        isFalse,
+      );
+      expect(
+        BrandAssets.assetNeedsDarkInvert('assets/icons/gemini-color.svg'),
+        isFalse,
+      );
+      expect(
+        BrandAssets.assetNeedsDarkInvert('assets/icons/kelivo.png'),
+        isFalse,
+      );
+    });
   });
 }

@@ -440,6 +440,10 @@ class _BrandIconBadge extends StatelessWidget {
                     asset,
                     width: size * 0.62,
                     height: size * 0.62,
+                    colorFilter:
+                        isDark && BrandAssets.assetNeedsDarkInvert(asset)
+                        ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                        : null,
                   )
                 : Image.asset(
                     asset,
