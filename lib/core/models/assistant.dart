@@ -4,6 +4,7 @@ import 'preset_message.dart';
 
 class Assistant {
   static const int defaultRecentChatsSummaryMessageCount = 5;
+  static const double defaultTemperature = 1.0;
   static const int minContextMessageSize = 1;
   static const int maxContextMessageSize = 1024;
   static const List<int> recentChatsSummaryMessageCountOptions = <int>[
@@ -62,7 +63,7 @@ class Assistant {
     this.temperature,
     this.topP,
     this.contextMessageSize = 64,
-    this.limitContextMessages = true,
+    this.limitContextMessages = false,
     this.streamOutput = true,
     this.thinkingBudget,
     this.maxTokens,
@@ -195,7 +196,7 @@ class Assistant {
     temperature: (json['temperature'] as num?)?.toDouble(),
     topP: (json['topP'] as num?)?.toDouble(),
     contextMessageSize: (json['contextMessageSize'] as num?)?.toInt() ?? 64,
-    limitContextMessages: json['limitContextMessages'] as bool? ?? true,
+    limitContextMessages: json['limitContextMessages'] as bool? ?? false,
     streamOutput: json['streamOutput'] as bool? ?? true,
     thinkingBudget: (json['thinkingBudget'] as num?)?.toInt(),
     maxTokens: (json['maxTokens'] as num?)?.toInt(),

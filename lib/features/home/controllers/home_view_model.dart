@@ -1187,7 +1187,7 @@ class HomeViewModel extends ChangeNotifier {
     final assistant = _contextProvider
         .read<AssistantProvider>()
         .currentAssistant;
-    final configured = (assistant?.limitContextMessages ?? true)
+    final configured = (assistant?.limitContextMessages ?? false)
         ? (assistant?.contextMessageSize ?? 0)
         : 0;
     // Pure count from the persisted total: no message bodies needed, exact

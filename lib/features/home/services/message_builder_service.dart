@@ -1038,7 +1038,7 @@ class MessageBuilderService {
     List<Map<String, dynamic>> apiMessages,
     Assistant? assistant,
   ) {
-    if ((assistant?.limitContextMessages ?? true) &&
+    if ((assistant?.limitContextMessages ?? false) &&
         (assistant?.contextMessageSize ?? 0) > 0) {
       final int keep = (assistant!.contextMessageSize).clamp(
         Assistant.minContextMessageSize,

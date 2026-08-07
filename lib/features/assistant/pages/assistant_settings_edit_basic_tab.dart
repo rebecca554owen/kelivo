@@ -680,7 +680,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                         .watch<AssistantProvider>()
                         .getById(widget.assistantId)
                         ?.temperature ??
-                    0.6;
+                    Assistant.defaultTemperature;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,7 +716,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                             final navigator = Navigator.of(ctx);
                             if (v) {
                               await assistantProvider.updateAssistant(
-                                a.copyWith(temperature: 0.6),
+                                a.copyWith(
+                                  temperature: Assistant.defaultTemperature,
+                                ),
                               );
                             } else {
                               await assistantProvider.updateAssistant(

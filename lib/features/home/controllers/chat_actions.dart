@@ -1058,7 +1058,7 @@ class ChatActions {
     required Assistant? assistant,
     required int persistedMessageCount,
   }) {
-    if ((assistant?.limitContextMessages ?? true) &&
+    if ((assistant?.limitContextMessages ?? false) &&
         (assistant?.contextMessageSize ?? 0) > 0) {
       return assistant!.contextMessageSize.clamp(
         Assistant.minContextMessageSize,
