@@ -71,6 +71,7 @@ class SettingsProvider extends ChangeNotifier {
     'Tensdaq',
     'DeepSeek',
     'AIhubmix',
+    '随想AI网关',
     'Aliyun',
     'Zhipu AI',
     'Claude',
@@ -4977,6 +4978,7 @@ class ProviderConfig {
     if (k.contains('kelivoin')) return 'https://text.pollinations.ai/openai';
     if (k.contains('openrouter')) return 'https://openrouter.ai/api/v1';
     if (k.contains('aihubmix')) return 'https://aihubmix.com/v1';
+    if (k.contains('随想')) return 'https://sui-xiang.com/v1';
     if (RegExp(r'qwen|aliyun|dashscope').hasMatch(k)) {
       return 'https://dashscope.aliyuncs.com/compatible-mode/v1';
     }
