@@ -61,9 +61,6 @@ class MainActivity : FlutterActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (McpOAuthHandler.handleActivityResult(requestCode, resultCode, data)) {
-            return
-        }
         if (requestCode != CREATE_DOCUMENT_REQUEST_CODE) {
             return
         }
