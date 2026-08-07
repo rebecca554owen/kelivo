@@ -15,8 +15,10 @@ import 'package:Kelivo/core/models/chat_input_data.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
+import 'package:Kelivo/core/providers/mcp_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/services/mcp/mcp_tool_service.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart'
     show ToolUIPart;
 import 'package:Kelivo/features/home/controllers/home_page_controller.dart';
@@ -179,6 +181,13 @@ void main() {
           ChangeNotifierProvider<ChatService>.value(value: service),
           ChangeNotifierProvider<AssistantProvider>.value(
             value: assistantProvider,
+          ),
+          ChangeNotifierProvider<McpProvider>(
+            create: (_) =>
+                McpProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider<McpToolService>(
+            create: (_) => McpToolService(),
           ),
         ],
         child: MaterialApp(

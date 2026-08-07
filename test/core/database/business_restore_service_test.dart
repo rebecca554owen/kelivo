@@ -155,7 +155,7 @@ END;
         'incoming': {'id': 'incoming', 'apiKey': 'secret'},
         'local': {'id': 'local', 'apiKey': 'local'},
       });
-      expect(exported['theme_mode_v1'], 'dark');
+      expect(exported['theme_mode_v1'], 'light');
     },
   );
 

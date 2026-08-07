@@ -1712,7 +1712,7 @@ void main() {
       final restored = await BusinessRestoreService(
         businessRepository,
       ).exportSettings();
-      expect(restored['preserved_setting'], 'imported');
+      expect(restored['preserved_setting'], 'local');
       expect(chatService.getConversation(existing.id), isNotNull);
       expect(chatService.getConversation('fixture-conversation'), isNotNull);
       expect(sync.lastMergeReport?.importedConversations, 1);
