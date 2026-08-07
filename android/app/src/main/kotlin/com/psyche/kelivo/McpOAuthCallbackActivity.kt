@@ -20,14 +20,24 @@ class McpOAuthCallbackActivity : Activity() {
     private fun handleCallback(intent: Intent?) {
         val delivered = intent?.data?.let(McpOAuthHandler::handleCallback) == true
         val mainTask = if (delivered) findMainTask() else null
+        if (mainTask != null) {
+            mainTask.startActivity(
+                this,
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                },
+                null,
+            )
+        }
         finish()
-        mainTask?.moveToFront()
     }
 
     private fun findMainTask(): ActivityManager.AppTask? {
         val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         return activityManager.appTasks.firstOrNull { task ->
-            task.taskInfo.baseIntent.component?.className == MainActivity::class.java.name
+            val taskInfo = task.taskInfo
+            taskInfo.baseActivity?.className == MainActivity::class.java.name ||
+                taskInfo.baseIntent.component?.className == MainActivity::class.java.name
         }
     }
 }

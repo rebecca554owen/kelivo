@@ -180,7 +180,7 @@ void main() {
   });
 
   test(
-    'prefetched discovery and DCR registration are reused across authorization retries',
+    'discovery and same-scope DCR are reused while changed scopes re-register',
     () async {
       const serverUrl = 'https://mcp.example.com/mcp';
       const metadataUrl = 'https://mcp.example.com/oauth-resource';
@@ -188,7 +188,7 @@ void main() {
       final callbacks = <_FakeCallback>[];
       var metadataRequests = 0;
       var authorizationMetadataRequests = 0;
-      var registrations = 0;
+      final registrationScopes = <String?>[];
       var launches = 0;
       final service = McpOAuthService(
         httpClient: MockClient((request) async {
@@ -217,7 +217,10 @@ void main() {
             );
           }
           if (request.url.toString() == '$issuer/register') {
-            registrations++;
+            registrationScopes.add(
+              (jsonDecode(request.body) as Map<String, dynamic>)['scope']
+                  as String?,
+            );
             return http.Response(
               jsonEncode({'client_id': 'registered-client'}),
               HttpStatus.created,
@@ -246,7 +249,7 @@ void main() {
             () => callback.complete(
               callback.redirectUri.replace(
                 queryParameters: {
-                  if (currentLaunch == 0)
+                  if (currentLaunch < 2)
                     'error': 'access_denied'
                   else
                     'code': 'authorization-code',
@@ -270,6 +273,16 @@ void main() {
           serverUrl: serverUrl,
           serverName: 'Retry MCP',
           wwwAuthenticate: const [challenge],
+          additionalScopes: const ['tools:read'],
+        ),
+        throwsA(isA<McpOAuthException>()),
+      );
+      await expectLater(
+        service.authorize(
+          serverUrl: serverUrl,
+          serverName: 'Retry MCP',
+          wwwAuthenticate: const [challenge],
+          additionalScopes: const ['tools:read'],
         ),
         throwsA(isA<McpOAuthException>()),
       );
@@ -277,13 +290,14 @@ void main() {
         serverUrl: serverUrl,
         serverName: 'Retry MCP',
         wwwAuthenticate: const [challenge],
+        additionalScopes: const ['tools:read', 'tools:write'],
       );
 
       expect(state.clientId, 'registered-client');
       expect(metadataRequests, 1);
       expect(authorizationMetadataRequests, 1);
-      expect(registrations, 1);
-      expect(launches, 2);
+      expect(registrationScopes, ['tools:read', 'tools:read tools:write']);
+      expect(launches, 3);
     },
   );
 

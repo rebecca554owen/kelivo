@@ -638,7 +638,11 @@ final class McpOAuthService {
             registration.registrationSource ==
                 McpOAuthClientRegistrationSource.dcr) {
           _dynamicRegistrationCache.remove(
-            _dynamicRegistrationCacheKey(discovery, callback.redirectUri),
+            _dynamicRegistrationCacheKey(
+              discovery,
+              callback.redirectUri,
+              scopes,
+            ),
           );
         }
         rethrow;
@@ -656,7 +660,7 @@ final class McpOAuthService {
       if (registration.registrationSource ==
           McpOAuthClientRegistrationSource.dcr) {
         _dynamicRegistrationCache.remove(
-          _dynamicRegistrationCacheKey(discovery, callback.redirectUri),
+          _dynamicRegistrationCacheKey(discovery, callback.redirectUri, scopes),
         );
       }
       return result;
@@ -802,7 +806,7 @@ final class McpOAuthService {
     required String clientName,
     required List<String> scopes,
   }) {
-    final key = _dynamicRegistrationCacheKey(discovery, redirectUri);
+    final key = _dynamicRegistrationCacheKey(discovery, redirectUri, scopes);
     final existing = _dynamicRegistrationCache[key];
     if (existing != null) return existing;
 
@@ -829,7 +833,12 @@ final class McpOAuthService {
   static String _dynamicRegistrationCacheKey(
     McpOAuthDiscovery discovery,
     Uri redirectUri,
-  ) => '${discovery.authorizationServer}\n$redirectUri';
+    List<String> scopes,
+  ) {
+    final normalizedScopes = scopes.toSet().toList()..sort();
+    return '${discovery.authorizationServer}\n$redirectUri\n'
+        '${normalizedScopes.join(' ')}';
+  }
 
   static String _discoveryCacheKey(
     String serverUrl,
@@ -1024,6 +1033,7 @@ final class McpOAuthService {
         .join('&'),
     operation: operation,
     discoveredTarget: true,
+    freshConnection: true,
   );
 
   Future<http.Response> _send(
@@ -1034,6 +1044,7 @@ final class McpOAuthService {
     required String operation,
     DateTime? deadline,
     bool discoveredTarget = false,
+    bool freshConnection = false,
   }) async {
     if (discoveredTarget && _validateDiscoveredHosts) {
       try {
@@ -1060,26 +1071,33 @@ final class McpOAuthService {
           ..headers.addAll(headers);
     if (body != null) request.body = body;
 
+    http.Client? oneShotClient;
     Future<http.Response> perform() async {
-      final client = discoveredTarget ? _discoveryHttpClient : _httpClient;
-      final streamed = await client.send(request);
-      final bytes = <int>[];
-      await for (final chunk in streamed.stream) {
-        if (bytes.length + chunk.length > _maximumResponseBytes) {
-          if (!abort.isCompleted) abort.complete();
-          throw McpOAuthException(
-            '$operation response exceeded $_maximumResponseBytes bytes',
-          );
+      final client = freshConnection && _ownsHttpClients
+          ? oneShotClient = createMcpOAuthDiscoveryHttpClient()
+          : (discoveredTarget ? _discoveryHttpClient : _httpClient);
+      try {
+        final streamed = await client.send(request);
+        final bytes = <int>[];
+        await for (final chunk in streamed.stream) {
+          if (bytes.length + chunk.length > _maximumResponseBytes) {
+            if (!abort.isCompleted) abort.complete();
+            throw McpOAuthException(
+              '$operation response exceeded $_maximumResponseBytes bytes',
+            );
+          }
+          bytes.addAll(chunk);
         }
-        bytes.addAll(chunk);
+        return http.Response.bytes(
+          bytes,
+          streamed.statusCode,
+          headers: streamed.headers,
+          reasonPhrase: streamed.reasonPhrase,
+          request: streamed.request,
+        );
+      } finally {
+        oneShotClient?.close();
       }
-      return http.Response.bytes(
-        bytes,
-        streamed.statusCode,
-        headers: streamed.headers,
-        reasonPhrase: streamed.reasonPhrase,
-        request: streamed.request,
-      );
     }
 
     try {

@@ -1,12 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cupertino_http/cupertino_http.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
 const _networkTimeout = Duration(seconds: 5);
 
 http.Client createMcpOAuthDiscoveryHttpClient() {
+  if (Platform.isIOS) {
+    return CupertinoClient.fromSessionConfiguration(
+      URLSessionConfiguration.ephemeralSessionConfiguration(),
+    );
+  }
   final client = HttpClient();
   client.connectionTimeout = _networkTimeout;
   return IOClient(client);

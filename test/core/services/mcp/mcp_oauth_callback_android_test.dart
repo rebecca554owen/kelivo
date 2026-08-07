@@ -32,7 +32,7 @@ void main() {
     );
     var fallbackLauncherCalled = false;
     final callbackUri = await callback.authorize(
-      Uri.parse('https://auth.example.com/authorize'),
+      Uri.parse('https://auth.example.com/authorize?state=state'),
       const Duration(seconds: 2),
       (uri) async {
         fallbackLauncherCalled = true;
@@ -49,7 +49,7 @@ void main() {
     expect(authenticationCall?.method, 'authenticate');
     expect(
       (authenticationCall?.arguments as Map<Object?, Object?>)['url'],
-      'https://auth.example.com/authorize',
+      'https://auth.example.com/authorize?state=state',
     );
     expect(fallbackLauncherCalled, isFalse);
     expect(cancelCalls, 1);
