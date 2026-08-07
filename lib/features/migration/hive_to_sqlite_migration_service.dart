@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,7 @@ import '../../core/database/chat_database_repository.dart';
 import '../../core/models/chat_message.dart';
 import '../../core/models/conversation.dart';
 import '../../core/services/backup/backup_settings_validator.dart';
+import '../../core/services/backup/restore_durability.dart';
 import '../../utils/app_directories.dart';
 
 enum HiveToSqliteMigrationStage {
@@ -124,8 +126,14 @@ class HiveToSqliteMigrationDecision {
 }
 
 class HiveToSqliteMigrationService {
-  HiveToSqliteMigrationService(this.decision);
+  HiveToSqliteMigrationService(
+    this.decision, {
+    RestoreDurability? durability,
+  }) : _durability = durability ?? RestorePlatformDurability();
 
+  static const skipAttemptThreshold = 2;
+  static const _attemptStateFileName =
+      'hive_to_sqlite_migration_attempt_v1.json';
   static const _conversationBoxName = 'conversations';
   static const _messagesBoxName = 'messages';
   static const _toolEventsBoxName = 'tool_events_v1';
@@ -147,12 +155,28 @@ class HiveToSqliteMigrationService {
       ];
 
   final HiveToSqliteMigrationDecision decision;
+  final RestoreDurability _durability;
   final _controller = StreamController<HiveToSqliteMigrationStatus>.broadcast();
   final _log = <String>[];
   var _lastBackupItems = const <HiveToSqliteBackupItem>[];
   var _chatsExportDegraded = false;
+  var _attemptCount = 0;
+  String? _persistedStageBreadcrumb;
 
   Stream<HiveToSqliteMigrationStatus> get statusStream => _controller.stream;
+
+  int get attemptCount => _attemptCount;
+
+  bool get canOfferSkip => _attemptCount >= skipAttemptThreshold;
+
+  String? get lastAttemptStage => _persistedStageBreadcrumb;
+
+  Future<int> loadAttemptState() async {
+    final state = await _readAttemptState();
+    _attemptCount = state.attempts;
+    _persistedStageBreadcrumb = state.stage;
+    return _attemptCount;
+  }
 
   static Future<HiveToSqliteMigrationDecision> check() async {
     final appDataDir = await AppDirectories.getAppDataDirectory();
@@ -177,6 +201,9 @@ class HiveToSqliteMigrationService {
       final repo = ChatDatabaseRepository.open(file: sqliteFile);
       try {
         if (await repo.isMigrationComplete()) {
+          await _deleteSqliteFamilyStatic(
+            File('${sqliteFile.path}.previous'),
+          );
           return HiveToSqliteMigrationDecision(
             needsMigration: false,
             appDataDir: appDataDir,
@@ -363,6 +390,11 @@ class HiveToSqliteMigrationService {
     LazyBox<dynamic>? toolEventsBox;
     var published = false;
     try {
+      await _beginAttempt();
+      await _recordStageBreadcrumb(
+        HiveToSqliteMigrationStage.migrating,
+        'schema',
+      );
       _emit(
         HiveToSqliteMigrationStage.migrating,
         0,
@@ -417,6 +449,10 @@ class HiveToSqliteMigrationService {
       // or skip those shapes instead of failing the whole migration.
       final repairStats = _MigrationRepairStats();
       final seenMessageIds = <String>{};
+      await _recordStageBreadcrumb(
+        HiveToSqliteMigrationStage.migrating,
+        'messages',
+      );
       for (final legacyConversation in conversations) {
         final conversation = await _convertLegacyVersionSelections(
           await _convertLegacyTruncateIndex(
@@ -524,6 +560,10 @@ class HiveToSqliteMigrationService {
         _logLine('legacy-data repairs: ${repairStats.describe()}');
       }
 
+      await _recordStageBreadcrumb(
+        HiveToSqliteMigrationStage.migrating,
+        'tool_events',
+      );
       _emit(
         HiveToSqliteMigrationStage.migrating,
         0.94,
@@ -533,6 +573,10 @@ class HiveToSqliteMigrationService {
         backupItems: _lastBackupItems,
         conversations: conversations.length,
         messages: migratedMessages,
+      );
+      await _recordStageBreadcrumb(
+        HiveToSqliteMigrationStage.migrating,
+        'validate',
       );
       _emit(
         HiveToSqliteMigrationStage.migrating,
@@ -549,9 +593,17 @@ class HiveToSqliteMigrationService {
       await repo.checkpoint();
       await repo.close();
       repo = null;
+      // WAL truncate can leave empty -wal/-shm files behind; strip them before
+      // the publish assertion treats any sidecar as unexpected data loss.
+      await _deleteDatabaseSidecars(tempFile);
 
+      await _recordStageBreadcrumb(
+        HiveToSqliteMigrationStage.migrating,
+        'publish',
+      );
       await _replaceSqlite(tempFile, decision.sqliteFile);
       published = true;
+      await _clearAttemptState();
       _emit(
         HiveToSqliteMigrationStage.complete,
         1,
@@ -703,6 +755,10 @@ class HiveToSqliteMigrationService {
     }
     // A failed attempt can leave the temporary database family behind.
     await _deleteSqliteFamily(File('${decision.sqliteFile.path}.migrating'));
+    await _deleteSqliteFamily(
+      File('${decision.sqliteFile.path}.previous'),
+    );
+    await _clearAttemptState();
     _logLine('skip-migration: legacy hive files retired');
   }
 
@@ -1259,23 +1315,173 @@ class HiveToSqliteMigrationService {
     }
   }
 
+  @visibleForTesting
+  Future<void> replaceSqliteForTest(File tempFile, File sqliteFile) {
+    return _replaceSqlite(tempFile, sqliteFile);
+  }
+
   Future<void> _replaceSqlite(File tempFile, File sqliteFile) async {
-    await _deleteSqliteFamily(sqliteFile);
-    for (final suffix in ['', '-wal', '-shm']) {
-      final source = File('${tempFile.path}$suffix');
-      if (await source.exists()) {
-        await source.rename('${sqliteFile.path}$suffix');
+    final asideFile = File('${sqliteFile.path}.previous');
+    final tempType = await FileSystemEntity.type(
+      tempFile.path,
+      followLinks: false,
+    );
+    final liveType = await FileSystemEntity.type(
+      sqliteFile.path,
+      followLinks: false,
+    );
+
+    if (tempType == FileSystemEntityType.notFound) {
+      if (liveType != FileSystemEntityType.file) {
+        throw StateError('migration_publish_missing_temp');
+      }
+      await _deleteDatabaseSidecars(sqliteFile);
+      await _deleteSqliteFamily(asideFile);
+      return;
+    }
+    if (tempType != FileSystemEntityType.file) {
+      throw StateError('migration_publish_temp_not_file');
+    }
+    await _requireNoDatabaseSidecars(tempFile);
+
+    if (liveType == FileSystemEntityType.directory) {
+      throw StateError('migration_publish_live_not_file');
+    }
+    if (liveType == FileSystemEntityType.file) {
+      await _deleteDatabaseSidecars(sqliteFile);
+      await _deleteSqliteFamily(asideFile);
+      await _durability.renameAndSync(
+        source: sqliteFile,
+        targetPath: asideFile.path,
+      );
+    }
+
+    final liveAfterAside = await FileSystemEntity.type(
+      sqliteFile.path,
+      followLinks: false,
+    );
+    if (liveAfterAside == FileSystemEntityType.notFound) {
+      await _durability.renameAndSync(
+        source: tempFile,
+        targetPath: sqliteFile.path,
+      );
+    } else if (await tempFile.exists()) {
+      throw StateError('migration_publish_split_brain');
+    }
+
+    await _durability.syncDirectory(
+      Directory(p.dirname(sqliteFile.path)),
+      fullBarrier: true,
+    );
+    await _deleteSqliteFamily(asideFile);
+  }
+
+  Future<void> _requireNoDatabaseSidecars(File databaseFile) async {
+    for (final suffix in const ['-wal', '-shm', '-journal']) {
+      final sidecar = File('${databaseFile.path}$suffix');
+      if (await FileSystemEntity.type(sidecar.path, followLinks: false) !=
+          FileSystemEntityType.notFound) {
+        throw StateError('database_sidecar:$suffix');
       }
     }
   }
 
-  Future<void> _deleteSqliteFamily(File file) async {
-    for (final suffix in ['', '-wal', '-shm']) {
+  Future<void> _deleteDatabaseSidecars(File databaseFile) async {
+    for (final suffix in const ['-wal', '-shm', '-journal']) {
+      final sidecar = File('${databaseFile.path}$suffix');
+      if (await FileSystemEntity.type(sidecar.path, followLinks: false) !=
+          FileSystemEntityType.notFound) {
+        await sidecar.delete();
+      }
+    }
+  }
+
+  Future<void> _deleteSqliteFamily(File file) => _deleteSqliteFamilyStatic(file);
+
+  static Future<void> _deleteSqliteFamilyStatic(File file) async {
+    for (final suffix in ['', '-wal', '-shm', '-journal']) {
       final target = File('${file.path}$suffix');
-      if (await target.exists()) {
+      if (await FileSystemEntity.type(target.path, followLinks: false) !=
+          FileSystemEntityType.notFound) {
         await target.delete();
       }
     }
+  }
+
+  File get _attemptStateFile =>
+      File(p.join(decision.appDataDir.path, _attemptStateFileName));
+
+  Future<void> _beginAttempt() async {
+    final state = await _readAttemptState();
+    _attemptCount = state.attempts + 1;
+    _persistedStageBreadcrumb = 'migrating/start';
+    await _writeAttemptState(
+      attempts: _attemptCount,
+      stage: _persistedStageBreadcrumb!,
+    );
+    _logLine(
+      'migration-attempt: $_attemptCount '
+      '(${HiveToSqliteMigrationStage.migrating.name}/start)',
+    );
+  }
+
+  Future<void> _recordStageBreadcrumb(
+    HiveToSqliteMigrationStage stage,
+    String detail,
+  ) async {
+    final breadcrumb = '${stage.name}/$detail';
+    if (breadcrumb == _persistedStageBreadcrumb) return;
+    _persistedStageBreadcrumb = breadcrumb;
+    _logLine('migration-stage: $breadcrumb');
+    await _writeAttemptState(attempts: _attemptCount, stage: breadcrumb);
+  }
+
+  Future<void> _clearAttemptState() async {
+    _attemptCount = 0;
+    _persistedStageBreadcrumb = null;
+    final file = _attemptStateFile;
+    if (await FileSystemEntity.type(file.path, followLinks: false) !=
+        FileSystemEntityType.notFound) {
+      await file.delete();
+    }
+  }
+
+  Future<({int attempts, String? stage})> _readAttemptState() async {
+    final file = _attemptStateFile;
+    if (await FileSystemEntity.type(file.path, followLinks: false) !=
+        FileSystemEntityType.file) {
+      return (attempts: 0, stage: null);
+    }
+    try {
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map) return (attempts: 0, stage: null);
+      final attempts = decoded['attempts'];
+      final stage = decoded['stage'];
+      return (
+        attempts: attempts is int && attempts > 0 ? attempts : 0,
+        stage: stage is String && stage.isNotEmpty ? stage : null,
+      );
+    } catch (_) {
+      return (attempts: 0, stage: null);
+    }
+  }
+
+  Future<void> _writeAttemptState({
+    required int attempts,
+    required String stage,
+  }) async {
+    final file = _attemptStateFile;
+    final temporary = File('${file.path}.tmp');
+    await temporary.writeAsString(
+      jsonEncode({'attempts': attempts, 'stage': stage}),
+      flush: true,
+    );
+    // POSIX rename replaces an existing target atomically. Windows requires
+    // the target to be absent, which briefly opens a neither-file window.
+    if (Platform.isWindows && await file.exists()) {
+      await file.delete();
+    }
+    await temporary.rename(file.path);
   }
 
   void _registerHiveAdapters() {

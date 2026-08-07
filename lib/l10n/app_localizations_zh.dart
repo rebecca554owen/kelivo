@@ -1733,6 +1733,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageImportFromCherryStudio => '从 Cherry Studio 导入';
 
   @override
+  String backupPageCherryStudioUnsupportedBackupVersion(String version) {
+    return '此备份使用 Cherry Studio 格式版本 $version，Kelivo 目前尚无法导入。请改用 Cherry Studio v1 导出备份，或等待后续版本支持 Cherry Studio v2。';
+  }
+
+  @override
   String get backupPageImportFromChatbox => '从 Chatbox 导入';
 
   @override
@@ -7773,6 +7778,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backupPageImportFromCherryStudio => '从 Cherry Studio 导入';
 
   @override
+  String backupPageCherryStudioUnsupportedBackupVersion(String version) {
+    return '此备份使用 Cherry Studio 格式版本 $version，Kelivo 目前尚无法导入。请改用 Cherry Studio v1 导出备份，或等待后续版本支持 Cherry Studio v2。';
+  }
+
+  @override
   String get backupPageImportFromChatbox => '从 Chatbox 导入';
 
   @override
@@ -13811,6 +13821,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupPageImportFromCherryStudio => '從 Cherry Studio 匯入';
+
+  @override
+  String backupPageCherryStudioUnsupportedBackupVersion(String version) {
+    return '此備份使用 Cherry Studio 格式版本 $version，Kelivo 目前尚無法匯入。請改用 Cherry Studio v1 匯出備份，或等待後續版本支援 Cherry Studio v2。';
+  }
 
   @override
   String get backupPageImportFromChatbox => '從 Chatbox 匯入';

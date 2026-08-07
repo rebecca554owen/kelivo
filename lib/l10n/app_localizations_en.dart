@@ -1790,6 +1790,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageImportFromCherryStudio => 'Import from Cherry Studio';
 
   @override
+  String backupPageCherryStudioUnsupportedBackupVersion(String version) {
+    return 'This backup uses Cherry Studio format version $version, which Kelivo cannot import yet. Export from Cherry Studio v1 instead, or wait for a Kelivo update that supports Cherry Studio v2 backups.';
+  }
+
+  @override
   String get backupPageImportFromChatbox => 'Import from Chatbox';
 
   @override

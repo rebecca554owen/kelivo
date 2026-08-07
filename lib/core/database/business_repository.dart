@@ -165,6 +165,14 @@ final class BusinessRepository {
     });
   }
 
+  /// Returns false when `PRAGMA wal_checkpoint(FULL)` reports `busy != 0`.
+  Future<bool> checkpoint() async {
+    final row = await _database
+        .customSelect('PRAGMA wal_checkpoint(FULL);')
+        .getSingle();
+    return row.read<int>('busy') == 0;
+  }
+
   Future<void> transformSnapshot(
     BusinessSnapshot Function(BusinessSnapshot current) transform, {
     bool writeReceipt = false,

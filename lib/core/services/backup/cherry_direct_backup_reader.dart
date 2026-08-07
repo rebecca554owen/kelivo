@@ -3,11 +3,38 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
+/// Thrown when a Cherry Studio direct backup uses a format version that stores
+/// live data in SQLite (v7+) rather than Local Storage / IndexedDB.
+class CherryUnsupportedBackupVersionException implements Exception {
+  final int version;
+  const CherryUnsupportedBackupVersionException(this.version);
+
+  @override
+  String toString() =>
+      'CherryUnsupportedBackupVersionException(version: $version)';
+}
+
 class CherryDirectBackupReader {
   CherryDirectBackupReader._();
 
-  static Map<String, dynamic>? readArchive(Archive archive) {
+  /// Reads root `metadata.json` when present. Throws
+  /// [CherryUnsupportedBackupVersionException] for version >= 7.
+  /// Returns null when the entry is missing or unreadable — legacy archives
+  /// without metadata must keep falling through to the JSON entry scan.
+  static Map<String, dynamic>? readMetadataOrThrowIfUnsupported(
+    Archive archive,
+  ) {
     final metadata = _readJsonObjectEntry(archive, 'metadata.json');
+    if (metadata == null) return null;
+    final version = (metadata['version'] as num?)?.toInt();
+    if (version != null && version >= 7) {
+      throw CherryUnsupportedBackupVersionException(version);
+    }
+    return metadata;
+  }
+
+  static Map<String, dynamic>? readArchive(Archive archive) {
+    final metadata = readMetadataOrThrowIfUnsupported(archive);
     final version = (metadata?['version'] as num?)?.toInt();
     if (version == null || version < 6) return null;
 

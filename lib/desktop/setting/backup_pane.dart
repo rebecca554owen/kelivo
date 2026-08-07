@@ -949,6 +949,30 @@ class _DesktopBackupPaneState extends State<DesktopBackupPane> {
                         ],
                       ),
                     );
+                  } on CherryUnsupportedBackupVersionException catch (e) {
+                    if (!rootCtx.mounted) return;
+                    await showDialog(
+                      context: rootCtx,
+                      barrierDismissible: false,
+                      builder: (dctx) => AlertDialog(
+                        backgroundColor: cs.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: Text(l10n.backupPageImportFromCherryStudio),
+                        content: Text(
+                          l10n.backupPageCherryStudioUnsupportedBackupVersion(
+                            '${e.version}',
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dctx).pop(),
+                            child: Text(l10n.backupPageOK),
+                          ),
+                        ],
+                      ),
+                    );
                   } catch (e) {
                     if (!rootCtx.mounted) return;
                     await showDialog(

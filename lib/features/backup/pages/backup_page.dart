@@ -1244,6 +1244,15 @@ class _BackupPageState extends State<BackupPage> {
                       ],
                     ),
                   );
+                } on CherryUnsupportedBackupVersionException catch (e) {
+                  if (!context.mounted) return;
+                  showAppSnackBar(
+                    context,
+                    message: l10n.backupPageCherryStudioUnsupportedBackupVersion(
+                      '${e.version}',
+                    ),
+                    type: NotificationType.error,
+                  );
                 } catch (e) {
                   if (!context.mounted) return;
                   showAppSnackBar(

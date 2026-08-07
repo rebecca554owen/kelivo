@@ -3425,6 +3425,12 @@ abstract class AppLocalizations {
   /// **'Import from Cherry Studio'**
   String get backupPageImportFromCherryStudio;
 
+  /// No description provided for @backupPageCherryStudioUnsupportedBackupVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup uses Cherry Studio format version {version}, which Kelivo cannot import yet. Export from Cherry Studio v1 instead, or wait for a Kelivo update that supports Cherry Studio v2 backups.'**
+  String backupPageCherryStudioUnsupportedBackupVersion(String version);
+
   /// No description provided for @backupPageImportFromChatbox.
   ///
   /// In en, this message translates to:

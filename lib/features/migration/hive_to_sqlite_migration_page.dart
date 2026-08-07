@@ -43,7 +43,7 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   bool _savingTemporaryBackup = false;
   bool _mobileBackupSaved = false;
   bool _busy = false;
-  int _failedAttempts = 0;
+  bool _canOfferSkip = false;
 
   bool get _usesMobileBackupFlow =>
       widget.mobileBackupSaver != null || Platform.isAndroid || Platform.isIOS;
@@ -52,9 +52,17 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   void initState() {
     super.initState();
     _status = widget.service.initialStatus();
+    _canOfferSkip = widget.service.canOfferSkip;
     _sub = widget.service.statusStream.listen((status) {
       if (mounted) setState(() => _status = status);
     });
+    unawaited(_refreshSkipAvailability());
+  }
+
+  Future<void> _refreshSkipAvailability() async {
+    await widget.service.loadAttemptState();
+    if (!mounted) return;
+    setState(() => _canOfferSkip = widget.service.canOfferSkip);
   }
 
   @override
@@ -84,7 +92,7 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
       setState(() => _backupFile = backupFile);
       await widget.service.migrate(backupPath: backupFile?.path);
     } catch (error, stackTrace) {
-      _failedAttempts++;
+      await _refreshSkipAvailability();
       if (mounted && _status.stage != HiveToSqliteMigrationStage.failed) {
         setState(() {
           _status = HiveToSqliteMigrationStatus(
@@ -172,7 +180,7 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
       await widget.service.migrate(backupPath: backupPath);
     } catch (_) {
       // Status stream already carries the failure details.
-      _failedAttempts++;
+      await _refreshSkipAvailability();
     } finally {
       await _deleteTemporaryBackup();
       if (mounted) setState(() => _busy = false);
@@ -210,8 +218,10 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
     try {
       await widget.service.skipMigrationAndStartFresh();
       if (!mounted) return;
+      setState(() => _canOfferSkip = false);
       await requestAppRestart(context, PlatformUtils.restartApp);
     } catch (error, stackTrace) {
+      await _refreshSkipAvailability();
       if (mounted) {
         setState(() {
           _status = _status.copyWith(
@@ -283,12 +293,14 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   }
 
   Widget _bodyForStatus(AppLocalizations l10n, {required Key key}) {
+    final onSkip = !_busy && _canOfferSkip ? _confirmSkipMigration : null;
     return switch (_status.stage) {
       HiveToSqliteMigrationStage.intro => _IntroStep(
         key: key,
         status: _status,
         mobileBackupFlow: _usesMobileBackupFlow,
         onStart: _busy ? null : _pickBackupAndStart,
+        onSkip: onSkip,
       ),
       HiveToSqliteMigrationStage.backupReady ||
       HiveToSqliteMigrationStage.backingUp ||
@@ -307,7 +319,7 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
         key: key,
         status: _status,
         onRetry: _busy ? null : _retry,
-        onSkip: !_busy && _failedAttempts >= 2 ? _confirmSkipMigration : null,
+        onSkip: onSkip,
       ),
     };
   }
@@ -319,11 +331,13 @@ class _IntroStep extends StatelessWidget {
     required this.status,
     required this.mobileBackupFlow,
     required this.onStart,
+    this.onSkip,
   });
 
   final HiveToSqliteMigrationStatus status;
   final bool mobileBackupFlow;
   final VoidCallback? onStart;
+  final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) {
@@ -360,6 +374,19 @@ class _IntroStep extends StatelessWidget {
               : l10n.migrationChooseFolderButton,
           onPressed: onStart,
         ),
+        if (onSkip != null) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onSkip,
+            child: Text(
+              l10n.migrationSkipButton,
+              style: TextStyle(
+                color: cs.error,
+                fontWeight: AppFontWeights.semibold,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'business_data.dart';
@@ -39,16 +41,19 @@ enum BusinessMigrationResult {
   freshInstall,
   alreadyComplete,
   cleanedAfterReceipt,
+  deferredCleanup,
 }
 
 final class BusinessMigrationEngine {
   BusinessMigrationEngine({
     required this.repository,
     required this.legacyPreferences,
+    this._checkpoint,
   });
 
   final BusinessRepository repository;
   final LegacyBusinessPreferences legacyPreferences;
+  final Future<bool> Function()? _checkpoint;
 
   Future<BusinessMigrationResult> run() async {
     final legacy = await legacyPreferences.snapshot();
@@ -56,6 +61,9 @@ final class BusinessMigrationEngine {
     if (await repository.hasMigrationReceipt()) {
       if (cleanupKeys.isEmpty) {
         return BusinessMigrationResult.alreadyComplete;
+      }
+      if (!await _durabilityBarrierAchieved()) {
+        return BusinessMigrationResult.deferredCleanup;
       }
       await _cleanup(cleanupKeys);
       return BusinessMigrationResult.cleanedAfterReceipt;
@@ -79,10 +87,27 @@ final class BusinessMigrationEngine {
       },
     );
 
-    await _cleanup(cleanupKeys);
+    if (await _durabilityBarrierAchieved()) {
+      await _cleanup(cleanupKeys);
+    }
     return hasBusinessData
         ? BusinessMigrationResult.migrated
         : BusinessMigrationResult.freshInstall;
+  }
+
+  Future<bool> _durabilityBarrierAchieved() async {
+    try {
+      return await (_checkpoint ?? repository.checkpoint)();
+    } catch (error, stackTrace) {
+      developer.log(
+        'Business migration durability barrier failed; '
+        'deferring legacy cleanup.',
+        name: 'Kelivo.business.migration',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   static Set<String> _cleanupKeys(Iterable<String> keys) => {

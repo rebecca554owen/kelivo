@@ -596,6 +596,278 @@ void main() {
       await service.dispose();
     },
   );
+
+  test(
+    'attempt counter persists across process kill and unlocks skip at 2',
+    () async {
+      _registerHiveAdapters();
+      Hive.init(tempDir.path);
+      final conversations = await Hive.openBox<Conversation>('conversations');
+      await conversations.close();
+      await Hive.close();
+      // A directory at the live path makes publish fail after the attempt is
+      // recorded, simulating a hard failure without needing a real OOM.
+      await Directory('${tempDir.path}/kelivo.db').create();
+
+      final decision = HiveToSqliteMigrationDecision(
+        needsMigration: true,
+        appDataDir: tempDir,
+        sqliteFile: File('${tempDir.path}/kelivo.db'),
+        hiveFiles: [File('${tempDir.path}/conversations.hive')],
+      );
+
+      final first = HiveToSqliteMigrationService(decision);
+      addTearDown(first.dispose);
+      expect(first.canOfferSkip, isFalse);
+      await expectLater(first.migrate(), throwsA(anything));
+      expect(first.attemptCount, 1);
+      expect(first.canOfferSkip, isFalse);
+      expect(first.lastAttemptStage, isNotNull);
+
+      // Fresh service instance ≈ process relaunch against the same app data dir.
+      final second = HiveToSqliteMigrationService(decision);
+      addTearDown(second.dispose);
+      expect(await second.loadAttemptState(), 1);
+      expect(second.canOfferSkip, isFalse);
+      await expectLater(second.migrate(), throwsA(anything));
+      expect(second.attemptCount, 2);
+      expect(second.canOfferSkip, isTrue);
+
+      final relaunched = HiveToSqliteMigrationService(decision);
+      addTearDown(relaunched.dispose);
+      expect(await relaunched.loadAttemptState(), 2);
+      expect(relaunched.canOfferSkip, isTrue);
+      expect(relaunched.lastAttemptStage, isNotNull);
+    },
+  );
+
+  test('attempt counter clears after successful migration', () async {
+    final conversation = Conversation(
+      id: 'conversation-clear-attempts',
+      title: 'Clear Attempts',
+      createdAt: DateTime(2024, 4, 1),
+      updatedAt: DateTime(2024, 4, 2),
+    );
+    final message = ChatMessage(
+      id: 'message-clear',
+      role: 'user',
+      content: 'hello',
+      conversationId: conversation.id,
+      timestamp: DateTime(2024, 4, 1, 10),
+    );
+    conversation.messageIds.add(message.id);
+
+    _registerHiveAdapters();
+    Hive.init(tempDir.path);
+    final conversations = await Hive.openBox<Conversation>('conversations');
+    final messages = await Hive.openBox<ChatMessage>('messages');
+    await conversations.put(conversation.id, conversation);
+    await messages.put(message.id, message);
+    await conversations.close();
+    await messages.close();
+    await Hive.close();
+
+    final decision = await HiveToSqliteMigrationService.check();
+    final priming = HiveToSqliteMigrationService(
+      HiveToSqliteMigrationDecision(
+        needsMigration: true,
+        appDataDir: tempDir,
+        sqliteFile: File('${tempDir.path}/kelivo.db'),
+        hiveFiles: decision.hiveFiles,
+      ),
+    );
+    addTearDown(priming.dispose);
+    await Directory('${tempDir.path}/kelivo.db').create();
+    await expectLater(priming.migrate(), throwsA(anything));
+    expect(priming.attemptCount, 1);
+    await Directory('${tempDir.path}/kelivo.db').delete(recursive: true);
+
+    final service = HiveToSqliteMigrationService(
+      await HiveToSqliteMigrationService.check(),
+    );
+    addTearDown(service.dispose);
+    expect(await service.loadAttemptState(), 1);
+    await service.migrate();
+    expect(service.attemptCount, 0);
+    expect(service.canOfferSkip, isFalse);
+
+    final relaunched = HiveToSqliteMigrationService(
+      await HiveToSqliteMigrationService.check(),
+    );
+    addTearDown(relaunched.dispose);
+    expect(await relaunched.loadAttemptState(), 0);
+    expect(
+      File(
+        '${tempDir.path}/hive_to_sqlite_migration_attempt_v1.json',
+      ).existsSync(),
+      isFalse,
+    );
+  });
+
+  test('attempt counter clears when migration is skipped', () async {
+    final hiveFile = File('${tempDir.path}/conversations.hive')
+      ..writeAsBytesSync([1, 2, 3]);
+    final decision = HiveToSqliteMigrationDecision(
+      needsMigration: true,
+      appDataDir: tempDir,
+      sqliteFile: File('${tempDir.path}/kelivo.db'),
+      hiveFiles: [hiveFile],
+    );
+    final stateFile = File(
+      '${tempDir.path}/hive_to_sqlite_migration_attempt_v1.json',
+    );
+    await stateFile.writeAsString(
+      '{"attempts":2,"stage":"migrating/messages"}',
+    );
+
+    final service = HiveToSqliteMigrationService(decision);
+    addTearDown(service.dispose);
+    expect(await service.loadAttemptState(), 2);
+    expect(service.canOfferSkip, isTrue);
+
+    await service.skipMigrationAndStartFresh();
+    expect(service.attemptCount, 0);
+    expect(service.canOfferSkip, isFalse);
+    expect(stateFile.existsSync(), isFalse);
+    expect(File('${hiveFile.path}.retired').existsSync(), isTrue);
+  });
+
+  test('replaceSqlite publishes the migrated database on the happy path', () async {
+    final live = File('${tempDir.path}/kelivo.db')
+      ..writeAsStringSync('old-placeholder');
+    final temp = File('${tempDir.path}/kelivo.db.migrating')
+      ..writeAsStringSync('migrated-contents');
+    final service = HiveToSqliteMigrationService(
+      HiveToSqliteMigrationDecision(
+        needsMigration: true,
+        appDataDir: tempDir,
+        sqliteFile: live,
+        hiveFiles: const <File>[],
+      ),
+    );
+    addTearDown(service.dispose);
+
+    await service.replaceSqliteForTest(temp, live);
+
+    expect(await live.readAsString(), 'migrated-contents');
+    expect(temp.existsSync(), isFalse);
+    expect(File('${live.path}.previous').existsSync(), isFalse);
+  });
+
+  test('replaceSqlite fails loudly when a temp -wal sidecar exists', () async {
+    final live = File('${tempDir.path}/kelivo.db')
+      ..writeAsStringSync('old-placeholder');
+    final temp = File('${tempDir.path}/kelivo.db.migrating')
+      ..writeAsStringSync('migrated-contents');
+    File('${temp.path}-wal').writeAsStringSync('stray-wal');
+    final service = HiveToSqliteMigrationService(
+      HiveToSqliteMigrationDecision(
+        needsMigration: true,
+        appDataDir: tempDir,
+        sqliteFile: live,
+        hiveFiles: const <File>[],
+      ),
+    );
+    addTearDown(service.dispose);
+
+    await expectLater(
+      service.replaceSqliteForTest(temp, live),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'database_sidecar:-wal',
+        ),
+      ),
+    );
+    expect(await live.readAsString(), 'old-placeholder');
+    expect(await temp.readAsString(), 'migrated-contents');
+  });
+
+  test(
+    'replaceSqlite ignores a stray -wal next to the live placeholder',
+    () async {
+      final live = File('${tempDir.path}/kelivo.db')
+        ..writeAsStringSync('old-placeholder');
+      final liveWal = File('${live.path}-wal')
+        ..writeAsStringSync('stale-placeholder-wal');
+      final temp = File('${tempDir.path}/kelivo.db.migrating')
+        ..writeAsStringSync('migrated-contents');
+      final service = HiveToSqliteMigrationService(
+        HiveToSqliteMigrationDecision(
+          needsMigration: true,
+          appDataDir: tempDir,
+          sqliteFile: live,
+          hiveFiles: const <File>[],
+        ),
+      );
+      addTearDown(service.dispose);
+
+      await service.replaceSqliteForTest(temp, live);
+
+      expect(await live.readAsString(), 'migrated-contents');
+      expect(temp.existsSync(), isFalse);
+      expect(liveWal.existsSync(), isFalse);
+      expect(File('${live.path}.previous').existsSync(), isFalse);
+      expect(File('${live.path}.previous-wal').existsSync(), isFalse);
+    },
+  );
+
+  test(
+    'replaceSqlite recovers after rename-aside before move-in',
+    () async {
+      final live = File('${tempDir.path}/kelivo.db');
+      final temp = File('${tempDir.path}/kelivo.db.migrating')
+        ..writeAsStringSync('migrated-contents');
+      final aside = File('${live.path}.previous')
+        ..writeAsStringSync('old-placeholder');
+      // Simulate kill after rename-aside: live gone, aside + temp remain.
+      expect(live.existsSync(), isFalse);
+
+      final service = HiveToSqliteMigrationService(
+        HiveToSqliteMigrationDecision(
+          needsMigration: true,
+          appDataDir: tempDir,
+          sqliteFile: live,
+          hiveFiles: const <File>[],
+        ),
+      );
+      addTearDown(service.dispose);
+
+      await service.replaceSqliteForTest(temp, live);
+
+      expect(await live.readAsString(), 'migrated-contents');
+      expect(temp.existsSync(), isFalse);
+      expect(aside.existsSync(), isFalse);
+    },
+  );
+
+  test(
+    'replaceSqlite recovers after move-in before retiring the old file',
+    () async {
+      final live = File('${tempDir.path}/kelivo.db')
+        ..writeAsStringSync('migrated-contents');
+      final aside = File('${live.path}.previous')
+        ..writeAsStringSync('old-placeholder');
+      final temp = File('${tempDir.path}/kelivo.db.migrating');
+      expect(temp.existsSync(), isFalse);
+
+      final service = HiveToSqliteMigrationService(
+        HiveToSqliteMigrationDecision(
+          needsMigration: true,
+          appDataDir: tempDir,
+          sqliteFile: live,
+          hiveFiles: const <File>[],
+        ),
+      );
+      addTearDown(service.dispose);
+
+      await service.replaceSqliteForTest(temp, live);
+
+      expect(await live.readAsString(), 'migrated-contents');
+      expect(aside.existsSync(), isFalse);
+    },
+  );
 }
 
 void _registerHiveAdapters() {

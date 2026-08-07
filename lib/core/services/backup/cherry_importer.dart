@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import '../../database/business_repository.dart';
 import '../../database/business_settings_router.dart';
@@ -11,6 +12,9 @@ import '../../models/conversation.dart';
 import '../chat/chat_service.dart';
 import '../../../utils/app_directories.dart';
 import 'cherry_direct_backup_reader.dart';
+
+export 'cherry_direct_backup_reader.dart'
+    show CherryUnsupportedBackupVersionException;
 
 class CherryImportResult {
   final int providers;
@@ -302,54 +306,218 @@ class CherryImporter {
 
   // ---------- helpers ----------
 
+  /// Cap for *speculative* ZIP-entry probes only (unknown / non-`.json` names).
+  static const int defaultSpeculativeJsonProbeBytes = 32 * 1024 * 1024;
+
+  /// Absolute ceiling for in-archive identified `.json` entries only.
+  /// Whole-file and gunzipped JSON remain uncapped.
+  static const int defaultIdentifiedArchiveJsonBytes = 256 * 1024 * 1024;
+
+  /// Test seam to shrink the speculative probe budget without large fixtures.
+  @visibleForTesting
+  static int? debugSpeculativeJsonProbeBytes;
+
+  /// Test seam for the in-archive identified `.json` ceiling.
+  @visibleForTesting
+  static int? debugIdentifiedArchiveJsonBytes;
+
+  @visibleForTesting
+  static int get speculativeJsonProbeBytes =>
+      debugSpeculativeJsonProbeBytes ?? defaultSpeculativeJsonProbeBytes;
+
+  @visibleForTesting
+  static int get identifiedArchiveJsonBytes =>
+      debugIdentifiedArchiveJsonBytes ?? defaultIdentifiedArchiveJsonBytes;
+
+  /// Counts ZIP entry content accesses during JSON probe passes (not metadata).
+  @visibleForTesting
+  static int debugZipJsonProbeDecodeCount = 0;
+
+  @visibleForTesting
+  static void debugResetJsonProbeBudgets() {
+    debugSpeculativeJsonProbeBytes = null;
+    debugIdentifiedArchiveJsonBytes = null;
+    debugZipJsonProbeDecodeCount = 0;
+  }
+
+  static const Set<String> _blockedSpeculativeProbeExtensions = <String>{
+    '.sqlite',
+    '.db',
+    '.ldb',
+    '.log',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.webp',
+    '.pdf',
+    '.bin',
+    '.exe',
+    '.dll',
+    '.so',
+    '.dylib',
+    '.wasm',
+    '.mp3',
+    '.mp4',
+    '.wav',
+    '.zip',
+    '.gz',
+  };
+
+  static String _entryBaseName(String name) {
+    final normalized = name.replaceAll('\\', '/').toLowerCase();
+    return normalized.split('/').last;
+  }
+
+  /// Archive entries ending in `.json` are treated as identified JSON targets.
+  @visibleForTesting
+  static bool isIdentifiedJsonEntryName(String name) {
+    return _entryBaseName(name).endsWith('.json');
+  }
+
+  /// True when [name] has no directory component (archive-root entry).
+  @visibleForTesting
+  static bool isArchiveRootEntryName(String name) {
+    var normalized = name.replaceAll('\\', '/');
+    while (normalized.startsWith('./')) {
+      normalized = normalized.substring(2);
+    }
+    while (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
+    }
+    return normalized.isNotEmpty && !normalized.contains('/');
+  }
+
+  /// Whether a non-`.json` ZIP entry may be decompressed as a speculative
+  /// JSON probe. Size is checked against [speculativeJsonProbeBytes] before
+  /// touching [ArchiveFile.content] (which would decompress and cache).
+  @visibleForTesting
+  static bool isSpeculativeJsonEntryCandidate(String name, int size) {
+    if (size <= 0 || size > speculativeJsonProbeBytes) return false;
+    if (isIdentifiedJsonEntryName(name)) return false;
+    final base = _entryBaseName(name);
+    for (final ext in _blockedSpeculativeProbeExtensions) {
+      if (base.endsWith(ext)) return false;
+    }
+    return true;
+  }
+
+  /// Whether an in-archive `.json` entry may be decompressed. Bounded by
+  /// [identifiedArchiveJsonBytes] so nested attachment dumps cannot OOM.
+  @visibleForTesting
+  static bool isIdentifiedArchiveJsonEntryCandidate(String name, int size) {
+    if (size <= 0 || size > identifiedArchiveJsonBytes) return false;
+    return isIdentifiedJsonEntryName(name);
+  }
+
+  static bool _looksLikeZip(List<int> bytes) {
+    return bytes.length >= 4 &&
+        bytes[0] == 0x50 &&
+        bytes[1] == 0x4b &&
+        (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07) &&
+        (bytes[3] == 0x04 || bytes[3] == 0x06 || bytes[3] == 0x08);
+  }
+
+  static bool _looksLikeGzip(List<int> bytes) {
+    return bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
+  }
+
+  static Map<String, dynamic>? _tryParseBackupJson(String text) {
+    try {
+      final obj = jsonDecode(text) as Map<String, dynamic>;
+      if (obj.containsKey('localStorage') && obj.containsKey('indexedDB')) {
+        return obj;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Map<String, dynamic>? _tryDecodeBackupJsonBytes(
+    List<int> raw, {
+    required bool allowMalformed,
+  }) {
+    try {
+      return _tryParseBackupJson(
+        utf8.decode(raw, allowMalformed: allowMalformed),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Map<String, dynamic>? _tryParseZipJsonEntry(
+    ArchiveFile entry, {
+    required bool identified,
+  }) {
+    if (!entry.isFile || entry.size <= 0) return null;
+    if (identified) {
+      if (!isIdentifiedArchiveJsonEntryCandidate(entry.name, entry.size)) {
+        return null;
+      }
+    } else if (!isSpeculativeJsonEntryCandidate(entry.name, entry.size)) {
+      return null;
+    }
+    try {
+      debugZipJsonProbeDecodeCount++;
+      final raw = entry.content;
+      if (identified) {
+        if (raw.length > identifiedArchiveJsonBytes) return null;
+      } else if (raw.length > speculativeJsonProbeBytes) {
+        return null;
+      }
+      return _tryDecodeBackupJsonBytes(
+        raw,
+        allowMalformed: identified,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>> _readCherryBackupFile(File file) async {
     final bytes = await file.readAsBytes();
 
-    // Helper to verify structure looks like Cherry backup
-    Map<String, dynamic>? tryParseBackupJson(String text) {
-      try {
-        final obj = jsonDecode(text) as Map<String, dynamic>;
-        if (obj.containsKey('localStorage') && obj.containsKey('indexedDB')) {
-          return obj;
-        }
-      } catch (_) {}
-      return null;
+    // Whole-file JSON (not ZIP/GZIP): uncapped, allowMalformed.
+    if (!_looksLikeZip(bytes) && !_looksLikeGzip(bytes)) {
+      final obj = _tryDecodeBackupJsonBytes(bytes, allowMalformed: true);
+      if (obj != null) return obj;
     }
 
-    // 1) Try as plain JSON text
-    try {
-      final content = await file.readAsString();
-      final obj = tryParseBackupJson(content);
-      if (obj != null) return obj;
-    } catch (_) {}
-
-    // 2) Try ZIP: scan all file entries and pick the one that parses to expected JSON
+    // ZIP: version-gate from metadata.json before any entry probe.
     try {
       final archive = ZipDecoder().decodeBytes(bytes);
+      CherryDirectBackupReader.readMetadataOrThrowIfUnsupported(archive);
       for (final entry in archive) {
-        if (!entry.isFile) continue;
-        try {
-          final content = utf8.decode(
-            entry.content as List<int>,
-            allowMalformed: true,
-          );
-          final obj = tryParseBackupJson(content);
-          if (obj != null) return obj;
-        } catch (_) {
-          // skip non-text entries
-        }
+        if (!isArchiveRootEntryName(entry.name)) continue;
+        final obj = _tryParseZipJsonEntry(entry, identified: true);
+        if (obj != null) return obj;
+      }
+      for (final entry in archive) {
+        if (isArchiveRootEntryName(entry.name)) continue;
+        final obj = _tryParseZipJsonEntry(entry, identified: true);
+        if (obj != null) return obj;
+      }
+      for (final entry in archive) {
+        final obj = _tryParseZipJsonEntry(entry, identified: false);
+        if (obj != null) return obj;
       }
       final directBackup = CherryDirectBackupReader.readArchive(archive);
       if (directBackup != null) return directBackup;
+    } on CherryUnsupportedBackupVersionException {
+      rethrow;
     } catch (_) {}
 
-    // 3) Try GZIP (some .bak may be gzip-compressed JSON)
-    try {
-      final gunzipped = GZipDecoder().decodeBytes(bytes, verify: false);
-      final content = utf8.decode(gunzipped, allowMalformed: true);
-      final obj = tryParseBackupJson(content);
-      if (obj != null) return obj;
-    } catch (_) {}
+    // GZIP JSON payload: uncapped, allowMalformed.
+    if (_looksLikeGzip(bytes)) {
+      try {
+        final gunzipped = GZipDecoder().decodeBytes(bytes, verify: false);
+        final obj = _tryDecodeBackupJsonBytes(
+          gunzipped,
+          allowMalformed: true,
+        );
+        if (obj != null) return obj;
+      } catch (_) {}
+    }
 
     throw Exception('Unable to read Cherry backup file');
   }

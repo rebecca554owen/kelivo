@@ -286,6 +286,193 @@ void main() {
     expect(actual, expected);
     expect(legacy.values, <String, Object?>{'flutter_log_enabled_v1': true});
   });
+
+  test(
+    'checkpoints before the first SharedPreferences deletion',
+    () async {
+      final events = <String>[];
+      final legacy = FakeLegacyBusinessPreferences({
+        'theme_mode_v1': 'dark',
+        'app_locale_v1': 'zh-CN',
+      })..onRemove = (_) => events.add('remove');
+
+      final result = await BusinessMigrationEngine(
+        repository: repository,
+        legacyPreferences: legacy,
+        checkpoint: () async {
+          events.add('checkpoint');
+          return repository.checkpoint();
+        },
+      ).run();
+
+      expect(result, BusinessMigrationResult.migrated);
+      expect(events.first, 'checkpoint');
+      expect(events.skip(1), everyElement('remove'));
+      expect(legacy.values, isEmpty);
+    },
+  );
+
+  test(
+    'busy checkpoint keeps source keys across launches until barrier succeeds',
+    () async {
+      final legacy = FakeLegacyBusinessPreferences({
+        'theme_mode_v1': 'dark',
+        'app_locale_v1': 'zh-CN',
+        'flutter_log_enabled_v1': true,
+      });
+      var barrierOk = false;
+      final engine = BusinessMigrationEngine(
+        repository: repository,
+        legacyPreferences: legacy,
+        checkpoint: () async => barrierOk,
+      );
+
+      expect(await engine.run(), BusinessMigrationResult.migrated);
+      expect(await repository.hasMigrationReceipt(), isTrue);
+      expect(await repository.getPreference('theme_mode_v1'), 'dark');
+      expect(legacy.values, {
+        'theme_mode_v1': 'dark',
+        'app_locale_v1': 'zh-CN',
+        'flutter_log_enabled_v1': true,
+      });
+
+      expect(await engine.run(), BusinessMigrationResult.deferredCleanup);
+      expect(legacy.values, {
+        'theme_mode_v1': 'dark',
+        'app_locale_v1': 'zh-CN',
+        'flutter_log_enabled_v1': true,
+      });
+
+      barrierOk = true;
+      expect(await engine.run(), BusinessMigrationResult.cleanedAfterReceipt);
+      expect(legacy.values, {'flutter_log_enabled_v1': true});
+    },
+  );
+
+  test(
+    'failed checkpoint keeps source keys across launches until barrier succeeds',
+    () async {
+      final legacy = FakeLegacyBusinessPreferences({
+        'theme_mode_v1': 'dark',
+        'flutter_log_enabled_v1': true,
+      });
+      var barrierOk = false;
+      final engine = BusinessMigrationEngine(
+        repository: repository,
+        legacyPreferences: legacy,
+        checkpoint: () async {
+          if (!barrierOk) {
+            throw StateError('injected_checkpoint_failure');
+          }
+          return true;
+        },
+      );
+
+      expect(await engine.run(), BusinessMigrationResult.migrated);
+      expect(await repository.hasMigrationReceipt(), isTrue);
+      expect(legacy.values, {
+        'theme_mode_v1': 'dark',
+        'flutter_log_enabled_v1': true,
+      });
+
+      expect(await engine.run(), BusinessMigrationResult.deferredCleanup);
+      expect(legacy.values, {
+        'theme_mode_v1': 'dark',
+        'flutter_log_enabled_v1': true,
+      });
+
+      barrierOk = true;
+      expect(await engine.run(), BusinessMigrationResult.cleanedAfterReceipt);
+      expect(legacy.values, {'flutter_log_enabled_v1': true});
+    },
+  );
+
+  test(
+    'receipt cleanup requires a durability barrier in the same run',
+    () async {
+      await repository.writeMigrationReceipt();
+      final legacy = FakeLegacyBusinessPreferences({
+        'theme_mode_v1': 'dark',
+        'flutter_log_enabled_v1': true,
+      });
+
+      expect(
+        await BusinessMigrationEngine(
+          repository: repository,
+          legacyPreferences: legacy,
+          checkpoint: () async => true,
+        ).run(),
+        BusinessMigrationResult.cleanedAfterReceipt,
+      );
+      expect(legacy.values, {'flutter_log_enabled_v1': true});
+    },
+  );
+
+  test(
+    'receipt cleanup retains keys when the barrier is busy or throws',
+    () async {
+      await repository.writeMigrationReceipt();
+      final legacy = FakeLegacyBusinessPreferences({
+        'theme_mode_v1': 'dark',
+        'app_locale_v1': 'zh-CN',
+        'flutter_log_enabled_v1': true,
+      });
+      final retained = {
+        'theme_mode_v1': 'dark',
+        'app_locale_v1': 'zh-CN',
+        'flutter_log_enabled_v1': true,
+      };
+
+      expect(
+        await BusinessMigrationEngine(
+          repository: repository,
+          legacyPreferences: legacy,
+          checkpoint: () async => false,
+        ).run(),
+        BusinessMigrationResult.deferredCleanup,
+      );
+      expect(legacy.values, retained);
+
+      expect(
+        await BusinessMigrationEngine(
+          repository: repository,
+          legacyPreferences: legacy,
+          checkpoint: () async => throw StateError('injected_checkpoint_failure'),
+        ).run(),
+        BusinessMigrationResult.deferredCleanup,
+      );
+      expect(legacy.values, retained);
+
+      expect(
+        await BusinessMigrationEngine(
+          repository: repository,
+          legacyPreferences: legacy,
+          checkpoint: () async => true,
+        ).run(),
+        BusinessMigrationResult.cleanedAfterReceipt,
+      );
+      expect(legacy.values, {'flutter_log_enabled_v1': true});
+    },
+  );
+
+  test('alreadyComplete does not invoke the durability barrier', () async {
+    await repository.writeMigrationReceipt();
+    var checkpointCalls = 0;
+
+    final result = await BusinessMigrationEngine(
+      repository: repository,
+      legacyPreferences: FakeLegacyBusinessPreferences({
+        'flutter_log_enabled_v1': true,
+      }),
+      checkpoint: () async {
+        checkpointCalls += 1;
+        return true;
+      },
+    ).run();
+
+    expect(result, BusinessMigrationResult.alreadyComplete);
+    expect(checkpointCalls, 0);
+  });
 }
 
 final class FakeLegacyBusinessPreferences implements LegacyBusinessPreferences {
@@ -294,6 +481,7 @@ final class FakeLegacyBusinessPreferences implements LegacyBusinessPreferences {
 
   final Map<String, Object?> values;
   int? failRemovalAfter;
+  void Function(String key)? onRemove;
   int _removalCount = 0;
 
   @override
@@ -307,6 +495,7 @@ final class FakeLegacyBusinessPreferences implements LegacyBusinessPreferences {
       throw StateError('injected_cleanup_failure');
     }
     _removalCount++;
+    onRemove?.call(key);
     values.remove(key);
   }
 }
