@@ -16,6 +16,7 @@ import 'package:Kelivo/core/models/backup.dart';
 import 'package:Kelivo/core/services/backup/cherry_direct_backup_reader.dart';
 import 'package:Kelivo/core/services/backup/cherry_importer.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/utils/app_directories.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.path);
@@ -998,7 +999,257 @@ void main() {
         'ok-with-bad-byte',
       );
     });
+
+    test(
+      'materializes attachments via basename, rel path, uuid id, and large entry',
+      () async {
+        const uuidId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+        final byBaseBytes = utf8.encode('basename-route-bytes');
+        final byRelBytes = utf8.encode('rel-path-route-bytes');
+        final byIdBytes = utf8.encode('uuid-id-route-bytes');
+        final largeBytes = List<int>.generate(
+          3 * 1024 * 1024,
+          (i) => i % 251,
+          growable: false,
+        );
+
+        final backup = await _createZip(tempDir, <String, List<int>>{
+          'data.json': utf8.encode(
+            jsonEncode(
+              _legacyBackupWithAttachments(
+                files: <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'file-base',
+                    'name': 'by-base.txt',
+                    'origin_name': 'by-base.txt',
+                    'type': 'text/plain',
+                  },
+                  <String, dynamic>{
+                    'id': 'file-rel',
+                    'name': 'rel-doc.bin',
+                    'origin_name': 'rel-doc.bin',
+                    'path': 'Data/Files/rel-doc.bin',
+                    'type': 'application/octet-stream',
+                  },
+                  <String, dynamic>{
+                    'id': uuidId,
+                    'name': 'id-route.bin',
+                    'origin_name': 'id-route.bin',
+                    'ext': 'bin',
+                    'type': 'application/octet-stream',
+                  },
+                  <String, dynamic>{
+                    'id': 'file-large',
+                    'name': 'large.bin',
+                    'origin_name': 'large.bin',
+                    'type': 'application/octet-stream',
+                  },
+                ],
+              ),
+            ),
+          ),
+          'Data/Files/by-base.txt': byBaseBytes,
+          // Prefixed so indexOf('/data/files/') matches (same as nested layouts).
+          'bundle/Data/Files/rel-doc.bin': byRelBytes,
+          'Data/Files/$uuidId.bin': byIdBytes,
+          'Data/Files/large.bin': largeBytes,
+        });
+
+        final result = await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        expect(result.files, greaterThanOrEqualTo(4));
+
+        final upload = await AppDirectories.getUploadDirectory();
+        Future<List<int>> readUpload(String id, String name) {
+          return File('${upload.path}/cherry_${id}_$name').readAsBytes();
+        }
+
+        expect(await readUpload('file-base', 'by-base.txt'), byBaseBytes);
+        expect(await readUpload('file-rel', 'rel-doc.bin'), byRelBytes);
+        expect(await readUpload(uuidId, 'id-route.bin'), byIdBytes);
+        expect(await readUpload('file-large', 'large.bin'), largeBytes);
+      },
+    );
+
+    test(
+      'non-ZIP backup falls back to sibling Data/Files directory',
+      () async {
+        final filesDir = Directory('${tempDir.path}/Data/Files')
+          ..createSync(recursive: true);
+        final diskBytes = utf8.encode('from-sibling-disk');
+        await File('${filesDir.path}/disk-only.txt').writeAsBytes(diskBytes);
+
+        final bak = File('${tempDir.path}/cherry_disk.bak');
+        await bak.writeAsString(
+          jsonEncode(
+            _legacyBackupWithAttachments(
+              files: <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'file-disk',
+                  'name': 'disk-only.txt',
+                  'origin_name': 'disk-only.txt',
+                  'path': 'Data/Files/disk-only.txt',
+                  'type': 'text/plain',
+                },
+              ],
+            ),
+          ),
+        );
+
+        final result = await CherryImporter.importFromCherryStudio(
+          file: bak,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        expect(result.files, greaterThanOrEqualTo(1));
+        final upload = await AppDirectories.getUploadDirectory();
+        expect(
+          await File(
+            '${upload.path}/cherry_file-disk_disk-only.txt',
+          ).readAsBytes(),
+          diskBytes,
+        );
+      },
+    );
+
+    test(
+      'already-written attachment path is reused without rewriting',
+      () async {
+        final payload = utf8.encode('original-zip-bytes');
+        final backup = await _createZip(tempDir, <String, List<int>>{
+          'data.json': utf8.encode(
+            jsonEncode(
+              _legacyBackupWithAttachments(
+                files: <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'file-reuse',
+                    'name': 'reuse.txt',
+                    'origin_name': 'reuse.txt',
+                    'type': 'text/plain',
+                  },
+                ],
+              ),
+            ),
+          ),
+          'Data/Files/reuse.txt': payload,
+        });
+
+        await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        final upload = await AppDirectories.getUploadDirectory();
+        final out = File('${upload.path}/cherry_file-reuse_reuse.txt');
+        expect(await out.readAsBytes(), payload);
+        final marker = utf8.encode('LOCAL_MARKER_DO_NOT_OVERWRITE');
+        await out.writeAsBytes(marker);
+
+        await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        expect(await out.readAsBytes(), marker);
+      },
+    );
+
+    test(
+      'resolves zip attachments whose entry names use backslash separators',
+      () async {
+        const uuidId = 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff';
+        final bytes = utf8.encode('backslash-entry-bytes');
+        final archive = Archive()
+          ..add(
+            ArchiveFile.string(
+              'data.json',
+              jsonEncode(
+                _legacyBackupWithAttachments(
+                  files: <Map<String, dynamic>>[
+                    <String, dynamic>{
+                      'id': uuidId,
+                      'name': 'win.bin',
+                      'origin_name': 'win.bin',
+                      'ext': 'bin',
+                      'type': 'application/octet-stream',
+                    },
+                  ],
+                ),
+              ),
+            ),
+          )
+          ..add(ArchiveFile.bytes('Data\\Files\\$uuidId.bin', bytes));
+
+        final zip = File(
+          '${tempDir.path}/backslash_${DateTime.now().microsecondsSinceEpoch}.zip',
+        );
+        await zip.writeAsBytes(ZipEncoder().encodeBytes(archive));
+
+        final result = await CherryImporter.importFromCherryStudio(
+          file: zip,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        expect(result.files, greaterThanOrEqualTo(1));
+        final upload = await AppDirectories.getUploadDirectory();
+        expect(
+          await File('${upload.path}/cherry_${uuidId}_win.bin').readAsBytes(),
+          bytes,
+        );
+      },
+    );
   });
+}
+
+Map<String, dynamic> _legacyBackupWithAttachments({
+  required List<Map<String, dynamic>> files,
+}) {
+  final fileRefs = <Map<String, dynamic>>[
+    for (final file in files)
+      <String, dynamic>{
+        'id': file['id'],
+        'name': file['name'],
+        'origin_name': file['origin_name'] ?? file['name'],
+        'type': file['type'] ?? 'application/octet-stream',
+      },
+  ];
+  return <String, dynamic>{
+    'version': 5,
+    'localStorage': <String, dynamic>{
+      'persist:cherry-studio': _persistStateJson(),
+    },
+    'indexedDB': <String, dynamic>{
+      'topics': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 'topic-files',
+          'messages': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'id': 'msg-files',
+              'role': 'user',
+              'topicId': 'topic-files',
+              'assistantId': 'assistant-1',
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'status': 'success',
+              'content': 'with-attachments',
+              'blocks': <String>[],
+              'files': fileRefs,
+            },
+          ],
+        },
+      ],
+      'message_blocks': <Map<String, dynamic>>[],
+      'files': files,
+    },
+  };
 }
 
 Map<String, dynamic> _legacyBackupRoot({
