@@ -54,7 +54,9 @@ ColorScheme _withDerivedSurfaceContainers(ColorScheme s) {
     surfaceContainerLowest: dark ? over(black, 0.28) : over(white, 0.72),
     surfaceContainerLow: dark ? over(white, 0.03) : over(white, 0.55),
     surfaceContainer: dark ? over(white, 0.045) : over(white, 0.35),
-    surfaceContainerHigh: dark ? over(white, 0.06) : over(s.onSurface, 0.03),
+    // Light "high" containers must stay ≈ white: chat bubbles, cards, menus
+    // and dialogs historically used plain Colors.white in light mode.
+    surfaceContainerHigh: dark ? over(white, 0.06) : over(white, 0.85),
     surfaceContainerHighest: dark ? over(white, 0.09) : over(s.onSurface, 0.05),
   );
 }

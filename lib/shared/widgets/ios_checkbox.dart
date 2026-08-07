@@ -47,9 +47,14 @@ class _IosCheckboxState extends State<IosCheckbox> {
   Widget build(BuildContext context) {
     final materialTheme = Theme.of(context);
     final cs = materialTheme.colorScheme;
+    final isDark = materialTheme.brightness == Brightness.dark;
     final activeColor =
         widget.activeColor ?? CupertinoTheme.of(context).primaryColor;
-    final borderColor = widget.borderColor ?? cs.outlineVariant;
+    // Neutral gray ring matching the original Cupertino systemGrey4 (light) /
+    // systemGrey3 (dark); several palettes define outlineVariant as pure
+    // black/white, which made this border far too strong.
+    final borderColor = widget.borderColor ??
+        cs.onSurface.withValues(alpha: isDark ? 0.24 : 0.20);
 
     final bool enabled = widget.onChanged != null;
     final Color bgColor = widget.value
