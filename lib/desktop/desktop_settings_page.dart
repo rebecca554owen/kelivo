@@ -69,6 +69,8 @@ import '../features/provider/widgets/share_provider_sheet.dart'
 import '../utils/clipboard_images.dart';
 import '../utils/provider_grouping_logic.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
+import '../theme/custom_theme.dart';
+import '../features/settings/widgets/custom_theme_widgets.dart';
 
 part 'setting/assistants_pane.dart';
 part 'setting/providers_pane.dart';

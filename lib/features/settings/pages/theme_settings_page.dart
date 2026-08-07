@@ -8,6 +8,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import '../../../theme/custom_theme.dart';
+import '../widgets/custom_theme_widgets.dart';
 
 class ThemeSettingsPage extends StatelessWidget {
   const ThemeSettingsPage({super.key});
@@ -27,6 +29,29 @@ class ThemeSettingsPage extends StatelessWidget {
           fontWeight: AppFontWeights.semibold,
           color: cs.onSurface.withValues(alpha: 0.8),
         ),
+      ),
+    );
+
+    // Section header with trailing action icons (e.g. new/import theme).
+    Widget headerWithActions(
+      String text, {
+      required List<Widget> actions,
+    }) => Padding(
+      padding: const EdgeInsets.fromLTRB(12, 18, 8, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: AppFontWeights.semibold,
+                color: cs.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+          ...actions,
+        ],
       ),
     );
 
@@ -91,203 +116,92 @@ class ThemeSettingsPage extends StatelessWidget {
                     ThemePalettes.all[i].id,
                   ),
                 ),
-                _iosDivider(context),
+                if (i != ThemePalettes.all.length - 1) _iosDivider(context),
               ],
-              _customPaletteRow(
-                context,
-                selected:
-                    settings.themePaletteId == ThemePalettes.customPaletteId,
-                onTap: () => context
-                    .read<SettingsProvider>()
-                    .setThemePalette(ThemePalettes.customPaletteId),
+            ],
+          ),
+          headerWithActions(
+            l10n.themeSettingsPageCustomThemesSection,
+            actions: [
+              Tooltip(
+                message: l10n.customThemeNewTheme,
+                child: _TactileIconButton(
+                  icon: Lucide.Plus,
+                  color: cs.onSurface.withValues(alpha: 0.7),
+                  size: 18,
+                  onTap: () => showCustomThemeEditor(context),
+                ),
+              ),
+              Tooltip(
+                message: l10n.customThemeImportTheme,
+                child: _TactileIconButton(
+                  icon: Lucide.Download,
+                  color: cs.onSurface.withValues(alpha: 0.7),
+                  size: 18,
+                  onTap: () => showImportCustomThemeDialog(context),
+                ),
               ),
             ],
           ),
-          if (settings.themePaletteId == ThemePalettes.customPaletteId) ...[
-            header(l10n.themeSettingsPageCustomColorsSection),
-            _iosSectionCard(
-              children: [
-                _colorRow(
-                  context,
-                  icon: Lucide.Palette,
-                  label: l10n.themeSettingsPageCustomSeedColorTitle,
-                  subtitle: l10n.themeSettingsPageCustomSeedColorSubtitle,
-                  color: settings.customSeedColor != null
-                      ? Color(settings.customSeedColor!)
-                      : null,
-                  onTap: () => _pickColor(
-                    context,
-                    title: l10n.themeSettingsPageCustomSeedColorTitle,
-                    allowReset: false,
-                    onSelected: (c) => context
-                        .read<SettingsProvider>()
-                        .setCustomSeedColor(c.toARGB32()),
-                  ),
-                ),
-                _iosDivider(context),
-                _colorRow(
-                  context,
-                  icon: Lucide.Brush,
-                  label: l10n.themeSettingsPageCustomPrimaryTitle,
-                  subtitle: l10n.themeSettingsPageCustomPrimarySubtitle,
-                  color: settings.customPrimaryOverride != null
-                      ? Color(settings.customPrimaryOverride!)
-                      : null,
-                  onTap: () => _pickColor(
-                    context,
-                    title: l10n.themeSettingsPageCustomPrimaryTitle,
-                    allowReset: true,
-                    onSelected: (c) => context
-                        .read<SettingsProvider>()
-                        .setCustomPrimaryOverride(c.toARGB32()),
-                    onReset: () => context
-                        .read<SettingsProvider>()
-                        .setCustomPrimaryOverride(null),
-                  ),
-                ),
-                _iosDivider(context),
-                _colorRow(
-                  context,
-                  icon: Lucide.Square,
-                  label: l10n.themeSettingsPageCustomSurfaceTitle,
-                  subtitle: l10n.themeSettingsPageCustomSurfaceSubtitle,
-                  color: settings.customSurfaceOverride != null
-                      ? Color(settings.customSurfaceOverride!)
-                      : null,
-                  onTap: () => _pickColor(
-                    context,
-                    title: l10n.themeSettingsPageCustomSurfaceTitle,
-                    allowReset: true,
-                    onSelected: (c) => context
-                        .read<SettingsProvider>()
-                        .setCustomSurfaceOverride(c.toARGB32()),
-                    onReset: () => context
-                        .read<SettingsProvider>()
-                        .setCustomSurfaceOverride(null),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-          ],
+          _customThemesSection(context),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 }
 
-/// Preset swatches for the custom-color picker sheet.
-/// These are fixed picker content (like brand colors), intentionally not themed.
-const List<Color> _kCustomColorSwatches = [
-  Color(0xFF4D5C92), // default palette primary
-  Color(0xFF00B96B), // doc theme primary
-  Color(0xFFE53935),
-  Color(0xFFD81B60),
-  Color(0xFF8E24AA),
-  Color(0xFF5E35B1),
-  Color(0xFF3949AB),
-  Color(0xFF1E88E5),
-  Color(0xFF039BE5),
-  Color(0xFF00ACC1),
-  Color(0xFF00897B),
-  Color(0xFF43A047),
-  Color(0xFF7CB342),
-  Color(0xFFC0CA33),
-  Color(0xFFFDD835),
-  Color(0xFFFFB300),
-  Color(0xFFFB8C00),
-  Color(0xFFF4511E),
-  Color(0xFF6D4C41),
-  Color(0xFF757575),
-];
-
-Future<void> _pickColor(
-  BuildContext context, {
-  required String title,
-  required bool allowReset,
-  required ValueChanged<Color> onSelected,
-  VoidCallback? onReset,
-}) async {
-  final cs = Theme.of(context).colorScheme;
-  final l10n = AppLocalizations.of(context)!;
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: cs.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (ctx) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: AppFontWeights.semibold,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [
-                  for (final c in _kCustomColorSwatches)
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        onSelected(c);
-                      },
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: cs.outlineVariant.withValues(alpha: 0.3),
-                            width: 0.6,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              if (allowReset) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      onReset?.call();
-                    },
-                    child: Text(l10n.themeSettingsPageCustomColorReset),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
-Widget _customPaletteRow(
-  BuildContext context, {
-  required bool selected,
-  required VoidCallback onTap,
-}) {
-  final cs = Theme.of(context).colorScheme;
+/// Saved custom themes list (create/import live in the section header).
+Widget _customThemesSection(BuildContext context) {
   final l10n = AppLocalizations.of(context)!;
   final settings = context.watch<SettingsProvider>();
-  final seed = settings.customSeedColor;
+  final themes = settings.customThemes;
+  final isCustomActive =
+      settings.themePaletteId == ThemePalettes.customPaletteId;
+
+  Future<void> confirmDelete(CustomTheme t) async {
+    final ok = await showCustomThemeConfirmDialog(
+      context,
+      message: l10n.customThemeDeleteConfirm,
+    );
+    if (ok && context.mounted) {
+      await context.read<SettingsProvider>().deleteCustomTheme(t.id);
+    }
+  }
+
+  if (themes.isEmpty) return const SizedBox.shrink();
+
+  return _iosSectionCard(
+    children: [
+      for (int i = 0; i < themes.length; i++) ...[
+        _customThemeRow(
+          context,
+          theme: themes[i],
+          selected: isCustomActive &&
+              settings.selectedCustomThemeId == themes[i].id,
+          onTap: () =>
+              context.read<SettingsProvider>().selectCustomTheme(themes[i].id),
+          onCopy: () => exportCustomThemeToClipboard(context, themes[i]),
+          onEdit: () => showCustomThemeEditor(context, initial: themes[i]),
+          onDelete: () => confirmDelete(themes[i]),
+        ),
+        if (i != themes.length - 1) _iosDivider(context),
+      ],
+    ],
+  );
+}
+
+Widget _customThemeRow(
+  BuildContext context, {
+  required CustomTheme theme,
+  required bool selected,
+  required VoidCallback onTap,
+  required VoidCallback onCopy,
+  required VoidCallback onEdit,
+  required VoidCallback onDelete,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  final l10n = AppLocalizations.of(context)!;
   return _TactileRow(
     onTap: onTap,
     builder: (pressed) {
@@ -296,40 +210,30 @@ Widget _customPaletteRow(
         pressed: pressed,
         base: baseColor,
         builder: (c) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: seed != null ? Color(seed) : null,
-                  gradient: seed == null
-                      ? const SweepGradient(
-                          colors: [
-                            Color(0xFFE53935),
-                            Color(0xFFFFB300),
-                            Color(0xFF43A047),
-                            Color(0xFF1E88E5),
-                            Color(0xFF8E24AA),
-                            Color(0xFFE53935),
-                          ],
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 16),
+              CustomThemeDot(theme: theme, size: 28, selected: selected),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  l10n.themeSettingsPageCustomPaletteName,
+                  theme.name.isEmpty
+                      ? l10n.themeSettingsPageCustomPaletteName
+                      : theme.name,
                   style: TextStyle(fontSize: 15, color: c),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (selected)
-                Icon(Lucide.Check, size: 18, color: cs.primary)
-              else
-                const SizedBox(width: 18, height: 18),
+              if (selected) Icon(Lucide.Check, size: 18, color: cs.primary),
+              _rowAction(context, icon: Lucide.Copy, onTap: onCopy),
+              _rowAction(context, icon: Lucide.Pencil, onTap: onEdit),
+              _rowAction(
+                context,
+                icon: Lucide.Trash2,
+                onTap: onDelete,
+                color: cs.error,
+              ),
             ],
           ),
         ),
@@ -338,68 +242,18 @@ Widget _customPaletteRow(
   );
 }
 
-Widget _colorRow(
+Widget _rowAction(
   BuildContext context, {
   required IconData icon,
-  required String label,
-  required String subtitle,
-  required Color? color,
   required VoidCallback onTap,
+  Color? color,
 }) {
   final cs = Theme.of(context).colorScheme;
-  return _TactileRow(
+  return _TactileIconButton(
+    icon: icon,
+    color: color ?? cs.onSurface.withValues(alpha: 0.7),
+    size: 16,
     onTap: onTap,
-    builder: (pressed) {
-      final baseColor = cs.onSurface.withValues(alpha: 0.9);
-      return _AnimatedPressColor(
-        pressed: pressed,
-        base: baseColor,
-        builder: (c) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: cs.onSurface.withValues(alpha: 0.7)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: TextStyle(fontSize: 15, color: c)),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color,
-                  border: Border.all(
-                    color: cs.outlineVariant.withValues(alpha: 0.4),
-                    width: 0.6,
-                  ),
-                ),
-                child: color == null
-                    ? Icon(
-                        Lucide.Sparkles,
-                        size: 13,
-                        color: cs.onSurface.withValues(alpha: 0.5),
-                      )
-                    : null,
-              ),
-            ],
-          ),
-        ),
-      );
-    },
   );
 }
 

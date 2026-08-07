@@ -8192,53 +8192,119 @@ abstract class AppLocalizations {
   /// **'Custom'**
   String get themeSettingsPageCustomPaletteName;
 
-  /// No description provided for @themeSettingsPageCustomColorsSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom Colors'**
-  String get themeSettingsPageCustomColorsSection;
-
-  /// No description provided for @themeSettingsPageCustomSeedColorTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Seed Color'**
-  String get themeSettingsPageCustomSeedColorTitle;
-
-  /// No description provided for @themeSettingsPageCustomSeedColorSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate a full palette from this color'**
-  String get themeSettingsPageCustomSeedColorSubtitle;
-
-  /// No description provided for @themeSettingsPageCustomPrimaryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Primary Override'**
-  String get themeSettingsPageCustomPrimaryTitle;
-
-  /// No description provided for @themeSettingsPageCustomPrimarySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional; replaces the generated primary'**
-  String get themeSettingsPageCustomPrimarySubtitle;
-
-  /// No description provided for @themeSettingsPageCustomSurfaceTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Surface Override'**
-  String get themeSettingsPageCustomSurfaceTitle;
-
-  /// No description provided for @themeSettingsPageCustomSurfaceSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional; ignored while Pure Background is on'**
-  String get themeSettingsPageCustomSurfaceSubtitle;
-
   /// No description provided for @themeSettingsPageCustomColorReset.
   ///
   /// In en, this message translates to:
   /// **'Reset'**
   String get themeSettingsPageCustomColorReset;
+
+  /// No description provided for @themeSettingsPageCustomThemesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Themes'**
+  String get themeSettingsPageCustomThemesSection;
+
+  /// No description provided for @customThemeNewTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'New Theme'**
+  String get customThemeNewTheme;
+
+  /// No description provided for @customThemeEditTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Theme'**
+  String get customThemeEditTheme;
+
+  /// No description provided for @customThemeImportTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Theme'**
+  String get customThemeImportTheme;
+
+  /// No description provided for @customThemeNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme name'**
+  String get customThemeNameLabel;
+
+  /// No description provided for @customThemePrimaryColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary'**
+  String get customThemePrimaryColor;
+
+  /// No description provided for @customThemeSecondaryColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Secondary'**
+  String get customThemeSecondaryColor;
+
+  /// No description provided for @customThemeTertiaryColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tertiary'**
+  String get customThemeTertiaryColor;
+
+  /// No description provided for @customThemeColorAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get customThemeColorAuto;
+
+  /// No description provided for @customThemeSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get customThemeSave;
+
+  /// No description provided for @customThemeCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get customThemeCancel;
+
+  /// No description provided for @customThemeDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get customThemeDelete;
+
+  /// No description provided for @customThemeDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this theme?'**
+  String get customThemeDeleteConfirm;
+
+  /// No description provided for @customThemeCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme JSON copied to clipboard'**
+  String get customThemeCopied;
+
+  /// No description provided for @customThemeCopyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get customThemeCopyAction;
+
+  /// No description provided for @customThemeImportHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the theme JSON here'**
+  String get customThemeImportHint;
+
+  /// No description provided for @customThemeImportInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid theme JSON'**
+  String get customThemeImportInvalid;
+
+  /// No description provided for @customThemeHexLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hex'**
+  String get customThemeHexLabel;
 
   /// No description provided for @ttsServicesPageBackButton.
   ///

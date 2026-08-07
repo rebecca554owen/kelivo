@@ -569,11 +569,14 @@ class _ThemeDots extends StatelessWidget {
   const _ThemeDots();
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final sp = context.watch<SettingsProvider>();
     final selected = sp.themePaletteId;
+    final isCustomActive = selected == ThemePalettes.customPaletteId;
     return Wrap(
       spacing: 10,
       runSpacing: 10,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (final p in ThemePalettes.all)
           _ThemeDot(
@@ -581,7 +584,153 @@ class _ThemeDots extends StatelessWidget {
             selected: selected == p.id,
             onTap: () => context.read<SettingsProvider>().setThemePalette(p.id),
           ),
+        for (final t in sp.customThemes)
+          _CustomThemeDotEntry(
+            theme: t,
+            selected: isCustomActive && sp.selectedCustomThemeId == t.id,
+            onTap: () =>
+                context.read<SettingsProvider>().selectCustomTheme(t.id),
+            onMenu: (pos) => showDesktopContextMenuAt(
+              context,
+              globalPosition: pos,
+              items: [
+                DesktopContextMenuItem(
+                  icon: lucide.Lucide.Pencil,
+                  label: l10n.customThemeEditTheme,
+                  onTap: () => showCustomThemeEditor(context, initial: t),
+                ),
+                DesktopContextMenuItem(
+                  icon: lucide.Lucide.Copy,
+                  label: l10n.customThemeCopyAction,
+                  onTap: () => exportCustomThemeToClipboard(context, t),
+                ),
+                DesktopContextMenuItem(
+                  icon: lucide.Lucide.Trash2,
+                  label: l10n.customThemeDelete,
+                  danger: true,
+                  onTap: () =>
+                      context.read<SettingsProvider>().deleteCustomTheme(t.id),
+                ),
+              ],
+            ),
+          ),
+        _ThemeActionDot(
+          icon: lucide.Lucide.Plus,
+          tooltip: l10n.customThemeNewTheme,
+          onTap: () => showCustomThemeEditor(context),
+        ),
+        _ThemeActionDot(
+          icon: lucide.Lucide.Download,
+          tooltip: l10n.customThemeImportTheme,
+          onTap: () => showImportCustomThemeDialog(context),
+        ),
       ],
+    );
+  }
+}
+
+class _CustomThemeDotEntry extends StatefulWidget {
+  const _CustomThemeDotEntry({
+    required this.theme,
+    required this.selected,
+    required this.onTap,
+    required this.onMenu,
+  });
+  final CustomTheme theme;
+  final bool selected;
+  final VoidCallback onTap;
+  final ValueChanged<Offset> onMenu;
+  @override
+  State<_CustomThemeDotEntry> createState() => _CustomThemeDotEntryState();
+}
+
+class _CustomThemeDotEntryState extends State<_CustomThemeDotEntry> {
+  bool _hover = false;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onSecondaryTapDown: (d) => widget.onMenu(d.globalPosition),
+        onLongPressStart: (d) => widget.onMenu(d.globalPosition),
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.selected
+                  ? cs.onSurface.withValues(alpha: 0.85)
+                  : cs.surface,
+              width: 2,
+            ),
+          ),
+          child: ClipOval(
+            child: CustomThemeDot(
+              theme: widget.theme,
+              size: 20,
+              selected: widget.selected || _hover,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeActionDot extends StatefulWidget {
+  const _ThemeActionDot({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  @override
+  State<_ThemeActionDot> createState() => _ThemeActionDotState();
+}
+
+class _ThemeActionDotState extends State<_ThemeActionDot> {
+  bool _hover = false;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: Tooltip(
+        message: widget.tooltip,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOutCubic,
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _hover
+                  ? cs.onSurface.withValues(alpha: 0.08)
+                  : cs.onSurface.withValues(alpha: 0.04),
+              border: Border.all(
+                color: cs.onSurface.withValues(alpha: _hover ? 0.35 : 0.2),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              widget.icon,
+              size: 13,
+              color: cs.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -642,60 +642,11 @@ class ThemePalettes {
     docTheme,
   ];
 
-  /// Id of the user-customized palette (built at runtime via [buildCustomPalette],
-  /// resolved in main.dart — not part of [all]).
+  /// Id of the user-customized palette (built at runtime from the selected
+  /// [CustomTheme] — see theme/custom_theme.dart — not part of [all]).
   static const String customPaletteId = 'custom';
 
   static ThemePalette byId(String id) {
     return all.firstWhere((p) => p.id == id, orElse: () => defaultPalette);
   }
-}
-
-/// Build a user-customized palette from a seed color, with optional overrides
-/// of the primary and surface roles.
-///
-/// Note: when [primaryOverride] is set, only `primary`/`onPrimary`/`surfaceTint`
-/// are recomputed; container roles stay seed-derived and may not perfectly match
-/// the overridden primary (known limitation).
-ThemePalette buildCustomPalette({
-  required Color seed,
-  Color? primaryOverride,
-  Color? surfaceOverride,
-}) {
-  ColorScheme apply(ColorScheme cs) {
-    var out = cs;
-    if (primaryOverride != null) {
-      final onPrimary =
-          ThemeData.estimateBrightnessForColor(primaryOverride) == Brightness.dark
-              ? const Color(0xFFFFFFFF)
-              : const Color(0xFF000000);
-      out = out.copyWith(
-        primary: primaryOverride,
-        onPrimary: onPrimary,
-        surfaceTint: primaryOverride,
-      );
-    }
-    if (surfaceOverride != null) {
-      final onSurface =
-          ThemeData.estimateBrightnessForColor(surfaceOverride) == Brightness.dark
-              ? const Color(0xFFFFFFFF)
-              : const Color(0xFF000000);
-      out = out.copyWith(surface: surfaceOverride, onSurface: onSurface);
-    }
-    return out;
-  }
-
-  return ThemePalette(
-    id: ThemePalettes.customPaletteId,
-    zhName: '自定义',
-    enName: 'Custom',
-    light: apply(ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.light,
-    )),
-    dark: apply(ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.dark,
-    )),
-  );
 }

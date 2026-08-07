@@ -28,6 +28,8 @@ import '../../utils/provider_grouping_logic.dart';
 import '../../utils/brand_assets.dart';
 import '../../utils/image_compressor.dart';
 import '../database/business_preferences.dart';
+import '../../theme/palettes.dart';
+import '../../theme/custom_theme.dart';
 
 // Desktop: topic list position
 enum DesktopTopicPosition { left, right }
@@ -96,9 +98,11 @@ class SettingsProvider extends ChangeNotifier {
   static const String _compressPromptKey = 'compress_prompt_v1';
   static const String _themePaletteKey = 'theme_palette_v1';
   static const String _useDynamicColorKey = 'use_dynamic_color_v1';
-  static const String _customSeedColorKey = 'theme_custom_seed_v1';
-  static const String _customPrimaryOverrideKey = 'theme_custom_primary_v1';
-  static const String _customSurfaceOverrideKey = 'theme_custom_surface_v1';
+  static const String _customThemesKey = 'custom_themes_v1';
+  static const String _customThemeSelectedKey = 'custom_theme_selected_v1';
+  // Legacy single-custom-palette keys (migrated into _customThemesKey on load)
+  static const String _legacyCustomSeedColorKey = 'theme_custom_seed_v1';
+  static const String _legacyCustomPrimaryOverrideKey = 'theme_custom_primary_v1';
   static const String _thinkingBudgetKey = 'thinking_budget_v1';
   static const String _titleGenerationThinkingEnabledKey =
       'title_generation_thinking_enabled_v1';
@@ -375,13 +379,20 @@ class SettingsProvider extends ChangeNotifier {
   bool _dynamicColorSupported = false; // runtime capability, not persisted
   bool get dynamicColorSupported => _dynamicColorSupported;
 
-  // Custom palette (seed color + optional role overrides), ARGB ints
-  int? _customSeedColor;
-  int? get customSeedColor => _customSeedColor;
-  int? _customPrimaryOverride;
-  int? get customPrimaryOverride => _customPrimaryOverride;
-  int? _customSurfaceOverride;
-  int? get customSurfaceOverride => _customSurfaceOverride;
+  // Custom user themes (RikkaHub-style: name + primary/secondary/tertiary)
+  List<CustomTheme> _customThemes = const <CustomTheme>[];
+  List<CustomTheme> get customThemes =>
+      List<CustomTheme>.unmodifiable(_customThemes);
+  String? _selectedCustomThemeId;
+  String? get selectedCustomThemeId => _selectedCustomThemeId;
+  CustomTheme? get selectedCustomTheme {
+    final id = _selectedCustomThemeId;
+    if (id == null) return null;
+    for (final t in _customThemes) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
 
   // When enabled, force pure white/black backgrounds regardless of theme color
   bool _usePureBackground = false;
@@ -635,9 +646,7 @@ class SettingsProvider extends ChangeNotifier {
     }
     _themePaletteId = prefs.getString(_themePaletteKey) ?? 'default';
     _useDynamicColor = prefs.getBool(_useDynamicColorKey) ?? true;
-    _customSeedColor = prefs.getInt(_customSeedColorKey);
-    _customPrimaryOverride = prefs.getInt(_customPrimaryOverrideKey);
-    _customSurfaceOverride = prefs.getInt(_customSurfaceOverrideKey);
+    _loadCustomThemes(prefs);
     final cfgStr = prefs.getString(_providerConfigsKey);
     if (cfgStr != null && cfgStr.isNotEmpty) {
       try {
@@ -2297,36 +2306,119 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool(_displayUsePureBackgroundKey, v);
   }
 
-  Future<void> setCustomSeedColor(int argb) async {
-    if (_customSeedColor == argb) return;
-    _customSeedColor = argb;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setInt(_customSeedColorKey, argb);
-  }
-
-  Future<void> setCustomPrimaryOverride(int? argb) async {
-    if (_customPrimaryOverride == argb) return;
-    _customPrimaryOverride = argb;
-    notifyListeners();
-    final prefs = _preferences;
-    if (argb == null) {
-      await prefs.remove(_customPrimaryOverrideKey);
-    } else {
-      await prefs.setInt(_customPrimaryOverrideKey, argb);
+  void _loadCustomThemes(BusinessPreferences prefs) {
+    final raw = prefs.getStringList(_customThemesKey) ?? const <String>[];
+    final themes = <CustomTheme>[];
+    for (final s in raw) {
+      try {
+        themes.add(CustomTheme.parse(s));
+      } catch (_) {}
+    }
+    _customThemes = themes;
+    _selectedCustomThemeId = prefs.getString(_customThemeSelectedKey);
+    if (_selectedCustomThemeId != null &&
+        !_customThemes.any((t) => t.id == _selectedCustomThemeId)) {
+      _selectedCustomThemeId = null;
+    }
+    // One-time migration from the legacy single seed/primary palette.
+    final legacyArgb =
+        prefs.getInt(_legacyCustomPrimaryOverrideKey) ??
+        prefs.getInt(_legacyCustomSeedColorKey);
+    if (legacyArgb != null) {
+      if (_customThemes.isEmpty) {
+        final migrated = CustomTheme(
+          id: 'migrated_$legacyArgb',
+          name: '',
+          primaryArgb: legacyArgb,
+        );
+        _customThemes = <CustomTheme>[migrated];
+        _selectedCustomThemeId ??= migrated.id;
+        unawaited(prefs.setStringList(
+          _customThemesKey,
+          _customThemes.map((t) => t.export()).toList(),
+        ));
+        unawaited(prefs.setString(_customThemeSelectedKey, migrated.id));
+      }
+      unawaited(prefs.remove(_legacyCustomSeedColorKey));
+      unawaited(prefs.remove(_legacyCustomPrimaryOverrideKey));
+      unawaited(prefs.remove('theme_custom_surface_v1'));
     }
   }
 
-  Future<void> setCustomSurfaceOverride(int? argb) async {
-    if (_customSurfaceOverride == argb) return;
-    _customSurfaceOverride = argb;
+  Future<void> _persistCustomThemes() async {
+    final prefs = _preferences;
+    await prefs.setStringList(
+      _customThemesKey,
+      _customThemes.map((t) => t.export()).toList(),
+    );
+    final sel = _selectedCustomThemeId;
+    if (sel == null) {
+      await prefs.remove(_customThemeSelectedKey);
+    } else {
+      await prefs.setString(_customThemeSelectedKey, sel);
+    }
+  }
+
+  /// Insert or update a custom theme. Returns the saved theme (with an id
+  /// assigned when [theme.id] is empty).
+  Future<CustomTheme> saveCustomTheme(CustomTheme theme) async {
+    var t = theme;
+    if (t.id.isEmpty) {
+      t = t.copyWith(id: 'ct_${DateTime.now().microsecondsSinceEpoch}');
+    }
+    final idx = _customThemes.indexWhere((e) => e.id == t.id);
+    final next = List<CustomTheme>.of(_customThemes);
+    if (idx >= 0) {
+      next[idx] = t;
+    } else {
+      next.add(t);
+    }
+    _customThemes = next;
+    notifyListeners();
+    await _persistCustomThemes();
+    return t;
+  }
+
+  Future<void> deleteCustomTheme(String id) async {
+    if (!_customThemes.any((t) => t.id == id)) return;
+    _customThemes = _customThemes.where((t) => t.id != id).toList();
+    if (_selectedCustomThemeId == id) {
+      _selectedCustomThemeId =
+          _customThemes.isEmpty ? null : _customThemes.first.id;
+      if (_selectedCustomThemeId == null &&
+          _themePaletteId == ThemePalettes.customPaletteId) {
+        _themePaletteId = ThemePalettes.defaultId;
+        unawaited(
+          _preferences.setString(_themePaletteKey, ThemePalettes.defaultId),
+        );
+      }
+    }
+    notifyListeners();
+    await _persistCustomThemes();
+  }
+
+  /// Select a custom theme and make it the active palette.
+  Future<void> selectCustomTheme(String id) async {
+    if (!_customThemes.any((t) => t.id == id)) return;
+    final changed = _selectedCustomThemeId != id ||
+        _themePaletteId != ThemePalettes.customPaletteId;
+    if (!changed) return;
+    _selectedCustomThemeId = id;
+    _themePaletteId = ThemePalettes.customPaletteId;
     notifyListeners();
     final prefs = _preferences;
-    if (argb == null) {
-      await prefs.remove(_customSurfaceOverrideKey);
-    } else {
-      await prefs.setInt(_customSurfaceOverrideKey, argb);
+    await prefs.setString(_customThemeSelectedKey, id);
+    await prefs.setString(_themePaletteKey, ThemePalettes.customPaletteId);
+  }
+
+  /// Parse a shared custom-theme JSON string, save it and return the stored
+  /// theme (a fresh id is assigned when the id is missing or already taken).
+  Future<CustomTheme> importCustomTheme(String source) {
+    var t = CustomTheme.parse(source);
+    if (t.id.isEmpty || _customThemes.any((e) => e.id == t.id)) {
+      t = t.copyWith(id: 'ct_${DateTime.now().microsecondsSinceEpoch}');
     }
+    return saveCustomTheme(t);
   }
 
   // Display: chat message background style (affects user/assistant bubbles)
@@ -4267,9 +4359,8 @@ Requirements:
     copy._themeMode = _themeMode;
     copy._themePaletteId = _themePaletteId;
     copy._useDynamicColor = _useDynamicColor;
-    copy._customSeedColor = _customSeedColor;
-    copy._customPrimaryOverride = _customPrimaryOverride;
-    copy._customSurfaceOverride = _customSurfaceOverride;
+    copy._customThemes = _customThemes;
+    copy._selectedCustomThemeId = _selectedCustomThemeId;
     copy._providerConfigs = _providerConfigs;
     copy._pinnedModels.addAll(_pinnedModels);
     copy._currentModelProvider = _currentModelProvider;

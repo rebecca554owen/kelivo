@@ -16,6 +16,7 @@ import 'desktop/desktop_tray_controller.dart';
 // Theme is now managed in SettingsProvider
 import 'theme/theme_factory.dart';
 import 'theme/palettes.dart';
+import 'theme/custom_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'core/providers/user_provider.dart';
@@ -729,22 +730,11 @@ class MyApp extends StatelessWidget {
               });
 
               final useDyn = isAndroid && settings.useDynamicColor;
+              final custom = settings.selectedCustomTheme;
               final palette =
-                  settings.themePaletteId == ThemePalettes.customPaletteId
-                  ? buildCustomPalette(
-                      seed: Color(
-                        settings.customSeedColor ??
-                            ThemePalettes
-                                .defaultPalette.light.primary
-                                .toARGB32(),
-                      ),
-                      primaryOverride: settings.customPrimaryOverride != null
-                          ? Color(settings.customPrimaryOverride!)
-                          : null,
-                      surfaceOverride: settings.customSurfaceOverride != null
-                          ? Color(settings.customSurfaceOverride!)
-                          : null,
-                    )
+                  settings.themePaletteId == ThemePalettes.customPaletteId &&
+                          custom != null
+                  ? buildCustomThemePalette(custom)
                   : ThemePalettes.byId(settings.themePaletteId);
 
               final light = buildLightThemeForScheme(

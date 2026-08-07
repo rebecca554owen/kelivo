@@ -4250,28 +4250,61 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeSettingsPageCustomPaletteName => '自定义';
 
   @override
-  String get themeSettingsPageCustomColorsSection => '自定义颜色';
-
-  @override
-  String get themeSettingsPageCustomSeedColorTitle => '种子颜色';
-
-  @override
-  String get themeSettingsPageCustomSeedColorSubtitle => '由此颜色生成整套配色';
-
-  @override
-  String get themeSettingsPageCustomPrimaryTitle => '主色覆盖';
-
-  @override
-  String get themeSettingsPageCustomPrimarySubtitle => '可选，覆盖生成的主色';
-
-  @override
-  String get themeSettingsPageCustomSurfaceTitle => '背景色覆盖';
-
-  @override
-  String get themeSettingsPageCustomSurfaceSubtitle => '可选，纯色背景开启时不生效';
-
-  @override
   String get themeSettingsPageCustomColorReset => '重置';
+
+  @override
+  String get themeSettingsPageCustomThemesSection => '自定义主题';
+
+  @override
+  String get customThemeNewTheme => '新建主题';
+
+  @override
+  String get customThemeEditTheme => '编辑主题';
+
+  @override
+  String get customThemeImportTheme => '导入主题';
+
+  @override
+  String get customThemeNameLabel => '主题名称';
+
+  @override
+  String get customThemePrimaryColor => '主色';
+
+  @override
+  String get customThemeSecondaryColor => '辅色';
+
+  @override
+  String get customThemeTertiaryColor => '第三色';
+
+  @override
+  String get customThemeColorAuto => '自动';
+
+  @override
+  String get customThemeSave => '保存';
+
+  @override
+  String get customThemeCancel => '取消';
+
+  @override
+  String get customThemeDelete => '删除';
+
+  @override
+  String get customThemeDeleteConfirm => '删除该主题？';
+
+  @override
+  String get customThemeCopied => '主题 JSON 已复制到剪贴板';
+
+  @override
+  String get customThemeCopyAction => '复制';
+
+  @override
+  String get customThemeImportHint => '在此粘贴主题 JSON';
+
+  @override
+  String get customThemeImportInvalid => '无效的主题 JSON';
+
+  @override
+  String get customThemeHexLabel => '十六进制';
 
   @override
   String get ttsServicesPageBackButton => '返回';
@@ -10257,28 +10290,61 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get themeSettingsPageCustomPaletteName => '自定义';
 
   @override
-  String get themeSettingsPageCustomColorsSection => '自定义颜色';
-
-  @override
-  String get themeSettingsPageCustomSeedColorTitle => '种子颜色';
-
-  @override
-  String get themeSettingsPageCustomSeedColorSubtitle => '由此颜色生成整套配色';
-
-  @override
-  String get themeSettingsPageCustomPrimaryTitle => '主色覆盖';
-
-  @override
-  String get themeSettingsPageCustomPrimarySubtitle => '可选，覆盖生成的主色';
-
-  @override
-  String get themeSettingsPageCustomSurfaceTitle => '背景色覆盖';
-
-  @override
-  String get themeSettingsPageCustomSurfaceSubtitle => '可选，纯色背景开启时不生效';
-
-  @override
   String get themeSettingsPageCustomColorReset => '重置';
+
+  @override
+  String get themeSettingsPageCustomThemesSection => '自定义主题';
+
+  @override
+  String get customThemeNewTheme => '新建主题';
+
+  @override
+  String get customThemeEditTheme => '编辑主题';
+
+  @override
+  String get customThemeImportTheme => '导入主题';
+
+  @override
+  String get customThemeNameLabel => '主题名称';
+
+  @override
+  String get customThemePrimaryColor => '主色';
+
+  @override
+  String get customThemeSecondaryColor => '辅色';
+
+  @override
+  String get customThemeTertiaryColor => '第三色';
+
+  @override
+  String get customThemeColorAuto => '自动';
+
+  @override
+  String get customThemeSave => '保存';
+
+  @override
+  String get customThemeCancel => '取消';
+
+  @override
+  String get customThemeDelete => '删除';
+
+  @override
+  String get customThemeDeleteConfirm => '删除该主题？';
+
+  @override
+  String get customThemeCopied => '主题 JSON 已复制到剪贴板';
+
+  @override
+  String get customThemeCopyAction => '复制';
+
+  @override
+  String get customThemeImportHint => '在此粘贴主题 JSON';
+
+  @override
+  String get customThemeImportInvalid => '无效的主题 JSON';
+
+  @override
+  String get customThemeHexLabel => '十六进制';
 
   @override
   String get ttsServicesPageBackButton => '返回';
@@ -16262,28 +16328,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get themeSettingsPageCustomPaletteName => '自定義';
 
   @override
-  String get themeSettingsPageCustomColorsSection => '自定義顏色';
-
-  @override
-  String get themeSettingsPageCustomSeedColorTitle => '種子顏色';
-
-  @override
-  String get themeSettingsPageCustomSeedColorSubtitle => '由此顏色生成整套配色';
-
-  @override
-  String get themeSettingsPageCustomPrimaryTitle => '主色覆蓋';
-
-  @override
-  String get themeSettingsPageCustomPrimarySubtitle => '可選，覆蓋生成的主色';
-
-  @override
-  String get themeSettingsPageCustomSurfaceTitle => '背景色覆蓋';
-
-  @override
-  String get themeSettingsPageCustomSurfaceSubtitle => '可選，純色背景開啟時不生效';
-
-  @override
   String get themeSettingsPageCustomColorReset => '重置';
+
+  @override
+  String get themeSettingsPageCustomThemesSection => '自定義主題';
+
+  @override
+  String get customThemeNewTheme => '新增主題';
+
+  @override
+  String get customThemeEditTheme => '編輯主題';
+
+  @override
+  String get customThemeImportTheme => '匯入主題';
+
+  @override
+  String get customThemeNameLabel => '主題名稱';
+
+  @override
+  String get customThemePrimaryColor => '主色';
+
+  @override
+  String get customThemeSecondaryColor => '輔色';
+
+  @override
+  String get customThemeTertiaryColor => '第三色';
+
+  @override
+  String get customThemeColorAuto => '自動';
+
+  @override
+  String get customThemeSave => '儲存';
+
+  @override
+  String get customThemeCancel => '取消';
+
+  @override
+  String get customThemeDelete => '刪除';
+
+  @override
+  String get customThemeDeleteConfirm => '刪除該主題？';
+
+  @override
+  String get customThemeCopied => '主題 JSON 已複製到剪貼簿';
+
+  @override
+  String get customThemeCopyAction => '複製';
+
+  @override
+  String get customThemeImportHint => '在此貼上主題 JSON';
+
+  @override
+  String get customThemeImportInvalid => '無效的主題 JSON';
+
+  @override
+  String get customThemeHexLabel => '十六進制';
 
   @override
   String get ttsServicesPageBackButton => '返回';

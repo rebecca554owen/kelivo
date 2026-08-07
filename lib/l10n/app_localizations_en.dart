@@ -4430,31 +4430,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeSettingsPageCustomPaletteName => 'Custom';
 
   @override
-  String get themeSettingsPageCustomColorsSection => 'Custom Colors';
-
-  @override
-  String get themeSettingsPageCustomSeedColorTitle => 'Seed Color';
-
-  @override
-  String get themeSettingsPageCustomSeedColorSubtitle =>
-      'Generate a full palette from this color';
-
-  @override
-  String get themeSettingsPageCustomPrimaryTitle => 'Primary Override';
-
-  @override
-  String get themeSettingsPageCustomPrimarySubtitle =>
-      'Optional; replaces the generated primary';
-
-  @override
-  String get themeSettingsPageCustomSurfaceTitle => 'Surface Override';
-
-  @override
-  String get themeSettingsPageCustomSurfaceSubtitle =>
-      'Optional; ignored while Pure Background is on';
-
-  @override
   String get themeSettingsPageCustomColorReset => 'Reset';
+
+  @override
+  String get themeSettingsPageCustomThemesSection => 'Custom Themes';
+
+  @override
+  String get customThemeNewTheme => 'New Theme';
+
+  @override
+  String get customThemeEditTheme => 'Edit Theme';
+
+  @override
+  String get customThemeImportTheme => 'Import Theme';
+
+  @override
+  String get customThemeNameLabel => 'Theme name';
+
+  @override
+  String get customThemePrimaryColor => 'Primary';
+
+  @override
+  String get customThemeSecondaryColor => 'Secondary';
+
+  @override
+  String get customThemeTertiaryColor => 'Tertiary';
+
+  @override
+  String get customThemeColorAuto => 'Auto';
+
+  @override
+  String get customThemeSave => 'Save';
+
+  @override
+  String get customThemeCancel => 'Cancel';
+
+  @override
+  String get customThemeDelete => 'Delete';
+
+  @override
+  String get customThemeDeleteConfirm => 'Delete this theme?';
+
+  @override
+  String get customThemeCopied => 'Theme JSON copied to clipboard';
+
+  @override
+  String get customThemeCopyAction => 'Copy';
+
+  @override
+  String get customThemeImportHint => 'Paste the theme JSON here';
+
+  @override
+  String get customThemeImportInvalid => 'Invalid theme JSON';
+
+  @override
+  String get customThemeHexLabel => 'Hex';
 
   @override
   String get ttsServicesPageBackButton => 'Back';
