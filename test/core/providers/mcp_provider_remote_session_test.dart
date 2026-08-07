@@ -18,10 +18,44 @@ void main() {
   HttpOverrides.global = null;
 
   test(
-    'first failed connection discovers OAuth without a manual retry',
+    '401 exposes authorization immediately while OAuth discovery continues',
     () async {
-      final server = await _MockMcpServer.start(failInitialize: true);
-      final oauthService = _oauthDiscoveryService(server.url);
+      const resourceMetadata = 'https://metadata.example.test/resource';
+      const issuer = 'https://auth.example.test';
+      final discoveryStarted = Completer<void>();
+      final releaseDiscovery = Completer<void>();
+      final server = await _MockMcpServer.start(
+        initializeChallenge:
+            'Bearer resource_metadata="$resourceMetadata", scope="tools:read"',
+      );
+      final oauthService = McpOAuthService(
+        httpClient: MockClient((request) async {
+          if (request.url.toString() == resourceMetadata) {
+            if (!discoveryStarted.isCompleted) discoveryStarted.complete();
+            await releaseDiscovery.future;
+            return http.Response(
+              jsonEncode({
+                'resource': server.url,
+                'authorization_servers': [issuer],
+              }),
+              HttpStatus.ok,
+            );
+          }
+          if (request.url.toString() ==
+              '$issuer/.well-known/oauth-authorization-server') {
+            return http.Response(
+              jsonEncode({
+                'issuer': issuer,
+                'authorization_endpoint': '$issuer/authorize',
+                'token_endpoint': '$issuer/token',
+                'code_challenge_methods_supported': ['S256'],
+              }),
+              HttpStatus.ok,
+            );
+          }
+          return http.Response('not found', HttpStatus.notFound);
+        }),
+      );
       final harness = await BusinessTestHarness.create();
       final provider = McpProvider(
         preferences: harness.preferences,
@@ -42,9 +76,12 @@ void main() {
 
         await _waitUntil(
           () => provider.statusFor(id) == McpStatus.needsAuthorization,
-          label: 'OAuth discovery after initial connection failure',
+          timeout: const Duration(milliseconds: 500),
+          label: 'authorization status before discovery completes',
         );
+        await discoveryStarted.future.timeout(const Duration(seconds: 1));
       } finally {
+        if (!releaseDiscovery.isCompleted) releaseDiscovery.complete();
         provider.dispose();
         oauthService.dispose();
         await harness.close();
@@ -52,6 +89,50 @@ void main() {
       }
     },
     timeout: const Timeout(Duration(seconds: 8)),
+  );
+
+  test(
+    'non-authorization connection failures do not start OAuth discovery',
+    () async {
+      final server = await _MockMcpServer.start(failInitialize: true);
+      var oauthRequests = 0;
+      final oauthService = McpOAuthService(
+        httpClient: MockClient((request) async {
+          oauthRequests++;
+          return http.Response('not found', HttpStatus.notFound);
+        }),
+      );
+      final harness = await BusinessTestHarness.create();
+      final provider = McpProvider(
+        preferences: harness.preferences,
+        oauthService: oauthService,
+      );
+
+      try {
+        await _waitUntil(
+          () => provider.servers.isNotEmpty,
+          label: 'provider load',
+        );
+        final id = await provider.addServer(
+          enabled: true,
+          name: 'Broken Remote',
+          transport: McpTransportType.http,
+          url: server.url,
+        );
+        await _waitUntil(
+          () => provider.statusFor(id) == McpStatus.error,
+          label: 'connection error',
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+
+        expect(oauthRequests, 0);
+      } finally {
+        provider.dispose();
+        oauthService.dispose();
+        await harness.close();
+        await server.close();
+      }
+    },
   );
 
   test(
@@ -293,6 +374,121 @@ void main() {
       }
     },
     timeout: const Timeout(Duration(seconds: 12)),
+  );
+
+  test(
+    'a newly authorized token is not refreshed after its first 401',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const issuer = 'https://auth.example.test';
+      const resourceMetadata = 'https://metadata.example.test/resource';
+      final callback = _FakeOAuthCallback();
+      final server = await _MockMcpServer.start(
+        expectedAuthorization: 'Bearer accepted-token',
+      );
+      var tokenRequests = 0;
+      final oauthService = McpOAuthService(
+        httpClient: MockClient((request) async {
+          if (request.url.toString() == server.url) {
+            return http.Response(
+              '',
+              HttpStatus.unauthorized,
+              headers: {
+                HttpHeaders.wwwAuthenticateHeader:
+                    'Bearer resource_metadata="$resourceMetadata"',
+              },
+            );
+          }
+          if (request.url.toString() == resourceMetadata) {
+            return http.Response(
+              jsonEncode({
+                'resource': server.url,
+                'authorization_servers': [issuer],
+              }),
+              HttpStatus.ok,
+            );
+          }
+          if (request.url.toString() ==
+              '$issuer/.well-known/oauth-authorization-server') {
+            return http.Response(
+              jsonEncode({
+                'issuer': issuer,
+                'authorization_endpoint': '$issuer/authorize',
+                'token_endpoint': '$issuer/token',
+                'code_challenge_methods_supported': ['S256'],
+              }),
+              HttpStatus.ok,
+            );
+          }
+          if (request.url.toString() == '$issuer/token') {
+            tokenRequests++;
+            final grantType = Uri.splitQueryString(request.body)['grant_type'];
+            return http.Response(
+              jsonEncode({
+                'access_token': grantType == 'refresh_token'
+                    ? 'refreshed-token'
+                    : 'fresh-token',
+                'refresh_token': 'refresh-token',
+                'token_type': 'Bearer',
+              }),
+              HttpStatus.ok,
+            );
+          }
+          return http.Response('not found', HttpStatus.notFound);
+        }),
+        callbackFactory: (_) async => callback,
+        launchAuthorizationUrl: (uri) async {
+          scheduleMicrotask(
+            () => callback.complete(
+              callback.redirectUri.replace(
+                queryParameters: {
+                  'code': 'authorization-code',
+                  'state': uri.queryParameters['state']!,
+                },
+              ),
+            ),
+          );
+          return true;
+        },
+      );
+      final harness = await BusinessTestHarness.create();
+      final provider = McpProvider(
+        preferences: harness.preferences,
+        oauthService: oauthService,
+      );
+
+      try {
+        await _waitUntil(
+          () => provider.servers.isNotEmpty,
+          label: 'provider load',
+        );
+        final id = await provider.addServer(
+          enabled: true,
+          name: 'Fresh token rejection',
+          transport: McpTransportType.http,
+          url: server.url,
+          oauthClient: const McpOAuthClientRegistration(
+            clientId: 'configured-client',
+            authorizationServer: issuer,
+          ),
+        );
+        await _waitUntil(
+          () => provider.statusFor(id) == McpStatus.needsAuthorization,
+          label: 'initial authorization requirement',
+        );
+
+        expect(await provider.authorize(id), isFalse);
+        expect(provider.statusFor(id), McpStatus.needsAuthorization);
+        expect(tokenRequests, 1);
+        expect(provider.getById(id)?.oauth?.accessToken, 'fresh-token');
+      } finally {
+        provider.dispose();
+        oauthService.dispose();
+        await harness.close();
+        await server.close();
+      }
+    },
   );
 
   test(
@@ -1140,57 +1336,6 @@ Future<void> _waitUntil(
     }
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
-}
-
-McpOAuthService _oauthDiscoveryService(String serverUrl) {
-  final server = Uri.parse(serverUrl);
-  final origin = Uri(
-    scheme: server.scheme,
-    host: server.host,
-    port: server.port,
-  );
-  final issuer = Uri.parse('https://auth.example.test/oauth');
-  final resourceMetadata = origin.resolve('/oauth-resource');
-  final authorizationMetadata = Uri.parse(
-    'https://auth.example.test'
-    '/.well-known/oauth-authorization-server/oauth',
-  );
-
-  return McpOAuthService(
-    httpClient: MockClient((request) async {
-      if (request.url.toString() == serverUrl) {
-        return http.Response(
-          '',
-          HttpStatus.unauthorized,
-          headers: {
-            HttpHeaders.wwwAuthenticateHeader:
-                'Bearer resource_metadata="$resourceMetadata"',
-          },
-        );
-      }
-      if (request.url == resourceMetadata) {
-        return http.Response(
-          jsonEncode({
-            'resource': serverUrl,
-            'authorization_servers': [issuer.toString()],
-          }),
-          HttpStatus.ok,
-        );
-      }
-      if (request.url == authorizationMetadata) {
-        return http.Response(
-          jsonEncode({
-            'issuer': issuer.toString(),
-            'authorization_endpoint': issuer.resolve('/authorize').toString(),
-            'token_endpoint': issuer.resolve('/token').toString(),
-            'code_challenge_methods_supported': ['S256'],
-          }),
-          HttpStatus.ok,
-        );
-      }
-      return http.Response('not found', HttpStatus.notFound);
-    }),
-  );
 }
 
 final class _FakeOAuthCallback implements McpOAuthCallback {

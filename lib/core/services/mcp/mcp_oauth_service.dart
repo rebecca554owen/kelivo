@@ -247,6 +247,27 @@ final class McpOAuthService {
   final McpOAuthUrlLauncher _launchAuthorizationUrl;
   final Duration _requestTimeout;
   final int _maximumResponseBytes;
+  final Map<String, Future<McpOAuthDiscovery>> _discoveryCache = {};
+  final Map<String, Future<McpOAuthClientRegistration>>
+  _dynamicRegistrationCache = {};
+  final Map<String, Future<void>> _publicTargetValidations = {};
+
+  Future<void> prefetchAuthorization(
+    String serverUrl, {
+    Map<String, String> headers = const {},
+    List<String> wwwAuthenticate = const [],
+  }) async {
+    try {
+      await _cachedDiscovery(
+        serverUrl,
+        headers: headers,
+        wwwAuthenticate: wwwAuthenticate,
+      );
+    } catch (_) {
+      // Authorization remains available so a foreground attempt can report
+      // the current discovery error instead of hiding the login action.
+    }
+  }
 
   Future<bool> supportsOAuth(
     String serverUrl, {
@@ -254,7 +275,7 @@ final class McpOAuthService {
     List<String> wwwAuthenticate = const [],
   }) async {
     try {
-      await discover(
+      await _cachedDiscovery(
         serverUrl,
         headers: headers,
         wwwAuthenticate: wwwAuthenticate,
@@ -465,10 +486,10 @@ final class McpOAuthService {
     if (_validateDiscoveredHosts) {
       try {
         await Future.wait<void>([
-          validateMcpOAuthPublicUri(authorizationEndpoint),
-          validateMcpOAuthPublicUri(tokenEndpoint),
+          _validatePublicTarget(authorizationEndpoint),
+          _validatePublicTarget(tokenEndpoint),
           if (registrationEndpoint != null)
-            validateMcpOAuthPublicUri(registrationEndpoint),
+            _validatePublicTarget(registrationEndpoint),
         ]);
       } catch (error) {
         throw McpOAuthException(
@@ -502,8 +523,13 @@ final class McpOAuthService {
     McpOAuthClientRegistration? clientRegistration,
   }) async {
     McpOAuthCallback? callback;
+    final discoveryKey = _discoveryCacheKey(
+      serverUrl,
+      headers,
+      wwwAuthenticate,
+    );
     try {
-      final discovery = await discover(
+      final discovery = await _cachedDiscovery(
         serverUrl,
         headers: headers,
         wwwAuthenticate: wwwAuthenticate,
@@ -521,7 +547,7 @@ final class McpOAuthService {
               ))) {
         registration = null;
       }
-      registration ??= await _dynamicallyRegisterClient(
+      registration ??= await _cachedDynamicRegistration(
         discovery,
         redirectUri: callback.redirectUri,
         clientName: serverName.trim().isEmpty ? 'Kelivo' : serverName.trim(),
@@ -598,14 +624,26 @@ final class McpOAuthService {
         );
       }
 
-      final token = await _requestToken(discovery.tokenEndpoint, {
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': callback.redirectUri.toString(),
-        'code_verifier': verifier,
-        'resource': discovery.resource.toString(),
-      }, registration: registration);
-      return _stateFromToken(
+      Map<String, dynamic> token;
+      try {
+        token = await _requestToken(discovery.tokenEndpoint, {
+          'grant_type': 'authorization_code',
+          'code': code,
+          'redirect_uri': callback.redirectUri.toString(),
+          'code_verifier': verifier,
+          'resource': discovery.resource.toString(),
+        }, registration: registration);
+      } on McpOAuthException catch (error) {
+        if (error.oauthError == 'invalid_client' &&
+            registration.registrationSource ==
+                McpOAuthClientRegistrationSource.dcr) {
+          _dynamicRegistrationCache.remove(
+            _dynamicRegistrationCacheKey(discovery, callback.redirectUri),
+          );
+        }
+        rethrow;
+      }
+      final result = _stateFromToken(
         token,
         discovery: discovery,
         registration: registration,
@@ -614,6 +652,14 @@ final class McpOAuthService {
           _requireServerUri(serverUrl, label: 'MCP server URL'),
         ).toString(),
       );
+      _discoveryCache.remove(discoveryKey);
+      if (registration.registrationSource ==
+          McpOAuthClientRegistrationSource.dcr) {
+        _dynamicRegistrationCache.remove(
+          _dynamicRegistrationCacheKey(discovery, callback.redirectUri),
+        );
+      }
+      return result;
     } on TimeoutException {
       throw const McpOAuthException(
         'timed out waiting for authorization',
@@ -720,6 +766,85 @@ final class McpOAuthService {
       redirectUri: redirectUri.toString(),
       registrationSource: McpOAuthClientRegistrationSource.dcr,
     );
+  }
+
+  Future<McpOAuthDiscovery> _cachedDiscovery(
+    String serverUrl, {
+    required Map<String, String> headers,
+    required List<String> wwwAuthenticate,
+  }) {
+    final key = _discoveryCacheKey(serverUrl, headers, wwwAuthenticate);
+    final existing = _discoveryCache[key];
+    if (existing != null) return existing;
+
+    final future = discover(
+      serverUrl,
+      headers: headers,
+      wwwAuthenticate: wwwAuthenticate,
+    );
+    _discoveryCache[key] = future;
+    unawaited(
+      future.then<void>(
+        (_) {},
+        onError: (Object _, StackTrace __) {
+          if (identical(_discoveryCache[key], future)) {
+            _discoveryCache.remove(key);
+          }
+        },
+      ),
+    );
+    return future;
+  }
+
+  Future<McpOAuthClientRegistration> _cachedDynamicRegistration(
+    McpOAuthDiscovery discovery, {
+    required Uri redirectUri,
+    required String clientName,
+    required List<String> scopes,
+  }) {
+    final key = _dynamicRegistrationCacheKey(discovery, redirectUri);
+    final existing = _dynamicRegistrationCache[key];
+    if (existing != null) return existing;
+
+    final future = _dynamicallyRegisterClient(
+      discovery,
+      redirectUri: redirectUri,
+      clientName: clientName,
+      scopes: scopes,
+    );
+    _dynamicRegistrationCache[key] = future;
+    unawaited(
+      future.then<void>(
+        (_) {},
+        onError: (Object _, StackTrace __) {
+          if (identical(_dynamicRegistrationCache[key], future)) {
+            _dynamicRegistrationCache.remove(key);
+          }
+        },
+      ),
+    );
+    return future;
+  }
+
+  static String _dynamicRegistrationCacheKey(
+    McpOAuthDiscovery discovery,
+    Uri redirectUri,
+  ) => '${discovery.authorizationServer}\n$redirectUri';
+
+  static String _discoveryCacheKey(
+    String serverUrl,
+    Map<String, String> headers,
+    List<String> wwwAuthenticate,
+  ) {
+    final sortedHeaders =
+        headers.entries
+            .map((entry) => [entry.key.toLowerCase(), entry.value])
+            .toList()
+          ..sort((left, right) {
+            final keyOrder = left.first.compareTo(right.first);
+            return keyOrder != 0 ? keyOrder : left.last.compareTo(right.last);
+          });
+    return jsonEncode([serverUrl, sortedHeaders, wwwAuthenticate]);
   }
 
   Future<Map<String, dynamic>> _requestToken(
@@ -910,6 +1035,16 @@ final class McpOAuthService {
     DateTime? deadline,
     bool discoveredTarget = false,
   }) async {
+    if (discoveredTarget && _validateDiscoveredHosts) {
+      try {
+        await _validatePublicTarget(uri);
+      } catch (error) {
+        throw McpOAuthException(
+          '$operation failed: $error',
+          kind: McpOAuthFailureKind.transient,
+        );
+      }
+    }
     final timeout = deadline?.difference(DateTime.now()) ?? _requestTimeout;
     if (timeout <= Duration.zero) {
       throw McpOAuthException(
@@ -973,7 +1108,32 @@ final class McpOAuthService {
     }
   }
 
+  Future<void> _validatePublicTarget(Uri uri) {
+    final key =
+        '${uri.scheme.toLowerCase()}://${uri.host.toLowerCase()}:'
+        '${_effectivePort(uri)}';
+    final existing = _publicTargetValidations[key];
+    if (existing != null) return existing;
+
+    final future = validateMcpOAuthPublicUri(uri);
+    _publicTargetValidations[key] = future;
+    unawaited(
+      future.then<void>(
+        (_) {},
+        onError: (Object _, StackTrace __) {
+          if (identical(_publicTargetValidations[key], future)) {
+            _publicTargetValidations.remove(key);
+          }
+        },
+      ),
+    );
+    return future;
+  }
+
   void dispose() {
+    _discoveryCache.clear();
+    _dynamicRegistrationCache.clear();
+    _publicTargetValidations.clear();
     if (_ownsHttpClients) {
       _httpClient.close();
       _discoveryHttpClient.close();

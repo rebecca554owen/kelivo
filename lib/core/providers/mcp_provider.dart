@@ -1041,7 +1041,7 @@ class McpProvider extends ChangeNotifier {
       );
       if (!persisted) return false;
       state.reRegisterDynamicClient = false;
-      final connected = await _connect(server.id);
+      final connected = await _connect(server.id, retryUnauthorized: false);
       if (connected ||
           !_isDesktopPlatform() ||
           state.status != McpStatus.error ||
@@ -1055,10 +1055,13 @@ class McpProvider extends ChangeNotifier {
           !_authorizationIsCurrent(server, state, generation)) {
         return false;
       }
-      return _connect(server.id);
+      return _connect(server.id, retryUnauthorized: false);
     } catch (error) {
       if (!_authorizationIsCurrent(server, state, generation)) return false;
-      state.status = error is McpOAuthException && !error.requiresAuthorization
+      state.status =
+          error is McpOAuthException &&
+              !error.requiresAuthorization &&
+              !error.isTransient
           ? McpStatus.error
           : McpStatus.needsAuthorization;
       state.error = error.toString();
@@ -1220,7 +1223,7 @@ class McpProvider extends ChangeNotifier {
     await _connect(id);
   }
 
-  Future<bool> _connect(String id) {
+  Future<bool> _connect(String id, {bool retryUnauthorized = true}) {
     final server = getById(id);
     if (server == null || !server.enabled || _disposed) {
       return Future<bool>.value(false);
@@ -1237,7 +1240,12 @@ class McpProvider extends ChangeNotifier {
       return Future<bool>.value(true);
     }
 
-    return _beginConnect(id, server, state);
+    return _beginConnect(
+      id,
+      server,
+      state,
+      retryUnauthorized: retryUnauthorized,
+    );
   }
 
   Future<bool> _beginConnect(
@@ -1245,6 +1253,7 @@ class McpProvider extends ChangeNotifier {
     McpServerConfig server,
     _ServerConnection state, {
     Future<bool>? waitFor,
+    bool retryUnauthorized = true,
   }) {
     state.status = McpStatus.connecting;
     state.error = null;
@@ -1263,7 +1272,13 @@ class McpProvider extends ChangeNotifier {
               getById(id)?.enabled != true) {
             return false;
           }
-          return _performConnect(id, server, state, generation);
+          return _performConnect(
+            id,
+            server,
+            state,
+            generation,
+            retryUnauthorized: retryUnauthorized,
+          );
         })().whenComplete(() {
           if (identical(state.connectFuture, future)) {
             state.connectFuture = null;
@@ -1359,7 +1374,6 @@ class McpProvider extends ChangeNotifier {
         server,
         state,
         effectiveError,
-        discoverOnConnectionFailure: true,
         operation: 'connect',
       )) {
         state.status = McpStatus.needsAuthorization;
@@ -1424,7 +1438,6 @@ class McpProvider extends ChangeNotifier {
     McpServerConfig server,
     _ServerConnection state,
     Object error, {
-    bool discoverOnConnectionFailure = false,
     required String operation,
   }) async {
     if (!_isRemoteTransport(server.transport) ||
@@ -1448,13 +1461,17 @@ class McpProvider extends ChangeNotifier {
       return _prepareScopeStepUp(server, state, error, operation);
     }
     final looksUnauthorized = _looksUnauthorized(error);
-    if (server.oauth != null) return looksUnauthorized;
-    if (!looksUnauthorized && !discoverOnConnectionFailure) return false;
-    return _oauthService.supportsOAuth(
-      server.url,
-      headers: server.headers,
-      wwwAuthenticate: challenges,
-    );
+    if (!looksUnauthorized) return false;
+    if (server.oauth == null) {
+      unawaited(
+        _oauthService.prefetchAuthorization(
+          server.url,
+          headers: server.headers,
+          wwwAuthenticate: challenges,
+        ),
+      );
+    }
+    return true;
   }
 
   bool _looksUnauthorized(Object error) {

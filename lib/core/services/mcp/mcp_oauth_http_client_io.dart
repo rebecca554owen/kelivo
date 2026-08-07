@@ -4,19 +4,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
-const _networkTimeout = Duration(seconds: 15);
+const _networkTimeout = Duration(seconds: 5);
 
 http.Client createMcpOAuthDiscoveryHttpClient() {
   final client = HttpClient();
-  client.connectionFactory = (uri, proxyHost, proxyPort) async {
-    if (proxyHost != null) {
-      throw const SocketException(
-        'OAuth discovery does not permit an implicit network proxy',
-      );
-    }
-    final addresses = await _publicAddresses(uri.host);
-    return _connectPinned(uri, addresses);
-  };
+  client.connectionTimeout = _networkTimeout;
   return IOClient(client);
 }
 
@@ -40,72 +32,6 @@ Future<List<InternetAddress>> _publicAddresses(String host) async {
     );
   }
   return addresses;
-}
-
-Future<ConnectionTask<Socket>> _connectPinned(
-  Uri uri,
-  List<InternetAddress> addresses,
-) async {
-  var cancelled = false;
-  Socket? activeSocket;
-  ConnectionTask<Socket>? activeConnection;
-
-  Future<Socket> connect() async {
-    Object? lastError;
-    for (final address in addresses) {
-      if (cancelled) throw const SocketException('Connection cancelled');
-      try {
-        final connection = await Socket.startConnect(address, uri.port);
-        activeConnection = connection;
-        if (cancelled) {
-          connection.cancel();
-          throw const SocketException('Connection cancelled');
-        }
-        final socket = await connection.socket.timeout(
-          _networkTimeout,
-          onTimeout: () {
-            connection.cancel();
-            throw TimeoutException('Connection timed out');
-          },
-        );
-        activeConnection = null;
-        activeSocket = socket;
-        if (cancelled) {
-          socket.destroy();
-          throw const SocketException('Connection cancelled');
-        }
-        if (uri.scheme == 'https') {
-          final secureSocket = await SecureSocket.secure(
-            socket,
-            host: uri.host,
-            supportedProtocols: const ['http/1.1'],
-          );
-          activeSocket = secureSocket;
-          if (cancelled) {
-            secureSocket.destroy();
-            throw const SocketException('Connection cancelled');
-          }
-          return secureSocket;
-        }
-        return socket;
-      } catch (error) {
-        activeConnection?.cancel();
-        activeConnection = null;
-        activeSocket?.destroy();
-        activeSocket = null;
-        lastError = error;
-      }
-    }
-    throw SocketException(
-      'Could not connect to OAuth discovery host: $lastError',
-    );
-  }
-
-  return ConnectionTask.fromSocket(connect(), () {
-    cancelled = true;
-    activeConnection?.cancel();
-    activeSocket?.destroy();
-  });
 }
 
 bool isPublicMcpOAuthAddress(

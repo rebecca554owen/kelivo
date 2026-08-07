@@ -180,6 +180,114 @@ void main() {
   });
 
   test(
+    'prefetched discovery and DCR registration are reused across authorization retries',
+    () async {
+      const serverUrl = 'https://mcp.example.com/mcp';
+      const metadataUrl = 'https://mcp.example.com/oauth-resource';
+      const issuer = 'https://auth.example.com';
+      final callbacks = <_FakeCallback>[];
+      var metadataRequests = 0;
+      var authorizationMetadataRequests = 0;
+      var registrations = 0;
+      var launches = 0;
+      final service = McpOAuthService(
+        httpClient: MockClient((request) async {
+          if (request.url.toString() == metadataUrl) {
+            metadataRequests++;
+            return http.Response(
+              jsonEncode({
+                'resource': serverUrl,
+                'authorization_servers': [issuer],
+              }),
+              HttpStatus.ok,
+            );
+          }
+          if (request.url.toString() ==
+              '$issuer/.well-known/oauth-authorization-server') {
+            authorizationMetadataRequests++;
+            return http.Response(
+              jsonEncode({
+                'issuer': issuer,
+                'authorization_endpoint': '$issuer/authorize',
+                'token_endpoint': '$issuer/token',
+                'registration_endpoint': '$issuer/register',
+                'code_challenge_methods_supported': ['S256'],
+              }),
+              HttpStatus.ok,
+            );
+          }
+          if (request.url.toString() == '$issuer/register') {
+            registrations++;
+            return http.Response(
+              jsonEncode({'client_id': 'registered-client'}),
+              HttpStatus.created,
+            );
+          }
+          if (request.url.toString() == '$issuer/token') {
+            return http.Response(
+              jsonEncode({
+                'access_token': 'access-token',
+                'token_type': 'Bearer',
+              }),
+              HttpStatus.ok,
+            );
+          }
+          return http.Response('not found', HttpStatus.notFound);
+        }),
+        callbackFactory: (_) async {
+          final callback = _FakeCallback();
+          callbacks.add(callback);
+          return callback;
+        },
+        launchAuthorizationUrl: (uri) async {
+          final callback = callbacks.last;
+          final currentLaunch = launches++;
+          scheduleMicrotask(
+            () => callback.complete(
+              callback.redirectUri.replace(
+                queryParameters: {
+                  if (currentLaunch == 0)
+                    'error': 'access_denied'
+                  else
+                    'code': 'authorization-code',
+                  'state': uri.queryParameters['state']!,
+                },
+              ),
+            ),
+          );
+          return true;
+        },
+      );
+      addTearDown(service.dispose);
+      const challenge = 'Bearer resource_metadata="$metadataUrl"';
+
+      await service.prefetchAuthorization(
+        serverUrl,
+        wwwAuthenticate: const [challenge],
+      );
+      await expectLater(
+        service.authorize(
+          serverUrl: serverUrl,
+          serverName: 'Retry MCP',
+          wwwAuthenticate: const [challenge],
+        ),
+        throwsA(isA<McpOAuthException>()),
+      );
+      final state = await service.authorize(
+        serverUrl: serverUrl,
+        serverName: 'Retry MCP',
+        wwwAuthenticate: const [challenge],
+      );
+
+      expect(state.clientId, 'registered-client');
+      expect(metadataRequests, 1);
+      expect(authorizationMetadataRequests, 1);
+      expect(registrations, 1);
+      expect(launches, 2);
+    },
+  );
+
+  test(
     'discovery preserves query and strictly validates resource and issuer',
     () async {
       const serverUrl = 'https://mcp.example.com/tenant/mcp?tenant=a';

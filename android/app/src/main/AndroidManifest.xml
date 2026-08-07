@@ -44,16 +44,18 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".OAuthReturnActivity"
+            android:name=".McpOAuthCallbackActivity"
             android:excludeFromRecents="true"
             android:exported="true"
+            android:launchMode="singleTask"
             android:noHistory="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="kelivo" android:host="oauth-return"/>
+                <data android:scheme="psyche.kelivo" android:host="mcp-oauth-callback"/>
             </intent-filter>
         </activity>
         <!-- Foreground service to keep Flutter isolate alive for background generation -->

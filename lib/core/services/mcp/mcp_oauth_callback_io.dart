@@ -3,25 +3,39 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'mcp_oauth_callback_types.dart';
 
-const _oauthReturnUri = 'kelivo://oauth-return';
-const _iosOAuthChannel = MethodChannel('app.mcp_oauth');
+const _mobileOAuthChannel = MethodChannel('app.mcp_oauth');
 
 Future<McpOAuthCallback> openMcpOAuthCallback(Uri authorizationServer) async {
-  if (Platform.isIOS) return _IosMcpOAuthCallback(authorizationServer);
+  if (Platform.isAndroid) {
+    return _AndroidMcpOAuthCallback(authorizationServer);
+  }
+  if (Platform.isIOS) {
+    return _IosMcpOAuthCallback(authorizationServer);
+  }
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   return _IoMcpOAuthCallback(server);
 }
 
-final class _IosMcpOAuthCallback implements McpOAuthCallback {
-  _IosMcpOAuthCallback(Uri authorizationServer)
+@visibleForTesting
+McpOAuthCallback createAndroidMcpOAuthCallbackForTesting(
+  Uri authorizationServer,
+) => _AndroidMcpOAuthCallback(authorizationServer);
+
+String _authorizationServerHash(Uri authorizationServer) => base64UrlEncode(
+  sha256.convert(utf8.encode(authorizationServer.toString())).bytes,
+).replaceAll('=', '');
+
+final class _AndroidMcpOAuthCallback implements McpOAuthCallback {
+  _AndroidMcpOAuthCallback(Uri authorizationServer)
     : redirectUri = Uri(
         scheme: 'psyche.kelivo',
-        path:
-            '/oauth/callback/${base64UrlEncode(sha256.convert(utf8.encode(authorizationServer.toString())).bytes).replaceAll('=', '')}',
+        host: 'mcp-oauth-callback',
+        path: '/${_authorizationServerHash(authorizationServer)}',
       );
 
   @override
@@ -34,7 +48,57 @@ final class _IosMcpOAuthCallback implements McpOAuthCallback {
     McpOAuthUrlLauncher launchAuthorizationUrl,
   ) async {
     try {
-      final value = await _iosOAuthChannel
+      final value = await _mobileOAuthChannel
+          .invokeMethod<String>('authenticate', {
+            'url': authorizationUrl.toString(),
+            'redirectUri': redirectUri.toString(),
+          })
+          .timeout(timeout);
+      if (value == null) {
+        throw const McpOAuthCallbackException(
+          'authorization session returned no callback URL',
+        );
+      }
+      return Uri.parse(value);
+    } on TimeoutException {
+      await _mobileOAuthChannel.invokeMethod<void>('cancel');
+      rethrow;
+    } on PlatformException catch (error) {
+      throw McpOAuthCallbackException(
+        error.message ?? 'authorization session failed',
+        cancelled: error.code == 'authorization_cancelled',
+      );
+    }
+  }
+
+  @override
+  Future<Uri> waitForCallback(Duration timeout) {
+    throw UnsupportedError('Android OAuth callbacks are handled by the app');
+  }
+
+  @override
+  Future<void> close() => _mobileOAuthChannel.invokeMethod<void>('cancel');
+}
+
+final class _IosMcpOAuthCallback implements McpOAuthCallback {
+  _IosMcpOAuthCallback(Uri authorizationServer)
+    : redirectUri = Uri(
+        scheme: 'psyche.kelivo',
+        path:
+            '/oauth/callback/${_authorizationServerHash(authorizationServer)}',
+      );
+
+  @override
+  final Uri redirectUri;
+
+  @override
+  Future<Uri> authorize(
+    Uri authorizationUrl,
+    Duration timeout,
+    McpOAuthUrlLauncher launchAuthorizationUrl,
+  ) async {
+    try {
+      final value = await _mobileOAuthChannel
           .invokeMethod<String>('authenticate', {
             'url': authorizationUrl.toString(),
             'callbackScheme': redirectUri.scheme,
@@ -47,7 +111,7 @@ final class _IosMcpOAuthCallback implements McpOAuthCallback {
       }
       return Uri.parse(value);
     } on TimeoutException {
-      await _iosOAuthChannel.invokeMethod<void>('cancel');
+      await _mobileOAuthChannel.invokeMethod<void>('cancel');
       rethrow;
     } on PlatformException catch (error) {
       throw McpOAuthCallbackException(
@@ -63,7 +127,7 @@ final class _IosMcpOAuthCallback implements McpOAuthCallback {
   }
 
   @override
-  Future<void> close() => _iosOAuthChannel.invokeMethod<void>('cancel');
+  Future<void> close() => _mobileOAuthChannel.invokeMethod<void>('cancel');
 }
 
 final class _IoMcpOAuthCallback implements McpOAuthCallback {
@@ -118,7 +182,7 @@ final class _IoMcpOAuthCallback implements McpOAuthCallback {
       ..statusCode = HttpStatus.ok
       ..headers.contentType = ContentType.html
       ..headers.set(HttpHeaders.cacheControlHeader, 'no-store')
-      ..write(_callbackPage(returnToApp: Platform.isAndroid || Platform.isIOS));
+      ..write(_callbackPage());
     await request.response.close();
     if (!_callback.isCompleted) {
       _callback.complete(redirectUri.replace(query: request.uri.query));
@@ -134,10 +198,7 @@ final class _IoMcpOAuthCallback implements McpOAuthCallback {
   }
 }
 
-String _callbackPage({required bool returnToApp}) =>
-    '''<!doctype html>
+String _callbackPage() => '''<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Kelivo</title></head>
-<body><p>${returnToApp ? 'Authorization received. Returning to Kelivo...' : 'Authorization received. You may close this window and return to Kelivo.'}</p>
-${returnToApp ? '<p><a href="$_oauthReturnUri">Return to Kelivo</a></p>' : ''}
-${returnToApp ? "<script>window.close(); setTimeout(function () { window.location.replace('$_oauthReturnUri'); }, 50);</script>" : ''}
+<body><p>Authorization received. You may close this window and return to Kelivo.</p>
 </body></html>''';
