@@ -1235,6 +1235,11 @@ class HomeViewModel extends ChangeNotifier {
     return defaultLabel;
   }
 
+  /// Test entry for [_maybeGenerateSummaryFor].
+  @visibleForTesting
+  Future<void> debugMaybeGenerateSummaryFor(String conversationId) =>
+      _maybeGenerateSummaryFor(conversationId);
+
   @visibleForTesting
   static int computeClearContextRemainingMessageCount({
     required int totalMessages,
@@ -1338,6 +1343,8 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> _maybeGenerateSummaryFor(String conversationId) async {
     final convo = _chatService.getConversation(conversationId);
     if (convo == null) return;
+    // Summaries only feed past-conversation search; temporary chats are never searchable.
+    if (_chatService.isTemporaryConversation(convo.id)) return;
 
     final settings = _contextProvider.read<SettingsProvider>();
     final msgCount = _chatService.getMessageCount(conversationId);

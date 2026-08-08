@@ -168,6 +168,9 @@ class HomePageController extends ChangeNotifier {
     _warmupSerial++;
   }
 
+  @visibleForTesting
+  HomeViewModel get debugViewModel => _viewModel;
+
   // ============================================================================
   // State Fields
   // ============================================================================
