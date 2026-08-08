@@ -466,6 +466,8 @@ final class BusinessSettingsRouter {
             'systemPrompt',
             'messageTemplate',
             'background',
+            'memorySmartAddMode',
+            'memoryWriteScope',
           },
           booleans: const {
             'useAssistantAvatar',
@@ -474,7 +476,12 @@ final class BusinessSettingsRouter {
             'streamOutput',
             'searchEnabled',
             'enableMemory',
+            // Read as a fallback for allowPastConversationRecall in old backups.
             'enableRecentChatsReference',
+            'autoOrganizeMemory',
+            'allowPastConversationRecall',
+            'generateConversationSummary',
+            'appendCurrentTimeToUserMessage',
           },
           numbers: const {
             'temperature',
@@ -483,6 +490,7 @@ final class BusinessSettingsRouter {
             'thinkingBudget',
             'maxTokens',
             'recentChatsSummaryMessageCount',
+            'memoryOrganizeEveryNTurns',
           },
           lists: const {
             'customHeaders',

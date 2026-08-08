@@ -685,7 +685,7 @@ class CherryImporter {
         'customHeaders': const <Map<String, String>>[],
         'customBody': const <Map<String, String>>[],
         'enableMemory': false,
-        'enableRecentChatsReference': false,
+        'allowPastConversationRecall': false,
       };
       out.add(json);
     }
