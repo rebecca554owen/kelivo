@@ -436,6 +436,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('temporary user edit saves and sends the in-memory version', (
+    tester,
+  ) async {
+    final controller = await pumpHarness(tester);
+    await tester.runAsync(() async {
+      final convo = await service.createDraftConversation(
+        title: 'Temporary Chat',
+        temporary: true,
+      );
+      controller.chatController.setDraftConversation(convo);
+      await controller.sendMessage(ChatInputData(text: 'original question'));
+      await waitFor(
+        () => !controller.chatController.isConversationLoading(convo.id),
+        'initial temporary streaming to finish',
+      );
+      final original = service
+          .getMessages(convo.id)
+          .firstWhere((message) => message.role == 'user');
+
+      await controller.startUserMessageEdit(original);
+      final result = await controller.sendMessage(
+        ChatInputData(text: 'edited question'),
+      );
+
+      expect(result, ChatInputSubmissionResult.sent);
+      await waitFor(() => streamRequestCount == 2, 'edited stream to fire');
+      await waitFor(
+        () => !controller.chatController.isConversationLoading(convo.id),
+        'edited temporary streaming to finish',
+      );
+      final edited = service.getMessages(convo.id).firstWhere(
+        (message) =>
+            message.role == 'user' &&
+            (message.groupId ?? message.id) ==
+                (original.groupId ?? original.id) &&
+            message.version == 1,
+      );
+      expect(edited.content, 'edited question');
+      expect(
+        service.getVersionSelections(convo.id),
+        containsPair(original.groupId ?? original.id, 1),
+      );
+      expect(service.isTemporaryConversation(convo.id), isTrue);
+      expect(service.getAllConversations(), isEmpty);
+    });
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('multi-version conversation still saves generated suggestions', (
     tester,
   ) async {

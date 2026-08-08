@@ -442,6 +442,46 @@ void main() {
       expect(service.getMessages(conversation.id), isEmpty);
       expect(service.getConversation(conversation.id)?.messageIds, isEmpty);
     });
+
+    test('temporary message editing appends an in-memory version', () async {
+      final service = createService();
+      await service.init();
+
+      final conversation = await service.createDraftConversation(
+        title: 'Temporary Chat',
+        temporary: true,
+      );
+      final original = await service.addMessage(
+        conversationId: conversation.id,
+        role: 'user',
+        content: 'original question',
+      );
+
+      final edited = await service.appendMessageVersion(
+        messageId: original.id,
+        content: 'edited question',
+      );
+
+      expect(edited, isNotNull);
+      expect(edited!.content, 'edited question');
+      expect(edited.groupId, original.groupId ?? original.id);
+      expect(edited.version, 1);
+      expect(service.getMessages(conversation.id), [original, edited]);
+      expect(service.getConversation(conversation.id)?.messageIds, [
+        original.id,
+        edited.id,
+      ]);
+      expect(service.getVersionSelections(conversation.id), {
+        original.groupId ?? original.id: edited.version,
+      });
+      expect(service.getAllConversations(), isEmpty);
+
+      final timeline = await service.loadTimelinePage(
+        conversation.id,
+        fromStart: true,
+      );
+      expect(timeline!.slots.single.message.id, edited.id);
+    });
   });
 
   group('ChatService fork conversations', () {

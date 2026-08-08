@@ -2935,6 +2935,38 @@ class ChatService extends ChangeNotifier {
     required String content,
   }) async {
     if (!_initialized) await init();
+    final temporaryOriginal = _cachedTemporaryMessage(messageId);
+    if (temporaryOriginal != null) {
+      final conversationId = temporaryOriginal.conversationId;
+      final conversation = _draftConversations[conversationId];
+      final messages = _messagesCache[conversationId];
+      if (conversation == null || messages == null) return null;
+
+      final groupId = temporaryOriginal.groupId ?? temporaryOriginal.id;
+      final versions = messages
+          .where((message) => (message.groupId ?? message.id) == groupId)
+          .map((message) => message.version);
+      final nextVersion = versions.isEmpty
+          ? 0
+          : versions.reduce((a, b) => a > b ? a : b) + 1;
+      final newMsg = ChatMessage(
+        role: temporaryOriginal.role,
+        content: content,
+        conversationId: conversationId,
+        modelId: temporaryOriginal.modelId,
+        providerId: temporaryOriginal.providerId,
+        groupId: groupId,
+        version: nextVersion,
+      );
+
+      messages.add(newMsg);
+      conversation.messageIds.add(newMsg.id);
+      conversation.versionSelections[groupId] = nextVersion;
+      conversation.updatedAt = DateTime.now();
+      notifyListeners();
+      return newMsg;
+    }
+
     final original = await _repo.getMessage(messageId);
     if (original != null) await _loadMessageOrder(original.conversationId);
     final result = await _repo.appendMessageVersion(
