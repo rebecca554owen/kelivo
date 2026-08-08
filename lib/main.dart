@@ -32,7 +32,9 @@ import 'core/providers/instruction_injection_provider.dart';
 import 'core/providers/instruction_injection_group_provider.dart';
 import 'core/providers/world_book_provider.dart';
 import 'core/providers/memory_provider.dart';
+import 'core/providers/memory_provider_v2.dart';
 import 'core/providers/backup_provider.dart';
+import 'core/services/memory/memory_repository.dart';
 import 'core/providers/s3_backup_provider.dart';
 import 'core/providers/backup_reminder_provider.dart';
 import 'core/providers/hotkey_provider.dart';
@@ -563,9 +565,8 @@ class MyApp extends StatelessWidget {
           create: (_) => TtsProvider(preferences: businessPreferences),
         ),
         ChangeNotifierProvider(
-          create: (ctx) => AsrProvider(
-            settingsProvider: ctx.read<SettingsProvider>(),
-          ),
+          create: (ctx) =>
+              AsrProvider(settingsProvider: ctx.read<SettingsProvider>()),
         ),
         ChangeNotifierProvider(create: (_) => UpdateProvider()),
         ChangeNotifierProvider(
@@ -585,6 +586,12 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => MemoryProvider(preferences: businessPreferences),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => MemoryProviderV2(
+            repository: MemoryRepository(businessPreferences),
+            chatRepository: databaseLease.chatRepository,
+          ),
         ),
         ChangeNotifierProvider(
           create: (_) =>
@@ -733,7 +740,7 @@ class MyApp extends StatelessWidget {
               final custom = settings.selectedCustomTheme;
               final palette =
                   settings.themePaletteId == ThemePalettes.customPaletteId &&
-                          custom != null
+                      custom != null
                   ? buildCustomThemePalette(custom)
                   : ThemePalettes.byId(settings.themePaletteId);
 
