@@ -372,7 +372,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: context.appColors.surfaceFill,
+                color: sheetContext.appColors.surfaceFill,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -396,7 +396,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: context.appColors.surfaceFill,
+                color: sheetContext.appColors.surfaceFill,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.2),

@@ -859,6 +859,58 @@ void main() {
       expect(find.byTooltip('Replay'), findsOneWidget);
     });
 
+    testWidgets('tool details stay mounted after the source card is removed', (
+      tester,
+    ) async {
+      final settings = await _createSettings(
+        ChatMessageBackgroundStyle.defaultStyle,
+      );
+      var showToolCard = true;
+      late StateSetter setHostState;
+
+      await tester.pumpWidget(
+        _buildHarness(
+          settings: settings,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              setHostState = setState;
+              return showToolCard
+                  ? ChatMessageWidget(
+                      message: ChatMessage(
+                        role: 'assistant',
+                        content: '',
+                        conversationId: 'conversation-removed-tool-card',
+                        isStreaming: true,
+                      ),
+                      showModelIcon: false,
+                      toolParts: const [
+                        ToolUIPart(
+                          id: 'time-info',
+                          toolName: 'get_time_info',
+                          arguments: {},
+                          content: '{"date":"2026-08-08"}',
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('Time Info'));
+      await tester.pump();
+      setHostState(() => showToolCard = false);
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(CustomBottomSheet.panelKey), findsOneWidget);
+      expect(find.textContaining('2026-08-08'), findsOneWidget);
+    });
+
     testWidgets('unclosed think tag remains visible as assistant content', (
       tester,
     ) async {
