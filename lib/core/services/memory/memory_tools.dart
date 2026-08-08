@@ -10,6 +10,7 @@ import 'memory_prompts.dart';
 import 'memory_repository.dart';
 import 'memory_smart_add.dart';
 import 'memory_tokenizer.dart';
+import 'memory_trace.dart';
 
 /// Memory system V1 tool declarations + dispatch (§10).
 ///
@@ -98,39 +99,66 @@ abstract final class MemoryTools {
     Future<String> Function(String prompt)? memoryLlmCall,
     String? smartAddPromptZh,
     String? smartAddPromptEn,
+
+    /// When provided, the call is recorded as a one-step trace.
+    MemoryTraceRecorder? traceRecorder,
+    String? conversationTitle,
   }) async {
     if (name == chatSearch) {
       if (!assistant.allowPastConversationRecall) return null;
+      final (handle, step) = _beginToolTrace(
+        traceRecorder,
+        kind: MemoryTraceStepKind.chatSearch,
+        name: name,
+        args: args,
+        assistant: assistant,
+        conversationId: conversationId,
+        conversationTitle: conversationTitle,
+      );
       try {
-        return await _handleChatSearch(
+        final result = await _handleChatSearch(
           args: args,
           chatService: chatService,
           conversationId: conversationId,
         );
+        _finishToolTrace(handle, step, result: result);
+        return result;
       } catch (e) {
-        return toolError(
+        final result = toolError(
           error: 'memory_execution_error',
           message: e.toString(),
           tool: name,
           instruction:
               'The memory tool failed. Retry only after correcting the parameters, or inform the user about the issue.',
         );
+        _finishToolTrace(handle, step, result: result, error: e.toString());
+        return result;
       }
     }
 
     if (!assistant.enableMemory) return null;
     if (!enableMemoryToolNames.contains(name)) return null;
 
+    final (handle, step) = _beginToolTrace(
+      traceRecorder,
+      kind: MemoryTraceStepKind.memoryTool,
+      name: name,
+      args: args,
+      assistant: assistant,
+      conversationId: conversationId,
+      conversationTitle: conversationTitle,
+    );
     try {
+      String? result;
       switch (name) {
         case memoryRead:
-          return await _handleMemoryRead(
+          result = await _handleMemoryRead(
             args: args,
             assistant: assistant,
             chatRepository: chatRepository,
           );
         case memoryUpdate:
-          final result = await _handleMemoryUpdate(
+          result = await _handleMemoryUpdate(
             args: args,
             assistant: assistant,
             repository: repository,
@@ -140,51 +168,112 @@ abstract final class MemoryTools {
             memoryLlmCall: memoryLlmCall,
             smartAddPromptZh: smartAddPromptZh,
             smartAddPromptEn: smartAddPromptEn,
+            traceStep: step,
           );
           await onMutated?.call();
-          return result;
         case memorySearchProfile:
-          return await _handleMemorySearchProfile(
+          result = await _handleMemorySearchProfile(
             args: args,
             assistant: assistant,
             chatRepository: chatRepository,
           );
         case memoryEdit:
-          final result = await _handleMemoryEdit(
+          result = await _handleMemoryEdit(
             args: args,
             assistant: assistant,
             repository: repository,
             chatRepository: chatRepository,
+            traceStep: step,
           );
           await onMutated?.call();
-          return result;
         case memoryDelete:
-          final result = await _handleMemoryDelete(
+          result = await _handleMemoryDelete(
             args: args,
             assistant: assistant,
             repository: repository,
             chatRepository: chatRepository,
+            traceStep: step,
           );
           await onMutated?.call();
-          return result;
         case updateUserProfile:
-          final result = await _handleUpdateUserProfile(
+          result = await _handleUpdateUserProfile(
             args: args,
             repository: repository,
+            chatRepository: chatRepository,
+            traceStep: step,
           );
           await onMutated?.call();
-          return result;
         default:
-          return null;
+          result = null;
       }
+      if (result == null) {
+        handle?.commit(error: 'unsupported_tool');
+        return null;
+      }
+      _finishToolTrace(handle, step, result: result);
+      return result;
     } catch (e) {
-      return toolError(
+      final result = toolError(
         error: 'memory_execution_error',
         message: e.toString(),
         tool: name,
         instruction:
             'The memory tool failed. Retry only after correcting the parameters, or inform the user about the issue.',
       );
+      _finishToolTrace(handle, step, result: result, error: e.toString());
+      return result;
+    }
+  }
+
+  static (MemoryTraceHandle?, MemoryTraceStep?) _beginToolTrace(
+    MemoryTraceRecorder? recorder, {
+    required MemoryTraceStepKind kind,
+    required String name,
+    required Map<String, dynamic> args,
+    required Assistant assistant,
+    String? conversationId,
+    String? conversationTitle,
+  }) {
+    if (recorder == null) return (null, null);
+    try {
+      final handle = recorder.begin(
+        trigger: MemoryTraceTrigger.toolCall,
+        scope: memoryTraceScopeOf(assistant.memoryWriteScope),
+        conversationId: conversationId,
+        conversationTitle: conversationTitle,
+        assistantId: assistant.id,
+        assistantName: assistant.name,
+      );
+      final step = handle?.beginStep(kind, label: name);
+      step?.appendPrompt(_prettyJson(args));
+      return (handle, step);
+    } catch (_) {
+      return (null, null);
+    }
+  }
+
+  static void _finishToolTrace(
+    MemoryTraceHandle? handle,
+    MemoryTraceStep? step, {
+    required String result,
+    String? error,
+  }) {
+    if (handle == null) return;
+    step?.appendResponse(result);
+    step?.finish(
+      error == null
+          ? MemoryTraceStepStatus.success
+          : MemoryTraceStepStatus.failed,
+      error: error,
+    );
+    handle.commit(error: error);
+  }
+
+  static String _prettyJson(Object? value) {
+    try {
+      return const JsonEncoder.withIndent('  ').convert(value);
+    } catch (_) {
+      return value?.toString() ?? '';
     }
   }
 
@@ -276,6 +365,7 @@ abstract final class MemoryTools {
     Future<String> Function(String prompt)? memoryLlmCall,
     String? smartAddPromptZh,
     String? smartAddPromptEn,
+    MemoryTraceStep? traceStep,
   }) async {
     final type = _parseMemoryType(args['type']);
     if (type == null) {
@@ -316,7 +406,9 @@ abstract final class MemoryTools {
       llmCall: memoryLlmCall,
       overrideZh: smartAddPromptZh,
       overrideEn: smartAddPromptEn,
+      traceStep: traceStep,
     );
+    traceStep?.setParsedJson(result.toToolJson());
     return jsonEncode(result.toToolJson());
   }
 
@@ -412,6 +504,7 @@ abstract final class MemoryTools {
     required Assistant assistant,
     required MemoryRepository repository,
     required ChatDatabaseRepository chatRepository,
+    MemoryTraceStep? traceStep,
   }) async {
     final id = (args['id'] ?? '').toString().trim();
     final content = (args['content'] ?? '').toString();
@@ -454,6 +547,15 @@ abstract final class MemoryTools {
             'Use memory_read or memory_search_profile to obtain a valid id, or call memory_update to write a new entry instead of editing a missing one.',
       );
     }
+    traceStep?.addMutation(
+      MemoryTraceMutation(
+        kind: MemoryTraceMutationKind.memoryEdited,
+        targetId: updated.id,
+        label: MemoryEntry.typeToString(updated.type),
+        before: entry.content,
+        after: updated.content,
+      ),
+    );
     return jsonEncode({
       'action': 'EDIT',
       'id': updated.id,
@@ -466,6 +568,7 @@ abstract final class MemoryTools {
     required Assistant assistant,
     required MemoryRepository repository,
     required ChatDatabaseRepository chatRepository,
+    MemoryTraceStep? traceStep,
   }) async {
     final id = (args['id'] ?? '').toString().trim();
     if (id.isEmpty) {
@@ -498,12 +601,22 @@ abstract final class MemoryTools {
             'Use memory_read or memory_search_profile to obtain a valid id, or skip archiving a missing memory.',
       );
     }
+    traceStep?.addMutation(
+      MemoryTraceMutation(
+        kind: MemoryTraceMutationKind.memoryArchived,
+        targetId: id,
+        label: MemoryEntry.typeToString(entry.type),
+        before: entry.content,
+      ),
+    );
     return jsonEncode({'action': 'ARCHIVE', 'id': id});
   }
 
   static Future<String> _handleUpdateUserProfile({
     required Map<String, dynamic> args,
     required MemoryRepository repository,
+    required ChatDatabaseRepository chatRepository,
+    MemoryTraceStep? traceStep,
   }) async {
     final rawFields = args['fields'];
     if (rawFields is! List) {
@@ -517,6 +630,16 @@ abstract final class MemoryTools {
     final updated = <String>[];
     final cleared = <String>[];
     final rejected = <Map<String, String>>[];
+
+    // Only read prior values when a trace needs before/after.
+    final priorValues = <String, String>{};
+    if (traceStep != null) {
+      try {
+        for (final field in await chatRepository.readProfileFields()) {
+          priorValues[field.key] = field.value;
+        }
+      } catch (_) {}
+    }
 
     for (final item in rawFields) {
       if (item is! Map) {
@@ -533,9 +656,24 @@ abstract final class MemoryTools {
       if (value.trim().isEmpty) {
         await repository.removeProfileField(key);
         cleared.add(key);
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.profileFieldCleared,
+            targetId: key,
+            before: priorValues[key],
+          ),
+        );
       } else {
         await repository.putProfileField(key, value, MemorySource.tool);
         updated.add(key);
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.profileFieldWritten,
+            targetId: key,
+            before: priorValues[key],
+            after: value,
+          ),
+        );
       }
     }
 

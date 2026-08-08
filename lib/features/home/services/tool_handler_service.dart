@@ -512,6 +512,10 @@ class ToolHandlerService {
       memoryLlmCall: memoryLlmCall,
       smartAddPromptZh: settings.memorySmartAddPromptZh,
       smartAddPromptEn: settings.memorySmartAddPromptEn,
+      traceRecorder: pipeline?.traceRecorder,
+      conversationTitle: conversationId == null
+          ? null
+          : chatService?.getConversation(conversationId)?.title,
     );
   }
 }

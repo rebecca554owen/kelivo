@@ -7,6 +7,7 @@ import 'memory_prompts.dart';
 import 'memory_repository.dart';
 import 'memory_tokenizer.dart';
 import 'memory_tools.dart';
+import 'memory_trace.dart';
 
 /// Smart Add action (§12.6).
 enum SmartAddAction { neu, merge, conflict, skip }
@@ -398,13 +399,26 @@ class MemorySmartAdd {
     return const SmartAddDecision(action: SmartAddAction.neu, degraded: true);
   }
 
+  /// Read an entry's current content, for trace before/after values only.
+  Future<String?> _contentBefore(String? id) async {
+    if (id == null) return null;
+    try {
+      final found = await chatRepository.memoriesByIds([id]);
+      return found.isEmpty ? null : found.first.content;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<SmartAddResult> applyDecision({
     required SmartAddItem item,
     required SmartAddDecision decision,
     required Set<String> candidateIds,
     required MemorySource source,
+    MemoryTraceStep? traceStep,
   }) async {
     final normalized = normalizeDecision(decision, candidateIds);
+    final typeLabel = MemoryEntry.typeToString(item.type);
     switch (normalized.action) {
       case SmartAddAction.skip:
         return SmartAddResult(
@@ -425,15 +439,44 @@ class MemorySmartAdd {
         for (final rid in normalized.relatedIds) {
           await repository.linkBidirectional(created.id, rid);
         }
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.memoryCreated,
+            targetId: created.id,
+            label: '$typeLabel · ${MemoryEntry.scopeToString(item.scope)}',
+            after: created.content,
+          ),
+        );
+        for (final rid in normalized.relatedIds) {
+          traceStep?.addMutation(
+            MemoryTraceMutation(
+              kind: MemoryTraceMutationKind.memoryLinked,
+              targetId: created.id,
+              label: rid,
+            ),
+          );
+        }
         return SmartAddResult(
           action: SmartAddAction.neu,
           id: created.id,
           content: created.content,
         );
       case SmartAddAction.merge:
+        final before = traceStep == null
+            ? null
+            : await _contentBefore(normalized.targetId);
         final updated = await repository.updateContent(
           normalized.targetId!,
           normalized.mergedContent!.trim(),
+        );
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.memoryMerged,
+            targetId: updated?.id ?? normalized.targetId,
+            label: typeLabel,
+            before: before,
+            after: updated?.content ?? normalized.mergedContent,
+          ),
         );
         return SmartAddResult(
           action: SmartAddAction.merge,
@@ -442,6 +485,7 @@ class MemorySmartAdd {
         );
       case SmartAddAction.conflict:
         final oldId = normalized.targetId!;
+        final before = traceStep == null ? null : await _contentBefore(oldId);
         await repository.archive(oldId);
         final created = await repository.create(
           scope: item.scope,
@@ -457,6 +501,22 @@ class MemorySmartAdd {
           if (rid == oldId) continue;
           await repository.linkBidirectional(created.id, rid);
         }
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.memoryArchived,
+            targetId: oldId,
+            label: typeLabel,
+            before: before,
+          ),
+        );
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.memoryCreated,
+            targetId: created.id,
+            label: '$typeLabel · ${MemoryEntry.scopeToString(item.scope)}',
+            after: created.content,
+          ),
+        );
         return SmartAddResult(
           action: SmartAddAction.conflict,
           id: created.id,
@@ -475,6 +535,7 @@ class MemorySmartAdd {
     Future<String> Function(String prompt)? llmCall,
     String? overrideZh,
     String? overrideEn,
+    MemoryTraceStep? traceStep,
   }) async {
     // Fast path: exact duplicate (§12.6).
     final exact = await chatRepository.findExactMemory(
@@ -513,8 +574,10 @@ class MemorySmartAdd {
         overrideZh: overrideZh,
         overrideEn: overrideEn,
       );
+      traceStep?.appendPrompt(prompt);
       try {
         final raw = await llmCall(prompt);
+        traceStep?.appendResponse(raw);
         final parsed = parsePerItem(raw);
         decision =
             parsed ??
@@ -523,7 +586,8 @@ class MemorySmartAdd {
               type: item.type,
               content: item.content,
             );
-      } catch (_) {
+      } catch (e) {
+        traceStep?.appendResponse('<request failed> $e');
         decision = await degradeDecision(
           visibilityAssistantId: visibilityAssistantId,
           type: item.type,
@@ -537,6 +601,7 @@ class MemorySmartAdd {
       decision: decision,
       candidateIds: candidateIds,
       source: source,
+      traceStep: traceStep,
     );
   }
 
@@ -555,6 +620,7 @@ class MemorySmartAdd {
     String? perItemOverrideEn,
     String? batchOverrideZh,
     String? batchOverrideEn,
+    MemoryTraceStep? traceStep,
   }) async {
     if (items.isEmpty) {
       return (results: <SmartAddResult>[], identityChanged: false);
@@ -572,6 +638,7 @@ class MemorySmartAdd {
           llmCall: llmCall,
           overrideZh: perItemOverrideZh,
           overrideEn: perItemOverrideEn,
+          traceStep: traceStep,
         );
         results.add(r);
         if (item.type == MemoryType.identity &&
@@ -636,8 +703,10 @@ class MemorySmartAdd {
         overrideZh: batchOverrideZh,
         overrideEn: batchOverrideEn,
       );
+      traceStep?.appendPrompt(prompt);
       try {
         final raw = await llmCall(prompt);
+        traceStep?.appendResponse(raw);
         batchParsed = parseBatch(raw, pendingItems.length);
         if (batchParsed == null) {
           for (var j = 0; j < pendingIndexes.length; j++) {
@@ -661,7 +730,8 @@ class MemorySmartAdd {
                 );
           }
         }
-      } catch (_) {
+      } catch (e) {
+        traceStep?.appendResponse('<request failed> $e');
         for (final idx in pendingIndexes) {
           decisions[idx] = await degradeDecision(
             visibilityAssistantId: visibilityAssistantId,
@@ -692,6 +762,7 @@ class MemorySmartAdd {
         decision: decision,
         candidateIds: candidateIds,
         source: source,
+        traceStep: traceStep,
       );
       results.add(result);
       if (item.type == MemoryType.identity &&

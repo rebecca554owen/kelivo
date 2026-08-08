@@ -6,6 +6,7 @@ import '../../models/user_profile_field.dart';
 import 'memory_block_builder.dart';
 import 'memory_prompts.dart';
 import 'memory_repository.dart';
+import 'memory_trace.dart';
 
 /// One distilled profile field from Distiller JSON (§12.7).
 class MemoryDistilledField {
@@ -131,12 +132,16 @@ class MemoryProfileDistiller {
     required Future<String> Function(String prompt) llmCall,
     String? overrideZh,
     String? overrideEn,
+    MemoryTraceStep? traceStep,
   }) async {
     final identity = await chatRepository.queryVisibleMemories(
       assistantId: assistantId,
       type: MemoryType.identity,
     );
-    if (identity.isEmpty) return true;
+    if (identity.isEmpty) {
+      traceStep?.parsedResult = 'no_identity_entries';
+      return true;
+    }
 
     final profile = await chatRepository.readProfileFields();
     final profileBlock = MemoryBlockBuilder.buildProfileBlock(
@@ -151,22 +156,48 @@ class MemoryProfileDistiller {
       overrideEn: overrideEn,
     );
 
+    traceStep?.appendPrompt(prompt);
     final String raw;
     try {
       raw = await llmCall(prompt);
-    } catch (_) {
+    } catch (e) {
+      traceStep?.appendResponse('<request failed> $e');
       return false;
     }
+    traceStep?.appendResponse(raw);
 
     final parsed = parse(raw);
-    if (!parsed.ok) return false;
+    if (!parsed.ok) {
+      traceStep?.parsedResult = 'malformed';
+      return false;
+    }
+    traceStep?.setParsedJson({
+      'fields': [
+        for (final f in parsed.fields) {'key': f.key, 'value': f.value},
+      ],
+    });
 
     for (final field in parsed.fields) {
       try {
+        String? before;
+        for (final existing in profile) {
+          if (existing.key == field.key) {
+            before = existing.value;
+            break;
+          }
+        }
         await repository.putProfileField(
           field.key,
           field.value,
           MemorySource.distilled,
+        );
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.profileFieldWritten,
+            targetId: field.key,
+            before: before,
+            after: field.value,
+          ),
         );
       } catch (_) {
         // Illegal keys already filtered; ignore write races.

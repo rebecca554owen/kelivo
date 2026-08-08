@@ -19,6 +19,7 @@ import 'memory_profile_distiller.dart';
 import 'memory_prompts.dart';
 import 'memory_repository.dart';
 import 'memory_smart_add.dart';
+import 'memory_trace.dart';
 
 /// Result of a background organize run (§12 / §13.6).
 class MemoryOrganizeResult {
@@ -49,20 +50,6 @@ class MemoryOrganizeStatus {
   final MemoryOrganizeResult? lastResult;
 }
 
-class MemoryOrganizeRecord {
-  MemoryOrganizeRecord({
-    required this.at,
-    required this.conversationId,
-    required this.windowSize,
-    required this.result,
-  });
-
-  final DateTime at;
-  final String conversationId;
-  final int windowSize;
-  final MemoryOrganizeResult result;
-}
-
 class _PipelineJob {
   _PipelineJob({
     required this.conversationId,
@@ -88,6 +75,7 @@ class MemoryPipelineService {
     required this._settings,
     required this._assistants,
     required this._memoryV2,
+    MemoryTraceRecorder? traceRecorder,
     Future<String> Function({
       required ProviderConfig config,
       required String modelId,
@@ -95,7 +83,8 @@ class MemoryPipelineService {
       int? thinkingBudget,
     })?
     generateText,
-  }) : _generateText = generateText ?? _defaultGenerateText,
+  }) : traceRecorder = traceRecorder ?? MemoryTraceRecorder.instance,
+       _generateText = generateText ?? _defaultGenerateText,
        smartAdd = MemorySmartAdd(
          repository: repository,
          chatRepository: chatRepository,
@@ -125,6 +114,9 @@ class MemoryPipelineService {
   final MemorySmartAdd smartAdd;
   final MemoryProfileDistiller distiller;
 
+  /// Collects step-by-step traces of every background run (§debug viewer).
+  final MemoryTraceRecorder traceRecorder;
+
   final SettingsProvider Function() _settings;
   final AssistantProvider Function() _assistants;
   final MemoryProviderV2 Function() _memoryV2;
@@ -148,10 +140,6 @@ class MemoryPipelineService {
 
   MemoryOrganizeStatus _lastStatus = const MemoryOrganizeStatus();
   MemoryOrganizeStatus get lastStatus => _lastStatus;
-
-  final List<MemoryOrganizeRecord> _recentRecords = [];
-  List<MemoryOrganizeRecord> get recentRecords =>
-      List<MemoryOrganizeRecord>.unmodifiable(_recentRecords);
 
   static final RegExp _imageMarkerRe = RegExp(r'\[image:[^\]]*\]');
   static final RegExp _fileMarkerRe = RegExp(r'\[file:[^\]]*\]');
@@ -316,18 +304,6 @@ class MemoryPipelineService {
           lastAt: DateTime.now(),
           lastResult: result,
         );
-        _recentRecords.insert(
-          0,
-          MemoryOrganizeRecord(
-            at: DateTime.now(),
-            conversationId: job.conversationId,
-            windowSize: result.windowSize,
-            result: result,
-          ),
-        );
-        if (_recentRecords.length > 20) {
-          _recentRecords.removeLast();
-        }
         job.completer?.complete(result);
       }
     } finally {
@@ -335,7 +311,49 @@ class MemoryPipelineService {
     }
   }
 
+  /// Open a trace for [job]. Returns null when recording is off or fails.
+  MemoryTraceHandle? _beginJobTrace(_PipelineJob job) {
+    try {
+      final assistant = _assistants().getById(job.assistantId);
+      final convo = chatService.getConversation(job.conversationId);
+      return traceRecorder.begin(
+        trigger: job.force
+            ? MemoryTraceTrigger.manual
+            : MemoryTraceTrigger.autoTurns,
+        scope: assistant == null
+            ? MemoryTraceScope.global
+            : memoryTraceScopeOf(assistant.memoryWriteScope),
+        conversationId: job.conversationId,
+        conversationTitle: convo?.title,
+        assistantId: assistant?.id ?? job.assistantId,
+        assistantName: assistant?.name,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<MemoryOrganizeResult> _runJob(_PipelineJob job) async {
+    final handle = _beginJobTrace(job);
+    MemoryOrganizeResult result;
+    try {
+      result = await _runJobBody(job, handle);
+    } catch (e) {
+      handle?.commit(error: e.toString());
+      rethrow;
+    }
+    handle?.commit(
+      advanced: result.advanced,
+      forcedAdvance: result.forcedAdvance,
+      error: result.error,
+    );
+    return result;
+  }
+
+  Future<MemoryOrganizeResult> _runJobBody(
+    _PipelineJob job,
+    MemoryTraceHandle? handle,
+  ) async {
     final settings = _settings();
     final assistants = _assistants();
     final assistant = assistants.getById(job.assistantId);
@@ -453,6 +471,7 @@ class MemoryPipelineService {
       settings: settings,
       watermark: watermark,
       window: window,
+      trace: handle,
       llmCall: (prompt) => _generateText(
         config: cfg,
         modelId: mdlId,
@@ -465,6 +484,9 @@ class MemoryPipelineService {
   /// Gatekeeper → Extract → Smart Add → Distiller for a prepared window.
   ///
   /// Exposed for tests (§18.1 / watermark / short-circuit).
+  ///
+  /// When [trace] is null a trace is opened and committed here, so direct
+  /// callers are recorded too.
   @visibleForTesting
   Future<MemoryOrganizeResult> processWindow({
     required String conversationId,
@@ -473,6 +495,57 @@ class MemoryPipelineService {
     required int watermark,
     required List<({ChatMessage message, int order})> window,
     required Future<String> Function(String prompt) llmCall,
+    MemoryTraceHandle? trace,
+  }) async {
+    final ownsTrace = trace == null;
+    MemoryTraceHandle? handle = trace;
+    if (ownsTrace) {
+      try {
+        handle = traceRecorder.begin(
+          trigger: MemoryTraceTrigger.manual,
+          scope: memoryTraceScopeOf(assistant.memoryWriteScope),
+          conversationId: conversationId,
+          conversationTitle: chatService.getConversation(conversationId)?.title,
+          assistantId: assistant.id,
+          assistantName: assistant.name,
+        );
+      } catch (_) {
+        handle = null;
+      }
+    }
+    MemoryOrganizeResult result;
+    try {
+      result = await _processWindowBody(
+        conversationId: conversationId,
+        assistant: assistant,
+        settings: settings,
+        watermark: watermark,
+        window: window,
+        llmCall: llmCall,
+        handle: handle,
+      );
+    } catch (e) {
+      if (ownsTrace) handle?.commit(error: e.toString());
+      rethrow;
+    }
+    if (ownsTrace) {
+      handle?.commit(
+        advanced: result.advanced,
+        forcedAdvance: result.forcedAdvance,
+        error: result.error,
+      );
+    }
+    return result;
+  }
+
+  Future<MemoryOrganizeResult> _processWindowBody({
+    required String conversationId,
+    required Assistant assistant,
+    required SettingsProvider settings,
+    required int watermark,
+    required List<({ChatMessage message, int order})> window,
+    required Future<String> Function(String prompt) llmCall,
+    required MemoryTraceHandle? handle,
   }) async {
     if (window.isEmpty) {
       return const MemoryOrganizeResult(
@@ -487,18 +560,31 @@ class MemoryPipelineService {
     final conversationText = buildConversationText([
       for (final e in window) e.message,
     ], lang);
+    handle?.setWindow(
+      watermark: watermark,
+      startOrder: window.first.order,
+      endOrder: windowEnd,
+      size: window.length,
+    );
 
     // ── Gatekeeper ────────────────────────────────────────────────────────
+    final gateStep = handle?.beginStep(MemoryTraceStepKind.gatekeeper);
     final gatePrompt = MemoryGatekeeper.buildPrompt(
       lang: lang,
       conversation: conversationText,
       overrideZh: settings.memoryGatePromptZh,
       overrideEn: settings.memoryGatePromptEn,
     );
+    gateStep?.appendPrompt(gatePrompt);
     final String gateRaw;
     try {
       gateRaw = await llmCall(gatePrompt);
     } catch (e) {
+      gateStep?.finish(
+        MemoryTraceStepStatus.failed,
+        error: 'gate_request_failed:$e',
+      );
+      _skipRemainingSteps(handle, from: MemoryTraceStepKind.extract);
       return _failWindow(
         failureKey: failureKey,
         conversationId: conversationId,
@@ -509,8 +595,15 @@ class MemoryPipelineService {
         error: 'gate_request_failed:$e',
       );
     }
+    gateStep?.appendResponse(gateRaw);
     final gate = MemoryGatekeeper.parse(gateRaw);
+    gateStep?.parsedResult = gate.name;
     if (gate == MemoryGateParseResult.malformed) {
+      gateStep?.finish(
+        MemoryTraceStepStatus.failed,
+        error: 'gate_parse_failed',
+      );
+      _skipRemainingSteps(handle, from: MemoryTraceStepKind.extract);
       return _failWindow(
         failureKey: failureKey,
         conversationId: conversationId,
@@ -521,7 +614,9 @@ class MemoryPipelineService {
         error: 'gate_parse_failed',
       );
     }
+    gateStep?.finish(MemoryTraceStepStatus.success);
     if (gate == MemoryGateParseResult.skip) {
+      _skipRemainingSteps(handle, from: MemoryTraceStepKind.extract);
       await _advance(conversationId, windowEnd, assistantId: assistant.id);
       _windowFailures.remove(failureKey);
       return MemoryOrganizeResult(
@@ -533,6 +628,7 @@ class MemoryPipelineService {
     }
 
     // ── Extract ───────────────────────────────────────────────────────────
+    final extractStep = handle?.beginStep(MemoryTraceStepKind.extract);
     final visible = await chatRepository.queryVisibleMemories(
       assistantId: assistant.id,
     );
@@ -552,10 +648,16 @@ class MemoryPipelineService {
       overrideZh: settings.memoryExtractPromptZh,
       overrideEn: settings.memoryExtractPromptEn,
     );
+    extractStep?.appendPrompt(extractPrompt);
     final String extractRaw;
     try {
       extractRaw = await llmCall(extractPrompt);
     } catch (e) {
+      extractStep?.finish(
+        MemoryTraceStepStatus.failed,
+        error: 'extract_request_failed:$e',
+      );
+      _skipRemainingSteps(handle, from: MemoryTraceStepKind.smartAdd);
       return _failWindow(
         failureKey: failureKey,
         conversationId: conversationId,
@@ -566,8 +668,14 @@ class MemoryPipelineService {
         error: 'extract_request_failed:$e',
       );
     }
+    extractStep?.appendResponse(extractRaw);
     final extracted = MemoryExtractor.parse(extractRaw);
     if (!extracted.ok) {
+      extractStep?.finish(
+        MemoryTraceStepStatus.failed,
+        error: 'extract_parse_failed',
+      );
+      _skipRemainingSteps(handle, from: MemoryTraceStepKind.smartAdd);
       return _failWindow(
         failureKey: failureKey,
         conversationId: conversationId,
@@ -578,7 +686,19 @@ class MemoryPipelineService {
         error: 'extract_parse_failed',
       );
     }
+    extractStep?.setParsedJson({
+      'items': [
+        for (final item in extracted.items)
+          {
+            'type': MemoryEntry.typeToString(item.type),
+            if (item.scopeAttr != null) 'scope': item.scopeAttr,
+            'content': item.content,
+          },
+      ],
+    });
+    extractStep?.finish(MemoryTraceStepStatus.success);
     if (extracted.items.isEmpty) {
+      _skipRemainingSteps(handle, from: MemoryTraceStepKind.smartAdd);
       await _advance(conversationId, windowEnd, assistantId: assistant.id);
       _windowFailures.remove(failureKey);
       return MemoryOrganizeResult(
@@ -606,6 +726,7 @@ class MemoryPipelineService {
         }(),
     ];
 
+    final smartStep = handle?.beginStep(MemoryTraceStepKind.smartAdd);
     final smart = await smartAdd.addMany(
       items: smartItems,
       visibilityAssistantId: assistant.id,
@@ -617,21 +738,38 @@ class MemoryPipelineService {
       perItemOverrideEn: settings.memorySmartAddPromptEn,
       batchOverrideZh: settings.memorySmartAddBatchPromptZh,
       batchOverrideEn: settings.memorySmartAddBatchPromptEn,
+      traceStep: smartStep,
     );
+    smartStep?.setParsedJson({
+      'identityChanged': smart.identityChanged,
+      'results': [for (final r in smart.results) r.toToolJson()],
+    });
+    smartStep?.finish(MemoryTraceStepStatus.success);
 
     // ── Profile Distiller (identity changes only) ─────────────────────────
     if (smart.identityChanged) {
+      final distillStep = handle?.beginStep(
+        MemoryTraceStepKind.profileDistiller,
+      );
       try {
-        await distiller.run(
+        final ok = await distiller.run(
           lang: lang,
           assistantId: assistant.id,
           llmCall: llmCall,
           overrideZh: settings.memoryProfileDistillPromptZh,
           overrideEn: settings.memoryProfileDistillPromptEn,
+          traceStep: distillStep,
+        );
+        distillStep?.finish(
+          ok ? MemoryTraceStepStatus.success : MemoryTraceStepStatus.failed,
+          error: ok ? null : 'distill_failed',
         );
       } catch (e) {
         debugPrint('MemoryPipeline distiller failed: $e');
+        distillStep?.finish(MemoryTraceStepStatus.failed, error: e.toString());
       }
+    } else {
+      _skipStep(handle, MemoryTraceStepKind.profileDistiller);
     }
 
     // Smart Add (including degraded) and Distiller failure both advance (§12.8).
@@ -643,6 +781,30 @@ class MemoryPipelineService {
       extractedCount: extracted.items.length,
       windowSize: window.length,
     );
+  }
+
+  /// Record a stage the run never reached, so the viewer shows the full chain.
+  void _skipStep(MemoryTraceHandle? handle, MemoryTraceStepKind kind) {
+    handle?.beginStep(kind)?.finish(MemoryTraceStepStatus.skipped);
+  }
+
+  static const List<MemoryTraceStepKind> _organizeStages = [
+    MemoryTraceStepKind.gatekeeper,
+    MemoryTraceStepKind.extract,
+    MemoryTraceStepKind.smartAdd,
+    MemoryTraceStepKind.profileDistiller,
+  ];
+
+  void _skipRemainingSteps(
+    MemoryTraceHandle? handle, {
+    required MemoryTraceStepKind from,
+  }) {
+    if (handle == null) return;
+    final start = _organizeStages.indexOf(from);
+    if (start < 0) return;
+    for (var i = start; i < _organizeStages.length; i++) {
+      _skipStep(handle, _organizeStages[i]);
+    }
   }
 
   Future<MemoryOrganizeResult> _failWindow({

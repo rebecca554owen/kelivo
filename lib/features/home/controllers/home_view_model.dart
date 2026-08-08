@@ -11,6 +11,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
+import '../../../core/services/memory/memory_trace.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_builder_service.dart';
@@ -1420,6 +1421,12 @@ class HomeViewModel extends ChangeNotifier {
         .replaceAll('{previous_summary}', previousSummary)
         .replaceAll('{user_messages}', content);
 
+    final traceHandle = _beginSummaryTrace(convo, assistant);
+    final traceStep = traceHandle?.beginStep(
+      MemoryTraceStepKind.conversationSummary,
+    );
+    traceStep?.appendPrompt(prompt);
+
     try {
       final summary = (await ChatApiService.generateText(
         config: cfg,
@@ -1427,6 +1434,7 @@ class HomeViewModel extends ChangeNotifier {
         prompt: prompt,
         thinkingBudget: budget,
       )).trim();
+      traceStep?.appendResponse(summary);
 
       if (summary.isNotEmpty) {
         await _chatService.updateConversationSummary(
@@ -1434,6 +1442,18 @@ class HomeViewModel extends ChangeNotifier {
           summary,
           msgCount,
         );
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.conversationSummaryWritten,
+            targetId: convo.id,
+            before: previousSummary.isEmpty ? null : previousSummary,
+            after: summary,
+          ),
+        );
+      }
+      traceStep?.finish(MemoryTraceStepStatus.success);
+      traceHandle?.commit(advanced: summary.isNotEmpty);
+      if (summary.isNotEmpty) {
         if (currentConversation?.id == convo.id) {
           _chatController.updateCurrentConversation(
             _chatService.getConversation(convo.id),
@@ -1441,8 +1461,32 @@ class HomeViewModel extends ChangeNotifier {
           notifyListeners();
         }
       }
-    } catch (_) {
+    } catch (e) {
       // Keep old summary on failure, ignore silently
+      traceStep?.finish(MemoryTraceStepStatus.failed, error: e.toString());
+      traceHandle?.commit(error: e.toString());
+    }
+  }
+
+  /// Open a trace for background summary generation (feeds past-conversation
+  /// recall). Never throws.
+  MemoryTraceHandle? _beginSummaryTrace(
+    Conversation convo,
+    Assistant? assistant,
+  ) {
+    try {
+      return MemoryTraceRecorder.instance.begin(
+        trigger: MemoryTraceTrigger.conversationSummary,
+        scope: assistant == null
+            ? MemoryTraceScope.global
+            : memoryTraceScopeOf(assistant.memoryWriteScope),
+        conversationId: convo.id,
+        conversationTitle: convo.title,
+        assistantId: assistant?.id,
+        assistantName: assistant?.name,
+      );
+    } catch (_) {
+      return null;
     }
   }
 

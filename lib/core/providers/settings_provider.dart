@@ -29,6 +29,7 @@ import '../../utils/brand_assets.dart';
 import '../../utils/image_compressor.dart';
 import '../database/business_preferences.dart';
 import '../services/memory/memory_prompts.dart';
+import '../services/memory/memory_trace.dart';
 import '../../theme/palettes.dart';
 import '../../theme/custom_theme.dart';
 
@@ -112,6 +113,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _memoryModelThinkingEnabledKey =
       'memory_model_thinking_enabled_v1';
   static const String _memoryPromptLangKey = 'memory_prompt_lang_v1';
+  static const String _memoryTraceEnabledKey = 'memory_trace_enabled_v1';
   static const String _memoryRulesPromptZhKey = 'memory_rules_prompt_zh_v1';
   static const String _memoryRulesPromptEnKey = 'memory_rules_prompt_en_v1';
   static const String _memoryGatePromptZhKey = 'memory_gate_prompt_zh_v1';
@@ -861,6 +863,8 @@ class SettingsProvider extends ChangeNotifier {
     _memoryPromptLang = (memoryLang == 'zh' || memoryLang == 'en')
         ? memoryLang!
         : 'auto';
+    _memoryTraceEnabled = prefs.getBool(_memoryTraceEnabledKey) ?? true;
+    MemoryTraceRecorder.instance.setEnabled(_memoryTraceEnabled);
     _memoryRulesPromptZh = _nonEmptyOr(
       prefs.getString(_memoryRulesPromptZhKey),
       MemoryPrompts.rulesZh,
@@ -3528,14 +3532,17 @@ Requirements:
   String _memoryPromptLang = 'auto';
   String get memoryPromptLang => _memoryPromptLang;
 
+  /// Records step-by-step traces of every background memory run. Default on.
+  bool _memoryTraceEnabled = true;
+  bool get memoryTraceEnabled => _memoryTraceEnabled;
+
   /// The locale the interface is actually rendered in.
   ///
   /// [appLocale] parses the stored tag, and the `system` tag has no locale to
   /// parse, so it falls through to `en_US`. Anything deciding what language to
   /// speak to the user in must ask the platform instead.
-  Locale get effectiveLocale => isFollowingSystemLocale
-      ? PlatformDispatcher.instance.locale
-      : appLocale;
+  Locale get effectiveLocale =>
+      isFollowingSystemLocale ? PlatformDispatcher.instance.locale : appLocale;
 
   /// Resolves `auto` → zh when the interface is Chinese, else en.
   MemoryPromptLang get resolvedMemoryPromptLang {
@@ -3599,6 +3606,15 @@ Requirements:
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_memoryModelThinkingEnabledKey, enabled);
+  }
+
+  /// Turning this off also drops every retained trace immediately.
+  Future<void> setMemoryTraceEnabled(bool enabled) async {
+    if (_memoryTraceEnabled == enabled) return;
+    _memoryTraceEnabled = enabled;
+    MemoryTraceRecorder.instance.setEnabled(enabled);
+    notifyListeners();
+    await _preferences.setBool(_memoryTraceEnabledKey, enabled);
   }
 
   Future<void> setMemoryPromptLang(String lang) async {
@@ -4741,6 +4757,7 @@ Requirements:
     copy._memoryModelId = _memoryModelId;
     copy._memoryModelThinkingEnabled = _memoryModelThinkingEnabled;
     copy._memoryPromptLang = _memoryPromptLang;
+    copy._memoryTraceEnabled = _memoryTraceEnabled;
     copy._memoryRulesPromptZh = _memoryRulesPromptZh;
     copy._memoryRulesPromptEn = _memoryRulesPromptEn;
     copy._memoryGatePromptZh = _memoryGatePromptZh;
