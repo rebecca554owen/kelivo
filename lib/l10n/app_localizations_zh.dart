@@ -1334,6 +1334,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditPreviewTitle => '预览';
 
   @override
+  String get assistantEditPromptTimeVarWarning =>
+      '在系统提示词中使用时间变量会让每一轮请求的开头都不同，Prompt 缓存无法命中，费用和首字延迟都会上升。需要让模型知道当前时间时，请改用下方的「追加当前时间」开关。';
+
+  @override
+  String get assistantEditPromptAppendTimeTitle => '追加当前时间';
+
+  @override
+  String get assistantEditPromptAppendTimeSubtitle =>
+      '在每条用户消息末尾追加发送时刻，例如 Mon 25-07-26 14:03:22。时间在请求末尾，不影响 Prompt 缓存。';
+
+  @override
+  String get assistantEditPromptAppendTimeInfoTitle => '追加时间格式';
+
+  @override
+  String assistantEditPromptAppendTimeInfoBody(String example) {
+    return '开启后，会在每条用户消息末尾先空一行，再追加如下标签：\n\n$example\n\n时间取该消息自己的发送时刻，重试时保持不变。';
+  }
+
+  @override
+  String get assistantEditPromptAppendTimeInfoClose => '知道了';
+
+  @override
+  String get assistantEditPromptTimeVarDialogTitle => '系统提示词中含时间变量';
+
+  @override
+  String assistantEditPromptTimeVarDialogBody(String variables) {
+    return '你的系统提示词里用了 $variables。系统提示词每次请求都会重新渲染，含时间变量会让每一轮请求的开头都不同，Prompt 缓存无法命中。建议移除这些变量，改用「追加当前时间」——它把时间放在请求末尾，不影响前缀。';
+  }
+
+  @override
+  String get assistantEditPromptTimeVarDialogRemove => '去移除';
+
+  @override
+  String get assistantEditPromptTimeVarDialogKeep => '仍然开启';
+
+  @override
   String get codeBlockPreviewButton => '预览';
 
   @override
@@ -2155,15 +2191,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatMessageWidgetDeepThinking => '深度思考';
-
-  @override
-  String get chatMessageWidgetCreateMemory => '创建记忆';
-
-  @override
-  String get chatMessageWidgetEditMemory => '编辑记忆';
-
-  @override
-  String get chatMessageWidgetDeleteMemory => '删除记忆';
 
   @override
   String chatMessageWidgetWebSearch(String query) {
@@ -7379,6 +7406,42 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditPreviewTitle => '预览';
 
   @override
+  String get assistantEditPromptTimeVarWarning =>
+      '在系统提示词中使用时间变量会让每一轮请求的开头都不同，Prompt 缓存无法命中，费用和首字延迟都会上升。需要让模型知道当前时间时，请改用下方的「追加当前时间」开关。';
+
+  @override
+  String get assistantEditPromptAppendTimeTitle => '追加当前时间';
+
+  @override
+  String get assistantEditPromptAppendTimeSubtitle =>
+      '在每条用户消息末尾追加发送时刻，例如 Mon 25-07-26 14:03:22。时间在请求末尾，不影响 Prompt 缓存。';
+
+  @override
+  String get assistantEditPromptAppendTimeInfoTitle => '追加时间格式';
+
+  @override
+  String assistantEditPromptAppendTimeInfoBody(String example) {
+    return '开启后，会在每条用户消息末尾先空一行，再追加如下标签：\n\n$example\n\n时间取该消息自己的发送时刻，重试时保持不变。';
+  }
+
+  @override
+  String get assistantEditPromptAppendTimeInfoClose => '知道了';
+
+  @override
+  String get assistantEditPromptTimeVarDialogTitle => '系统提示词中含时间变量';
+
+  @override
+  String assistantEditPromptTimeVarDialogBody(String variables) {
+    return '你的系统提示词里用了 $variables。系统提示词每次请求都会重新渲染，含时间变量会让每一轮请求的开头都不同，Prompt 缓存无法命中。建议移除这些变量，改用「追加当前时间」——它把时间放在请求末尾，不影响前缀。';
+  }
+
+  @override
+  String get assistantEditPromptTimeVarDialogRemove => '去移除';
+
+  @override
+  String get assistantEditPromptTimeVarDialogKeep => '仍然开启';
+
+  @override
   String get codeBlockPreviewButton => '预览';
 
   @override
@@ -8200,15 +8263,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatMessageWidgetDeepThinking => '深度思考';
-
-  @override
-  String get chatMessageWidgetCreateMemory => '创建记忆';
-
-  @override
-  String get chatMessageWidgetEditMemory => '编辑记忆';
-
-  @override
-  String get chatMessageWidgetDeleteMemory => '删除记忆';
 
   @override
   String chatMessageWidgetWebSearch(String query) {
@@ -13424,6 +13478,42 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get assistantEditPreviewTitle => '預覽';
 
   @override
+  String get assistantEditPromptTimeVarWarning =>
+      '在系統提示詞中使用時間變數會讓每一輪請求的開頭都不同，Prompt 快取無法命中，費用和首字延遲都會上升。需要讓模型知道當前時間時，請改用下方的「追加當前時間」開關。';
+
+  @override
+  String get assistantEditPromptAppendTimeTitle => '追加當前時間';
+
+  @override
+  String get assistantEditPromptAppendTimeSubtitle =>
+      '在每條使用者訊息末尾追加傳送時刻，例如 Mon 25-07-26 14:03:22。時間在請求末尾，不影響 Prompt 快取。';
+
+  @override
+  String get assistantEditPromptAppendTimeInfoTitle => '追加時間格式';
+
+  @override
+  String assistantEditPromptAppendTimeInfoBody(String example) {
+    return '開啟後，會在每條使用者訊息末尾先空一行，再追加如下標籤：\n\n$example\n\n時間取該訊息自己的傳送時刻，重試時保持不變。';
+  }
+
+  @override
+  String get assistantEditPromptAppendTimeInfoClose => '知道了';
+
+  @override
+  String get assistantEditPromptTimeVarDialogTitle => '系統提示詞中含時間變數';
+
+  @override
+  String assistantEditPromptTimeVarDialogBody(String variables) {
+    return '你的系統提示詞裡用了 $variables。系統提示詞每次請求都會重新渲染，含時間變數會讓每一輪請求的開頭都不同，Prompt 快取無法命中。建議移除這些變數，改用「追加當前時間」——它把時間放在請求末尾，不影響前綴。';
+  }
+
+  @override
+  String get assistantEditPromptTimeVarDialogRemove => '去移除';
+
+  @override
+  String get assistantEditPromptTimeVarDialogKeep => '仍然開啟';
+
+  @override
   String get codeBlockPreviewButton => '預覽';
 
   @override
@@ -14244,15 +14334,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatMessageWidgetDeepThinking => '深度思考';
-
-  @override
-  String get chatMessageWidgetCreateMemory => '建立記憶';
-
-  @override
-  String get chatMessageWidgetEditMemory => '編輯記憶';
-
-  @override
-  String get chatMessageWidgetDeleteMemory => '刪除記憶';
 
   @override
   String chatMessageWidgetWebSearch(String query) {

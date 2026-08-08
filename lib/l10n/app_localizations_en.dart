@@ -1382,6 +1382,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditPreviewTitle => 'Preview';
 
   @override
+  String get assistantEditPromptTimeVarWarning =>
+      'Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.';
+
+  @override
+  String get assistantEditPromptAppendTimeTitle => 'Append current time';
+
+  @override
+  String get assistantEditPromptAppendTimeSubtitle =>
+      'Append the send time to the end of each user message, e.g. Mon 25-07-26 14:03:22. Time stays at the end of the request, so prompt caching is unaffected.';
+
+  @override
+  String get assistantEditPromptAppendTimeInfoTitle => 'Appended time format';
+
+  @override
+  String assistantEditPromptAppendTimeInfoBody(String example) {
+    return 'When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n$example\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.';
+  }
+
+  @override
+  String get assistantEditPromptAppendTimeInfoClose => 'Got it';
+
+  @override
+  String get assistantEditPromptTimeVarDialogTitle =>
+      'System prompt contains time variables';
+
+  @override
+  String assistantEditPromptTimeVarDialogBody(String variables) {
+    return 'Your system prompt uses $variables. The system prompt is re-rendered on every request, so time variables make the beginning of every request different and prompt caching cannot hit. Consider removing these variables and using \"Append current time\" instead — it puts the time at the end of the request and does not affect the prefix.';
+  }
+
+  @override
+  String get assistantEditPromptTimeVarDialogRemove => 'Go remove';
+
+  @override
+  String get assistantEditPromptTimeVarDialogKeep => 'Enable anyway';
+
+  @override
   String get codeBlockPreviewButton => 'Preview';
 
   @override
@@ -2228,15 +2265,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMessageWidgetDeepThinking => 'Deep Thinking';
-
-  @override
-  String get chatMessageWidgetCreateMemory => 'Create Memory';
-
-  @override
-  String get chatMessageWidgetEditMemory => 'Edit Memory';
-
-  @override
-  String get chatMessageWidgetDeleteMemory => 'Delete Memory';
 
   @override
   String chatMessageWidgetWebSearch(String query) {

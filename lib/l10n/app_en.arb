@@ -564,6 +564,30 @@
   "assistantEditVariableRole": "Role",
   "assistantEditVariableMessage": "Message",
   "assistantEditPreviewTitle": "Preview",
+  "assistantEditPromptTimeVarWarning": "Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.",
+  "assistantEditPromptAppendTimeTitle": "Append current time",
+  "assistantEditPromptAppendTimeSubtitle": "Append the send time to the end of each user message, e.g. Mon 25-07-26 14:03:22. Time stays at the end of the request, so prompt caching is unaffected.",
+  "assistantEditPromptAppendTimeInfoTitle": "Appended time format",
+  "assistantEditPromptAppendTimeInfoBody": "When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n{example}\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.",
+  "@assistantEditPromptAppendTimeInfoBody": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptAppendTimeInfoClose": "Got it",
+  "assistantEditPromptTimeVarDialogTitle": "System prompt contains time variables",
+  "assistantEditPromptTimeVarDialogBody": "Your system prompt uses {variables}. The system prompt is re-rendered on every request, so time variables make the beginning of every request different and prompt caching cannot hit. Consider removing these variables and using \"Append current time\" instead — it puts the time at the end of the request and does not affect the prefix.",
+  "@assistantEditPromptTimeVarDialogBody": {
+    "placeholders": {
+      "variables": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptTimeVarDialogRemove": "Go remove",
+  "assistantEditPromptTimeVarDialogKeep": "Enable anyway",
   "codeBlockPreviewButton": "Preview",
   "codeBlockSaveAsButton": "Save as file",
   "codeBlockCollapseButton": "Collapse",
@@ -914,9 +938,6 @@
   "chatMessageWidgetTranslateTooltip": "Translate",
   "chatMessageWidgetBuiltinSearchHideNote": "Hide builtin search tool cards",
   "chatMessageWidgetDeepThinking": "Deep Thinking",
-  "chatMessageWidgetCreateMemory": "Create Memory",
-  "chatMessageWidgetEditMemory": "Edit Memory",
-  "chatMessageWidgetDeleteMemory": "Delete Memory",
   "chatMessageWidgetWebSearch": "Web Search: {query}",
   "@chatMessageWidgetWebSearch": {
     "placeholders": {

@@ -383,6 +383,30 @@
   "assistantEditVariableRole": "角色",
   "assistantEditVariableMessage": "內容",
   "assistantEditPreviewTitle": "預覽",
+  "assistantEditPromptTimeVarWarning": "在系統提示詞中使用時間變數會讓每一輪請求的開頭都不同，Prompt 快取無法命中，費用和首字延遲都會上升。需要讓模型知道當前時間時，請改用下方的「追加當前時間」開關。",
+  "assistantEditPromptAppendTimeTitle": "追加當前時間",
+  "assistantEditPromptAppendTimeSubtitle": "在每條使用者訊息末尾追加傳送時刻，例如 Mon 25-07-26 14:03:22。時間在請求末尾，不影響 Prompt 快取。",
+  "assistantEditPromptAppendTimeInfoTitle": "追加時間格式",
+  "assistantEditPromptAppendTimeInfoBody": "開啟後，會在每條使用者訊息末尾先空一行，再追加如下標籤：\n\n{example}\n\n時間取該訊息自己的傳送時刻，重試時保持不變。",
+  "@assistantEditPromptAppendTimeInfoBody": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptAppendTimeInfoClose": "知道了",
+  "assistantEditPromptTimeVarDialogTitle": "系統提示詞中含時間變數",
+  "assistantEditPromptTimeVarDialogBody": "你的系統提示詞裡用了 {variables}。系統提示詞每次請求都會重新渲染，含時間變數會讓每一輪請求的開頭都不同，Prompt 快取無法命中。建議移除這些變數，改用「追加當前時間」——它把時間放在請求末尾，不影響前綴。",
+  "@assistantEditPromptTimeVarDialogBody": {
+    "placeholders": {
+      "variables": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptTimeVarDialogRemove": "去移除",
+  "assistantEditPromptTimeVarDialogKeep": "仍然開啟",
   "codeBlockPreviewButton": "預覽",
   "codeBlockSaveAsButton": "另存為檔案",
   "codeBlockCollapseButton": "摺疊",
@@ -743,9 +767,6 @@
   "chatMessageWidgetTranslateTooltip": "翻譯",
   "chatMessageWidgetBuiltinSearchHideNote": "隱藏內建搜尋工具卡片",
   "chatMessageWidgetDeepThinking": "深度思考",
-  "chatMessageWidgetCreateMemory": "建立記憶",
-  "chatMessageWidgetEditMemory": "編輯記憶",
-  "chatMessageWidgetDeleteMemory": "刪除記憶",
   "chatMessageWidgetWebSearch": "聯網檢索: {query}",
   "chatMessageWidgetBuiltinSearch": "模型內建搜尋",
   "chatMessageWidgetReadClipboard": "讀取剪貼簿",

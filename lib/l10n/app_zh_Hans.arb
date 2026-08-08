@@ -395,6 +395,30 @@
   "assistantEditVariableRole": "角色",
   "assistantEditVariableMessage": "内容",
   "assistantEditPreviewTitle": "预览",
+  "assistantEditPromptTimeVarWarning": "在系统提示词中使用时间变量会让每一轮请求的开头都不同，Prompt 缓存无法命中，费用和首字延迟都会上升。需要让模型知道当前时间时，请改用下方的「追加当前时间」开关。",
+  "assistantEditPromptAppendTimeTitle": "追加当前时间",
+  "assistantEditPromptAppendTimeSubtitle": "在每条用户消息末尾追加发送时刻，例如 Mon 25-07-26 14:03:22。时间在请求末尾，不影响 Prompt 缓存。",
+  "assistantEditPromptAppendTimeInfoTitle": "追加时间格式",
+  "assistantEditPromptAppendTimeInfoBody": "开启后，会在每条用户消息末尾先空一行，再追加如下标签：\n\n{example}\n\n时间取该消息自己的发送时刻，重试时保持不变。",
+  "@assistantEditPromptAppendTimeInfoBody": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptAppendTimeInfoClose": "知道了",
+  "assistantEditPromptTimeVarDialogTitle": "系统提示词中含时间变量",
+  "assistantEditPromptTimeVarDialogBody": "你的系统提示词里用了 {variables}。系统提示词每次请求都会重新渲染，含时间变量会让每一轮请求的开头都不同，Prompt 缓存无法命中。建议移除这些变量，改用「追加当前时间」——它把时间放在请求末尾，不影响前缀。",
+  "@assistantEditPromptTimeVarDialogBody": {
+    "placeholders": {
+      "variables": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptTimeVarDialogRemove": "去移除",
+  "assistantEditPromptTimeVarDialogKeep": "仍然开启",
   "codeBlockPreviewButton": "预览",
   "codeBlockSaveAsButton": "另存为文件",
   "codeBlockCollapseButton": "折叠",
@@ -785,9 +809,6 @@
   "chatMessageWidgetTranslateTooltip": "翻译",
   "chatMessageWidgetBuiltinSearchHideNote": "隐藏内置搜索工具卡片",
   "chatMessageWidgetDeepThinking": "深度思考",
-  "chatMessageWidgetCreateMemory": "创建记忆",
-  "chatMessageWidgetEditMemory": "编辑记忆",
-  "chatMessageWidgetDeleteMemory": "删除记忆",
   "chatMessageWidgetWebSearch": "联网检索: {query}",
   "chatMessageWidgetBuiltinSearch": "模型内置搜索",
   "chatMessageWidgetReadClipboard": "读取剪切板",

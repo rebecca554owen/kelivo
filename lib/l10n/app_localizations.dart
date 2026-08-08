@@ -2657,6 +2657,66 @@ abstract class AppLocalizations {
   /// **'Preview'**
   String get assistantEditPreviewTitle;
 
+  /// No description provided for @assistantEditPromptTimeVarWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.'**
+  String get assistantEditPromptTimeVarWarning;
+
+  /// No description provided for @assistantEditPromptAppendTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Append current time'**
+  String get assistantEditPromptAppendTimeTitle;
+
+  /// No description provided for @assistantEditPromptAppendTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Append the send time to the end of each user message, e.g. Mon 25-07-26 14:03:22. Time stays at the end of the request, so prompt caching is unaffected.'**
+  String get assistantEditPromptAppendTimeSubtitle;
+
+  /// No description provided for @assistantEditPromptAppendTimeInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appended time format'**
+  String get assistantEditPromptAppendTimeInfoTitle;
+
+  /// No description provided for @assistantEditPromptAppendTimeInfoBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n{example}\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.'**
+  String assistantEditPromptAppendTimeInfoBody(String example);
+
+  /// No description provided for @assistantEditPromptAppendTimeInfoClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get assistantEditPromptAppendTimeInfoClose;
+
+  /// No description provided for @assistantEditPromptTimeVarDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System prompt contains time variables'**
+  String get assistantEditPromptTimeVarDialogTitle;
+
+  /// No description provided for @assistantEditPromptTimeVarDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your system prompt uses {variables}. The system prompt is re-rendered on every request, so time variables make the beginning of every request different and prompt caching cannot hit. Consider removing these variables and using \"Append current time\" instead — it puts the time at the end of the request and does not affect the prefix.'**
+  String assistantEditPromptTimeVarDialogBody(String variables);
+
+  /// No description provided for @assistantEditPromptTimeVarDialogRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Go remove'**
+  String get assistantEditPromptTimeVarDialogRemove;
+
+  /// No description provided for @assistantEditPromptTimeVarDialogKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable anyway'**
+  String get assistantEditPromptTimeVarDialogKeep;
+
   /// No description provided for @codeBlockPreviewButton.
   ///
   /// In en, this message translates to:
@@ -4234,24 +4294,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deep Thinking'**
   String get chatMessageWidgetDeepThinking;
-
-  /// No description provided for @chatMessageWidgetCreateMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Create Memory'**
-  String get chatMessageWidgetCreateMemory;
-
-  /// No description provided for @chatMessageWidgetEditMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit Memory'**
-  String get chatMessageWidgetEditMemory;
-
-  /// No description provided for @chatMessageWidgetDeleteMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Memory'**
-  String get chatMessageWidgetDeleteMemory;
 
   /// No description provided for @chatMessageWidgetWebSearch.
   ///
