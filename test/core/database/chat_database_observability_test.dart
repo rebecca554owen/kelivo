@@ -67,7 +67,7 @@ void main() {
         content: secret,
         streaming: true,
       );
-      await repository.appendMessageToConversation(
+      await repository.appendLinearMessageToConversation(
         conversation: conversation,
         message: streaming,
       );
@@ -142,7 +142,7 @@ void main() {
     test('records rollback failure without database values', () async {
       const secret = 'failed-secret-content';
       await expectLater(
-        repository.appendMessageToConversation(
+        repository.appendLinearMessageToConversation(
           conversation: Conversation(
             id: 'private-conversation-id',
             title: secret,
@@ -185,6 +185,37 @@ void main() {
           observer: observer,
         );
         await repository.ensureReady();
+      },
+    );
+
+    test(
+      'text part digest isolate failure is recorded then falls back via Drift',
+      () async {
+        final conversation = Conversation(
+          id: 'private-conversation-id',
+          title: 'Digest fallback',
+        );
+        final chatMessage = message(
+          id: 'digest-fallback-message',
+          content: 'hello 😀 digest',
+          role: 'user',
+        );
+        await repository.appendLinearMessageToConversation(
+          conversation: conversation,
+          message: chatMessage,
+        );
+
+        repository.debugForceTextPartDigestIsolateFailureForTest = true;
+        final digest = await repository.getTextPartContentDigest();
+        expect(digest.length, 64);
+
+        final metric = observer
+            .snapshot()
+            .operations[ChatDatabaseOperation.queryTextPartContentDigest]!;
+        // One recorded isolate infrastructure failure + one successful measure.
+        expect(metric.failureCount, 1);
+        expect(metric.totalCount, greaterThanOrEqualTo(2));
+        expect(metric.lastFailureKind, isNotNull);
       },
     );
   });

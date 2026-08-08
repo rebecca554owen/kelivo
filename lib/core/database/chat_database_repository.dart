@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../models/chat_message.dart';
@@ -606,13 +608,11 @@ class ChatDatabaseRepository {
         'id',
         'conversation_id',
         'role',
-        'content',
         'timestamp',
         'model_id',
         'provider_id',
         'total_tokens',
         'is_streaming',
-        'reasoning_text',
         'reasoning_start_at',
         'reasoning_finished_at',
         'translation',
@@ -627,6 +627,7 @@ class ChatDatabaseRepository {
       ],
       'chat_storage_meta_rows': ['key', 'value'],
       'message_part_rows': [
+        'part_id',
         'conversation_id',
         'revision_id',
         'ordinal',
@@ -1041,15 +1042,18 @@ class ChatDatabaseRepository {
 
       var scanned = 0;
       var updated = 0;
-      var cursor = '';
+      // Cursor on part_id (AUTOINCREMENT PK): stable order, no missed rows,
+      // and no re-scan loop after payload rewrites (part_id is unchanged).
+      var cursor = 0;
       while (true) {
         final rows = await _db
             .customSelect(
-              'SELECT id, content FROM message_rows '
-              'WHERE id > ? AND (content LIKE ? OR content LIKE ?) '
-              'ORDER BY id LIMIT ?;',
+              "SELECT part_id, payload FROM message_part_rows "
+              "WHERE kind = 'text' AND part_id > ? "
+              'AND (payload LIKE ? OR payload LIKE ?) '
+              'ORDER BY part_id LIMIT ?;',
               variables: [
-                Variable<String>(cursor),
+                Variable<int>(cursor),
                 const Variable<String>('%[image:%'),
                 const Variable<String>('%[file:%'),
                 Variable<int>(batchSize),
@@ -1058,38 +1062,18 @@ class ChatDatabaseRepository {
             .get();
         if (rows.isEmpty) break;
         for (final row in rows) {
-          final id = row.read<String>('id');
-          final content = row.read<String>('content');
-          final rewritten = rewriteContent(content);
+          final partId = row.read<int>('part_id');
+          final payload = row.read<String>('payload');
+          final rewritten = rewriteContent(payload);
           scanned += 1;
-          if (rewritten != content) {
+          if (rewritten != payload) {
             await _db.customStatement(
-              'UPDATE message_rows SET content = ? WHERE id = ?;',
-              [rewritten, id],
+              'UPDATE message_part_rows SET payload = ? WHERE part_id = ?;',
+              [rewritten, partId],
             );
-            // Text parts mirror the content column and win on read, so they
-            // must be rewritten in lockstep or stale paths survive.
-            final textParts = await _db
-                .customSelect(
-                  "SELECT ordinal, payload FROM message_part_rows "
-                  "WHERE revision_id = ? AND kind = 'text';",
-                  variables: [Variable<String>(id)],
-                )
-                .get();
-            for (final part in textParts) {
-              final payload = part.read<String>('payload');
-              final rewrittenPayload = rewriteContent(payload);
-              if (rewrittenPayload != payload) {
-                await _db.customStatement(
-                  "UPDATE message_part_rows SET payload = ? "
-                  "WHERE revision_id = ? AND kind = 'text' AND ordinal = ?;",
-                  [rewrittenPayload, id, part.read<int>('ordinal')],
-                );
-              }
-            }
             updated += 1;
           }
-          cursor = id;
+          cursor = partId;
         }
       }
       await _db
@@ -1163,8 +1147,15 @@ class ChatDatabaseRepository {
               WHERE d.revision_id = m.id
             ) OR (? AND (
               m.role = 'user' OR
-              m.content LIKE '%[image:%' OR
-              m.content LIKE '%[file:%' OR
+              EXISTS (
+                SELECT 1 FROM message_part_rows p
+                WHERE p.revision_id = m.id
+                  AND p.kind = 'text'
+                  AND (
+                    p.payload LIKE '%[image:%' OR
+                    p.payload LIKE '%[file:%'
+                  )
+              ) OR
               EXISTS (
                 SELECT 1 FROM message_asset_rows a WHERE a.revision_id = m.id
               )
@@ -1177,7 +1168,7 @@ class ChatDatabaseRepository {
             Variable<bool>(includeLegacyCandidates),
             Variable<int>(limit),
           ],
-          readsFrom: {_db.messageRows},
+          readsFrom: {_db.messageRows, _db.messagePartRows},
         )
         .get();
     return _messagesFromRowsWithParts(
@@ -1418,6 +1409,297 @@ class ChatDatabaseRepository {
     );
   }
 
+  Future<int> getTextPartCount() async {
+    return _observer.measure(
+      ChatDatabaseOperation.queryTextPartCount,
+      () async {
+        final count = _db.messagePartRows.partId.count();
+        final row =
+            await (_db.selectOnly(_db.messagePartRows)
+                  ..addColumns([count])
+                  ..where(_db.messagePartRows.kind.equals('text')))
+                .getSingle();
+        return row.read(count) ?? 0;
+      },
+      resultCount: (count) => count,
+    );
+  }
+
+  Future<int> getToolCallPartCount() async {
+    return _observer.measure(
+      ChatDatabaseOperation.queryToolCallPartCount,
+      () async {
+        final count = _db.messagePartRows.partId.count();
+        final row =
+            await (_db.selectOnly(_db.messagePartRows)
+                  ..addColumns([count])
+                  ..where(_db.messagePartRows.kind.equals('tool_call')))
+                .getSingle();
+        return row.read(count) ?? 0;
+      },
+      resultCount: (count) => count,
+    );
+  }
+
+  /// When true, the worker-isolate digest path throws before spawn so tests can
+  /// assert the Drift fallback still completes validation.
+  @visibleForTesting
+  bool debugForceTextPartDigestIsolateFailureForTest = false;
+
+  /// Order-independent digest of every `kind='text'` part payload.
+  ///
+  /// Each row contributes `SHA-256(revision_id || NUL || payload)` XORed into a
+  /// 32-byte accumulator. When a database file path is available the scan and
+  /// SHA-256 work prefer a **dedicated worker isolate** (not the Drift SQL
+  /// isolate and not the UI isolate). Any infrastructure failure on that path
+  /// (including [Isolate.spawn]) is recorded via [_observer] and transparently
+  /// falls back to the Drift in-process scan — only a digest *mismatch* at the
+  /// call site should fail migration. [onProgress] reports SQLite `LENGTH`
+  /// character counts (same unit for total and processed).
+  Future<String> getTextPartContentDigest({
+    void Function(int processedChars, int totalChars)? onProgress,
+  }) async {
+    return _observer.measure(
+      ChatDatabaseOperation.queryTextPartContentDigest,
+      () async {
+        final file = _databaseFile;
+        if (file != null) {
+          final isolateSw = Stopwatch()..start();
+          try {
+            if (debugForceTextPartDigestIsolateFailureForTest) {
+              throw StateError('digest_isolate_forced_failure');
+            }
+            return await _computeTextPartContentDigestInIsolate(
+              file.path,
+              onProgress: onProgress,
+            );
+          } catch (error) {
+            isolateSw.stop();
+            // Infrastructure-only: digest mismatch is decided by the caller.
+            _observer.recordFailure(
+              operation: ChatDatabaseOperation.queryTextPartContentDigest,
+              elapsedMicros: isolateSw.elapsedMicroseconds,
+              error: error,
+            );
+          }
+        }
+        return _computeTextPartContentDigestViaDrift(onProgress: onProgress);
+      },
+    );
+  }
+
+  /// Drift-backed scan: SQL on the Drift worker isolate, SHA-256 on the caller.
+  /// Used when no file path is available, and as fallback when the dedicated
+  /// digest isolate cannot complete.
+  Future<String> _computeTextPartContentDigestViaDrift({
+    void Function(int processedChars, int totalChars)? onProgress,
+  }) async {
+    final totalRow = await _db
+        .customSelect(
+          "SELECT COALESCE(SUM(LENGTH(payload)), 0) AS total "
+          "FROM message_part_rows WHERE kind = 'text';",
+          readsFrom: {_db.messagePartRows},
+        )
+        .getSingle();
+    final totalChars = totalRow.read<int>('total');
+    _emitTextPartDigestProgress(onProgress, 0, totalChars);
+
+    final digest = Uint8List(32);
+    const pageSize = 256;
+    var cursor = 0;
+    var processedChars = 0;
+    while (true) {
+      final rows = await _db
+          .customSelect(
+            'SELECT part_id, revision_id, payload, LENGTH(payload) AS '
+            'payload_length FROM message_part_rows '
+            "WHERE kind = 'text' AND part_id > ? "
+            'ORDER BY part_id LIMIT ?;',
+            variables: [
+              Variable<int>(cursor),
+              const Variable<int>(pageSize),
+            ],
+            readsFrom: {_db.messagePartRows},
+          )
+          .get();
+      if (rows.isEmpty) break;
+      for (final row in rows) {
+        mixTextPartContentDigest(
+          digest,
+          row.read<String>('revision_id'),
+          row.read<String>('payload'),
+        );
+        processedChars += row.read<int>('payload_length');
+        cursor = row.read<int>('part_id');
+      }
+      _emitTextPartDigestProgress(onProgress, processedChars, totalChars);
+      if (rows.length < pageSize) break;
+    }
+    return textPartContentDigestHex(digest);
+  }
+
+  static Future<String> _computeTextPartContentDigestInIsolate(
+    String databasePath, {
+    void Function(int processedChars, int totalChars)? onProgress,
+  }) async {
+    final receivePort = ReceivePort();
+    Isolate? isolate;
+    try {
+      isolate = await Isolate.spawn(
+        _textPartContentDigestIsolateMain,
+        (path: databasePath, sendPort: receivePort.sendPort),
+        debugName: 'text_part_content_digest',
+      );
+      await for (final message in receivePort) {
+        if (message is! Map) {
+          throw StateError('digest_isolate_protocol');
+        }
+        final type = message['type'];
+        if (type == 'progress') {
+          _emitTextPartDigestProgress(
+            onProgress,
+            message['processed'] as int,
+            message['total'] as int,
+          );
+          continue;
+        }
+        if (type == 'result') {
+          return message['digest'] as String;
+        }
+        if (type == 'error') {
+          throw StateError(
+            'Migration validation digest isolate failed: '
+            '${message['error']}',
+          );
+        }
+        throw StateError('digest_isolate_protocol');
+      }
+      throw StateError('digest_isolate_ended');
+    } finally {
+      receivePort.close();
+      isolate?.kill(priority: Isolate.immediate);
+    }
+  }
+
+  /// Worker entry: own read-only sqlite3 connection; never touches the UI
+  /// isolate. Progress/result maps are sent back on [args.sendPort].
+  ///
+  /// Progress uses SQLite `LENGTH(payload)` for both total and processed so
+  /// emoji / surrogate pairs cannot push the bar past 100%.
+  static void _textPartContentDigestIsolateMain(
+    ({String path, SendPort sendPort}) args,
+  ) {
+    try {
+      final database = sqlite.sqlite3.open(
+        args.path,
+        mode: sqlite.OpenMode.readOnly,
+      );
+      try {
+        final totalChars =
+            database.select(
+                  "SELECT COALESCE(SUM(LENGTH(payload)), 0) AS total "
+                  "FROM message_part_rows WHERE kind = 'text';",
+                ).single['total']
+                as int;
+        args.sendPort.send({
+          'type': 'progress',
+          'processed': 0,
+          'total': totalChars,
+        });
+
+        final digest = Uint8List(32);
+        const pageSize = 256;
+        var cursor = 0;
+        var processedChars = 0;
+        while (true) {
+          final rows = database.select(
+            'SELECT part_id, revision_id, payload, LENGTH(payload) AS '
+            'payload_length FROM message_part_rows '
+            "WHERE kind = 'text' AND part_id > ? "
+            'ORDER BY part_id LIMIT ?;',
+            [cursor, pageSize],
+          );
+          if (rows.isEmpty) break;
+          for (final row in rows) {
+            mixTextPartContentDigest(
+              digest,
+              row['revision_id'] as String,
+              row['payload'] as String,
+            );
+            processedChars += row['payload_length'] as int;
+            cursor = row['part_id'] as int;
+          }
+          args.sendPort.send({
+            'type': 'progress',
+            'processed': processedChars,
+            'total': totalChars,
+          });
+          if (rows.length < pageSize) break;
+        }
+        args.sendPort.send({
+          'type': 'result',
+          'digest': textPartContentDigestHex(digest),
+        });
+      } finally {
+        database.close();
+      }
+    } catch (error, stackTrace) {
+      args.sendPort.send({'type': 'error', 'error': '$error\n$stackTrace'});
+    }
+  }
+
+  static void _emitTextPartDigestProgress(
+    void Function(int processedChars, int totalChars)? onProgress,
+    int processedChars,
+    int totalChars,
+  ) {
+    if (onProgress == null) return;
+    final safeTotal = totalChars < 0 ? 0 : totalChars;
+    final safeProcessed = processedChars.clamp(0, safeTotal);
+    onProgress(safeProcessed, safeTotal);
+  }
+
+  /// Mixes one text part into an order-independent 32-byte XOR digest.
+  static void mixTextPartContentDigest(
+    Uint8List digest,
+    String revisionId,
+    String payload,
+  ) {
+    final hash = sha256.convert(utf8.encode('$revisionId\u0000$payload')).bytes;
+    for (var i = 0; i < digest.length; i++) {
+      digest[i] ^= hash[i];
+    }
+  }
+
+  static String textPartContentDigestHex(Uint8List digest) {
+    final buffer = StringBuffer();
+    for (final byte in digest) {
+      buffer.write(byte.toRadixString(16).padLeft(2, '0'));
+    }
+    return buffer.toString();
+  }
+
+  @visibleForTesting
+  Future<void> corruptTextPartPayloadForTest(
+    String revisionId,
+    String payload,
+  ) async {
+    await _db.customStatement(
+      "UPDATE message_part_rows SET payload = ? "
+      "WHERE revision_id = ? AND kind = 'text';",
+      [payload, revisionId],
+    );
+  }
+
+  @visibleForTesting
+  Future<void> deleteTextPartsForTest(String revisionId) async {
+    await _db.customStatement(
+      "DELETE FROM message_part_rows "
+      "WHERE revision_id = ? AND kind = 'text';",
+      [revisionId],
+    );
+  }
+
   Future<int> getMessageIndex(String conversationId, String messageId) async {
     final row =
         await (_db.select(_db.messageRows)
@@ -1558,6 +1840,7 @@ class ChatDatabaseRepository {
             )
             SELECT
               m.*,
+              p.part_id AS part_part_id,
               p.ordinal AS part_ordinal,
               p.kind AS part_kind,
               p.payload AS part_payload,
@@ -1599,6 +1882,7 @@ class ChatDatabaseRepository {
             .putIfAbsent(message.id, () => <MessagePartRow>[])
             .add(
               MessagePartRow(
+                partId: row.read<int>('part_part_id'),
                 conversationId: message.conversationId,
                 revisionId: message.id,
                 ordinal: ordinal,
@@ -1684,13 +1968,15 @@ class ChatDatabaseRepository {
           SELECT
             ranked.id,
             ranked.role,
-            SUBSTR(m.content, 1, ?) AS content_summary,
+            (SELECT SUBSTR(p.payload, 1, ?)
+               FROM message_part_rows p
+              WHERE p.revision_id = ranked.id AND p.kind = 'text')
+              AS content_summary,
             ranked.timestamp,
             ranked.conversation_id,
             ranked.group_id,
             ranked.version
           FROM ranked
-          JOIN message_rows m ON m.id = ranked.id
           WHERE ranked.version_rank = 1
           ORDER BY ranked.anchor_order, ranked.group_id;
           ''',
@@ -1700,7 +1986,11 @@ class ChatDatabaseRepository {
             Variable<String>(conversationId),
             Variable<int>(safeSummaryCharacters),
           ],
-          readsFrom: {_db.conversationRows, _db.messageRows},
+          readsFrom: {
+            _db.conversationRows,
+            _db.messageRows,
+            _db.messagePartRows,
+          },
         )
         .get();
     return [
@@ -1708,7 +1998,7 @@ class ChatDatabaseRepository {
         ChatMessage(
           id: row.read<String>('id'),
           role: row.read<String>('role'),
-          content: row.read<String>('content_summary'),
+          content: row.readNullable<String>('content_summary') ?? '',
           timestamp: _dateTimeFromSqlite(row.data['timestamp']),
           conversationId: row.read<String>('conversation_id'),
           groupId: row.read<String>('group_id'),
@@ -2044,13 +2334,25 @@ class ChatDatabaseRepository {
           SELECT 1 FROM message_rows mx
           WHERE mx.conversation_id = c.id
             AND mx.role IN ('user', 'assistant')
-            AND LOWER(mx.content) LIKE ? ESCAPE '\\'
+            AND EXISTS (
+              SELECT 1 FROM message_part_rows px
+              WHERE px.revision_id = mx.id
+                AND px.kind = 'text'
+                AND LOWER(px.payload) LIKE ? ESCAPE '\\'
+            )
             ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible WHERE visible.conversation_id = mx.conversation_id AND visible.group_id = COALESCE(mx.group_id, mx.id) AND visible.selected_version = mx.version)'}
         )
         ''');
       existsArgs.add(pattern);
       if (useSubstringFallback) {
-        messageAnyClauses.add('LOWER(m.content) LIKE ? ESCAPE \'\\\'');
+        messageAnyClauses.add('''
+          EXISTS (
+            SELECT 1 FROM message_part_rows px
+            WHERE px.revision_id = m.id
+              AND px.kind = 'text'
+              AND LOWER(px.payload) LIKE ? ESCAPE '\\'
+          )
+          ''');
         messageArgs.add(pattern);
       }
     }
@@ -2059,8 +2361,8 @@ class ChatDatabaseRepository {
         .join(' AND ');
     if (!useSubstringFallback) {
       messageAnyClauses.add(
-        'm.id IN (SELECT id FROM message_search_fts '
-        'WHERE content MATCH ?)',
+        'm.id IN (SELECT revision_id FROM message_search_fts '
+        'WHERE payload MATCH ?)',
       );
       messageArgs.add(ftsQuery);
       existsClauses
@@ -2068,8 +2370,8 @@ class ChatDatabaseRepository {
         ..add('''
         EXISTS (
           SELECT 1 FROM message_search_fts fx
-          WHERE fx.conversation_id = c.id AND fx.content MATCH ?
-            ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible INNER JOIN message_rows selected ON selected.id = fx.id WHERE visible.conversation_id = selected.conversation_id AND visible.group_id = COALESCE(selected.group_id, selected.id) AND visible.selected_version = selected.version)'}
+          WHERE fx.conversation_id = c.id AND fx.payload MATCH ?
+            ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible INNER JOIN message_rows selected ON selected.id = fx.revision_id WHERE visible.conversation_id = selected.conversation_id AND visible.group_id = COALESCE(selected.group_id, selected.id) AND visible.selected_version = selected.version)'}
         )
         ''');
       existsArgs
@@ -2109,7 +2411,13 @@ class ChatDatabaseRepository {
         c.title AS conversation_title,
         c.updated_at AS updated_at,
         m.id AS message_id,
-        m.content AS message_content,
+        (
+          SELECT px.payload
+          FROM message_part_rows px
+          WHERE px.revision_id = m.id AND px.kind = 'text'
+          ORDER BY px.ordinal
+          LIMIT 1
+        ) AS message_content,
         m.role AS message_role,
         m.group_id AS group_id,
         m.version AS version,
@@ -2503,9 +2811,9 @@ class ChatDatabaseRepository {
               )
               AND NOT EXISTS (
                 SELECT 1 FROM asset_reference_dirty_rows d
-                JOIN message_rows m ON m.id = d.revision_id
+                JOIN message_part_rows p ON p.revision_id = d.revision_id
                 JOIN asset_rows a ON a.id = g.asset_id
-                WHERE instr(m.content, a.path) > 0
+                WHERE p.kind = 'text' AND instr(p.payload, a.path) > 0
               )
             ORDER BY g.not_before, g.asset_id LIMIT ?;
           ''',
@@ -2560,9 +2868,9 @@ class ChatDatabaseRepository {
             )
             AND NOT EXISTS (
               SELECT 1 FROM asset_reference_dirty_rows d
-              JOIN message_rows m ON m.id = d.revision_id
+              JOIN message_part_rows p ON p.revision_id = d.revision_id
               JOIN asset_rows a ON a.id = g.asset_id
-              WHERE instr(m.content, a.path) > 0
+              WHERE p.kind = 'text' AND instr(p.payload, a.path) > 0
             )
           LIMIT 1;
         ''',
@@ -2592,9 +2900,9 @@ class ChatDatabaseRepository {
               )
               AND NOT EXISTS (
                 SELECT 1 FROM asset_reference_dirty_rows d
-                JOIN message_rows m ON m.id = d.revision_id
+                JOIN message_part_rows p ON p.revision_id = d.revision_id
                 JOIN asset_rows a ON a.id = g.asset_id
-                WHERE instr(m.content, a.path) > 0
+                WHERE p.kind = 'text' AND instr(p.payload, a.path) > 0
               )
             LIMIT 1;
           ''',
@@ -2639,8 +2947,8 @@ class ChatDatabaseRepository {
         .getSingleOrNull();
     final existingSql = existing?.readNullable<String>('sql') ?? '';
     final externalContent =
-        existingSql.contains("content='message_rows'") &&
-        existingSql.contains("content_rowid='rowid'");
+        existingSql.contains("content='message_part_rows'") &&
+        existingSql.contains("content_rowid='part_id'");
     if (existing != null && !externalContent) {
       await _db.transaction(() async {
         await _db.customStatement(
@@ -2652,53 +2960,156 @@ class ChatDatabaseRepository {
         await _db.customStatement(
           'DROP TRIGGER IF EXISTS message_search_fts_update;',
         );
+        await _db.customStatement(
+          'DROP TRIGGER IF EXISTS message_search_fts_finalize;',
+        );
+        await _db.customStatement(
+          'DROP TRIGGER IF EXISTS message_search_fts_unindex;',
+        );
+        await _db.customStatement(
+          'DROP TRIGGER IF EXISTS message_search_fts_message_delete;',
+        );
         await _db.customStatement('DROP TABLE message_search_fts;');
       });
     }
     final needsRebuild = existing == null || !externalContent;
     await _db.customStatement('''
       CREATE VIRTUAL TABLE IF NOT EXISTS message_search_fts USING fts5(
-        id UNINDEXED,
+        revision_id UNINDEXED,
         conversation_id UNINDEXED,
-        content,
-        content='message_rows',
-        content_rowid='rowid',
+        payload,
+        content='message_part_rows',
+        content_rowid='part_id',
         tokenize = 'unicode61 remove_diacritics 2'
       );
     ''');
+    // Index only finalized text parts. Positive EXISTS (not NOT EXISTS) so a
+    // deferred part insert that races ahead of its message_rows parent stays
+    // out of the index until a later finalize/rebuild path can see is_streaming=0.
     await _db.customStatement('''
       CREATE TRIGGER IF NOT EXISTS message_search_fts_insert
-      AFTER INSERT ON message_rows BEGIN
-        INSERT INTO message_search_fts(rowid, id, conversation_id, content)
-        VALUES (new.rowid, new.id, new.conversation_id, new.content);
+      AFTER INSERT ON message_part_rows
+      WHEN new.kind = 'text'
+       AND EXISTS (
+         SELECT 1 FROM message_rows m
+         WHERE m.id = new.revision_id AND m.is_streaming = 0
+       )
+      BEGIN
+        INSERT INTO message_search_fts(
+          rowid, revision_id, conversation_id, payload
+        ) VALUES (
+          new.part_id, new.revision_id, new.conversation_id, new.payload
+        );
       END;
     ''');
+    // Symmetric with insert: only reverse-delete postings that were indexed.
+    // During ON DELETE CASCADE the parent message_rows row is already gone, so
+    // this WHEN fails — message_search_fts_message_delete covers that path.
     await _db.customStatement('''
       CREATE TRIGGER IF NOT EXISTS message_search_fts_delete
-      AFTER DELETE ON message_rows BEGIN
+      AFTER DELETE ON message_part_rows
+      WHEN old.kind = 'text'
+       AND EXISTS (
+         SELECT 1 FROM message_rows m
+         WHERE m.id = old.revision_id AND m.is_streaming = 0
+       )
+      BEGIN
         INSERT INTO message_search_fts(
-          message_search_fts, rowid, id, conversation_id, content
+          message_search_fts, rowid, revision_id, conversation_id, payload
         ) VALUES (
-          'delete', old.rowid, old.id, old.conversation_id, old.content
+          'delete', old.part_id, old.revision_id, old.conversation_id,
+          old.payload
         );
       END;
     ''');
+    // Rare direct payload rewrites (e.g. sandbox path migration). Normal
+    // checkpoints delete+insert parts instead.
     await _db.customStatement('''
       CREATE TRIGGER IF NOT EXISTS message_search_fts_update
-      AFTER UPDATE OF content, conversation_id ON message_rows BEGIN
+      AFTER UPDATE OF payload, conversation_id, kind ON message_part_rows
+      WHEN (old.kind = 'text' OR new.kind = 'text')
+       AND EXISTS (
+         SELECT 1 FROM message_rows m
+         WHERE m.id = new.revision_id AND m.is_streaming = 0
+       )
+      BEGIN
         INSERT INTO message_search_fts(
-          message_search_fts, rowid, id, conversation_id, content
-        ) VALUES (
-          'delete', old.rowid, old.id, old.conversation_id, old.content
-        );
-        INSERT INTO message_search_fts(rowid, id, conversation_id, content)
-        VALUES (new.rowid, new.id, new.conversation_id, new.content);
+          message_search_fts, rowid, revision_id, conversation_id, payload
+        )
+        SELECT
+          'delete', old.part_id, old.revision_id, old.conversation_id,
+          old.payload
+        WHERE old.kind = 'text';
+        INSERT INTO message_search_fts(
+          rowid, revision_id, conversation_id, payload
+        )
+        SELECT
+          new.part_id, new.revision_id, new.conversation_id, new.payload
+        WHERE new.kind = 'text';
+      END;
+    ''');
+    // Streaming checkpoints defer FTS; when is_streaming flips to 0, index the
+    // text parts present at that moment. The subsequent part rewrite (if any)
+    // then delete+inserts under the finalized gate.
+    await _db.customStatement('''
+      CREATE TRIGGER IF NOT EXISTS message_search_fts_finalize
+      AFTER UPDATE OF is_streaming ON message_rows
+      WHEN old.is_streaming <> 0 AND new.is_streaming = 0
+      BEGIN
+        INSERT INTO message_search_fts(
+          rowid, revision_id, conversation_id, payload
+        )
+        SELECT
+          p.part_id, p.revision_id, p.conversation_id, p.payload
+        FROM message_part_rows p
+        WHERE p.revision_id = new.id AND p.kind = 'text';
+      END;
+    ''');
+    // Symmetric with finalize: reopening a finished revision (0→1) must drop
+    // its postings before streaming checkpoints rewrite parts under the
+    // is_streaming≠0 gate that would otherwise leave orphan FTS rows.
+    await _db.customStatement('''
+      CREATE TRIGGER IF NOT EXISTS message_search_fts_unindex
+      AFTER UPDATE OF is_streaming ON message_rows
+      WHEN old.is_streaming = 0 AND new.is_streaming <> 0
+      BEGIN
+        INSERT INTO message_search_fts(
+          message_search_fts, rowid, revision_id, conversation_id, payload
+        )
+        SELECT
+          'delete', p.part_id, p.revision_id, p.conversation_id, p.payload
+        FROM message_part_rows p
+        WHERE p.revision_id = new.id AND p.kind = 'text';
+      END;
+    ''');
+    // Cascade deletes remove parts after the parent row is invisible to the
+    // part DELETE trigger's EXISTS gate. Clean FTS here first, and only for
+    // revisions that were eligible to be indexed (is_streaming = 0).
+    await _db.customStatement('''
+      CREATE TRIGGER IF NOT EXISTS message_search_fts_message_delete
+      BEFORE DELETE ON message_rows
+      WHEN old.is_streaming = 0
+      BEGIN
+        INSERT INTO message_search_fts(
+          message_search_fts, rowid, revision_id, conversation_id, payload
+        )
+        SELECT
+          'delete', p.part_id, p.revision_id, p.conversation_id, p.payload
+        FROM message_part_rows p
+        WHERE p.revision_id = old.id AND p.kind = 'text';
       END;
     ''');
     if (needsRebuild) {
-      await _db.customStatement(
-        "INSERT INTO message_search_fts(message_search_fts) VALUES('rebuild');",
-      );
+      await _db.customStatement('''
+        INSERT INTO message_search_fts(
+          rowid, revision_id, conversation_id, payload
+        )
+        SELECT
+          p.part_id, p.revision_id, p.conversation_id, p.payload
+        FROM message_part_rows p
+        INNER JOIN message_rows m ON m.id = p.revision_id
+        WHERE p.kind = 'text' AND m.is_streaming = 0;
+      ''');
     }
     _messageSearchFtsReady = true;
   }
@@ -2721,24 +3132,6 @@ class ChatDatabaseRepository {
           .insertOnConflictUpdate(_messageCompanion(message, order));
       await _replaceMessageParts(message);
     });
-  }
-
-  @Deprecated('legacy/test only; use linear append/generation commands')
-  Future<Conversation> appendMessageToConversation({
-    required Conversation conversation,
-    required ChatMessage message,
-    bool selectVersion = false,
-    bool touchUpdatedAt = true,
-  }) {
-    return _observer.measure(
-      ChatDatabaseOperation.commandAppendMessage,
-      () => _appendMessageToConversation(
-        conversation: conversation,
-        message: message,
-        selectVersion: selectVersion,
-        touchUpdatedAt: touchUpdatedAt,
-      ),
-    );
   }
 
   Future<Conversation> appendLinearMessageToConversation({
@@ -3069,24 +3462,6 @@ class ChatDatabaseRepository {
               updatedAt: updatedAt,
             ),
           );
-      if (event['content'] != null) {
-        await _db
-            .into(_db.messagePartRows)
-            .insert(
-              MessagePartRowsCompanion.insert(
-                conversationId: message.conversationId,
-                revisionId: message.id,
-                ordinal: ordinal++,
-                kind: 'tool_result',
-                payload: jsonEncode({
-                  if (event['id'] != null) 'id': event['id'],
-                  'content': event['content'],
-                }),
-                createdAt: message.timestamp,
-                updatedAt: updatedAt,
-              ),
-            );
-      }
     }
     await _db
         .into(_db.messagePartRows)
@@ -3103,11 +3478,11 @@ class ChatDatabaseRepository {
         );
   }
 
-  /// Returns the number of persisted tool parts when they already match what
-  /// a full rebuild would write for [toolEvents] (kind, payload and ordinal),
+  /// Returns the number of persisted tool_call parts when they already match
+  /// what a full rebuild would write for [toolEvents] (payload and ordinal),
   /// or null when any difference forces the full delete-and-reinsert. A
   /// reasoning presence change renumbers tool ordinals, so it also forces a
-  /// full rebuild.
+  /// full rebuild. Each tool event produces exactly one `tool_call` part.
   Future<int?> _unchangedToolPartCount(
     ChatMessage message,
     List<Map<String, dynamic>> toolEvents,
@@ -3124,30 +3499,17 @@ class ChatDatabaseRepository {
       (part) => part.kind == 'reasoning',
     );
     if (hasReasoning != hasPersistedReasoning) return null;
-    final expectedKinds = <String>[];
-    final expectedPayloads = <String>[];
-    for (final event in toolEvents) {
-      expectedKinds.add('tool_call');
-      expectedPayloads.add(jsonEncode(event));
-      if (event['content'] != null) {
-        expectedKinds.add('tool_result');
-        expectedPayloads.add(
-          jsonEncode({
-            if (event['id'] != null) 'id': event['id'],
-            'content': event['content'],
-          }),
-        );
-      }
-    }
+    final expectedPayloads = [
+      for (final event in toolEvents) jsonEncode(event),
+    ];
     final persistedToolParts = existing
-        .where((part) => part.kind == 'tool_call' || part.kind == 'tool_result')
+        .where((part) => part.kind == 'tool_call')
         .toList(growable: false);
-    if (persistedToolParts.length != expectedKinds.length) return null;
+    if (persistedToolParts.length != expectedPayloads.length) return null;
     final firstToolOrdinal = hasReasoning ? 1 : 0;
     for (var i = 0; i < persistedToolParts.length; i++) {
       final part = persistedToolParts[i];
-      if (part.kind != expectedKinds[i] ||
-          part.payload != expectedPayloads[i] ||
+      if (part.payload != expectedPayloads[i] ||
           part.ordinal != firstToolOrdinal + i) {
         return null;
       }
@@ -3202,101 +3564,6 @@ class ChatDatabaseRepository {
         );
   }
 
-  Future<Conversation> _appendMessageToConversation({
-    required Conversation conversation,
-    required ChatMessage message,
-    required bool selectVersion,
-    required bool touchUpdatedAt,
-  }) async {
-    if (message.conversationId != conversation.id) {
-      throw ArgumentError.value(
-        message.conversationId,
-        'message.conversationId',
-        'Message and conversation IDs must match.',
-      );
-    }
-    late final Conversation persisted;
-    await _db.transaction(() async {
-      final existingRow = await (_db.select(
-        _db.conversationRows,
-      )..where((row) => row.id.equals(conversation.id))).getSingleOrNull();
-      final current = existingRow == null
-          ? conversation
-          : await _conversationFromRow(existingRow);
-      final selections = Map<String, int>.from(current.versionSelections);
-      if (selectVersion) {
-        selections[message.groupId ?? message.id] = message.version;
-      }
-      persisted = current.copyWith(
-        messageIds: [...current.messageIds, message.id],
-        versionSelections: selections,
-        updatedAt: touchUpdatedAt ? DateTime.now() : current.updatedAt,
-      );
-      await _db
-          .into(_db.conversationRows)
-          .insertOnConflictUpdate(_conversationCompanion(persisted));
-      if (existingRow == null) {
-        await _replaceMcpServers(persisted.id, persisted.mcpServerIds);
-      }
-      final order = await _nextMessageOrder(persisted.id);
-      await _db
-          .into(_db.messageRows)
-          .insert(_messageCompanion(message, order), mode: InsertMode.insert);
-    });
-    return persisted;
-  }
-
-  @Deprecated('legacy/test only; use linear repository commands')
-  Future<void> createConversationWithMessages({
-    required Conversation conversation,
-    required List<ChatMessage> messages,
-  }) {
-    return _observer.measure(
-      ChatDatabaseOperation.commandCreateConversation,
-      () => _createConversationWithMessages(
-        conversation: conversation,
-        messages: messages,
-      ),
-    );
-  }
-
-  Future<void> _createConversationWithMessages({
-    required Conversation conversation,
-    required List<ChatMessage> messages,
-  }) async {
-    for (final message in messages) {
-      if (message.conversationId != conversation.id) {
-        throw ArgumentError.value(
-          message.conversationId,
-          'messages',
-          'Every message must belong to the new conversation.',
-        );
-      }
-    }
-    if (messages.map((message) => message.id).toSet().length !=
-        messages.length) {
-      throw ArgumentError.value(
-        messages,
-        'messages',
-        'Message IDs must be unique.',
-      );
-    }
-    final persisted = conversation.copyWith(
-      messageIds: messages.map((message) => message.id).toList(growable: false),
-    );
-    await _db.transaction(() async {
-      await _db
-          .into(_db.conversationRows)
-          .insert(_conversationCompanion(persisted), mode: InsertMode.insert);
-      await _replaceMcpServers(persisted.id, persisted.mcpServerIds);
-      for (final (index, message) in messages.indexed) {
-        await _db
-            .into(_db.messageRows)
-            .insert(_messageCompanion(message, index), mode: InsertMode.insert);
-      }
-    });
-  }
-
   Future<AppendedMessageVersion?> appendMessageVersion({
     required String messageId,
     required String content,
@@ -3322,15 +3589,15 @@ class ChatDatabaseRepository {
               .getSingleOrNull();
       if (conversationRow == null) return null;
 
-      final original = _messageFromRow(originalRow);
-      final groupId = original.groupId ?? original.id;
+      // Metadata only — body text is written via message parts.
+      final groupId = originalRow.groupId ?? originalRow.id;
       final maxVersion = _db.messageRows.version.max();
       final maxVersionRow =
           await (_db.selectOnly(_db.messageRows)
                 ..addColumns([maxVersion])
                 ..where(
                   _db.messageRows.conversationId.equals(
-                        original.conversationId,
+                        originalRow.conversationId,
                       ) &
                       (_db.messageRows.groupId.equals(groupId) |
                           (_db.messageRows.groupId.isNull() &
@@ -3339,11 +3606,11 @@ class ChatDatabaseRepository {
               .getSingle();
       final nextVersion = (maxVersionRow.read(maxVersion) ?? -1) + 1;
       final message = ChatMessage(
-        role: original.role,
+        role: originalRow.role,
         content: content,
-        conversationId: original.conversationId,
-        modelId: original.modelId,
-        providerId: original.providerId,
+        conversationId: originalRow.conversationId,
+        modelId: originalRow.modelId,
+        providerId: originalRow.providerId,
         totalTokens: null,
         isStreaming: false,
         groupId: groupId,
@@ -3683,8 +3950,8 @@ class ChatDatabaseRepository {
         .get();
     final messageRows = await _db
         .customSelect(
-          'SELECT id, role, content, timestamp, model_id, provider_id, '
-          'total_tokens, is_streaming, reasoning_text, reasoning_start_at, '
+          'SELECT id, role, timestamp, model_id, provider_id, '
+          'total_tokens, is_streaming, reasoning_start_at, '
           'reasoning_finished_at, translation, reasoning_segments_json, group_id, '
           'version, prompt_tokens, completion_tokens, cached_tokens, duration_ms, '
           'message_order FROM $schema.message_rows WHERE conversation_id = ? '
@@ -3692,28 +3959,49 @@ class ChatDatabaseRepository {
           variables: [Variable<String>(id)],
         )
         .get();
+    // Text/reasoning/tool payloads and thought signatures are fingerprinted
+    // from materialized parts/artifacts; part_id, timestamps, and ordinals are
+    // excluded so equal payloads hash equally across snapshots. Both load once
+    // per conversation: merging a large backup calls this per candidate id, so
+    // per-message queries would cost four DB round trips per message. They join
+    // through message_rows instead of trusting the denormalized
+    // message_part_rows.conversation_id, matching the revision-keyed grouping
+    // the fingerprint has always used.
+    final partRows = await _db
+        .customSelect(
+          'SELECT p.revision_id, p.kind, p.payload '
+          'FROM $schema.message_part_rows p '
+          'INNER JOIN $schema.message_rows m ON m.id = p.revision_id '
+          'WHERE m.conversation_id = ? '
+          'ORDER BY p.revision_id, p.ordinal;',
+          variables: [Variable<String>(id)],
+        )
+        .get();
+    final partPayloads = <String, Map<String, List<String>>>{};
+    for (final part in partRows) {
+      partPayloads
+          .putIfAbsent(part.read<String>('revision_id'), () => {})
+          .putIfAbsent(part.read<String>('kind'), () => [])
+          .add(part.read<String>('payload'));
+    }
+    final signatureRows = await _db
+        .customSelect(
+          'SELECT a.revision_id, a.payload '
+          'FROM $schema.provider_artifact_rows a '
+          'INNER JOIN $schema.message_rows m ON m.id = a.revision_id '
+          "WHERE m.conversation_id = ? AND a.kind = 'gemini_thought_signature';",
+          variables: [Variable<String>(id)],
+        )
+        .get();
+    final signatures = {
+      for (final row in signatureRows)
+        row.read<String>('revision_id'): row.read<String>('payload'),
+    };
     final messages = <Object?>[];
     final groupOrdinals = <String, int>{};
     for (final row in messageRows) {
       final messageId = row.read<String>('id');
-      // Tool events and thought signatures are fingerprinted from the
-      // materialized parts/artifacts; part timestamps and ordinals are
-      // excluded so equal payloads hash equally across snapshots.
-      final toolParts = await _db
-          .customSelect(
-            'SELECT payload FROM $schema.message_part_rows '
-            "WHERE revision_id = ? AND kind = 'tool_call' "
-            'ORDER BY ordinal;',
-            variables: [Variable<String>(messageId)],
-          )
-          .get();
-      final signature = await _db
-          .customSelect(
-            'SELECT payload FROM $schema.provider_artifact_rows '
-            "WHERE revision_id = ? AND kind = 'gemini_thought_signature';",
-            variables: [Variable<String>(messageId)],
-          )
-          .getSingleOrNull();
+      final payloads = partPayloads[messageId];
       final data = Map<String, Object?>.from(row.data)..remove('id');
       data['is_streaming'] = 0;
       for (final field in const [
@@ -3730,10 +4018,10 @@ class ChatDatabaseRepository {
       );
       messages.add([
         data,
-        toolParts.isEmpty
-            ? null
-            : [for (final part in toolParts) part.read<String>('payload')],
-        signature?.read<String>('payload'),
+        payloads?['text'],
+        payloads?['reasoning'],
+        payloads?['tool_call'],
+        signatures[messageId],
       ]);
     }
     return sha256
@@ -3901,13 +4189,13 @@ class ChatDatabaseRepository {
           : (groupIdMap[sourceGroupId] ?? sourceGroupId);
       await _db.customStatement(
         'INSERT INTO main.message_rows '
-        '(id, conversation_id, role, content, timestamp, model_id, provider_id, '
-        'total_tokens, is_streaming, reasoning_text, reasoning_start_at, '
+        '(id, conversation_id, role, timestamp, model_id, provider_id, '
+        'total_tokens, is_streaming, reasoning_start_at, '
         'reasoning_finished_at, translation, reasoning_segments_json, group_id, '
         'version, prompt_tokens, completion_tokens, cached_tokens, duration_ms, '
         'message_order) '
-        'SELECT ?, ?, role, content, timestamp, model_id, provider_id, '
-        'total_tokens, 0, reasoning_text, reasoning_start_at, '
+        'SELECT ?, ?, role, timestamp, model_id, provider_id, '
+        'total_tokens, 0, reasoning_start_at, '
         'reasoning_finished_at, translation, reasoning_segments_json, '
         '?, version, '
         'prompt_tokens, completion_tokens, cached_tokens, duration_ms, '
@@ -3937,8 +4225,9 @@ class ChatDatabaseRepository {
     // treat their files as unreferenced.
     await _db.customStatement(
       'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
-      'SELECT id FROM main.message_rows WHERE conversation_id = ? '
-      "AND (content LIKE '%[image:%' OR content LIKE '%[file:%');",
+      'SELECT DISTINCT revision_id FROM main.message_part_rows '
+      'WHERE conversation_id = ? AND kind = \'text\' '
+      "AND (payload LIKE '%[image:%' OR payload LIKE '%[file:%');",
       [targetId],
     );
   }
@@ -4014,17 +4303,14 @@ class ChatDatabaseRepository {
 
   Future<void> updateMessage(ChatMessage message) async {
     await _db.transaction(() async {
-      await _updateMessageShadow(message);
+      await _updateMessageRow(message);
       await _replaceMessageParts(message);
     });
   }
 
-  Future<void> _updateMessageShadow(
-    ChatMessage message, {
-    bool includeContent = true,
-  }) async {
+  Future<void> _updateMessageRow(ChatMessage message) async {
     await (_db.update(_db.messageRows)..where((t) => t.id.equals(message.id)))
-        .write(_messageUpdate(message, includeContent: includeContent));
+        .write(_messageUpdate(message));
   }
 
   /// Partial-column UPDATE: only the non-null fields are written, so
@@ -4048,15 +4334,11 @@ class ChatDatabaseRepository {
     int? durationMs,
   }) {
     final companion = MessageRowsCompanion(
-      content: content != null ? Value(content) : const Value.absent(),
       totalTokens: totalTokens != null
           ? Value(totalTokens)
           : const Value.absent(),
       isStreaming: isStreaming != null
           ? Value(isStreaming)
-          : const Value.absent(),
-      reasoningText: reasoningText != null
-          ? Value(reasoningText)
           : const Value.absent(),
       reasoningStartAt: reasoningStartAt != null
           ? Value(reasoningStartAt)
@@ -4089,8 +4371,8 @@ class ChatDatabaseRepository {
       if (updated == null) return null;
       if (content == null && reasoningText == null) return updated;
       // getMessage resolves content/reasoning from parts, which still hold
-      // the pre-update payloads; rebuild parts from the just-written values
-      // or the stale parts would poison the new text part.
+      // the pre-update payloads. Overlay only the provided fields so a
+      // content-only write does not clear reasoning (and vice versa).
       final corrected = updated.copyWith(
         content: content ?? updated.content,
         reasoningText: reasoningText ?? updated.reasoningText,
@@ -4129,10 +4411,9 @@ class ChatDatabaseRepository {
     int? checkpointSeq,
   }) async {
     await _db.transaction(() async {
-      // The content shadow is only a search/backup mirror; parts are the
-      // persistence authority, so streaming checkpoints defer it to the
-      // terminal (isStreaming == false) write.
-      await _updateMessageShadow(message, includeContent: !message.isStreaming);
+      // Keep message_rows (incl. is_streaming) ahead of parts rewrite so the
+      // FTS finalize trigger indexes the pre-rewrite text part correctly.
+      await _updateMessageRow(message);
       await _replaceMessageParts(
         message,
         toolEvents: toolEvents,
@@ -4291,9 +4572,22 @@ class ChatDatabaseRepository {
       await (_db.update(_db.conversationRows)
             ..where((row) => row.id.equals(conversationId)))
           .write(_conversationCompanion(conversation));
+      // Callers (ChatService.deleteMessages) only need message.id for cache
+      // invalidation; body text is intentionally omitted.
       return (
         conversation: conversation,
-        messages: deletedRows.map(_messageFromRow).toList(growable: false),
+        messages: [
+          for (final row in deletedRows)
+            ChatMessage(
+              id: row.id,
+              role: row.role,
+              content: '',
+              timestamp: row.timestamp,
+              conversationId: row.conversationId,
+              groupId: row.groupId,
+              version: row.version,
+            ),
+        ],
       );
     });
   }
@@ -4675,29 +4969,8 @@ class ChatDatabaseRepository {
           updates: {_db.generationRunRows},
         );
       }
-      // Streaming checkpoints defer the content shadow to finalize, so an
-      // interrupted stream leaves it behind the authoritative parts; resync
-      // it here to keep search/backup snapshots consistent after a crash.
-      // The reasoning shadow gets the same treatment for paused-reasoning
-      // streams whose reasoning part outlives the shadow column.
-      final staleRows = await (_db.select(
-        _db.messageRows,
-      )..where((row) => row.isStreaming.equals(true))).get();
-      for (final row in staleRows) {
-        final resolved = await getMessage(row.id);
-        if (resolved != null &&
-            (resolved.content != row.content ||
-                resolved.reasoningText != row.reasoningText)) {
-          await (_db.update(
-            _db.messageRows,
-          )..where((t) => t.id.equals(row.id))).write(
-            MessageRowsCompanion(
-              content: Value(resolved.content),
-              reasoningText: Value(resolved.reasoningText),
-            ),
-          );
-        }
-      }
+      // Clearing is_streaming fires message_search_fts_finalize, which indexes
+      // the checkpointed text parts left by the abandoned stream.
       await (_db.update(_db.messageRows)
             ..where((row) => row.isStreaming.equals(true)))
           .write(const MessageRowsCompanion(isStreaming: Value(false)));
@@ -4881,25 +5154,21 @@ class ChatDatabaseRepository {
     ];
   }
 
-  /// Ordered parts are authoritative when present; legacy row columns remain
-  /// a compatibility fallback for older imported data.
+  /// Body text and reasoning come only from [authoritativeParts]. Missing or
+  /// empty parts yield empty content.
   ChatMessage _messageFromRow(
     MessageRow row, {
     List<MessagePartRow>? authoritativeParts,
   }) {
-    final hasAuthoritativeParts = authoritativeParts?.isNotEmpty ?? false;
-    final text = hasAuthoritativeParts
-        ? authoritativeParts!
-              .where((part) => part.kind == 'text')
-              .map((part) => part.payload)
-              .join()
-        : row.content;
-    final reasoningParts = hasAuthoritativeParts
-        ? authoritativeParts!
-              .where((part) => part.kind == 'reasoning')
-              .map((part) => part.payload)
-              .toList(growable: false)
-        : const <String>[];
+    final parts = authoritativeParts ?? const <MessagePartRow>[];
+    final text = parts
+        .where((part) => part.kind == 'text')
+        .map((part) => part.payload)
+        .join();
+    final reasoningParts = parts
+        .where((part) => part.kind == 'reasoning')
+        .map((part) => part.payload)
+        .toList(growable: false);
     return ChatMessage(
       id: row.id,
       role: row.role,
@@ -4910,9 +5179,7 @@ class ChatDatabaseRepository {
       totalTokens: row.totalTokens,
       conversationId: row.conversationId,
       isStreaming: row.isStreaming,
-      reasoningText: hasAuthoritativeParts
-          ? (reasoningParts.isEmpty ? null : reasoningParts.join())
-          : row.reasoningText,
+      reasoningText: reasoningParts.isEmpty ? null : reasoningParts.join(),
       reasoningStartAt: row.reasoningStartAt,
       reasoningFinishedAt: row.reasoningFinishedAt,
       translation: row.translation,
@@ -4944,13 +5211,11 @@ class ChatDatabaseRepository {
       id: message.id,
       conversationId: message.conversationId,
       role: message.role,
-      content: message.content,
       timestamp: message.timestamp,
       modelId: Value(message.modelId),
       providerId: Value(message.providerId),
       totalTokens: Value(message.totalTokens),
       isStreaming: Value(message.isStreaming),
-      reasoningText: Value(message.reasoningText),
       reasoningStartAt: Value(message.reasoningStartAt),
       reasoningFinishedAt: Value(message.reasoningFinishedAt),
       translation: Value(message.translation),
@@ -4965,15 +5230,10 @@ class ChatDatabaseRepository {
     );
   }
 
-  MessageRowsCompanion _messageUpdate(
-    ChatMessage message, {
-    bool includeContent = true,
-  }) {
+  MessageRowsCompanion _messageUpdate(ChatMessage message) {
     return MessageRowsCompanion(
-      content: includeContent ? Value(message.content) : const Value.absent(),
       totalTokens: Value(message.totalTokens),
       isStreaming: Value(message.isStreaming),
-      reasoningText: Value(message.reasoningText),
       reasoningStartAt: Value(message.reasoningStartAt),
       reasoningFinishedAt: Value(message.reasoningFinishedAt),
       translation: Value(message.translation),

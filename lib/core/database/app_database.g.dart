@@ -742,17 +742,6 @@ class $MessageRowsTable extends MessageRows
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _contentMeta = const VerificationMeta(
-    'content',
-  );
-  @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-    'content',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   @override
   late final GeneratedColumnWithTypeConverter<DateTime, int> timestamp =
       GeneratedColumn<int>(
@@ -810,17 +799,6 @@ class $MessageRowsTable extends MessageRows
       'CHECK ("is_streaming" IN (0, 1))',
     ),
     defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _reasoningTextMeta = const VerificationMeta(
-    'reasoningText',
-  );
-  @override
-  late final GeneratedColumn<String> reasoningText = GeneratedColumn<String>(
-    'reasoning_text',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
   );
   @override
   late final GeneratedColumnWithTypeConverter<DateTime?, int> reasoningStartAt =
@@ -951,13 +929,11 @@ class $MessageRowsTable extends MessageRows
     id,
     conversationId,
     role,
-    content,
     timestamp,
     modelId,
     providerId,
     totalTokens,
     isStreaming,
-    reasoningText,
     reasoningStartAt,
     reasoningFinishedAt,
     translation,
@@ -1006,14 +982,6 @@ class $MessageRowsTable extends MessageRows
     } else if (isInserting) {
       context.missing(_roleMeta);
     }
-    if (data.containsKey('content')) {
-      context.handle(
-        _contentMeta,
-        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_contentMeta);
-    }
     if (data.containsKey('model_id')) {
       context.handle(
         _modelIdMeta,
@@ -1041,15 +1009,6 @@ class $MessageRowsTable extends MessageRows
         isStreaming.isAcceptableOrUnknown(
           data['is_streaming']!,
           _isStreamingMeta,
-        ),
-      );
-    }
-    if (data.containsKey('reasoning_text')) {
-      context.handle(
-        _reasoningTextMeta,
-        reasoningText.isAcceptableOrUnknown(
-          data['reasoning_text']!,
-          _reasoningTextMeta,
         ),
       );
     }
@@ -1153,10 +1112,6 @@ class $MessageRowsTable extends MessageRows
         DriftSqlType.string,
         data['${effectivePrefix}role'],
       )!,
-      content: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}content'],
-      )!,
       timestamp: $MessageRowsTable.$convertertimestamp.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
@@ -1179,10 +1134,6 @@ class $MessageRowsTable extends MessageRows
         DriftSqlType.bool,
         data['${effectivePrefix}is_streaming'],
       )!,
-      reasoningText: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}reasoning_text'],
-      ),
       reasoningStartAt: $MessageRowsTable.$converterreasoningStartAtn.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
@@ -1256,13 +1207,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
   final String id;
   final String conversationId;
   final String role;
-  final String content;
   final DateTime timestamp;
   final String? modelId;
   final String? providerId;
   final int? totalTokens;
   final bool isStreaming;
-  final String? reasoningText;
   final DateTime? reasoningStartAt;
   final DateTime? reasoningFinishedAt;
   final String? translation;
@@ -1278,13 +1227,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
     required this.id,
     required this.conversationId,
     required this.role,
-    required this.content,
     required this.timestamp,
     this.modelId,
     this.providerId,
     this.totalTokens,
     required this.isStreaming,
-    this.reasoningText,
     this.reasoningStartAt,
     this.reasoningFinishedAt,
     this.translation,
@@ -1303,7 +1250,6 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
     map['id'] = Variable<String>(id);
     map['conversation_id'] = Variable<String>(conversationId);
     map['role'] = Variable<String>(role);
-    map['content'] = Variable<String>(content);
     {
       map['timestamp'] = Variable<int>(
         $MessageRowsTable.$convertertimestamp.toSql(timestamp),
@@ -1319,9 +1265,6 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
       map['total_tokens'] = Variable<int>(totalTokens);
     }
     map['is_streaming'] = Variable<bool>(isStreaming);
-    if (!nullToAbsent || reasoningText != null) {
-      map['reasoning_text'] = Variable<String>(reasoningText);
-    }
     if (!nullToAbsent || reasoningStartAt != null) {
       map['reasoning_start_at'] = Variable<int>(
         $MessageRowsTable.$converterreasoningStartAtn.toSql(reasoningStartAt),
@@ -1365,7 +1308,6 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
       id: Value(id),
       conversationId: Value(conversationId),
       role: Value(role),
-      content: Value(content),
       timestamp: Value(timestamp),
       modelId: modelId == null && nullToAbsent
           ? const Value.absent()
@@ -1377,9 +1319,6 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
           ? const Value.absent()
           : Value(totalTokens),
       isStreaming: Value(isStreaming),
-      reasoningText: reasoningText == null && nullToAbsent
-          ? const Value.absent()
-          : Value(reasoningText),
       reasoningStartAt: reasoningStartAt == null && nullToAbsent
           ? const Value.absent()
           : Value(reasoningStartAt),
@@ -1421,13 +1360,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
       id: serializer.fromJson<String>(json['id']),
       conversationId: serializer.fromJson<String>(json['conversationId']),
       role: serializer.fromJson<String>(json['role']),
-      content: serializer.fromJson<String>(json['content']),
       timestamp: serializer.fromJson<DateTime>(json['timestamp']),
       modelId: serializer.fromJson<String?>(json['modelId']),
       providerId: serializer.fromJson<String?>(json['providerId']),
       totalTokens: serializer.fromJson<int?>(json['totalTokens']),
       isStreaming: serializer.fromJson<bool>(json['isStreaming']),
-      reasoningText: serializer.fromJson<String?>(json['reasoningText']),
       reasoningStartAt: serializer.fromJson<DateTime?>(
         json['reasoningStartAt'],
       ),
@@ -1454,13 +1391,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
       'id': serializer.toJson<String>(id),
       'conversationId': serializer.toJson<String>(conversationId),
       'role': serializer.toJson<String>(role),
-      'content': serializer.toJson<String>(content),
       'timestamp': serializer.toJson<DateTime>(timestamp),
       'modelId': serializer.toJson<String?>(modelId),
       'providerId': serializer.toJson<String?>(providerId),
       'totalTokens': serializer.toJson<int?>(totalTokens),
       'isStreaming': serializer.toJson<bool>(isStreaming),
-      'reasoningText': serializer.toJson<String?>(reasoningText),
       'reasoningStartAt': serializer.toJson<DateTime?>(reasoningStartAt),
       'reasoningFinishedAt': serializer.toJson<DateTime?>(reasoningFinishedAt),
       'translation': serializer.toJson<String?>(translation),
@@ -1481,13 +1416,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
     String? id,
     String? conversationId,
     String? role,
-    String? content,
     DateTime? timestamp,
     Value<String?> modelId = const Value.absent(),
     Value<String?> providerId = const Value.absent(),
     Value<int?> totalTokens = const Value.absent(),
     bool? isStreaming,
-    Value<String?> reasoningText = const Value.absent(),
     Value<DateTime?> reasoningStartAt = const Value.absent(),
     Value<DateTime?> reasoningFinishedAt = const Value.absent(),
     Value<String?> translation = const Value.absent(),
@@ -1503,15 +1436,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
     role: role ?? this.role,
-    content: content ?? this.content,
     timestamp: timestamp ?? this.timestamp,
     modelId: modelId.present ? modelId.value : this.modelId,
     providerId: providerId.present ? providerId.value : this.providerId,
     totalTokens: totalTokens.present ? totalTokens.value : this.totalTokens,
     isStreaming: isStreaming ?? this.isStreaming,
-    reasoningText: reasoningText.present
-        ? reasoningText.value
-        : this.reasoningText,
     reasoningStartAt: reasoningStartAt.present
         ? reasoningStartAt.value
         : this.reasoningStartAt,
@@ -1539,7 +1468,6 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
           ? data.conversationId.value
           : this.conversationId,
       role: data.role.present ? data.role.value : this.role,
-      content: data.content.present ? data.content.value : this.content,
       timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
       modelId: data.modelId.present ? data.modelId.value : this.modelId,
       providerId: data.providerId.present
@@ -1551,9 +1479,6 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
       isStreaming: data.isStreaming.present
           ? data.isStreaming.value
           : this.isStreaming,
-      reasoningText: data.reasoningText.present
-          ? data.reasoningText.value
-          : this.reasoningText,
       reasoningStartAt: data.reasoningStartAt.present
           ? data.reasoningStartAt.value
           : this.reasoningStartAt,
@@ -1592,13 +1517,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
           ..write('id: $id, ')
           ..write('conversationId: $conversationId, ')
           ..write('role: $role, ')
-          ..write('content: $content, ')
           ..write('timestamp: $timestamp, ')
           ..write('modelId: $modelId, ')
           ..write('providerId: $providerId, ')
           ..write('totalTokens: $totalTokens, ')
           ..write('isStreaming: $isStreaming, ')
-          ..write('reasoningText: $reasoningText, ')
           ..write('reasoningStartAt: $reasoningStartAt, ')
           ..write('reasoningFinishedAt: $reasoningFinishedAt, ')
           ..write('translation: $translation, ')
@@ -1615,17 +1538,15 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
   }
 
   @override
-  int get hashCode => Object.hashAll([
+  int get hashCode => Object.hash(
     id,
     conversationId,
     role,
-    content,
     timestamp,
     modelId,
     providerId,
     totalTokens,
     isStreaming,
-    reasoningText,
     reasoningStartAt,
     reasoningFinishedAt,
     translation,
@@ -1637,7 +1558,7 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
     cachedTokens,
     durationMs,
     messageOrder,
-  ]);
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1645,13 +1566,11 @@ class MessageRow extends DataClass implements Insertable<MessageRow> {
           other.id == this.id &&
           other.conversationId == this.conversationId &&
           other.role == this.role &&
-          other.content == this.content &&
           other.timestamp == this.timestamp &&
           other.modelId == this.modelId &&
           other.providerId == this.providerId &&
           other.totalTokens == this.totalTokens &&
           other.isStreaming == this.isStreaming &&
-          other.reasoningText == this.reasoningText &&
           other.reasoningStartAt == this.reasoningStartAt &&
           other.reasoningFinishedAt == this.reasoningFinishedAt &&
           other.translation == this.translation &&
@@ -1669,13 +1588,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
   final Value<String> id;
   final Value<String> conversationId;
   final Value<String> role;
-  final Value<String> content;
   final Value<DateTime> timestamp;
   final Value<String?> modelId;
   final Value<String?> providerId;
   final Value<int?> totalTokens;
   final Value<bool> isStreaming;
-  final Value<String?> reasoningText;
   final Value<DateTime?> reasoningStartAt;
   final Value<DateTime?> reasoningFinishedAt;
   final Value<String?> translation;
@@ -1692,13 +1609,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
     this.id = const Value.absent(),
     this.conversationId = const Value.absent(),
     this.role = const Value.absent(),
-    this.content = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.modelId = const Value.absent(),
     this.providerId = const Value.absent(),
     this.totalTokens = const Value.absent(),
     this.isStreaming = const Value.absent(),
-    this.reasoningText = const Value.absent(),
     this.reasoningStartAt = const Value.absent(),
     this.reasoningFinishedAt = const Value.absent(),
     this.translation = const Value.absent(),
@@ -1716,13 +1631,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
     required String id,
     required String conversationId,
     required String role,
-    required String content,
     required DateTime timestamp,
     this.modelId = const Value.absent(),
     this.providerId = const Value.absent(),
     this.totalTokens = const Value.absent(),
     this.isStreaming = const Value.absent(),
-    this.reasoningText = const Value.absent(),
     this.reasoningStartAt = const Value.absent(),
     this.reasoningFinishedAt = const Value.absent(),
     this.translation = const Value.absent(),
@@ -1738,20 +1651,17 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
   }) : id = Value(id),
        conversationId = Value(conversationId),
        role = Value(role),
-       content = Value(content),
        timestamp = Value(timestamp),
        messageOrder = Value(messageOrder);
   static Insertable<MessageRow> custom({
     Expression<String>? id,
     Expression<String>? conversationId,
     Expression<String>? role,
-    Expression<String>? content,
     Expression<int>? timestamp,
     Expression<String>? modelId,
     Expression<String>? providerId,
     Expression<int>? totalTokens,
     Expression<bool>? isStreaming,
-    Expression<String>? reasoningText,
     Expression<int>? reasoningStartAt,
     Expression<int>? reasoningFinishedAt,
     Expression<String>? translation,
@@ -1769,13 +1679,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
       if (id != null) 'id': id,
       if (conversationId != null) 'conversation_id': conversationId,
       if (role != null) 'role': role,
-      if (content != null) 'content': content,
       if (timestamp != null) 'timestamp': timestamp,
       if (modelId != null) 'model_id': modelId,
       if (providerId != null) 'provider_id': providerId,
       if (totalTokens != null) 'total_tokens': totalTokens,
       if (isStreaming != null) 'is_streaming': isStreaming,
-      if (reasoningText != null) 'reasoning_text': reasoningText,
       if (reasoningStartAt != null) 'reasoning_start_at': reasoningStartAt,
       if (reasoningFinishedAt != null)
         'reasoning_finished_at': reasoningFinishedAt,
@@ -1797,13 +1705,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
     Value<String>? id,
     Value<String>? conversationId,
     Value<String>? role,
-    Value<String>? content,
     Value<DateTime>? timestamp,
     Value<String?>? modelId,
     Value<String?>? providerId,
     Value<int?>? totalTokens,
     Value<bool>? isStreaming,
-    Value<String?>? reasoningText,
     Value<DateTime?>? reasoningStartAt,
     Value<DateTime?>? reasoningFinishedAt,
     Value<String?>? translation,
@@ -1821,13 +1727,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
       id: id ?? this.id,
       conversationId: conversationId ?? this.conversationId,
       role: role ?? this.role,
-      content: content ?? this.content,
       timestamp: timestamp ?? this.timestamp,
       modelId: modelId ?? this.modelId,
       providerId: providerId ?? this.providerId,
       totalTokens: totalTokens ?? this.totalTokens,
       isStreaming: isStreaming ?? this.isStreaming,
-      reasoningText: reasoningText ?? this.reasoningText,
       reasoningStartAt: reasoningStartAt ?? this.reasoningStartAt,
       reasoningFinishedAt: reasoningFinishedAt ?? this.reasoningFinishedAt,
       translation: translation ?? this.translation,
@@ -1856,9 +1760,6 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
     if (role.present) {
       map['role'] = Variable<String>(role.value);
     }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
-    }
     if (timestamp.present) {
       map['timestamp'] = Variable<int>(
         $MessageRowsTable.$convertertimestamp.toSql(timestamp.value),
@@ -1875,9 +1776,6 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
     }
     if (isStreaming.present) {
       map['is_streaming'] = Variable<bool>(isStreaming.value);
-    }
-    if (reasoningText.present) {
-      map['reasoning_text'] = Variable<String>(reasoningText.value);
     }
     if (reasoningStartAt.present) {
       map['reasoning_start_at'] = Variable<int>(
@@ -1934,13 +1832,11 @@ class MessageRowsCompanion extends UpdateCompanion<MessageRow> {
           ..write('id: $id, ')
           ..write('conversationId: $conversationId, ')
           ..write('role: $role, ')
-          ..write('content: $content, ')
           ..write('timestamp: $timestamp, ')
           ..write('modelId: $modelId, ')
           ..write('providerId: $providerId, ')
           ..write('totalTokens: $totalTokens, ')
           ..write('isStreaming: $isStreaming, ')
-          ..write('reasoningText: $reasoningText, ')
           ..write('reasoningStartAt: $reasoningStartAt, ')
           ..write('reasoningFinishedAt: $reasoningFinishedAt, ')
           ..write('translation: $translation, ')
@@ -2462,6 +2358,19 @@ class $MessagePartRowsTable extends MessagePartRows
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $MessagePartRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _partIdMeta = const VerificationMeta('partId');
+  @override
+  late final GeneratedColumn<int> partId = GeneratedColumn<int>(
+    'part_id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   static const VerificationMeta _conversationIdMeta = const VerificationMeta(
     'conversationId',
   );
@@ -2502,8 +2411,7 @@ class $MessagePartRowsTable extends MessagePartRows
     'kind',
     aliasedName,
     false,
-    check: () =>
-        kind.isIn(const ['text', 'reasoning', 'tool_call', 'tool_result']),
+    check: () => kind.isIn(const ['text', 'reasoning', 'tool_call']),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
@@ -2538,6 +2446,7 @@ class $MessagePartRowsTable extends MessagePartRows
       ).withConverter<DateTime>($MessagePartRowsTable.$converterupdatedAt);
   @override
   List<GeneratedColumn> get $columns => [
+    partId,
     conversationId,
     revisionId,
     ordinal,
@@ -2558,6 +2467,12 @@ class $MessagePartRowsTable extends MessagePartRows
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('part_id')) {
+      context.handle(
+        _partIdMeta,
+        partId.isAcceptableOrUnknown(data['part_id']!, _partIdMeta),
+      );
+    }
     if (data.containsKey('conversation_id')) {
       context.handle(
         _conversationIdMeta,
@@ -2605,15 +2520,19 @@ class $MessagePartRowsTable extends MessagePartRows
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {revisionId, ordinal};
+  Set<GeneratedColumn> get $primaryKey => {partId};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {conversationId, revisionId, ordinal},
+    {revisionId, ordinal},
   ];
   @override
   MessagePartRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return MessagePartRow(
+      partId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}part_id'],
+      )!,
       conversationId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}conversation_id'],
@@ -2661,6 +2580,7 @@ class $MessagePartRowsTable extends MessagePartRows
 }
 
 class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
+  final int partId;
   final String conversationId;
   final String revisionId;
   final int ordinal;
@@ -2669,6 +2589,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   final DateTime createdAt;
   final DateTime updatedAt;
   const MessagePartRow({
+    required this.partId,
     required this.conversationId,
     required this.revisionId,
     required this.ordinal,
@@ -2680,6 +2601,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['part_id'] = Variable<int>(partId);
     map['conversation_id'] = Variable<String>(conversationId);
     map['revision_id'] = Variable<String>(revisionId);
     map['ordinal'] = Variable<int>(ordinal);
@@ -2700,6 +2622,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
 
   MessagePartRowsCompanion toCompanion(bool nullToAbsent) {
     return MessagePartRowsCompanion(
+      partId: Value(partId),
       conversationId: Value(conversationId),
       revisionId: Value(revisionId),
       ordinal: Value(ordinal),
@@ -2716,6 +2639,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return MessagePartRow(
+      partId: serializer.fromJson<int>(json['partId']),
       conversationId: serializer.fromJson<String>(json['conversationId']),
       revisionId: serializer.fromJson<String>(json['revisionId']),
       ordinal: serializer.fromJson<int>(json['ordinal']),
@@ -2729,6 +2653,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'partId': serializer.toJson<int>(partId),
       'conversationId': serializer.toJson<String>(conversationId),
       'revisionId': serializer.toJson<String>(revisionId),
       'ordinal': serializer.toJson<int>(ordinal),
@@ -2740,6 +2665,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   }
 
   MessagePartRow copyWith({
+    int? partId,
     String? conversationId,
     String? revisionId,
     int? ordinal,
@@ -2748,6 +2674,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => MessagePartRow(
+    partId: partId ?? this.partId,
     conversationId: conversationId ?? this.conversationId,
     revisionId: revisionId ?? this.revisionId,
     ordinal: ordinal ?? this.ordinal,
@@ -2758,6 +2685,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   );
   MessagePartRow copyWithCompanion(MessagePartRowsCompanion data) {
     return MessagePartRow(
+      partId: data.partId.present ? data.partId.value : this.partId,
       conversationId: data.conversationId.present
           ? data.conversationId.value
           : this.conversationId,
@@ -2775,6 +2703,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   @override
   String toString() {
     return (StringBuffer('MessagePartRow(')
+          ..write('partId: $partId, ')
           ..write('conversationId: $conversationId, ')
           ..write('revisionId: $revisionId, ')
           ..write('ordinal: $ordinal, ')
@@ -2788,6 +2717,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
 
   @override
   int get hashCode => Object.hash(
+    partId,
     conversationId,
     revisionId,
     ordinal,
@@ -2800,6 +2730,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is MessagePartRow &&
+          other.partId == this.partId &&
           other.conversationId == this.conversationId &&
           other.revisionId == this.revisionId &&
           other.ordinal == this.ordinal &&
@@ -2810,6 +2741,7 @@ class MessagePartRow extends DataClass implements Insertable<MessagePartRow> {
 }
 
 class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
+  final Value<int> partId;
   final Value<String> conversationId;
   final Value<String> revisionId;
   final Value<int> ordinal;
@@ -2817,8 +2749,8 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
   final Value<String> payload;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
-  final Value<int> rowid;
   const MessagePartRowsCompanion({
+    this.partId = const Value.absent(),
     this.conversationId = const Value.absent(),
     this.revisionId = const Value.absent(),
     this.ordinal = const Value.absent(),
@@ -2826,9 +2758,9 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
     this.payload = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   MessagePartRowsCompanion.insert({
+    this.partId = const Value.absent(),
     required String conversationId,
     required String revisionId,
     required int ordinal,
@@ -2836,7 +2768,6 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
     required String payload,
     required DateTime createdAt,
     required DateTime updatedAt,
-    this.rowid = const Value.absent(),
   }) : conversationId = Value(conversationId),
        revisionId = Value(revisionId),
        ordinal = Value(ordinal),
@@ -2845,6 +2776,7 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<MessagePartRow> custom({
+    Expression<int>? partId,
     Expression<String>? conversationId,
     Expression<String>? revisionId,
     Expression<int>? ordinal,
@@ -2852,9 +2784,9 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
     Expression<String>? payload,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (partId != null) 'part_id': partId,
       if (conversationId != null) 'conversation_id': conversationId,
       if (revisionId != null) 'revision_id': revisionId,
       if (ordinal != null) 'ordinal': ordinal,
@@ -2862,11 +2794,11 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
       if (payload != null) 'payload': payload,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   MessagePartRowsCompanion copyWith({
+    Value<int>? partId,
     Value<String>? conversationId,
     Value<String>? revisionId,
     Value<int>? ordinal,
@@ -2874,9 +2806,9 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
     Value<String>? payload,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
-    Value<int>? rowid,
   }) {
     return MessagePartRowsCompanion(
+      partId: partId ?? this.partId,
       conversationId: conversationId ?? this.conversationId,
       revisionId: revisionId ?? this.revisionId,
       ordinal: ordinal ?? this.ordinal,
@@ -2884,13 +2816,15 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
       payload: payload ?? this.payload,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (partId.present) {
+      map['part_id'] = Variable<int>(partId.value);
+    }
     if (conversationId.present) {
       map['conversation_id'] = Variable<String>(conversationId.value);
     }
@@ -2916,23 +2850,20 @@ class MessagePartRowsCompanion extends UpdateCompanion<MessagePartRow> {
         $MessagePartRowsTable.$converterupdatedAt.toSql(updatedAt.value),
       );
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('MessagePartRowsCompanion(')
+          ..write('partId: $partId, ')
           ..write('conversationId: $conversationId, ')
           ..write('revisionId: $revisionId, ')
           ..write('ordinal: $ordinal, ')
           ..write('kind: $kind, ')
           ..write('payload: $payload, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -10352,13 +10283,11 @@ typedef $$MessageRowsTableCreateCompanionBuilder =
       required String id,
       required String conversationId,
       required String role,
-      required String content,
       required DateTime timestamp,
       Value<String?> modelId,
       Value<String?> providerId,
       Value<int?> totalTokens,
       Value<bool> isStreaming,
-      Value<String?> reasoningText,
       Value<DateTime?> reasoningStartAt,
       Value<DateTime?> reasoningFinishedAt,
       Value<String?> translation,
@@ -10377,13 +10306,11 @@ typedef $$MessageRowsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> conversationId,
       Value<String> role,
-      Value<String> content,
       Value<DateTime> timestamp,
       Value<String?> modelId,
       Value<String?> providerId,
       Value<int?> totalTokens,
       Value<bool> isStreaming,
-      Value<String?> reasoningText,
       Value<DateTime?> reasoningStartAt,
       Value<DateTime?> reasoningFinishedAt,
       Value<String?> translation,
@@ -10485,11 +10412,6 @@ class $$MessageRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnWithTypeConverterFilters<DateTime, DateTime, int> get timestamp =>
       $composableBuilder(
         column: $table.timestamp,
@@ -10513,11 +10435,6 @@ class $$MessageRowsTableFilterComposer
 
   ColumnFilters<bool> get isStreaming => $composableBuilder(
     column: $table.isStreaming,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get reasoningText => $composableBuilder(
-    column: $table.reasoningText,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10672,11 +10589,6 @@ class $$MessageRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get timestamp => $composableBuilder(
     column: $table.timestamp,
     builder: (column) => ColumnOrderings(column),
@@ -10699,11 +10611,6 @@ class $$MessageRowsTableOrderingComposer
 
   ColumnOrderings<bool> get isStreaming => $composableBuilder(
     column: $table.isStreaming,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get reasoningText => $composableBuilder(
-    column: $table.reasoningText,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -10801,9 +10708,6 @@ class $$MessageRowsTableAnnotationComposer
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
 
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
-
   GeneratedColumnWithTypeConverter<DateTime, int> get timestamp =>
       $composableBuilder(column: $table.timestamp, builder: (column) => column);
 
@@ -10822,11 +10726,6 @@ class $$MessageRowsTableAnnotationComposer
 
   GeneratedColumn<bool> get isStreaming => $composableBuilder(
     column: $table.isStreaming,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get reasoningText => $composableBuilder(
-    column: $table.reasoningText,
     builder: (column) => column,
   );
 
@@ -10994,13 +10893,11 @@ class $$MessageRowsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> conversationId = const Value.absent(),
                 Value<String> role = const Value.absent(),
-                Value<String> content = const Value.absent(),
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<String?> modelId = const Value.absent(),
                 Value<String?> providerId = const Value.absent(),
                 Value<int?> totalTokens = const Value.absent(),
                 Value<bool> isStreaming = const Value.absent(),
-                Value<String?> reasoningText = const Value.absent(),
                 Value<DateTime?> reasoningStartAt = const Value.absent(),
                 Value<DateTime?> reasoningFinishedAt = const Value.absent(),
                 Value<String?> translation = const Value.absent(),
@@ -11017,13 +10914,11 @@ class $$MessageRowsTableTableManager
                 id: id,
                 conversationId: conversationId,
                 role: role,
-                content: content,
                 timestamp: timestamp,
                 modelId: modelId,
                 providerId: providerId,
                 totalTokens: totalTokens,
                 isStreaming: isStreaming,
-                reasoningText: reasoningText,
                 reasoningStartAt: reasoningStartAt,
                 reasoningFinishedAt: reasoningFinishedAt,
                 translation: translation,
@@ -11042,13 +10937,11 @@ class $$MessageRowsTableTableManager
                 required String id,
                 required String conversationId,
                 required String role,
-                required String content,
                 required DateTime timestamp,
                 Value<String?> modelId = const Value.absent(),
                 Value<String?> providerId = const Value.absent(),
                 Value<int?> totalTokens = const Value.absent(),
                 Value<bool> isStreaming = const Value.absent(),
-                Value<String?> reasoningText = const Value.absent(),
                 Value<DateTime?> reasoningStartAt = const Value.absent(),
                 Value<DateTime?> reasoningFinishedAt = const Value.absent(),
                 Value<String?> translation = const Value.absent(),
@@ -11065,13 +10958,11 @@ class $$MessageRowsTableTableManager
                 id: id,
                 conversationId: conversationId,
                 role: role,
-                content: content,
                 timestamp: timestamp,
                 modelId: modelId,
                 providerId: providerId,
                 totalTokens: totalTokens,
                 isStreaming: isStreaming,
-                reasoningText: reasoningText,
                 reasoningStartAt: reasoningStartAt,
                 reasoningFinishedAt: reasoningFinishedAt,
                 translation: translation,
@@ -11676,6 +11567,7 @@ typedef $$ChatStorageMetaRowsTableProcessedTableManager =
     >;
 typedef $$MessagePartRowsTableCreateCompanionBuilder =
     MessagePartRowsCompanion Function({
+      Value<int> partId,
       required String conversationId,
       required String revisionId,
       required int ordinal,
@@ -11683,10 +11575,10 @@ typedef $$MessagePartRowsTableCreateCompanionBuilder =
       required String payload,
       required DateTime createdAt,
       required DateTime updatedAt,
-      Value<int> rowid,
     });
 typedef $$MessagePartRowsTableUpdateCompanionBuilder =
     MessagePartRowsCompanion Function({
+      Value<int> partId,
       Value<String> conversationId,
       Value<String> revisionId,
       Value<int> ordinal,
@@ -11694,7 +11586,6 @@ typedef $$MessagePartRowsTableUpdateCompanionBuilder =
       Value<String> payload,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
-      Value<int> rowid,
     });
 
 class $$MessagePartRowsTableFilterComposer
@@ -11706,6 +11597,11 @@ class $$MessagePartRowsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get partId => $composableBuilder(
+    column: $table.partId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get conversationId => $composableBuilder(
     column: $table.conversationId,
     builder: (column) => ColumnFilters(column),
@@ -11753,6 +11649,11 @@ class $$MessagePartRowsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get partId => $composableBuilder(
+    column: $table.partId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get conversationId => $composableBuilder(
     column: $table.conversationId,
     builder: (column) => ColumnOrderings(column),
@@ -11798,6 +11699,9 @@ class $$MessagePartRowsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get partId =>
+      $composableBuilder(column: $table.partId, builder: (column) => column);
+
   GeneratedColumn<String> get conversationId => $composableBuilder(
     column: $table.conversationId,
     builder: (column) => column,
@@ -11861,6 +11765,7 @@ class $$MessagePartRowsTableTableManager
               $$MessagePartRowsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<int> partId = const Value.absent(),
                 Value<String> conversationId = const Value.absent(),
                 Value<String> revisionId = const Value.absent(),
                 Value<int> ordinal = const Value.absent(),
@@ -11868,8 +11773,8 @@ class $$MessagePartRowsTableTableManager
                 Value<String> payload = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
               }) => MessagePartRowsCompanion(
+                partId: partId,
                 conversationId: conversationId,
                 revisionId: revisionId,
                 ordinal: ordinal,
@@ -11877,10 +11782,10 @@ class $$MessagePartRowsTableTableManager
                 payload: payload,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
-                rowid: rowid,
               ),
           createCompanionCallback:
               ({
+                Value<int> partId = const Value.absent(),
                 required String conversationId,
                 required String revisionId,
                 required int ordinal,
@@ -11888,8 +11793,8 @@ class $$MessagePartRowsTableTableManager
                 required String payload,
                 required DateTime createdAt,
                 required DateTime updatedAt,
-                Value<int> rowid = const Value.absent(),
               }) => MessagePartRowsCompanion.insert(
+                partId: partId,
                 conversationId: conversationId,
                 revisionId: revisionId,
                 ordinal: ordinal,
@@ -11897,7 +11802,6 @@ class $$MessagePartRowsTableTableManager
                 payload: payload,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
-                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

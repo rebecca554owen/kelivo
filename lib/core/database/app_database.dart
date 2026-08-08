@@ -80,7 +80,6 @@ class MessageRows extends Table {
       text()
       // ignore: recursive_getters
       .check(role.isNotValue(''))();
-  TextColumn get content => text()();
   IntColumn get timestamp =>
       integer().map(const MicrosecondDateTimeConverter())();
   TextColumn get modelId => text().nullable()();
@@ -90,7 +89,6 @@ class MessageRows extends Table {
       .check(totalTokens.isBiggerOrEqualValue(0))
       .nullable()();
   BoolColumn get isStreaming => boolean().withDefault(const Constant(false))();
-  TextColumn get reasoningText => text().nullable()();
   IntColumn get reasoningStartAt =>
       integer().map(const MicrosecondDateTimeConverter()).nullable()();
   IntColumn get reasoningFinishedAt =>
@@ -164,6 +162,7 @@ class ChatStorageMetaRows extends Table {
   columns: {#conversationId, #revisionId, #ordinal},
 )
 class MessagePartRows extends Table {
+  IntColumn get partId => integer().autoIncrement()();
   TextColumn get conversationId => text()();
   TextColumn get revisionId => text()();
   IntColumn get ordinal =>
@@ -172,7 +171,7 @@ class MessagePartRows extends Table {
       .check(ordinal.isBiggerOrEqualValue(0))();
   TextColumn get kind => text().check(
     // ignore: recursive_getters
-    kind.isIn(const ['text', 'reasoning', 'tool_call', 'tool_result']),
+    kind.isIn(const ['text', 'reasoning', 'tool_call']),
   )();
   TextColumn get payload => text()();
   IntColumn get createdAt =>
@@ -181,11 +180,8 @@ class MessagePartRows extends Table {
       integer().map(const MicrosecondDateTimeConverter())();
 
   @override
-  Set<Column<Object>> get primaryKey => {revisionId, ordinal};
-
-  @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {conversationId, revisionId, ordinal},
+    {revisionId, ordinal},
   ];
 
   @override

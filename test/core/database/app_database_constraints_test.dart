@@ -55,7 +55,6 @@ void main() {
             id: id,
             conversationId: conversationId,
             role: role,
-            content: 'content',
             timestamp: timestamp ?? DateTime.utc(2026, 7, 11),
             groupId: Value(groupId),
             version: Value(version),

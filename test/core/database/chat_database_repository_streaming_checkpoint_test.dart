@@ -110,12 +110,14 @@ void main() {
         expect(parts.map((row) => row['kind']), const [
           'reasoning',
           'tool_call',
-          'tool_result',
           'text',
         ]);
-        raw.execute(
-          "UPDATE message_rows SET content = 'wrong shadow', "
-          "reasoning_text = 'wrong reasoning' WHERE id = 'streaming';",
+        expect(
+          raw.select(
+            "SELECT COUNT(*) AS c FROM message_part_rows "
+            "WHERE kind = 'tool_result';",
+          ).single['c'],
+          0,
         );
       } finally {
         raw.close();
@@ -247,7 +249,7 @@ void main() {
               .select(
                 "SELECT kind, payload, ordinal, updated_at FROM "
                 "message_part_rows WHERE revision_id = 'streaming' AND "
-                "kind IN ('tool_call', 'tool_result') ORDER BY ordinal;",
+                "kind = 'tool_call' ORDER BY ordinal;",
               )
               .map(
                 (row) => <String, Object?>{
@@ -264,10 +266,7 @@ void main() {
       }
 
       final before = toolPartRows();
-      expect(before.map((row) => row['kind']), const [
-        'tool_call',
-        'tool_result',
-      ]);
+      expect(before.map((row) => row['kind']), const ['tool_call']);
       await Future<void>.delayed(const Duration(milliseconds: 5));
 
       await repository.updateStreamingCheckpoint(
@@ -328,55 +327,88 @@ void main() {
       expect((await repository.getMessage('streaming'))?.content, 'draft two');
     });
 
-    test('流式 checkpoint 推迟 content shadow 到 finalize 一次性写', () async {
-      String rawShadow() {
-        final raw = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
-        try {
-          return raw
-                  .select(
-                    "SELECT content FROM message_rows WHERE id = 'streaming';",
-                  )
-                  .single['content']
-              as String;
-        } finally {
-          raw.close();
-        }
+    test('message_rows 不再包含 content / reasoning_text 影子列', () async {
+      final raw = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
+      try {
+        final columns = raw
+            .select('PRAGMA table_info(message_rows);')
+            .map((row) => row['name'] as String)
+            .toSet();
+        expect(columns.contains('content'), isFalse);
+        expect(columns.contains('reasoning_text'), isFalse);
+      } finally {
+        raw.close();
       }
-
-      await repository.updateStreamingCheckpoint(
-        ChatMessage(
-          id: 'streaming',
-          role: 'assistant',
-          content: 'partial answer',
-          conversationId: 'conversation',
-          isStreaming: true,
-        ),
-        const [],
-      );
-      expect(rawShadow(), '');
-      expect(
-        (await repository.getMessage('streaming'))?.content,
-        'partial answer',
-      );
-
-      await repository.updateStreamingCheckpoint(
-        ChatMessage(
-          id: 'streaming',
-          role: 'assistant',
-          content: 'final answer',
-          conversationId: 'conversation',
-          isStreaming: false,
-        ),
-        const [],
-      );
-      expect(rawShadow(), 'final answer');
-      expect(
-        (await repository.getMessage('streaming'))?.content,
-        'final answer',
-      );
     });
 
-    test('崩溃恢复用 parts 回补 deferred content shadow', () async {
+    test('任何写入路径都不会产生 tool_result part', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          content: 'with tools',
+          conversationId: 'conversation',
+          isStreaming: true,
+          reasoningText: 'think',
+        ),
+        const [
+          {
+            'id': 'tool-1',
+            'name': 'search',
+            'arguments': {'q': 'x'},
+            'content': 'result body',
+          },
+        ],
+      );
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          content: 'final with tools',
+          conversationId: 'conversation',
+          isStreaming: false,
+          reasoningText: 'think',
+        ),
+        const [
+          {
+            'id': 'tool-1',
+            'name': 'search',
+            'arguments': {'q': 'x'},
+            'content': 'result body',
+          },
+        ],
+      );
+      await repository.updateMessageFields(
+        'streaming',
+        content: 'edited with tools',
+      );
+
+      final raw = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
+      try {
+        expect(
+          raw
+              .select(
+                "SELECT COUNT(*) AS c FROM message_part_rows "
+                "WHERE kind = 'tool_result';",
+              )
+              .single['c'],
+          0,
+        );
+        expect(
+          raw
+              .select(
+                "SELECT kind FROM message_part_rows "
+                "WHERE revision_id = 'streaming' ORDER BY ordinal;",
+              )
+              .map((row) => row['kind']),
+          const ['reasoning', 'tool_call', 'text'],
+        );
+      } finally {
+        raw.close();
+      }
+    });
+
+    test('崩溃恢复后 parts 可读且 FTS 可搜索', () async {
       final createdAt = DateTime.now().toUtc();
       await repository.createGenerationRun(
         id: 'crashed-run',
@@ -403,35 +435,71 @@ void main() {
         ChatMessage(
           id: 'streaming',
           role: 'assistant',
-          content: 'interrupted partial',
+          content: 'interrupted crash-recovery-token partial',
           conversationId: 'conversation',
           isStreaming: true,
+          reasoningText: 'interrupted reasoning trail',
         ),
         const [],
         generationRunId: 'crashed-run',
         checkpointSeq: 1,
       );
 
-      expect(await repository.resetStaleStreamingState(), 1);
-
-      final raw = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
+      // Simulate process kill: message still streaming with checkpointed parts.
+      final midCrash = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
       try {
         expect(
-          raw
+          midCrash
               .select(
-                "SELECT content FROM message_rows WHERE id = 'streaming';",
+                "SELECT is_streaming FROM message_rows WHERE id = 'streaming';",
               )
-              .single['content'],
-          'interrupted partial',
+              .single['is_streaming'],
+          1,
+        );
+        expect(
+          midCrash
+              .select(
+                "SELECT payload FROM message_part_rows "
+                "WHERE revision_id = 'streaming' AND kind = 'text';",
+              )
+              .single['payload'],
+          'interrupted crash-recovery-token partial',
+        );
+      } finally {
+        midCrash.close();
+      }
+
+      expect(await repository.resetStaleStreamingState(), 1);
+
+      final message = await repository.getMessage('streaming');
+      expect(message?.isStreaming, isFalse);
+      expect(message?.content, 'interrupted crash-recovery-token partial');
+      expect(message?.reasoningText, 'interrupted reasoning trail');
+      final run = await repository.getGenerationRun('crashed-run');
+      expect(run?.state, GenerationRunState.interrupted);
+
+      expect(
+        (await repository.searchConversationMatches(
+          tokens: const ['crash-recovery-token'],
+        )).single.messageId,
+        'streaming',
+      );
+
+      await repository.close();
+      final raw = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
+      try {
+        raw.execute(
+          "INSERT INTO message_search_fts(message_search_fts) "
+          "VALUES('integrity-check');",
         );
       } finally {
         raw.close();
       }
-      final message = await repository.getMessage('streaming');
-      expect(message?.isStreaming, isFalse);
-      expect(message?.content, 'interrupted partial');
-      final run = await repository.getGenerationRun('crashed-run');
-      expect(run?.state, GenerationRunState.interrupted);
+      // Re-open so tearDown can close a live repository handle.
+      repository = ChatDatabaseRepository.open(
+        file: File('${directory.path}/chat.sqlite'),
+      );
+      await repository.ensureReady();
     });
 
     test('reasoning finishing mid-stream keeps earlier tool parts', () async {

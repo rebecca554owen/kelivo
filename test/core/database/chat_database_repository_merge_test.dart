@@ -41,11 +41,17 @@ void main() {
       required String messageId,
       required String content,
     }) {
+      // Fixed instants: the fingerprint truncates timestamps to whole seconds,
+      // so two DateTime.now() writes straddling a second boundary would stop
+      // identical conversations from deduplicating.
+      final anchor = DateTime.utc(2026, 8, 7, 12);
       return repository.putMigrationBatch(
         conversations: [
           Conversation(
             id: conversationId,
             title: title,
+            createdAt: anchor,
+            updatedAt: anchor,
             messageIds: [messageId],
             mcpServerIds: const ['server'],
             versionSelections: {messageId: 0},
@@ -58,6 +64,7 @@ void main() {
               role: 'assistant',
               content: content,
               conversationId: conversationId,
+              timestamp: anchor,
             ),
             messageOrder: 0,
           ),
@@ -68,6 +75,58 @@ void main() {
           ],
         },
         geminiSignaturesByMessageId: {messageId: 'sig-$content'},
+      );
+    }
+
+    /// Two messages whose text, reasoning and tool payloads differ. Both carry
+    /// the same thought signature on purpose: a swapped-body variant must then
+    /// differ only in which revision owns which part, leaving part grouping as
+    /// the sole thing the fingerprint can tell them apart by.
+    Future<void> putTwoMessageConversation(
+      ChatDatabaseRepository repository, {
+      required String conversationId,
+      required String firstMessageId,
+      required String secondMessageId,
+      required String firstBody,
+      required String secondBody,
+    }) {
+      final anchor = DateTime.utc(2026, 8, 7, 12);
+      ChatMessage message(String id, String body, int index) => ChatMessage(
+        id: id,
+        role: 'assistant',
+        content: '$body content',
+        reasoningText: '$body reasoning',
+        conversationId: conversationId,
+        timestamp: anchor.add(Duration(minutes: index)),
+      );
+      return repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Two messages',
+            createdAt: anchor,
+            updatedAt: anchor,
+            messageIds: [firstMessageId, secondMessageId],
+            mcpServerIds: const ['server'],
+            versionSelections: {firstMessageId: 0, secondMessageId: 0},
+          ),
+        ],
+        messages: [
+          (message: message(firstMessageId, firstBody, 0), messageOrder: 0),
+          (message: message(secondMessageId, secondBody, 1), messageOrder: 1),
+        ],
+        toolEventsByMessageId: {
+          firstMessageId: [
+            {'id': 'tool', 'content': '$firstBody tool'},
+          ],
+          secondMessageId: [
+            {'id': 'tool', 'content': '$secondBody tool'},
+          ],
+        },
+        geminiSignaturesByMessageId: {
+          firstMessageId: 'sig-shared',
+          secondMessageId: 'sig-shared',
+        },
       );
     }
 
@@ -132,6 +191,83 @@ void main() {
       expect(first.deduplicatedConversations, 1);
       expect(second.deduplicatedConversations, 1);
       expect(await live.getAllConversations(), hasLength(1));
+    });
+
+    test('多消息会话 parts 按 revision 分组后指纹一致，重复导入去重', () async {
+      for (final repository in [live, source]) {
+        await putTwoMessageConversation(
+          repository,
+          conversationId: 'multi',
+          firstMessageId: 'multi-a',
+          secondMessageId: 'multi-b',
+          firstBody: 'alpha',
+          secondBody: 'beta',
+        );
+      }
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+
+      expect(report.deduplicatedConversations, 1);
+      expect(await live.getAllConversations(), hasLength(1));
+    });
+
+    test('多消息会话正文互换后指纹不同，不会被误判为重复', () async {
+      // Both sides hold the same multiset of text/reasoning/tool payloads, the
+      // same signature and the same per-position timestamps, and differ only in
+      // which message owns which payload. A fingerprint that pooled parts per
+      // conversation instead of per revision would hash these equal and
+      // silently drop the imported conversation as a duplicate.
+      await putTwoMessageConversation(
+        live,
+        conversationId: 'swap',
+        firstMessageId: 'swap-a',
+        secondMessageId: 'swap-b',
+        firstBody: 'alpha',
+        secondBody: 'beta',
+      );
+      await putTwoMessageConversation(
+        source,
+        conversationId: 'swap',
+        firstMessageId: 'swap-a',
+        secondMessageId: 'swap-b',
+        firstBody: 'beta',
+        secondBody: 'alpha',
+      );
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+
+      expect(report.deduplicatedConversations, 0);
+      expect(report.importedConversations, 1);
+      final remappedId = report.remappedConversationIds['swap'];
+      expect(remappedId, isNotNull);
+      expect(await live.getAllConversations(), hasLength(2));
+
+      expect(
+        (await live.getMessagesRange('swap', start: 0, limit: 10))
+            .map((message) => message.content)
+            .toList(),
+        const ['alpha content', 'beta content'],
+      );
+      final imported = await live.getMessagesRange(
+        remappedId!,
+        start: 0,
+        limit: 10,
+      );
+      expect(
+        imported.map((message) => message.content).toList(),
+        const ['beta content', 'alpha content'],
+      );
+      expect(
+        imported.map((message) => message.reasoningText).toList(),
+        const ['beta reasoning', 'alpha reasoning'],
+      );
+      expect(await live.getToolEvents(imported.first.id), const [
+        {'id': 'tool', 'content': 'beta tool'},
+      ]);
     });
 
     test('同 conversation ID 异内容时整会话 remap 并可重复去重', () async {
@@ -271,9 +407,17 @@ void main() {
         content: 'v0',
         conversationId: 'versioned',
       );
-      await source.createConversationWithMessages(
-        conversation: Conversation(id: 'versioned', title: 'Imported'),
-        messages: [v0],
+      await source.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: 'versioned',
+            title: 'Imported',
+            messageIds: [v0.id],
+          ),
+        ],
+        messages: [(message: v0, messageOrder: 0)],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
       );
       final appended = await source.appendMessageVersion(
         messageId: v0.id,

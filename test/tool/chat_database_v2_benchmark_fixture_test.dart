@@ -90,13 +90,25 @@ void main() {
       );
       try {
         expect(database.select('PRAGMA foreign_key_check;'), isEmpty);
+        // 100 text parts + 10 tool_call parts (every 10th message).
         expect(
           database
               .select('SELECT COUNT(*) FROM message_part_rows;')
               .single
               .values
               .single,
-          10,
+          110,
+        );
+        expect(
+          database
+              .select(
+                "SELECT COUNT(*) FROM message_part_rows "
+                "WHERE kind = 'tool_result';",
+              )
+              .single
+              .values
+              .single,
+          0,
         );
       } finally {
         database.close();

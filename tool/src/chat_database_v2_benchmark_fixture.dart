@@ -215,13 +215,11 @@ CREATE TABLE message_rows (
   id TEXT NOT NULL PRIMARY KEY,
   conversation_id TEXT NOT NULL REFERENCES conversation_rows(id) ON DELETE CASCADE,
   role TEXT NOT NULL,
-  content TEXT NOT NULL,
   timestamp INTEGER NOT NULL,
   model_id TEXT,
   provider_id TEXT,
   total_tokens INTEGER,
   is_streaming INTEGER NOT NULL DEFAULT 0,
-  reasoning_text TEXT,
   reasoning_start_at INTEGER,
   reasoning_finished_at INTEGER,
   translation TEXT,
@@ -244,7 +242,7 @@ CREATE TABLE message_part_rows (
   conversation_id TEXT NOT NULL,
   revision_id TEXT NOT NULL,
   ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
-  kind TEXT NOT NULL CHECK (kind IN ('text', 'reasoning', 'tool_call', 'tool_result')),
+  kind TEXT NOT NULL CHECK (kind IN ('text', 'reasoning', 'tool_call')),
   payload TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
@@ -279,13 +277,13 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
     );
     final messageInsert = database.prepare(
       'INSERT INTO message_rows '
-      '(id, conversation_id, role, content, timestamp, group_id, version, message_order) '
-      'VALUES (?, ?, ?, ?, ?, ?, 0, ?);',
+      '(id, conversation_id, role, timestamp, group_id, version, message_order) '
+      'VALUES (?, ?, ?, ?, ?, 0, ?);',
     );
-    final toolInsert = database.prepare(
+    final partInsert = database.prepare(
       'INSERT INTO message_part_rows '
       '(conversation_id, revision_id, ordinal, kind, payload, created_at, updated_at) '
-      'VALUES (?, ?, 0, ?, ?, ?, ?);',
+      'VALUES (?, ?, ?, ?, ?, ?, ?);',
     );
     try {
       for (var conversation = 0; conversation < conversations; conversation++) {
@@ -307,32 +305,43 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
                   ? '中文搜索 基准消息 $index 固定种子 $seed'
                   : 'English search benchmark message $index seed $seed')
             : 'Benchmark message $index seed $seed';
+        final ts = seed + index;
         messageInsert.execute([
           id,
           conversationId,
           index.isEven ? 'user' : 'assistant',
-          text,
-          seed + index,
+          ts,
           'slot-$id',
           order[conversation]++,
         ]);
+        var ordinal = 0;
         if (index % toolEvery == 0) {
-          toolInsert.execute([
+          partInsert.execute([
             conversationId,
             id,
-            'tool_result',
+            ordinal++,
+            'tool_call',
             jsonEncode([
               {'type': 'result', 'index': index},
             ]),
-            seed + index,
-            seed + index,
+            ts,
+            ts,
           ]);
         }
+        partInsert.execute([
+          conversationId,
+          id,
+          ordinal,
+          'text',
+          text,
+          ts,
+          ts,
+        ]);
       }
     } finally {
       conversationInsert.close();
       messageInsert.close();
-      toolInsert.close();
+      partInsert.close();
     }
   }
 
@@ -494,8 +503,8 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
       );
       database.execute(
         'INSERT INTO message_rows '
-        '(id, conversation_id, role, content, timestamp, message_order) '
-        "VALUES ('orphan', 'missing-conversation', 'user', 'orphan', 0, 3);",
+        '(id, conversation_id, role, timestamp, message_order) '
+        "VALUES ('orphan', 'missing-conversation', 'user', 0, 3);",
       );
     } finally {
       database.close();
@@ -559,21 +568,27 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
     required String content,
     String? reasoning,
   }) {
+    final ts = seed + order;
     database.execute(
       'INSERT INTO message_rows '
-      '(id, conversation_id, role, content, timestamp, reasoning_text, '
-      'group_id, version, message_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);',
-      [
-        id,
-        conversationId,
-        'assistant',
-        content,
-        seed + order,
-        reasoning,
-        groupId,
-        version,
-        order,
-      ],
+      '(id, conversation_id, role, timestamp, '
+      'group_id, version, message_order) VALUES (?, ?, ?, ?, ?, ?, ?);',
+      [id, conversationId, 'assistant', ts, groupId, version, order],
+    );
+    var ordinal = 0;
+    if (reasoning != null && reasoning.isNotEmpty) {
+      database.execute(
+        'INSERT INTO message_part_rows '
+        '(conversation_id, revision_id, ordinal, kind, payload, '
+        'created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);',
+        [conversationId, id, ordinal++, 'reasoning', reasoning, ts, ts],
+      );
+    }
+    database.execute(
+      'INSERT INTO message_part_rows '
+      '(conversation_id, revision_id, ordinal, kind, payload, '
+      'created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);',
+      [conversationId, id, ordinal, 'text', content, ts, ts],
     );
   }
 }
@@ -623,7 +638,8 @@ final class ChatDatabaseV2BenchmarkMetrics {
           searchChinese2Samples.add(
             _time(
               () => database.select(
-                'SELECT id FROM message_rows WHERE content LIKE ? LIMIT 50;',
+                "SELECT revision_id FROM message_part_rows "
+                "WHERE kind = 'text' AND payload LIKE ? LIMIT 50;",
                 ['%搜索%'],
               ),
             ),
@@ -631,7 +647,8 @@ final class ChatDatabaseV2BenchmarkMetrics {
           searchChinese4Samples.add(
             _time(
               () => database.select(
-                'SELECT id FROM message_rows WHERE content LIKE ? LIMIT 50;',
+                "SELECT revision_id FROM message_part_rows "
+                "WHERE kind = 'text' AND payload LIKE ? LIMIT 50;",
                 ['%中文搜索%'],
               ),
             ),
@@ -639,7 +656,8 @@ final class ChatDatabaseV2BenchmarkMetrics {
           searchRareTailSamples.add(
             _time(
               () => database.select(
-                'SELECT id FROM message_rows WHERE content LIKE ? LIMIT 50;',
+                "SELECT revision_id FROM message_part_rows "
+                "WHERE kind = 'text' AND payload LIKE ? LIMIT 50;",
                 ['%message 99999 seed%'],
               ),
             ),

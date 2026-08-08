@@ -4,19 +4,22 @@ import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 void main() {
   group('sandbox path migration version', () {
     late Directory directory;
+    late File dbFile;
     late ChatDatabaseRepository repository;
+    var repositoryClosed = false;
 
     setUp(() async {
       directory = await Directory.systemTemp.createTemp(
         'kelivo_sandbox_path_migration_',
       );
-      repository = ChatDatabaseRepository.open(
-        file: File('${directory.path}/chat.sqlite'),
-      );
+      dbFile = File('${directory.path}/chat.sqlite');
+      repository = ChatDatabaseRepository.open(file: dbFile);
+      repositoryClosed = false;
       await repository.ensureReady();
       await repository.putMigrationBatch(
         conversations: [
@@ -41,7 +44,7 @@ void main() {
               id: 'path',
               conversationId: 'conversation',
               role: 'user',
-              content: '[image:/old/upload/a.png]',
+              content: '[image:/old/sandboxoldtoken/a.png]',
             ),
             messageOrder: 1,
           ),
@@ -52,7 +55,7 @@ void main() {
     });
 
     tearDown(() async {
-      await repository.close();
+      if (!repositoryClosed) await repository.close();
       if (await directory.exists()) await directory.delete(recursive: true);
     });
 
@@ -61,7 +64,8 @@ void main() {
         targetVersion: 1,
         targetRoot: '/new',
         batchSize: 1,
-        rewriteContent: (content) => content.replaceFirst('/old/', '/new/'),
+        rewriteContent: (content) =>
+            content.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
       );
 
       expect(result.ran, isTrue);
@@ -73,7 +77,7 @@ void main() {
           start: 0,
           limit: 10,
         )).last.content,
-        '[image:/new/upload/a.png]',
+        '[image:/new/sandboxnewtoken/a.png]',
       );
     });
 
@@ -113,7 +117,8 @@ void main() {
       final retry = await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/new',
-        rewriteContent: (content) => content.replaceFirst('/old/', '/new/'),
+        rewriteContent: (content) =>
+            content.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
       );
       expect(retry.ran, isTrue);
       expect(retry.updatedMessages, 1);
@@ -129,11 +134,52 @@ void main() {
       final result = await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/second',
-        rewriteContent: (content) => content.replaceFirst('/old/', '/second/'),
+        rewriteContent: (content) => content.replaceFirst(
+          '/old/sandboxoldtoken/',
+          '/second/sandboxnewtoken/',
+        ),
       );
 
       expect(result.ran, isTrue);
       expect(result.updatedMessages, 1);
+    });
+
+    test('路径重写后 FTS 按新路径可搜、旧路径不可搜且索引完整', () async {
+      await repository.migrateSandboxPaths(
+        targetVersion: 1,
+        targetRoot: '/new',
+        rewriteContent: (content) =>
+            content.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
+      );
+
+      expect(
+        (await repository.searchConversationMatches(
+          tokens: const ['sandboxnewtoken'],
+        )).single.messageId,
+        'path',
+      );
+      expect(
+        await repository.searchConversationMatches(
+          tokens: const ['sandboxoldtoken'],
+        ),
+        isEmpty,
+      );
+
+      // Force FTS setup path, then integrity-check on a raw connection.
+      await repository.searchConversationMatches(
+        tokens: const ['__fts_integrity__'],
+      );
+      await repository.close();
+      repositoryClosed = true;
+      final database = sqlite.sqlite3.open(dbFile.path);
+      try {
+        database.execute(
+          "INSERT INTO message_search_fts(message_search_fts) "
+          "VALUES('integrity-check');",
+        );
+      } finally {
+        database.close();
+      }
     });
 
     test('拒绝高于当前实现的已有 migration version', () async {

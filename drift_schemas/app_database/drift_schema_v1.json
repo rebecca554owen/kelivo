@@ -255,16 +255,6 @@
             ]
           },
           {
-            "name": "content",
-            "getter_name": "content",
-            "moor_type": "string",
-            "nullable": false,
-            "customConstraints": null,
-            "default_dart": null,
-            "default_client_dart": null,
-            "dsl_features": []
-          },
-          {
             "name": "timestamp",
             "getter_name": "timestamp",
             "moor_type": "int",
@@ -338,16 +328,6 @@
               "sqlite": "CHECK (\"is_streaming\" IN (0, 1))"
             },
             "default_dart": "const CustomExpression('0')",
-            "default_client_dart": null,
-            "dsl_features": []
-          },
-          {
-            "name": "reasoning_text",
-            "getter_name": "reasoningText",
-            "moor_type": "string",
-            "nullable": true,
-            "customConstraints": null,
-            "default_dart": null,
             "default_client_dart": null,
             "dsl_features": []
           },
@@ -742,6 +722,22 @@
         "was_declared_in_moor": false,
         "columns": [
           {
+            "name": "part_id",
+            "getter_name": "partId",
+            "moor_type": "int",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "PRIMARY KEY AUTOINCREMENT",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "PRIMARY KEY AUTOINCREMENT"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [
+              "auto-increment"
+            ]
+          },
+          {
             "name": "conversation_id",
             "getter_name": "conversationId",
             "moor_type": "string",
@@ -807,7 +803,7 @@
                         "lexeme": "kind",
                         "tag": "kind"
                       },
-                      ".isIn(const ['text','reasoning','tool_call','tool_result'])"
+                      ".isIn(const ['text','reasoning','tool_call'])"
                     ]
                   }
                 }
@@ -859,13 +855,8 @@
           "FOREIGN KEY (revision_id) REFERENCES message_rows (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED",
           "CHECK (updated_at >= created_at)"
         ],
-        "explicit_pk": [
-          "revision_id",
-          "ordinal"
-        ],
         "unique_keys": [
           [
-            "conversation_id",
             "revision_id",
             "ordinal"
           ]
@@ -2920,7 +2911,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"message_rows\" (\"id\" TEXT NOT NULL, \"conversation_id\" TEXT NOT NULL REFERENCES conversation_rows (id) ON DELETE CASCADE, \"role\" TEXT NOT NULL CHECK(\"role\" IS NOT ''), \"content\" TEXT NOT NULL, \"timestamp\" INTEGER NOT NULL, \"model_id\" TEXT NULL, \"provider_id\" TEXT NULL, \"total_tokens\" INTEGER NULL CHECK(\"total_tokens\" >= 0), \"is_streaming\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_streaming\" IN (0, 1)), \"reasoning_text\" TEXT NULL, \"reasoning_start_at\" INTEGER NULL, \"reasoning_finished_at\" INTEGER NULL, \"translation\" TEXT NULL, \"reasoning_segments_json\" TEXT NULL, \"group_id\" TEXT NULL, \"version\" INTEGER NOT NULL DEFAULT 0 CHECK(\"version\" >= 0), \"prompt_tokens\" INTEGER NULL CHECK(\"prompt_tokens\" >= 0), \"completion_tokens\" INTEGER NULL CHECK(\"completion_tokens\" >= 0), \"cached_tokens\" INTEGER NULL CHECK(\"cached_tokens\" >= 0), \"duration_ms\" INTEGER NULL CHECK(\"duration_ms\" >= 0), \"message_order\" INTEGER NOT NULL CHECK(\"message_order\" >= 0), PRIMARY KEY (\"id\"), UNIQUE (\"conversation_id\", \"message_order\"), UNIQUE (\"conversation_id\", \"group_id\", \"version\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"message_rows\" (\"id\" TEXT NOT NULL, \"conversation_id\" TEXT NOT NULL REFERENCES conversation_rows (id) ON DELETE CASCADE, \"role\" TEXT NOT NULL CHECK(\"role\" IS NOT ''), \"timestamp\" INTEGER NOT NULL, \"model_id\" TEXT NULL, \"provider_id\" TEXT NULL, \"total_tokens\" INTEGER NULL CHECK(\"total_tokens\" >= 0), \"is_streaming\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_streaming\" IN (0, 1)), \"reasoning_start_at\" INTEGER NULL, \"reasoning_finished_at\" INTEGER NULL, \"translation\" TEXT NULL, \"reasoning_segments_json\" TEXT NULL, \"group_id\" TEXT NULL, \"version\" INTEGER NOT NULL DEFAULT 0 CHECK(\"version\" >= 0), \"prompt_tokens\" INTEGER NULL CHECK(\"prompt_tokens\" >= 0), \"completion_tokens\" INTEGER NULL CHECK(\"completion_tokens\" >= 0), \"cached_tokens\" INTEGER NULL CHECK(\"cached_tokens\" >= 0), \"duration_ms\" INTEGER NULL CHECK(\"duration_ms\" >= 0), \"message_order\" INTEGER NOT NULL CHECK(\"message_order\" >= 0), PRIMARY KEY (\"id\"), UNIQUE (\"conversation_id\", \"message_order\"), UNIQUE (\"conversation_id\", \"group_id\", \"version\"));"
         }
       ]
     },
@@ -2947,7 +2938,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"message_part_rows\" (\"conversation_id\" TEXT NOT NULL, \"revision_id\" TEXT NOT NULL, \"ordinal\" INTEGER NOT NULL CHECK(\"ordinal\" >= 0), \"kind\" TEXT NOT NULL CHECK(\"kind\" IN ('text', 'reasoning', 'tool_call', 'tool_result')), \"payload\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, PRIMARY KEY (\"revision_id\", \"ordinal\"), UNIQUE (\"conversation_id\", \"revision_id\", \"ordinal\"), FOREIGN KEY (revision_id) REFERENCES message_rows (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED, CHECK (updated_at >= created_at));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"message_part_rows\" (\"part_id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"conversation_id\" TEXT NOT NULL, \"revision_id\" TEXT NOT NULL, \"ordinal\" INTEGER NOT NULL CHECK(\"ordinal\" >= 0), \"kind\" TEXT NOT NULL CHECK(\"kind\" IN ('text', 'reasoning', 'tool_call')), \"payload\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, UNIQUE (\"revision_id\", \"ordinal\"), FOREIGN KEY (revision_id) REFERENCES message_rows (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED, CHECK (updated_at >= created_at));"
         }
       ]
     },

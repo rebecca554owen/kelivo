@@ -4,7 +4,7 @@
 >
 > - 文档状态：设计基线；**PD-15（2026-07-12，用户裁决）已推翻 graph/branch 消息模型，最终形态为完全线性模型，见 §5.3 与 §11 Phase 6**。§6.3 的 graph 数据模型、§7.2 的 graft/fork 语义与 §7.4 的 timeline coordinator 设计保留为历史记录，不再是实施目标
 > - 审计基线：分支 `sql`，提交 `df1dae8a`
-> - 最后更新：2026-07-12
+> - 最后更新：2026-08-07（**GEN-05 验收收口**：`message_part_rows` 为唯一正文权威，Schema 1 原地删除 `message_rows` 影子列）
 > - 实施状态：[chat-database-v2-refactoring-progress.md](./chat-database-v2-refactoring-progress.md)
 
 ## 1. 文档目的
@@ -202,9 +202,9 @@ u1, a1-v0, u2, a2-v0, a1-v1
 
 **数据模型（最终形态）**：
 
-- `message_rows` 是唯一消息真相：按 `message_order` 排序的线性列表；多版本 = 同 `group_id` 下的多行（`version` 递增）；`conversation_rows.version_selections_json` 记录每组选中版本（缺省为最新）。该结构在 v2 期间一直作为影子完整维护，回归即"扶正"，不需要数据搬迁。
+- `message_rows` 是消息身份与线性顺序的唯一真相：按 `message_order` 排序的线性列表；多版本 = 同 `group_id` 下的多行（`version` 递增）；`conversation_rows.version_selections_json` 记录每组选中版本（缺省为最新）。该结构在 v2 期间一直作为影子完整维护，回归即"扶正"，不需要数据搬迁。**正文与 reasoning 不在此表**，见下条。
 - **删除** graph 四表（`message_slot_rows`、`message_revision_rows`、`conversation_branch_rows`、`conversation_state_rows`）及其命令/投影器/legacy adapter。v2 从未发布（PD-13：公开数据源是 Hive），删除无兼容负担。
-- 保留 `message_part_rows`（ordered parts 读写）与 `generation_run_rows`（崩溃恢复），它们与线性/graph 无关。
+- 保留 `message_part_rows`（ordered parts；**正文与 reasoning 的唯一权威存储**）与 `generation_run_rows`（崩溃恢复），它们与线性/graph 无关。`message_rows` 不再保存 `content`/`reasoning_text` 影子列（GEN-05 于 2026-08-07 收口；见进度文档）。
 
 **行为合同（恢复 `f7e11373` 基线行为，rikkahub 行为一致处已注明）**：
 
@@ -402,7 +402,7 @@ erDiagram
 | `message_slots` | 稳定逻辑消息位置和 UI identity | `UNIQUE(conversation_id, id)`；`role` CHECK；切 revision 不改变 ID |
 | `message_revisions` | revision metadata、因果 parent 和 finalization | `UNIQUE(conversation_id, id)`、`UNIQUE(conversation_id, slot_id, revision_no)`；slot/parent 使用同会话复合 FK |
 | `generation_runs` | 生成生命周期、checkpoint 和错误 | 一个 target revision 最多一个活动 run；checkpoint 单调递增 |
-| `message_parts` | text、reasoning、tool call/result 的唯一权威 payload | `UNIQUE(conversation_id, message_revision_id, ordinal)`；active run 可 checkpoint，finalize 后不可变 |
+| `message_parts` | text、reasoning、tool_call 的唯一权威 payload（tool result 不进 parts，留在 `tool_event_rows`） | `part_id` INTEGER PK AUTOINCREMENT；`UNIQUE(revision_id, ordinal)`；active run 可 checkpoint，finalize 后不可变；FTS external-content 以 `part_id` 为 `content_rowid`，仅索引 `kind='text'` |
 | `provider_artifacts` | Gemini signature 等供应商数据 | `PRIMARY KEY(message_revision_id, kind)` |
 | `assets` | 文件 hash、mime、尺寸、管理路径和状态 | hash/路径策略唯一；禁止正文 regex 作为唯一引用源 |
 | `message_assets` | revision 与 asset 的关联 | FK；删除 revision 后由引用计数/GC 处理 |
@@ -420,7 +420,7 @@ erDiagram
 - selection 不再是 conversation 上的 JSON；active path 中实际出现的 revision 就是该 branch 的选择。
 - `revision_no` 仅用于显示和同 slot 排序，不作为选择、cursor 或上下文边界。
 - `generation_runs.state` 是生成生命周期的唯一真相；`isStreaming` 等 UI 状态由它投影，revision 不再保存第二套竞争状态。
-- `message_parts` 是消息正文的唯一真相。`message_revisions` 不再重复保存 `content`；若将来为查询性能增加 text projection，它必须是带 hash/version、可删除重建的派生数据。
+- `message_parts` 是消息正文的唯一真相。线性最终形态下 `message_rows` 亦不重复保存 `content`/`reasoning_text`；若将来为查询性能增加 text projection，它必须是带 hash/version、可删除重建的派生数据。
 - `conversation_branches.causality_kind` 至少区分 `native`、`legacy_visible_projection` 和 `legacy_ambiguous`，旧扁平历史不得伪装为已知真实因果图。
 
 如果 PD-01 最终决定不支持真实分支，可简化 `conversation_branches`，但仍必须保留稳定 slot、revision ID、FK selection 和逻辑分页，不能回到 JSON ordinal。
@@ -571,10 +571,11 @@ stateDiagram-v2
 
 - 统计通过 SQL aggregate/view 计算，不实例化全库 `ChatMessage`。
 - 搜索使用 FTS5 或经五平台验证的等价索引：
+  - external-content 挂 `message_part_rows`，`content_rowid = part_id`，仅索引 `kind='text'`，并以所属消息 `is_streaming = 0` 门控（GEN-05 收口后合同；见进度文档 OPS-04 / §11.6）；
   - 三个及以上 Unicode 字符评估 trigram substring；
   - 一至两个中文字符采用实测后的受限 fallback；
-  - 当前 branch 与所有 revisions 的范围由 PD-06 决定。
-- 每个搜索结果保存 branch/revision identity，导航时可恢复对应路径和 slot anchor。
+  - 范围由 PD-06 / LIN-05 决定（默认各组选中版本，可显式含全部版本）。
+- 每个搜索结果保存稳定 revision/message identity，导航时可恢复对应路径和锚点。
 - 附件由 `assets` / `message_assets` FK 管理，删除消息只更新引用；空闲期批量 GC，禁止每次删除扫描全库和整个文件系统。
 - 对 FTS、统计和缓存等派生数据提供可重建机制，不把它们作为唯一用户数据。
 
@@ -892,7 +893,7 @@ flowchart LR
 - `GEN-02`：原子 begin send/regeneration。
 - `GEN-03`：解耦网络 buffer、UI frame publisher、DB checkpoint queue。
 - `GEN-04`：原子 complete/fail/cancel/interrupted 收尾。
-- `GEN-05`：tool/reasoning/provider artifacts 按有序 parts 持久化；在此项完成前，`message_rows` 与 `message_part_rows` 的正文双写只是过渡态，repository 是唯一允许的写入口；完成时必须让 parts 成为唯一正文权威，并移除或拒绝任何绕过 repository 直接改写 `message_rows` 正文的路径。
+- `GEN-05`：tool/reasoning/provider artifacts 按有序 parts 持久化；在此项完成前，`message_rows` 与 `message_part_rows` 的正文双写只是过渡态，repository 是唯一允许的写入口；完成时必须让 parts 成为唯一正文权威，并移除或拒绝任何绕过 repository 直接改写 `message_rows` 正文的路径。**验收收口（2026-08-07）**：统一业务 **Schema 1** 原地重做（`currentSchemaVersion` 仍为 1，无版本间迁移）：删除 `message_rows.content`/`reasoning_text`；`message_part_rows` 新增稳定 `part_id` PK，`kind` CHECK 收敛为 `('text','reasoning','tool_call')`；读写/FTS/sandbox/asset/merge/崩溃恢复与 Hive→SQLite 校验全部改接 parts。动态证据见[进度文档](./chat-database-v2-refactoring-progress.md) §9 GEN-05 与 §11.6。
 - `GEN-06`：启动恢复所有非终态 run；删除 active ID JSON。
 - `GEN-07`：验证 chunk/onDone/cancel/切会话/kill 竞态和迟到事件。
 
@@ -901,7 +902,8 @@ flowchart LR
 - 100 token/s 与 1MiB 长响应下网络不等待 DB commit；
 - DB 写频率和写入字节满足 SLO；
 - kill 后 partial content 可读、run 为 `interrupted`；
-- 终态不能被迟到 chunk 回退。
+- 终态不能被迟到 chunk 回退；
+- **`message_part_rows` 为正文唯一权威存储**：`message_rows` 无正文影子列；生产与测试写路径均不绕过 parts。
 
 ### Phase 4：Timeline 与 Renderer
 
@@ -930,7 +932,7 @@ flowchart LR
 - `OPS-01`：默认 SQLite snapshot ZIP + manifest/hash。
 - `OPS-02`：staging restore/merge + crash-safe swap receipt。
 - `OPS-03`：旧 JSON 只读 adapter + 显式 portable NDJSON v2。
-- `OPS-04`：FTS5/短中文 fallback 和 branch-aware 导航。
+- `OPS-04`：FTS5/短中文 fallback 与版本范围导航；索引 external-content 挂权威 `message_part_rows`（仅 text；见 GEN-05 收口）。
 - `OPS-05`：统计 SQL 聚合与 current branch/all revisions 口径。
 - `OPS-06`：assets 引用表、缩略图元数据，以及 assets/branch/revision 延迟 GC；消除 `deleteRevision` 当前为每个未删除 branch 重做完整路径投影的 `O(活跃 branch 数 × 路径长度)` 检测，以集合化 reachability、索引或可批处理的 GC ledger 控制重度会话删除成本，并保留高 branch-count 压测证据。
 - `OPS-07`：凭据与其他可备份设置统一留在 SharedPreferences；正常备份与恢复覆盖 API key、代理密码、WebDAV/S3/TTS/搜索等字段，不引入 secure-storage 分叉。

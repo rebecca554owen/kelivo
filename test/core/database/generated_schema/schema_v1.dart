@@ -173,14 +173,6 @@ class MessageRows extends Table with TableInfo {
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL CHECK (role IS NOT \'\')',
   );
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-    'content',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL',
-  );
   late final GeneratedColumn<int> timestamp = GeneratedColumn<int>(
     'timestamp',
     aliasedName,
@@ -221,14 +213,6 @@ class MessageRows extends Table with TableInfo {
     requiredDuringInsert: false,
     $customConstraints: 'NOT NULL DEFAULT 0 CHECK (is_streaming IN (0, 1))',
     defaultValue: const CustomExpression('0'),
-  );
-  late final GeneratedColumn<String> reasoningText = GeneratedColumn<String>(
-    'reasoning_text',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    $customConstraints: 'NULL',
   );
   late final GeneratedColumn<int> reasoningStartAt = GeneratedColumn<int>(
     'reasoning_start_at',
@@ -325,13 +309,11 @@ class MessageRows extends Table with TableInfo {
     id,
     conversationId,
     role,
-    content,
     timestamp,
     modelId,
     providerId,
     totalTokens,
     isStreaming,
-    reasoningText,
     reasoningStartAt,
     reasoningFinishedAt,
     translation,
@@ -489,6 +471,15 @@ class MessagePartRows extends Table with TableInfo {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   MessagePartRows(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumn<int> partId = GeneratedColumn<int>(
+    'part_id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL PRIMARY KEY AUTOINCREMENT',
+  );
   late final GeneratedColumn<String> conversationId = GeneratedColumn<String>(
     'conversation_id',
     aliasedName,
@@ -520,7 +511,7 @@ class MessagePartRows extends Table with TableInfo {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     $customConstraints:
-        'NOT NULL CHECK (kind IN (\'text\', \'reasoning\', \'tool_call\', \'tool_result\'))',
+        'NOT NULL CHECK (kind IN (\'text\', \'reasoning\', \'tool_call\'))',
   );
   late final GeneratedColumn<String> payload = GeneratedColumn<String>(
     'payload',
@@ -548,6 +539,7 @@ class MessagePartRows extends Table with TableInfo {
   );
   @override
   List<GeneratedColumn> get $columns => [
+    partId,
     conversationId,
     revisionId,
     ordinal,
@@ -562,10 +554,10 @@ class MessagePartRows extends Table with TableInfo {
   String get actualTableName => $name;
   static const String $name = 'message_part_rows';
   @override
-  Set<GeneratedColumn> get $primaryKey => {revisionId, ordinal};
+  Set<GeneratedColumn> get $primaryKey => {partId};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {conversationId, revisionId, ordinal},
+    {revisionId, ordinal},
   ];
   @override
   Never map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -579,8 +571,7 @@ class MessagePartRows extends Table with TableInfo {
 
   @override
   List<String> get customConstraints => const [
-    'PRIMARY KEY(revision_id, ordinal)',
-    'UNIQUE(conversation_id, revision_id, ordinal)',
+    'UNIQUE(revision_id, ordinal)',
     'FOREIGN KEY(revision_id)REFERENCES message_rows(id)ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED',
     'CHECK(updated_at >= created_at)',
   ];

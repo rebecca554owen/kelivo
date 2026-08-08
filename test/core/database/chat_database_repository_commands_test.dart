@@ -52,69 +52,6 @@ void main() {
     );
   }
 
-  test(
-    'legacy append persists conversation and selection without active JSON',
-    () async {
-      final persisted = await repository.appendMessageToConversation(
-        conversation: conversation(),
-        message: message(
-          id: 'message-1',
-          groupId: 'group-1',
-          version: 1,
-          isStreaming: true,
-        ),
-        selectVersion: true,
-      );
-
-      expect(persisted.messageIds, const ['message-1']);
-      expect(persisted.versionSelections, const {'group-1': 1});
-      expect((await repository.getConversation('conversation-1'))?.messageIds, [
-        'message-1',
-      ]);
-      expect(await repository.getActiveStreamingIds(), isEmpty);
-    },
-  );
-
-  test(
-    'append rolls back the conversation when message validation fails',
-    () async {
-      await expectLater(
-        repository.appendMessageToConversation(
-          conversation: conversation(),
-          message: message(id: 'message-1', role: ''),
-        ),
-        throwsA(
-          predicate<Object>(
-            (error) =>
-                error.toString().contains('CHECK constraint failed: role'),
-          ),
-        ),
-      );
-
-      expect(await repository.getConversation('conversation-1'), isNull);
-      expect(await repository.getMessage('message-1'), isNull);
-      expect(await repository.getActiveStreamingIds(), isEmpty);
-    },
-  );
-
-  test(
-    'concurrent appends allocate unique order inside transactions',
-    () async {
-      final base = conversation();
-      await Future.wait([
-        for (var index = 0; index < 12; index++)
-          repository.appendMessageToConversation(
-            conversation: base,
-            message: message(id: 'message-$index'),
-          ),
-      ]);
-
-      final ids = await repository.getMessageIds('conversation-1');
-      expect(ids, hasLength(12));
-      expect(ids.toSet(), hasLength(12));
-    },
-  );
-
   test('append version selects the new row in the linear group', () async {
     await repository.appendLinearMessageToConversation(
       conversation: conversation(),
@@ -177,7 +114,7 @@ void main() {
     'concurrent selection and append commands preserve unrelated state',
     () async {
       final base = conversation();
-      await repository.appendMessageToConversation(
+      await repository.appendLinearMessageToConversation(
         conversation: base,
         message: message(id: 'message-0'),
       );
@@ -193,7 +130,7 @@ void main() {
           groupId: 'group-2',
           version: 2,
         ),
-        repository.appendMessageToConversation(
+        repository.appendLinearMessageToConversation(
           conversation: base,
           message: message(id: 'message-1'),
         ),
@@ -207,30 +144,6 @@ void main() {
         'message-0',
         'message-1',
       ]);
-    },
-  );
-
-  test(
-    'fork command rolls back its earlier rows when a later message fails',
-    () async {
-      await expectLater(
-        repository.createConversationWithMessages(
-          conversation: conversation(id: 'fork'),
-          messages: [
-            message(id: 'message-1', conversationId: 'fork'),
-            message(id: 'message-2', conversationId: 'fork', role: ''),
-          ],
-        ),
-        throwsA(
-          predicate<Object>(
-            (error) =>
-                error.toString().contains('CHECK constraint failed: role'),
-          ),
-        ),
-      );
-
-      expect(await repository.getConversation('fork'), isNull);
-      expect(await repository.getMessage('message-1'), isNull);
     },
   );
 
@@ -361,7 +274,7 @@ void main() {
     'final checkpoint stores content, tools and streaming receipt atomically',
     () async {
       final streaming = message(id: 'message-1', isStreaming: true);
-      await repository.appendMessageToConversation(
+      await repository.appendLinearMessageToConversation(
         conversation: conversation(),
         message: streaming,
       );

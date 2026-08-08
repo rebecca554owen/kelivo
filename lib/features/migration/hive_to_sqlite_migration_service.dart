@@ -155,6 +155,11 @@ class HiveToSqliteMigrationService {
       ];
 
   final HiveToSqliteMigrationDecision decision;
+
+  /// Invoked after all batches are written and immediately before [_validate].
+  /// Tests use this to corrupt the temporary database and assert rollback.
+  @visibleForTesting
+  Future<void> Function(ChatDatabaseRepository repo)? debugBeforeValidateForTest;
   final RestoreDurability _durability;
   final _controller = StreamController<HiveToSqliteMigrationStatus>.broadcast();
   final _log = <String>[];
@@ -432,6 +437,8 @@ class HiveToSqliteMigrationService {
         (sum, conversation) => sum + conversation.messageIds.length,
       );
       var migratedMessages = 0;
+      var expectedToolCallParts = 0;
+      final expectedTextContentDigest = Uint8List(32);
       _emit(
         HiveToSqliteMigrationStage.migrating,
         0.04,
@@ -511,10 +518,16 @@ class HiveToSqliteMigrationService {
             }
             batch.add((message: message, messageOrder: order));
             order++;
+            ChatDatabaseRepository.mixTextPartContentDigest(
+              expectedTextContentDigest,
+              message.id,
+              message.content,
+            );
             if (toolEventsBox != null) {
               final events = await _toolEventsFor(toolEventsBox, message.id);
               if (events.isNotEmpty) {
                 toolEventsByMessageId[message.id] = events;
+                expectedToolCallParts += events.length;
               }
               final signature = await _signatureFor(toolEventsBox, message.id);
               if (signature != null) {
@@ -588,7 +601,21 @@ class HiveToSqliteMigrationService {
         conversations: conversations.length,
         messages: migratedMessages,
       );
-      await _validate(repo, conversations.length, migratedMessages);
+      final beforeValidate = debugBeforeValidateForTest;
+      if (beforeValidate != null) {
+        await beforeValidate(repo);
+      }
+      await _validate(
+        repo,
+        expectedConversations: conversations.length,
+        expectedMessages: migratedMessages,
+        expectedTextContentDigest: ChatDatabaseRepository.textPartContentDigestHex(
+          expectedTextContentDigest,
+        ),
+        expectedToolCallParts: expectedToolCallParts,
+        backupPath: backupPath,
+        migratedMessages: migratedMessages,
+      );
       await repo.markMigrationComplete();
       await repo.checkpoint();
       await repo.close();
@@ -1301,16 +1328,74 @@ class HiveToSqliteMigrationService {
   }
 
   Future<void> _validate(
-    ChatDatabaseRepository repo,
-    int expectedConversations,
-    int expectedMessages,
-  ) async {
+    ChatDatabaseRepository repo, {
+    required int expectedConversations,
+    required int expectedMessages,
+    required String expectedTextContentDigest,
+    required int expectedToolCallParts,
+    String? backupPath,
+    int migratedMessages = 0,
+  }) async {
     final conversationCount = await repo.getConversationCount();
-    final messageCount = await repo.getTotalMessageCount();
-    if (conversationCount != expectedConversations ||
-        messageCount != expectedMessages) {
+    if (conversationCount != expectedConversations) {
       throw StateError(
-        'Migration validation failed: expected $expectedConversations conversations / $expectedMessages messages, got $conversationCount / $messageCount.',
+        'Migration validation failed (conversation count): '
+        'expected $expectedConversations, got $conversationCount.',
+      );
+    }
+    final messageCount = await repo.getTotalMessageCount();
+    if (messageCount != expectedMessages) {
+      throw StateError(
+        'Migration validation failed (message count): '
+        'expected $expectedMessages, got $messageCount.',
+      );
+    }
+    final textPartCount = await repo.getTextPartCount();
+    if (textPartCount != expectedMessages) {
+      throw StateError(
+        'Migration validation failed (text part count): '
+        'expected $expectedMessages, got $textPartCount.',
+      );
+    }
+    final toolCallPartCount = await repo.getToolCallPartCount();
+    if (toolCallPartCount != expectedToolCallParts) {
+      throw StateError(
+        'Migration validation failed (tool_call part count): '
+        'expected $expectedToolCallParts, got $toolCallPartCount.',
+      );
+    }
+    // Digest scans multi-GB payloads on a worker isolate; map byte progress
+    // into the remaining validate window so the migration bar keeps moving.
+    var lastDigestProgressEmit = DateTime.fromMillisecondsSinceEpoch(0);
+    final textContentDigest = await repo.getTextPartContentDigest(
+      onProgress: (processedChars, totalChars) {
+        final now = DateTime.now();
+        final isDone = totalChars > 0 && processedChars >= totalChars;
+        if (!isDone &&
+            now.difference(lastDigestProgressEmit) <
+                const Duration(milliseconds: 100)) {
+          return;
+        }
+        lastDigestProgressEmit = now;
+        final fraction = totalChars <= 0
+            ? 1.0
+            : (processedChars / totalChars).clamp(0.0, 1.0);
+        _emit(
+          HiveToSqliteMigrationStage.migrating,
+          0.98 + 0.015 * fraction,
+          'migrate',
+          'validate',
+          backupPath: backupPath,
+          backupItems: _lastBackupItems,
+          conversations: expectedConversations,
+          messages: migratedMessages,
+        );
+      },
+    );
+    if (textContentDigest != expectedTextContentDigest) {
+      throw StateError(
+        'Migration validation failed (text content digest): '
+        'expected $expectedTextContentDigest, got $textContentDigest.',
       );
     }
   }

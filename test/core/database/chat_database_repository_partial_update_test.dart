@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
@@ -120,6 +121,45 @@ void main() {
     expect(await repository.getToolEvents(message.id), [
       {'id': 'tool-1', 'content': 'tool output'},
     ]);
+
+    final raw = sqlite.sqlite3.open('${root.path}/partial.sqlite');
+    try {
+      expect(
+        raw
+            .select(
+              "SELECT COUNT(*) AS c FROM message_part_rows "
+              "WHERE kind = 'tool_result';",
+            )
+            .single['c'],
+        0,
+      );
+      expect(
+        raw
+            .select(
+              "SELECT kind FROM message_part_rows "
+              "WHERE revision_id = '${message.id}' ORDER BY ordinal;",
+            )
+            .map((row) => row['kind']),
+        const ['reasoning', 'tool_call', 'text'],
+      );
+    } finally {
+      raw.close();
+    }
+  });
+
+  test('content-only update does not clear reasoning parts', () async {
+    final message = await seedMessage();
+
+    final updated = await repository.updateMessageFields(
+      message.id,
+      content: 'new body only',
+    );
+    expect(updated!.content, 'new body only');
+    expect(updated.reasoningText, 'original reasoning');
+
+    final reloaded = await repository.getMessage(message.id);
+    expect(reloaded!.content, 'new body only');
+    expect(reloaded.reasoningText, 'original reasoning');
   });
 
   test('returns null when the message does not exist', () async {

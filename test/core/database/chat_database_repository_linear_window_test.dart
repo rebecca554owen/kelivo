@@ -270,6 +270,61 @@ void main() {
         'assistant-tail',
       ]);
       expect(projections.first.content, 'ignored ');
+      expect(projections.first.content.length, 8);
+    },
+  );
+
+  test(
+    'selected message projections read truncated text from message parts',
+    () async {
+      final root = await Directory.systemTemp.createTemp(
+        'projection_parts_test_',
+      );
+      final dbFile = File('${root.path}/chat.sqlite');
+      const conversationId = 'conversation';
+      const messageId = 'msg-1';
+      const partText = 'abcdefghij';
+      final repository = ChatDatabaseRepository.open(file: dbFile);
+      addTearDown(() async {
+        await repository.close();
+        if (await root.exists()) await root.delete(recursive: true);
+      });
+      await repository.ensureReady();
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Projections',
+            messageIds: const [messageId],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'user',
+              content: partText,
+              conversationId: conversationId,
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final projections = await repository.getSelectedMessageProjections(
+        conversationId,
+        summaryCharacters: 5,
+      );
+      expect(projections, hasLength(1));
+      expect(projections.single.content, 'abcde');
+
+      final untruncated = await repository.getSelectedMessageProjections(
+        conversationId,
+        summaryCharacters: 200,
+      );
+      expect(untruncated.single.content, partText);
     },
   );
 }
