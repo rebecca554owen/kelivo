@@ -77,8 +77,7 @@ class _MemoryTab extends StatelessWidget {
                           decoration: InputDecoration(
                             hintText: l10n.assistantEditMemoryDialogHint,
                             filled: true,
-                            fillColor:
-                                ctx.appColors.surfaceFill,
+                            fillColor: ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -330,17 +329,17 @@ class _MemoryTab extends StatelessWidget {
                 context,
                 icon: Lucide.History,
                 label: l10n.assistantEditRecentChatsSwitchTitle,
-                value: a.enableRecentChatsReference,
+                value: a.allowPastConversationRecall,
                 onChanged: (v) async {
                   await context.read<AssistantProvider>().updateAssistant(
-                    a.copyWith(enableRecentChatsReference: v),
+                    a.copyWith(allowPastConversationRecall: v),
                   );
                 },
               ),
               AnimatedSize(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
-                child: a.enableRecentChatsReference
+                child: a.allowPastConversationRecall
                     ? Column(
                         children: [
                           _iosDivider(context),
@@ -679,8 +678,7 @@ class _MemoryTab extends StatelessWidget {
                           decoration: InputDecoration(
                             hintText: l10n.assistantEditSummaryDialogHint,
                             filled: true,
-                            fillColor:
-                                ctx.appColors.surfaceFill,
+                            fillColor: ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color: cs.outlineVariant.withValues(alpha: 0.2),

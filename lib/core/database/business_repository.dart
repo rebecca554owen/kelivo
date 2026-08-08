@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../models/memory_entry.dart';
 import 'app_database.dart';
 import 'business_data.dart';
 
@@ -415,8 +416,10 @@ WHERE id IN ($placeholders);
 ''', ids.toList(growable: false));
   }
 
+  /// The `content_normalized` projection must match the model's rule exactly,
+  /// or dedupe lookups silently miss rows that differ only in whitespace.
   static String normalizeMemoryContent(String content) =>
-      content.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+      MemoryEntry.normalizeContent(content);
 
   Future<void> _deleteEntity(BusinessEntityKind kind, String id) =>
       _database.customStatement(

@@ -702,7 +702,7 @@ class MessageBuilderService {
 ''');
         _appendToSystemMessage(apiMessages, buf.toString());
       }
-      if (assistant?.enableRecentChatsReference == true) {
+      if (assistant?.allowPastConversationRecall == true) {
         final chats = chatService.getAllConversations();
         final relevantChats = chats
             .where(

@@ -1322,8 +1322,8 @@ class HomeViewModel extends ChangeNotifier {
 
     final budget = assistant?.thinkingBudget ?? settings.thinkingBudget;
 
-    // Only generate summary if assistant has recent chats reference enabled
-    if (assistant?.enableRecentChatsReference != true) return;
+    // Only generate summary when past-conversation recall is enabled (§4.1).
+    if (assistant?.allowPastConversationRecall != true) return;
 
     final triggerMessageCount =
         assistant?.recentChatsSummaryMessageCount ??
