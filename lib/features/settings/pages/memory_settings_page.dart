@@ -12,6 +12,7 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import 'legacy_memory_page.dart';
 import 'memory_entries_page.dart';
+import 'memory_trace_page.dart';
 import 'user_profile_page.dart';
 
 /// Global memory settings (§4.2 / §14.4): model, thinking, prompt lang, templates.
@@ -152,6 +153,15 @@ class MemorySettingsContent extends StatelessWidget {
                 );
               },
             ),
+            _NavRow(
+              title: l10n.memoryTraceSettingsTitle,
+              subtitle: l10n.memoryTraceSettingsSubtitle,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MemoryTracePage()),
+                );
+              },
+            ),
           ],
         ),
       ],
@@ -216,27 +226,28 @@ class _MemoryPromptEditPage extends StatefulWidget {
   State<_MemoryPromptEditPage> createState() => _MemoryPromptEditPageState();
 }
 
-class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs;
-  late final TextEditingController _zh;
-  late final TextEditingController _en;
-  TextEditingController? _batchZh;
-  TextEditingController? _batchEn;
+class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
+  /// The prompt this editor writes.
+  ///
+  /// Templates are stored per language, but only the one matching
+  /// [SettingsProvider.resolvedMemoryPromptLang] is ever sent to the model, so
+  /// editing the other one is busywork on a string the user will never see.
+  late final MemoryPromptLang _lang;
+  late final TextEditingController _main;
+
+  /// Smart Add runs a second, genuinely different prompt for batch candidates.
+  TextEditingController? _batch;
+
   bool _hydrated = false;
 
   bool get _isSmartAdd => widget.entry.kind == _PromptKind.smartAdd;
+  bool get _isZh => _lang == MemoryPromptLang.zh;
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: _isSmartAdd ? 4 : 2, vsync: this);
-    _zh = TextEditingController();
-    _en = TextEditingController();
-    if (_isSmartAdd) {
-      _batchZh = TextEditingController();
-      _batchEn = TextEditingController();
-    }
+    _main = TextEditingController();
+    if (_isSmartAdd) _batch = TextEditingController();
   }
 
   @override
@@ -245,54 +256,63 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage>
     if (_hydrated) return;
     _hydrated = true;
     final settings = context.read<SettingsProvider>();
-    final pair = _load(settings);
-    _zh.text = pair.$1;
-    _en.text = pair.$2;
+    _lang = settings.resolvedMemoryPromptLang;
+    _main.text = _load(settings);
     if (_isSmartAdd) {
-      _batchZh!.text = settings.memorySmartAddBatchPromptZh;
-      _batchEn!.text = settings.memorySmartAddBatchPromptEn;
+      _batch!.text = _isZh
+          ? settings.memorySmartAddBatchPromptZh
+          : settings.memorySmartAddBatchPromptEn;
     }
   }
 
-  (String, String) _load(SettingsProvider s) {
+  String _load(SettingsProvider s) {
     switch (widget.entry.kind) {
       case _PromptKind.rules:
-        return (s.memoryRulesPromptZh, s.memoryRulesPromptEn);
+        return _isZh ? s.memoryRulesPromptZh : s.memoryRulesPromptEn;
       case _PromptKind.gate:
-        return (s.memoryGatePromptZh, s.memoryGatePromptEn);
+        return _isZh ? s.memoryGatePromptZh : s.memoryGatePromptEn;
       case _PromptKind.extract:
-        return (s.memoryExtractPromptZh, s.memoryExtractPromptEn);
+        return _isZh ? s.memoryExtractPromptZh : s.memoryExtractPromptEn;
       case _PromptKind.smartAdd:
-        return (s.memorySmartAddPromptZh, s.memorySmartAddPromptEn);
+        return _isZh ? s.memorySmartAddPromptZh : s.memorySmartAddPromptEn;
       case _PromptKind.distill:
-        return (s.memoryProfileDistillPromptZh, s.memoryProfileDistillPromptEn);
+        return _isZh
+            ? s.memoryProfileDistillPromptZh
+            : s.memoryProfileDistillPromptEn;
     }
   }
 
   Future<void> _save() async {
     final s = context.read<SettingsProvider>();
+    final text = _main.text;
     switch (widget.entry.kind) {
       case _PromptKind.rules:
-        await s.setMemoryRulesPromptZh(_zh.text);
-        await s.setMemoryRulesPromptEn(_en.text);
+        await (_isZh
+            ? s.setMemoryRulesPromptZh(text)
+            : s.setMemoryRulesPromptEn(text));
         break;
       case _PromptKind.gate:
-        await s.setMemoryGatePromptZh(_zh.text);
-        await s.setMemoryGatePromptEn(_en.text);
+        await (_isZh
+            ? s.setMemoryGatePromptZh(text)
+            : s.setMemoryGatePromptEn(text));
         break;
       case _PromptKind.extract:
-        await s.setMemoryExtractPromptZh(_zh.text);
-        await s.setMemoryExtractPromptEn(_en.text);
+        await (_isZh
+            ? s.setMemoryExtractPromptZh(text)
+            : s.setMemoryExtractPromptEn(text));
         break;
       case _PromptKind.smartAdd:
-        await s.setMemorySmartAddPromptZh(_zh.text);
-        await s.setMemorySmartAddPromptEn(_en.text);
-        await s.setMemorySmartAddBatchPromptZh(_batchZh!.text);
-        await s.setMemorySmartAddBatchPromptEn(_batchEn!.text);
+        await (_isZh
+            ? s.setMemorySmartAddPromptZh(text)
+            : s.setMemorySmartAddPromptEn(text));
+        await (_isZh
+            ? s.setMemorySmartAddBatchPromptZh(_batch!.text)
+            : s.setMemorySmartAddBatchPromptEn(_batch!.text));
         break;
       case _PromptKind.distill:
-        await s.setMemoryProfileDistillPromptZh(_zh.text);
-        await s.setMemoryProfileDistillPromptEn(_en.text);
+        await (_isZh
+            ? s.setMemoryProfileDistillPromptZh(text)
+            : s.setMemoryProfileDistillPromptEn(text));
         break;
     }
     if (mounted) Navigator.of(context).maybePop();
@@ -302,38 +322,44 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage>
     final s = context.read<SettingsProvider>();
     switch (widget.entry.kind) {
       case _PromptKind.rules:
-        await s.resetMemoryRulesPromptZh();
-        await s.resetMemoryRulesPromptEn();
-        _zh.text = MemoryPrompts.rulesZh;
-        _en.text = MemoryPrompts.rulesEn;
+        await (_isZh
+            ? s.resetMemoryRulesPromptZh()
+            : s.resetMemoryRulesPromptEn());
+        _main.text = _isZh ? MemoryPrompts.rulesZh : MemoryPrompts.rulesEn;
         break;
       case _PromptKind.gate:
-        await s.resetMemoryGatePromptZh();
-        await s.resetMemoryGatePromptEn();
-        _zh.text = MemoryPrompts.gateZh;
-        _en.text = MemoryPrompts.gateEn;
+        await (_isZh
+            ? s.resetMemoryGatePromptZh()
+            : s.resetMemoryGatePromptEn());
+        _main.text = _isZh ? MemoryPrompts.gateZh : MemoryPrompts.gateEn;
         break;
       case _PromptKind.extract:
-        await s.resetMemoryExtractPromptZh();
-        await s.resetMemoryExtractPromptEn();
-        _zh.text = MemoryPrompts.extractZh;
-        _en.text = MemoryPrompts.extractEn;
+        await (_isZh
+            ? s.resetMemoryExtractPromptZh()
+            : s.resetMemoryExtractPromptEn());
+        _main.text = _isZh ? MemoryPrompts.extractZh : MemoryPrompts.extractEn;
         break;
       case _PromptKind.smartAdd:
-        await s.resetMemorySmartAddPromptZh();
-        await s.resetMemorySmartAddPromptEn();
-        await s.resetMemorySmartAddBatchPromptZh();
-        await s.resetMemorySmartAddBatchPromptEn();
-        _zh.text = MemoryPrompts.smartAddZh;
-        _en.text = MemoryPrompts.smartAddEn;
-        _batchZh!.text = MemoryPrompts.smartAddBatchZh;
-        _batchEn!.text = MemoryPrompts.smartAddBatchEn;
+        await (_isZh
+            ? s.resetMemorySmartAddPromptZh()
+            : s.resetMemorySmartAddPromptEn());
+        await (_isZh
+            ? s.resetMemorySmartAddBatchPromptZh()
+            : s.resetMemorySmartAddBatchPromptEn());
+        _main.text = _isZh
+            ? MemoryPrompts.smartAddZh
+            : MemoryPrompts.smartAddEn;
+        _batch!.text = _isZh
+            ? MemoryPrompts.smartAddBatchZh
+            : MemoryPrompts.smartAddBatchEn;
         break;
       case _PromptKind.distill:
-        await s.resetMemoryProfileDistillPromptZh();
-        await s.resetMemoryProfileDistillPromptEn();
-        _zh.text = MemoryPrompts.profileDistillZh;
-        _en.text = MemoryPrompts.profileDistillEn;
+        await (_isZh
+            ? s.resetMemoryProfileDistillPromptZh()
+            : s.resetMemoryProfileDistillPromptEn());
+        _main.text = _isZh
+            ? MemoryPrompts.profileDistillZh
+            : MemoryPrompts.profileDistillEn;
         break;
     }
     setState(() {});
@@ -341,11 +367,8 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage>
 
   @override
   void dispose() {
-    _tabs.dispose();
-    _zh.dispose();
-    _en.dispose();
-    _batchZh?.dispose();
-    _batchEn?.dispose();
+    _main.dispose();
+    _batch?.dispose();
     super.dispose();
   }
 
@@ -353,42 +376,90 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final labels = _isSmartAdd
-        ? [
-            l10n.memoryPromptEditTabPerItemZh,
-            l10n.memoryPromptEditTabPerItemEn,
-            l10n.memoryPromptEditTabBatchZh,
-            l10n.memoryPromptEditTabBatchEn,
-          ]
-        : [l10n.memoryPromptEditTabZh, l10n.memoryPromptEditTabEn];
 
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: IosIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            minSize: 44,
+            semanticLabel: l10n.settingsPageBackButton,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
+        ),
         title: Text(widget.entry.title),
         actions: [
-          TextButton(
-            onPressed: _reset,
-            child: Text(l10n.memoryPromptEditReset),
+          Tooltip(
+            message: l10n.memoryPromptEditReset,
+            child: IosIconButton(
+              icon: Lucide.RotateCcw,
+              color: cs.onSurface,
+              size: 20,
+              minSize: 44,
+              semanticLabel: l10n.memoryPromptEditReset,
+              onTap: _reset,
+            ),
           ),
-          TextButton(onPressed: _save, child: Text(l10n.memoryPromptEditSave)),
+          Tooltip(
+            message: l10n.memoryPromptEditSave,
+            child: IosIconButton(
+              icon: Lucide.Check,
+              color: cs.primary,
+              size: 20,
+              minSize: 44,
+              semanticLabel: l10n.memoryPromptEditSave,
+              onTap: _save,
+            ),
+          ),
+          const SizedBox(width: 4),
         ],
-        bottom: TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabs: [for (final t in labels) Tab(text: t)],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabs,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          _PromptField(controller: _zh),
-          _PromptField(controller: _en),
+          Text(
+            widget.entry.subtitle,
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: cs.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 14),
           if (_isSmartAdd) ...[
-            _PromptField(controller: _batchZh!),
-            _PromptField(controller: _batchEn!),
+            _PromptFieldLabel(text: l10n.memoryPromptEditSectionPerItem),
+            const SizedBox(height: 6),
+          ],
+          _PromptField(controller: _main),
+          if (_isSmartAdd) ...[
+            const SizedBox(height: 18),
+            _PromptFieldLabel(text: l10n.memoryPromptEditSectionBatch),
+            const SizedBox(height: 6),
+            _PromptField(controller: _batch!),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _PromptFieldLabel extends StatelessWidget {
+  const _PromptFieldLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12.5,
+        fontWeight: AppFontWeights.semibold,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
       ),
     );
   }
@@ -402,32 +473,23 @@ class _PromptField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appColors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.28)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       child: TextField(
         controller: controller,
         maxLines: null,
-        expands: true,
+        minLines: 12,
         textAlignVertical: TextAlignVertical.top,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: context.appColors.surfaceFill,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: cs.outlineVariant.withValues(alpha: 0.4),
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: cs.outlineVariant.withValues(alpha: 0.4),
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: cs.primary.withValues(alpha: 0.5)),
-          ),
+        style: TextStyle(fontSize: 13.5, height: 1.5, color: cs.onSurface),
+        decoration: const InputDecoration(
+          isCollapsed: true,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );

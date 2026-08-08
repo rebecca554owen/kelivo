@@ -8,8 +8,12 @@ import '../../../core/models/user_profile_field.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/custom_bottom_sheet.dart';
+import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../widgets/memory_ui.dart';
 
 /// Structured user profile fields (§14.4 / §5.7).
 class UserProfilePage extends StatelessWidget {
@@ -86,104 +90,35 @@ class _UserProfileContentState extends State<UserProfileContent> {
     bool isCustom = false,
   }) async {
     final l10n = AppLocalizations.of(context)!;
-    final keyCtrl = TextEditingController(
-      text: (isCustom && current == null) ? 'custom.' : key,
-    );
-    final valueCtrl = TextEditingController(text: current ?? '');
-    var cleared = false;
+    final isNewCustom = isCustom && current == null;
 
-    final saved = await showDialog<bool>(
+    final result = await showCustomBottomSheet<_ProfileFieldResult>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(
-            isCustom && current == null
-                ? l10n.userProfileAddCustom
-                : (isCustom ? key : _knownLabel(l10n, key)),
-          ),
-          content: SizedBox(
-            width: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isCustom && current == null)
-                    TextField(
-                      controller: keyCtrl,
-                      decoration: InputDecoration(
-                        hintText: l10n.userProfileCustomKeyHint,
-                        filled: true,
-                        fillColor: ctx.appColors.surfaceFill,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  if (isCustom && current == null) const SizedBox(height: 10),
-                  TextField(
-                    controller: valueCtrl,
-                    autofocus: true,
-                    minLines: 1,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: l10n.userProfileCustomValueHint,
-                      filled: true,
-                      fillColor: ctx.appColors.surfaceFill,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  if (key == 'preferred_name') ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.userProfilePreferredNameHint,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: Theme.of(
-                          ctx,
-                        ).colorScheme.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            if (current != null && current.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  cleared = true;
-                  Navigator.of(ctx).pop(true);
-                },
-                child: Text(l10n.userProfileClear),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(l10n.assistantEditEmojiDialogCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(l10n.userProfileSave),
-            ),
-          ],
-        );
-      },
+      title: isNewCustom
+          ? l10n.userProfileAddCustom
+          : (isCustom ? key : _knownLabel(l10n, key)),
+      closeSemanticLabel: l10n.mcpPageClose,
+      // Pinned footer: the panel must be fully visible from the start.
+      partialHeightFactor: 0.55,
+      expandedHeightFactor: 0.55,
+      builder: (ctx, scrollController) => _ProfileFieldForm(
+        scrollController: scrollController,
+        fieldKey: key,
+        initialValue: current ?? '',
+        isNewCustom: isNewCustom,
+        canClear: current != null && current.isNotEmpty,
+        description: key == 'preferred_name'
+            ? l10n.userProfilePreferredNameHint
+            : null,
+      ),
     );
 
-    final targetKey = (isCustom && current == null) ? keyCtrl.text.trim() : key;
-    final value = valueCtrl.text.trim();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      keyCtrl.dispose();
-      valueCtrl.dispose();
-    });
-    if (saved != true || !mounted) return;
+    if (result == null || !mounted) return;
 
+    final targetKey = isNewCustom ? result.key.trim() : key;
+    final value = result.value.trim();
     final mp = context.read<MemoryProviderV2>();
-    if (cleared || value.isEmpty) {
+    if (result.cleared || value.isEmpty) {
       if (UserProfileField.isValidKey(targetKey)) {
         await mp.removeProfileField(targetKey);
       }
@@ -303,6 +238,145 @@ class _UserProfileContentState extends State<UserProfileContent> {
           ),
         ]),
       ],
+    );
+  }
+}
+
+class _ProfileFieldResult {
+  const _ProfileFieldResult({
+    required this.key,
+    required this.value,
+    this.cleared = false,
+  });
+
+  final String key;
+  final String value;
+  final bool cleared;
+}
+
+class _ProfileFieldForm extends StatefulWidget {
+  const _ProfileFieldForm({
+    required this.scrollController,
+    required this.fieldKey,
+    required this.initialValue,
+    required this.isNewCustom,
+    required this.canClear,
+    this.description,
+  });
+
+  final ScrollController scrollController;
+  final String fieldKey;
+  final String initialValue;
+  final bool isNewCustom;
+  final bool canClear;
+  final String? description;
+
+  @override
+  State<_ProfileFieldForm> createState() => _ProfileFieldFormState();
+}
+
+class _ProfileFieldFormState extends State<_ProfileFieldForm> {
+  late final TextEditingController _key;
+  late final TextEditingController _value;
+
+  @override
+  void initState() {
+    super.initState();
+    _key = TextEditingController(
+      text: widget.isNewCustom ? 'custom.' : widget.fieldKey,
+    );
+    _value = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _key.dispose();
+    _value.dispose();
+    super.dispose();
+  }
+
+  void _pop({bool cleared = false}) {
+    Navigator.of(context).pop(
+      _ProfileFieldResult(
+        key: _key.text,
+        value: cleared ? '' : _value.text,
+        cleared: cleared,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              controller: widget.scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              children: [
+                MemorySectionCard(
+                  children: [
+                    if (widget.isNewCustom)
+                      IosFormTextField(
+                        label: l10n.memoryUiCustomKeyLabel,
+                        controller: _key,
+                        hintText: l10n.userProfileCustomKeyHint,
+                        inlineLabel: false,
+                        textAlign: TextAlign.start,
+                        textInputAction: TextInputAction.next,
+                      ),
+                    IosFormTextField(
+                      label: l10n.memoryUiValueLabel,
+                      controller: _value,
+                      hintText: l10n.userProfileCustomValueHint,
+                      minLines: 1,
+                      maxLines: 4,
+                      inlineLabel: false,
+                      autofocus: true,
+                      textAlign: TextAlign.start,
+                    ),
+                  ],
+                ),
+                if (widget.description != null) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      widget.description!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.62),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: MemorySheetActions(
+              confirmLabel: l10n.userProfileSave,
+              onCancel: () => Navigator.of(context).maybePop(),
+              onConfirm: _pop,
+              extraAction: widget.canClear
+                  ? IosTileButton(
+                      label: l10n.userProfileClear,
+                      icon: Lucide.Trash2,
+                      backgroundColor: cs.error,
+                      onTap: () => _pop(cleared: true),
+                    )
+                  : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

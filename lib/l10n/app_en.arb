@@ -2447,12 +2447,8 @@
   "memoryPromptEditDistillSubtitle": "Distills identity memories into profile fields",
   "memoryPromptEditReset": "Reset to default",
   "memoryPromptEditSave": "Save",
-  "memoryPromptEditTabZh": "Chinese",
-  "memoryPromptEditTabEn": "English",
-  "memoryPromptEditTabPerItemZh": "Per-item · ZH",
-  "memoryPromptEditTabPerItemEn": "Per-item · EN",
-  "memoryPromptEditTabBatchZh": "Batched · ZH",
-  "memoryPromptEditTabBatchEn": "Batched · EN",
+  "memoryPromptEditSectionPerItem": "Per-item prompt",
+  "memoryPromptEditSectionBatch": "Batched prompt",
   "memorySettingsEntriesSection": "All memories",
   "memorySettingsEntriesTitle": "Memory list",
   "memorySettingsEntriesSubtitle": "Browse, edit, archive, and delete memories",
@@ -2610,6 +2606,15 @@
     }
   },
   "legacyMemorySearchHint": "Search legacy memories",
+  "memoryUiContentLabel": "Content",
+  "memoryUiValueLabel": "Value",
+  "memoryUiCustomKeyLabel": "Key",
+  "memoryUiStatusLabel": "Status",
+  "memoryUiAssistantLabel": "Assistant",
+  "memoryUiAssistantAll": "All assistants",
+  "memoryUiSearchClear": "Clear search",
+  "memoryUiAssistantLegacyTitle": "Legacy memories (read-only)",
+  "memoryUiAssistantLegacySubtitle": "Old memories of this assistant from previous versions",
   "assistantEditMemorySwitchTitle": "Use long-term memory",
   "assistantEditAutoOrganizeTitle": "Auto-organize memory",
   "assistantEditAutoOrganizeSubtitle": "Run the memory pipeline after chats",
@@ -2933,5 +2938,111 @@
   "imageSettingsPageCustomQualityTitle": "Compression Quality",
   "imageSettingsPageCompressTransparentTitle": "Compress Transparent & Animated Images",
   "imageSettingsPageCompressTransparentSubtitle": "When enabled, transparent PNG, GIF, and similar formats are compressed; transparent areas become white and animations keep only the first frame.",
-  "imageSettingsPageFooter": "Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files."
+  "imageSettingsPageFooter": "Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.",
+  "memoryTraceSettingsTitle": "Pipeline Traces",
+  "memoryTraceSettingsSubtitle": "Inspect every background memory run step by step",
+  "memoryTracePageTitle": "Memory Pipeline Traces",
+  "memoryTraceRecordingSection": "Recording",
+  "memoryTraceToggleTitle": "Record pipeline traces",
+  "memoryTraceToggleSubtitle": "Keeps prompts, responses and changes of recent background runs in memory only",
+  "memoryTraceRunsSection": "Recent runs",
+  "memoryTraceEmptyTitle": "No traces yet",
+  "memoryTraceEmptySubtitle": "Traces appear here after the background memory pipeline runs.",
+  "memoryTraceDisabledTitle": "Recording is off",
+  "memoryTraceDisabledSubtitle": "Turn recording on to capture the next background memory run.",
+  "memoryTraceClearAction": "Clear",
+  "memoryTraceClearSheetTitle": "Clear traces",
+  "memoryTraceClearSheetMessage": "This removes every recorded trace. Traces are never written to disk, so nothing else is affected.",
+  "memoryTraceClearConfirm": "Clear traces",
+  "memoryTraceCancel": "Cancel",
+  "memoryTraceClearedToast": "Traces cleared",
+  "memoryTraceCopyAction": "Copy",
+  "memoryTraceCopiedToast": "Copied to clipboard",
+  "memoryTraceTriggerAuto": "Auto",
+  "memoryTraceTriggerManual": "Manual",
+  "memoryTraceTriggerTool": "Tool call",
+  "memoryTraceTriggerSummary": "Summary",
+  "memoryTraceScopeAssistant": "Assistant",
+  "memoryTraceScopeGlobal": "Global",
+  "memoryTraceStepGatekeeper": "Gatekeeper",
+  "memoryTraceStepExtract": "Extract",
+  "memoryTraceStepSmartAdd": "Smart Add",
+  "memoryTraceStepDistiller": "Profile Distiller",
+  "memoryTraceStepSummary": "Conversation Summary",
+  "memoryTraceStepChatSearch": "Past Conversation Recall",
+  "memoryTraceStepTool": "Memory Tool",
+  "memoryTraceStatusSuccess": "Success",
+  "memoryTraceStatusFailed": "Failed",
+  "memoryTraceStatusSkipped": "Skipped",
+  "memoryTraceStatusRunning": "Running",
+  "memoryTraceOutcomeAdvanced": "Watermark advanced",
+  "memoryTraceOutcomeHeld": "Watermark held",
+  "memoryTraceOutcomeForced": "Forced advance",
+  "memoryTraceDetailTitle": "Trace detail",
+  "memoryTraceSectionOverview": "Overview",
+  "memoryTraceSectionPrompt": "Prompt",
+  "memoryTraceSectionResponse": "Raw response",
+  "memoryTraceSectionParsed": "Parsed result",
+  "memoryTraceSectionMutations": "Changes applied",
+  "memoryTraceFieldTime": "Started",
+  "memoryTraceFieldDuration": "Duration",
+  "memoryTraceFieldTrigger": "Trigger",
+  "memoryTraceFieldScope": "Scope",
+  "memoryTraceFieldConversation": "Chat",
+  "memoryTraceFieldAssistant": "Assistant",
+  "memoryTraceFieldWindow": "Window",
+  "memoryTraceFieldWatermark": "Watermark",
+  "memoryTraceFieldOutcome": "Outcome",
+  "memoryTraceFieldError": "Error",
+  "memoryTraceMutationCreated": "Created",
+  "memoryTraceMutationMerged": "Merged",
+  "memoryTraceMutationEdited": "Edited",
+  "memoryTraceMutationArchived": "Archived",
+  "memoryTraceMutationLinked": "Linked",
+  "memoryTraceMutationProfileWritten": "Profile field written",
+  "memoryTraceMutationProfileCleared": "Profile field cleared",
+  "memoryTraceMutationSummary": "Chat summary written",
+  "memoryTraceBefore": "Before",
+  "memoryTraceAfter": "After",
+  "memoryTraceEmptyValue": "(empty)",
+  "memoryTraceStepsCount": "{count} steps",
+  "@memoryTraceStepsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceMutationsCount": "{count} changes",
+  "@memoryTraceMutationsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceRepeatCount": "repeated {count}×",
+  "@memoryTraceRepeatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceWindowValue": "{size} messages · #{start}–#{end}",
+  "@memoryTraceWindowValue": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      },
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceShowMore": "Show full text",
+  "memoryTraceShowLess": "Collapse"
 }

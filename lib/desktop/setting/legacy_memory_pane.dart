@@ -8,7 +8,10 @@ import '../../theme/app_font_weights.dart';
 
 /// Desktop right-side pane for read-only legacy memories (§14.5).
 class DesktopLegacyMemoryPane extends StatelessWidget {
-  const DesktopLegacyMemoryPane({super.key});
+  const DesktopLegacyMemoryPane({super.key, this.assistantId});
+
+  /// When set, only legacy memories of that assistant are listed.
+  final String? assistantId;
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +41,19 @@ class DesktopLegacyMemoryPane extends StatelessWidget {
                   color: cs.onSurface,
                   size: 18,
                   minSize: 36,
-                  onTap: () => LegacyMemoryContent.exportAll(context),
+                  onTap: () => LegacyMemoryContent.exportAll(
+                    context,
+                    assistantId: assistantId,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const Expanded(
+        Expanded(
           child: LegacyMemoryContent(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            assistantId: assistantId,
           ),
         ),
       ],

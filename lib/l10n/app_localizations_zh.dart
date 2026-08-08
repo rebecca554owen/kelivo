@@ -5636,22 +5636,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryPromptEditSave => '保存';
 
   @override
-  String get memoryPromptEditTabZh => '中文';
+  String get memoryPromptEditSectionPerItem => '逐条提示词';
 
   @override
-  String get memoryPromptEditTabEn => 'English';
-
-  @override
-  String get memoryPromptEditTabPerItemZh => '逐条 · 中文';
-
-  @override
-  String get memoryPromptEditTabPerItemEn => '逐条 · EN';
-
-  @override
-  String get memoryPromptEditTabBatchZh => '合并 · 中文';
-
-  @override
-  String get memoryPromptEditTabBatchEn => '合并 · EN';
+  String get memoryPromptEditSectionBatch => '合并提示词';
 
   @override
   String get memorySettingsEntriesSection => '全部记忆';
@@ -5967,6 +5955,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get legacyMemorySearchHint => '搜索旧版记忆';
+
+  @override
+  String get memoryUiContentLabel => '内容';
+
+  @override
+  String get memoryUiValueLabel => '值';
+
+  @override
+  String get memoryUiCustomKeyLabel => '键名';
+
+  @override
+  String get memoryUiStatusLabel => '状态';
+
+  @override
+  String get memoryUiAssistantLabel => '助手';
+
+  @override
+  String get memoryUiAssistantAll => '全部助手';
+
+  @override
+  String get memoryUiSearchClear => '清除搜索';
+
+  @override
+  String get memoryUiAssistantLegacyTitle => '旧版记忆（只读）';
+
+  @override
+  String get memoryUiAssistantLegacySubtitle => '该助手来自旧版本的记忆';
 
   @override
   String get assistantEditMemorySwitchTitle => '使用长期记忆';
@@ -6567,6 +6582,230 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get imageSettingsPageFooter =>
       '压缩在添加图片时进行，已保存或已发送的图片不受影响；压缩后图片以 JPEG 格式随消息发送。';
+
+  @override
+  String get memoryTraceSettingsTitle => '流程追踪';
+
+  @override
+  String get memoryTraceSettingsSubtitle => '逐步查看每次后台记忆处理的全过程';
+
+  @override
+  String get memoryTracePageTitle => '记忆流程追踪';
+
+  @override
+  String get memoryTraceRecordingSection => '记录';
+
+  @override
+  String get memoryTraceToggleTitle => '记录流程追踪';
+
+  @override
+  String get memoryTraceToggleSubtitle => '仅在内存中保留最近几次后台运行的提示词、模型回复与实际改动';
+
+  @override
+  String get memoryTraceRunsSection => '最近运行';
+
+  @override
+  String get memoryTraceEmptyTitle => '暂无追踪记录';
+
+  @override
+  String get memoryTraceEmptySubtitle => '后台记忆流程运行后，记录会显示在这里。';
+
+  @override
+  String get memoryTraceDisabledTitle => '记录已关闭';
+
+  @override
+  String get memoryTraceDisabledSubtitle => '开启记录后，下一次后台记忆运行才会被捕获。';
+
+  @override
+  String get memoryTraceClearAction => '清空';
+
+  @override
+  String get memoryTraceClearSheetTitle => '清空追踪记录';
+
+  @override
+  String get memoryTraceClearSheetMessage => '将删除所有已记录的追踪。追踪从不写入磁盘，因此不会影响其他数据。';
+
+  @override
+  String get memoryTraceClearConfirm => '清空记录';
+
+  @override
+  String get memoryTraceCancel => '取消';
+
+  @override
+  String get memoryTraceClearedToast => '追踪记录已清空';
+
+  @override
+  String get memoryTraceCopyAction => '复制';
+
+  @override
+  String get memoryTraceCopiedToast => '已复制到剪贴板';
+
+  @override
+  String get memoryTraceTriggerAuto => '自动';
+
+  @override
+  String get memoryTraceTriggerManual => '手动';
+
+  @override
+  String get memoryTraceTriggerTool => '工具调用';
+
+  @override
+  String get memoryTraceTriggerSummary => '对话摘要';
+
+  @override
+  String get memoryTraceScopeAssistant => '助手';
+
+  @override
+  String get memoryTraceScopeGlobal => '全局';
+
+  @override
+  String get memoryTraceStepGatekeeper => '守门判断';
+
+  @override
+  String get memoryTraceStepExtract => '记忆抽取';
+
+  @override
+  String get memoryTraceStepSmartAdd => '智能写入';
+
+  @override
+  String get memoryTraceStepDistiller => '用户画像提炼';
+
+  @override
+  String get memoryTraceStepSummary => '对话摘要生成';
+
+  @override
+  String get memoryTraceStepChatSearch => '历史对话检索';
+
+  @override
+  String get memoryTraceStepTool => '记忆工具';
+
+  @override
+  String get memoryTraceStatusSuccess => '成功';
+
+  @override
+  String get memoryTraceStatusFailed => '失败';
+
+  @override
+  String get memoryTraceStatusSkipped => '跳过';
+
+  @override
+  String get memoryTraceStatusRunning => '进行中';
+
+  @override
+  String get memoryTraceOutcomeAdvanced => '水位已推进';
+
+  @override
+  String get memoryTraceOutcomeHeld => '水位未推进';
+
+  @override
+  String get memoryTraceOutcomeForced => '强制推进';
+
+  @override
+  String get memoryTraceDetailTitle => '追踪详情';
+
+  @override
+  String get memoryTraceSectionOverview => '概览';
+
+  @override
+  String get memoryTraceSectionPrompt => '提示词';
+
+  @override
+  String get memoryTraceSectionResponse => '原始回复';
+
+  @override
+  String get memoryTraceSectionParsed => '解析结果';
+
+  @override
+  String get memoryTraceSectionMutations => '实际改动';
+
+  @override
+  String get memoryTraceFieldTime => '开始时间';
+
+  @override
+  String get memoryTraceFieldDuration => '耗时';
+
+  @override
+  String get memoryTraceFieldTrigger => '触发方式';
+
+  @override
+  String get memoryTraceFieldScope => '作用范围';
+
+  @override
+  String get memoryTraceFieldConversation => '对话';
+
+  @override
+  String get memoryTraceFieldAssistant => '助手';
+
+  @override
+  String get memoryTraceFieldWindow => '消息窗口';
+
+  @override
+  String get memoryTraceFieldWatermark => '水位';
+
+  @override
+  String get memoryTraceFieldOutcome => '结果';
+
+  @override
+  String get memoryTraceFieldError => '错误';
+
+  @override
+  String get memoryTraceMutationCreated => '新建';
+
+  @override
+  String get memoryTraceMutationMerged => '合并';
+
+  @override
+  String get memoryTraceMutationEdited => '修改';
+
+  @override
+  String get memoryTraceMutationArchived => '归档';
+
+  @override
+  String get memoryTraceMutationLinked => '关联';
+
+  @override
+  String get memoryTraceMutationProfileWritten => '写入画像字段';
+
+  @override
+  String get memoryTraceMutationProfileCleared => '清除画像字段';
+
+  @override
+  String get memoryTraceMutationSummary => '写入对话摘要';
+
+  @override
+  String get memoryTraceBefore => '改动前';
+
+  @override
+  String get memoryTraceAfter => '改动后';
+
+  @override
+  String get memoryTraceEmptyValue => '（空）';
+
+  @override
+  String memoryTraceStepsCount(int count) {
+    return '$count 个步骤';
+  }
+
+  @override
+  String memoryTraceMutationsCount(int count) {
+    return '$count 项改动';
+  }
+
+  @override
+  String memoryTraceRepeatCount(int count) {
+    return '重复 $count 次';
+  }
+
+  @override
+  String memoryTraceWindowValue(int size, int start, int end) {
+    return '$size 条消息 · #$start–#$end';
+  }
+
+  @override
+  String get memoryTraceShowMore => '展开全文';
+
+  @override
+  String get memoryTraceShowLess => '收起';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -12201,22 +12440,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memoryPromptEditSave => '保存';
 
   @override
-  String get memoryPromptEditTabZh => '中文';
+  String get memoryPromptEditSectionPerItem => '逐条提示词';
 
   @override
-  String get memoryPromptEditTabEn => 'English';
-
-  @override
-  String get memoryPromptEditTabPerItemZh => '逐条 · 中文';
-
-  @override
-  String get memoryPromptEditTabPerItemEn => '逐条 · EN';
-
-  @override
-  String get memoryPromptEditTabBatchZh => '合并 · 中文';
-
-  @override
-  String get memoryPromptEditTabBatchEn => '合并 · EN';
+  String get memoryPromptEditSectionBatch => '合并提示词';
 
   @override
   String get memorySettingsEntriesSection => '全部记忆';
@@ -12532,6 +12759,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get legacyMemorySearchHint => '搜索旧版记忆';
+
+  @override
+  String get memoryUiContentLabel => '内容';
+
+  @override
+  String get memoryUiValueLabel => '值';
+
+  @override
+  String get memoryUiCustomKeyLabel => '键名';
+
+  @override
+  String get memoryUiStatusLabel => '状态';
+
+  @override
+  String get memoryUiAssistantLabel => '助手';
+
+  @override
+  String get memoryUiAssistantAll => '全部助手';
+
+  @override
+  String get memoryUiSearchClear => '清除搜索';
+
+  @override
+  String get memoryUiAssistantLegacyTitle => '旧版记忆（只读）';
+
+  @override
+  String get memoryUiAssistantLegacySubtitle => '该助手来自旧版本的记忆';
 
   @override
   String get assistantEditMemorySwitchTitle => '使用长期记忆';
@@ -13132,6 +13386,230 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get imageSettingsPageFooter =>
       '压缩在添加图片时进行，已保存或已发送的图片不受影响；压缩后图片以 JPEG 格式随消息发送。';
+
+  @override
+  String get memoryTraceSettingsTitle => '流程追踪';
+
+  @override
+  String get memoryTraceSettingsSubtitle => '逐步查看每次后台记忆处理的全过程';
+
+  @override
+  String get memoryTracePageTitle => '记忆流程追踪';
+
+  @override
+  String get memoryTraceRecordingSection => '记录';
+
+  @override
+  String get memoryTraceToggleTitle => '记录流程追踪';
+
+  @override
+  String get memoryTraceToggleSubtitle => '仅在内存中保留最近几次后台运行的提示词、模型回复与实际改动';
+
+  @override
+  String get memoryTraceRunsSection => '最近运行';
+
+  @override
+  String get memoryTraceEmptyTitle => '暂无追踪记录';
+
+  @override
+  String get memoryTraceEmptySubtitle => '后台记忆流程运行后，记录会显示在这里。';
+
+  @override
+  String get memoryTraceDisabledTitle => '记录已关闭';
+
+  @override
+  String get memoryTraceDisabledSubtitle => '开启记录后，下一次后台记忆运行才会被捕获。';
+
+  @override
+  String get memoryTraceClearAction => '清空';
+
+  @override
+  String get memoryTraceClearSheetTitle => '清空追踪记录';
+
+  @override
+  String get memoryTraceClearSheetMessage => '将删除所有已记录的追踪。追踪从不写入磁盘，因此不会影响其他数据。';
+
+  @override
+  String get memoryTraceClearConfirm => '清空记录';
+
+  @override
+  String get memoryTraceCancel => '取消';
+
+  @override
+  String get memoryTraceClearedToast => '追踪记录已清空';
+
+  @override
+  String get memoryTraceCopyAction => '复制';
+
+  @override
+  String get memoryTraceCopiedToast => '已复制到剪贴板';
+
+  @override
+  String get memoryTraceTriggerAuto => '自动';
+
+  @override
+  String get memoryTraceTriggerManual => '手动';
+
+  @override
+  String get memoryTraceTriggerTool => '工具调用';
+
+  @override
+  String get memoryTraceTriggerSummary => '对话摘要';
+
+  @override
+  String get memoryTraceScopeAssistant => '助手';
+
+  @override
+  String get memoryTraceScopeGlobal => '全局';
+
+  @override
+  String get memoryTraceStepGatekeeper => '守门判断';
+
+  @override
+  String get memoryTraceStepExtract => '记忆抽取';
+
+  @override
+  String get memoryTraceStepSmartAdd => '智能写入';
+
+  @override
+  String get memoryTraceStepDistiller => '用户画像提炼';
+
+  @override
+  String get memoryTraceStepSummary => '对话摘要生成';
+
+  @override
+  String get memoryTraceStepChatSearch => '历史对话检索';
+
+  @override
+  String get memoryTraceStepTool => '记忆工具';
+
+  @override
+  String get memoryTraceStatusSuccess => '成功';
+
+  @override
+  String get memoryTraceStatusFailed => '失败';
+
+  @override
+  String get memoryTraceStatusSkipped => '跳过';
+
+  @override
+  String get memoryTraceStatusRunning => '进行中';
+
+  @override
+  String get memoryTraceOutcomeAdvanced => '水位已推进';
+
+  @override
+  String get memoryTraceOutcomeHeld => '水位未推进';
+
+  @override
+  String get memoryTraceOutcomeForced => '强制推进';
+
+  @override
+  String get memoryTraceDetailTitle => '追踪详情';
+
+  @override
+  String get memoryTraceSectionOverview => '概览';
+
+  @override
+  String get memoryTraceSectionPrompt => '提示词';
+
+  @override
+  String get memoryTraceSectionResponse => '原始回复';
+
+  @override
+  String get memoryTraceSectionParsed => '解析结果';
+
+  @override
+  String get memoryTraceSectionMutations => '实际改动';
+
+  @override
+  String get memoryTraceFieldTime => '开始时间';
+
+  @override
+  String get memoryTraceFieldDuration => '耗时';
+
+  @override
+  String get memoryTraceFieldTrigger => '触发方式';
+
+  @override
+  String get memoryTraceFieldScope => '作用范围';
+
+  @override
+  String get memoryTraceFieldConversation => '对话';
+
+  @override
+  String get memoryTraceFieldAssistant => '助手';
+
+  @override
+  String get memoryTraceFieldWindow => '消息窗口';
+
+  @override
+  String get memoryTraceFieldWatermark => '水位';
+
+  @override
+  String get memoryTraceFieldOutcome => '结果';
+
+  @override
+  String get memoryTraceFieldError => '错误';
+
+  @override
+  String get memoryTraceMutationCreated => '新建';
+
+  @override
+  String get memoryTraceMutationMerged => '合并';
+
+  @override
+  String get memoryTraceMutationEdited => '修改';
+
+  @override
+  String get memoryTraceMutationArchived => '归档';
+
+  @override
+  String get memoryTraceMutationLinked => '关联';
+
+  @override
+  String get memoryTraceMutationProfileWritten => '写入画像字段';
+
+  @override
+  String get memoryTraceMutationProfileCleared => '清除画像字段';
+
+  @override
+  String get memoryTraceMutationSummary => '写入对话摘要';
+
+  @override
+  String get memoryTraceBefore => '改动前';
+
+  @override
+  String get memoryTraceAfter => '改动后';
+
+  @override
+  String get memoryTraceEmptyValue => '（空）';
+
+  @override
+  String memoryTraceStepsCount(int count) {
+    return '$count 个步骤';
+  }
+
+  @override
+  String memoryTraceMutationsCount(int count) {
+    return '$count 项改动';
+  }
+
+  @override
+  String memoryTraceRepeatCount(int count) {
+    return '重复 $count 次';
+  }
+
+  @override
+  String memoryTraceWindowValue(int size, int start, int end) {
+    return '$size 条消息 · #$start–#$end';
+  }
+
+  @override
+  String get memoryTraceShowMore => '展开全文';
+
+  @override
+  String get memoryTraceShowLess => '收起';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18766,22 +19244,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memoryPromptEditSave => '儲存';
 
   @override
-  String get memoryPromptEditTabZh => '中文';
+  String get memoryPromptEditSectionPerItem => '逐條提示詞';
 
   @override
-  String get memoryPromptEditTabEn => 'English';
-
-  @override
-  String get memoryPromptEditTabPerItemZh => '逐條 · 中文';
-
-  @override
-  String get memoryPromptEditTabPerItemEn => '逐條 · EN';
-
-  @override
-  String get memoryPromptEditTabBatchZh => '合併 · 中文';
-
-  @override
-  String get memoryPromptEditTabBatchEn => '合併 · EN';
+  String get memoryPromptEditSectionBatch => '合併提示詞';
 
   @override
   String get memorySettingsEntriesSection => '全部記憶';
@@ -19097,6 +19563,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get legacyMemorySearchHint => '搜尋舊版記憶';
+
+  @override
+  String get memoryUiContentLabel => '內容';
+
+  @override
+  String get memoryUiValueLabel => '值';
+
+  @override
+  String get memoryUiCustomKeyLabel => '鍵名';
+
+  @override
+  String get memoryUiStatusLabel => '狀態';
+
+  @override
+  String get memoryUiAssistantLabel => '助手';
+
+  @override
+  String get memoryUiAssistantAll => '全部助手';
+
+  @override
+  String get memoryUiSearchClear => '清除搜尋';
+
+  @override
+  String get memoryUiAssistantLegacyTitle => '舊版記憶（唯讀）';
+
+  @override
+  String get memoryUiAssistantLegacySubtitle => '該助手來自舊版本的記憶';
 
   @override
   String get assistantEditMemorySwitchTitle => '使用長期記憶';
@@ -19697,4 +20190,228 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get imageSettingsPageFooter =>
       '壓縮會在加入圖片時進行，已儲存或已傳送的圖片不受影響；壓縮後圖片會以 JPEG 格式隨訊息傳送。';
+
+  @override
+  String get memoryTraceSettingsTitle => '流程追蹤';
+
+  @override
+  String get memoryTraceSettingsSubtitle => '逐步檢視每次背景記憶處理的完整過程';
+
+  @override
+  String get memoryTracePageTitle => '記憶流程追蹤';
+
+  @override
+  String get memoryTraceRecordingSection => '記錄';
+
+  @override
+  String get memoryTraceToggleTitle => '記錄流程追蹤';
+
+  @override
+  String get memoryTraceToggleSubtitle => '僅在記憶體中保留最近幾次背景執行的提示詞、模型回覆與實際變更';
+
+  @override
+  String get memoryTraceRunsSection => '最近執行';
+
+  @override
+  String get memoryTraceEmptyTitle => '尚無追蹤記錄';
+
+  @override
+  String get memoryTraceEmptySubtitle => '背景記憶流程執行後，記錄會顯示在這裡。';
+
+  @override
+  String get memoryTraceDisabledTitle => '記錄已關閉';
+
+  @override
+  String get memoryTraceDisabledSubtitle => '開啟記錄後，下一次背景記憶執行才會被擷取。';
+
+  @override
+  String get memoryTraceClearAction => '清空';
+
+  @override
+  String get memoryTraceClearSheetTitle => '清空追蹤記錄';
+
+  @override
+  String get memoryTraceClearSheetMessage => '將刪除所有已記錄的追蹤。追蹤從不寫入磁碟，因此不會影響其他資料。';
+
+  @override
+  String get memoryTraceClearConfirm => '清空記錄';
+
+  @override
+  String get memoryTraceCancel => '取消';
+
+  @override
+  String get memoryTraceClearedToast => '追蹤記錄已清空';
+
+  @override
+  String get memoryTraceCopyAction => '複製';
+
+  @override
+  String get memoryTraceCopiedToast => '已複製到剪貼簿';
+
+  @override
+  String get memoryTraceTriggerAuto => '自動';
+
+  @override
+  String get memoryTraceTriggerManual => '手動';
+
+  @override
+  String get memoryTraceTriggerTool => '工具呼叫';
+
+  @override
+  String get memoryTraceTriggerSummary => '對話摘要';
+
+  @override
+  String get memoryTraceScopeAssistant => '助手';
+
+  @override
+  String get memoryTraceScopeGlobal => '全域';
+
+  @override
+  String get memoryTraceStepGatekeeper => '守門判斷';
+
+  @override
+  String get memoryTraceStepExtract => '記憶擷取';
+
+  @override
+  String get memoryTraceStepSmartAdd => '智慧寫入';
+
+  @override
+  String get memoryTraceStepDistiller => '使用者輪廓提煉';
+
+  @override
+  String get memoryTraceStepSummary => '對話摘要生成';
+
+  @override
+  String get memoryTraceStepChatSearch => '歷史對話檢索';
+
+  @override
+  String get memoryTraceStepTool => '記憶工具';
+
+  @override
+  String get memoryTraceStatusSuccess => '成功';
+
+  @override
+  String get memoryTraceStatusFailed => '失敗';
+
+  @override
+  String get memoryTraceStatusSkipped => '略過';
+
+  @override
+  String get memoryTraceStatusRunning => '進行中';
+
+  @override
+  String get memoryTraceOutcomeAdvanced => '水位已推進';
+
+  @override
+  String get memoryTraceOutcomeHeld => '水位未推進';
+
+  @override
+  String get memoryTraceOutcomeForced => '強制推進';
+
+  @override
+  String get memoryTraceDetailTitle => '追蹤詳情';
+
+  @override
+  String get memoryTraceSectionOverview => '概覽';
+
+  @override
+  String get memoryTraceSectionPrompt => '提示詞';
+
+  @override
+  String get memoryTraceSectionResponse => '原始回覆';
+
+  @override
+  String get memoryTraceSectionParsed => '解析結果';
+
+  @override
+  String get memoryTraceSectionMutations => '實際變更';
+
+  @override
+  String get memoryTraceFieldTime => '開始時間';
+
+  @override
+  String get memoryTraceFieldDuration => '耗時';
+
+  @override
+  String get memoryTraceFieldTrigger => '觸發方式';
+
+  @override
+  String get memoryTraceFieldScope => '作用範圍';
+
+  @override
+  String get memoryTraceFieldConversation => '對話';
+
+  @override
+  String get memoryTraceFieldAssistant => '助手';
+
+  @override
+  String get memoryTraceFieldWindow => '訊息視窗';
+
+  @override
+  String get memoryTraceFieldWatermark => '水位';
+
+  @override
+  String get memoryTraceFieldOutcome => '結果';
+
+  @override
+  String get memoryTraceFieldError => '錯誤';
+
+  @override
+  String get memoryTraceMutationCreated => '新增';
+
+  @override
+  String get memoryTraceMutationMerged => '合併';
+
+  @override
+  String get memoryTraceMutationEdited => '修改';
+
+  @override
+  String get memoryTraceMutationArchived => '封存';
+
+  @override
+  String get memoryTraceMutationLinked => '關聯';
+
+  @override
+  String get memoryTraceMutationProfileWritten => '寫入輪廓欄位';
+
+  @override
+  String get memoryTraceMutationProfileCleared => '清除輪廓欄位';
+
+  @override
+  String get memoryTraceMutationSummary => '寫入對話摘要';
+
+  @override
+  String get memoryTraceBefore => '變更前';
+
+  @override
+  String get memoryTraceAfter => '變更後';
+
+  @override
+  String get memoryTraceEmptyValue => '（空）';
+
+  @override
+  String memoryTraceStepsCount(int count) {
+    return '$count 個步驟';
+  }
+
+  @override
+  String memoryTraceMutationsCount(int count) {
+    return '$count 項變更';
+  }
+
+  @override
+  String memoryTraceRepeatCount(int count) {
+    return '重複 $count 次';
+  }
+
+  @override
+  String memoryTraceWindowValue(int size, int start, int end) {
+    return '$size 則訊息 · #$start–#$end';
+  }
+
+  @override
+  String get memoryTraceShowMore => '展開全文';
+
+  @override
+  String get memoryTraceShowLess => '收合';
 }

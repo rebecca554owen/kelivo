@@ -20,6 +20,8 @@ import 'package:Kelivo/core/services/memory/memory_pipeline.dart';
 import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/tts/tts_playback_models.dart';
 import 'package:Kelivo/features/assistant/pages/assistant_settings_edit_page.dart';
+import 'package:Kelivo/features/settings/pages/legacy_memory_page.dart';
+import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
 import '../../../support/business_test_harness.dart';
@@ -246,6 +248,67 @@ void main() {
       find.text('Long-term memory is off for this assistant'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('add memory sheet opens and cancels without throwing', (
+    tester,
+  ) async {
+    final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+    _setLargeSurface(tester);
+    await ap.updateAssistant(
+      ap.getById(_assistantId)!.copyWith(enableMemory: true),
+    );
+
+    await tester.pumpWidget(
+      _buildHarness(
+        assistantProvider: ap,
+        chatService: chat,
+        memoryV2: memoryV2,
+        pipeline: pipeline,
+        child: const AssistantSettingsEditPage(assistantId: _assistantId),
+      ),
+    );
+    await _openMemoryTab(tester);
+
+    final addButton = find.text('Add memory').hitTestable();
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    expect(find.byType(MemoryEntryEditForm), findsOneWidget);
+
+    // Cancelling used to throw "TextEditingController was used after being
+    // disposed" while the sheet was still animating out.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MemoryEntryEditForm), findsNothing);
+    expect(tester.takeException(), isNull);
+    expect(memoryV2.entries, isEmpty);
+  });
+
+  testWidgets('memory tab links to this assistant\'s legacy memories', (
+    tester,
+  ) async {
+    final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+    _setLargeSurface(tester);
+
+    await tester.pumpWidget(
+      _buildHarness(
+        assistantProvider: ap,
+        chatService: chat,
+        memoryV2: memoryV2,
+        pipeline: pipeline,
+        child: const AssistantSettingsEditPage(assistantId: _assistantId),
+      ),
+    );
+    await _openMemoryTab(tester);
+
+    final legacyRow = find.text('Legacy memories (read-only)').hitTestable();
+    await tester.ensureVisible(legacyRow);
+    await tester.tap(legacyRow);
+    await tester.pumpAndSettle();
+
+    final page = tester.widget<LegacyMemoryPage>(find.byType(LegacyMemoryPage));
+    expect(page.assistantId, _assistantId);
   });
 
   testWidgets('write scope and dedupe chips persist', (tester) async {

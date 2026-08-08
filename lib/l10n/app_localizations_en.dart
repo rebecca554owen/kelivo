@@ -5867,22 +5867,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPromptEditSave => 'Save';
 
   @override
-  String get memoryPromptEditTabZh => 'Chinese';
+  String get memoryPromptEditSectionPerItem => 'Per-item prompt';
 
   @override
-  String get memoryPromptEditTabEn => 'English';
-
-  @override
-  String get memoryPromptEditTabPerItemZh => 'Per-item · ZH';
-
-  @override
-  String get memoryPromptEditTabPerItemEn => 'Per-item · EN';
-
-  @override
-  String get memoryPromptEditTabBatchZh => 'Batched · ZH';
-
-  @override
-  String get memoryPromptEditTabBatchEn => 'Batched · EN';
+  String get memoryPromptEditSectionBatch => 'Batched prompt';
 
   @override
   String get memorySettingsEntriesSection => 'All memories';
@@ -6212,6 +6200,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legacyMemorySearchHint => 'Search legacy memories';
+
+  @override
+  String get memoryUiContentLabel => 'Content';
+
+  @override
+  String get memoryUiValueLabel => 'Value';
+
+  @override
+  String get memoryUiCustomKeyLabel => 'Key';
+
+  @override
+  String get memoryUiStatusLabel => 'Status';
+
+  @override
+  String get memoryUiAssistantLabel => 'Assistant';
+
+  @override
+  String get memoryUiAssistantAll => 'All assistants';
+
+  @override
+  String get memoryUiSearchClear => 'Clear search';
+
+  @override
+  String get memoryUiAssistantLegacyTitle => 'Legacy memories (read-only)';
+
+  @override
+  String get memoryUiAssistantLegacySubtitle =>
+      'Old memories of this assistant from previous versions';
 
   @override
   String get assistantEditMemorySwitchTitle => 'Use long-term memory';
@@ -6843,4 +6859,233 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get imageSettingsPageFooter =>
       'Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.';
+
+  @override
+  String get memoryTraceSettingsTitle => 'Pipeline Traces';
+
+  @override
+  String get memoryTraceSettingsSubtitle =>
+      'Inspect every background memory run step by step';
+
+  @override
+  String get memoryTracePageTitle => 'Memory Pipeline Traces';
+
+  @override
+  String get memoryTraceRecordingSection => 'Recording';
+
+  @override
+  String get memoryTraceToggleTitle => 'Record pipeline traces';
+
+  @override
+  String get memoryTraceToggleSubtitle =>
+      'Keeps prompts, responses and changes of recent background runs in memory only';
+
+  @override
+  String get memoryTraceRunsSection => 'Recent runs';
+
+  @override
+  String get memoryTraceEmptyTitle => 'No traces yet';
+
+  @override
+  String get memoryTraceEmptySubtitle =>
+      'Traces appear here after the background memory pipeline runs.';
+
+  @override
+  String get memoryTraceDisabledTitle => 'Recording is off';
+
+  @override
+  String get memoryTraceDisabledSubtitle =>
+      'Turn recording on to capture the next background memory run.';
+
+  @override
+  String get memoryTraceClearAction => 'Clear';
+
+  @override
+  String get memoryTraceClearSheetTitle => 'Clear traces';
+
+  @override
+  String get memoryTraceClearSheetMessage =>
+      'This removes every recorded trace. Traces are never written to disk, so nothing else is affected.';
+
+  @override
+  String get memoryTraceClearConfirm => 'Clear traces';
+
+  @override
+  String get memoryTraceCancel => 'Cancel';
+
+  @override
+  String get memoryTraceClearedToast => 'Traces cleared';
+
+  @override
+  String get memoryTraceCopyAction => 'Copy';
+
+  @override
+  String get memoryTraceCopiedToast => 'Copied to clipboard';
+
+  @override
+  String get memoryTraceTriggerAuto => 'Auto';
+
+  @override
+  String get memoryTraceTriggerManual => 'Manual';
+
+  @override
+  String get memoryTraceTriggerTool => 'Tool call';
+
+  @override
+  String get memoryTraceTriggerSummary => 'Summary';
+
+  @override
+  String get memoryTraceScopeAssistant => 'Assistant';
+
+  @override
+  String get memoryTraceScopeGlobal => 'Global';
+
+  @override
+  String get memoryTraceStepGatekeeper => 'Gatekeeper';
+
+  @override
+  String get memoryTraceStepExtract => 'Extract';
+
+  @override
+  String get memoryTraceStepSmartAdd => 'Smart Add';
+
+  @override
+  String get memoryTraceStepDistiller => 'Profile Distiller';
+
+  @override
+  String get memoryTraceStepSummary => 'Conversation Summary';
+
+  @override
+  String get memoryTraceStepChatSearch => 'Past Conversation Recall';
+
+  @override
+  String get memoryTraceStepTool => 'Memory Tool';
+
+  @override
+  String get memoryTraceStatusSuccess => 'Success';
+
+  @override
+  String get memoryTraceStatusFailed => 'Failed';
+
+  @override
+  String get memoryTraceStatusSkipped => 'Skipped';
+
+  @override
+  String get memoryTraceStatusRunning => 'Running';
+
+  @override
+  String get memoryTraceOutcomeAdvanced => 'Watermark advanced';
+
+  @override
+  String get memoryTraceOutcomeHeld => 'Watermark held';
+
+  @override
+  String get memoryTraceOutcomeForced => 'Forced advance';
+
+  @override
+  String get memoryTraceDetailTitle => 'Trace detail';
+
+  @override
+  String get memoryTraceSectionOverview => 'Overview';
+
+  @override
+  String get memoryTraceSectionPrompt => 'Prompt';
+
+  @override
+  String get memoryTraceSectionResponse => 'Raw response';
+
+  @override
+  String get memoryTraceSectionParsed => 'Parsed result';
+
+  @override
+  String get memoryTraceSectionMutations => 'Changes applied';
+
+  @override
+  String get memoryTraceFieldTime => 'Started';
+
+  @override
+  String get memoryTraceFieldDuration => 'Duration';
+
+  @override
+  String get memoryTraceFieldTrigger => 'Trigger';
+
+  @override
+  String get memoryTraceFieldScope => 'Scope';
+
+  @override
+  String get memoryTraceFieldConversation => 'Chat';
+
+  @override
+  String get memoryTraceFieldAssistant => 'Assistant';
+
+  @override
+  String get memoryTraceFieldWindow => 'Window';
+
+  @override
+  String get memoryTraceFieldWatermark => 'Watermark';
+
+  @override
+  String get memoryTraceFieldOutcome => 'Outcome';
+
+  @override
+  String get memoryTraceFieldError => 'Error';
+
+  @override
+  String get memoryTraceMutationCreated => 'Created';
+
+  @override
+  String get memoryTraceMutationMerged => 'Merged';
+
+  @override
+  String get memoryTraceMutationEdited => 'Edited';
+
+  @override
+  String get memoryTraceMutationArchived => 'Archived';
+
+  @override
+  String get memoryTraceMutationLinked => 'Linked';
+
+  @override
+  String get memoryTraceMutationProfileWritten => 'Profile field written';
+
+  @override
+  String get memoryTraceMutationProfileCleared => 'Profile field cleared';
+
+  @override
+  String get memoryTraceMutationSummary => 'Chat summary written';
+
+  @override
+  String get memoryTraceBefore => 'Before';
+
+  @override
+  String get memoryTraceAfter => 'After';
+
+  @override
+  String get memoryTraceEmptyValue => '(empty)';
+
+  @override
+  String memoryTraceStepsCount(int count) {
+    return '$count steps';
+  }
+
+  @override
+  String memoryTraceMutationsCount(int count) {
+    return '$count changes';
+  }
+
+  @override
+  String memoryTraceRepeatCount(int count) {
+    return 'repeated $count×';
+  }
+
+  @override
+  String memoryTraceWindowValue(int size, int start, int end) {
+    return '$size messages · #$start–#$end';
+  }
+
+  @override
+  String get memoryTraceShowMore => 'Show full text';
+
+  @override
+  String get memoryTraceShowLess => 'Collapse';
 }

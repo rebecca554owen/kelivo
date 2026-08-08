@@ -22,129 +22,20 @@ class _MemoryTabState extends State<_MemoryTab> {
     });
   }
 
-  Future<void> _showAddEditSheet({MemoryEntry? existing}) async {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final controller = TextEditingController(text: existing?.content ?? '');
-    var type = existing?.type ?? MemoryType.identity;
-    var scope = existing?.scope ?? MemoryScope.global;
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            return AlertDialog(
-              title: Text(
-                existing == null
-                    ? l10n.memoryEntryCreateTitle
-                    : l10n.memoryEntryEditTitle,
-              ),
-              content: SizedBox(
-                width: 420,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: controller,
-                      minLines: 3,
-                      maxLines: 8,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        hintText: l10n.memoryEntryContentHint,
-                        filled: true,
-                        fillColor: ctx.appColors.surfaceFill,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    if (existing == null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.memoryEntryTypeLabel,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: AppFontWeights.semibold,
-                          color: cs.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final t in MemoryType.values)
-                            ChoiceChip(
-                              label: Text(memoryTypeLabel(l10n, t)),
-                              selected: type == t,
-                              onSelected: (_) => setLocal(() => type = t),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.memoryEntryScopeLabel,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: AppFontWeights.semibold,
-                          color: cs.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: Text(l10n.memoryEntryScopeGlobal),
-                            selected: scope == MemoryScope.global,
-                            onSelected: (_) =>
-                                setLocal(() => scope = MemoryScope.global),
-                          ),
-                          ChoiceChip(
-                            label: Text(l10n.memoryEntryScopeAssistant),
-                            selected: scope == MemoryScope.assistant,
-                            onSelected: (_) =>
-                                setLocal(() => scope = MemoryScope.assistant),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(l10n.assistantEditEmojiDialogCancel),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text(l10n.assistantEditEmojiDialogSave),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  Future<void> _showAddEditSheet({MemoryEntry? existing}) {
+    return showMemoryEntryEditor(
+      context,
+      existing: existing,
+      defaultAssistantId: widget.assistantId,
     );
+  }
 
-    final text = controller.text.trim();
-    controller.dispose();
-    if (saved != true || text.isEmpty || !mounted) return;
-    final mp = context.read<MemoryProviderV2>();
-    if (existing == null) {
-      await mp.create(
-        scope: scope,
-        assistantId: scope == MemoryScope.assistant ? widget.assistantId : null,
-        type: type,
-        content: text,
-        source: MemorySource.manual,
-      );
-    } else {
-      await mp.updateContent(existing.id, text);
-    }
+  void _goLegacyMemory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LegacyMemoryPage(assistantId: widget.assistantId),
+      ),
+    );
   }
 
   Future<void> _runOrganize() async {
@@ -483,6 +374,20 @@ class _MemoryTabState extends State<_MemoryTab> {
           ),
         ),
 
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: MemorySectionCard(
+            padding: EdgeInsets.zero,
+            children: [
+              MemoryNavRow(
+                title: l10n.memoryUiAssistantLegacyTitle,
+                subtitle: l10n.memoryUiAssistantLegacySubtitle,
+                onTap: _goLegacyMemory,
+              ),
+            ],
+          ),
+        ),
+
         if (!a.enableMemory)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -650,47 +555,24 @@ class _MemoryTabState extends State<_MemoryTab> {
     ChatService chatService,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: conversation.summary ?? '');
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.assistantEditSummaryDialogTitle),
-        content: TextField(
-          controller: controller,
-          minLines: 3,
-          maxLines: 10,
-          decoration: InputDecoration(
-            hintText: l10n.assistantEditSummaryDialogHint,
-            filled: true,
-            fillColor: ctx.appColors.surfaceFill,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.assistantEditEmojiDialogCancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              final text = controller.text.trim();
-              if (text.isEmpty) {
-                await chatService.clearConversationSummary(conversation.id);
-              } else {
-                await chatService.updateConversationSummary(
-                  conversation.id,
-                  text,
-                  conversation.lastSummarizedMessageCount,
-                );
-              }
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            },
-            child: Text(l10n.assistantEditEmojiDialogSave),
-          ),
-        ],
-      ),
+    final text = await _showMemoryTextSheet(
+      context,
+      title: l10n.assistantEditSummaryDialogTitle,
+      label: l10n.assistantEditSummaryDialogTitle,
+      hintText: l10n.assistantEditSummaryDialogHint,
+      initialValue: conversation.summary ?? '',
+      allowEmpty: true,
     );
-    controller.dispose();
+    if (text == null) return;
+    if (text.isEmpty) {
+      await chatService.clearConversationSummary(conversation.id);
+    } else {
+      await chatService.updateConversationSummary(
+        conversation.id,
+        text,
+        conversation.lastSummarizedMessageCount,
+      );
+    }
   }
 
   Future<void> _confirmDeleteSummary(
@@ -725,6 +607,149 @@ class _MemoryTabState extends State<_MemoryTab> {
   }
 }
 
+/// Text/number input sheet whose controller lives in a [State], so it survives
+/// the sheet's exit transition.
+Future<String?> _showMemoryTextSheet(
+  BuildContext context, {
+  required String title,
+  required String label,
+  required String initialValue,
+  String? hintText,
+  String? description,
+  int minLines = 3,
+  int maxLines = 10,
+  TextInputType? keyboardType,
+  bool allowEmpty = false,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  return showCustomBottomSheet<String>(
+    context: context,
+    title: title,
+    closeSemanticLabel: l10n.mcpPageClose,
+    // Pinned footer: the panel must be fully visible from the start.
+    partialHeightFactor: 0.55,
+    expandedHeightFactor: 0.55,
+    builder: (ctx, scrollController) => _MemoryTextInputForm(
+      scrollController: scrollController,
+      label: label,
+      hintText: hintText,
+      description: description,
+      initialValue: initialValue,
+      minLines: minLines,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      allowEmpty: allowEmpty,
+    ),
+  );
+}
+
+class _MemoryTextInputForm extends StatefulWidget {
+  const _MemoryTextInputForm({
+    required this.scrollController,
+    required this.label,
+    required this.initialValue,
+    required this.minLines,
+    required this.maxLines,
+    required this.allowEmpty,
+    this.hintText,
+    this.description,
+    this.keyboardType,
+  });
+
+  final ScrollController scrollController;
+  final String label;
+  final String initialValue;
+  final String? hintText;
+  final String? description;
+  final int minLines;
+  final int maxLines;
+  final TextInputType? keyboardType;
+  final bool allowEmpty;
+
+  @override
+  State<_MemoryTextInputForm> createState() => _MemoryTextInputFormState();
+}
+
+class _MemoryTextInputFormState extends State<_MemoryTextInputForm> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              controller: widget.scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              children: [
+                MemorySectionCard(
+                  children: [
+                    IosFormTextField(
+                      label: widget.label,
+                      controller: _controller,
+                      hintText: widget.hintText,
+                      minLines: widget.minLines,
+                      maxLines: widget.maxLines,
+                      inlineLabel: false,
+                      autofocus: true,
+                      textAlign: TextAlign.start,
+                      keyboardType: widget.keyboardType,
+                    ),
+                  ],
+                ),
+                if (widget.description != null) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      widget.description!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.62),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _controller,
+              builder: (context, value, _) => MemorySheetActions(
+                confirmLabel: l10n.userProfileSave,
+                confirmEnabled:
+                    widget.allowEmpty || value.text.trim().isNotEmpty,
+                onCancel: () => Navigator.of(context).maybePop(),
+                onConfirm: () =>
+                    Navigator.of(context).pop(_controller.text.trim()),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MemoryOrganizeFrequencySection extends StatelessWidget {
   const _MemoryOrganizeFrequencySection({required this.assistant});
 
@@ -734,42 +759,20 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
 
   Future<void> _showCustom(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(
-      text: assistant.memoryOrganizeEveryNTurns.toString(),
-    );
     final ap = context.read<AssistantProvider>();
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(l10n.assistantEditOrganizeFrequencyCustomTitle),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: l10n.assistantEditOrganizeFrequencyCustomLabel,
-              hintText: l10n.assistantEditOrganizeFrequencyCustomHint,
-              helperText: l10n.assistantEditOrganizeFrequencyCustomDescription,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(l10n.assistantEditEmojiDialogCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(l10n.assistantEditEmojiDialogSave),
-            ),
-          ],
-        );
-      },
+    final input = await _showMemoryTextSheet(
+      context,
+      title: l10n.assistantEditOrganizeFrequencyCustomTitle,
+      label: l10n.assistantEditOrganizeFrequencyCustomLabel,
+      hintText: l10n.assistantEditOrganizeFrequencyCustomHint,
+      description: l10n.assistantEditOrganizeFrequencyCustomDescription,
+      initialValue: assistant.memoryOrganizeEveryNTurns.toString(),
+      minLines: 1,
+      maxLines: 1,
+      keyboardType: TextInputType.number,
     );
-    final parsed = int.tryParse(controller.text.trim());
-    controller.dispose();
-    if (saved != true || parsed == null) return;
+    final parsed = input == null ? null : int.tryParse(input);
+    if (parsed == null) return;
     if (parsed < Assistant.minMemoryOrganizeEveryNTurns ||
         parsed > Assistant.maxMemoryOrganizeEveryNTurns) {
       if (context.mounted) {
@@ -845,7 +848,7 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
               children: [
                 ...options.map((count) {
                   final isSelected = count == selected;
-                  return _FrequencyChipButton(
+                  return MemorySelectChip(
                     label: l10n.assistantEditOrganizeFrequencyOption(count),
                     selected: isSelected,
                     onTap: isSelected
@@ -859,7 +862,7 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
                           },
                   );
                 }),
-                _FrequencyChipButton(
+                MemorySelectChip(
                   label: l10n.assistantEditOrganizeFrequencyCustomButton,
                   icon: Lucide.Pencil,
                   emphasized: true,
@@ -934,7 +937,7 @@ class _MemoryDedupeModeSection extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _FrequencyChipButton(
+                MemorySelectChip(
                   label: l10n.assistantEditDedupeModeBatched,
                   selected:
                       assistant.memorySmartAddMode ==
@@ -947,7 +950,7 @@ class _MemoryDedupeModeSection extends StatelessWidget {
                     );
                   },
                 ),
-                _FrequencyChipButton(
+                MemorySelectChip(
                   label: l10n.assistantEditDedupeModePerItem,
                   selected:
                       assistant.memorySmartAddMode ==
@@ -1046,7 +1049,7 @@ class _MemoryWriteScopeSection extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final item in items)
-                  _FrequencyChipButton(
+                  MemorySelectChip(
                     label: item.$2,
                     selected: assistant.memoryWriteScope == item.$1,
                     onTap: () async {
@@ -1071,42 +1074,19 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
 
   Future<void> _showCustomCountInput(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(
-      text: assistant.recentChatsSummaryMessageCount.toString(),
-    );
     final ap = context.read<AssistantProvider>();
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(l10n.assistantEditRecentChatsSummaryFrequencyCustomTitle),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText:
-                  l10n.assistantEditRecentChatsSummaryFrequencyCustomLabel,
-              hintText: l10n.assistantEditRecentChatsSummaryFrequencyCustomHint,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(l10n.assistantEditEmojiDialogCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(l10n.assistantEditEmojiDialogSave),
-            ),
-          ],
-        );
-      },
+    final input = await _showMemoryTextSheet(
+      context,
+      title: l10n.assistantEditRecentChatsSummaryFrequencyCustomTitle,
+      label: l10n.assistantEditRecentChatsSummaryFrequencyCustomLabel,
+      hintText: l10n.assistantEditRecentChatsSummaryFrequencyCustomHint,
+      initialValue: assistant.recentChatsSummaryMessageCount.toString(),
+      minLines: 1,
+      maxLines: 1,
+      keyboardType: TextInputType.number,
     );
-    final parsed = int.tryParse(controller.text.trim());
-    controller.dispose();
-    if (saved != true || parsed == null || parsed < 1) return;
+    final parsed = input == null ? null : int.tryParse(input);
+    if (parsed == null || parsed < 1) return;
     await ap.updateAssistant(
       assistant.copyWith(recentChatsSummaryMessageCount: parsed),
     );
@@ -1174,7 +1154,7 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
               children: [
                 ...options.map((count) {
                   final isSelected = count == selected;
-                  return _FrequencyChipButton(
+                  return MemorySelectChip(
                     label: l10n.assistantEditRecentChatsSummaryFrequencyOption(
                       count,
                     ),
@@ -1190,7 +1170,7 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
                           },
                   );
                 }),
-                _FrequencyChipButton(
+                MemorySelectChip(
                   label:
                       l10n.assistantEditRecentChatsSummaryFrequencyCustomButton,
                   icon: Lucide.Pencil,
@@ -1201,84 +1181,6 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FrequencyChipButton extends StatelessWidget {
-  const _FrequencyChipButton({
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-    this.emphasized = false,
-    this.icon,
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final bool selected;
-  final bool emphasized;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBackground = selected
-        ? cs.primary.withValues(alpha: isDark ? 0.22 : 0.12)
-        : (context.appColors.surfaceFill);
-    final borderColor = selected
-        ? cs.primary.withValues(alpha: 0.38)
-        : (emphasized
-              ? cs.primary.withValues(alpha: isDark ? 0.24 : 0.18)
-              : cs.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.14));
-    final foregroundColor = selected || emphasized
-        ? cs.primary
-        : cs.onSurface.withValues(alpha: 0.8);
-
-    return MouseRegion(
-      cursor: onTap == null
-          ? SystemMouseCursors.basic
-          : SystemMouseCursors.click,
-      child: _TactileRow(
-        onTap: onTap,
-        haptics: true,
-        pressedScale: 0.985,
-        releaseDelayMs: 0,
-        builder: (pressed) {
-          return AnimatedOpacity(
-            duration: const Duration(milliseconds: 90),
-            curve: Curves.easeOutCubic,
-            opacity: pressed ? (selected ? 0.94 : 0.82) : 1.0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: baseBackground,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: borderColor),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 14, color: foregroundColor),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: AppFontWeights.semibold,
-                      color: foregroundColor,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
     );
   }

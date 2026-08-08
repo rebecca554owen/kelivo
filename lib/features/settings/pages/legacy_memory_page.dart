@@ -16,10 +16,14 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../widgets/memory_ui.dart';
 
 /// Read-only legacy memories from [MemoryProvider] (§14.5 / D-29).
 class LegacyMemoryPage extends StatelessWidget {
-  const LegacyMemoryPage({super.key});
+  const LegacyMemoryPage({super.key, this.assistantId});
+
+  /// When set, only legacy memories of that assistant are listed and exported.
+  final String? assistantId;
 
   @override
   Widget build(BuildContext context) {
@@ -48,20 +52,26 @@ class LegacyMemoryPage extends StatelessWidget {
               color: cs.onSurface,
               size: 20,
               minSize: 44,
-              onTap: () => LegacyMemoryContent.exportAll(context),
+              onTap: () => LegacyMemoryContent.exportAll(
+                context,
+                assistantId: assistantId,
+              ),
             ),
           ),
         ],
       ),
-      body: const LegacyMemoryContent(),
+      body: LegacyMemoryContent(assistantId: assistantId),
     );
   }
 }
 
 class LegacyMemoryContent extends StatefulWidget {
-  const LegacyMemoryContent({super.key, this.padding});
+  const LegacyMemoryContent({super.key, this.padding, this.assistantId});
 
   final EdgeInsetsGeometry? padding;
+
+  /// When set, only legacy memories of that assistant are listed.
+  final String? assistantId;
 
   static String buildExportText({
     required AppLocalizations l10n,
@@ -90,15 +100,21 @@ class LegacyMemoryContent extends StatefulWidget {
     return buf.toString().trimRight();
   }
 
-  static Future<void> exportAll(BuildContext context) async {
+  static Future<void> exportAll(
+    BuildContext context, {
+    String? assistantId,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final mp = context.read<MemoryProvider>();
     final ap = context.read<AssistantProvider>();
     await mp.initialize();
     if (!context.mounted) return;
+    final memories = assistantId == null
+        ? mp.memories
+        : mp.memories.where((m) => m.assistantId == assistantId).toList();
     final text = buildExportText(
       l10n: l10n,
-      memories: mp.memories,
+      memories: memories,
       assistantName: (id) => ap.getById(id)?.name ?? id,
     );
     final dir = await getTemporaryDirectory();
@@ -139,7 +155,11 @@ class _LegacyMemoryContentState extends State<LegacyMemoryContent> {
     final mp = context.watch<MemoryProvider>();
     final ap = context.watch<AssistantProvider>();
     final q = _search.text.trim().toLowerCase();
+    final assistantFilter = widget.assistantId;
     final memories = mp.memories.where((m) {
+      if (assistantFilter != null && m.assistantId != assistantFilter) {
+        return false;
+      }
       if (q.isEmpty) return true;
       return m.content.toLowerCase().contains(q);
     }).toList();
@@ -151,44 +171,35 @@ class _LegacyMemoryContentState extends State<LegacyMemoryContent> {
     return ListView(
       padding: widget.padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Material(
-          color: cs.secondaryContainer.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Lucide.BadgeInfo, size: 18, color: cs.secondary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.legacyMemoryBanner,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.35,
-                      color: cs.onSurface.withValues(alpha: 0.8),
-                    ),
+        Container(
+          decoration: BoxDecoration(
+            color: cs.secondaryContainer.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Lucide.BadgeInfo, size: 18, color: cs.secondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.legacyMemoryBanner,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    color: cs.onSurface.withValues(alpha: 0.8),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
+        MemorySearchField(
           controller: _search,
+          hintText: l10n.legacyMemorySearchHint,
           onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: l10n.legacyMemorySearchHint,
-            prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface),
-            filled: true,
-            fillColor: context.appColors.surfaceFill,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
         ),
         const SizedBox(height: 12),
         if (byAssistant.isEmpty)

@@ -19,6 +19,7 @@ import 'package:Kelivo/features/settings/pages/memory_entries_page.dart';
 import 'package:Kelivo/features/settings/pages/user_profile_page.dart';
 import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/custom_bottom_sheet.dart';
 import 'package:Kelivo/shared/widgets/ios_switch.dart';
 
 import '../../../support/business_test_harness.dart';
@@ -210,21 +211,14 @@ void main() {
     await tester.pumpWidget(_wrap(h, const UserProfileContent()));
     await tester.pumpAndSettle();
 
+    final sheet = find.byType(CustomBottomSheet);
+    Finder inSheet(Finder matching) =>
+        find.descendant(of: sheet, matching: matching);
+
     await tester.tap(find.text('Preferred name'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ),
-      'Alex',
-    );
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Save'),
-      ),
-    );
+    await tester.enterText(inSheet(find.byType(TextField)), 'Alex');
+    await tester.tap(inSheet(find.text('Save')));
     await tester.pumpAndSettle();
     expect(
       h.memoryV2.profileFields.any(
@@ -235,12 +229,7 @@ void main() {
 
     await tester.tap(find.text('Preferred name'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Clear'),
-      ),
-    );
+    await tester.tap(inSheet(find.text('Clear')));
     await tester.pumpAndSettle();
     expect(
       h.memoryV2.profileFields.any((f) => f.key == 'preferred_name'),
@@ -249,19 +238,11 @@ void main() {
 
     await tester.tap(find.text('Add custom field'));
     await tester.pumpAndSettle();
-    final dialogFields = find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.byType(TextField),
-    );
-    expect(dialogFields, findsNWidgets(2));
-    await tester.enterText(dialogFields.at(0), 'custom.company');
-    await tester.enterText(dialogFields.at(1), 'Acme');
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Save'),
-      ),
-    );
+    final sheetFields = inSheet(find.byType(TextField));
+    expect(sheetFields, findsNWidgets(2));
+    await tester.enterText(sheetFields.at(0), 'custom.company');
+    await tester.enterText(sheetFields.at(1), 'Acme');
+    await tester.tap(inSheet(find.text('Save')));
     await tester.pumpAndSettle();
     expect(
       h.memoryV2.profileFields.any(
@@ -272,19 +253,8 @@ void main() {
 
     await tester.tap(find.text('custom.company'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ),
-      'Beta',
-    );
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Save'),
-      ),
-    );
+    await tester.enterText(inSheet(find.byType(TextField)), 'Beta');
+    await tester.tap(inSheet(find.text('Save')));
     await tester.pumpAndSettle();
     expect(
       h.memoryV2.profileFields.any(
@@ -300,6 +270,86 @@ void main() {
       throwsA(isA<ArgumentError>()),
     );
     expect(h.memoryV2.profileFields.any((f) => f.key == 'bad key!'), isFalse);
+  });
+
+  testWidgets('memory editor sheet opens and cancels without throwing', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness();
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(_wrap(h, const MemoryEntriesContent()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add memory'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MemoryEntryEditForm), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MemoryEntryEditForm), findsNothing);
+    expect(tester.takeException(), isNull);
+    expect(h.memoryV2.entries, isEmpty);
+  });
+
+  testWidgets('memory editor sheet saves a new global memory', (tester) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness();
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(_wrap(h, const MemoryEntriesContent()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add memory'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MemoryEntryEditForm),
+        matching: find.byType(TextField),
+      ),
+      'Likes espresso',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      h.memoryV2.entries.any(
+        (e) => e.content == 'Likes espresso' && e.scope == MemoryScope.global,
+      ),
+      isTrue,
+    );
+  });
+
+  testWidgets('legacy content can be scoped to a single assistant', (
+    tester,
+  ) async {
+    final h = await _createHarness(
+      assistantList: const [
+        Assistant(id: 'a1', name: 'Writer', temperature: 0.6),
+        Assistant(id: 'a2', name: 'Coder', temperature: 0.6),
+      ],
+    );
+    await h.legacyMemory.add(assistantId: 'a1', content: 'Writer memory');
+    await h.legacyMemory.add(assistantId: 'a2', content: 'Coder memory');
+
+    await tester.pumpWidget(
+      _wrap(h, const LegacyMemoryContent(assistantId: 'a2')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coder memory'), findsOneWidget);
+    expect(find.text('Writer memory'), findsNothing);
   });
 
   testWidgets('orphan cleanup shows count and deletes on confirm', (

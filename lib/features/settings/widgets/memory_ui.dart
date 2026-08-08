@@ -7,13 +7,18 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
+import '../../../core/models/assistant.dart';
 import '../../../core/models/memory_entry.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/custom_bottom_sheet.dart';
+import '../../../shared/widgets/ios_checkbox.dart';
+import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/ios_tile_button.dart';
 
 final DateFormat memoryEntryDateFormat = DateFormat('yyyy-MM-dd');
 
@@ -181,6 +186,672 @@ Future<bool> confirmScopeSwitch(
   return result == true;
 }
 
+/// iOS-style grouped card used by every memory surface.
+class MemorySectionCard extends StatelessWidget {
+  const MemorySectionCard({
+    super.key,
+    required this.children,
+    this.padding = const EdgeInsets.symmetric(vertical: 4),
+  });
+
+  final List<Widget> children;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appColors.surfaceCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
+          width: 0.6,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: padding,
+        child: Column(children: children),
+      ),
+    );
+  }
+}
+
+/// Section header above a [MemorySectionCard].
+class MemorySectionLabel extends StatelessWidget {
+  const MemorySectionLabel({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: AppFontWeights.semibold,
+          color: cs.onSurface.withValues(alpha: 0.8),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tappable "title + subtitle + chevron" row, matching the settings pages.
+class MemoryNavRow extends StatelessWidget {
+  const MemoryNavRow({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return IosCardPress(
+      onTap: onTap,
+      borderRadius: BorderRadius.zero,
+      padding: EdgeInsets.zero,
+      baseColor: Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: AppFontWeights.semibold,
+                      color: cs.onSurface.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.25,
+                      color: cs.onSurface.withValues(alpha: 0.62),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Lucide.ChevronRight,
+              size: 18,
+              color: cs.onSurface.withValues(alpha: 0.35),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Selectable pill used instead of Material's `ChoiceChip`.
+class MemorySelectChip extends StatelessWidget {
+  const MemorySelectChip({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+    this.emphasized = false,
+    this.icon,
+    this.trailingIcon,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool selected;
+  final bool emphasized;
+  final IconData? icon;
+  final IconData? trailingIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = selected
+        ? cs.primary.withValues(alpha: isDark ? 0.22 : 0.12)
+        : (emphasized
+              ? cs.primary.withValues(alpha: isDark ? 0.16 : 0.10)
+              : context.appColors.surfaceFill);
+    final borderColor = selected
+        ? cs.primary.withValues(alpha: 0.38)
+        : (emphasized
+              ? cs.primary.withValues(alpha: isDark ? 0.24 : 0.18)
+              : cs.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.14));
+    final foreground = selected || emphasized
+        ? cs.primary
+        : cs.onSurface.withValues(alpha: 0.8);
+
+    return IosCardPress(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      baseColor: background,
+      border: Border.all(color: borderColor),
+      pressedScale: 0.985,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: foreground),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: AppFontWeights.semibold,
+              color: foreground,
+              height: 1.0,
+            ),
+          ),
+          if (trailingIcon != null) ...[
+            const SizedBox(width: 4),
+            Icon(trailingIcon, size: 14, color: foreground),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Rounded search box matching the app's filled-field styling.
+class MemorySearchField extends StatelessWidget {
+  const MemorySearchField({
+    super.key,
+    required this.controller,
+    required this.hintText,
+    this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 42),
+      decoration: BoxDecoration(
+        color: context.appColors.surfaceFill,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        children: [
+          Icon(
+            Lucide.Search,
+            size: 18,
+            color: cs.onSurface.withValues(alpha: 0.55),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              textAlignVertical: TextAlignVertical.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: AppFontWeights.medium,
+                color: cs.onSurface.withValues(alpha: 0.92),
+                height: 1.15,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                isCollapsed: true,
+                hintText: hintText,
+                hintStyle: TextStyle(
+                  fontSize: 15,
+                  fontWeight: AppFontWeights.medium,
+                  color: cs.onSurface.withValues(alpha: isDark ? 0.42 : 0.46),
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              if (value.text.isEmpty) return const SizedBox(width: 4);
+              return IosIconButton(
+                icon: Lucide.X,
+                size: 16,
+                padding: const EdgeInsets.all(4),
+                color: cs.onSurface.withValues(alpha: 0.55),
+                semanticLabel: l10n.memoryUiSearchClear,
+                onTap: () {
+                  controller.clear();
+                  onChanged?.call('');
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MemoryPickerOption<T> {
+  const MemoryPickerOption({required this.value, required this.label});
+
+  final T value;
+  final String label;
+}
+
+/// Bottom-sheet option picker used instead of Material `ListTile` menus.
+Future<T?> showMemoryOptionPicker<T>(
+  BuildContext context, {
+  required String title,
+  required List<MemoryPickerOption<T>> options,
+  required T selected,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return showModalBottomSheet<T>(
+    context: context,
+    backgroundColor: cs.surface,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      final localCs = Theme.of(ctx).colorScheme;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(ctx).height * 0.7,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: localCs.onSurface.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: AppFontWeights.emphasis,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: MemorySectionCard(
+                      children: [
+                        for (var i = 0; i < options.length; i++) ...[
+                          _MemoryOptionRow<T>(
+                            label: options[i].label,
+                            selected: options[i].value == selected,
+                            onTap: () =>
+                                Navigator.of(ctx).pop(options[i].value),
+                          ),
+                          if (i != options.length - 1)
+                            Divider(
+                              height: 6,
+                              thickness: 0.6,
+                              indent: 12,
+                              endIndent: 12,
+                              color: localCs.outlineVariant.withValues(
+                                alpha: 0.18,
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _MemoryOptionRow<T> extends StatelessWidget {
+  const _MemoryOptionRow({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return IosCardPress(
+      onTap: onTap,
+      baseColor: Colors.transparent,
+      borderRadius: BorderRadius.zero,
+      pressedBlendStrength: 0.08,
+      pressedScale: 1.0,
+      haptics: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: AppFontWeights.semibold,
+                  color: cs.onSurface.withValues(alpha: 0.9),
+                ),
+              ),
+            ),
+            if (selected) Icon(Lucide.Check, size: 18, color: cs.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cancel / confirm footer shared by the memory bottom sheets.
+class MemorySheetActions extends StatelessWidget {
+  const MemorySheetActions({
+    super.key,
+    required this.onCancel,
+    required this.onConfirm,
+    required this.confirmLabel,
+    this.confirmEnabled = true,
+    this.extraAction,
+  });
+
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+  final String confirmLabel;
+  final bool confirmEnabled;
+  final Widget? extraAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        if (extraAction != null) ...[
+          Expanded(child: extraAction!),
+          const SizedBox(width: 10),
+        ],
+        Expanded(
+          child: IosTileButton(
+            label: l10n.homePageCancel,
+            icon: Lucide.X,
+            onTap: onCancel,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: IosTileButton(
+            label: confirmLabel,
+            icon: Lucide.Check,
+            enabled: confirmEnabled,
+            backgroundColor: cs.primary,
+            onTap: onConfirm,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Opens the add/edit memory sheet.
+///
+/// The form owns its [TextEditingController] inside a [State], so the
+/// controller stays alive for the whole exit transition.
+Future<void> showMemoryEntryEditor(
+  BuildContext context, {
+  MemoryEntry? existing,
+  String? defaultAssistantId,
+  bool allowAssistantPicker = false,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  return showCustomBottomSheet<void>(
+    context: context,
+    title: existing == null
+        ? l10n.memoryEntryCreateTitle
+        : l10n.memoryEntryEditTitle,
+    closeSemanticLabel: l10n.mcpPageClose,
+    // The form has a pinned footer, so the panel must be fully visible from
+    // the start instead of resting at a partial height.
+    partialHeightFactor: 0.85,
+    expandedHeightFactor: 0.85,
+    builder: (ctx, scrollController) => MemoryEntryEditForm(
+      scrollController: scrollController,
+      existing: existing,
+      defaultAssistantId: defaultAssistantId,
+      allowAssistantPicker: allowAssistantPicker,
+    ),
+  );
+}
+
+class MemoryEntryEditForm extends StatefulWidget {
+  const MemoryEntryEditForm({
+    super.key,
+    required this.scrollController,
+    this.existing,
+    this.defaultAssistantId,
+    this.allowAssistantPicker = false,
+  });
+
+  final ScrollController scrollController;
+  final MemoryEntry? existing;
+  final String? defaultAssistantId;
+  final bool allowAssistantPicker;
+
+  @override
+  State<MemoryEntryEditForm> createState() => _MemoryEntryEditFormState();
+}
+
+class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
+  late final TextEditingController _content;
+  late MemoryType _type;
+  late MemoryScope _scope;
+  String? _assistantId;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _content = TextEditingController(text: existing?.content ?? '');
+    _type = existing?.type ?? MemoryType.identity;
+    _scope = existing?.scope ?? MemoryScope.global;
+    _assistantId = existing?.assistantId ?? widget.defaultAssistantId;
+  }
+
+  @override
+  void dispose() {
+    _content.dispose();
+    super.dispose();
+  }
+
+  bool get _isCreate => widget.existing == null;
+
+  String? _resolvedAssistantId(List<Assistant> assistants) {
+    if (_scope != MemoryScope.assistant) return null;
+    final current = _assistantId;
+    if (current != null && current.isNotEmpty) return current;
+    if (!widget.allowAssistantPicker) return widget.defaultAssistantId;
+    return assistants.isEmpty ? null : assistants.first.id;
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final text = _content.text.trim();
+    if (text.isEmpty) return;
+    final navigator = Navigator.of(context);
+    final mp = context.read<MemoryProviderV2>();
+    final assistants = context.read<AssistantProvider>().assistants;
+    final assistantId = _resolvedAssistantId(assistants);
+    if (_isCreate &&
+        _scope == MemoryScope.assistant &&
+        (assistantId == null || assistantId.isEmpty)) {
+      return;
+    }
+    setState(() => _saving = true);
+    final existing = widget.existing;
+    if (existing == null) {
+      await mp.create(
+        scope: _scope,
+        assistantId: assistantId,
+        type: _type,
+        content: text,
+        source: MemorySource.manual,
+      );
+    } else {
+      await mp.updateContent(existing.id, text);
+    }
+    navigator.maybePop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final assistants = context.watch<AssistantProvider>().assistants;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              controller: widget.scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              children: [
+                MemorySectionCard(
+                  children: [
+                    IosFormTextField(
+                      label: l10n.memoryUiContentLabel,
+                      controller: _content,
+                      hintText: l10n.memoryEntryContentHint,
+                      minLines: 4,
+                      maxLines: 10,
+                      inlineLabel: false,
+                      autofocus: true,
+                      textAlign: TextAlign.start,
+                      textInputAction: TextInputAction.newline,
+                      keyboardType: TextInputType.multiline,
+                    ),
+                  ],
+                ),
+                if (_isCreate) ...[
+                  const SizedBox(height: 16),
+                  MemorySectionLabel(text: l10n.memoryEntryTypeLabel),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final t in MemoryType.values)
+                        MemorySelectChip(
+                          label: memoryTypeLabel(l10n, t),
+                          selected: _type == t,
+                          onTap: () => setState(() => _type = t),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  MemorySectionLabel(text: l10n.memoryEntryScopeLabel),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      MemorySelectChip(
+                        label: l10n.memoryEntryScopeGlobal,
+                        selected: _scope == MemoryScope.global,
+                        onTap: () =>
+                            setState(() => _scope = MemoryScope.global),
+                      ),
+                      MemorySelectChip(
+                        label: l10n.memoryEntryScopeAssistant,
+                        selected: _scope == MemoryScope.assistant,
+                        onTap: () =>
+                            setState(() => _scope = MemoryScope.assistant),
+                      ),
+                    ],
+                  ),
+                  if (widget.allowAssistantPicker &&
+                      _scope == MemoryScope.assistant) ...[
+                    const SizedBox(height: 16),
+                    MemorySectionLabel(text: l10n.memoryUiAssistantLabel),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final a in assistants)
+                          MemorySelectChip(
+                            label: a.name,
+                            selected: _resolvedAssistantId(assistants) == a.id,
+                            onTap: () => setState(() => _assistantId = a.id),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _content,
+              builder: (context, value, _) => MemorySheetActions(
+                confirmLabel: l10n.userProfileSave,
+                confirmEnabled: value.text.trim().isNotEmpty && !_saving,
+                onCancel: () => Navigator.of(context).maybePop(),
+                onConfirm: _save,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class MemoryBadge extends StatelessWidget {
   const MemoryBadge({
     super.key,
@@ -342,15 +1013,15 @@ class MemoryEntryCard extends StatelessWidget {
               Row(
                 children: [
                   if (selectable) ...[
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: Checkbox(
-                        value: selected,
-                        onChanged: (v) => onSelectedChanged?.call(v ?? false),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                      ),
+                    IosCheckbox(
+                      value: selected,
+                      size: 20,
+                      hitTestSize: 24,
+                      borderWidth: 1.6,
+                      activeColor: cs.primary,
+                      borderColor: cs.primary.withValues(alpha: 0.55),
+                      semanticLabel: l10n.memoryEntryActionBatchDelete,
+                      onChanged: (v) => onSelectedChanged?.call(v),
                     ),
                     const SizedBox(width: 6),
                   ],
@@ -461,51 +1132,48 @@ class MemoryModelMissingNotice extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Material(
-        color: cs.errorContainer.withValues(alpha: 0.30),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Lucide.MessageCircleWarning, size: 18, color: cs.error),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.memoryModelMissingNotice,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.8),
-                      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.errorContainer.withValues(alpha: 0.30),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Lucide.MessageCircleWarning, size: 18, color: cs.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.memoryModelMissingNotice,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: cs.onSurface.withValues(alpha: 0.8),
                     ),
-                    const SizedBox(height: 8),
-                    IosCardPress(
-                      onTap: onGoSelect,
-                      borderRadius: BorderRadius.circular(8),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IosTileButton(
+                      label: l10n.memoryModelMissingGoSelect,
+                      icon: Lucide.Settings2,
+                      fontSize: 12.5,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
-                        vertical: 6,
+                        vertical: 7,
                       ),
-                      baseColor: cs.primary.withValues(alpha: 0.12),
-                      child: Text(
-                        l10n.memoryModelMissingGoSelect,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: AppFontWeights.semibold,
-                          color: cs.primary,
-                        ),
-                      ),
+                      backgroundColor: cs.primary,
+                      onTap: onGoSelect,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -524,40 +1192,44 @@ class MemoryOrphanBanner extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Material(
-        color: cs.errorContainer.withValues(alpha: 0.30),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: Row(
-            children: [
-              Icon(Lucide.TriangleAlert, size: 18, color: cs.error),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l10n.memoryOrphanBanner(count),
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.3,
-                    color: cs.onSurface.withValues(alpha: 0.8),
-                  ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.errorContainer.withValues(alpha: 0.30),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
+          children: [
+            Icon(Lucide.TriangleAlert, size: 18, color: cs.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.memoryOrphanBanner(count),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.3,
+                  color: cs.onSurface.withValues(alpha: 0.8),
                 ),
               ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: () async {
-                  if (!await confirmOrphanCleanup(context, count: count)) {
-                    return;
-                  }
-                  if (!context.mounted) return;
-                  await context
-                      .read<MemoryProviderV2>()
-                      .deleteOrphanAssistantMemories();
-                },
-                child: Text(l10n.memoryOrphanCleanupButton),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            IosTileButton(
+              label: l10n.memoryOrphanCleanupButton,
+              icon: Lucide.Trash2,
+              fontSize: 12.5,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              backgroundColor: cs.error,
+              onTap: () async {
+                if (!await confirmOrphanCleanup(context, count: count)) {
+                  return;
+                }
+                if (!context.mounted) return;
+                await context
+                    .read<MemoryProviderV2>()
+                    .deleteOrphanAssistantMemories();
+              },
+            ),
+          ],
         ),
       ),
     );

@@ -10820,41 +10820,17 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get memoryPromptEditSave;
 
-  /// No description provided for @memoryPromptEditTabZh.
+  /// No description provided for @memoryPromptEditSectionPerItem.
   ///
   /// In en, this message translates to:
-  /// **'Chinese'**
-  String get memoryPromptEditTabZh;
+  /// **'Per-item prompt'**
+  String get memoryPromptEditSectionPerItem;
 
-  /// No description provided for @memoryPromptEditTabEn.
+  /// No description provided for @memoryPromptEditSectionBatch.
   ///
   /// In en, this message translates to:
-  /// **'English'**
-  String get memoryPromptEditTabEn;
-
-  /// No description provided for @memoryPromptEditTabPerItemZh.
-  ///
-  /// In en, this message translates to:
-  /// **'Per-item · ZH'**
-  String get memoryPromptEditTabPerItemZh;
-
-  /// No description provided for @memoryPromptEditTabPerItemEn.
-  ///
-  /// In en, this message translates to:
-  /// **'Per-item · EN'**
-  String get memoryPromptEditTabPerItemEn;
-
-  /// No description provided for @memoryPromptEditTabBatchZh.
-  ///
-  /// In en, this message translates to:
-  /// **'Batched · ZH'**
-  String get memoryPromptEditTabBatchZh;
-
-  /// No description provided for @memoryPromptEditTabBatchEn.
-  ///
-  /// In en, this message translates to:
-  /// **'Batched · EN'**
-  String get memoryPromptEditTabBatchEn;
+  /// **'Batched prompt'**
+  String get memoryPromptEditSectionBatch;
 
   /// No description provided for @memorySettingsEntriesSection.
   ///
@@ -11437,6 +11413,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search legacy memories'**
   String get legacyMemorySearchHint;
+
+  /// No description provided for @memoryUiContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get memoryUiContentLabel;
+
+  /// No description provided for @memoryUiValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get memoryUiValueLabel;
+
+  /// No description provided for @memoryUiCustomKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Key'**
+  String get memoryUiCustomKeyLabel;
+
+  /// No description provided for @memoryUiStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get memoryUiStatusLabel;
+
+  /// No description provided for @memoryUiAssistantLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryUiAssistantLabel;
+
+  /// No description provided for @memoryUiAssistantAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All assistants'**
+  String get memoryUiAssistantAll;
+
+  /// No description provided for @memoryUiSearchClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get memoryUiSearchClear;
+
+  /// No description provided for @memoryUiAssistantLegacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy memories (read-only)'**
+  String get memoryUiAssistantLegacyTitle;
+
+  /// No description provided for @memoryUiAssistantLegacySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Old memories of this assistant from previous versions'**
+  String get memoryUiAssistantLegacySubtitle;
 
   /// No description provided for @assistantEditMemorySwitchTitle.
   ///
@@ -12511,6 +12541,438 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.'**
   String get imageSettingsPageFooter;
+
+  /// No description provided for @memoryTraceSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pipeline Traces'**
+  String get memoryTraceSettingsTitle;
+
+  /// No description provided for @memoryTraceSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect every background memory run step by step'**
+  String get memoryTraceSettingsSubtitle;
+
+  /// No description provided for @memoryTracePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Pipeline Traces'**
+  String get memoryTracePageTitle;
+
+  /// No description provided for @memoryTraceRecordingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording'**
+  String get memoryTraceRecordingSection;
+
+  /// No description provided for @memoryTraceToggleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record pipeline traces'**
+  String get memoryTraceToggleTitle;
+
+  /// No description provided for @memoryTraceToggleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps prompts, responses and changes of recent background runs in memory only'**
+  String get memoryTraceToggleSubtitle;
+
+  /// No description provided for @memoryTraceRunsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent runs'**
+  String get memoryTraceRunsSection;
+
+  /// No description provided for @memoryTraceEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No traces yet'**
+  String get memoryTraceEmptyTitle;
+
+  /// No description provided for @memoryTraceEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Traces appear here after the background memory pipeline runs.'**
+  String get memoryTraceEmptySubtitle;
+
+  /// No description provided for @memoryTraceDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording is off'**
+  String get memoryTraceDisabledTitle;
+
+  /// No description provided for @memoryTraceDisabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn recording on to capture the next background memory run.'**
+  String get memoryTraceDisabledSubtitle;
+
+  /// No description provided for @memoryTraceClearAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get memoryTraceClearAction;
+
+  /// No description provided for @memoryTraceClearSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear traces'**
+  String get memoryTraceClearSheetTitle;
+
+  /// No description provided for @memoryTraceClearSheetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes every recorded trace. Traces are never written to disk, so nothing else is affected.'**
+  String get memoryTraceClearSheetMessage;
+
+  /// No description provided for @memoryTraceClearConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear traces'**
+  String get memoryTraceClearConfirm;
+
+  /// No description provided for @memoryTraceCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get memoryTraceCancel;
+
+  /// No description provided for @memoryTraceClearedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Traces cleared'**
+  String get memoryTraceClearedToast;
+
+  /// No description provided for @memoryTraceCopyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get memoryTraceCopyAction;
+
+  /// No description provided for @memoryTraceCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get memoryTraceCopiedToast;
+
+  /// No description provided for @memoryTraceTriggerAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get memoryTraceTriggerAuto;
+
+  /// No description provided for @memoryTraceTriggerManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get memoryTraceTriggerManual;
+
+  /// No description provided for @memoryTraceTriggerTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool call'**
+  String get memoryTraceTriggerTool;
+
+  /// No description provided for @memoryTraceTriggerSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get memoryTraceTriggerSummary;
+
+  /// No description provided for @memoryTraceScopeAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryTraceScopeAssistant;
+
+  /// No description provided for @memoryTraceScopeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get memoryTraceScopeGlobal;
+
+  /// No description provided for @memoryTraceStepGatekeeper.
+  ///
+  /// In en, this message translates to:
+  /// **'Gatekeeper'**
+  String get memoryTraceStepGatekeeper;
+
+  /// No description provided for @memoryTraceStepExtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract'**
+  String get memoryTraceStepExtract;
+
+  /// No description provided for @memoryTraceStepSmartAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Add'**
+  String get memoryTraceStepSmartAdd;
+
+  /// No description provided for @memoryTraceStepDistiller.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Distiller'**
+  String get memoryTraceStepDistiller;
+
+  /// No description provided for @memoryTraceStepSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation Summary'**
+  String get memoryTraceStepSummary;
+
+  /// No description provided for @memoryTraceStepChatSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Past Conversation Recall'**
+  String get memoryTraceStepChatSearch;
+
+  /// No description provided for @memoryTraceStepTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Tool'**
+  String get memoryTraceStepTool;
+
+  /// No description provided for @memoryTraceStatusSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get memoryTraceStatusSuccess;
+
+  /// No description provided for @memoryTraceStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get memoryTraceStatusFailed;
+
+  /// No description provided for @memoryTraceStatusSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get memoryTraceStatusSkipped;
+
+  /// No description provided for @memoryTraceStatusRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get memoryTraceStatusRunning;
+
+  /// No description provided for @memoryTraceOutcomeAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark advanced'**
+  String get memoryTraceOutcomeAdvanced;
+
+  /// No description provided for @memoryTraceOutcomeHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark held'**
+  String get memoryTraceOutcomeHeld;
+
+  /// No description provided for @memoryTraceOutcomeForced.
+  ///
+  /// In en, this message translates to:
+  /// **'Forced advance'**
+  String get memoryTraceOutcomeForced;
+
+  /// No description provided for @memoryTraceDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trace detail'**
+  String get memoryTraceDetailTitle;
+
+  /// No description provided for @memoryTraceSectionOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get memoryTraceSectionOverview;
+
+  /// No description provided for @memoryTraceSectionPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt'**
+  String get memoryTraceSectionPrompt;
+
+  /// No description provided for @memoryTraceSectionResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw response'**
+  String get memoryTraceSectionResponse;
+
+  /// No description provided for @memoryTraceSectionParsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsed result'**
+  String get memoryTraceSectionParsed;
+
+  /// No description provided for @memoryTraceSectionMutations.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes applied'**
+  String get memoryTraceSectionMutations;
+
+  /// No description provided for @memoryTraceFieldTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Started'**
+  String get memoryTraceFieldTime;
+
+  /// No description provided for @memoryTraceFieldDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get memoryTraceFieldDuration;
+
+  /// No description provided for @memoryTraceFieldTrigger.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger'**
+  String get memoryTraceFieldTrigger;
+
+  /// No description provided for @memoryTraceFieldScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope'**
+  String get memoryTraceFieldScope;
+
+  /// No description provided for @memoryTraceFieldConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get memoryTraceFieldConversation;
+
+  /// No description provided for @memoryTraceFieldAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryTraceFieldAssistant;
+
+  /// No description provided for @memoryTraceFieldWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get memoryTraceFieldWindow;
+
+  /// No description provided for @memoryTraceFieldWatermark.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark'**
+  String get memoryTraceFieldWatermark;
+
+  /// No description provided for @memoryTraceFieldOutcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Outcome'**
+  String get memoryTraceFieldOutcome;
+
+  /// No description provided for @memoryTraceFieldError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get memoryTraceFieldError;
+
+  /// No description provided for @memoryTraceMutationCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get memoryTraceMutationCreated;
+
+  /// No description provided for @memoryTraceMutationMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'Merged'**
+  String get memoryTraceMutationMerged;
+
+  /// No description provided for @memoryTraceMutationEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get memoryTraceMutationEdited;
+
+  /// No description provided for @memoryTraceMutationArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get memoryTraceMutationArchived;
+
+  /// No description provided for @memoryTraceMutationLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked'**
+  String get memoryTraceMutationLinked;
+
+  /// No description provided for @memoryTraceMutationProfileWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile field written'**
+  String get memoryTraceMutationProfileWritten;
+
+  /// No description provided for @memoryTraceMutationProfileCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile field cleared'**
+  String get memoryTraceMutationProfileCleared;
+
+  /// No description provided for @memoryTraceMutationSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat summary written'**
+  String get memoryTraceMutationSummary;
+
+  /// No description provided for @memoryTraceBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get memoryTraceBefore;
+
+  /// No description provided for @memoryTraceAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get memoryTraceAfter;
+
+  /// No description provided for @memoryTraceEmptyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'(empty)'**
+  String get memoryTraceEmptyValue;
+
+  /// No description provided for @memoryTraceStepsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} steps'**
+  String memoryTraceStepsCount(int count);
+
+  /// No description provided for @memoryTraceMutationsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes'**
+  String memoryTraceMutationsCount(int count);
+
+  /// No description provided for @memoryTraceRepeatCount.
+  ///
+  /// In en, this message translates to:
+  /// **'repeated {count}×'**
+  String memoryTraceRepeatCount(int count);
+
+  /// No description provided for @memoryTraceWindowValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} messages · #{start}–#{end}'**
+  String memoryTraceWindowValue(int size, int start, int end);
+
+  /// No description provided for @memoryTraceShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show full text'**
+  String get memoryTraceShowMore;
+
+  /// No description provided for @memoryTraceShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get memoryTraceShowLess;
 }
 
 class _AppLocalizationsDelegate

@@ -37,6 +37,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/memory/memory_gatekeeper.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
+import '../../settings/pages/legacy_memory_page.dart';
 import '../../settings/pages/memory_settings_page.dart';
 import '../../settings/widgets/memory_ui.dart';
 import '../../../core/services/haptics.dart';
@@ -44,8 +45,10 @@ import '../../../desktop/desktop_context_menu.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/custom_bottom_sheet.dart';
 import '../../../shared/widgets/emoji_picker_dialog.dart';
 import '../../../shared/widgets/emoji_text.dart';
+import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -1225,13 +1228,11 @@ class _TactileRow extends StatefulWidget {
     this.onTap,
     this.haptics = true,
     this.pressedScale = 1.0,
-    this.releaseDelayMs = 60,
   });
   final Widget Function(bool pressed) builder;
   final VoidCallback? onTap;
   final bool haptics;
   final double pressedScale;
-  final int releaseDelayMs;
 
   @override
   State<_TactileRow> createState() => _TactileRowState();
@@ -1261,11 +1262,7 @@ class _TactileRowState extends State<_TactileRow> {
       onTapUp: widget.onTap == null
           ? null
           : (_) async {
-              if (widget.releaseDelayMs > 0) {
-                await Future.delayed(
-                  Duration(milliseconds: widget.releaseDelayMs),
-                );
-              }
+              await Future.delayed(const Duration(milliseconds: 60));
               if (mounted) _setPressed(false);
             },
       onTapCancel: widget.onTap == null ? null : () => _setPressed(false),

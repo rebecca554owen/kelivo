@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
-import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 import '../../../core/models/memory_entry.dart';
 import '../../../core/providers/assistant_provider.dart';
@@ -129,151 +128,13 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
         .toList(growable: false);
   }
 
-  Future<void> _showEditSheet({MemoryEntry? existing}) async {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final contentCtrl = TextEditingController(text: existing?.content ?? '');
-    var type = existing?.type ?? MemoryType.identity;
-    var scope = existing?.scope ?? MemoryScope.global;
-    String? assistantId = existing?.assistantId;
-    final assistants = context.read<AssistantProvider>().assistants;
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            return AlertDialog(
-              title: Text(
-                existing == null
-                    ? l10n.memoryEntryCreateTitle
-                    : l10n.memoryEntryEditTitle,
-              ),
-              content: SizedBox(
-                width: 420,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: contentCtrl,
-                      minLines: 3,
-                      maxLines: 8,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        hintText: l10n.memoryEntryContentHint,
-                        filled: true,
-                        fillColor: ctx.appColors.surfaceFill,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(l10n.memoryEntryTypeLabel, style: _labelStyle(cs)),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final t in MemoryType.values)
-                          ChoiceChip(
-                            label: Text(memoryTypeLabel(l10n, t)),
-                            selected: type == t,
-                            onSelected: existing != null
-                                ? null
-                                : (_) => setLocal(() => type = t),
-                          ),
-                      ],
-                    ),
-                    if (existing == null) ...[
-                      const SizedBox(height: 12),
-                      Text(l10n.memoryEntryScopeLabel, style: _labelStyle(cs)),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: Text(l10n.memoryEntryScopeGlobal),
-                            selected: scope == MemoryScope.global,
-                            onSelected: (_) => setLocal(() {
-                              scope = MemoryScope.global;
-                              assistantId = null;
-                            }),
-                          ),
-                          ChoiceChip(
-                            label: Text(l10n.memoryEntryScopeAssistant),
-                            selected: scope == MemoryScope.assistant,
-                            onSelected: (_) => setLocal(() {
-                              scope = MemoryScope.assistant;
-                              assistantId ??= assistants.isNotEmpty
-                                  ? assistants.first.id
-                                  : null;
-                            }),
-                          ),
-                        ],
-                      ),
-                      if (scope == MemoryScope.assistant) ...[
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          initialValue: assistantId,
-                          items: [
-                            for (final a in assistants)
-                              DropdownMenuItem(
-                                value: a.id,
-                                child: Text(a.name),
-                              ),
-                          ],
-                          onChanged: (v) => setLocal(() => assistantId = v),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(l10n.assistantEditEmojiDialogCancel),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text(l10n.assistantEditEmojiDialogSave),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  Future<void> _showEditSheet({MemoryEntry? existing}) {
+    return showMemoryEntryEditor(
+      context,
+      existing: existing,
+      allowAssistantPicker: true,
     );
-
-    final text = contentCtrl.text.trim();
-    contentCtrl.dispose();
-    if (saved != true || text.isEmpty || !mounted) return;
-    final mp = context.read<MemoryProviderV2>();
-    if (existing == null) {
-      if (scope == MemoryScope.assistant &&
-          (assistantId == null || assistantId!.isEmpty)) {
-        return;
-      }
-      await mp.create(
-        scope: scope,
-        assistantId: scope == MemoryScope.assistant ? assistantId : null,
-        type: type,
-        content: text,
-        source: MemorySource.manual,
-      );
-    } else {
-      await mp.updateContent(existing.id, text);
-    }
   }
-
-  TextStyle _labelStyle(ColorScheme cs) => TextStyle(
-    fontSize: 12.5,
-    fontWeight: AppFontWeights.semibold,
-    color: cs.onSurface.withValues(alpha: 0.7),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -296,23 +157,10 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
           padding: widget.padding == null
               ? const EdgeInsets.fromLTRB(16, 8, 16, 4)
               : const EdgeInsets.fromLTRB(0, 0, 0, 4),
-          child: TextField(
+          child: MemorySearchField(
             controller: _search,
+            hintText: l10n.memorySearchHint,
             onChanged: _runSearch,
-            decoration: InputDecoration(
-              hintText: l10n.memorySearchHint,
-              prefixIcon: Icon(Lucide.Search, size: 18, color: cs.onSurface),
-              filled: true,
-              fillColor: context.appColors.surfaceFill,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
-            ),
           ),
         ),
         SingleChildScrollView(
@@ -327,26 +175,22 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
                   _ScopeFilter.assistant => l10n.memoryFilterScopeAssistant,
                 },
                 onTap: () async {
-                  final next = await showModalBottomSheet<_ScopeFilter>(
-                    context: context,
-                    builder: (ctx) => SafeArea(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final v in _ScopeFilter.values)
-                            ListTile(
-                              title: Text(switch (v) {
-                                _ScopeFilter.all => l10n.memoryFilterScopeAll,
-                                _ScopeFilter.global =>
-                                  l10n.memoryFilterScopeGlobal,
-                                _ScopeFilter.assistant =>
-                                  l10n.memoryFilterScopeAssistant,
-                              }),
-                              onTap: () => Navigator.pop(ctx, v),
-                            ),
-                        ],
-                      ),
-                    ),
+                  final next = await showMemoryOptionPicker<_ScopeFilter>(
+                    context,
+                    title: l10n.memoryEntryScopeLabel,
+                    selected: _scope,
+                    options: [
+                      for (final v in _ScopeFilter.values)
+                        MemoryPickerOption(
+                          value: v,
+                          label: switch (v) {
+                            _ScopeFilter.all => l10n.memoryFilterScopeAll,
+                            _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
+                            _ScopeFilter.assistant =>
+                              l10n.memoryFilterScopeAssistant,
+                          },
+                        ),
+                    ],
                   );
                   if (next != null) setState(() => _scope = next);
                 },
@@ -357,25 +201,23 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
                     ? l10n.memoryFilterTypeAll
                     : memoryTypeLabel(l10n, _type!),
                 onTap: () async {
-                  final next = await showModalBottomSheet<MemoryType?>(
-                    context: context,
-                    builder: (ctx) => SafeArea(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            title: Text(l10n.memoryFilterTypeAll),
-                            onTap: () => Navigator.pop(ctx, null),
-                          ),
-                          for (final t in MemoryType.values)
-                            ListTile(
-                              title: Text(memoryTypeLabel(l10n, t)),
-                              onTap: () => Navigator.pop(ctx, t),
-                            ),
-                        ],
+                  final next = await showMemoryOptionPicker<MemoryType?>(
+                    context,
+                    title: l10n.memoryEntryTypeLabel,
+                    selected: _type,
+                    options: [
+                      MemoryPickerOption(
+                        value: null,
+                        label: l10n.memoryFilterTypeAll,
                       ),
-                    ),
+                      for (final t in MemoryType.values)
+                        MemoryPickerOption(
+                          value: t,
+                          label: memoryTypeLabel(l10n, t),
+                        ),
+                    ],
                   );
+                  if (!mounted) return;
                   setState(() => _type = next);
                   if (_search.text.trim().isNotEmpty) {
                     await _runSearch(_search.text);
@@ -390,26 +232,23 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
                   _StatusFilter.archived => l10n.memoryFilterStatusArchived,
                 },
                 onTap: () async {
-                  final next = await showModalBottomSheet<_StatusFilter>(
-                    context: context,
-                    builder: (ctx) => SafeArea(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final v in _StatusFilter.values)
-                            ListTile(
-                              title: Text(switch (v) {
-                                _StatusFilter.all => l10n.memoryFilterStatusAll,
-                                _StatusFilter.active =>
-                                  l10n.memoryFilterStatusActive,
-                                _StatusFilter.archived =>
-                                  l10n.memoryFilterStatusArchived,
-                              }),
-                              onTap: () => Navigator.pop(ctx, v),
-                            ),
-                        ],
-                      ),
-                    ),
+                  final next = await showMemoryOptionPicker<_StatusFilter>(
+                    context,
+                    title: l10n.memoryUiStatusLabel,
+                    selected: _status,
+                    options: [
+                      for (final v in _StatusFilter.values)
+                        MemoryPickerOption(
+                          value: v,
+                          label: switch (v) {
+                            _StatusFilter.all => l10n.memoryFilterStatusAll,
+                            _StatusFilter.active =>
+                              l10n.memoryFilterStatusActive,
+                            _StatusFilter.archived =>
+                              l10n.memoryFilterStatusArchived,
+                          },
+                        ),
+                    ],
                   );
                   if (next != null) setState(() => _status = next);
                 },
@@ -459,27 +298,32 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
         ),
         if (_scope == _ScopeFilter.assistant)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: DropdownButtonFormField<String?>(
-              initialValue: _assistantFilterId,
-              decoration: InputDecoration(
-                isDense: true,
-                filled: true,
-                fillColor: context.appColors.surfaceFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _FilterChip(
+                label: _assistantFilterId == null
+                    ? l10n.memoryUiAssistantAll
+                    : (ap.getById(_assistantFilterId!)?.name ??
+                          l10n.memoryUiAssistantAll),
+                onTap: () async {
+                  final next = await showMemoryOptionPicker<String?>(
+                    context,
+                    title: l10n.memoryUiAssistantLabel,
+                    selected: _assistantFilterId,
+                    options: [
+                      MemoryPickerOption(
+                        value: null,
+                        label: l10n.memoryUiAssistantAll,
+                      ),
+                      for (final a in ap.assistants)
+                        MemoryPickerOption(value: a.id, label: a.name),
+                    ],
+                  );
+                  if (!mounted) return;
+                  setState(() => _assistantFilterId = next);
+                },
               ),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(l10n.memoryFilterScopeAll),
-                ),
-                for (final a in ap.assistants)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
-              ],
-              onChanged: (v) => setState(() => _assistantFilterId = v),
             ),
           ),
         const MemoryOrphanBanner(),
@@ -575,37 +419,11 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return IosCardPress(
+    return MemorySelectChip(
+      label: label,
+      emphasized: emphasized,
+      trailingIcon: Lucide.ChevronDown,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      baseColor: emphasized
-          ? cs.primary.withValues(alpha: 0.12)
-          : context.appColors.surfaceFill,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: AppFontWeights.semibold,
-              color: emphasized
-                  ? cs.primary
-                  : cs.onSurface.withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Lucide.ChevronDown,
-            size: 14,
-            color: emphasized
-                ? cs.primary
-                : cs.onSurface.withValues(alpha: 0.5),
-          ),
-        ],
-      ),
     );
   }
 }
