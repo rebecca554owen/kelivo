@@ -154,8 +154,8 @@ void main() {
       );
       expect(withMemory.map(toolName).toList(), [
         'memory_read',
-        'memory_update',
         'memory_search_profile',
+        'memory_update',
         'memory_edit',
         'memory_delete',
         'update_user_profile',
@@ -176,6 +176,21 @@ void main() {
         allowPastConversationRecall: false,
       );
       expect(none, isEmpty);
+    });
+
+    test('write tools are withheld when writes are not allowed', () {
+      final readOnly = MemoryTools.buildDefinitions(
+        lang: MemoryPromptLang.en,
+        writeScope: MemoryWriteScope.alwaysGlobal,
+        enableMemory: true,
+        allowPastConversationRecall: true,
+        allowMemoryWrites: false,
+      );
+      expect(readOnly.map(toolName).toList(), [
+        'memory_read',
+        'memory_search_profile',
+        'chat_search',
+      ]);
     });
 
     test('legacy create/edit/delete_memory are gone', () {
@@ -684,6 +699,84 @@ void main() {
         a: assistant(enableMemory: true, allowPastConversationRecall: false),
       );
       expect(raw, isNull);
+    });
+
+    test(
+      'a requested conversation is found past the candidate limit',
+      () async {
+        // Scoping happens in SQL, so the candidate limit is spent on rows the
+        // caller can use. Filtering afterwards would return nothing here.
+        final chatService = ChatService(existingRepository: chatRepository);
+        addTearDown(chatService.close);
+        await chatService.init();
+
+        final wanted = await chatService.createConversation(title: 'Wanted');
+        await chatService.addMessage(
+          conversationId: wanted.id,
+          role: 'user',
+          content: 'needle in conversation',
+        );
+
+        // Enough newer conversations to push the target below any global cut.
+        for (var i = 0; i < 30; i++) {
+          final noise = await chatService.createConversation(title: 'Noise $i');
+          await chatService.addMessage(
+            conversationId: noise.id,
+            role: 'user',
+            content: 'needle in conversation',
+          );
+        }
+
+        final raw = await call(
+          MemoryTools.chatSearch,
+          {'query': 'needle', 'conversation_id': wanted.id, 'limit': 1},
+          a: assistant(enableMemory: false, allowPastConversationRecall: true),
+          chatService: chatService,
+          conversationId: 'some-other-conversation',
+        );
+        final results = decode(raw!)['results'] as List;
+        expect(results, isNotEmpty);
+        expect(results.every((r) => r['conversationId'] == wanted.id), isTrue);
+      },
+    );
+  });
+
+  group('temporary conversations', () {
+    test('write tools are refused; reads still work', () async {
+      final chatService = ChatService(existingRepository: chatRepository);
+      addTearDown(chatService.close);
+      await chatService.init();
+      final temp = await chatService.createDraftConversation(
+        title: 'Temp',
+        temporary: true,
+      );
+      expect(chatService.isTemporaryConversation(temp.id), isTrue);
+
+      for (final name in MemoryTools.writeToolNames) {
+        final raw = await call(
+          name,
+          {
+            'content': 'User lives in Berlin.',
+            'id': 'mem_0001',
+            'fields': {'preferred_name': 'Ann'},
+          },
+          chatService: chatService,
+          conversationId: temp.id,
+        );
+        expect(
+          decode(raw!)['error'],
+          'temporary_conversation',
+          reason: '$name must not persist from a throwaway chat',
+        );
+      }
+
+      final read = await call(
+        MemoryTools.memoryRead,
+        {'type': 'identity'},
+        chatService: chatService,
+        conversationId: temp.id,
+      );
+      expect(decode(read!).containsKey('error'), isFalse);
     });
   });
 

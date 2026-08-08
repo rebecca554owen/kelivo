@@ -185,6 +185,21 @@ class ToolHandlerService {
   /// - Search tool (if enabled and model supports tools)
   /// - Memory tools (if assistant has memory / past-recall enabled)
   /// - MCP tools (from selected servers for the assistant)
+  /// Whether the chat being generated is a throwaway one.
+  ///
+  /// Tool definitions are built without a conversation id, so this reads the
+  /// active conversation the same way the tool handler does.
+  bool _isTemporaryConversation() {
+    try {
+      final chatService = contextProvider.read<ChatService>();
+      return chatService.isTemporaryConversation(
+        chatService.currentConversationId,
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   List<Map<String, dynamic>> buildToolDefinitions(
     SettingsProvider settings,
     Assistant? assistant,
@@ -212,6 +227,7 @@ class ToolHandlerService {
           writeScope: assistant.memoryWriteScope,
           enableMemory: assistant.enableMemory,
           allowPastConversationRecall: assistant.allowPastConversationRecall,
+          allowMemoryWrites: !_isTemporaryConversation(),
         ),
       );
     }

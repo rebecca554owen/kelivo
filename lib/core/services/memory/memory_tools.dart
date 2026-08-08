@@ -36,6 +36,14 @@ abstract final class MemoryTools {
     updateUserProfile,
   };
 
+  /// Tools that persist something beyond the current conversation.
+  static const Set<String> writeToolNames = {
+    memoryUpdate,
+    memoryEdit,
+    memoryDelete,
+    updateUserProfile,
+  };
+
   static const Set<String> allToolNames = {
     ...enableMemoryToolNames,
     chatSearch,
@@ -61,15 +69,21 @@ abstract final class MemoryTools {
     required MemoryWriteScope writeScope,
     required bool enableMemory,
     required bool allowPastConversationRecall,
+
+    /// False in temporary conversations, where reads stay available but a
+    /// write would outlive the conversation the user asked to be throwaway.
+    bool allowMemoryWrites = true,
   }) {
     final out = <Map<String, dynamic>>[];
     if (enableMemory) {
       out.add(_defMemoryRead(lang));
-      out.add(_defMemoryUpdate(lang, writeScope));
       out.add(_defMemorySearchProfile(lang));
-      out.add(_defMemoryEdit(lang));
-      out.add(_defMemoryDelete(lang));
-      out.add(_defUpdateUserProfile(lang));
+      if (allowMemoryWrites) {
+        out.add(_defMemoryUpdate(lang, writeScope));
+        out.add(_defMemoryEdit(lang));
+        out.add(_defMemoryDelete(lang));
+        out.add(_defUpdateUserProfile(lang));
+      }
     }
     if (allowPastConversationRecall) {
       out.add(_defChatSearch(lang));
@@ -138,6 +152,21 @@ abstract final class MemoryTools {
 
     if (!assistant.enableMemory) return null;
     if (!enableMemoryToolNames.contains(name)) return null;
+
+    // A temporary conversation is discarded when the user leaves it. Reads stay
+    // available, but a write would outlive the conversation the user asked to
+    // be throwaway.
+    if (writeToolNames.contains(name) &&
+        (chatService?.isTemporaryConversation(conversationId) ?? false)) {
+      return toolError(
+        error: 'temporary_conversation',
+        message: 'Memory cannot be written from a temporary conversation.',
+        tool: name,
+        instruction:
+            'Do not retry. Tell the user that memory is disabled in temporary '
+            'chats, and continue without saving.',
+      );
+    }
 
     final (handle, step) = _beginToolTrace(
       traceRecorder,
@@ -717,20 +746,17 @@ abstract final class MemoryTools {
       return jsonEncode({'query': query, 'results': <Map<String, dynamic>>[]});
     }
 
+    final scoped =
+        filterConversationId != null && filterConversationId.isNotEmpty;
     final matches = await chatService.searchConversationMatches(
       tokens: tokens,
       limit: limit * 8,
+      conversationId: scoped ? filterConversationId : null,
+      excludeConversationId: scoped ? null : conversationId,
     );
 
     final results = <Map<String, dynamic>>[];
     for (final m in matches) {
-      if (filterConversationId != null && filterConversationId.isNotEmpty) {
-        if (m.conversationId != filterConversationId) continue;
-      } else if (conversationId != null &&
-          conversationId.isNotEmpty &&
-          m.conversationId == conversationId) {
-        continue;
-      }
       final role = m.messageRole;
       if (role != 'user' && role != 'assistant') continue;
       final content = (m.messageContent ?? '').trim();

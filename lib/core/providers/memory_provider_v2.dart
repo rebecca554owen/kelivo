@@ -107,6 +107,15 @@ class MemoryProviderV2 extends ChangeNotifier {
   /// Convenience for the global management UI (§14.4).
   Future<void> refreshAll() => refresh(loadAll: true);
 
+  /// Re-read without changing which entries the UI is currently showing.
+  ///
+  /// Background work has no business narrowing the visible set: it knows which
+  /// assistant it ran for, but the user may be looking at every assistant, and
+  /// passing that id to [refresh] would make the other entries vanish until the
+  /// page is reopened.
+  Future<void> reloadCurrentScope() =>
+      refresh(assistantId: _focusAssistantId, loadAll: _loadAll);
+
   /// Search via §5.9 token AND. When [acrossAll] is true, searches every
   /// assistant; otherwise respects [assistantId] visibility.
   Future<List<MemoryEntry>> search({

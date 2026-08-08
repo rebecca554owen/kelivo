@@ -938,15 +938,25 @@ class MessageBuilderService {
     SettingsProvider? settings,
   }) async {
     try {
-      if (assistant?.enableMemory != true) return;
+      if (assistant == null) return;
+      // The two gates are independent: chat_search is registered on
+      // allowPastConversationRecall alone, so its rules cannot ride along with
+      // the long-term memory rules or the tool ships without instructions.
+      final wantsMemoryRules = assistant.enableMemory;
+      final wantsRecallRules = assistant.allowPastConversationRecall;
+      if (!wantsMemoryRules && !wantsRecallRules) return;
+
       final resolved = settings ?? contextProvider.read<SettingsProvider>();
       final lang = resolved.resolvedMemoryPromptLang;
-      final rules = lang == MemoryPromptLang.zh
-          ? resolved.memoryRulesPromptZh
-          : resolved.memoryRulesPromptEn;
-      final buf = StringBuffer(rules.trim());
-      if (assistant!.allowPastConversationRecall) {
-        buf.write('\n\n');
+      final buf = StringBuffer();
+      if (wantsMemoryRules) {
+        final rules = lang == MemoryPromptLang.zh
+            ? resolved.memoryRulesPromptZh
+            : resolved.memoryRulesPromptEn;
+        buf.write(rules.trim());
+      }
+      if (wantsRecallRules) {
+        if (buf.isNotEmpty) buf.write('\n\n');
         buf.write(MemoryPrompts.rulesPastConversationRecallFor(lang));
       }
       _appendToSystemMessage(apiMessages, buf.toString());

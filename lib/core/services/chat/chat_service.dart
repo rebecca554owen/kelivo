@@ -967,12 +967,16 @@ class ChatService extends ChangeNotifier {
     required List<String> tokens,
     int limit = 200,
     bool includeAllRevisions = false,
+    String? conversationId,
+    String? excludeConversationId,
   }) async {
     if (!_initialized) return const <ConversationSearchMatch>[];
     return _repo.searchConversationMatches(
       tokens: tokens,
       limit: limit,
       includeAllRevisions: includeAllRevisions,
+      conversationId: conversationId,
+      excludeConversationId: excludeConversationId,
     );
   }
 

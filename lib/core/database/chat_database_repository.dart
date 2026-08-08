@@ -2356,11 +2356,19 @@ class ChatDatabaseRepository {
     });
   }
 
+  /// Searches conversations for [tokens].
+  ///
+  /// [conversationId] restricts the search to one conversation and
+  /// [excludeConversationId] omits one. Both are applied in SQL rather than by
+  /// the caller, because the candidate `LIMIT` is global: a conversation whose
+  /// matches rank below the cut would otherwise be filtered down to nothing.
   Future<List<ConversationSearchMatch>> searchConversationMatches({
     required List<String> tokens,
     int limit = 200,
     int candidateMultiplier = 8,
     bool includeAllRevisions = false,
+    String? conversationId,
+    String? excludeConversationId,
   }) {
     return _observer.measure(
       ChatDatabaseOperation.querySearch,
@@ -2369,6 +2377,8 @@ class ChatDatabaseRepository {
         limit: limit,
         candidateMultiplier: candidateMultiplier,
         includeAllRevisions: includeAllRevisions,
+        conversationId: conversationId,
+        excludeConversationId: excludeConversationId,
       ),
       resultCount: (rows) => rows.length,
     );
@@ -2379,6 +2389,8 @@ class ChatDatabaseRepository {
     required int limit,
     required int candidateMultiplier,
     required bool includeAllRevisions,
+    String? conversationId,
+    String? excludeConversationId,
   }) async {
     final cleanTokens = tokens
         .map((token) => token.trim().toLowerCase())
@@ -2455,6 +2467,19 @@ class ChatDatabaseRepository {
         ..add(ftsQuery);
     }
 
+    // Applied alongside the match predicate so the candidate LIMIT is spent on
+    // rows the caller can actually use.
+    final scopeArgs = <String>[];
+    var scopeSql = '';
+    if (conversationId != null && conversationId.isNotEmpty) {
+      scopeSql = 'AND c.id = ?';
+      scopeArgs.add(conversationId);
+    } else if (excludeConversationId != null &&
+        excludeConversationId.isNotEmpty) {
+      scopeSql = 'AND c.id <> ?';
+      scopeArgs.add(excludeConversationId);
+    }
+
     final candidateLimit = (limit * candidateMultiplier)
         .clamp(limit, 2000)
         .toInt();
@@ -2518,7 +2543,8 @@ class ChatDatabaseRepository {
         AND m.role IN ('user', 'assistant')
         AND (${messageAnyClauses.join(' OR ')})
         ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible WHERE visible.conversation_id = m.conversation_id AND visible.group_id = COALESCE(m.group_id, m.id) AND visible.selected_version = m.version)'}
-      WHERE (${titleClauses.join(' AND ')}) OR (${existsClauses.join(' AND ')})
+      WHERE ((${titleClauses.join(' AND ')}) OR (${existsClauses.join(' AND ')}))
+        $scopeSql
       ORDER BY c.updated_at DESC, m.message_order ASC
       LIMIT ?
       ''',
@@ -2526,6 +2552,7 @@ class ChatDatabaseRepository {
             ...messageArgs.map((value) => Variable<String>(value! as String)),
             ...titleArgs.map((value) => Variable<String>(value! as String)),
             ...existsArgs.map((value) => Variable<String>(value! as String)),
+            ...scopeArgs.map(Variable<String>.new),
             Variable<int>(candidateLimit),
           ],
         )

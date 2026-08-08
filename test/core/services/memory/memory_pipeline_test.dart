@@ -241,6 +241,71 @@ void main() {
     });
   });
 
+  group('temporary conversations', () {
+    test('are never organized into long-term memory', () async {
+      // A temporary chat is discarded when the user leaves it, so distilling
+      // it would outlive the conversation they asked to be throwaway.
+      await seedAssistant('a1');
+      final temp = await chatService.createDraftConversation(
+        title: 'temp',
+        assistantId: 'a1',
+        temporary: true,
+      );
+      expect(chatService.isTemporaryConversation(temp.id), isTrue);
+
+      final result = await pipeline.runNow(
+        conversationId: temp.id,
+        assistantId: 'a1',
+      );
+      expect(result.advanced, isFalse);
+      expect(result.error, 'temporary_conversation');
+
+      // The auto path must be just as silent.
+      pipeline.scheduleIfNeeded(conversationId: temp.id, assistantId: 'a1');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(
+        await chatRepository.queryVisibleMemories(assistantId: 'a1'),
+        isEmpty,
+      );
+    });
+  });
+
+  group('background refresh does not narrow the UI', () {
+    test('reloadCurrentScope keeps a global listing intact', () async {
+      // The global memory page loads every assistant. A background run knows
+      // only the assistant it ran for, and passing that id would drop every
+      // other assistant's entries from the open list.
+      final memoryV2 = MemoryProviderV2(
+        repository: memoryRepository,
+        chatRepository: chatRepository,
+      );
+      await memoryRepository.create(
+        scope: MemoryScope.assistant,
+        assistantId: 'a1',
+        type: MemoryType.identity,
+        content: 'Belongs to a1.',
+        source: MemorySource.manual,
+      );
+      await memoryRepository.create(
+        scope: MemoryScope.assistant,
+        assistantId: 'a2',
+        type: MemoryType.identity,
+        content: 'Belongs to a2.',
+        source: MemorySource.manual,
+      );
+
+      await memoryV2.refreshAll();
+      expect(memoryV2.entries, hasLength(2));
+
+      await memoryV2.reloadCurrentScope();
+      expect(
+        memoryV2.entries,
+        hasLength(2),
+        reason: 'a background reload must not change the visible scope',
+      );
+    });
+  });
+
   group('processWindow watermark + short-circuit', () {
     test('Gatekeeper false advances watermark and skips Extract', () async {
       await seedAssistant('a1');

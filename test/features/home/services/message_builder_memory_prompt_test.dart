@@ -804,5 +804,46 @@ void main() {
         expect(before, isNot(contains('当前时间是')));
       },
     );
+
+    test(
+      'recall rules ship without memory rules when only recall is on',
+      () async {
+        // chat_search is registered on allowPastConversationRecall alone, so its
+        // usage rules cannot ride along with the long-term memory rules or the
+        // tool reaches the model with no instructions at all.
+        await seedAssistant('assistant-1');
+        final api = <Map<String, dynamic>>[
+          {'role': 'system', 'content': 'base system'},
+        ];
+        await buildService().injectMemoryAndRecentChats(
+          api,
+          assistant.copyWith(
+            enableMemory: false,
+            allowPastConversationRecall: true,
+          ),
+          settings: settings,
+        );
+
+        final content = (api.first['content'] ?? '').toString();
+        expect(content, contains(MemoryPrompts.rulesPastConversationRecallZh));
+        expect(content, isNot(contains('## 长期记忆')));
+      },
+    );
+
+    test('neither gate injects nothing', () async {
+      await seedAssistant('assistant-1');
+      final api = <Map<String, dynamic>>[
+        {'role': 'system', 'content': 'base system'},
+      ];
+      await buildService().injectMemoryAndRecentChats(
+        api,
+        assistant.copyWith(
+          enableMemory: false,
+          allowPastConversationRecall: false,
+        ),
+        settings: settings,
+      );
+      expect(api.first['content'], 'base system');
+    });
   });
 }

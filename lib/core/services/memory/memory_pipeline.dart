@@ -262,6 +262,20 @@ class MemoryPipelineService {
   }
 
   void _enqueue(_PipelineJob job) {
+    // A temporary conversation is discarded when the user leaves it and never
+    // reaches the database. Distilling it into long-term memory would outlive
+    // the conversation the user asked to be throwaway.
+    if (chatService.isTemporaryConversation(job.conversationId)) {
+      job.completer?.complete(
+        const MemoryOrganizeResult(
+          advanced: false,
+          gate: null,
+          error: 'temporary_conversation',
+        ),
+      );
+      return;
+    }
+
     // Coalesce pending (not running) jobs for the same conversation.
     _queue.removeWhere(
       (j) =>
@@ -617,7 +631,7 @@ class MemoryPipelineService {
     gateStep?.finish(MemoryTraceStepStatus.success);
     if (gate == MemoryGateParseResult.skip) {
       _skipRemainingSteps(handle, from: MemoryTraceStepKind.extract);
-      await _advance(conversationId, windowEnd, assistantId: assistant.id);
+      await _advance(conversationId, windowEnd);
       _windowFailures.remove(failureKey);
       return MemoryOrganizeResult(
         advanced: true,
@@ -699,7 +713,7 @@ class MemoryPipelineService {
     extractStep?.finish(MemoryTraceStepStatus.success);
     if (extracted.items.isEmpty) {
       _skipRemainingSteps(handle, from: MemoryTraceStepKind.smartAdd);
-      await _advance(conversationId, windowEnd, assistantId: assistant.id);
+      await _advance(conversationId, windowEnd);
       _windowFailures.remove(failureKey);
       return MemoryOrganizeResult(
         advanced: true,
@@ -773,7 +787,7 @@ class MemoryPipelineService {
     }
 
     // Smart Add (including degraded) and Distiller failure both advance (§12.8).
-    await _advance(conversationId, windowEnd, assistantId: assistant.id);
+    await _advance(conversationId, windowEnd);
     _windowFailures.remove(failureKey);
     return MemoryOrganizeResult(
       advanced: true,
@@ -819,7 +833,7 @@ class MemoryPipelineService {
     final count = (_windowFailures[failureKey] ?? 0) + 1;
     _windowFailures[failureKey] = count;
     if (count >= maxWindowFailures) {
-      await _advance(conversationId, windowEnd, assistantId: assistantId);
+      await _advance(conversationId, windowEnd);
       _windowFailures.remove(failureKey);
       return MemoryOrganizeResult(
         advanced: true,
@@ -837,11 +851,7 @@ class MemoryPipelineService {
     );
   }
 
-  Future<void> _advance(
-    String conversationId,
-    int order, {
-    String? assistantId,
-  }) async {
+  Future<void> _advance(String conversationId, int order) async {
     await chatRepository.setConversationLastMemoryExtractedOrder(
       conversationId,
       order,
@@ -852,7 +862,7 @@ class MemoryPipelineService {
       convo.lastMemoryExtractedOrder = order;
     }
     try {
-      await _memoryV2().refresh(assistantId: assistantId);
+      await _memoryV2().reloadCurrentScope();
     } catch (_) {}
   }
 }
