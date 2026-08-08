@@ -1826,16 +1826,19 @@ class DataSync {
             }
 
             // Restore non-existing conversations and their messages
+            final mergedConvIds = <String>[];
             for (final c in conversations) {
               if (!existingConvIds.contains(c.id)) {
                 final list = byConv[c.id] ?? const <ChatMessage>[];
                 await chatService.restoreConversation(c, list);
+                mergedConvIds.add(c.id);
               } else if (byConv.containsKey(c.id)) {
                 // Conversation exists but has new messages
                 final newMessages = byConv[c.id]!;
                 for (final msg in newMessages) {
                   await chatService.addMessageDirectly(c.id, msg);
                 }
+                mergedConvIds.add(c.id);
               }
             }
 
@@ -1857,6 +1860,11 @@ class DataSync {
                 );
               }
             }
+            // §6.7: restored history must not re-trigger background extraction,
+            // and injection hashes must clear so the next request self-heals.
+            await businessRepository.applyPostMergeMemoryConversationState(
+              mergedConvIds,
+            );
           }
         } catch (_) {
           rethrow;

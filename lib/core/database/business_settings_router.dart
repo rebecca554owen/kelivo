@@ -136,6 +136,21 @@ final class BusinessKeyRegistry {
     'mobile_assistant_edit_tab_order_v1',
     'mobile_assistant_edit_tab_hidden_v1',
     'mobile_assistant_detail_outline_enabled_v1',
+    'memory_model_v1',
+    'memory_model_thinking_enabled_v1',
+    'memory_prompt_lang_v1',
+    'memory_rules_prompt_zh_v1',
+    'memory_rules_prompt_en_v1',
+    'memory_gate_prompt_zh_v1',
+    'memory_gate_prompt_en_v1',
+    'memory_extract_prompt_zh_v1',
+    'memory_extract_prompt_en_v1',
+    'memory_smart_add_prompt_zh_v1',
+    'memory_smart_add_prompt_en_v1',
+    'memory_smart_add_batch_prompt_zh_v1',
+    'memory_smart_add_batch_prompt_en_v1',
+    'memory_profile_distill_prompt_zh_v1',
+    'memory_profile_distill_prompt_en_v1',
   };
 
   static BusinessKeyDisposition classify(String key) {
@@ -583,8 +598,80 @@ final class BusinessSettingsRouter {
         return;
       case BusinessEntityKind.assistantTag:
         return;
+      case BusinessEntityKind.memoryEntry:
+        _validateKnownFields(
+          kind,
+          payload,
+          requiredStrings: const {'id', 'scope', 'type', 'content'},
+          strings: const {'status', 'source', 'assistantId'},
+          numbers: const {'createdAt', 'updatedAt'},
+          stringLists: const {'relatedIds'},
+        );
+        final scope = payload['scope'] as String;
+        if (scope != 'global' && scope != 'assistant') {
+          throw FormatException(kind.sourceKey);
+        }
+        final type = payload['type'] as String;
+        if (type != 'identity' &&
+            type != 'workflow' &&
+            type != 'voice' &&
+            type != 'instruction') {
+          throw FormatException(kind.sourceKey);
+        }
+        final status = payload['status'];
+        if (status != null && status != 'active' && status != 'archived') {
+          throw FormatException(kind.sourceKey);
+        }
+        final source = payload['source'];
+        if (source != null &&
+            source != 'manual' &&
+            source != 'tool' &&
+            source != 'extracted' &&
+            source != 'distilled') {
+          throw FormatException(kind.sourceKey);
+        }
+        final assistantId = payload['assistantId'];
+        if (scope == 'global') {
+          if (assistantId != null) {
+            throw FormatException(kind.sourceKey);
+          }
+        } else if (assistantId is! String || assistantId.trim().isEmpty) {
+          throw FormatException(kind.sourceKey);
+        }
+        if (payload['createdAt'] is! num || payload['updatedAt'] is! num) {
+          throw FormatException(kind.sourceKey);
+        }
+        final content = payload['content'] as String;
+        if (content.trim().isEmpty) {
+          throw FormatException(kind.sourceKey);
+        }
+        return;
+      case BusinessEntityKind.userProfileField:
+        _validateKnownFields(
+          kind,
+          payload,
+          requiredStrings: const {'id', 'value'},
+          numbers: const {'updatedAt'},
+        );
+        final id = payload['id'] as String;
+        if (!_userProfileFieldIdPattern.hasMatch(id)) {
+          throw FormatException(kind.sourceKey);
+        }
+        final value = payload['value'] as String;
+        if (value.trim().isEmpty) {
+          throw FormatException(kind.sourceKey);
+        }
+        if (payload['updatedAt'] is! num) {
+          throw FormatException(kind.sourceKey);
+        }
+        return;
     }
   }
+
+  static final _userProfileFieldIdPattern = RegExp(
+    r'^(preferred_name|gender|pronouns|preferred_language|timezone|'
+    r'occupation|location|custom\.[A-Za-z0-9_\-]{1,32})$',
+  );
 
   static void _validateKnownFields(
     BusinessEntityKind kind,

@@ -248,17 +248,35 @@ void main() {
                 'provider-b': {'id': 'provider-b', 'apiKey': 'secret-b'},
               })
             : jsonEncode([
-                {
-                  'id': kind == BusinessEntityKind.assistantMemory
-                      ? 1
-                      : '${kind.name}-a',
-                  if (kind == BusinessEntityKind.assistantMemory)
-                    'assistantId': 'assistant-a',
-                  if (kind == BusinessEntityKind.searchService)
-                    'type': 'bing_local',
-                  if (kind == BusinessEntityKind.ttsService) 'kind': 'openai',
-                  'opaque': kind.name,
-                },
+                if (kind == BusinessEntityKind.memoryEntry)
+                  {
+                    'id': 'mem_a1b2c3d4',
+                    'scope': 'global',
+                    'type': 'identity',
+                    'content': 'Migrated memory.',
+                    'createdAt': 1786012880106000,
+                    'updatedAt': 1786012880106000,
+                    'opaque': kind.name,
+                  }
+                else if (kind == BusinessEntityKind.userProfileField)
+                  {
+                    'id': 'preferred_name',
+                    'value': 'Psyche',
+                    'updatedAt': 1786012880106000,
+                    'opaque': kind.name,
+                  }
+                else
+                  {
+                    'id': kind == BusinessEntityKind.assistantMemory
+                        ? 1
+                        : '${kind.name}-a',
+                    if (kind == BusinessEntityKind.assistantMemory)
+                      'assistantId': 'assistant-a',
+                    if (kind == BusinessEntityKind.searchService)
+                      'type': 'bing_local',
+                    if (kind == BusinessEntityKind.ttsService) 'kind': 'openai',
+                    'opaque': kind.name,
+                  },
               ]),
       'providers_order_v1': <String>['provider-b', 'provider-a'],
       'pinned_models_v1': <String>['provider-a::model-a'],
@@ -287,30 +305,27 @@ void main() {
     expect(legacy.values, <String, Object?>{'flutter_log_enabled_v1': true});
   });
 
-  test(
-    'checkpoints before the first SharedPreferences deletion',
-    () async {
-      final events = <String>[];
-      final legacy = FakeLegacyBusinessPreferences({
-        'theme_mode_v1': 'dark',
-        'app_locale_v1': 'zh-CN',
-      })..onRemove = (_) => events.add('remove');
+  test('checkpoints before the first SharedPreferences deletion', () async {
+    final events = <String>[];
+    final legacy = FakeLegacyBusinessPreferences({
+      'theme_mode_v1': 'dark',
+      'app_locale_v1': 'zh-CN',
+    })..onRemove = (_) => events.add('remove');
 
-      final result = await BusinessMigrationEngine(
-        repository: repository,
-        legacyPreferences: legacy,
-        checkpoint: () async {
-          events.add('checkpoint');
-          return repository.checkpoint();
-        },
-      ).run();
+    final result = await BusinessMigrationEngine(
+      repository: repository,
+      legacyPreferences: legacy,
+      checkpoint: () async {
+        events.add('checkpoint');
+        return repository.checkpoint();
+      },
+    ).run();
 
-      expect(result, BusinessMigrationResult.migrated);
-      expect(events.first, 'checkpoint');
-      expect(events.skip(1), everyElement('remove'));
-      expect(legacy.values, isEmpty);
-    },
-  );
+    expect(result, BusinessMigrationResult.migrated);
+    expect(events.first, 'checkpoint');
+    expect(events.skip(1), everyElement('remove'));
+    expect(legacy.values, isEmpty);
+  });
 
   test(
     'busy checkpoint keeps source keys across launches until barrier succeeds',
@@ -437,7 +452,8 @@ void main() {
         await BusinessMigrationEngine(
           repository: repository,
           legacyPreferences: legacy,
-          checkpoint: () async => throw StateError('injected_checkpoint_failure'),
+          checkpoint: () async =>
+              throw StateError('injected_checkpoint_failure'),
         ).run(),
         BusinessMigrationResult.deferredCleanup,
       );

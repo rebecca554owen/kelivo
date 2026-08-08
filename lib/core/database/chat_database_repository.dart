@@ -562,6 +562,9 @@ class ChatDatabaseRepository {
       'instruction_injection_rows',
       'assistant_tag_rows',
       'preference_rows',
+      'memory_entry_rows',
+      'user_profile_field_rows',
+      'message_prompt_rows',
     };
     final tableRows = database.select(
       "SELECT name FROM sqlite_master WHERE type = 'table';",
@@ -598,6 +601,8 @@ class ChatDatabaseRepository {
         'summary',
         'last_summarized_message_count',
         'chat_suggestions_json',
+        'injected_memory_hash',
+        'last_memory_extracted_order',
       ],
       'conversation_mcp_server_rows': [
         'conversation_id',
@@ -699,6 +704,28 @@ class ChatDatabaseRepository {
       ],
       'assistant_tag_rows': ['id', 'sort_order', 'payload', 'updated_at'],
       'preference_rows': ['key', 'value', 'updated_at'],
+      'memory_entry_rows': [
+        'id',
+        'sort_order',
+        'scope',
+        'assistant_id',
+        'type',
+        'status',
+        'content',
+        'content_normalized',
+        'entry_created_at',
+        'entry_updated_at',
+        'payload',
+        'updated_at',
+      ],
+      'user_profile_field_rows': ['id', 'sort_order', 'payload', 'updated_at'],
+      'message_prompt_rows': [
+        'revision_id',
+        'conversation_id',
+        'payload',
+        'carries_memory_snapshot',
+        'created_at',
+      ],
     };
     for (final entry in expectedColumns.entries) {
       final tableInfo = database.select('PRAGMA table_info(${entry.key});');
@@ -729,6 +756,9 @@ class ChatDatabaseRepository {
       'instruction_injection_rows': ['id'],
       'assistant_tag_rows': ['id'],
       'preference_rows': ['key'],
+      'memory_entry_rows': ['id'],
+      'user_profile_field_rows': ['id'],
+      'message_prompt_rows': ['revision_id'],
     };
     const sortOrderTables = {
       'assistant_rows',
@@ -742,6 +772,8 @@ class ChatDatabaseRepository {
       'tts_service_rows',
       'instruction_injection_rows',
       'assistant_tag_rows',
+      'memory_entry_rows',
+      'user_profile_field_rows',
     };
     for (final entry in expectedPrimaryKeys.entries) {
       final primaryRows =
@@ -795,6 +827,47 @@ class ChatDatabaseRepository {
     ])) {
       throw StateError('index_schema:$memoryIndexName');
     }
+
+    void requireIndex({
+      required String table,
+      required String name,
+      required List<String> columns,
+    }) {
+      final indexRows = database.select('PRAGMA index_list($table);');
+      final index = indexRows.where((row) => row['name'] == name);
+      if (index.length != 1 || index.single['unique'] != 0) {
+        throw StateError('index_schema:$name');
+      }
+      final actual = database
+          .select('PRAGMA index_info($name);')
+          .map((row) => row['name'])
+          .whereType<String>()
+          .toList(growable: false);
+      if (!_sameOrderedStrings(actual, columns)) {
+        throw StateError('index_schema:$name');
+      }
+    }
+
+    requireIndex(
+      table: 'memory_entry_rows',
+      name: 'idx_memory_entries_visible',
+      columns: const ['status', 'type', 'scope', 'assistant_id'],
+    );
+    requireIndex(
+      table: 'memory_entry_rows',
+      name: 'idx_memory_entries_recent',
+      columns: const ['status', 'type', 'entry_updated_at', 'id'],
+    );
+    requireIndex(
+      table: 'memory_entry_rows',
+      name: 'idx_memory_entries_dedupe',
+      columns: const ['scope', 'assistant_id', 'type', 'content_normalized'],
+    );
+    requireIndex(
+      table: 'message_prompt_rows',
+      name: 'idx_message_prompts_conversation_snapshot',
+      columns: const ['conversation_id', 'carries_memory_snapshot'],
+    );
 
     const assetIndexName = 'idx_message_assets_asset';
     final assetIndexRows = database.select(
@@ -868,6 +941,9 @@ class ChatDatabaseRepository {
       'instruction_injection_rows': <String>{},
       'assistant_tag_rows': <String>{},
       'preference_rows': <String>{},
+      'memory_entry_rows': <String>{},
+      'user_profile_field_rows': <String>{},
+      'message_prompt_rows': {'revision_id->message_rows.id:CASCADE'},
     };
     for (final entry in expectedForeignKeys.entries) {
       final actual = database
@@ -1515,10 +1591,7 @@ class ChatDatabaseRepository {
             'payload_length FROM message_part_rows '
             "WHERE kind = 'text' AND part_id > ? "
             'ORDER BY part_id LIMIT ?;',
-            variables: [
-              Variable<int>(cursor),
-              const Variable<int>(pageSize),
-            ],
+            variables: [Variable<int>(cursor), const Variable<int>(pageSize)],
             readsFrom: {_db.messagePartRows},
           )
           .get();
@@ -1545,11 +1618,10 @@ class ChatDatabaseRepository {
     final receivePort = ReceivePort();
     Isolate? isolate;
     try {
-      isolate = await Isolate.spawn(
-        _textPartContentDigestIsolateMain,
-        (path: databasePath, sendPort: receivePort.sendPort),
-        debugName: 'text_part_content_digest',
-      );
+      isolate = await Isolate.spawn(_textPartContentDigestIsolateMain, (
+        path: databasePath,
+        sendPort: receivePort.sendPort,
+      ), debugName: 'text_part_content_digest');
       await for (final message in receivePort) {
         if (message is! Map) {
           throw StateError('digest_isolate_protocol');
@@ -1596,10 +1668,12 @@ class ChatDatabaseRepository {
       );
       try {
         final totalChars =
-            database.select(
-                  "SELECT COALESCE(SUM(LENGTH(payload)), 0) AS total "
-                  "FROM message_part_rows WHERE kind = 'text';",
-                ).single['total']
+            database
+                    .select(
+                      "SELECT COALESCE(SUM(LENGTH(payload)), 0) AS total "
+                      "FROM message_part_rows WHERE kind = 'text';",
+                    )
+                    .single['total']
                 as int;
         args.sendPort.send({
           'type': 'progress',
@@ -4163,12 +4237,15 @@ class ChatDatabaseRepository {
       'INSERT INTO main.conversation_rows '
       '(id, title, created_at, updated_at, is_pinned, assistant_id, '
       'truncate_index, version_selections_json, summary, '
-      'last_summarized_message_count, chat_suggestions_json) '
+      'last_summarized_message_count, chat_suggestions_json, '
+      'injected_memory_hash, last_memory_extracted_order) '
       'SELECT ?, title, created_at, updated_at, is_pinned, assistant_id, '
       'truncate_index, ?, summary, '
-      'last_summarized_message_count, chat_suggestions_json '
+      'last_summarized_message_count, chat_suggestions_json, '
+      'NULL, COALESCE((SELECT MAX(message_order) '
+      'FROM merge_source.message_rows WHERE conversation_id = ?), -1) '
       'FROM merge_source.conversation_rows WHERE id = ?;',
-      [targetId, jsonEncode(targetSelections), sourceId],
+      [targetId, jsonEncode(targetSelections), sourceId, sourceId],
     );
     await _db.customStatement(
       'INSERT INTO main.conversation_mcp_server_rows '
@@ -4309,8 +4386,9 @@ class ChatDatabaseRepository {
   }
 
   Future<void> _updateMessageRow(ChatMessage message) async {
-    await (_db.update(_db.messageRows)..where((t) => t.id.equals(message.id)))
-        .write(_messageUpdate(message));
+    await (_db.update(
+      _db.messageRows,
+    )..where((t) => t.id.equals(message.id))).write(_messageUpdate(message));
   }
 
   /// Partial-column UPDATE: only the non-null fields are written, so
@@ -5109,6 +5187,8 @@ class ChatDatabaseRepository {
       summary: row.summary,
       lastSummarizedMessageCount: row.lastSummarizedMessageCount,
       chatSuggestions: _decodeStringList(row.chatSuggestionsJson),
+      injectedMemoryHash: row.injectedMemoryHash,
+      lastMemoryExtractedOrder: row.lastMemoryExtractedOrder,
     );
   }
 
@@ -5127,6 +5207,8 @@ class ChatDatabaseRepository {
         conversation.lastSummarizedMessageCount,
       ),
       chatSuggestionsJson: Value(jsonEncode(conversation.chatSuggestions)),
+      injectedMemoryHash: Value(conversation.injectedMemoryHash),
+      lastMemoryExtractedOrder: Value(conversation.lastMemoryExtractedOrder),
     );
   }
 

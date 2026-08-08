@@ -51,6 +51,14 @@ class Conversation extends HiveObject {
   @HiveField(12)
   List<String> chatSuggestions;
 
+  // Hash of the last injected memory block; null means never injected.
+  @HiveField(13)
+  String? injectedMemoryHash;
+
+  // Highest message_order processed by background memory extraction; -1 = never.
+  @HiveField(14)
+  int lastMemoryExtractedOrder;
+
   Conversation({
     String? id,
     required this.title,
@@ -65,6 +73,8 @@ class Conversation extends HiveObject {
     this.summary,
     int? lastSummarizedMessageCount,
     List<String>? chatSuggestions,
+    this.injectedMemoryHash,
+    int? lastMemoryExtractedOrder,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now(),
@@ -73,7 +83,8 @@ class Conversation extends HiveObject {
        truncateIndex = truncateIndex ?? -1,
        versionSelections = versionSelections ?? <String, int>{},
        lastSummarizedMessageCount = lastSummarizedMessageCount ?? 0,
-       chatSuggestions = chatSuggestions ?? [];
+       chatSuggestions = chatSuggestions ?? [],
+       lastMemoryExtractedOrder = lastMemoryExtractedOrder ?? -1;
 
   Conversation copyWith({
     String? id,
@@ -89,7 +100,10 @@ class Conversation extends HiveObject {
     String? summary,
     int? lastSummarizedMessageCount,
     List<String>? chatSuggestions,
+    String? injectedMemoryHash,
+    int? lastMemoryExtractedOrder,
     bool clearSummary = false,
+    bool clearInjectedMemoryHash = false,
   }) {
     return Conversation(
       id: id ?? this.id,
@@ -106,6 +120,11 @@ class Conversation extends HiveObject {
       lastSummarizedMessageCount:
           lastSummarizedMessageCount ?? this.lastSummarizedMessageCount,
       chatSuggestions: chatSuggestions ?? this.chatSuggestions,
+      injectedMemoryHash: clearInjectedMemoryHash
+          ? null
+          : (injectedMemoryHash ?? this.injectedMemoryHash),
+      lastMemoryExtractedOrder:
+          lastMemoryExtractedOrder ?? this.lastMemoryExtractedOrder,
     );
   }
 
@@ -124,6 +143,8 @@ class Conversation extends HiveObject {
       'summary': summary,
       'lastSummarizedMessageCount': lastSummarizedMessageCount,
       'chatSuggestions': chatSuggestions,
+      'injectedMemoryHash': injectedMemoryHash,
+      'lastMemoryExtractedOrder': lastMemoryExtractedOrder,
     };
   }
 
@@ -150,6 +171,8 @@ class Conversation extends HiveObject {
       chatSuggestions:
           (json['chatSuggestions'] as List?)?.cast<String>() ??
           const <String>[],
+      injectedMemoryHash: json['injectedMemoryHash'] as String?,
+      lastMemoryExtractedOrder: json['lastMemoryExtractedOrder'] as int? ?? -1,
     );
   }
 }
