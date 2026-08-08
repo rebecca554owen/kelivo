@@ -30,6 +30,30 @@ import 'ocr_service.dart';
 /// Result of §7.6 memory-prefix resolution.
 typedef MemoryPrefixResolution = ({String prefix, String? hash});
 
+/// Memory injection state shared by the messages assembled in one request.
+///
+/// Persisted conversations could read all of this back from the database, but
+/// temporary ones are never written there, so without a pass-scoped record each
+/// message would look like the first and re-inject the same snapshot.
+class MemoryInjectionPass {
+  /// Revision ids that received a memory block during this request.
+  final Set<String> snapshotCarriers = <String>{};
+
+  /// The most recent hash injected during this request, if any.
+  String? get injectedHash => _injectedHash;
+  String? _injectedHash;
+
+  /// Whether [injectedHash] has been set, distinguishing "none yet" from a
+  /// legitimately null hash.
+  bool get hasInjectedHash => _hasInjectedHash;
+  bool _hasInjectedHash = false;
+
+  void recordInjectedHash(String? hash) {
+    _injectedHash = hash;
+    _hasInjectedHash = true;
+  }
+}
+
 /// Service for building API messages from conversation state.
 ///
 /// This service handles:
@@ -509,10 +533,7 @@ class MessageBuilderService {
       }
     }
 
-    // Revision ids that received a snapshot during this very pass. Reading it
-    // back from message_prompt_rows would work for persisted conversations but
-    // not for temporary ones, which never get a row.
-    final snapshotCarriersThisPass = <String>{};
+    final injectionPass = MemoryInjectionPass();
 
     for (int i = 0; i < apiMessages.length; i++) {
       if (!isPersistedUserMessage(apiMessages[i])) continue;
@@ -646,7 +667,7 @@ class MessageBuilderService {
           conversation: conversation,
           settings: settings,
           apiMessages: apiMessages,
-          snapshotCarriers: snapshotCarriersThisPass,
+          pass: injectionPass,
         );
       } else {
         // No conversation or no matching stored message: nothing to freeze
@@ -710,7 +731,7 @@ class MessageBuilderService {
     required Conversation conversation,
     required SettingsProvider settings,
     required List<Map<String, dynamic>> apiMessages,
-    Set<String>? snapshotCarriers,
+    MemoryInjectionPass? pass,
   }) async {
     final repo = _repo;
     final persist =
@@ -729,10 +750,10 @@ class MessageBuilderService {
             apiMessages: apiMessages,
             currentMessageId: message.id,
             lang: settings.resolvedMemoryPromptLang,
-            snapshotCarriers: snapshotCarriers,
+            pass: pass,
           );
     if (memory.prefix.isNotEmpty) {
-      snapshotCarriers?.add(message.id);
+      pass?.snapshotCarriers.add(message.id);
     }
 
     final templ = (assistant?.messageTemplate ?? '{{ message }}').trim().isEmpty
@@ -771,7 +792,7 @@ class MessageBuilderService {
     required List<Map<String, dynamic>> apiMessages,
     required String currentMessageId,
     required MemoryPromptLang lang,
-    Set<String>? snapshotCarriers,
+    MemoryInjectionPass? pass,
   }) async {
     if (!assistant.enableMemory) {
       return (prefix: '', hash: null);
@@ -825,7 +846,9 @@ class MessageBuilderService {
       historyUserIds.add(revisionId);
     }
     final hasSnapshot =
-        historyUserIds.any((id) => snapshotCarriers?.contains(id) ?? false) ||
+        historyUserIds.any(
+          (id) => pass?.snapshotCarriers.contains(id) ?? false,
+        ) ||
         await repo.anyPromptCarriesMemorySnapshot(historyUserIds);
 
     // CRITICAL: compare against the prior hash BEFORE any write (appendix §6).
@@ -836,9 +859,13 @@ class MessageBuilderService {
     // `conversation.copyWith(...)` and nothing ever loads this column back into
     // the model, so the cached value is stale forever and every turn would look
     // like a change.
-    final previousHash = await repo.getConversationInjectedMemoryHash(
-      conversation.id,
-    );
+    //
+    // A hash already injected earlier in this same request wins, because
+    // temporary conversations are never persisted and would otherwise read
+    // null for every message and repeat an identical update block on each one.
+    final previousHash = pass != null && pass.hasInjectedHash
+        ? pass.injectedHash
+        : await repo.getConversationInjectedMemoryHash(conversation.id);
 
     final String prefix;
     if (!hasSnapshot) {
@@ -859,6 +886,7 @@ class MessageBuilderService {
 
     // The hash lands in the database through freezeMessagePrompt, in the same
     // transaction as the prompt row.
+    pass?.recordInjectedHash(currentHash);
     return (prefix: prefix, hash: currentHash);
   }
 

@@ -424,6 +424,63 @@ void main() {
         expect(result.hash, isNull);
       },
     );
+
+    test(
+      'a hash injected earlier in the same request is not re-injected',
+      () async {
+        // Temporary conversations never reach the database, so the prior hash
+        // has to come from the request itself. Without that, every message
+        // after the first repeats a byte-identical update block.
+        await seedAssistant('assistant-1');
+        await putEntry(id: 'mem_01', content: 'User likes Flutter.');
+        final conversation = await seedConversation('conv-1');
+        await seedUserMessage(id: 'u1', conversationId: 'conv-1');
+        await seedUserMessage(
+          id: 'u2',
+          conversationId: 'conv-1',
+          content: 'next',
+          messageOrder: 1,
+        );
+
+        final service = buildService();
+        final apiMessages = [
+          {
+            'role': 'user',
+            'content': 'hi',
+            MessageBuilderService.internalRevisionIdKey: 'u1',
+          },
+          {
+            'role': 'user',
+            'content': 'next',
+            MessageBuilderService.internalRevisionIdKey: 'u2',
+          },
+        ];
+        final pass = MemoryInjectionPass();
+
+        final first = await service.resolveMemoryPrefix(
+          conversation: conversation,
+          assistant: assistant,
+          apiMessages: apiMessages,
+          currentMessageId: 'u1',
+          lang: MemoryPromptLang.zh,
+          pass: pass,
+        );
+        pass.snapshotCarriers.add('u1');
+
+        final second = await service.resolveMemoryPrefix(
+          conversation: conversation,
+          assistant: assistant,
+          apiMessages: apiMessages,
+          currentMessageId: 'u2',
+          lang: MemoryPromptLang.zh,
+          pass: pass,
+        );
+
+        expect(first.prefix, contains(MemoryPrompts.introFullZh));
+        expect(second.prefix, isEmpty);
+        expect(second.hash, isNull);
+      },
+    );
   });
 
   group('hash ordering regression (appendix item 6)', () {
