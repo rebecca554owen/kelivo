@@ -303,6 +303,23 @@ void main() {
         hasLength(2),
         reason: 'a background reload must not change the visible scope',
       );
+
+      // Same contract as ToolHandlerService.onMutated: a write for one
+      // assistant must not collapse an open global listing.
+      await memoryRepository.create(
+        scope: MemoryScope.assistant,
+        assistantId: 'a1',
+        type: MemoryType.identity,
+        content: 'Another a1 fact.',
+        source: MemorySource.tool,
+      );
+      await memoryV2.reloadCurrentScope();
+      expect(memoryV2.entries, hasLength(3));
+      expect(
+        memoryV2.entries.any((e) => e.assistantId == 'a2'),
+        isTrue,
+        reason: 'a1 tool writes must leave a2 entries visible',
+      );
     });
   });
 

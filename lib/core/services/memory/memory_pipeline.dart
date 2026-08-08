@@ -327,6 +327,10 @@ class MemoryPipelineService {
 
   /// Open a trace for [job]. Returns null when recording is off or fails.
   MemoryTraceHandle? _beginJobTrace(_PipelineJob job) {
+    // Temporary chats are discarded on exit; keep their traces out of the UI.
+    if (chatService.isTemporaryConversation(job.conversationId)) {
+      return null;
+    }
     try {
       final assistant = _assistants().getById(job.assistantId);
       final convo = chatService.getConversation(job.conversationId);
@@ -514,17 +518,23 @@ class MemoryPipelineService {
     final ownsTrace = trace == null;
     MemoryTraceHandle? handle = trace;
     if (ownsTrace) {
-      try {
-        handle = traceRecorder.begin(
-          trigger: MemoryTraceTrigger.manual,
-          scope: memoryTraceScopeOf(assistant.memoryWriteScope),
-          conversationId: conversationId,
-          conversationTitle: chatService.getConversation(conversationId)?.title,
-          assistantId: assistant.id,
-          assistantName: assistant.name,
-        );
-      } catch (_) {
+      if (chatService.isTemporaryConversation(conversationId)) {
         handle = null;
+      } else {
+        try {
+          handle = traceRecorder.begin(
+            trigger: MemoryTraceTrigger.manual,
+            scope: memoryTraceScopeOf(assistant.memoryWriteScope),
+            conversationId: conversationId,
+            conversationTitle: chatService
+                .getConversation(conversationId)
+                ?.title,
+            assistantId: assistant.id,
+            assistantName: assistant.name,
+          );
+        } catch (_) {
+          handle = null;
+        }
       }
     }
     MemoryOrganizeResult result;

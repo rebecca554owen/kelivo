@@ -1474,6 +1474,10 @@ class HomeViewModel extends ChangeNotifier {
     Conversation convo,
     Assistant? assistant,
   ) {
+    // Temporary chats are discarded on exit; keep their traces out of the UI.
+    if (_chatService.isTemporaryConversation(convo.id)) {
+      return null;
+    }
     try {
       return MemoryTraceRecorder.instance.begin(
         trigger: MemoryTraceTrigger.conversationSummary,

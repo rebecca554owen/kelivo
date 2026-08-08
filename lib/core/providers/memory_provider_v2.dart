@@ -233,9 +233,7 @@ class MemoryProviderV2 extends ChangeNotifier {
     return ok;
   }
 
-  Future<void> _refreshAfterWrite() {
-    return refresh(assistantId: _focusAssistantId, loadAll: _loadAll);
-  }
+  Future<void> _refreshAfterWrite() => reloadCurrentScope();
 
   static bool _isVisible(MemoryEntry entry, String? assistantId) {
     if (entry.scope == MemoryScope.global) return true;

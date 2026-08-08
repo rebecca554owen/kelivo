@@ -118,10 +118,16 @@ abstract final class MemoryTools {
     MemoryTraceRecorder? traceRecorder,
     String? conversationTitle,
   }) async {
+    // Temporary chats are discarded on exit. Reads stay available, but a
+    // recorded trace (title, args, result) would outlive the conversation.
+    final temporary =
+        chatService?.isTemporaryConversation(conversationId) ?? false;
+    final activeRecorder = temporary ? null : traceRecorder;
+
     if (name == chatSearch) {
       if (!assistant.allowPastConversationRecall) return null;
       final (handle, step) = _beginToolTrace(
-        traceRecorder,
+        activeRecorder,
         kind: MemoryTraceStepKind.chatSearch,
         name: name,
         args: args,
@@ -169,7 +175,7 @@ abstract final class MemoryTools {
     }
 
     final (handle, step) = _beginToolTrace(
-      traceRecorder,
+      activeRecorder,
       kind: MemoryTraceStepKind.memoryTool,
       name: name,
       args: args,

@@ -8,8 +8,13 @@ import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 
 /// Ensures FTS setup ran, then runs FTS5 integrity-check on [dbFile].
-Future<void> expectFtsIntegrity(ChatDatabaseRepository repository, File dbFile) async {
-  await repository.searchConversationMatches(tokens: const ['__fts_integrity__']);
+Future<void> expectFtsIntegrity(
+  ChatDatabaseRepository repository,
+  File dbFile,
+) async {
+  await repository.searchConversationMatches(
+    tokens: const ['__fts_integrity__'],
+  );
   await repository.close();
   final database = sqlite.sqlite3.open(dbFile.path);
   try {
@@ -319,86 +324,89 @@ void main() {
     await expectFtsIntegrity(repository, file);
   });
 
-  test('deleting a conversation removes all message bodies from search', () async {
-    final root = await Directory.systemTemp.createTemp('chat_search_del_conv_');
-    final file = File('${root.path}/search.sqlite');
-    final repository = ChatDatabaseRepository.open(file: file);
-    addTearDown(() async {
-      if (await root.exists()) {
-        await root.delete(recursive: true);
-      }
-    });
-    await repository.putMigrationBatch(
-      conversations: [
-        Conversation(
-          id: 'doomed',
-          title: 'Doomed',
-          createdAt: DateTime.utc(2026, 7, 12),
-          updatedAt: DateTime.utc(2026, 7, 12),
-          messageIds: const ['m1'],
-        ),
-        Conversation(
-          id: 'survivor',
-          title: 'Survivor',
-          createdAt: DateTime.utc(2026, 7, 12),
-          updatedAt: DateTime.utc(2026, 7, 12),
-          messageIds: const ['m2'],
-        ),
-      ],
-      messages: [
-        (
-          message: ChatMessage(
-            id: 'm1',
-            role: 'user',
-            content: 'doomed-conversation-token',
-            timestamp: DateTime.utc(2026, 7, 12),
-            conversationId: 'doomed',
+  test(
+    'deleting a conversation removes all message bodies from search',
+    () async {
+      final root = await Directory.systemTemp.createTemp(
+        'chat_search_del_conv_',
+      );
+      final file = File('${root.path}/search.sqlite');
+      final repository = ChatDatabaseRepository.open(file: file);
+      addTearDown(() async {
+        if (await root.exists()) {
+          await root.delete(recursive: true);
+        }
+      });
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: 'doomed',
+            title: 'Doomed',
+            createdAt: DateTime.utc(2026, 7, 12),
+            updatedAt: DateTime.utc(2026, 7, 12),
+            messageIds: const ['m1'],
           ),
-          messageOrder: 0,
-        ),
-        (
-          message: ChatMessage(
-            id: 'm2',
-            role: 'user',
-            content: 'survivor-conversation-token',
-            timestamp: DateTime.utc(2026, 7, 12),
-            conversationId: 'survivor',
+          Conversation(
+            id: 'survivor',
+            title: 'Survivor',
+            createdAt: DateTime.utc(2026, 7, 12),
+            updatedAt: DateTime.utc(2026, 7, 12),
+            messageIds: const ['m2'],
           ),
-          messageOrder: 0,
-        ),
-      ],
-      toolEventsByMessageId: const {},
-      geminiSignaturesByMessageId: const {},
-    );
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: 'm1',
+              role: 'user',
+              content: 'doomed-conversation-token',
+              timestamp: DateTime.utc(2026, 7, 12),
+              conversationId: 'doomed',
+            ),
+            messageOrder: 0,
+          ),
+          (
+            message: ChatMessage(
+              id: 'm2',
+              role: 'user',
+              content: 'survivor-conversation-token',
+              timestamp: DateTime.utc(2026, 7, 12),
+              conversationId: 'survivor',
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
 
-    expect(
-      await repository.searchConversationMatches(
-        tokens: const ['doomed-conversation-token'],
-      ),
-      isNotEmpty,
-    );
-    await repository.deleteConversation('doomed');
-    expect(
-      await repository.searchConversationMatches(
-        tokens: const ['doomed-conversation-token'],
-      ),
-      isEmpty,
-    );
-    expect(
-      (await repository.searchConversationMatches(
-        tokens: const ['survivor-conversation-token'],
-      )).single.messageId,
-      'm2',
-    );
-    await expectFtsIntegrity(repository, file);
-  });
+      expect(
+        await repository.searchConversationMatches(
+          tokens: const ['doomed-conversation-token'],
+        ),
+        isNotEmpty,
+      );
+      await repository.deleteConversation('doomed');
+      expect(
+        await repository.searchConversationMatches(
+          tokens: const ['doomed-conversation-token'],
+        ),
+        isEmpty,
+      );
+      expect(
+        (await repository.searchConversationMatches(
+          tokens: const ['survivor-conversation-token'],
+        )).single.messageId,
+        'm2',
+      );
+      await expectFtsIntegrity(repository, file);
+    },
+  );
 
   test(
     'reopening a finalized message for streaming unindexes before rewrite',
     () async {
-      final root = await Directory.systemTemp.createTemp(
-        'chat_search_reopen_',
-      );
+      final root = await Directory.systemTemp.createTemp('chat_search_reopen_');
       final file = File('${root.path}/search.sqlite');
       final repository = ChatDatabaseRepository.open(file: file);
       addTearDown(() async {
@@ -445,10 +453,7 @@ void main() {
         const [],
       );
       await repository.updateStreamingCheckpoint(
-        reopened.copyWith(
-          content: 'reopen-new-body-token',
-          isStreaming: false,
-        ),
+        reopened.copyWith(content: 'reopen-new-body-token', isStreaming: false),
         const [],
       );
 
@@ -467,6 +472,78 @@ void main() {
       await expectFtsIntegrity(repository, file);
     },
   );
+
+  test('conversationId scope is applied before the candidate LIMIT', () async {
+    // candidateLimit = (limit * candidateMultiplier).clamp(limit, 2000).
+    // With limit=2 and multiplier=1 the ceiling is 2 rows. Newer matching
+    // noise fills that window; SQL scoping must still find the older target.
+    // Filtering in Dart after an unscoped LIMIT would miss it.
+    final root = await Directory.systemTemp.createTemp(
+      'chat_search_scope_limit_',
+    );
+    final repository = ChatDatabaseRepository.open(
+      file: File('${root.path}/search.sqlite'),
+    );
+    addTearDown(() async {
+      await repository.close();
+      await root.delete(recursive: true);
+    });
+
+    final base = DateTime.utc(2026, 7, 1);
+    Future<void> seedConversation({
+      required String id,
+      required DateTime updatedAt,
+      required String messageId,
+    }) {
+      return repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: id,
+            title: id,
+            createdAt: updatedAt,
+            updatedAt: updatedAt,
+            messageIds: [messageId],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'user',
+              content: 'needle in conversation',
+              timestamp: updatedAt,
+              conversationId: id,
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+    }
+
+    await seedConversation(
+      id: 'wanted',
+      updatedAt: base,
+      messageId: 'wanted-msg',
+    );
+    for (var i = 0; i < 5; i++) {
+      await seedConversation(
+        id: 'noise-$i',
+        updatedAt: base.add(Duration(days: i + 1)),
+        messageId: 'noise-msg-$i',
+      );
+    }
+
+    final matches = await repository.searchConversationMatches(
+      tokens: const ['needle'],
+      limit: 2,
+      candidateMultiplier: 1,
+      conversationId: 'wanted',
+    );
+    expect(matches, isNotEmpty);
+    expect(matches.every((m) => m.conversationId == 'wanted'), isTrue);
+  });
 
   test('tool_call payloads are not indexed for search', () async {
     final root = await Directory.systemTemp.createTemp('chat_search_tool_');

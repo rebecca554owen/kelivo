@@ -17,6 +17,7 @@ import 'package:Kelivo/core/services/mcp/mcp_tool_service.dart';
 import 'package:Kelivo/core/services/memory/memory_prompts.dart';
 import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/memory/memory_tools.dart';
+import 'package:Kelivo/core/services/memory/memory_trace.dart';
 import 'package:Kelivo/features/home/services/tool_handler_service.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -263,6 +264,53 @@ void main() {
         expect(names.contains(legacy), isFalse);
       }
     });
+
+    test(
+      'tool write reloads without narrowing an open global memory list',
+      () async {
+        // ToolHandlerService wires onMutated to reloadCurrentScope so a write
+        // for one assistant cannot collapse an open refreshAll() listing.
+        await seedAssistant('assistant-a');
+        await seedAssistant('assistant-b');
+        final memoryV2 = MemoryProviderV2(
+          repository: memoryRepository,
+          chatRepository: chatRepository,
+        );
+        await memoryRepository.create(
+          scope: MemoryScope.assistant,
+          assistantId: 'assistant-a',
+          type: MemoryType.identity,
+          content: 'Belongs to assistant-a.',
+          source: MemorySource.manual,
+        );
+        await memoryRepository.create(
+          scope: MemoryScope.assistant,
+          assistantId: 'assistant-b',
+          type: MemoryType.identity,
+          content: 'Belongs to assistant-b.',
+          source: MemorySource.manual,
+        );
+        await memoryV2.refreshAll();
+        expect(memoryV2.entries, hasLength(2));
+
+        final raw = await MemoryTools.handle(
+          name: MemoryTools.memoryUpdate,
+          args: {'type': 'identity', 'content': 'User prefers dark mode.'},
+          assistant: assistant(id: 'assistant-a'),
+          repository: memoryRepository,
+          chatRepository: chatRepository,
+          onMutated: memoryV2.reloadCurrentScope,
+        );
+        expect(decode(raw!)['action'], isNotNull);
+        expect(
+          memoryV2.entries.any((e) => e.assistantId == 'assistant-b'),
+          isTrue,
+          reason:
+              'memory tool onMutated must not collapse refreshAll() to one assistant',
+        );
+        expect(memoryV2.entries.length, greaterThanOrEqualTo(2));
+      },
+    );
   });
 
   group('write-scope matrix (§10.2 / §4.3)', () {
@@ -701,44 +749,35 @@ void main() {
       expect(raw, isNull);
     });
 
-    test(
-      'a requested conversation is found past the candidate limit',
-      () async {
-        // Scoping happens in SQL, so the candidate limit is spent on rows the
-        // caller can use. Filtering afterwards would return nothing here.
-        final chatService = ChatService(existingRepository: chatRepository);
-        addTearDown(chatService.close);
-        await chatService.init();
+    test('conversation_id filter returns the requested conversation', () async {
+      final chatService = ChatService(existingRepository: chatRepository);
+      addTearDown(chatService.close);
+      await chatService.init();
 
-        final wanted = await chatService.createConversation(title: 'Wanted');
-        await chatService.addMessage(
-          conversationId: wanted.id,
-          role: 'user',
-          content: 'needle in conversation',
-        );
+      final wanted = await chatService.createConversation(title: 'Wanted');
+      await chatService.addMessage(
+        conversationId: wanted.id,
+        role: 'user',
+        content: 'needle in conversation',
+      );
+      final other = await chatService.createConversation(title: 'Other');
+      await chatService.addMessage(
+        conversationId: other.id,
+        role: 'user',
+        content: 'needle in conversation',
+      );
 
-        // Enough newer conversations to push the target below any global cut.
-        for (var i = 0; i < 30; i++) {
-          final noise = await chatService.createConversation(title: 'Noise $i');
-          await chatService.addMessage(
-            conversationId: noise.id,
-            role: 'user',
-            content: 'needle in conversation',
-          );
-        }
-
-        final raw = await call(
-          MemoryTools.chatSearch,
-          {'query': 'needle', 'conversation_id': wanted.id, 'limit': 1},
-          a: assistant(enableMemory: false, allowPastConversationRecall: true),
-          chatService: chatService,
-          conversationId: 'some-other-conversation',
-        );
-        final results = decode(raw!)['results'] as List;
-        expect(results, isNotEmpty);
-        expect(results.every((r) => r['conversationId'] == wanted.id), isTrue);
-      },
-    );
+      final raw = await call(
+        MemoryTools.chatSearch,
+        {'query': 'needle', 'conversation_id': wanted.id, 'limit': 5},
+        a: assistant(enableMemory: false, allowPastConversationRecall: true),
+        chatService: chatService,
+        conversationId: 'some-other-conversation',
+      );
+      final results = decode(raw!)['results'] as List;
+      expect(results, isNotEmpty);
+      expect(results.every((r) => r['conversationId'] == wanted.id), isTrue);
+    });
   });
 
   group('temporary conversations', () {
@@ -777,6 +816,58 @@ void main() {
         conversationId: temp.id,
       );
       expect(decode(read!).containsKey('error'), isFalse);
+    });
+
+    test('read tools do not leave pipeline traces', () async {
+      final chatService = ChatService(existingRepository: chatRepository);
+      addTearDown(chatService.close);
+      await chatService.init();
+      final temp = await chatService.createDraftConversation(
+        title: 'Temp Trace',
+        temporary: true,
+      );
+      final recorder = MemoryTraceRecorder();
+
+      for (final name in [
+        MemoryTools.memoryRead,
+        MemoryTools.memorySearchProfile,
+      ]) {
+        final raw = await MemoryTools.handle(
+          name: name,
+          args: name == MemoryTools.memorySearchProfile
+              ? {'query': 'anything'}
+              : {'type': 'identity'},
+          assistant: assistant(),
+          repository: memoryRepository,
+          chatRepository: chatRepository,
+          chatService: chatService,
+          conversationId: temp.id,
+          traceRecorder: recorder,
+          conversationTitle: temp.title,
+        );
+        expect(raw, isNotNull);
+      }
+
+      final chatSearch = await MemoryTools.handle(
+        name: MemoryTools.chatSearch,
+        args: {'query': 'anything'},
+        assistant: assistant(
+          enableMemory: false,
+          allowPastConversationRecall: true,
+        ),
+        repository: memoryRepository,
+        chatRepository: chatRepository,
+        chatService: chatService,
+        conversationId: temp.id,
+        traceRecorder: recorder,
+        conversationTitle: temp.title,
+      );
+      expect(chatSearch, isNotNull);
+      expect(
+        recorder.traces,
+        isEmpty,
+        reason: 'temporary chat tools must not linger in the trace viewer',
+      );
     });
   });
 

@@ -514,6 +514,8 @@ class ToolHandlerService {
       );
     }
 
+    final temporary =
+        chatService?.isTemporaryConversation(conversationId) ?? false;
     return MemoryTools.handle(
       name: name,
       args: args,
@@ -522,13 +524,15 @@ class ToolHandlerService {
       chatRepository: memoryV2.chatRepository,
       chatService: chatService,
       conversationId: conversationId,
-      onMutated: () => memoryV2.refresh(assistantId: assistant.id),
+      // Reload without changing which assistants the open memory UI is showing.
+      onMutated: memoryV2.reloadCurrentScope,
       smartAdd: pipeline?.smartAdd,
       promptLang: settings.resolvedMemoryPromptLang,
       memoryLlmCall: memoryLlmCall,
       smartAddPromptZh: settings.memorySmartAddPromptZh,
       smartAddPromptEn: settings.memorySmartAddPromptEn,
-      traceRecorder: pipeline?.traceRecorder,
+      // Temporary chats are discarded on exit; their tool traces must not linger.
+      traceRecorder: temporary ? null : pipeline?.traceRecorder,
       conversationTitle: conversationId == null
           ? null
           : chatService?.getConversation(conversationId)?.title,
