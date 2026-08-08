@@ -5783,6 +5783,114 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageWorldBook => 'World Book';
 
   @override
+  String get settingsPageMemory => 'Memory';
+
+  @override
+  String get memorySettingsPageTitle => 'Memory';
+
+  @override
+  String get memorySettingsModelSection => 'Memory model';
+
+  @override
+  String get memorySettingsModelTitle => 'Processing model';
+
+  @override
+  String get memorySettingsModelUnset => 'Not selected';
+
+  @override
+  String get memorySettingsThinkingTitle => 'Enable thinking';
+
+  @override
+  String get memorySettingsThinkingSubtitle =>
+      'Allow the memory model to use reasoning when supported';
+
+  @override
+  String get memorySettingsPromptLangSection => 'Prompt language';
+
+  @override
+  String get memorySettingsPromptLangAuto => 'Auto';
+
+  @override
+  String get memorySettingsPromptLangAutoSubtitle =>
+      'Follow the UI language (Chinese → zh, otherwise en)';
+
+  @override
+  String get memorySettingsPromptLangZh => 'Chinese';
+
+  @override
+  String get memorySettingsPromptLangZhSubtitle =>
+      'Always use Chinese memory prompts and tool descriptions';
+
+  @override
+  String get memorySettingsPromptLangEn => 'English';
+
+  @override
+  String get memorySettingsPromptLangEnSubtitle =>
+      'Always use English memory prompts and tool descriptions';
+
+  @override
+  String get memorySettingsPromptsSection => 'Prompt templates';
+
+  @override
+  String get memoryPromptEditRulesTitle => 'Memory rules';
+
+  @override
+  String get memoryPromptEditRulesSubtitle =>
+      'Injected into the main chat system prompt';
+
+  @override
+  String get memoryPromptEditGateTitle => 'Gatekeeper';
+
+  @override
+  String get memoryPromptEditGateSubtitle =>
+      'Decides whether a turn is worth remembering';
+
+  @override
+  String get memoryPromptEditExtractTitle => 'Extract';
+
+  @override
+  String get memoryPromptEditExtractSubtitle =>
+      'Extracts candidate memory items from a conversation';
+
+  @override
+  String get memoryPromptEditSmartAddTitle => 'Smart Add';
+
+  @override
+  String get memoryPromptEditSmartAddSubtitle =>
+      'NEW / MERGE / CONFLICT / SKIP dedupe judge';
+
+  @override
+  String get memoryPromptEditDistillTitle => 'Profile Distiller';
+
+  @override
+  String get memoryPromptEditDistillSubtitle =>
+      'Distills identity memories into profile fields';
+
+  @override
+  String get memoryPromptEditReset => 'Reset to default';
+
+  @override
+  String get memoryPromptEditSave => 'Save';
+
+  @override
+  String get memoryPromptEditTabZh => 'Chinese';
+
+  @override
+  String get memoryPromptEditTabEn => 'English';
+
+  @override
+  String get memoryPromptEditTabPerItemZh => 'Per-item · ZH';
+
+  @override
+  String get memoryPromptEditTabPerItemEn => 'Per-item · EN';
+
+  @override
+  String get memoryPromptEditTabBatchZh => 'Batched · ZH';
+
+  @override
+  String get memoryPromptEditTabBatchEn => 'Batched · EN';
+
+  @override
   String get worldBookTitle => 'World Book';
 
   @override

@@ -12,6 +12,7 @@ import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
+import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import 'ask_user_interaction_service.dart';
@@ -466,11 +467,35 @@ class ToolHandlerService {
     if (!MemoryTools.allToolNames.contains(name)) return null;
 
     final memoryV2 = contextProvider.read<MemoryProviderV2>();
+    final settings = contextProvider.read<SettingsProvider>();
     ChatService? chatService;
     try {
       chatService = contextProvider.read<ChatService>();
     } catch (_) {
       chatService = null;
+    }
+
+    MemoryPipelineService? pipeline;
+    try {
+      pipeline = contextProvider.read<MemoryPipelineService>();
+    } catch (_) {
+      pipeline = null;
+    }
+
+    Future<String> Function(String prompt)? memoryLlmCall;
+    final provKey = settings.memoryModelProvider;
+    final mdlId = settings.memoryModelId;
+    if (provKey != null && mdlId != null) {
+      final cfg = settings.getProviderConfig(provKey);
+      final budget = settings.memoryModelThinkingEnabled
+          ? (assistant.thinkingBudget ?? settings.thinkingBudget)
+          : 0;
+      memoryLlmCall = (prompt) => ChatApiService.generateText(
+        config: cfg,
+        modelId: mdlId,
+        prompt: prompt,
+        thinkingBudget: budget,
+      );
     }
 
     return MemoryTools.handle(
@@ -482,6 +507,11 @@ class ToolHandlerService {
       chatService: chatService,
       conversationId: conversationId,
       onMutated: () => memoryV2.refresh(assistantId: assistant.id),
+      smartAdd: pipeline?.smartAdd,
+      promptLang: settings.resolvedMemoryPromptLang,
+      memoryLlmCall: memoryLlmCall,
+      smartAddPromptZh: settings.memorySmartAddPromptZh,
+      smartAddPromptEn: settings.memorySmartAddPromptEn,
     );
   }
 }

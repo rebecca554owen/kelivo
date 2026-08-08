@@ -10670,6 +10670,204 @@ abstract class AppLocalizations {
   /// **'World Book'**
   String get settingsPageWorldBook;
 
+  /// No description provided for @settingsPageMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get settingsPageMemory;
+
+  /// No description provided for @memorySettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get memorySettingsPageTitle;
+
+  /// No description provided for @memorySettingsModelSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory model'**
+  String get memorySettingsModelSection;
+
+  /// No description provided for @memorySettingsModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing model'**
+  String get memorySettingsModelTitle;
+
+  /// No description provided for @memorySettingsModelUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get memorySettingsModelUnset;
+
+  /// No description provided for @memorySettingsThinkingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable thinking'**
+  String get memorySettingsThinkingTitle;
+
+  /// No description provided for @memorySettingsThinkingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the memory model to use reasoning when supported'**
+  String get memorySettingsThinkingSubtitle;
+
+  /// No description provided for @memorySettingsPromptLangSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt language'**
+  String get memorySettingsPromptLangSection;
+
+  /// No description provided for @memorySettingsPromptLangAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get memorySettingsPromptLangAuto;
+
+  /// No description provided for @memorySettingsPromptLangAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the UI language (Chinese → zh, otherwise en)'**
+  String get memorySettingsPromptLangAutoSubtitle;
+
+  /// No description provided for @memorySettingsPromptLangZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese'**
+  String get memorySettingsPromptLangZh;
+
+  /// No description provided for @memorySettingsPromptLangZhSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Always use Chinese memory prompts and tool descriptions'**
+  String get memorySettingsPromptLangZhSubtitle;
+
+  /// No description provided for @memorySettingsPromptLangEn.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get memorySettingsPromptLangEn;
+
+  /// No description provided for @memorySettingsPromptLangEnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Always use English memory prompts and tool descriptions'**
+  String get memorySettingsPromptLangEnSubtitle;
+
+  /// No description provided for @memorySettingsPromptsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt templates'**
+  String get memorySettingsPromptsSection;
+
+  /// No description provided for @memoryPromptEditRulesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory rules'**
+  String get memoryPromptEditRulesTitle;
+
+  /// No description provided for @memoryPromptEditRulesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Injected into the main chat system prompt'**
+  String get memoryPromptEditRulesSubtitle;
+
+  /// No description provided for @memoryPromptEditGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gatekeeper'**
+  String get memoryPromptEditGateTitle;
+
+  /// No description provided for @memoryPromptEditGateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decides whether a turn is worth remembering'**
+  String get memoryPromptEditGateSubtitle;
+
+  /// No description provided for @memoryPromptEditExtractTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract'**
+  String get memoryPromptEditExtractTitle;
+
+  /// No description provided for @memoryPromptEditExtractSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extracts candidate memory items from a conversation'**
+  String get memoryPromptEditExtractSubtitle;
+
+  /// No description provided for @memoryPromptEditSmartAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Add'**
+  String get memoryPromptEditSmartAddTitle;
+
+  /// No description provided for @memoryPromptEditSmartAddSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW / MERGE / CONFLICT / SKIP dedupe judge'**
+  String get memoryPromptEditSmartAddSubtitle;
+
+  /// No description provided for @memoryPromptEditDistillTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Distiller'**
+  String get memoryPromptEditDistillTitle;
+
+  /// No description provided for @memoryPromptEditDistillSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Distills identity memories into profile fields'**
+  String get memoryPromptEditDistillSubtitle;
+
+  /// No description provided for @memoryPromptEditReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get memoryPromptEditReset;
+
+  /// No description provided for @memoryPromptEditSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get memoryPromptEditSave;
+
+  /// No description provided for @memoryPromptEditTabZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese'**
+  String get memoryPromptEditTabZh;
+
+  /// No description provided for @memoryPromptEditTabEn.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get memoryPromptEditTabEn;
+
+  /// No description provided for @memoryPromptEditTabPerItemZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-item · ZH'**
+  String get memoryPromptEditTabPerItemZh;
+
+  /// No description provided for @memoryPromptEditTabPerItemEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-item · EN'**
+  String get memoryPromptEditTabPerItemEn;
+
+  /// No description provided for @memoryPromptEditTabBatchZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Batched · ZH'**
+  String get memoryPromptEditTabBatchZh;
+
+  /// No description provided for @memoryPromptEditTabBatchEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Batched · EN'**
+  String get memoryPromptEditTabBatchEn;
+
   /// No description provided for @worldBookTitle.
   ///
   /// In en, this message translates to:

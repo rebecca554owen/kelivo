@@ -5560,6 +5560,106 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageWorldBook => '世界书';
 
   @override
+  String get settingsPageMemory => '记忆';
+
+  @override
+  String get memorySettingsPageTitle => '记忆';
+
+  @override
+  String get memorySettingsModelSection => '记忆模型';
+
+  @override
+  String get memorySettingsModelTitle => '处理模型';
+
+  @override
+  String get memorySettingsModelUnset => '未选择';
+
+  @override
+  String get memorySettingsThinkingTitle => '启用思考';
+
+  @override
+  String get memorySettingsThinkingSubtitle => '在模型支持时允许记忆模型使用推理';
+
+  @override
+  String get memorySettingsPromptLangSection => '提示词语言';
+
+  @override
+  String get memorySettingsPromptLangAuto => '自动';
+
+  @override
+  String get memorySettingsPromptLangAutoSubtitle => '跟随界面语言（中文用 zh，否则用 en）';
+
+  @override
+  String get memorySettingsPromptLangZh => '中文';
+
+  @override
+  String get memorySettingsPromptLangZhSubtitle => '始终使用中文记忆提示词与工具描述';
+
+  @override
+  String get memorySettingsPromptLangEn => 'English';
+
+  @override
+  String get memorySettingsPromptLangEnSubtitle => '始终使用英文记忆提示词与工具描述';
+
+  @override
+  String get memorySettingsPromptsSection => '提示词模板';
+
+  @override
+  String get memoryPromptEditRulesTitle => '记忆规则';
+
+  @override
+  String get memoryPromptEditRulesSubtitle => '注入到主对话的系统提示中';
+
+  @override
+  String get memoryPromptEditGateTitle => 'Gatekeeper';
+
+  @override
+  String get memoryPromptEditGateSubtitle => '判断这一轮是否值得记忆';
+
+  @override
+  String get memoryPromptEditExtractTitle => 'Extract';
+
+  @override
+  String get memoryPromptEditExtractSubtitle => '从对话中提取候选记忆条目';
+
+  @override
+  String get memoryPromptEditSmartAddTitle => 'Smart Add';
+
+  @override
+  String get memoryPromptEditSmartAddSubtitle =>
+      'NEW / MERGE / CONFLICT / SKIP 去重判定';
+
+  @override
+  String get memoryPromptEditDistillTitle => 'Profile Distiller';
+
+  @override
+  String get memoryPromptEditDistillSubtitle => '从身份类记忆提炼画像字段';
+
+  @override
+  String get memoryPromptEditReset => '恢复默认';
+
+  @override
+  String get memoryPromptEditSave => '保存';
+
+  @override
+  String get memoryPromptEditTabZh => '中文';
+
+  @override
+  String get memoryPromptEditTabEn => 'English';
+
+  @override
+  String get memoryPromptEditTabPerItemZh => '逐条 · 中文';
+
+  @override
+  String get memoryPromptEditTabPerItemEn => '逐条 · EN';
+
+  @override
+  String get memoryPromptEditTabBatchZh => '合并 · 中文';
+
+  @override
+  String get memoryPromptEditTabBatchEn => '合并 · EN';
+
+  @override
   String get worldBookTitle => '世界书';
 
   @override
@@ -11632,6 +11732,106 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageWorldBook => '世界书';
 
   @override
+  String get settingsPageMemory => '记忆';
+
+  @override
+  String get memorySettingsPageTitle => '记忆';
+
+  @override
+  String get memorySettingsModelSection => '记忆模型';
+
+  @override
+  String get memorySettingsModelTitle => '处理模型';
+
+  @override
+  String get memorySettingsModelUnset => '未选择';
+
+  @override
+  String get memorySettingsThinkingTitle => '启用思考';
+
+  @override
+  String get memorySettingsThinkingSubtitle => '在模型支持时允许记忆模型使用推理';
+
+  @override
+  String get memorySettingsPromptLangSection => '提示词语言';
+
+  @override
+  String get memorySettingsPromptLangAuto => '自动';
+
+  @override
+  String get memorySettingsPromptLangAutoSubtitle => '跟随界面语言（中文用 zh，否则用 en）';
+
+  @override
+  String get memorySettingsPromptLangZh => '中文';
+
+  @override
+  String get memorySettingsPromptLangZhSubtitle => '始终使用中文记忆提示词与工具描述';
+
+  @override
+  String get memorySettingsPromptLangEn => 'English';
+
+  @override
+  String get memorySettingsPromptLangEnSubtitle => '始终使用英文记忆提示词与工具描述';
+
+  @override
+  String get memorySettingsPromptsSection => '提示词模板';
+
+  @override
+  String get memoryPromptEditRulesTitle => '记忆规则';
+
+  @override
+  String get memoryPromptEditRulesSubtitle => '注入到主对话的系统提示中';
+
+  @override
+  String get memoryPromptEditGateTitle => 'Gatekeeper';
+
+  @override
+  String get memoryPromptEditGateSubtitle => '判断这一轮是否值得记忆';
+
+  @override
+  String get memoryPromptEditExtractTitle => 'Extract';
+
+  @override
+  String get memoryPromptEditExtractSubtitle => '从对话中提取候选记忆条目';
+
+  @override
+  String get memoryPromptEditSmartAddTitle => 'Smart Add';
+
+  @override
+  String get memoryPromptEditSmartAddSubtitle =>
+      'NEW / MERGE / CONFLICT / SKIP 去重判定';
+
+  @override
+  String get memoryPromptEditDistillTitle => 'Profile Distiller';
+
+  @override
+  String get memoryPromptEditDistillSubtitle => '从身份类记忆提炼画像字段';
+
+  @override
+  String get memoryPromptEditReset => '恢复默认';
+
+  @override
+  String get memoryPromptEditSave => '保存';
+
+  @override
+  String get memoryPromptEditTabZh => '中文';
+
+  @override
+  String get memoryPromptEditTabEn => 'English';
+
+  @override
+  String get memoryPromptEditTabPerItemZh => '逐条 · 中文';
+
+  @override
+  String get memoryPromptEditTabPerItemEn => '逐条 · EN';
+
+  @override
+  String get memoryPromptEditTabBatchZh => '合并 · 中文';
+
+  @override
+  String get memoryPromptEditTabBatchEn => '合并 · EN';
+
+  @override
   String get worldBookTitle => '世界书';
 
   @override
@@ -17702,6 +17902,106 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsPageWorldBook => '世界書';
+
+  @override
+  String get settingsPageMemory => '記憶';
+
+  @override
+  String get memorySettingsPageTitle => '記憶';
+
+  @override
+  String get memorySettingsModelSection => '記憶模型';
+
+  @override
+  String get memorySettingsModelTitle => '處理模型';
+
+  @override
+  String get memorySettingsModelUnset => '未選擇';
+
+  @override
+  String get memorySettingsThinkingTitle => '啟用思考';
+
+  @override
+  String get memorySettingsThinkingSubtitle => '在模型支援時允許記憶模型使用推理';
+
+  @override
+  String get memorySettingsPromptLangSection => '提示詞語言';
+
+  @override
+  String get memorySettingsPromptLangAuto => '自動';
+
+  @override
+  String get memorySettingsPromptLangAutoSubtitle => '跟隨介面語言（中文用 zh，否則用 en）';
+
+  @override
+  String get memorySettingsPromptLangZh => '中文';
+
+  @override
+  String get memorySettingsPromptLangZhSubtitle => '一律使用中文記憶提示詞與工具描述';
+
+  @override
+  String get memorySettingsPromptLangEn => 'English';
+
+  @override
+  String get memorySettingsPromptLangEnSubtitle => '一律使用英文記憶提示詞與工具描述';
+
+  @override
+  String get memorySettingsPromptsSection => '提示詞模板';
+
+  @override
+  String get memoryPromptEditRulesTitle => '記憶規則';
+
+  @override
+  String get memoryPromptEditRulesSubtitle => '注入到主對話的系統提示中';
+
+  @override
+  String get memoryPromptEditGateTitle => 'Gatekeeper';
+
+  @override
+  String get memoryPromptEditGateSubtitle => '判斷這一輪是否值得記憶';
+
+  @override
+  String get memoryPromptEditExtractTitle => 'Extract';
+
+  @override
+  String get memoryPromptEditExtractSubtitle => '從對話中提取候選記憶條目';
+
+  @override
+  String get memoryPromptEditSmartAddTitle => 'Smart Add';
+
+  @override
+  String get memoryPromptEditSmartAddSubtitle =>
+      'NEW / MERGE / CONFLICT / SKIP 去重判定';
+
+  @override
+  String get memoryPromptEditDistillTitle => 'Profile Distiller';
+
+  @override
+  String get memoryPromptEditDistillSubtitle => '從身分類記憶提煉畫像欄位';
+
+  @override
+  String get memoryPromptEditReset => '恢復預設';
+
+  @override
+  String get memoryPromptEditSave => '儲存';
+
+  @override
+  String get memoryPromptEditTabZh => '中文';
+
+  @override
+  String get memoryPromptEditTabEn => 'English';
+
+  @override
+  String get memoryPromptEditTabPerItemZh => '逐條 · 中文';
+
+  @override
+  String get memoryPromptEditTabPerItemEn => '逐條 · EN';
+
+  @override
+  String get memoryPromptEditTabBatchZh => '合併 · 中文';
+
+  @override
+  String get memoryPromptEditTabBatchEn => '合併 · EN';
 
   @override
   String get worldBookTitle => '世界書';

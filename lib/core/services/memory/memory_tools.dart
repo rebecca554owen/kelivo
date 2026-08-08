@@ -8,6 +8,7 @@ import '../chat/chat_service.dart';
 import 'memory_block_builder.dart';
 import 'memory_prompts.dart';
 import 'memory_repository.dart';
+import 'memory_smart_add.dart';
 import 'memory_tokenizer.dart';
 
 /// Memory system V1 tool declarations + dispatch (§10).
@@ -90,6 +91,13 @@ abstract final class MemoryTools {
     ChatService? chatService,
     String? conversationId,
     Future<void> Function()? onMutated,
+
+    /// When provided, `memory_update` goes through real Smart Add (§12.6).
+    MemorySmartAdd? smartAdd,
+    MemoryPromptLang? promptLang,
+    Future<String> Function(String prompt)? memoryLlmCall,
+    String? smartAddPromptZh,
+    String? smartAddPromptEn,
   }) async {
     if (name == chatSearch) {
       if (!assistant.allowPastConversationRecall) return null;
@@ -127,6 +135,11 @@ abstract final class MemoryTools {
             assistant: assistant,
             repository: repository,
             chatRepository: chatRepository,
+            smartAdd: smartAdd,
+            promptLang: promptLang,
+            memoryLlmCall: memoryLlmCall,
+            smartAddPromptZh: smartAddPromptZh,
+            smartAddPromptEn: smartAddPromptEn,
           );
           await onMutated?.call();
           return result;
@@ -258,6 +271,11 @@ abstract final class MemoryTools {
     required Assistant assistant,
     required MemoryRepository repository,
     required ChatDatabaseRepository chatRepository,
+    MemorySmartAdd? smartAdd,
+    MemoryPromptLang? promptLang,
+    Future<String> Function(String prompt)? memoryLlmCall,
+    String? smartAddPromptZh,
+    String? smartAddPromptEn,
   }) async {
     final type = _parseMemoryType(args['type']);
     if (type == null) {
@@ -281,32 +299,25 @@ abstract final class MemoryTools {
     final scope = resolveWriteScope(assistant.memoryWriteScope, scopeArg);
     final assistantId = scope == MemoryScope.assistant ? assistant.id : null;
 
-    // Degraded Smart Add (PR4 / §12.6): exact duplicate → SKIP, else NEW.
-    final exact = await chatRepository.findExactMemory(
-      assistantId: assistant.id,
-      type: type,
-      contentNormalized: MemoryEntry.normalizeContent(content),
-    );
-    if (exact != null) {
-      return jsonEncode({
-        'action': 'SKIP',
-        'reason': 'duplicate',
-        'id': exact.id,
-      });
-    }
-
-    final entry = await repository.create(
-      scope: scope,
-      assistantId: assistantId,
-      type: type,
-      content: content,
+    // Real Smart Add when wired (§12.6); else exact-duplicate → SKIP / NEW.
+    final adder =
+        smartAdd ??
+        MemorySmartAdd(repository: repository, chatRepository: chatRepository);
+    final result = await adder.addOne(
+      item: SmartAddItem(
+        type: type,
+        content: content,
+        scope: scope,
+        assistantId: assistantId,
+      ),
+      visibilityAssistantId: assistant.id,
       source: MemorySource.tool,
+      lang: promptLang ?? MemoryPromptLang.en,
+      llmCall: memoryLlmCall,
+      overrideZh: smartAddPromptZh,
+      overrideEn: smartAddPromptEn,
     );
-    return jsonEncode({
-      'action': 'NEW',
-      'id': entry.id,
-      'content': entry.content,
-    });
+    return jsonEncode(result.toToolJson());
   }
 
   static Future<String> _handleMemorySearchProfile({
