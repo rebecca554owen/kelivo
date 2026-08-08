@@ -5757,6 +5757,25 @@ class ChatDatabaseRepository {
     return row != null;
   }
 
+  /// The last memory snapshot hash delivered to [conversationId].
+  ///
+  /// Read this rather than a cached [Conversation]: the field is written by
+  /// [freezeMessagePrompt] and never loaded back into the in-memory model, so a
+  /// cached copy reports the value from whenever it was constructed.
+  Future<String?> getConversationInjectedMemoryHash(
+    String conversationId,
+  ) async {
+    final row = await _db
+        .customSelect(
+          'SELECT injected_memory_hash FROM conversation_rows '
+          'WHERE id = ? LIMIT 1;',
+          variables: [Variable<String>(conversationId)],
+          readsFrom: {_db.conversationRows},
+        )
+        .getSingleOrNull();
+    return row?.read<String?>('injected_memory_hash');
+  }
+
   Future<void> setConversationInjectedMemoryHash(
     String conversationId,
     String? hash,

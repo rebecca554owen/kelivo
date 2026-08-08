@@ -198,6 +198,7 @@ class MessageGenerationService {
           settings,
           assistant,
           conversation: currentConversation,
+          sourceMessages: messages,
         );
 
     onFileProcessingFinished?.call();

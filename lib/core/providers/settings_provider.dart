@@ -3528,7 +3528,16 @@ Requirements:
   String _memoryPromptLang = 'auto';
   String get memoryPromptLang => _memoryPromptLang;
 
-  /// Resolves `auto` → zh when UI locale `languageCode == 'zh'`, else en.
+  /// The locale the interface is actually rendered in.
+  ///
+  /// [appLocale] parses the stored tag, and the `system` tag has no locale to
+  /// parse, so it falls through to `en_US`. Anything deciding what language to
+  /// speak to the user in must ask the platform instead.
+  Locale get effectiveLocale => isFollowingSystemLocale
+      ? PlatformDispatcher.instance.locale
+      : appLocale;
+
+  /// Resolves `auto` → zh when the interface is Chinese, else en.
   MemoryPromptLang get resolvedMemoryPromptLang {
     switch (_memoryPromptLang) {
       case 'zh':
@@ -3536,7 +3545,7 @@ Requirements:
       case 'en':
         return MemoryPromptLang.en;
       default:
-        return appLocale.languageCode == 'zh'
+        return effectiveLocale.languageCode == 'zh'
             ? MemoryPromptLang.zh
             : MemoryPromptLang.en;
     }

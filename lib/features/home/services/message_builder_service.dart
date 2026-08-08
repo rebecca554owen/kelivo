@@ -389,6 +389,7 @@ class MessageBuilderService {
     SettingsProvider settings,
     Assistant? assistant, {
     Conversation? conversation,
+    List<ChatMessage>? sourceMessages,
   }) async {
     final bool ocrActive =
         settings.ocrEnabled &&
@@ -634,6 +635,7 @@ class MessageBuilderService {
       final chatMessage = _resolveChatMessage(
         revisionId: revisionId,
         conversation: conversation,
+        sourceMessages: sourceMessages,
       );
 
       if (conversation != null && chatMessage != null) {
@@ -673,15 +675,27 @@ class MessageBuilderService {
   /// The stored message behind an api payload, or null when it cannot be
   /// found.
   ///
+  /// [sourceMessages] is the list this request's api payloads were built from
+  /// and is checked first. `ChatService.getMessages` only serves conversations
+  /// already in its cache, so on a freshly created conversation it returns
+  /// nothing and the new message would silently skip memory injection and
+  /// freezing — then pick both up a turn later, rewriting history and losing
+  /// the prompt cache.
+  ///
   /// A synthesized stand-in would have to invent a timestamp, and freezing that
-  /// would bake the wrong `{{ time }}` into the prompt forever. Returning null
-  /// keeps the message on the unfrozen render path instead, which stays wrong
-  /// only for as long as the message is missing.
+  /// would bake the wrong `{{ time }}` into the prompt forever, so a genuine
+  /// miss returns null and stays on the unfrozen render path.
   ChatMessage? _resolveChatMessage({
     required String revisionId,
     required Conversation? conversation,
+    required List<ChatMessage>? sourceMessages,
   }) {
     if (revisionId.isEmpty || conversation == null) return null;
+    if (sourceMessages != null) {
+      for (final candidate in sourceMessages) {
+        if (candidate.id == revisionId) return candidate;
+      }
+    }
     for (final candidate in chatService.getMessages(conversation.id)) {
       if (candidate.id == revisionId) return candidate;
     }
@@ -817,7 +831,14 @@ class MessageBuilderService {
     // CRITICAL: compare against the prior hash BEFORE any write (appendix §6).
     // Writing first makes currentHash == injectedMemoryHash and the update
     // branch is permanently unreachable.
-    final previousHash = conversation.injectedMemoryHash;
+    //
+    // Read from the database, not from [conversation]: callers hand us
+    // `conversation.copyWith(...)` and nothing ever loads this column back into
+    // the model, so the cached value is stale forever and every turn would look
+    // like a change.
+    final previousHash = await repo.getConversationInjectedMemoryHash(
+      conversation.id,
+    );
 
     final String prefix;
     if (!hasSnapshot) {
@@ -836,9 +857,8 @@ class MessageBuilderService {
       return (prefix: '', hash: null);
     }
 
-    // Advance in-memory hash only after the decision; DB write is deferred to
-    // freezeMessagePrompt in the same transaction as the prompt row.
-    conversation.injectedMemoryHash = currentHash;
+    // The hash lands in the database through freezeMessagePrompt, in the same
+    // transaction as the prompt row.
     return (prefix: prefix, hash: currentHash);
   }
 

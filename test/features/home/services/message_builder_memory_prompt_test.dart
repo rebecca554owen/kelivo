@@ -234,7 +234,6 @@ void main() {
       expect(result.prefix, contains('<user_memory type="identity">'));
       expect(result.prefix, isNot(contains('<user_memory_update>')));
       expect(result.hash, isNotNull);
-      expect(conversation.injectedMemoryHash, result.hash);
     });
 
     test('has snapshot + same hash → empty', () async {
@@ -301,7 +300,6 @@ void main() {
 
       expect(result.prefix, isEmpty);
       expect(result.hash, isNull);
-      expect(conversation.injectedMemoryHash, hash);
     });
 
     test('has snapshot + different hash → update block', () async {
@@ -352,8 +350,80 @@ void main() {
       expect(result.prefix, contains('<user_memory_update>'));
       expect(result.hash, isNotNull);
       expect(result.hash, isNot('oldhash012345678'));
-      expect(conversation.injectedMemoryHash, result.hash);
     });
+
+    test(
+      'the prior hash is read from the database, not from the model',
+      () async {
+        // Callers pass `conversation.copyWith(...)` and nothing ever loads this
+        // column back into the model, so a stale copy must not be trusted:
+        // doing so makes every turn look like a change and re-sends the same
+        // update block forever.
+        await seedAssistant('assistant-1');
+        await putEntry(id: 'mem_01', content: 'User likes Flutter.');
+        final fields = await chatRepository.readProfileFields();
+        final visible = await chatRepository.queryVisibleMemories(
+          assistantId: 'assistant-1',
+        );
+        final totals = await chatRepository.countVisibleMemoriesByType(
+          assistantId: 'assistant-1',
+        );
+        final hash = MemoryBlockBuilder.hashBlocks(
+          MemoryBlockBuilder.buildProfileBlock(
+            fields: fields,
+            lang: MemoryPromptLang.zh,
+          ),
+          MemoryBlockBuilder.buildMemoryBlock(
+            visible: visible,
+            totalByType: totals,
+            lang: MemoryPromptLang.zh,
+          ),
+        );
+
+        await seedConversation('conv-1');
+        await seedUserMessage(id: 'u1', conversationId: 'conv-1');
+        await seedUserMessage(
+          id: 'u-new',
+          conversationId: 'conv-1',
+          content: 'next',
+          messageOrder: 1,
+        );
+        await chatRepository.freezeMessagePrompt(
+          revisionId: 'u1',
+          conversationId: 'conv-1',
+          payload: 'frozen',
+          carriesMemorySnapshot: true,
+          injectedMemoryHash: hash,
+        );
+
+        // The model still carries the pre-freeze value.
+        final staleConversation = Conversation(id: 'conv-1', title: 'conv-1');
+        expect(staleConversation.injectedMemoryHash, isNull);
+
+        final apiMessages = [
+          {
+            'role': 'user',
+            'content': 'hi',
+            MessageBuilderService.internalRevisionIdKey: 'u1',
+          },
+          {
+            'role': 'user',
+            'content': 'next',
+            MessageBuilderService.internalRevisionIdKey: 'u-new',
+          },
+        ];
+        final result = await buildService().resolveMemoryPrefix(
+          conversation: staleConversation,
+          assistant: assistant,
+          apiMessages: apiMessages,
+          currentMessageId: 'u-new',
+          lang: MemoryPromptLang.zh,
+        );
+
+        expect(result.prefix, isEmpty);
+        expect(result.hash, isNull);
+      },
+    );
   });
 
   group('hash ordering regression (appendix item 6)', () {
@@ -500,6 +570,55 @@ void main() {
         expect(first, contains('hello world'));
         expect(first, contains(MemoryPrompts.formatCurrentTimeTag(ts)));
         expect(first, contains('<user_memory type="identity">'));
+      },
+    );
+
+    test(
+      'first message of a fresh conversation gets the snapshot even when the '
+      'chat cache is empty',
+      () async {
+        // ChatService only serves conversations already in its cache, so on a
+        // brand new conversation the lookup misses. Falling back to an
+        // unfrozen render silently dropped memory from the first turn, then
+        // added it a turn later — rewriting history and losing the cache.
+        await seedAssistant('assistant-1');
+        await putEntry(id: 'mem_01', content: 'User likes Flutter.');
+
+        final conversation = await seedConversation('conv-fresh');
+        final message = await seedUserMessage(
+          id: 'u1',
+          conversationId: 'conv-fresh',
+          content: 'what is my name',
+        );
+
+        // Empty cache, exactly as for a conversation created this turn.
+        final service = buildService();
+        final apiMessages = [
+          {
+            'role': 'user',
+            'content': 'what is my name',
+            MessageBuilderService.internalRevisionIdKey: 'u1',
+          },
+        ];
+
+        await service.processUserMessagesForApi(
+          apiMessages,
+          settings,
+          assistant,
+          conversation: conversation,
+          sourceMessages: [message],
+        );
+
+        final content = apiMessages.single['content'] as String;
+        expect(content, contains(MemoryPrompts.introFullZh));
+        expect(content, contains('<user_memory type="identity">'));
+        expect(content, endsWith('what is my name'));
+
+        // And it is frozen, so the next turn replays the same bytes.
+        final frozen = await chatRepository.getMessagePrompt('u1');
+        expect(frozen, isNotNull);
+        expect(frozen!.payload, content);
+        expect(frozen.carriesMemorySnapshot, isTrue);
       },
     );
   });
