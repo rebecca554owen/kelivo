@@ -125,6 +125,14 @@ class ChatService extends ChangeNotifier {
   bool _initialized = false;
   Future<void>? _initFuture;
   bool get initialized => _initialized;
+
+  /// Underlying typed repository when ready (after [init], or the injected
+  /// [existingRepository] before init). Null for uninitialized services.
+  ChatDatabaseRepository? get chatRepositoryOrNull {
+    if (_initialized) return _repo;
+    return _existingRepository;
+  }
+
   int _statisticsRevision = 0;
   int get statisticsRevision => _statisticsRevision;
 

@@ -586,7 +586,8 @@ void main() {
         contextProvider: _FakeBuildContext(),
       );
       // prepareApiMessages injects WorldBook against the full history, then
-      // applies a single context trim before OCR.
+      // applies a single context trim before OCR — only when the assistant
+      // opts into limitContextMessages (default is unlimited, D-30).
       final apiMessages = <Map<String, dynamic>>[
         {'role': 'system', 'content': 'system'},
         for (var index = 0; index < 6; index++)
@@ -600,7 +601,12 @@ void main() {
 
       service.applyContextLimit(
         apiMessages,
-        const Assistant(id: 'assistant-1', name: 'test', contextMessageSize: 4),
+        const Assistant(
+          id: 'assistant-1',
+          name: 'test',
+          contextMessageSize: 4,
+          limitContextMessages: true,
+        ),
       );
       expect(apiMessages.length, 5); // system + 4
       expect(apiMessages.first['role'], 'system');
@@ -631,7 +637,12 @@ void main() {
 
       service.applyContextLimit(
         apiMessages,
-        const Assistant(id: 'assistant-1', name: 'test', contextMessageSize: 2),
+        const Assistant(
+          id: 'assistant-1',
+          name: 'test',
+          contextMessageSize: 2,
+          limitContextMessages: true,
+        ),
       );
 
       expect(apiMessages, hasLength(2));
@@ -708,7 +719,12 @@ void main() {
 
       service.applyContextLimit(
         apiMessages,
-        const Assistant(id: 'assistant-1', name: 'test', contextMessageSize: 3),
+        const Assistant(
+          id: 'assistant-1',
+          name: 'test',
+          contextMessageSize: 3,
+          limitContextMessages: true,
+        ),
       );
 
       expect(
@@ -755,7 +771,12 @@ void main() {
 
       service.applyContextLimit(
         apiMessages,
-        const Assistant(id: 'assistant-1', name: 'test', contextMessageSize: 4),
+        const Assistant(
+          id: 'assistant-1',
+          name: 'test',
+          contextMessageSize: 4,
+          limitContextMessages: true,
+        ),
       );
 
       expect(

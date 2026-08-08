@@ -2,18 +2,21 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/instruction_injection.dart';
+import '../../../core/models/memory_entry.dart';
 import '../../../core/models/world_book.dart';
-import '../../../core/providers/memory_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/chat/document_text_extractor.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
+import '../../../core/services/memory/memory_block_builder.dart';
+import '../../../core/services/memory/memory_prompts.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/providers/world_book_provider.dart';
@@ -23,6 +26,9 @@ import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import 'ocr_service.dart';
+
+/// Result of §7.6 memory-prefix resolution.
+typedef MemoryPrefixResolution = ({String prefix, String? hash});
 
 /// Service for building API messages from conversation state.
 ///
@@ -42,12 +48,20 @@ class MessageBuilderService {
   MessageBuilderService({
     required this.chatService,
     required this.contextProvider,
+    this.chatRepository,
     this.ocrHandler,
     this.ocrPrefetch,
     this.geminiThoughtSignatureHandler,
   });
 
   final ChatService chatService;
+
+  /// Optional override for `promptContent` freeze and §7.6 injection.
+  /// When null, falls back to [ChatService.chatRepositoryOrNull].
+  final ChatDatabaseRepository? chatRepository;
+
+  ChatDatabaseRepository? get _repo =>
+      chatRepository ?? chatService.chatRepositoryOrNull;
 
   /// Build context (used for accessing providers via context.read)
   final BuildContext contextProvider;
@@ -366,14 +380,16 @@ class MessageBuilderService {
     return resolveDocumentAttachmentMime(attachment);
   }
 
-  /// Process user messages in apiMessages: extract documents, apply OCR, inject file prompts.
+  /// Process user messages in apiMessages: prefer frozen `promptContent`, else
+  /// assemble (docs/OCR → memory prefix → template → time) and freeze (§8).
   ///
   /// Returns the image paths from the last user message (for API call).
   Future<List<String>> processUserMessagesForApi(
     List<Map<String, dynamic>> apiMessages,
     SettingsProvider settings,
-    Assistant? assistant,
-  ) async {
+    Assistant? assistant, {
+    Conversation? conversation,
+  }) async {
     final bool ocrActive =
         settings.ocrEnabled &&
         settings.ocrModelProvider != null &&
@@ -400,6 +416,7 @@ class MessageBuilderService {
       }
     }
 
+    // Prefetch OCR only for messages that still need generation (no freeze yet).
     OcrPrepareSession? ocrSession;
     if (ocrActive && ocrPrefetch != null) {
       final revisionIds = <String>[];
@@ -409,6 +426,10 @@ class MessageBuilderService {
         final revisionId = (message[internalRevisionIdKey] ?? '')
             .toString()
             .trim();
+        if (revisionId.isNotEmpty && _repo != null) {
+          final existing = await _repo!.getMessagePrompt(revisionId);
+          if (existing != null) continue;
+        }
         final parsedUser = parseInputFromRaw(
           (message['content'] ?? '').toString(),
         );
@@ -487,8 +508,16 @@ class MessageBuilderService {
       }
     }
 
+    // Revision ids that received a snapshot during this very pass. Reading it
+    // back from message_prompt_rows would work for persisted conversations but
+    // not for temporary ones, which never get a row.
+    final snapshotCarriersThisPass = <String>{};
+
     for (int i = 0; i < apiMessages.length; i++) {
       if (!isPersistedUserMessage(apiMessages[i])) continue;
+      final revisionId = (apiMessages[i][internalRevisionIdKey] ?? '')
+          .toString()
+          .trim();
       final rawUser = (apiMessages[i]['content'] ?? '').toString();
       final parsedUser = parseInputFromRaw(rawUser);
       final videoPaths = <String>{
@@ -517,11 +546,20 @@ class MessageBuilderService {
         apiMessages[i][internalMediaPathsKey] = messageMediaPaths;
       }
 
-      // Capture image paths from last user message
+      // Capture image paths from last user message (from raw markers).
       if (i == lastUserIdx &&
           lastUserImagePaths == null &&
           parsedUser.imagePaths.isNotEmpty) {
         lastUserImagePaths = List<String>.of(parsedUser.imagePaths);
+      }
+
+      // Prefer frozen promptContent — never recompute (§8.3).
+      if (revisionId.isNotEmpty && _repo != null) {
+        final existing = await _repo!.getMessagePrompt(revisionId);
+        if (existing != null) {
+          apiMessages[i]['content'] = existing.payload;
+          continue;
+        }
       }
 
       final inlineImagePaths = parsedUser.imagePaths
@@ -578,9 +616,6 @@ class MessageBuilderService {
             .toSet()
             .toList();
         if (ocrTargets.isNotEmpty) {
-          final revisionId = (apiMessages[i][internalRevisionIdKey] ?? '')
-              .toString()
-              .trim();
           final ocrText = await ocrHandler!(
             ocrTargets,
             revisionId: revisionId.isEmpty ? null : revisionId,
@@ -595,26 +630,216 @@ class MessageBuilderService {
         }
       }
 
-      apiMessages[i]['content'] = merged.isEmpty ? cleanedUser : merged;
-    }
-
-    // Apply message template to last user message
-    if (lastUserIdx != -1) {
-      final userText = (apiMessages[lastUserIdx]['content'] ?? '').toString();
-      final templ =
-          (assistant?.messageTemplate ?? '{{ message }}').trim().isEmpty
-          ? '{{ message }}'
-          : (assistant!.messageTemplate);
-      final templated = PromptTransformer.applyMessageTemplate(
-        templ,
-        role: 'user',
-        message: userText,
-        now: DateTime.now(),
+      final processedBody = merged.isEmpty ? cleanedUser : merged;
+      final chatMessage = _resolveChatMessage(
+        revisionId: revisionId,
+        conversation: conversation,
       );
-      apiMessages[lastUserIdx]['content'] = templated;
+
+      if (conversation != null && chatMessage != null) {
+        apiMessages[i]['content'] = await resolvePromptContent(
+          message: chatMessage,
+          processedUserBody: processedBody,
+          assistant: assistant,
+          conversation: conversation,
+          settings: settings,
+          apiMessages: apiMessages,
+          snapshotCarriers: snapshotCarriersThisPass,
+        );
+      } else {
+        // No conversation or no matching stored message: nothing to freeze
+        // against, so render the template without a memory prefix.
+        final templ =
+            (assistant?.messageTemplate ?? '{{ message }}').trim().isEmpty
+            ? '{{ message }}'
+            : (assistant?.messageTemplate ?? '{{ message }}');
+        final now = chatMessage?.timestamp ?? DateTime.now();
+        var content = PromptTransformer.applyMessageTemplate(
+          templ,
+          role: 'user',
+          message: processedBody,
+          now: now,
+        );
+        if (assistant?.appendCurrentTimeToUserMessage == true) {
+          content = '$content\n\n${MemoryPrompts.formatCurrentTimeTag(now)}';
+        }
+        apiMessages[i]['content'] = content;
+      }
     }
 
     return lastUserImagePaths ?? <String>[];
+  }
+
+  /// The stored message behind an api payload, or null when it cannot be
+  /// found.
+  ///
+  /// A synthesized stand-in would have to invent a timestamp, and freezing that
+  /// would bake the wrong `{{ time }}` into the prompt forever. Returning null
+  /// keeps the message on the unfrozen render path instead, which stays wrong
+  /// only for as long as the message is missing.
+  ChatMessage? _resolveChatMessage({
+    required String revisionId,
+    required Conversation? conversation,
+  }) {
+    if (revisionId.isEmpty || conversation == null) return null;
+    for (final candidate in chatService.getMessages(conversation.id)) {
+      if (candidate.id == revisionId) return candidate;
+    }
+    return null;
+  }
+
+  /// §8.3 immutability contract: return frozen payload or assemble + freeze.
+  Future<String> resolvePromptContent({
+    required ChatMessage message,
+    required String processedUserBody,
+    required Assistant? assistant,
+    required Conversation conversation,
+    required SettingsProvider settings,
+    required List<Map<String, dynamic>> apiMessages,
+    Set<String>? snapshotCarriers,
+  }) async {
+    final repo = _repo;
+    final persist =
+        repo != null &&
+        !chatService.isTemporaryConversation(message.conversationId);
+    if (persist) {
+      final existing = await repo.getMessagePrompt(message.id);
+      if (existing != null) return existing.payload;
+    }
+
+    final memory = assistant == null
+        ? (prefix: '', hash: null)
+        : await resolveMemoryPrefix(
+            conversation: conversation,
+            assistant: assistant,
+            apiMessages: apiMessages,
+            currentMessageId: message.id,
+            lang: settings.resolvedMemoryPromptLang,
+            snapshotCarriers: snapshotCarriers,
+          );
+    if (memory.prefix.isNotEmpty) {
+      snapshotCarriers?.add(message.id);
+    }
+
+    final templ = (assistant?.messageTemplate ?? '{{ message }}').trim().isEmpty
+        ? '{{ message }}'
+        : (assistant!.messageTemplate);
+    final templated = PromptTransformer.applyMessageTemplate(
+      templ,
+      role: 'user',
+      message: processedUserBody,
+      now: message.timestamp,
+    );
+    final timeSuffix = (assistant?.appendCurrentTimeToUserMessage ?? false)
+        ? '\n\n${MemoryPrompts.formatCurrentTimeTag(message.timestamp)}'
+        : '';
+    final finalContent = '${memory.prefix}$templated$timeSuffix';
+
+    // Temporary drafts never land in message_rows; freezing would violate the
+    // message_prompt_rows FK. Assemble in-memory only for those.
+    if (persist) {
+      await repo.freezeMessagePrompt(
+        revisionId: message.id,
+        conversationId: message.conversationId,
+        payload: finalContent,
+        carriesMemorySnapshot: memory.prefix.isNotEmpty,
+        injectedMemoryHash: memory.hash,
+      );
+    }
+
+    return finalContent;
+  }
+
+  /// §7.6 hash gating + self-healing. Compare hash **before** writing it.
+  Future<MemoryPrefixResolution> resolveMemoryPrefix({
+    required Conversation conversation,
+    required Assistant assistant,
+    required List<Map<String, dynamic>> apiMessages,
+    required String currentMessageId,
+    required MemoryPromptLang lang,
+    Set<String>? snapshotCarriers,
+  }) async {
+    if (!assistant.enableMemory) {
+      return (prefix: '', hash: null);
+    }
+
+    final repo = _repo;
+    if (repo == null) {
+      return (prefix: '', hash: null);
+    }
+
+    final fields = await repo.readProfileFields();
+    final totalByType = await repo.countVisibleMemoriesByType(
+      assistantId: assistant.id,
+    );
+    final hasAnyMemory = totalByType.values.any((count) => count > 0);
+    final hasProfile = fields.any((f) => f.value.trim().isNotEmpty);
+
+    // Fully empty: inject nothing and do not write hash.
+    if (!hasProfile && !hasAnyMemory) {
+      return (prefix: '', hash: null);
+    }
+
+    final visible = hasAnyMemory
+        ? await repo.queryVisibleMemories(assistantId: assistant.id)
+        : const <MemoryEntry>[];
+    final profileBlock = MemoryBlockBuilder.buildProfileBlock(
+      fields: fields,
+      lang: lang,
+    );
+    final memoryBlock = MemoryBlockBuilder.buildMemoryBlock(
+      visible: visible,
+      totalByType: totalByType,
+      lang: lang,
+    );
+
+    final currentHash = MemoryBlockBuilder.hashBlocks(
+      profileBlock,
+      memoryBlock,
+    );
+
+    // Self-healing: any history user message in *this* request carrying a
+    // snapshot? Read revision ids before stripInternalRevisionIds; exclude
+    // the message being assembled now.
+    final historyUserIds = <String>[];
+    for (final message in apiMessages) {
+      if ((message['role'] ?? '').toString() != 'user') continue;
+      final revisionId = (message[internalRevisionIdKey] ?? '')
+          .toString()
+          .trim();
+      if (revisionId.isEmpty || revisionId == currentMessageId) continue;
+      historyUserIds.add(revisionId);
+    }
+    final hasSnapshot =
+        historyUserIds.any((id) => snapshotCarriers?.contains(id) ?? false) ||
+        await repo.anyPromptCarriesMemorySnapshot(historyUserIds);
+
+    // CRITICAL: compare against the prior hash BEFORE any write (appendix §6).
+    // Writing first makes currentHash == injectedMemoryHash and the update
+    // branch is permanently unreachable.
+    final previousHash = conversation.injectedMemoryHash;
+
+    final String prefix;
+    if (!hasSnapshot) {
+      prefix = MemoryBlockBuilder.buildFullSnapshotPrefix(
+        profileBlock,
+        memoryBlock,
+        lang,
+      );
+    } else if (currentHash != previousHash) {
+      prefix = MemoryBlockBuilder.buildUpdatePrefix(
+        profileBlock,
+        memoryBlock,
+        lang,
+      );
+    } else {
+      return (prefix: '', hash: null);
+    }
+
+    // Advance in-memory hash only after the decision; DB write is deferred to
+    // freezeMessagePrompt in the same transaction as the prompt row.
+    conversation.injectedMemoryHash = currentHash;
+    return (prefix: prefix, hash: currentHash);
   }
 
   /// Default OCR text wrapper
@@ -652,93 +877,32 @@ class MessageBuilderService {
     }
   }
 
-  /// Inject memory prompts and recent chats reference into apiMessages.
+  /// Inject §11 memory rules into the system message.
+  ///
+  /// Pure function of `(enableMemory, allowPastConversationRecall, lang,
+  /// user template)` — must not vary with memory content or the clock (§11.1).
+  /// Relative order among remaining system injections is preserved by the
+  /// caller (`injectSystemPrompt` → this → `injectSearchPrompt` →
+  /// `injectInstructionPrompts` → `injectWorldBookPrompts`).
   Future<void> injectMemoryAndRecentChats(
     List<Map<String, dynamic>> apiMessages,
     Assistant? assistant, {
-    String? currentConversationId,
+    SettingsProvider? settings,
   }) async {
     try {
-      if (assistant?.enableMemory == true) {
-        final mp = contextProvider.read<MemoryProvider>();
-        await mp.initialize();
-        final mems = mp.getForAssistant(assistant!.id);
-        final currentHour = _formatCurrentHour(DateTime.now());
-        final buf = StringBuffer();
-        buf.writeln('## Memories');
-        buf.writeln(
-          'These are memories that you can reference in the future conversations.',
-        );
-        buf.writeln('<memories>');
-        for (final m in mems) {
-          buf.writeln('<record>');
-          buf.writeln('<id>${m.id}</id>');
-          buf.writeln('<content>${m.content}</content>');
-          buf.writeln('</record>');
-        }
-        buf.writeln('</memories>');
-        buf.writeln('''
-## Memory Tool
-你是一个无状态的大模型，你无法存储记忆，因此为了记住信息，你需要使用**记忆工具**。
-你可以使用 `create_memory`, `edit_memory`, `delete_memory` 工具创建、更新或删除记忆。
-- 如果记忆中没有相关信息，请使用 create_memory 创建一条新的记录。
-- 如果已有相关记录，请使用 edit_memory 更新内容。
-- 若记忆过时或无用，请使用 delete_memory 删除。
-这些记忆会自动包含在未来的对话上下文中，在<memories>标签内。
-请勿在记忆中存储敏感信息，敏感信息包括：用户的民族、宗教信仰、性取向、政治观点及党派归属、性生活、犯罪记录等。
-在与用户聊天过程中，你可以像一个私人秘书一样**主动的**记录用户相关的信息到记忆里，包括但不限于：
-- 用户昵称/姓名
-- 年龄/性别/兴趣爱好
-- 计划事项等
-- 聊天风格偏好
-- 工作相关
-- 首次聊天时间
-- ...
-请主动调用工具记录，而不是需要用户要求。
-记忆如果包含日期信息，请包含在内，请使用绝对时间格式，并且当前时间是$currentHour。
-无需告知用户你已更改记忆记录，也不要在对话中直接显示记忆内容，除非用户主动要求。
-相似或相关的记忆应合并为一条记录，而不要重复记录，过时记录应删除。
-你可以在和用户闲聊的时候暗示用户你能记住东西。
-''');
-        _appendToSystemMessage(apiMessages, buf.toString());
+      if (assistant?.enableMemory != true) return;
+      final resolved = settings ?? contextProvider.read<SettingsProvider>();
+      final lang = resolved.resolvedMemoryPromptLang;
+      final rules = lang == MemoryPromptLang.zh
+          ? resolved.memoryRulesPromptZh
+          : resolved.memoryRulesPromptEn;
+      final buf = StringBuffer(rules.trim());
+      if (assistant!.allowPastConversationRecall) {
+        buf.write('\n\n');
+        buf.write(MemoryPrompts.rulesPastConversationRecallFor(lang));
       }
-      if (assistant?.allowPastConversationRecall == true) {
-        final chats = chatService.getAllConversations();
-        final relevantChats = chats
-            .where(
-              (c) =>
-                  c.assistantId == assistant!.id &&
-                  c.id != currentConversationId,
-            )
-            .where((c) => c.title.trim().isNotEmpty)
-            .take(10)
-            .toList();
-        if (relevantChats.isNotEmpty) {
-          final sb = StringBuffer();
-          sb.writeln('<recent_chats>');
-          sb.writeln('这是用户最近的一些对话标题和摘要，你可以参考这些内容了解用户偏好和关注点');
-          for (final c in relevantChats) {
-            sb.writeln('<conversation>');
-            // Format: timestamp: title || summary
-            final timestamp = c.updatedAt.toIso8601String().substring(0, 10);
-            final title = c.title.trim();
-            final summary = (c.summary ?? '').trim();
-            if (summary.isNotEmpty) {
-              sb.writeln('  $timestamp: $title || $summary');
-            } else {
-              sb.writeln('  $timestamp: $title');
-            }
-            sb.writeln('</conversation>');
-          }
-          sb.writeln('</recent_chats>');
-          _appendToSystemMessage(apiMessages, sb.toString());
-        }
-      }
+      _appendToSystemMessage(apiMessages, buf.toString());
     } catch (_) {}
-  }
-
-  String _formatCurrentHour(DateTime now) {
-    return '${now.year}年${now.month}月${now.day}日的${now.hour}点';
   }
 
   /// Inject search tool usage prompt into apiMessages.
