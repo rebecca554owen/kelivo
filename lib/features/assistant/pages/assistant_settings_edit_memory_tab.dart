@@ -1,272 +1,227 @@
 part of 'assistant_settings_edit_page.dart';
 
-class _MemoryTab extends StatelessWidget {
+class _MemoryTab extends StatefulWidget {
   const _MemoryTab({required this.assistantId});
   final String assistantId;
 
-  Future<void> _showAddEditSheet(
-    BuildContext context, {
-    int? id,
-    String initial = '',
-  }) async {
+  @override
+  State<_MemoryTab> createState() => _MemoryTabState();
+}
+
+class _MemoryTabState extends State<_MemoryTab> {
+  bool _organizing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<MemoryProviderV2>().initialize(
+        assistantId: widget.assistantId,
+      );
+    });
+  }
+
+  Future<void> _showAddEditSheet({MemoryEntry? existing}) async {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final controller = TextEditingController(text: initial);
-    // Desktop: custom dialog; Mobile: keep bottom sheet
-    final platform = Theme.of(context).platform;
-    final isDesktop =
-        platform == TargetPlatform.macOS ||
-        platform == TargetPlatform.linux ||
-        platform == TargetPlatform.windows;
-    if (isDesktop) {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) {
-          return Dialog(
-            backgroundColor: cs.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 24,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: 44,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l10n.assistantEditMemoryDialogTitle,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: AppFontWeights.emphasis,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: MaterialLocalizations.of(
-                              ctx,
-                            ).closeButtonTooltip,
-                            icon: const Icon(Lucide.X, size: 18),
-                            color: cs.onSurface,
-                            onPressed: () => Navigator.of(ctx).maybePop(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextField(
-                          controller: controller,
-                          minLines: 3,
-                          maxLines: 8,
-                          decoration: InputDecoration(
-                            hintText: l10n.assistantEditMemoryDialogHint,
-                            filled: true,
-                            fillColor: ctx.appColors.surfaceFill,
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: cs.outlineVariant.withValues(alpha: 0.2),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: cs.primary.withValues(alpha: 0.5),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          autofocus: true,
-                          onSubmitted: (_) async {
-                            final text = controller.text.trim();
-                            if (text.isEmpty) return;
-                            final mp = context.read<MemoryProvider>();
-                            if (id == null) {
-                              await mp.add(
-                                assistantId: assistantId,
-                                content: text,
-                              );
-                            } else {
-                              await mp.update(id: id, content: text);
-                            }
-                            if (context.mounted) Navigator.of(ctx).pop();
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            _IosButton(
-                              label: l10n.assistantEditEmojiDialogCancel,
-                              onTap: () => Navigator.of(ctx).pop(),
-                              filled: false,
-                              neutral: true,
-                              dense: true,
-                            ),
-                            const SizedBox(width: 8),
-                            _IosButton(
-                              label: l10n.assistantEditEmojiDialogSave,
-                              onTap: () async {
-                                final text = controller.text.trim();
-                                if (text.isEmpty) return;
-                                final mp = context.read<MemoryProvider>();
-                                if (id == null) {
-                                  await mp.add(
-                                    assistantId: assistantId,
-                                    content: text,
-                                  );
-                                } else {
-                                  await mp.update(id: id, content: text);
-                                }
-                                if (context.mounted) Navigator.of(ctx).pop();
-                              },
-                              filled: true,
-                              neutral: false,
-                              dense: true,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      return;
-    }
-    await showModalBottomSheet<void>(
+    final controller = TextEditingController(text: existing?.content ?? '');
+    var type = existing?.type ?? MemoryType.identity;
+    var scope = existing?.scope ?? MemoryScope.global;
+
+    final saved = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (ctx) {
-        final media = MediaQuery.of(ctx);
-        final bottom = media.viewInsets.bottom;
-        final maxSheetHeight =
-            (media.size.height -
-                    media.padding.top -
-                    media.viewInsets.bottom -
-                    24)
-                .clamp(0.0, 560.0)
-                .toDouble();
-        return SafeArea(
-          top: false,
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + 16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxSheetHeight),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Lucide.Library, size: 18, color: cs.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l10n.assistantEditMemoryDialogTitle,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: AppFontWeights.emphasis,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Flexible(
-                    fit: FlexFit.loose,
-                    child: TextField(
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return AlertDialog(
+              title: Text(
+                existing == null
+                    ? l10n.memoryEntryCreateTitle
+                    : l10n.memoryEntryEditTitle,
+              ),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
                       controller: controller,
-                      minLines: 1,
-                      maxLines: 16,
+                      minLines: 3,
+                      maxLines: 8,
+                      autofocus: true,
                       decoration: InputDecoration(
-                        hintText: l10n.assistantEditMemoryDialogHint,
+                        hintText: l10n.memoryEntryContentHint,
                         filled: true,
                         fillColor: ctx.appColors.surfaceFill,
                         border: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: cs.outlineVariant.withValues(alpha: 0.2),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: cs.primary.withValues(alpha: 0.5),
-                          ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _IosButton(
-                          label: l10n.assistantEditEmojiDialogCancel,
-                          icon: Lucide.X,
-                          onTap: () => Navigator.of(ctx).pop(),
-                          filled: false,
-                          neutral: true,
+                    if (existing == null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.memoryEntryTypeLabel,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: AppFontWeights.semibold,
+                          color: cs.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _IosButton(
-                          label: l10n.assistantEditEmojiDialogSave,
-                          icon: Lucide.Check,
-                          onTap: () async {
-                            final text = controller.text.trim();
-                            if (text.isEmpty) return;
-                            final mp = context.read<MemoryProvider>();
-                            if (id == null) {
-                              await mp.add(
-                                assistantId: assistantId,
-                                content: text,
-                              );
-                            } else {
-                              await mp.update(id: id, content: text);
-                            }
-                            if (context.mounted) Navigator.of(ctx).pop();
-                          },
-                          filled: true,
-                          neutral: false,
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final t in MemoryType.values)
+                            ChoiceChip(
+                              label: Text(memoryTypeLabel(l10n, t)),
+                              selected: type == t,
+                              onSelected: (_) => setLocal(() => type = t),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.memoryEntryScopeLabel,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: AppFontWeights.semibold,
+                          color: cs.onSurface.withValues(alpha: 0.7),
                         ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: Text(l10n.memoryEntryScopeGlobal),
+                            selected: scope == MemoryScope.global,
+                            onSelected: (_) =>
+                                setLocal(() => scope = MemoryScope.global),
+                          ),
+                          ChoiceChip(
+                            label: Text(l10n.memoryEntryScopeAssistant),
+                            selected: scope == MemoryScope.assistant,
+                            onSelected: (_) =>
+                                setLocal(() => scope = MemoryScope.assistant),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(l10n.assistantEditEmojiDialogCancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text(l10n.assistantEditEmojiDialogSave),
+                ),
+              ],
+            );
+          },
         );
       },
     );
+
+    final text = controller.text.trim();
+    controller.dispose();
+    if (saved != true || text.isEmpty || !mounted) return;
+    final mp = context.read<MemoryProviderV2>();
+    if (existing == null) {
+      await mp.create(
+        scope: scope,
+        assistantId: scope == MemoryScope.assistant ? widget.assistantId : null,
+        type: type,
+        content: text,
+        source: MemorySource.manual,
+      );
+    } else {
+      await mp.updateContent(existing.id, text);
+    }
+  }
+
+  Future<void> _runOrganize() async {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.read<SettingsProvider>();
+    if (settings.memoryModelProvider == null ||
+        settings.memoryModelId == null) {
+      showAppSnackBar(
+        context,
+        message: l10n.memoryOrganizeNeedsModel,
+        type: NotificationType.warning,
+      );
+      return;
+    }
+    final chat = context.read<ChatService>();
+    final convId = chat.currentConversationId;
+    final conv = convId == null ? null : chat.getConversation(convId);
+    if (conv == null || conv.assistantId != widget.assistantId) {
+      showAppSnackBar(
+        context,
+        message: l10n.memoryOrganizeNeedsConversation,
+        type: NotificationType.warning,
+      );
+      return;
+    }
+    setState(() => _organizing = true);
+    try {
+      final pipeline = context.read<MemoryPipelineService>();
+      await pipeline.runNow(
+        conversationId: conv.id,
+        assistantId: widget.assistantId,
+      );
+      if (mounted) {
+        await context.read<MemoryProviderV2>().refresh(
+          assistantId: widget.assistantId,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _organizing = false);
+    }
+  }
+
+  String _statusLine(AppLocalizations l10n, MemoryOrganizeStatus status) {
+    final lastAt = status.lastAt;
+    final result = status.lastResult;
+    if (lastAt == null || result == null) {
+      return l10n.memoryOrganizeStatusNever;
+    }
+    final when = _formatRelative(l10n, lastAt);
+    final parts = <String>[l10n.memoryOrganizeStatusLast(when)];
+    if (result.error != null && result.error!.isNotEmpty) {
+      parts.add(l10n.memoryOrganizeStatusFailed(result.error!));
+    } else if (result.gate == MemoryGateParseResult.skip ||
+        (result.extractedCount == 0 && result.advanced)) {
+      parts.add(l10n.memoryOrganizeStatusSkipped);
+    } else {
+      parts.add(l10n.memoryOrganizeStatusExtracted(result.extractedCount));
+    }
+    return parts.join(' · ');
+  }
+
+  String _formatRelative(AppLocalizations l10n, DateTime at) {
+    final delta = DateTime.now().difference(at);
+    if (delta.inMinutes < 1) return l10n.memoryOrganizeJustNow;
+    if (delta.inHours < 1) {
+      return l10n.memoryOrganizeMinutesAgo(delta.inMinutes);
+    }
+    if (delta.inDays < 1) {
+      return l10n.memoryOrganizeHoursAgo(delta.inHours);
+    }
+    return l10n.memoryOrganizeDaysAgo(delta.inDays);
+  }
+
+  void _goMemorySettings() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const MemorySettingsPage()));
   }
 
   @override
@@ -275,17 +230,24 @@ class _MemoryTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ap = context.watch<AssistantProvider>();
-    final a = ap.getById(assistantId)!;
-    final mp = context.watch<MemoryProvider>();
-    // Ensure provider loads persisted memories once
-    try {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        mp.initialize();
-      });
-    } catch (_) {}
-    final memories = mp.getForAssistant(assistantId);
+    final a = ap.getById(widget.assistantId)!;
+    final settings = context.watch<SettingsProvider>();
+    final mp = context.watch<MemoryProviderV2>();
+    final pipeline = context.read<MemoryPipelineService>();
+    final modelMissing =
+        settings.memoryModelProvider == null || settings.memoryModelId == null;
 
-    // Align the section card visuals with the basic settings page iOS-style list cards
+    final visible = mp.visibleFor(widget.assistantId);
+    final archived = mp.archivedFor(widget.assistantId);
+    final chat = context.watch<ChatService>();
+    final convId = chat.currentConversationId;
+    final conv = convId == null ? null : chat.getConversation(convId);
+    final canOrganize =
+        !modelMissing &&
+        conv != null &&
+        conv.assistantId == widget.assistantId &&
+        !_organizing;
+
     Widget sectionCard({
       required Widget child,
       EdgeInsets padding = const EdgeInsets.symmetric(vertical: 6),
@@ -293,7 +255,6 @@ class _MemoryTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          // Match Settings page: Light uses translucent white; Dark uses subtle white10
           color: context.appColors.surfaceCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -309,7 +270,6 @@ class _MemoryTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       children: [
-        // Feature switches
         sectionCard(
           child: Column(
             children: [
@@ -324,15 +284,66 @@ class _MemoryTab extends StatelessWidget {
                   );
                 },
               ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: a.enableMemory
+                    ? Column(
+                        children: [
+                          _iosDivider(context),
+                          _iosSwitchRow(
+                            context,
+                            icon: Lucide.Sparkles,
+                            label: l10n.assistantEditAutoOrganizeTitle,
+                            value: a.autoOrganizeMemory,
+                            onChanged: (v) async {
+                              await context
+                                  .read<AssistantProvider>()
+                                  .updateAssistant(
+                                    a.copyWith(autoOrganizeMemory: v),
+                                  );
+                            },
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOutCubic,
+                            child: a.autoOrganizeMemory
+                                ? Column(
+                                    children: [
+                                      _iosDivider(context),
+                                      if (modelMissing)
+                                        MemoryModelMissingNotice(
+                                          onGoSelect: _goMemorySettings,
+                                        ),
+                                      _MemoryOrganizeFrequencySection(
+                                        assistant: a,
+                                      ),
+                                      _iosDivider(context),
+                                      _MemoryDedupeModeSection(assistant: a),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          _iosDivider(context),
+                          _MemoryWriteScopeSection(assistant: a),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
               _iosDivider(context),
               _iosSwitchRow(
                 context,
                 icon: Lucide.History,
-                label: l10n.assistantEditRecentChatsSwitchTitle,
+                label: l10n.assistantEditAllowPastRecallTitle,
                 value: a.allowPastConversationRecall,
                 onChanged: (v) async {
                   await context.read<AssistantProvider>().updateAssistant(
-                    a.copyWith(allowPastConversationRecall: v),
+                    a.copyWith(
+                      allowPastConversationRecall: v,
+                      generateConversationSummary: v
+                          ? a.generateConversationSummary
+                          : false,
+                    ),
                   );
                 },
               ),
@@ -343,7 +354,33 @@ class _MemoryTab extends StatelessWidget {
                     ? Column(
                         children: [
                           _iosDivider(context),
-                          _RecentChatsSummaryFrequencySection(assistant: a),
+                          _iosSwitchRow(
+                            context,
+                            icon: Lucide.FileText,
+                            label: l10n.assistantEditGenerateSummaryTitle,
+                            value: a.generateConversationSummary,
+                            onChanged: (v) async {
+                              await context
+                                  .read<AssistantProvider>()
+                                  .updateAssistant(
+                                    a.copyWith(generateConversationSummary: v),
+                                  );
+                            },
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOutCubic,
+                            child: a.generateConversationSummary
+                                ? Column(
+                                    children: [
+                                      _iosDivider(context),
+                                      _RecentChatsSummaryFrequencySection(
+                                        assistant: a,
+                                      ),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
                         ],
                       )
                     : const SizedBox.shrink(),
@@ -352,7 +389,6 @@ class _MemoryTab extends StatelessWidget {
           ),
         ),
 
-        // Manage memories header with add button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Row(
@@ -366,8 +402,52 @@ class _MemoryTab extends StatelessWidget {
                   ),
                 ),
               ),
+              Tooltip(
+                message: modelMissing
+                    ? l10n.memoryOrganizeNeedsModel
+                    : (!canOrganize && !_organizing
+                          ? l10n.memoryOrganizeNeedsConversation
+                          : l10n.memoryOrganizeButton),
+                child: _TactileRow(
+                  onTap: canOrganize ? _runOrganize : null,
+                  pressedScale: 0.97,
+                  builder: (pressed) {
+                    final enabled = canOrganize;
+                    final color = !enabled
+                        ? cs.onSurface.withValues(alpha: 0.35)
+                        : (pressed
+                              ? cs.primary.withValues(alpha: 0.7)
+                              : cs.primary);
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_organizing)
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: color,
+                            ),
+                          )
+                        else
+                          Icon(Lucide.Sparkles, size: 16, color: color),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.memoryOrganizeButton,
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: AppFontWeights.semibold,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
               _TactileRow(
-                onTap: () => _showAddEditSheet(context),
+                onTap: () => _showAddEditSheet(),
                 pressedScale: 0.97,
                 builder: (pressed) {
                   final color = pressed
@@ -379,7 +459,7 @@ class _MemoryTab extends StatelessWidget {
                       Icon(Lucide.Plus, size: 16, color: color),
                       const SizedBox(width: 4),
                       Text(
-                        l10n.assistantEditAddMemoryButton,
+                        l10n.memoryEntryActionAdd,
                         style: TextStyle(
                           color: color,
                           fontWeight: AppFontWeights.semibold,
@@ -392,12 +472,33 @@ class _MemoryTab extends StatelessWidget {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(
+            _statusLine(l10n, pipeline.lastStatus),
+            style: TextStyle(
+              fontSize: 12,
+              color: cs.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ),
 
-        if (memories.isEmpty)
+        if (!a.enableMemory)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
-              l10n.assistantEditMemoryEmpty,
+              l10n.memoryEntryEmptyDisabled,
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+          )
+        else if (visible.isEmpty && archived.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              l10n.memoryEntryEmpty,
               style: TextStyle(
                 color: cs.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
@@ -405,189 +506,139 @@ class _MemoryTab extends StatelessWidget {
             ),
           ),
 
-        // Memory list
-        ...memories.map((m) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.appColors.surfaceCard,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: cs.outlineVariant.withValues(
-                    alpha: isDark ? 0.08 : 0.06,
-                  ),
-                  width: 0.6,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        m.content,
-                        maxLines: 5,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    _TactileIconButton(
-                      icon: Lucide.Pencil,
-                      size: 18,
-                      color: cs.primary,
-                      onTap: () => _showAddEditSheet(
-                        context,
-                        id: m.id,
-                        initial: m.content,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    _TactileIconButton(
-                      icon: Lucide.Trash2,
-                      size: 18,
-                      color: cs.error,
-                      onTap: () async {
-                        await context.read<MemoryProvider>().delete(id: m.id);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-
-        // Summaries section
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.assistantEditManageSummariesTitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: AppFontWeights.emphasis,
-                  ),
-                ),
-              ),
-            ],
+        ...visible.map(
+          (m) => MemoryEntryCard(
+            entry: m,
+            useThisAssistantLabel: true,
+            scopeToggleAssistantId: widget.assistantId,
+            onEdit: () => _showAddEditSheet(existing: m),
           ),
         ),
+        if (archived.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(
+              l10n.memoryEntryArchivedSection,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: AppFontWeights.emphasis,
+              ),
+            ),
+          ),
+          ...archived.map(
+            (m) => MemoryEntryCard(
+              entry: m,
+              useThisAssistantLabel: true,
+              scopeToggleAssistantId: widget.assistantId,
+              onEdit: () => _showAddEditSheet(existing: m),
+            ),
+          ),
+        ],
 
-        Builder(
-          builder: (context) {
-            final chatService = context.watch<ChatService>();
-            final summaries = chatService
-                .getConversationsWithSummaryForAssistant(assistantId);
-
-            if (summaries.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Text(
-                  l10n.assistantEditSummaryEmpty,
-                  style: TextStyle(
-                    color: cs.onSurface.withValues(alpha: 0.6),
-                    fontSize: 12,
-                  ),
-                ),
-              );
-            }
-
-            return Column(
-              children: summaries.map((conv) {
+        if (a.allowPastConversationRecall && a.generateConversationSummary) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
+            child: Text(
+              l10n.assistantEditManageSummariesTitle,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: AppFontWeights.emphasis,
+              ),
+            ),
+          ),
+          Builder(
+            builder: (context) {
+              final chatService = context.watch<ChatService>();
+              final summaries = chatService
+                  .getConversationsWithSummaryForAssistant(widget.assistantId);
+              if (summaries.isEmpty) {
                 return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.appColors.surfaceCard,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: cs.outlineVariant.withValues(
-                          alpha: isDark ? 0.08 : 0.06,
-                        ),
-                        width: 0.6,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Lucide.MessageSquare,
-                                size: 14,
-                                color: cs.onSurface.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  conv.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: cs.onSurface.withValues(alpha: 0.6),
-                                    fontWeight: AppFontWeights.medium,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  conv.summary ?? '',
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              _TactileIconButton(
-                                icon: Lucide.Pencil,
-                                size: 18,
-                                color: cs.primary,
-                                onTap: () => _showEditSummarySheet(
-                                  context,
-                                  conv,
-                                  chatService,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              _TactileIconButton(
-                                icon: Lucide.Trash2,
-                                size: 18,
-                                color: cs.error,
-                                onTap: () => _confirmDeleteSummary(
-                                  context,
-                                  conv.id,
-                                  chatService,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    l10n.assistantEditSummaryEmpty,
+                    style: TextStyle(
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
                     ),
                   ),
                 );
-              }).toList(),
-            );
-          },
-        ),
-
+              }
+              return Column(
+                children: summaries.map((conv) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.appColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: cs.outlineVariant.withValues(
+                            alpha: isDark ? 0.08 : 0.06,
+                          ),
+                          width: 0.6,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              conv.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurface.withValues(alpha: 0.6),
+                                fontWeight: AppFontWeights.medium,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    conv.summary ?? '',
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                _TactileIconButton(
+                                  icon: Lucide.Pencil,
+                                  size: 18,
+                                  color: cs.primary,
+                                  onTap: () => _showEditSummarySheet(
+                                    context,
+                                    conv,
+                                    chatService,
+                                  ),
+                                ),
+                                _TactileIconButton(
+                                  icon: Lucide.Trash2,
+                                  size: 18,
+                                  color: cs.error,
+                                  onTap: () => _confirmDeleteSummary(
+                                    context,
+                                    conv.id,
+                                    chatService,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
         const SizedBox(height: 32),
       ],
     );
@@ -599,258 +650,47 @@ class _MemoryTab extends StatelessWidget {
     ChatService chatService,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final controller = TextEditingController(text: conversation.summary ?? '');
-    final platform = Theme.of(context).platform;
-    final isDesktop =
-        platform == TargetPlatform.macOS ||
-        platform == TargetPlatform.linux ||
-        platform == TargetPlatform.windows;
-
-    if (isDesktop) {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) {
-          return Dialog(
-            backgroundColor: cs.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 24,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: 44,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l10n.assistantEditSummaryDialogTitle,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: AppFontWeights.emphasis,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: MaterialLocalizations.of(
-                              ctx,
-                            ).closeButtonTooltip,
-                            icon: const Icon(Lucide.X, size: 18),
-                            color: cs.onSurface,
-                            onPressed: () => Navigator.of(ctx).maybePop(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Text(
-                      conversation.title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.6),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextField(
-                          controller: controller,
-                          minLines: 3,
-                          maxLines: 8,
-                          decoration: InputDecoration(
-                            hintText: l10n.assistantEditSummaryDialogHint,
-                            filled: true,
-                            fillColor: ctx.appColors.surfaceFill,
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: cs.outlineVariant.withValues(alpha: 0.2),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: cs.primary.withValues(alpha: 0.5),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          autofocus: true,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            _IosButton(
-                              label: l10n.assistantEditEmojiDialogCancel,
-                              onTap: () => Navigator.of(ctx).pop(),
-                              filled: false,
-                              neutral: true,
-                              dense: true,
-                            ),
-                            const SizedBox(width: 8),
-                            _IosButton(
-                              label: l10n.assistantEditEmojiDialogSave,
-                              onTap: () async {
-                                final text = controller.text.trim();
-                                if (text.isEmpty) {
-                                  await chatService.clearConversationSummary(
-                                    conversation.id,
-                                  );
-                                } else {
-                                  await chatService.updateConversationSummary(
-                                    conversation.id,
-                                    text,
-                                    conversation.lastSummarizedMessageCount,
-                                  );
-                                }
-                                if (context.mounted) Navigator.of(ctx).pop();
-                              },
-                              filled: true,
-                              neutral: false,
-                              dense: true,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      return;
-    }
-
-    // Mobile: BottomSheet
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        final bottom = MediaQuery.of(ctx).viewInsets.bottom;
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Lucide.FileText, size: 18, color: cs.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.assistantEditSummaryDialogTitle,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: AppFontWeights.emphasis,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  conversation.title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurface.withValues(alpha: 0.6),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: 16,
-                  decoration: InputDecoration(
-                    hintText: l10n.assistantEditSummaryDialogHint,
-                    filled: true,
-                    fillColor: ctx.appColors.surfaceFill,
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.2),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: cs.primary.withValues(alpha: 0.5),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _IosButton(
-                        label: l10n.assistantEditEmojiDialogCancel,
-                        icon: Lucide.X,
-                        onTap: () => Navigator.of(ctx).pop(),
-                        filled: false,
-                        neutral: true,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _IosButton(
-                        label: l10n.assistantEditEmojiDialogSave,
-                        icon: Lucide.Check,
-                        onTap: () async {
-                          final text = controller.text.trim();
-                          if (text.isEmpty) {
-                            await chatService.clearConversationSummary(
-                              conversation.id,
-                            );
-                          } else {
-                            await chatService.updateConversationSummary(
-                              conversation.id,
-                              text,
-                              conversation.lastSummarizedMessageCount,
-                            );
-                          }
-                          if (context.mounted) Navigator.of(ctx).pop();
-                        },
-                        filled: true,
-                        neutral: false,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.assistantEditSummaryDialogTitle),
+        content: TextField(
+          controller: controller,
+          minLines: 3,
+          maxLines: 10,
+          decoration: InputDecoration(
+            hintText: l10n.assistantEditSummaryDialogHint,
+            filled: true,
+            fillColor: ctx.appColors.surfaceFill,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.assistantEditEmojiDialogCancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              if (text.isEmpty) {
+                await chatService.clearConversationSummary(conversation.id);
+              } else {
+                await chatService.updateConversationSummary(
+                  conversation.id,
+                  text,
+                  conversation.lastSummarizedMessageCount,
+                );
+              }
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: Text(l10n.assistantEditEmojiDialogSave),
+          ),
+        ],
+      ),
     );
+    controller.dispose();
   }
 
   Future<void> _confirmDeleteSummary(
@@ -879,10 +719,348 @@ class _MemoryTab extends StatelessWidget {
         ],
       ),
     );
-
     if (confirmed == true && context.mounted) {
       await chatService.clearConversationSummary(conversationId);
     }
+  }
+}
+
+class _MemoryOrganizeFrequencySection extends StatelessWidget {
+  const _MemoryOrganizeFrequencySection({required this.assistant});
+
+  final Assistant assistant;
+
+  static const _options = [1, 3, 5, 10];
+
+  Future<void> _showCustom(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(
+      text: assistant.memoryOrganizeEveryNTurns.toString(),
+    );
+    final ap = context.read<AssistantProvider>();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(l10n.assistantEditOrganizeFrequencyCustomTitle),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.assistantEditOrganizeFrequencyCustomLabel,
+              hintText: l10n.assistantEditOrganizeFrequencyCustomHint,
+              helperText: l10n.assistantEditOrganizeFrequencyCustomDescription,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.assistantEditEmojiDialogCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.assistantEditEmojiDialogSave),
+            ),
+          ],
+        );
+      },
+    );
+    final parsed = int.tryParse(controller.text.trim());
+    controller.dispose();
+    if (saved != true || parsed == null) return;
+    if (parsed < Assistant.minMemoryOrganizeEveryNTurns ||
+        parsed > Assistant.maxMemoryOrganizeEveryNTurns) {
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          message: l10n.assistantEditOrganizeFrequencyCustomInvalid,
+          type: NotificationType.error,
+        );
+      }
+      return;
+    }
+    await ap.updateAssistant(
+      assistant.copyWith(memoryOrganizeEveryNTurns: parsed),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final ap = context.read<AssistantProvider>();
+    final selected = assistant.memoryOrganizeEveryNTurns;
+    final options = <int>{..._options, selected}.toList()..sort();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 36,
+                child: Icon(
+                  Lucide.FileClock,
+                  size: 20,
+                  color: cs.onSurface.withValues(alpha: 0.9),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.assistantEditOrganizeFrequencyTitle,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: cs.onSurface.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.assistantEditOrganizeFrequencySubtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.65),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(left: 48),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ...options.map((count) {
+                  final isSelected = count == selected;
+                  return _FrequencyChipButton(
+                    label: l10n.assistantEditOrganizeFrequencyOption(count),
+                    selected: isSelected,
+                    onTap: isSelected
+                        ? null
+                        : () async {
+                            await ap.updateAssistant(
+                              assistant.copyWith(
+                                memoryOrganizeEveryNTurns: count,
+                              ),
+                            );
+                          },
+                  );
+                }),
+                _FrequencyChipButton(
+                  label: l10n.assistantEditOrganizeFrequencyCustomButton,
+                  icon: Lucide.Pencil,
+                  emphasized: true,
+                  onTap: () => _showCustom(context),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemoryDedupeModeSection extends StatelessWidget {
+  const _MemoryDedupeModeSection({required this.assistant});
+
+  final Assistant assistant;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final ap = context.read<AssistantProvider>();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 36,
+                child: Icon(
+                  Lucide.Layers,
+                  size: 20,
+                  color: cs.onSurface.withValues(alpha: 0.9),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.assistantEditDedupeModeTitle,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: cs.onSurface.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.assistantEditDedupeModeSubtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.65),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(left: 48),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _FrequencyChipButton(
+                  label: l10n.assistantEditDedupeModeBatched,
+                  selected:
+                      assistant.memorySmartAddMode ==
+                      MemorySmartAddMode.batched,
+                  onTap: () async {
+                    await ap.updateAssistant(
+                      assistant.copyWith(
+                        memorySmartAddMode: MemorySmartAddMode.batched,
+                      ),
+                    );
+                  },
+                ),
+                _FrequencyChipButton(
+                  label: l10n.assistantEditDedupeModePerItem,
+                  selected:
+                      assistant.memorySmartAddMode ==
+                      MemorySmartAddMode.perItem,
+                  onTap: () async {
+                    await ap.updateAssistant(
+                      assistant.copyWith(
+                        memorySmartAddMode: MemorySmartAddMode.perItem,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemoryWriteScopeSection extends StatelessWidget {
+  const _MemoryWriteScopeSection({required this.assistant});
+
+  final Assistant assistant;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final ap = context.read<AssistantProvider>();
+
+    final items = <(MemoryWriteScope, String)>[
+      (MemoryWriteScope.alwaysGlobal, l10n.assistantEditWriteScopeAlwaysGlobal),
+      (
+        MemoryWriteScope.alwaysAssistant,
+        l10n.assistantEditWriteScopeAlwaysAssistant,
+      ),
+      (
+        MemoryWriteScope.toolDefaultGlobal,
+        l10n.assistantEditWriteScopeToolDefaultGlobal,
+      ),
+      (
+        MemoryWriteScope.toolDefaultAssistant,
+        l10n.assistantEditWriteScopeToolDefaultAssistant,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 36,
+                child: Icon(
+                  Lucide.Globe,
+                  size: 20,
+                  color: cs.onSurface.withValues(alpha: 0.9),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.assistantEditWriteScopeTitle,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: cs.onSurface.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.assistantEditWriteScopeSubtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.65),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(left: 48),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final item in items)
+                  _FrequencyChipButton(
+                    label: item.$2,
+                    selected: assistant.memoryWriteScope == item.$1,
+                    onTap: () async {
+                      await ap.updateAssistant(
+                        assistant.copyWith(memoryWriteScope: item.$1),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -893,221 +1071,44 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
 
   Future<void> _showCustomCountInput(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final controller = TextEditingController(
       text: assistant.recentChatsSummaryMessageCount.toString(),
     );
     final ap = context.read<AssistantProvider>();
-    final platform = Theme.of(context).platform;
-    final isDesktop =
-        platform == TargetPlatform.macOS ||
-        platform == TargetPlatform.linux ||
-        platform == TargetPlatform.windows;
-
-    int? parseValue() {
-      final value = int.tryParse(controller.text.trim());
-      if (value == null || value < 1) return null;
-      return value;
-    }
-
-    Future<void> submit(BuildContext sheetContext) async {
-      final parsed = parseValue();
-      if (parsed == null) return;
-      if (parsed != assistant.recentChatsSummaryMessageCount) {
-        await ap.updateAssistant(
-          assistant.copyWith(recentChatsSummaryMessageCount: parsed),
-        );
-      }
-      if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-    }
-
-    if (isDesktop) {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) {
-          return StatefulBuilder(
-            builder: (ctx, setLocal) {
-              final parsed = parseValue();
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: Text(
-                  l10n.assistantEditRecentChatsSummaryFrequencyCustomTitle,
-                ),
-                content: SizedBox(
-                  width: 360,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.assistantEditRecentChatsSummaryFrequencyCustomDescription,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 1.4,
-                          color: cs.onSurface.withValues(alpha: 0.68),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          labelText: l10n
-                              .assistantEditRecentChatsSummaryFrequencyCustomLabel,
-                          hintText: l10n
-                              .assistantEditRecentChatsSummaryFrequencyCustomHint,
-                        ),
-                        onChanged: (_) => setLocal(() {}),
-                        onSubmitted: (_) async {
-                          if (parsed != null) await submit(ctx);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text(l10n.assistantEditEmojiDialogCancel),
-                  ),
-                  TextButton(
-                    onPressed: parsed == null ? null : () => submit(ctx),
-                    child: Text(l10n.assistantEditEmojiDialogSave),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-      return;
-    }
-
-    await showModalBottomSheet<void>(
+    final saved = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            final parsed = parseValue();
-            return SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  MediaQuery.of(ctx).viewInsets.bottom + 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Lucide.FileClock, size: 18, color: cs.primary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            l10n.assistantEditRecentChatsSummaryFrequencyCustomTitle,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: AppFontWeights.emphasis,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.assistantEditRecentChatsSummaryFrequencyCustomDescription,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.4,
-                        color: cs.onSurface.withValues(alpha: 0.68),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        labelText: l10n
-                            .assistantEditRecentChatsSummaryFrequencyCustomLabel,
-                        hintText: l10n
-                            .assistantEditRecentChatsSummaryFrequencyCustomHint,
-                        filled: true,
-                        fillColor: ctx.appColors.surfaceFill,
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: cs.outlineVariant.withValues(alpha: 0.2),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: cs.primary.withValues(alpha: 0.5),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onChanged: (_) => setLocal(() {}),
-                      onSubmitted: (_) async {
-                        if (parsed != null) await submit(ctx);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _IosButton(
-                            label: l10n.assistantEditEmojiDialogCancel,
-                            icon: Lucide.X,
-                            onTap: () => Navigator.of(ctx).pop(),
-                            filled: false,
-                            neutral: true,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _IosButton(
-                            label: l10n.assistantEditEmojiDialogSave,
-                            icon: Lucide.Check,
-                            onTap: parsed == null
-                                ? () {
-                                    showAppSnackBar(
-                                      context,
-                                      message: l10n
-                                          .assistantEditRecentChatsSummaryFrequencyCustomInvalid,
-                                      type: NotificationType.error,
-                                    );
-                                  }
-                                : () => submit(ctx),
-                            filled: true,
-                            neutral: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        return AlertDialog(
+          title: Text(l10n.assistantEditRecentChatsSummaryFrequencyCustomTitle),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText:
+                  l10n.assistantEditRecentChatsSummaryFrequencyCustomLabel,
+              hintText: l10n.assistantEditRecentChatsSummaryFrequencyCustomHint,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.assistantEditEmojiDialogCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.assistantEditEmojiDialogSave),
+            ),
+          ],
         );
       },
+    );
+    final parsed = int.tryParse(controller.text.trim());
+    controller.dispose();
+    if (saved != true || parsed == null || parsed < 1) return;
+    await ap.updateAssistant(
+      assistant.copyWith(recentChatsSummaryMessageCount: parsed),
     );
   }
 

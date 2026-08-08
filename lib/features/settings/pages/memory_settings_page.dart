@@ -10,6 +10,9 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../model/widgets/model_select_sheet.dart';
+import 'legacy_memory_page.dart';
+import 'memory_entries_page.dart';
+import 'user_profile_page.dart';
 
 /// Global memory settings (§4.2 / §14.4): model, thinking, prompt lang, templates.
 class MemorySettingsPage extends StatelessWidget {
@@ -116,6 +119,39 @@ class MemorySettingsContent extends StatelessWidget {
                 subtitle: entry.subtitle,
                 onTap: () => _openPromptEditor(context, entry),
               ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        _SettingsSection(
+          title: l10n.memorySettingsEntriesSection,
+          children: [
+            _NavRow(
+              title: l10n.memorySettingsEntriesTitle,
+              subtitle: l10n.memorySettingsEntriesSubtitle,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MemoryEntriesPage()),
+                );
+              },
+            ),
+            _NavRow(
+              title: l10n.memorySettingsProfileTitle,
+              subtitle: l10n.memorySettingsProfileSubtitle,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UserProfilePage()),
+                );
+              },
+            ),
+            _NavRow(
+              title: l10n.memorySettingsLegacyTitle,
+              subtitle: l10n.memorySettingsLegacySubtitle,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LegacyMemoryPage()),
+                );
+              },
+            ),
           ],
         ),
       ],

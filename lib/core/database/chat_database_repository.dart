@@ -5595,6 +5595,78 @@ class ChatDatabaseRepository {
     return row.read<int>('count');
   }
 
+  /// All memory entries across every assistant (global management UI §14.4).
+  Future<List<MemoryEntry>> queryAllMemories({
+    bool includeArchived = false,
+    MemoryType? type,
+  }) async {
+    final clauses = <String>[];
+    final variables = <Variable<Object>>[];
+    if (!includeArchived) {
+      clauses.add("status = 'active'");
+    }
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    final where = clauses.isEmpty ? '' : 'WHERE ${clauses.join(' AND ')} ';
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          '$where'
+          'ORDER BY entry_updated_at DESC, id ASC;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: null,
+      dropInvisibleRelated: false,
+    );
+  }
+
+  /// Search across every assistant (§14.4 / §5.9 AND semantics).
+  Future<List<MemoryEntry>> searchAllMemories({
+    required List<String> tokens,
+    MemoryType? type,
+    bool includeArchived = false,
+    int limit = 200,
+  }) async {
+    if (tokens.isEmpty || limit <= 0) {
+      return const <MemoryEntry>[];
+    }
+    final clauses = <String>[];
+    final variables = <Variable<Object>>[];
+    if (!includeArchived) {
+      clauses.add("status = 'active'");
+    }
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    for (final token in tokens) {
+      clauses.add("content_normalized LIKE ? ESCAPE '\\'");
+      variables.add(Variable<String>('%$token%'));
+    }
+    variables.add(Variable<int>(limit));
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          'WHERE ${clauses.join(' AND ')} '
+          'ORDER BY entry_updated_at DESC, id ASC '
+          'LIMIT ?;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: null,
+      dropInvisibleRelated: false,
+    );
+  }
+
   Future<List<UserProfileField>> readProfileFields() async {
     final rows = await _db
         .customSelect(

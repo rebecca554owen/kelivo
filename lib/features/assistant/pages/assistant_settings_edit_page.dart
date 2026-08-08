@@ -31,9 +31,14 @@ import '../../../core/models/quick_phrase.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
-import '../../../core/providers/memory_provider.dart';
+import '../../../core/models/memory_entry.dart';
+import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/memory/memory_gatekeeper.dart';
+import '../../../core/services/memory/memory_pipeline.dart';
+import '../../settings/pages/memory_settings_page.dart';
+import '../../settings/widgets/memory_ui.dart';
 import '../../../core/services/haptics.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../home/services/local_tools_service.dart';
@@ -878,8 +883,7 @@ class _SegTabBar extends StatelessWidget {
             final double rowWidth =
                 segWidth * tabs.length + gap * (tabs.length - 1);
 
-            final Color shellBg =
-                context.appColors.surfaceCard; // 白底胶囊，无边框阴影
+            final Color shellBg = context.appColors.surfaceCard; // 白底胶囊，无边框阴影
 
             List<Widget> children = [];
             for (int index = 0; index < tabs.length; index++) {
@@ -1433,9 +1437,7 @@ class _IosButtonState extends State<_IosButton> {
         curve: Curves.easeOutCubic,
         child: Container(
           decoration: BoxDecoration(
-            color: widget.filled
-                ? cs.primary
-                : (context.appColors.surfaceFill),
+            color: widget.filled ? cs.primary : (context.appColors.surfaceFill),
             borderRadius: BorderRadius.circular(12),
             border: widget.filled ? null : Border.all(color: borderColor),
           ),
@@ -2311,8 +2313,12 @@ class _DesktopAssistantBasicPaneState
                       pressedScale: 0.98,
                       builder: (pressed) {
                         final base = context.appColors.surfaceFill;
-                        final pressOv = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
-                        final hoverOv = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.04);
+                        final pressOv = cs.onSurface.withValues(
+                          alpha: isDark ? 0.06 : 0.05,
+                        );
+                        final hoverOv = cs.onSurface.withValues(
+                          alpha: isDark ? 0.04 : 0.04,
+                        );
                         final bgColor = pressed
                             ? Color.alphaBlend(pressOv, base)
                             : (_hoverChatModel
@@ -2398,8 +2404,12 @@ class _DesktopAssistantBasicPaneState
                         pressedScale: 0.98,
                         builder: (pressed) {
                           final base = context.appColors.surfaceFill;
-                          final pressOv = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
-                          final hoverOv = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.04);
+                          final pressOv = cs.onSurface.withValues(
+                            alpha: isDark ? 0.06 : 0.05,
+                          );
+                          final hoverOv = cs.onSurface.withValues(
+                            alpha: isDark ? 0.04 : 0.04,
+                          );
                           final bg = pressed
                               ? Color.alphaBlend(pressOv, base)
                               : (_hoverBgChooser

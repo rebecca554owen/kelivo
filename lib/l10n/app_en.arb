@@ -2219,11 +2219,9 @@
   "assistantEditLocalToolAskUserSubtitle": "Let the assistant ask short questions and continue after you answer.",
   "assistantEditLocalToolCalculateTitle": "Calculator",
   "assistantEditLocalToolCalculateSubtitle": "Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.",
-  "assistantEditMemorySwitchTitle": "Memory",
   "assistantEditMemorySwitchDescription": "Allow the assistant to create and use memories across chats.",
   "assistantEditRecentChatsSwitchTitle": "Recent Chats Reference",
   "assistantEditRecentChatsSwitchDescription": "Include recent conversation titles to help with context.",
-  "assistantEditManageMemoryTitle": "Manage Memories",
   "assistantEditAddMemoryButton": "Add Memory",
   "assistantEditMemoryEmpty": "No memories yet",
   "assistantEditMemoryDialogTitle": "Memory",
@@ -2455,6 +2453,195 @@
   "memoryPromptEditTabPerItemEn": "Per-item · EN",
   "memoryPromptEditTabBatchZh": "Batched · ZH",
   "memoryPromptEditTabBatchEn": "Batched · EN",
+  "memorySettingsEntriesSection": "All memories",
+  "memorySettingsEntriesTitle": "Memory list",
+  "memorySettingsEntriesSubtitle": "Browse, edit, archive, and delete memories",
+  "memorySettingsProfileTitle": "User profile",
+  "memorySettingsProfileSubtitle": "Structured identity fields for the model",
+  "memorySettingsLegacyTitle": "Legacy memories (read-only)",
+  "memorySettingsLegacySubtitle": "Old memories from previous versions",
+  "memoryEntryTypeIdentity": "Identity",
+  "memoryEntryTypeWorkflow": "Workflow",
+  "memoryEntryTypeVoice": "Voice",
+  "memoryEntryTypeInstruction": "Instruction",
+  "memoryEntryScopeGlobal": "Global",
+  "memoryEntryScopeAssistant": "This assistant",
+  "memoryEntryScopeAssistantNamed": "{name}",
+  "@memoryEntryScopeAssistantNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "memoryEntrySourceManual": "Manual",
+  "memoryEntrySourceTool": "Tool",
+  "memoryEntrySourceExtracted": "Extracted",
+  "memoryEntrySourceDistilled": "Distilled",
+  "memoryEntryStatusActive": "Active",
+  "memoryEntryStatusArchived": "Archived",
+  "memoryEntryUpdatedAt": "Updated {date}",
+  "@memoryEntryUpdatedAt": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "memoryEntryActionEdit": "Edit",
+  "memoryEntryActionDelete": "Delete",
+  "memoryEntryActionArchive": "Archive",
+  "memoryEntryActionRestore": "Restore",
+  "memoryEntryActionSwitchScope": "Change scope",
+  "memoryEntryActionBatchDelete": "Delete selected",
+  "memoryEntryActionAdd": "Add memory",
+  "memoryEntryDeleteConfirmTitle": "Delete memory?",
+  "memoryEntryDeleteConfirmContent": "This permanently deletes the memory. This cannot be undone.",
+  "memoryEntryBatchDeleteConfirmTitle": "Delete {count} memories?",
+  "@memoryEntryBatchDeleteConfirmTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryEntryBatchDeleteConfirmContent": "Selected memories will be permanently deleted.",
+  "memoryEntrySwitchScopeConfirmTitle": "Change memory scope?",
+  "memoryEntrySwitchScopeToGlobal": "Make this memory global (shared across assistants)?",
+  "memoryEntrySwitchScopeToAssistant": "Limit this memory to the current assistant?",
+  "memoryEntryArchivedSection": "Archived",
+  "memoryEntryEmpty": "No memories yet",
+  "memoryEntryEmptyDisabled": "Long-term memory is off for this assistant",
+  "memoryEntryEditTitle": "Edit memory",
+  "memoryEntryCreateTitle": "New memory",
+  "memoryEntryContentHint": "Enter memory content",
+  "memoryEntryTypeLabel": "Type",
+  "memoryEntryScopeLabel": "Scope",
+  "memoryFilterScopeAll": "All scopes",
+  "memoryFilterScopeGlobal": "Global only",
+  "memoryFilterScopeAssistant": "Assistant",
+  "memoryFilterTypeAll": "All types",
+  "memoryFilterStatusAll": "All statuses",
+  "memoryFilterStatusActive": "Active",
+  "memoryFilterStatusArchived": "Archived",
+  "memorySearchHint": "Search memories",
+  "memorySearchEmpty": "No matching memories",
+  "memoryOrphanBanner": "{count} orphaned assistant memories (assistant deleted)",
+  "@memoryOrphanBanner": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryOrphanCleanupButton": "Clean up",
+  "memoryOrphanConfirmTitle": "Clean up orphaned memories?",
+  "memoryOrphanConfirmContent": "Permanently delete {count} memories whose assistant no longer exists.",
+  "@memoryOrphanConfirmContent": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryOrganizeButton": "Organize",
+  "memoryOrganizeNeedsConversation": "Open a chat with this assistant to organize memories",
+  "memoryOrganizeNeedsModel": "Select a memory model in Settings → Memory first",
+  "memoryOrganizeStatusNever": "Not organized yet",
+  "memoryOrganizeStatusLast": "Last organized: {when}",
+  "@memoryOrganizeStatusLast": {
+    "placeholders": {
+      "when": {"type": "String"}
+    }
+  },
+  "memoryOrganizeStatusExtracted": "extracted {count}",
+  "@memoryOrganizeStatusExtracted": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryOrganizeStatusSkipped": "nothing to remember",
+  "memoryOrganizeStatusFailed": "Failed: {reason}",
+  "@memoryOrganizeStatusFailed": {
+    "placeholders": {
+      "reason": {"type": "String"}
+    }
+  },
+  "memoryOrganizeJustNow": "just now",
+  "memoryOrganizeMinutesAgo": "{n} min ago",
+  "@memoryOrganizeMinutesAgo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memoryOrganizeHoursAgo": "{n} h ago",
+  "@memoryOrganizeHoursAgo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memoryOrganizeDaysAgo": "{n} d ago",
+  "@memoryOrganizeDaysAgo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memoryModelMissingNotice": "Select a memory processing model in Settings → Memory first.",
+  "memoryModelMissingGoSelect": "Choose model",
+  "memoryEntriesPageTitle": "All memories",
+  "userProfilePageTitle": "User profile",
+  "userProfilePreferredName": "Preferred name",
+  "userProfilePreferredNameHint": "How the model should address you — unrelated to the sidebar display name",
+  "userProfileGender": "Gender",
+  "userProfilePronouns": "Pronouns",
+  "userProfilePreferredLanguage": "Preferred language",
+  "userProfileTimezone": "Timezone",
+  "userProfileOccupation": "Occupation",
+  "userProfileLocation": "Location",
+  "userProfileCustomSection": "Custom fields",
+  "userProfileAddCustom": "Add custom field",
+  "userProfileCustomKeyHint": "Key (custom.name)",
+  "userProfileCustomValueHint": "Value",
+  "userProfileInvalidKey": "Key must be custom. followed by 1–32 letters, digits, _ or -",
+  "userProfileClear": "Clear",
+  "userProfileSave": "Save",
+  "userProfileEmptyValue": "Not set",
+  "legacyMemoryPageTitle": "Legacy memories",
+  "legacyMemoryBanner": "These are memories from an older version. They are not used in chats. Migration will arrive in a later release.",
+  "legacyMemoryEmpty": "No legacy memories",
+  "legacyMemoryCopy": "Copy",
+  "legacyMemoryCopied": "Copied",
+  "legacyMemoryExport": "Export",
+  "legacyMemoryExportTitle": "Kelivo legacy memory export",
+  "legacyMemoryAssistantHeader": "Assistant: {name}",
+  "@legacyMemoryAssistantHeader": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "legacyMemorySearchHint": "Search legacy memories",
+  "assistantEditMemorySwitchTitle": "Use long-term memory",
+  "assistantEditAutoOrganizeTitle": "Auto-organize memory",
+  "assistantEditAutoOrganizeSubtitle": "Run the memory pipeline after chats",
+  "assistantEditAllowPastRecallTitle": "Allow recalling past chats",
+  "assistantEditAllowPastRecallSubtitle": "Enable chat search across past conversations",
+  "assistantEditGenerateSummaryTitle": "Generate conversation summaries",
+  "assistantEditGenerateSummarySubtitle": "Summaries are only used by chat search",
+  "assistantEditManageMemoryTitle": "Memories visible to this assistant",
+  "assistantEditWriteScopeTitle": "Memory write scope",
+  "assistantEditWriteScopeSubtitle": "Where new memories are stored by default",
+  "assistantEditWriteScopeAlwaysGlobal": "Always global",
+  "assistantEditWriteScopeAlwaysAssistant": "Always this assistant",
+  "assistantEditWriteScopeToolDefaultGlobal": "Model chooses (default global)",
+  "assistantEditWriteScopeToolDefaultAssistant": "Model chooses (default assistant)",
+  "assistantEditDedupeModeTitle": "Dedupe mode",
+  "assistantEditDedupeModeSubtitle": "How candidates are judged against existing memories",
+  "assistantEditDedupeModeBatched": "Batched",
+  "assistantEditDedupeModePerItem": "Per item",
+  "assistantEditOrganizeFrequencyTitle": "Organize every N turns",
+  "assistantEditOrganizeFrequencySubtitle": "Run auto-organize after this many assistant replies",
+  "assistantEditOrganizeFrequencyOption": "Every {n}",
+  "@assistantEditOrganizeFrequencyOption": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "assistantEditOrganizeFrequencyCustomButton": "Custom",
+  "assistantEditOrganizeFrequencyCustomTitle": "Custom frequency",
+  "assistantEditOrganizeFrequencyCustomDescription": "Enter a number between 1 and 20.",
+  "assistantEditOrganizeFrequencyCustomLabel": "Turns",
+  "assistantEditOrganizeFrequencyCustomHint": "1–20",
+  "assistantEditOrganizeFrequencyCustomInvalid": "Enter a number between 1 and 20",
   "worldBookTitle": "World Book",
   "worldBookAdd": "Add World Book",
   "worldBookEmptyMessage": "No world books yet",

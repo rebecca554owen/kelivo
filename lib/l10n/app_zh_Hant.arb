@@ -1817,13 +1817,11 @@
   "assistantEditLocalToolAskUserSubtitle": "允許助手提出簡短問題，並在你回答後繼續生成。",
   "assistantEditLocalToolCalculateTitle": "計算機",
   "assistantEditLocalToolCalculateSubtitle": "計算數學表達式，支援加減乘除冪運算 sqrt sin cos 等。",
-  "assistantEditMemorySwitchTitle": "記憶",
   "assistantEditMemorySwitchDescription": "允許助理主動儲存並在對話間引用使用者相關資訊",
   "assistantEditOutlineModeTitle": "二級列表樣式",
   "assistantEditOutlineModeSubtitle": "先顯示助理概覽，再從列表進入各個設定項。",
   "assistantEditRecentChatsSwitchTitle": "參考歷史聊天記錄",
   "assistantEditRecentChatsSwitchDescription": "在新對話中引用最近的對話標題以增強上下文",
-  "assistantEditManageMemoryTitle": "管理記憶",
   "assistantEditAddMemoryButton": "新增記憶",
   "assistantEditMemoryEmpty": "暫無記憶",
   "assistantEditMemoryDialogTitle": "記憶",
@@ -2050,6 +2048,195 @@
   "memoryPromptEditTabPerItemEn": "逐條 · EN",
   "memoryPromptEditTabBatchZh": "合併 · 中文",
   "memoryPromptEditTabBatchEn": "合併 · EN",
+  "memorySettingsEntriesSection": "全部記憶",
+  "memorySettingsEntriesTitle": "記憶列表",
+  "memorySettingsEntriesSubtitle": "瀏覽、編輯、封存與刪除記憶",
+  "memorySettingsProfileTitle": "使用者畫像",
+  "memorySettingsProfileSubtitle": "供模型使用的結構化身分欄位",
+  "memorySettingsLegacyTitle": "舊版記憶（唯讀）",
+  "memorySettingsLegacySubtitle": "來自舊版本的記憶",
+  "memoryEntryTypeIdentity": "身分",
+  "memoryEntryTypeWorkflow": "工作流",
+  "memoryEntryTypeVoice": "語氣",
+  "memoryEntryTypeInstruction": "指令",
+  "memoryEntryScopeGlobal": "全域",
+  "memoryEntryScopeAssistant": "僅本助手",
+  "memoryEntryScopeAssistantNamed": "{name}",
+  "@memoryEntryScopeAssistantNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "memoryEntrySourceManual": "手動",
+  "memoryEntrySourceTool": "工具",
+  "memoryEntrySourceExtracted": "擷取",
+  "memoryEntrySourceDistilled": "蒸餾",
+  "memoryEntryStatusActive": "作用中",
+  "memoryEntryStatusArchived": "已封存",
+  "memoryEntryUpdatedAt": "更新於 {date}",
+  "@memoryEntryUpdatedAt": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "memoryEntryActionEdit": "編輯",
+  "memoryEntryActionDelete": "刪除",
+  "memoryEntryActionArchive": "封存",
+  "memoryEntryActionRestore": "還原",
+  "memoryEntryActionSwitchScope": "切換範圍",
+  "memoryEntryActionBatchDelete": "刪除所選",
+  "memoryEntryActionAdd": "新增記憶",
+  "memoryEntryDeleteConfirmTitle": "刪除這條記憶？",
+  "memoryEntryDeleteConfirmContent": "將永久刪除該記憶，且無法復原。",
+  "memoryEntryBatchDeleteConfirmTitle": "刪除 {count} 條記憶？",
+  "@memoryEntryBatchDeleteConfirmTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryEntryBatchDeleteConfirmContent": "所選記憶將被永久刪除。",
+  "memoryEntrySwitchScopeConfirmTitle": "更改記憶範圍？",
+  "memoryEntrySwitchScopeToGlobal": "將這條記憶設為全域（所有助手可見）？",
+  "memoryEntrySwitchScopeToAssistant": "將這條記憶限制為僅本助手？",
+  "memoryEntryArchivedSection": "已封存",
+  "memoryEntryEmpty": "還沒有記憶",
+  "memoryEntryEmptyDisabled": "該助手未啟用長期記憶",
+  "memoryEntryEditTitle": "編輯記憶",
+  "memoryEntryCreateTitle": "新建記憶",
+  "memoryEntryContentHint": "輸入記憶內容",
+  "memoryEntryTypeLabel": "類型",
+  "memoryEntryScopeLabel": "範圍",
+  "memoryFilterScopeAll": "全部範圍",
+  "memoryFilterScopeGlobal": "僅全域",
+  "memoryFilterScopeAssistant": "助手",
+  "memoryFilterTypeAll": "全部類型",
+  "memoryFilterStatusAll": "全部狀態",
+  "memoryFilterStatusActive": "作用中",
+  "memoryFilterStatusArchived": "已封存",
+  "memorySearchHint": "搜尋記憶",
+  "memorySearchEmpty": "沒有相符的記憶",
+  "memoryOrphanBanner": "有 {count} 條孤兒助手記憶（助手已刪除）",
+  "@memoryOrphanBanner": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryOrphanCleanupButton": "清理",
+  "memoryOrphanConfirmTitle": "清理孤兒記憶？",
+  "memoryOrphanConfirmContent": "將永久刪除 {count} 條所屬助手已不存在的記憶。",
+  "@memoryOrphanConfirmContent": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryOrganizeButton": "整理記憶",
+  "memoryOrganizeNeedsConversation": "需要在與該助手的對話中使用",
+  "memoryOrganizeNeedsModel": "請先在 設定 → 記憶 中選擇記憶處理模型",
+  "memoryOrganizeStatusNever": "尚未整理",
+  "memoryOrganizeStatusLast": "上次整理：{when}",
+  "@memoryOrganizeStatusLast": {
+    "placeholders": {
+      "when": {"type": "String"}
+    }
+  },
+  "memoryOrganizeStatusExtracted": "擷取 {count} 條",
+  "@memoryOrganizeStatusExtracted": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "memoryOrganizeStatusSkipped": "無需記憶",
+  "memoryOrganizeStatusFailed": "失敗：{reason}",
+  "@memoryOrganizeStatusFailed": {
+    "placeholders": {
+      "reason": {"type": "String"}
+    }
+  },
+  "memoryOrganizeJustNow": "剛剛",
+  "memoryOrganizeMinutesAgo": "{n} 分鐘前",
+  "@memoryOrganizeMinutesAgo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memoryOrganizeHoursAgo": "{n} 小時前",
+  "@memoryOrganizeHoursAgo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memoryOrganizeDaysAgo": "{n} 天前",
+  "@memoryOrganizeDaysAgo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memoryModelMissingNotice": "需要先在 設定 → 記憶 中選擇記憶處理模型。",
+  "memoryModelMissingGoSelect": "去選擇",
+  "memoryEntriesPageTitle": "全部記憶",
+  "userProfilePageTitle": "使用者畫像",
+  "userProfilePreferredName": "希望怎麼稱呼我",
+  "userProfilePreferredNameHint": "這是希望模型怎麼稱呼你，與側欄顯示的使用者名稱無關",
+  "userProfileGender": "性別",
+  "userProfilePronouns": "代詞",
+  "userProfilePreferredLanguage": "偏好語言",
+  "userProfileTimezone": "時區",
+  "userProfileOccupation": "職業",
+  "userProfileLocation": "所在地",
+  "userProfileCustomSection": "自訂欄位",
+  "userProfileAddCustom": "新增自訂欄位",
+  "userProfileCustomKeyHint": "鍵名（custom.name）",
+  "userProfileCustomValueHint": "值",
+  "userProfileInvalidKey": "鍵名須為 custom. 後接 1–32 位字母、數字、_ 或 -",
+  "userProfileClear": "清除",
+  "userProfileSave": "儲存",
+  "userProfileEmptyValue": "未設定",
+  "legacyMemoryPageTitle": "舊版記憶",
+  "legacyMemoryBanner": "這些是舊版記憶，不會參與對話；遷移功能會在後續版本提供。",
+  "legacyMemoryEmpty": "沒有舊版記憶",
+  "legacyMemoryCopy": "複製",
+  "legacyMemoryCopied": "已複製",
+  "legacyMemoryExport": "匯出",
+  "legacyMemoryExportTitle": "Kelivo 舊版記憶匯出",
+  "legacyMemoryAssistantHeader": "助手：{name}",
+  "@legacyMemoryAssistantHeader": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "legacyMemorySearchHint": "搜尋舊版記憶",
+  "assistantEditMemorySwitchTitle": "使用長期記憶",
+  "assistantEditAutoOrganizeTitle": "自動整理記憶",
+  "assistantEditAutoOrganizeSubtitle": "對話後自動執行記憶管線",
+  "assistantEditAllowPastRecallTitle": "允許回憶過去對話",
+  "assistantEditAllowPastRecallSubtitle": "啟用跨會話的對話搜尋",
+  "assistantEditGenerateSummaryTitle": "產生會話摘要",
+  "assistantEditGenerateSummarySubtitle": "摘要僅供對話搜尋使用",
+  "assistantEditManageMemoryTitle": "本助手可見的記憶",
+  "assistantEditWriteScopeTitle": "記憶寫入範圍",
+  "assistantEditWriteScopeSubtitle": "新記憶預設寫入的位置",
+  "assistantEditWriteScopeAlwaysGlobal": "一律全域",
+  "assistantEditWriteScopeAlwaysAssistant": "一律本助手",
+  "assistantEditWriteScopeToolDefaultGlobal": "模型自選（預設全域）",
+  "assistantEditWriteScopeToolDefaultAssistant": "模型自選（預設本助手）",
+  "assistantEditDedupeModeTitle": "去重方式",
+  "assistantEditDedupeModeSubtitle": "候選記憶如何與既有條目比對",
+  "assistantEditDedupeModeBatched": "合併",
+  "assistantEditDedupeModePerItem": "逐條",
+  "assistantEditOrganizeFrequencyTitle": "整理頻率",
+  "assistantEditOrganizeFrequencySubtitle": "每累積 N 輪助手回覆觸發一次自動整理",
+  "assistantEditOrganizeFrequencyOption": "每 {n} 輪",
+  "@assistantEditOrganizeFrequencyOption": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "assistantEditOrganizeFrequencyCustomButton": "自訂",
+  "assistantEditOrganizeFrequencyCustomTitle": "自訂整理頻率",
+  "assistantEditOrganizeFrequencyCustomDescription": "請輸入 1 到 20 之間的整數。",
+  "assistantEditOrganizeFrequencyCustomLabel": "輪數",
+  "assistantEditOrganizeFrequencyCustomHint": "1–20",
+  "assistantEditOrganizeFrequencyCustomInvalid": "請輸入 1 到 20 之間的整數",
   "worldBookTitle": "世界書",
   "worldBookAdd": "新增世界書",
   "worldBookEmptyMessage": "暫無世界書",

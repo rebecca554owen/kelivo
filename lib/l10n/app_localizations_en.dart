@@ -5346,9 +5346,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.';
 
   @override
-  String get assistantEditMemorySwitchTitle => 'Memory';
-
-  @override
   String get assistantEditMemorySwitchDescription =>
       'Allow the assistant to create and use memories across chats.';
 
@@ -5358,9 +5355,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assistantEditRecentChatsSwitchDescription =>
       'Include recent conversation titles to help with context.';
-
-  @override
-  String get assistantEditManageMemoryTitle => 'Manage Memories';
 
   @override
   String get assistantEditAddMemoryButton => 'Add Memory';
@@ -5889,6 +5883,430 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryPromptEditTabBatchEn => 'Batched · EN';
+
+  @override
+  String get memorySettingsEntriesSection => 'All memories';
+
+  @override
+  String get memorySettingsEntriesTitle => 'Memory list';
+
+  @override
+  String get memorySettingsEntriesSubtitle =>
+      'Browse, edit, archive, and delete memories';
+
+  @override
+  String get memorySettingsProfileTitle => 'User profile';
+
+  @override
+  String get memorySettingsProfileSubtitle =>
+      'Structured identity fields for the model';
+
+  @override
+  String get memorySettingsLegacyTitle => 'Legacy memories (read-only)';
+
+  @override
+  String get memorySettingsLegacySubtitle =>
+      'Old memories from previous versions';
+
+  @override
+  String get memoryEntryTypeIdentity => 'Identity';
+
+  @override
+  String get memoryEntryTypeWorkflow => 'Workflow';
+
+  @override
+  String get memoryEntryTypeVoice => 'Voice';
+
+  @override
+  String get memoryEntryTypeInstruction => 'Instruction';
+
+  @override
+  String get memoryEntryScopeGlobal => 'Global';
+
+  @override
+  String get memoryEntryScopeAssistant => 'This assistant';
+
+  @override
+  String memoryEntryScopeAssistantNamed(String name) {
+    return '$name';
+  }
+
+  @override
+  String get memoryEntrySourceManual => 'Manual';
+
+  @override
+  String get memoryEntrySourceTool => 'Tool';
+
+  @override
+  String get memoryEntrySourceExtracted => 'Extracted';
+
+  @override
+  String get memoryEntrySourceDistilled => 'Distilled';
+
+  @override
+  String get memoryEntryStatusActive => 'Active';
+
+  @override
+  String get memoryEntryStatusArchived => 'Archived';
+
+  @override
+  String memoryEntryUpdatedAt(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String get memoryEntryActionEdit => 'Edit';
+
+  @override
+  String get memoryEntryActionDelete => 'Delete';
+
+  @override
+  String get memoryEntryActionArchive => 'Archive';
+
+  @override
+  String get memoryEntryActionRestore => 'Restore';
+
+  @override
+  String get memoryEntryActionSwitchScope => 'Change scope';
+
+  @override
+  String get memoryEntryActionBatchDelete => 'Delete selected';
+
+  @override
+  String get memoryEntryActionAdd => 'Add memory';
+
+  @override
+  String get memoryEntryDeleteConfirmTitle => 'Delete memory?';
+
+  @override
+  String get memoryEntryDeleteConfirmContent =>
+      'This permanently deletes the memory. This cannot be undone.';
+
+  @override
+  String memoryEntryBatchDeleteConfirmTitle(int count) {
+    return 'Delete $count memories?';
+  }
+
+  @override
+  String get memoryEntryBatchDeleteConfirmContent =>
+      'Selected memories will be permanently deleted.';
+
+  @override
+  String get memoryEntrySwitchScopeConfirmTitle => 'Change memory scope?';
+
+  @override
+  String get memoryEntrySwitchScopeToGlobal =>
+      'Make this memory global (shared across assistants)?';
+
+  @override
+  String get memoryEntrySwitchScopeToAssistant =>
+      'Limit this memory to the current assistant?';
+
+  @override
+  String get memoryEntryArchivedSection => 'Archived';
+
+  @override
+  String get memoryEntryEmpty => 'No memories yet';
+
+  @override
+  String get memoryEntryEmptyDisabled =>
+      'Long-term memory is off for this assistant';
+
+  @override
+  String get memoryEntryEditTitle => 'Edit memory';
+
+  @override
+  String get memoryEntryCreateTitle => 'New memory';
+
+  @override
+  String get memoryEntryContentHint => 'Enter memory content';
+
+  @override
+  String get memoryEntryTypeLabel => 'Type';
+
+  @override
+  String get memoryEntryScopeLabel => 'Scope';
+
+  @override
+  String get memoryFilterScopeAll => 'All scopes';
+
+  @override
+  String get memoryFilterScopeGlobal => 'Global only';
+
+  @override
+  String get memoryFilterScopeAssistant => 'Assistant';
+
+  @override
+  String get memoryFilterTypeAll => 'All types';
+
+  @override
+  String get memoryFilterStatusAll => 'All statuses';
+
+  @override
+  String get memoryFilterStatusActive => 'Active';
+
+  @override
+  String get memoryFilterStatusArchived => 'Archived';
+
+  @override
+  String get memorySearchHint => 'Search memories';
+
+  @override
+  String get memorySearchEmpty => 'No matching memories';
+
+  @override
+  String memoryOrphanBanner(int count) {
+    return '$count orphaned assistant memories (assistant deleted)';
+  }
+
+  @override
+  String get memoryOrphanCleanupButton => 'Clean up';
+
+  @override
+  String get memoryOrphanConfirmTitle => 'Clean up orphaned memories?';
+
+  @override
+  String memoryOrphanConfirmContent(int count) {
+    return 'Permanently delete $count memories whose assistant no longer exists.';
+  }
+
+  @override
+  String get memoryOrganizeButton => 'Organize';
+
+  @override
+  String get memoryOrganizeNeedsConversation =>
+      'Open a chat with this assistant to organize memories';
+
+  @override
+  String get memoryOrganizeNeedsModel =>
+      'Select a memory model in Settings → Memory first';
+
+  @override
+  String get memoryOrganizeStatusNever => 'Not organized yet';
+
+  @override
+  String memoryOrganizeStatusLast(String when) {
+    return 'Last organized: $when';
+  }
+
+  @override
+  String memoryOrganizeStatusExtracted(int count) {
+    return 'extracted $count';
+  }
+
+  @override
+  String get memoryOrganizeStatusSkipped => 'nothing to remember';
+
+  @override
+  String memoryOrganizeStatusFailed(String reason) {
+    return 'Failed: $reason';
+  }
+
+  @override
+  String get memoryOrganizeJustNow => 'just now';
+
+  @override
+  String memoryOrganizeMinutesAgo(int n) {
+    return '$n min ago';
+  }
+
+  @override
+  String memoryOrganizeHoursAgo(int n) {
+    return '$n h ago';
+  }
+
+  @override
+  String memoryOrganizeDaysAgo(int n) {
+    return '$n d ago';
+  }
+
+  @override
+  String get memoryModelMissingNotice =>
+      'Select a memory processing model in Settings → Memory first.';
+
+  @override
+  String get memoryModelMissingGoSelect => 'Choose model';
+
+  @override
+  String get memoryEntriesPageTitle => 'All memories';
+
+  @override
+  String get userProfilePageTitle => 'User profile';
+
+  @override
+  String get userProfilePreferredName => 'Preferred name';
+
+  @override
+  String get userProfilePreferredNameHint =>
+      'How the model should address you — unrelated to the sidebar display name';
+
+  @override
+  String get userProfileGender => 'Gender';
+
+  @override
+  String get userProfilePronouns => 'Pronouns';
+
+  @override
+  String get userProfilePreferredLanguage => 'Preferred language';
+
+  @override
+  String get userProfileTimezone => 'Timezone';
+
+  @override
+  String get userProfileOccupation => 'Occupation';
+
+  @override
+  String get userProfileLocation => 'Location';
+
+  @override
+  String get userProfileCustomSection => 'Custom fields';
+
+  @override
+  String get userProfileAddCustom => 'Add custom field';
+
+  @override
+  String get userProfileCustomKeyHint => 'Key (custom.name)';
+
+  @override
+  String get userProfileCustomValueHint => 'Value';
+
+  @override
+  String get userProfileInvalidKey =>
+      'Key must be custom. followed by 1–32 letters, digits, _ or -';
+
+  @override
+  String get userProfileClear => 'Clear';
+
+  @override
+  String get userProfileSave => 'Save';
+
+  @override
+  String get userProfileEmptyValue => 'Not set';
+
+  @override
+  String get legacyMemoryPageTitle => 'Legacy memories';
+
+  @override
+  String get legacyMemoryBanner =>
+      'These are memories from an older version. They are not used in chats. Migration will arrive in a later release.';
+
+  @override
+  String get legacyMemoryEmpty => 'No legacy memories';
+
+  @override
+  String get legacyMemoryCopy => 'Copy';
+
+  @override
+  String get legacyMemoryCopied => 'Copied';
+
+  @override
+  String get legacyMemoryExport => 'Export';
+
+  @override
+  String get legacyMemoryExportTitle => 'Kelivo legacy memory export';
+
+  @override
+  String legacyMemoryAssistantHeader(String name) {
+    return 'Assistant: $name';
+  }
+
+  @override
+  String get legacyMemorySearchHint => 'Search legacy memories';
+
+  @override
+  String get assistantEditMemorySwitchTitle => 'Use long-term memory';
+
+  @override
+  String get assistantEditAutoOrganizeTitle => 'Auto-organize memory';
+
+  @override
+  String get assistantEditAutoOrganizeSubtitle =>
+      'Run the memory pipeline after chats';
+
+  @override
+  String get assistantEditAllowPastRecallTitle => 'Allow recalling past chats';
+
+  @override
+  String get assistantEditAllowPastRecallSubtitle =>
+      'Enable chat search across past conversations';
+
+  @override
+  String get assistantEditGenerateSummaryTitle =>
+      'Generate conversation summaries';
+
+  @override
+  String get assistantEditGenerateSummarySubtitle =>
+      'Summaries are only used by chat search';
+
+  @override
+  String get assistantEditManageMemoryTitle =>
+      'Memories visible to this assistant';
+
+  @override
+  String get assistantEditWriteScopeTitle => 'Memory write scope';
+
+  @override
+  String get assistantEditWriteScopeSubtitle =>
+      'Where new memories are stored by default';
+
+  @override
+  String get assistantEditWriteScopeAlwaysGlobal => 'Always global';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistant => 'Always this assistant';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultGlobal =>
+      'Model chooses (default global)';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistant =>
+      'Model chooses (default assistant)';
+
+  @override
+  String get assistantEditDedupeModeTitle => 'Dedupe mode';
+
+  @override
+  String get assistantEditDedupeModeSubtitle =>
+      'How candidates are judged against existing memories';
+
+  @override
+  String get assistantEditDedupeModeBatched => 'Batched';
+
+  @override
+  String get assistantEditDedupeModePerItem => 'Per item';
+
+  @override
+  String get assistantEditOrganizeFrequencyTitle => 'Organize every N turns';
+
+  @override
+  String get assistantEditOrganizeFrequencySubtitle =>
+      'Run auto-organize after this many assistant replies';
+
+  @override
+  String assistantEditOrganizeFrequencyOption(int n) {
+    return 'Every $n';
+  }
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomButton => 'Custom';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomTitle => 'Custom frequency';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomDescription =>
+      'Enter a number between 1 and 20.';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomLabel => 'Turns';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomHint => '1–20';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomInvalid =>
+      'Enter a number between 1 and 20';
 
   @override
   String get worldBookTitle => 'World Book';

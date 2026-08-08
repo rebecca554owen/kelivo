@@ -94,6 +94,43 @@ class MemoryRepository extends JsonBlobStore<MemoryEntry> {
     });
   }
 
+  /// Move an entry between global and an assistant scope (§14.2 scope badge).
+  Future<MemoryEntry?> updateScope(
+    String id, {
+    required MemoryScope scope,
+    String? assistantId,
+  }) {
+    return runExclusive(() async {
+      if (scope == MemoryScope.global && assistantId != null) {
+        throw ArgumentError.value(
+          assistantId,
+          'assistantId',
+          'Must be null when scope is global',
+        );
+      }
+      if (scope == MemoryScope.assistant &&
+          (assistantId == null || assistantId.isEmpty)) {
+        throw ArgumentError.value(
+          assistantId,
+          'assistantId',
+          'Required when scope is assistant',
+        );
+      }
+      final all = await readAll();
+      final index = all.indexWhere((entry) => entry.id == id);
+      if (index == -1) return null;
+      final updated = all[index].copyWith(
+        scope: scope,
+        assistantId: assistantId,
+        clearAssistantId: scope == MemoryScope.global,
+        updatedAt: DateTime.now().toUtc(),
+      );
+      all[index] = updated;
+      await writeAll(all);
+      return updated;
+    });
+  }
+
   /// Soft-delete (model `memory_delete` / CONFLICT). Also strips reverse
   /// `relatedIds` references from every other entry in the same write (D-25).
   Future<bool> archive(String id) {

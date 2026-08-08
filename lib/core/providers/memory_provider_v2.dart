@@ -20,8 +20,12 @@ class MemoryProviderV2 extends ChangeNotifier {
   List<UserProfileField> _profileFields = const <UserProfileField>[];
   int _orphanCount = 0;
   String? _focusAssistantId;
+  bool _loadAll = false;
   bool _initialized = false;
   Future<void>? _initializationFuture;
+
+  /// Full cached entry list from the last [refresh] / [refreshAll].
+  List<MemoryEntry> get entries => List<MemoryEntry>.unmodifiable(_entries);
 
   List<UserProfileField> get profileFields =>
       List<UserProfileField>.unmodifiable(_profileFields);
@@ -50,16 +54,21 @@ class MemoryProviderV2 extends ChangeNotifier {
         .toList(growable: false);
   }
 
-  Future<void> initialize({String? assistantId}) {
-    if (_initialized && assistantId == _focusAssistantId) {
+  Future<void> initialize({String? assistantId, bool loadAll = false}) {
+    if (_initialized &&
+        assistantId == _focusAssistantId &&
+        loadAll == _loadAll) {
       return Future<void>.value();
     }
-    return _initializationFuture ??= _initialize(assistantId: assistantId);
+    return _initializationFuture ??= _initialize(
+      assistantId: assistantId,
+      loadAll: loadAll,
+    );
   }
 
-  Future<void> _initialize({String? assistantId}) async {
+  Future<void> _initialize({String? assistantId, bool loadAll = false}) async {
     try {
-      await refresh(assistantId: assistantId);
+      await refresh(assistantId: assistantId, loadAll: loadAll);
       _initialized = true;
     } finally {
       _initializationFuture = null;
@@ -69,14 +78,17 @@ class MemoryProviderV2 extends ChangeNotifier {
   /// Reloads caches from the typed-column read path (§13.1 / §13.3).
   ///
   /// Pass [assistantId] to include that assistant's scoped entries alongside
-  /// globals. `null` loads globals only.
-  Future<void> refresh({String? assistantId}) async {
+  /// globals. `null` loads globals only unless [loadAll] is true.
+  Future<void> refresh({String? assistantId, bool loadAll = false}) async {
     _focusAssistantId = assistantId;
+    _loadAll = loadAll;
     try {
-      final entries = await chatRepository.queryVisibleMemories(
-        assistantId: assistantId,
-        includeArchived: true,
-      );
+      final entries = loadAll
+          ? await chatRepository.queryAllMemories(includeArchived: true)
+          : await chatRepository.queryVisibleMemories(
+              assistantId: assistantId,
+              includeArchived: true,
+            );
       final profile = await chatRepository.readProfileFields();
       final orphans = await chatRepository.countOrphanAssistantMemories();
       _entries = entries;
@@ -90,6 +102,36 @@ class MemoryProviderV2 extends ChangeNotifier {
       _orphanCount = 0;
       notifyListeners();
     }
+  }
+
+  /// Convenience for the global management UI (§14.4).
+  Future<void> refreshAll() => refresh(loadAll: true);
+
+  /// Search via §5.9 token AND. When [acrossAll] is true, searches every
+  /// assistant; otherwise respects [assistantId] visibility.
+  Future<List<MemoryEntry>> search({
+    required List<String> tokens,
+    String? assistantId,
+    bool acrossAll = false,
+    MemoryType? type,
+    bool includeArchived = false,
+    int limit = 200,
+  }) {
+    if (acrossAll) {
+      return chatRepository.searchAllMemories(
+        tokens: tokens,
+        type: type,
+        includeArchived: includeArchived,
+        limit: limit,
+      );
+    }
+    return chatRepository.searchMemories(
+      assistantId: assistantId,
+      tokens: tokens,
+      type: type,
+      matchAll: true,
+      limit: limit,
+    );
   }
 
   Future<MemoryEntry> create({
@@ -108,48 +150,62 @@ class MemoryProviderV2 extends ChangeNotifier {
       source: source,
       relatedIds: relatedIds,
     );
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return entry;
   }
 
   Future<MemoryEntry?> updateContent(String id, String content) async {
     final entry = await repository.updateContent(id, content);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
+    return entry;
+  }
+
+  Future<MemoryEntry?> updateScope(
+    String id, {
+    required MemoryScope scope,
+    String? assistantId,
+  }) async {
+    final entry = await repository.updateScope(
+      id,
+      scope: scope,
+      assistantId: assistantId,
+    );
+    await _refreshAfterWrite();
     return entry;
   }
 
   Future<bool> archive(String id) async {
     final ok = await repository.archive(id);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return ok;
   }
 
   Future<bool> restore(String id) async {
     final ok = await repository.restore(id);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return ok;
   }
 
   Future<bool> hardDelete(String id) async {
     final ok = await repository.hardDelete(id);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return ok;
   }
 
   Future<int> hardDeleteMany(List<String> ids) async {
     final count = await repository.hardDeleteMany(ids);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return count;
   }
 
   Future<void> linkBidirectional(String a, String b) async {
     await repository.linkBidirectional(a, b);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
   }
 
   Future<int> deleteOrphanAssistantMemories() async {
     final count = await repository.deleteOrphanAssistantMemories();
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return count;
   }
 
@@ -159,13 +215,17 @@ class MemoryProviderV2 extends ChangeNotifier {
     MemorySource source,
   ) async {
     await repository.putProfileField(key, value, source);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
   }
 
   Future<bool> removeProfileField(String key) async {
     final ok = await repository.removeProfileField(key);
-    await refresh(assistantId: _focusAssistantId);
+    await _refreshAfterWrite();
     return ok;
+  }
+
+  Future<void> _refreshAfterWrite() {
+    return refresh(assistantId: _focusAssistantId, loadAll: _loadAll);
   }
 
   static bool _isVisible(MemoryEntry entry, String? assistantId) {
