@@ -807,6 +807,14 @@
       }
     }
   },
+  "chatMessageWidgetMemoryRead": "读取记忆",
+  "chatMessageWidgetMemoryUpdate": "更新记忆",
+  "chatMessageWidgetMemorySearchProfile": "检索记忆",
+  "chatMessageWidgetMemoryEdit": "编辑记忆",
+  "chatMessageWidgetMemoryDelete": "删除记忆",
+  "chatMessageWidgetUpdateUserProfile": "更新用户画像",
+  "chatMessageWidgetChatSearch": "搜索历史对话",
+  "chatMessageWidgetCreateMemory": "创建记忆",
   "chatMessageWidgetToolCall": "调用工具: {name}",
   "chatMessageWidgetToolResult": "调用工具: {name}",
   "chatMessageWidgetNoResultYet": "（暂无结果）",

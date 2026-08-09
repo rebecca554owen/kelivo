@@ -106,8 +106,11 @@ IconData _toolIconFor(String name, [Map<String, dynamic> args = const {}]) {
     case 'memory_search_profile':
     case 'memory_edit':
     case 'update_user_profile':
+    case 'create_memory':
+    case 'edit_memory':
       return Lucide.bookHeart;
     case 'memory_delete':
+    case 'delete_memory':
       return Lucide.bookDashed;
     case 'chat_search':
       return Lucide.Search;
@@ -250,6 +253,24 @@ String _toolTitleFor(
   final localToolTitle = _localToolTitleFor(l10n, name, args);
   if (localToolTitle != null) return localToolTitle;
   switch (name) {
+    case 'memory_read':
+      return l10n.chatMessageWidgetMemoryRead;
+    case 'memory_update':
+      return l10n.chatMessageWidgetMemoryUpdate;
+    case 'memory_search_profile':
+      return l10n.chatMessageWidgetMemorySearchProfile;
+    case 'memory_edit':
+    case 'edit_memory':
+      return l10n.chatMessageWidgetMemoryEdit;
+    case 'memory_delete':
+    case 'delete_memory':
+      return l10n.chatMessageWidgetMemoryDelete;
+    case 'update_user_profile':
+      return l10n.chatMessageWidgetUpdateUserProfile;
+    case 'chat_search':
+      return l10n.chatMessageWidgetChatSearch;
+    case 'create_memory':
+      return l10n.chatMessageWidgetCreateMemory;
     case 'search_web':
       final q = (args['query'] ?? '').toString();
       return l10n.chatMessageWidgetWebSearch(q);

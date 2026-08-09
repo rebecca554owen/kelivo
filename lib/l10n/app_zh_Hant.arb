@@ -765,6 +765,14 @@
       }
     }
   },
+  "chatMessageWidgetMemoryRead": "讀取記憶",
+  "chatMessageWidgetMemoryUpdate": "更新記憶",
+  "chatMessageWidgetMemorySearchProfile": "檢索記憶",
+  "chatMessageWidgetMemoryEdit": "編輯記憶",
+  "chatMessageWidgetMemoryDelete": "刪除記憶",
+  "chatMessageWidgetUpdateUserProfile": "更新使用者畫像",
+  "chatMessageWidgetChatSearch": "搜尋歷史對話",
+  "chatMessageWidgetCreateMemory": "建立記憶",
   "chatMessageWidgetToolCall": "呼叫工具: {name}",
   "chatMessageWidgetToolResult": "呼叫工具: {name}",
   "chatMessageWidgetNoResultYet": "（暫無結果）",

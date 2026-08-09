@@ -2208,6 +2208,30 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get chatMessageWidgetMemoryRead => '读取记忆';
+
+  @override
+  String get chatMessageWidgetMemoryUpdate => '更新记忆';
+
+  @override
+  String get chatMessageWidgetMemorySearchProfile => '检索记忆';
+
+  @override
+  String get chatMessageWidgetMemoryEdit => '编辑记忆';
+
+  @override
+  String get chatMessageWidgetMemoryDelete => '删除记忆';
+
+  @override
+  String get chatMessageWidgetUpdateUserProfile => '更新用户画像';
+
+  @override
+  String get chatMessageWidgetChatSearch => '搜索历史对话';
+
+  @override
+  String get chatMessageWidgetCreateMemory => '创建记忆';
+
+  @override
   String chatMessageWidgetToolCall(String name) {
     return '调用工具: $name';
   }
@@ -9018,6 +9042,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get chatMessageWidgetMemoryRead => '读取记忆';
+
+  @override
+  String get chatMessageWidgetMemoryUpdate => '更新记忆';
+
+  @override
+  String get chatMessageWidgetMemorySearchProfile => '检索记忆';
+
+  @override
+  String get chatMessageWidgetMemoryEdit => '编辑记忆';
+
+  @override
+  String get chatMessageWidgetMemoryDelete => '删除记忆';
+
+  @override
+  String get chatMessageWidgetUpdateUserProfile => '更新用户画像';
+
+  @override
+  String get chatMessageWidgetChatSearch => '搜索历史对话';
+
+  @override
+  String get chatMessageWidgetCreateMemory => '创建记忆';
+
+  @override
   String chatMessageWidgetToolCall(String name) {
     return '调用工具: $name';
   }
@@ -15825,6 +15873,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String chatMessageWidgetSpeakText(String text) {
     return '正在朗讀: $text';
   }
+
+  @override
+  String get chatMessageWidgetMemoryRead => '讀取記憶';
+
+  @override
+  String get chatMessageWidgetMemoryUpdate => '更新記憶';
+
+  @override
+  String get chatMessageWidgetMemorySearchProfile => '檢索記憶';
+
+  @override
+  String get chatMessageWidgetMemoryEdit => '編輯記憶';
+
+  @override
+  String get chatMessageWidgetMemoryDelete => '刪除記憶';
+
+  @override
+  String get chatMessageWidgetUpdateUserProfile => '更新使用者畫像';
+
+  @override
+  String get chatMessageWidgetChatSearch => '搜尋歷史對話';
+
+  @override
+  String get chatMessageWidgetCreateMemory => '建立記憶';
 
   @override
   String chatMessageWidgetToolCall(String name) {

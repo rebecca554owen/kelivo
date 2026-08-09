@@ -4324,6 +4324,54 @@ abstract class AppLocalizations {
   /// **'Speaking: {text}'**
   String chatMessageWidgetSpeakText(String text);
 
+  /// No description provided for @chatMessageWidgetMemoryRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Memory'**
+  String get chatMessageWidgetMemoryRead;
+
+  /// No description provided for @chatMessageWidgetMemoryUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Memory'**
+  String get chatMessageWidgetMemoryUpdate;
+
+  /// No description provided for @chatMessageWidgetMemorySearchProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Memory'**
+  String get chatMessageWidgetMemorySearchProfile;
+
+  /// No description provided for @chatMessageWidgetMemoryEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Memory'**
+  String get chatMessageWidgetMemoryEdit;
+
+  /// No description provided for @chatMessageWidgetMemoryDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Memory'**
+  String get chatMessageWidgetMemoryDelete;
+
+  /// No description provided for @chatMessageWidgetUpdateUserProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Update User Profile'**
+  String get chatMessageWidgetUpdateUserProfile;
+
+  /// No description provided for @chatMessageWidgetChatSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Past Chats'**
+  String get chatMessageWidgetChatSearch;
+
+  /// No description provided for @chatMessageWidgetCreateMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Memory'**
+  String get chatMessageWidgetCreateMemory;
+
   /// No description provided for @chatMessageWidgetToolCall.
   ///
   /// In en, this message translates to:

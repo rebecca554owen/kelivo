@@ -943,6 +943,14 @@
       }
     }
   },
+  "chatMessageWidgetMemoryRead": "Read Memory",
+  "chatMessageWidgetMemoryUpdate": "Update Memory",
+  "chatMessageWidgetMemorySearchProfile": "Search Memory",
+  "chatMessageWidgetMemoryEdit": "Edit Memory",
+  "chatMessageWidgetMemoryDelete": "Delete Memory",
+  "chatMessageWidgetUpdateUserProfile": "Update User Profile",
+  "chatMessageWidgetChatSearch": "Search Past Chats",
+  "chatMessageWidgetCreateMemory": "Create Memory",
   "chatMessageWidgetToolCall": "Tool Call: {name}",
   "@chatMessageWidgetToolCall": {
     "placeholders": {

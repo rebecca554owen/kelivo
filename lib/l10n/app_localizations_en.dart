@@ -2282,6 +2282,30 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get chatMessageWidgetMemoryRead => 'Read Memory';
+
+  @override
+  String get chatMessageWidgetMemoryUpdate => 'Update Memory';
+
+  @override
+  String get chatMessageWidgetMemorySearchProfile => 'Search Memory';
+
+  @override
+  String get chatMessageWidgetMemoryEdit => 'Edit Memory';
+
+  @override
+  String get chatMessageWidgetMemoryDelete => 'Delete Memory';
+
+  @override
+  String get chatMessageWidgetUpdateUserProfile => 'Update User Profile';
+
+  @override
+  String get chatMessageWidgetChatSearch => 'Search Past Chats';
+
+  @override
+  String get chatMessageWidgetCreateMemory => 'Create Memory';
+
+  @override
   String chatMessageWidgetToolCall(String name) {
     return 'Tool Call: $name';
   }
