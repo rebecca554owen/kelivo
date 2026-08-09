@@ -26,6 +26,7 @@ import '../../../core/services/api/builtin_tools.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/brand_assets.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/app_directories.dart';
@@ -456,7 +457,12 @@ class _ChatInputBarState extends State<ChatInputBar>
         ..clear()
         ..addAll(
           input.imagePaths.map(
-            (path) => _DraftImage(id: _nextImageId++, path: path),
+            (path) => _DraftImage(
+              id: _nextImageId++,
+              path: isRemoteOrDataUri(path)
+                  ? path
+                  : SandboxPathResolver.fix(path),
+            ),
           ),
         );
       _docs
