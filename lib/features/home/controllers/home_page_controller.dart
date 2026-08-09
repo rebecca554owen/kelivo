@@ -1270,8 +1270,8 @@ class HomePageController extends ChangeNotifier {
   }
 
   void _enterUserMessageEdit(ChatMessage message) {
-    final input = _messageBuilderService.parseInputFromRaw(
-      message.content,
+    final input = _messageBuilderService.parseInputFromMessage(
+      message,
       includeMediaFilePathsAsImages: false,
     );
     final messageId = message.id;
@@ -1312,7 +1312,7 @@ class HomePageController extends ChangeNotifier {
     final conversation = currentConversation;
     if (conversation == null) return null;
     final assistant = _context.read<AssistantProvider>().currentAssistant;
-    final content = MessageGenerationService.buildPersistedUserMessageContent(
+    final parts = await MessageGenerationService.buildPersistedUserMessageParts(
       input,
       assistant: assistant,
     );
@@ -1324,7 +1324,7 @@ class HomePageController extends ChangeNotifier {
 
     final newMsg = await _chatService.appendMessageVersion(
       messageId: editState.messageId,
-      content: content,
+      parts: parts,
     );
     if (newMsg == null) return null;
 

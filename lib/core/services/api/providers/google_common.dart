@@ -469,11 +469,20 @@ Stream<ChatStreamChunk> _sendGoogleStream(
         }
       }
 
+      // Semantic media detection only - custom attachment markers are not
+      // recognized. Attachments arrive via structured media-path keys /
+      // userImagePaths, plus Markdown ![](...).
       final hasMarkdownImages = raw.contains('![') && raw.contains('](');
-      final hasCustomImages = raw.contains('[image:');
+      final internalMediaRefs = parseInternalMediaRefs(
+        msg[multimodalInternalMediaPathsKey],
+      );
+      // Consume injected media refs for user and assistant history turns.
+      final hasInternalMedia = internalMediaRefs.isNotEmpty;
       final hasAttachedImages =
           isLast && role == 'user' && (userImagePaths?.isNotEmpty == true);
-      if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
+      if (hasMarkdownImages ||
+          hasAttachedImages ||
+          hasInternalMedia) {
         final parsed = await _parseTextAndImages(
           raw,
           // Gemini API 目前无法直接拉取远程 http(s) 图片
@@ -498,7 +507,8 @@ Stream<ChatStreamChunk> _sendGoogleStream(
             }
           } else if (ref.kind == 'path') {
             final mime = _mimeFromPath(ref.src);
-            final b64 = await _encodeBase64File(ref.src, withPrefix: false);
+            final b64 = await _tryEncodeBase64File(ref.src, withPrefix: false);
+            if (b64 == null) continue;
             parts.add({
               'inline_data': {'mime_type': mime, 'data': b64},
             });
@@ -506,12 +516,18 @@ Stream<ChatStreamChunk> _sendGoogleStream(
             parts.add({'text': '(image) ${ref.src}'});
           }
         }
-        if (hasAttachedImages) {
-          for (final p in userImagePaths!) {
+        final supplementalRefs = _supplementalMediaRefs(
+          internalRaw: msg[multimodalInternalMediaPathsKey],
+          userPaths: userImagePaths,
+          includeUserPaths: hasAttachedImages,
+        );
+        if (supplementalRefs.isNotEmpty) {
+          for (final mediaRef in supplementalRefs) {
+            final p = mediaRef.uri;
             final normalized = normalizeSrc(p);
             if (!seenSources.add(normalized)) continue;
             if (p.startsWith('data:')) {
-              final mime = _mimeFromDataUrl(p);
+              final mime = _mimeForInternalMediaRef(mediaRef);
               final idx = p.indexOf('base64,');
               if (idx > 0) {
                 final b64 = p.substring(idx + 7);
@@ -520,8 +536,9 @@ Stream<ChatStreamChunk> _sendGoogleStream(
                 });
               }
             } else if (!(p.startsWith('http://') || p.startsWith('https://'))) {
-              final mime = _mimeFromPath(p);
-              final b64 = await _encodeBase64File(p, withPrefix: false);
+              final mime = _mimeForInternalMediaRef(mediaRef);
+              final b64 = await _tryEncodeBase64File(p, withPrefix: false);
+              if (b64 == null) continue;
               parts.add({
                 'inline_data': {'mime_type': mime, 'data': b64},
               });
@@ -942,13 +959,22 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       }
     }
 
-    // Only parse images if there are images to process
+    // Only parse images if there are images to process.
+    // Semantic media detection only - custom attachment markers are not
+    // recognized. Attachments arrive via structured media-path keys /
+    // userImagePaths, plus Markdown ![](...).
     final hasMarkdownImages = raw.contains('![') && raw.contains('](');
-    final hasCustomImages = raw.contains('[image:');
+    final internalMediaRefs = parseInternalMediaRefs(
+      msg[multimodalInternalMediaPathsKey],
+    );
+    // Consume injected media refs for user and assistant history turns.
+    final hasInternalMedia = internalMediaRefs.isNotEmpty;
     final hasAttachedImages =
         isLast && role == 'user' && (userImagePaths?.isNotEmpty == true);
 
-    if (hasMarkdownImages || hasCustomImages || hasAttachedImages) {
+    if (hasMarkdownImages ||
+        hasAttachedImages ||
+        hasInternalMedia) {
       final parsed = await _parseTextAndImages(
         raw,
         // Gemini API 目前无法直接拉取远程 http(s) 图片
@@ -975,7 +1001,8 @@ Stream<ChatStreamChunk> _sendGoogleStream(
           }
         } else if (ref.kind == 'path') {
           final mime = _mimeFromPath(ref.src);
-          final b64 = await _encodeBase64File(ref.src, withPrefix: false);
+          final b64 = await _tryEncodeBase64File(ref.src, withPrefix: false);
+          if (b64 == null) continue;
           parts.add({
             'inline_data': {'mime_type': mime, 'data': b64},
           });
@@ -984,12 +1011,18 @@ Stream<ChatStreamChunk> _sendGoogleStream(
           parts.add({'text': '(image) ${ref.src}'});
         }
       }
-      if (hasAttachedImages) {
-        for (final p in userImagePaths!) {
+      final supplementalRefs = _supplementalMediaRefs(
+        internalRaw: msg[multimodalInternalMediaPathsKey],
+        userPaths: userImagePaths,
+        includeUserPaths: hasAttachedImages,
+      );
+      if (supplementalRefs.isNotEmpty) {
+        for (final mediaRef in supplementalRefs) {
+          final p = mediaRef.uri;
           final normalized = normalizeSrc(p);
           if (!seenSources.add(normalized)) continue;
           if (p.startsWith('data:')) {
-            final mime = _mimeFromDataUrl(p);
+            final mime = _mimeForInternalMediaRef(mediaRef);
             final idx = p.indexOf('base64,');
             if (idx > 0) {
               final b64 = p.substring(idx + 7);
@@ -998,8 +1031,9 @@ Stream<ChatStreamChunk> _sendGoogleStream(
               });
             }
           } else if (!(p.startsWith('http://') || p.startsWith('https://'))) {
-            final mime = _mimeFromPath(p);
-            final b64 = await _encodeBase64File(p, withPrefix: false);
+            final mime = _mimeForInternalMediaRef(mediaRef);
+            final b64 = await _tryEncodeBase64File(p, withPrefix: false);
+            if (b64 == null) continue;
             parts.add({
               'inline_data': {'mime_type': mime, 'data': b64},
             });

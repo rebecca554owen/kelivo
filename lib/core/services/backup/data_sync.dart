@@ -19,9 +19,13 @@ import '../../database/business_settings_router.dart';
 import '../../database/chat_database_repository.dart';
 import '../../models/backup.dart';
 import '../../models/chat_message.dart';
+import '../../models/message_part.dart';
 import '../../models/conversation.dart';
 import '../chat/chat_service.dart';
+import '../migration/legacy_message_content_decoder.dart';
+import '../../utils/multimodal_input_utils.dart';
 import '../../../utils/app_directories.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import 'backup_settings_validator.dart';
 import 'restore_bundle_preparation.dart';
 import 'temporary_restore_file.dart';
@@ -41,6 +45,60 @@ typedef _VersionedBackupInfo = ({
   Map<String, Object?>? businessEntityRowIds,
   String normalizedManifestSha256,
 });
+
+
+/// Recompute [ImagePart]/[FilePart.unavailable] against the live filesystem.
+///
+/// Remote/data URIs stay available. Local URIs use [SandboxPathResolver.fix]
+/// and [File.existsSync]. Intended for post-file-restore refresh of legacy
+/// chats.json imports that decoded before assets were copied.
+List<MessagePart> recomputeAttachmentAvailability(
+  List<MessagePart> parts, {
+  bool Function(String path)? fileExists,
+}) {
+  final exists = fileExists ?? _attachmentExistsOnDisk;
+  final out = <MessagePart>[];
+  var changed = false;
+  for (final part in parts) {
+    if (part is ImagePart) {
+      final unavailable = _unavailableForUri(part.uri, exists);
+      if (unavailable != part.unavailable) changed = true;
+      out.add(
+        ImagePart(
+          uri: part.uri,
+          mime: part.mime,
+          assetId: part.assetId,
+          unavailable: unavailable,
+        ),
+      );
+    } else if (part is FilePart) {
+      final unavailable = _unavailableForUri(part.uri, exists);
+      if (unavailable != part.unavailable) changed = true;
+      out.add(
+        FilePart(
+          uri: part.uri,
+          name: part.name,
+          mime: part.mime,
+          assetId: part.assetId,
+          unavailable: unavailable,
+        ),
+      );
+    } else {
+      out.add(part);
+    }
+  }
+  return changed ? out : parts;
+}
+
+bool _unavailableForUri(String uri, bool Function(String path) exists) {
+  if (isRemoteOrDataUri(uri)) return false;
+  return !exists(uri);
+}
+
+bool _attachmentExistsOnDisk(String path) {
+  final fixed = SandboxPathResolver.fix(path);
+  return File(fixed).existsSync();
+}
 
 class DataSync {
   static const _backupFormat = 'kelivo-backup';
@@ -1293,24 +1351,52 @@ class DataSync {
       }
       geminiThoughtSigs[entry.key.toString()] = entry.value as String;
     }
+    final conversations = (chats['conversations'] as List)
+        .map(
+          (entry) =>
+              Conversation.fromJson((entry as Map).cast<String, dynamic>()),
+        )
+        .toList();
+
+    // Import boundary for legacy chats.json: promote marker-bearing content
+    // into structured parts only when the raw JSON lacks a `parts` list.
+    // New exports already carry `parts` (including literal marker-shaped text)
+    // and must round-trip without re-promotion.
+    var converted = 0;
+    var malformed = 0;
+    var missingFiles = 0;
+    final messages = <ChatMessage>[];
+    for (final entry in chats['messages'] as List) {
+      final raw = (entry as Map).cast<String, dynamic>();
+      final hasPartsList = raw['parts'] is List;
+      var message = ChatMessage.fromJson(raw);
+      if (message.isStreaming) {
+        message = message.copyWith(isStreaming: false);
+      }
+      if (!hasPartsList) {
+        final decoded = await decodeLegacyContent(
+          message.content,
+          existingParts: message.parts,
+        );
+        converted += decoded.converted;
+        malformed += decoded.malformed;
+        missingFiles += decoded.missingFiles;
+        if (decoded.converted > 0) {
+          message = message.copyWith(parts: decoded.parts);
+        }
+      }
+      messages.add(message);
+    }
+    if (converted > 0 || malformed > 0 || missingFiles > 0) {
+      debugPrint(
+        'legacy chats.json decode: converted=$converted '
+        'malformed=$malformed missingFiles=$missingFiles',
+      );
+    }
+
     return (
-      conversations: (chats['conversations'] as List)
-          .map(
-            (entry) =>
-                Conversation.fromJson((entry as Map).cast<String, dynamic>()),
-          )
-          .toList(),
-      messages: (chats['messages'] as List)
-          .map(
-            (entry) =>
-                ChatMessage.fromJson((entry as Map).cast<String, dynamic>()),
-          )
-          .map(
-            (message) => message.isStreaming
-                ? message.copyWith(isStreaming: false)
-                : message,
-          )
-          .toList(),
+      conversations: conversations,
+      messages: messages,
       toolEvents: ((chats['toolEvents'] as Map?) ?? const <String, dynamic>{})
           .map(
             (key, value) => MapEntry(
@@ -1795,82 +1881,6 @@ class DataSync {
               );
       }
 
-      // Restore chats
-      if (restoreChats) {
-        try {
-          if (mode == RestoreMode.overwrite) {
-            await chatService.replaceAllDataFromBackup(
-              conversations: conversations,
-              messages: messages,
-              toolEventsByMessageId: toolEvents,
-              geminiSignaturesByMessageId: geminiThoughtSigs,
-            );
-          } else {
-            // Merge mode: Add only non-existing conversations and messages
-            final existingConvs = chatService.getAllCompleteConversations();
-            final existingConvIds = existingConvs.map((c) => c.id).toSet();
-
-            // Create a map of message IDs to avoid duplicates (ids only:
-            // full message loads would flush the LRU cache for no gain)
-            final existingMsgIds = <String>{};
-            for (final conv in existingConvs) {
-              existingMsgIds.addAll(await chatService.getMessageIds(conv.id));
-            }
-
-            // Group messages by conversation
-            final byConv = <String, List<ChatMessage>>{};
-            for (final m in messages) {
-              if (!existingMsgIds.contains(m.id)) {
-                (byConv[m.conversationId] ??= <ChatMessage>[]).add(m);
-              }
-            }
-
-            // Restore non-existing conversations and their messages
-            final mergedConvIds = <String>[];
-            for (final c in conversations) {
-              if (!existingConvIds.contains(c.id)) {
-                final list = byConv[c.id] ?? const <ChatMessage>[];
-                await chatService.restoreConversation(c, list);
-                mergedConvIds.add(c.id);
-              } else if (byConv.containsKey(c.id)) {
-                // Conversation exists but has new messages
-                final newMessages = byConv[c.id]!;
-                for (final msg in newMessages) {
-                  await chatService.addMessageDirectly(c.id, msg);
-                }
-                mergedConvIds.add(c.id);
-              }
-            }
-
-            // Merge tool events
-            for (final entry in toolEvents.entries) {
-              final existing = chatService.getToolEvents(entry.key);
-              if (existing.isEmpty) {
-                await chatService.setToolEvents(entry.key, entry.value);
-              }
-            }
-            for (final entry in geminiThoughtSigs.entries) {
-              final existingSig = chatService.getGeminiThoughtSignature(
-                entry.key,
-              );
-              if (existingSig == null || existingSig.isEmpty) {
-                await chatService.setGeminiThoughtSignature(
-                  entry.key,
-                  entry.value,
-                );
-              }
-            }
-            // §6.7: restored history must not re-trigger background extraction,
-            // and injection hashes must clear so the next request self-heals.
-            await businessRepository.applyPostMergeMemoryConversationState(
-              mergedConvIds,
-            );
-          }
-        } catch (_) {
-          rethrow;
-        }
-      }
-
       // Restore files
       if (cfg.includeFiles) {
         if (mode == RestoreMode.overwrite) {
@@ -1955,6 +1965,97 @@ class DataSync {
           await _restoreAssetDirectoriesAdditive(restorePayloadDirectory);
         }
       }
+      // Legacy chats.json decodes before assets exist; refresh availability
+      // once upload/images are on disk so local parts are not stuck unavailable.
+      if (restoreChats && cfg.includeFiles) {
+        final refreshed = <ChatMessage>[];
+        for (final message in messages) {
+          final nextParts = recomputeAttachmentAvailability(message.parts);
+          refreshed.add(
+            identical(nextParts, message.parts)
+                ? message
+                : message.copyWith(parts: nextParts),
+          );
+        }
+        messages = refreshed;
+      }
+
+      // Restore chats
+      if (restoreChats) {
+        try {
+          if (mode == RestoreMode.overwrite) {
+            await chatService.replaceAllDataFromBackup(
+              conversations: conversations,
+              messages: messages,
+              toolEventsByMessageId: toolEvents,
+              geminiSignaturesByMessageId: geminiThoughtSigs,
+            );
+          } else {
+            // Merge mode: Add only non-existing conversations and messages
+            final existingConvs = chatService.getAllCompleteConversations();
+            final existingConvIds = existingConvs.map((c) => c.id).toSet();
+
+            // Create a map of message IDs to avoid duplicates (ids only:
+            // full message loads would flush the LRU cache for no gain)
+            final existingMsgIds = <String>{};
+            for (final conv in existingConvs) {
+              existingMsgIds.addAll(await chatService.getMessageIds(conv.id));
+            }
+
+            // Group messages by conversation
+            final byConv = <String, List<ChatMessage>>{};
+            for (final m in messages) {
+              if (!existingMsgIds.contains(m.id)) {
+                (byConv[m.conversationId] ??= <ChatMessage>[]).add(m);
+              }
+            }
+
+            // Restore non-existing conversations and their messages
+            final mergedConvIds = <String>[];
+            for (final c in conversations) {
+              if (!existingConvIds.contains(c.id)) {
+                final list = byConv[c.id] ?? const <ChatMessage>[];
+                await chatService.restoreConversation(c, list);
+                mergedConvIds.add(c.id);
+              } else if (byConv.containsKey(c.id)) {
+                // Conversation exists but has new messages
+                final newMessages = byConv[c.id]!;
+                for (final msg in newMessages) {
+                  await chatService.addMessageDirectly(c.id, msg);
+                }
+                mergedConvIds.add(c.id);
+              }
+            }
+
+            // Merge tool events
+            for (final entry in toolEvents.entries) {
+              final existing = chatService.getToolEvents(entry.key);
+              if (existing.isEmpty) {
+                await chatService.setToolEvents(entry.key, entry.value);
+              }
+            }
+            for (final entry in geminiThoughtSigs.entries) {
+              final existingSig = chatService.getGeminiThoughtSignature(
+                entry.key,
+              );
+              if (existingSig == null || existingSig.isEmpty) {
+                await chatService.setGeminiThoughtSignature(
+                  entry.key,
+                  entry.value,
+                );
+              }
+            }
+            // §6.7: restored history must not re-trigger background extraction,
+            // and injection hashes must clear so the next request self-heals.
+            await businessRepository.applyPostMergeMemoryConversationState(
+              mergedConvIds,
+            );
+          }
+        } catch (_) {
+          rethrow;
+        }
+      }
+
       final restoreBusiness = pendingBusinessRestore;
       if (restoreBusiness != null) {
         await _runLiveBusinessRestore(restoreBusiness);

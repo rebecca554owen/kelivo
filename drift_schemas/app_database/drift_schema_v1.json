@@ -842,7 +842,7 @@
                         "lexeme": "kind",
                         "tag": "kind"
                       },
-                      ".isIn(const ['text','reasoning','tool_call'])"
+                      ".isNotValue('')"
                     ]
                   }
                 }
@@ -3465,7 +3465,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"message_part_rows\" (\"part_id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"conversation_id\" TEXT NOT NULL, \"revision_id\" TEXT NOT NULL, \"ordinal\" INTEGER NOT NULL CHECK(\"ordinal\" >= 0), \"kind\" TEXT NOT NULL CHECK(\"kind\" IN ('text', 'reasoning', 'tool_call')), \"payload\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, UNIQUE (\"revision_id\", \"ordinal\"), FOREIGN KEY (revision_id) REFERENCES message_rows (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED, CHECK (updated_at >= created_at));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"message_part_rows\" (\"part_id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"conversation_id\" TEXT NOT NULL, \"revision_id\" TEXT NOT NULL, \"ordinal\" INTEGER NOT NULL CHECK(\"ordinal\" >= 0), \"kind\" TEXT NOT NULL CHECK(\"kind\" IS NOT ''), \"payload\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, UNIQUE (\"revision_id\", \"ordinal\"), FOREIGN KEY (revision_id) REFERENCES message_rows (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED, CHECK (updated_at >= created_at));"
         }
       ]
     },

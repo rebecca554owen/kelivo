@@ -7,6 +7,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 
 ProviderConfig _openAiConfig(String baseUrl, {bool useResponseApi = false}) {
   return ProviderConfig(
@@ -437,6 +438,287 @@ void main() {
       expect(requestBody, contains('make the background blue'));
       expect(requestBody, contains('name="image[]"'));
       expect(requestBody, contains('content-type: image/png'));
+    });
+
+    test('prefers structured media mime over bare userImagePaths', () async {
+      late String requestBody;
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_openai_structured_mime_',
+      );
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      // Extension implies png; structured mime should win as jpeg.
+      final inputImage = File('${tempDir.path}/source.png');
+      await inputImage.writeAsBytes(const [1, 2, 3, 4]);
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestBody = latin1.decode(await _readBytes(request));
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/structured-mime-edit.png'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server)),
+        modelId: 'gpt-image-2',
+        messages: [
+          {
+            'role': 'user',
+            'content': 'make the background blue',
+            multimodalInternalMediaPathsKey: [
+              encodeInternalMediaRef(
+                uri: inputImage.path,
+                mime: 'image/jpeg',
+              ),
+            ],
+          },
+        ],
+        userImagePaths: [inputImage.path],
+      ).toList();
+
+      expect(requestBody, contains('name="image[]"'));
+      expect(requestBody, contains('content-type: image/jpeg'));
+      expect(requestBody, isNot(contains('content-type: image/png')));
+    });
+
+    test('routes multimodalInternalMediaPathsKey to edits multipart', () async {
+      late Uri requestUri;
+      late String contentType;
+      late String requestBody;
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_openai_media_paths_edit_',
+      );
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final inputImage = File('${tempDir.path}/source.png');
+      await inputImage.writeAsBytes(const [1, 2, 3, 4]);
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestUri = request.uri;
+        contentType = request.headers.contentType?.mimeType ?? '';
+        requestBody = latin1.decode(await _readBytes(request));
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/media-paths-edit.png'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server)),
+        modelId: 'gpt-image-2',
+        messages: [
+          {
+            'role': 'user',
+            'content': 'make the background blue',
+            multimodalInternalMediaPathsKey: [inputImage.path],
+          },
+        ],
+      ).toList();
+
+      expect(requestUri.path, '/v1/images/edits');
+      expect(contentType, 'multipart/form-data');
+      expect(requestBody, contains('name="prompt"'));
+      expect(requestBody, contains('make the background blue'));
+      expect(requestBody, contains('name="image[]"'));
+      expect(requestBody, contains('filename="source.png"'));
+      expect(requestBody, contains('content-type: image/png'));
+    });
+
+
+    test('skips non-image structured media refs for /images/edits', () async {
+      late Uri requestUri;
+      late String contentType;
+      late String requestBody;
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_openai_non_image_refs_',
+      );
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final png = File('${tempDir.path}/keep.png');
+      final mp3 = File('${tempDir.path}/skip.mp3');
+      final mp4 = File('${tempDir.path}/skip.mp4');
+      final octet = File('${tempDir.path}/skip.bin');
+      await png.writeAsBytes(const [1, 2, 3, 4]);
+      await mp3.writeAsBytes(const [9, 9, 9]);
+      await mp4.writeAsBytes(const [8, 8, 8]);
+      await octet.writeAsBytes(const [7, 7, 7]);
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestUri = request.uri;
+        contentType = request.headers.contentType?.mimeType ?? '';
+        requestBody = latin1.decode(await _readBytes(request));
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/filtered-edit.png'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server)),
+        modelId: 'gpt-image-2',
+        messages: [
+          {
+            'role': 'user',
+            'content': 'edit using only the image',
+            multimodalInternalMediaPathsKey: [
+              encodeInternalMediaRef(uri: png.path, mime: 'image/png'),
+              encodeInternalMediaRef(uri: mp3.path, mime: 'audio/mpeg'),
+              encodeInternalMediaRef(uri: mp4.path, mime: 'video/mp4'),
+              encodeInternalMediaRef(
+                uri: octet.path,
+                mime: 'application/octet-stream',
+              ),
+            ],
+          },
+        ],
+      ).toList();
+
+      expect(requestUri.path, '/v1/images/edits');
+      expect(contentType, 'multipart/form-data');
+      expect(requestBody, contains('name="image[]"'));
+      expect(requestBody, contains('filename="keep.png"'));
+      expect(requestBody, contains('content-type: image/png'));
+      expect(requestBody, isNot(contains('skip.mp3')));
+      expect(requestBody, isNot(contains('skip.mp4')));
+      expect(requestBody, isNot(contains('skip.bin')));
+      expect(requestBody, isNot(contains('audio/mpeg')));
+      expect(requestBody, isNot(contains('video/mp4')));
+      expect(requestBody, isNot(contains('application/octet-stream')));
+    });
+
+    test('non-image-only structured refs do not force /images/edits', () async {
+      late Uri requestUri;
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_openai_audio_only_refs_',
+      );
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final mp3 = File('${tempDir.path}/only.mp3');
+      await mp3.writeAsBytes(const [9, 9, 9]);
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestUri = request.uri;
+        await request.drain<void>();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/generations.png'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server)),
+        modelId: 'gpt-image-2',
+        messages: [
+          {
+            'role': 'user',
+            'content': 'draw something',
+            multimodalInternalMediaPathsKey: [
+              encodeInternalMediaRef(uri: mp3.path, mime: 'audio/mpeg'),
+              encodeInternalMediaRef(
+                uri: 'data:video/mp4;base64,AAAA',
+                mime: 'video/mp4',
+              ),
+            ],
+          },
+        ],
+      ).toList();
+
+      expect(requestUri.path, '/v1/images/generations');
+    });
+
+    test('literal [image:...] markers are not used as edit inputs', () async {
+      late Uri requestUri;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestUri = request.uri;
+        await request.drain<void>();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/generated.png'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      final chunks = await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server)),
+        modelId: 'gpt-image-2',
+        messages: const [
+          {
+            'role': 'user',
+            'content': 'draw a cat [image:data:image/png;base64,AQIDBA==]',
+          },
+        ],
+      ).toList();
+
+      // Marker text must not force edits; generations path is used instead.
+      expect(requestUri.path, '/v1/images/generations');
+      expect(chunks.single.content, '![image](https://example.com/generated.png)');
     });
 
     test('rejects dall-e-3 edits before sending a request', () async {

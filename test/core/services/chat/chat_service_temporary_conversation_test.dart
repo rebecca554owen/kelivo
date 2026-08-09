@@ -1,3 +1,4 @@
+import 'package:Kelivo/core/models/message_part.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -103,7 +104,7 @@ void main() {
 
     final result = await service.beginSendGeneration(
       conversationId: conversation.id,
-      userContent: 'next question',
+      userParts: const [TextPart('next question')],
       modelId: 'model',
       providerId: 'provider',
     );
@@ -144,7 +145,13 @@ void main() {
       final message = await service.addMessage(
         conversationId: conversation.id,
         role: 'user',
-        content: '[file:${upload.path}|spec.pdf|application/pdf]',
+        parts: [
+          FilePart(
+            uri: upload.path,
+            name: 'spec.pdf',
+            mime: 'application/pdf',
+          ),
+        ],
       );
 
       await service.deleteMessage(message.id);
@@ -154,6 +161,36 @@ void main() {
         now: DateTime.now().toUtc().add(const Duration(days: 8)),
       );
       expect(await upload.exists(), isFalse);
+    },
+  );
+
+  test(
+    'unavailable local attachment does not leave asset sync dirty',
+    () async {
+      final service = createService();
+      await service.init();
+      final conversation = await service.createConversation(title: 'Missing');
+      final missing = File('${tempDir.path}/upload/gone.png');
+      await missing.parent.create(recursive: true);
+      // Path is under upload/, but the file itself is intentionally absent.
+      expect(await missing.exists(), isFalse);
+
+      await service.addMessage(
+        conversationId: conversation.id,
+        role: 'user',
+        parts: [
+          ImagePart(
+            uri: missing.path,
+            mime: 'image/png',
+            unavailable: true,
+          ),
+        ],
+      );
+
+      await service.runAssetReferenceMaintenance();
+      final repo = service.chatRepositoryOrNull;
+      expect(repo, isNotNull);
+      expect(await repo!.hasPendingAssetReferenceSync(), isFalse);
     },
   );
 
@@ -169,7 +206,13 @@ void main() {
       final message = await first.addMessage(
         conversationId: conversation.id,
         role: 'user',
-        content: '[file:${upload.path}|legacy.txt|text/plain]',
+        parts: [
+          FilePart(
+            uri: upload.path,
+            name: 'legacy.txt',
+            mime: 'text/plain',
+          ),
+        ],
       );
       await first.close();
       services.remove(first);
@@ -659,6 +702,37 @@ void main() {
       );
       expect(timeline!.slots.single.message.id, edited.id);
     });
+
+    test('temporary content-only append keeps prior ImagePart', () async {
+      final service = createService();
+      await service.init();
+
+      final conversation = await service.createDraftConversation(
+        title: 'Temporary Chat',
+        temporary: true,
+      );
+      final original = await service.addMessage(
+        conversationId: conversation.id,
+        role: 'user',
+        parts: const [
+          ImagePart(uri: '/tmp/keep.png', mime: 'image/png'),
+          TextPart('original caption'),
+        ],
+      );
+
+      final edited = await service.appendMessageVersion(
+        messageId: original.id,
+        content: 'edited caption',
+      );
+
+      expect(edited, isNotNull);
+      expect(edited!.content, 'edited caption');
+      expect(edited.parts, hasLength(2));
+      expect(edited.parts[0], isA<ImagePart>());
+      expect((edited.parts[0] as ImagePart).uri, '/tmp/keep.png');
+      expect(edited.parts[1], isA<TextPart>());
+      expect((edited.parts[1] as TextPart).text, 'edited caption');
+    });
   });
 
   group('ChatService fork conversations', () {
@@ -707,7 +781,7 @@ void main() {
     final conversation = await service.createConversation(title: 'Stats');
     final generation = await service.beginSendGeneration(
       conversationId: conversation.id,
-      userContent: 'question',
+      userParts: const [TextPart('question')],
       modelId: 'model',
       providerId: 'provider',
     );

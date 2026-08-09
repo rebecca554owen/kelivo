@@ -4,11 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 import 'package:Kelivo/features/home/services/message_builder_service.dart';
+import 'package:Kelivo/features/home/services/message_generation_service.dart';
+import 'package:Kelivo/features/home/controllers/generation_controller.dart';
+import 'package:Kelivo/features/home/controllers/stream_controller.dart' as stream_ctrl;
 import 'package:Kelivo/features/home/services/ocr_service.dart';
 
 import '../../../support/business_test_harness.dart';
@@ -40,6 +44,26 @@ class _FakeChatService extends ChatService {
         .where((message) => message.conversationId == conversationId)
         .toList();
   }
+}
+
+
+class _StubGenerationController extends Fake implements GenerationController {}
+
+class _StubStreamController extends Fake implements stream_ctrl.StreamController {}
+
+MessageGenerationService _messageGenerationServiceForAudioCheck() {
+  final chatService = _FakeChatService(const {});
+  final messageBuilderService = MessageBuilderService(
+    chatService: chatService,
+    contextProvider: _FakeBuildContext(),
+  );
+  return MessageGenerationService(
+    chatService: chatService,
+    messageBuilderService: messageBuilderService,
+    generationController: _StubGenerationController(),
+    streamController: _StubStreamController(),
+    contextProvider: _FakeBuildContext(),
+  );
 }
 
 ChatMessage _message({
@@ -91,17 +115,184 @@ void main() {
     expect(collapsed.single.id, 'v1');
   });
 
-  group('MessageBuilderService.parseInputFromRaw', () {
-    test('默认将视频和音频文件路径纳入媒体路径供 API 使用', () {
+
+  group('MessageBuilderService.parseInputFromMessage', () {
+    test('reads image/file parts without marker strings', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final message = ChatMessage(
+        role: 'user',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('media'),
+          ImagePart(uri: 'C:/tmp/photo.png', mime: 'image/png'),
+          FilePart(
+            uri: 'C:/tmp/clip.mp4',
+            name: 'clip.mp4',
+            mime: 'video/mp4',
+          ),
+        ],
+      );
+      final input = service.parseInputFromMessage(message);
+      expect(input.text, 'media');
+      expect(input.imagePaths, contains('C:/tmp/photo.png'));
+      expect(input.imagePaths, contains('C:/tmp/clip.mp4'));
+      expect(input.documents.single.fileName, 'clip.mp4');
+    });
+
+    test('skips unavailable parts for API media and keeps mime on documents', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final input = service.parseInputFromMessage(
+        ChatMessage(
+          role: 'user',
+          conversationId: 'c1',
+          parts: const [
+            TextPart('media'),
+            ImagePart(
+              uri: '/tmp/missing.png',
+              mime: 'image/png',
+              unavailable: true,
+            ),
+            ImagePart(uri: '/tmp/ok.png', mime: 'image/png'),
+            FilePart(
+              uri: '/tmp/gone.wav',
+              name: 'gone.wav',
+              mime: 'audio/wav',
+              unavailable: true,
+            ),
+            FilePart(
+              uri: '/tmp/keep.wav',
+              name: 'keep.wav',
+              mime: 'audio/wav',
+            ),
+          ],
+        ),
+      );
+      expect(input.imagePaths, ['/tmp/ok.png', '/tmp/keep.wav']);
+      expect(input.documents.single.fileName, 'keep.wav');
+      expect(input.documents.single.mime, 'audio/wav');
+    });
+
+    test('TextPart-only content does not decode legacy attachment markers', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final message = ChatMessage(
+        role: 'user',
+        conversationId: 'c1',
+        parts: const [
+          TextPart(
+            'see [image:/tmp/a.png] and [file:/tmp/a.pdf|a.pdf|application/pdf]',
+          ),
+        ],
+      );
+      final input = service.parseInputFromMessage(message);
+      expect(
+        input.text,
+        'see [image:/tmp/a.png] and [file:/tmp/a.pdf|a.pdf|application/pdf]',
+      );
+      expect(input.imagePaths, isEmpty);
+      expect(input.documents, isEmpty);
+    });
+  });
+
+  group('MessageBuilderService.parseInputFromApiMap', () {
+    test('uses content text and internal media paths only', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final input = service.parseInputFromApiMap({
+        'role': 'user',
+        'content': 'caption [image:/tmp/ignored.png]',
+        MessageBuilderService.internalMediaPathsKey: [
+          '/tmp/real.png',
+          '/tmp/clip.mp3',
+        ],
+      });
+      expect(input.text, 'caption [image:/tmp/ignored.png]');
+      expect(input.imagePaths, ['/tmp/real.png', '/tmp/clip.mp3']);
+      expect(input.documents.single.fileName, 'clip.mp3');
+      expect(input.documents.single.mime.startsWith('audio/'), isTrue);
+    });
+
+    test('reads structured map media refs and preserves mime', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final input = service.parseInputFromApiMap({
+        'role': 'user',
+        'content': 'caption',
+        MessageBuilderService.internalMediaPathsKey: [
+          encodeInternalMediaRef(uri: '/tmp/real.png', mime: 'image/png'),
+          encodeInternalMediaRef(
+            uri: '/tmp/voice.bin',
+            mime: 'audio/wav',
+          ),
+        ],
+      });
+      expect(input.imagePaths, ['/tmp/real.png', '/tmp/voice.bin']);
+      expect(input.documents.single.fileName, 'voice.bin');
+      expect(input.documents.single.mime, 'audio/wav');
+    });
+  });
+
+  group('MessageBuilderService.parseInputFromMessage media files', () {
+    test('image/png FilePart enters imagePaths when includeMediaFilePathsAsImages', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final input = service.parseInputFromMessage(
+        ChatMessage(
+          role: 'user',
+          conversationId: 'c1',
+          parts: const [
+            TextPart('caption'),
+            FilePart(
+              uri: '/tmp/photo.png',
+              name: 'photo.png',
+              mime: 'image/png',
+            ),
+          ],
+        ),
+      );
+      expect(input.imagePaths, contains('/tmp/photo.png'));
+      expect(input.documents.single.fileName, 'photo.png');
+      expect(input.documents.single.mime, 'image/png');
+    });
+
+    test('默认将视频和音频 FilePart 纳入媒体路径供 API 使用', () {
       final service = MessageBuilderService(
         chatService: _FakeChatService(const {}),
         contextProvider: _FakeBuildContext(),
       );
 
-      final input = service.parseInputFromRaw(
-        'media\n'
-        '[file:C:/tmp/clip.mp4|clip.mp4|video/mp4]\n'
-        '[file:C:/tmp/audio.wav|audio.wav|audio/wav]',
+      final input = service.parseInputFromMessage(
+        ChatMessage(
+          role: 'user',
+          conversationId: 'c1',
+          parts: const [
+            TextPart('media'),
+            FilePart(
+              uri: 'C:/tmp/clip.mp4',
+              name: 'clip.mp4',
+              mime: 'video/mp4',
+            ),
+            FilePart(
+              uri: 'C:/tmp/audio.wav',
+              name: 'audio.wav',
+              mime: 'audio/wav',
+            ),
+          ],
+        ),
       );
 
       expect(input.text, 'media');
@@ -112,17 +303,31 @@ void main() {
       ]);
     });
 
-    test('编辑恢复草稿时不把视频和音频文件伪装成图片', () {
+    test('编辑恢复草稿时不把视频和音频 FilePart 伪装成图片', () {
       final service = MessageBuilderService(
         chatService: _FakeChatService(const {}),
         contextProvider: _FakeBuildContext(),
       );
 
-      final input = service.parseInputFromRaw(
-        'media\n'
-        '[image:C:/tmp/photo.png]\n'
-        '[file:C:/tmp/clip.mp4|clip.mp4|video/mp4]\n'
-        '[file:C:/tmp/audio.wav|audio.wav|audio/wav]',
+      final input = service.parseInputFromMessage(
+        ChatMessage(
+          role: 'user',
+          conversationId: 'c1',
+          parts: const [
+            TextPart('media'),
+            ImagePart(uri: 'C:/tmp/photo.png', mime: 'image/png'),
+            FilePart(
+              uri: 'C:/tmp/clip.mp4',
+              name: 'clip.mp4',
+              mime: 'video/mp4',
+            ),
+            FilePart(
+              uri: 'C:/tmp/audio.wav',
+              name: 'audio.wav',
+              mime: 'audio/wav',
+            ),
+          ],
+        ),
         includeMediaFilePathsAsImages: false,
       );
 
@@ -132,6 +337,246 @@ void main() {
         'clip.mp4',
         'audio.wav',
       ]);
+    });
+  });
+
+  group('MessageBuilderService.buildApiMessages media paths', () {
+    test('pure-attachment user message emits structured media paths', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          ChatMessage(
+            id: 'u1',
+            role: 'user',
+            conversationId: 'c1',
+            parts: const [
+              ImagePart(uri: '/tmp/only.png', mime: 'image/png'),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      expect(apiMessages, hasLength(1));
+      expect(apiMessages.single['content'], '');
+      expect(
+        apiMessages.single[MessageBuilderService.internalRevisionIdKey],
+        'u1',
+      );
+      expect(
+        apiMessages.single[MessageBuilderService.internalMediaPathsKey],
+        [
+          encodeInternalMediaRef(uri: '/tmp/only.png', mime: 'image/png'),
+        ],
+      );
+    });
+
+    test('assistant ImagePart gets media paths too', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          _message(id: 'u1', role: 'user', content: 'hi'),
+          ChatMessage(
+            id: 'a1',
+            role: 'assistant',
+            conversationId: 'c1',
+            parts: const [
+              TextPart('see image'),
+              ImagePart(uri: '/tmp/assistant.png', mime: 'image/png'),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      final assistant = apiMessages.lastWhere(
+        (message) => message['role'] == 'assistant',
+      );
+      expect(
+        assistant[MessageBuilderService.internalMediaPathsKey],
+        [
+          encodeInternalMediaRef(
+            uri: '/tmp/assistant.png',
+            mime: 'image/png',
+          ),
+        ],
+      );
+    });
+
+    test('unavailable parts are omitted from media paths', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          ChatMessage(
+            id: 'u1',
+            role: 'user',
+            conversationId: 'c1',
+            parts: const [
+              TextPart('mixed'),
+              ImagePart(
+                uri: '/tmp/missing.png',
+                mime: 'image/png',
+                unavailable: true,
+              ),
+              ImagePart(uri: '/tmp/ok.png', mime: 'image/png'),
+              FilePart(
+                uri: '/tmp/gone.mp3',
+                name: 'gone.mp3',
+                mime: 'audio/mpeg',
+                unavailable: true,
+              ),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      expect(
+        apiMessages.single[MessageBuilderService.internalMediaPathsKey],
+        [encodeInternalMediaRef(uri: '/tmp/ok.png', mime: 'image/png')],
+      );
+    });
+
+
+    test('pure PDF FilePart-only user message appears in buildApiMessages', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          ChatMessage(
+            id: 'u-pdf',
+            role: 'user',
+            conversationId: 'c1',
+            parts: const [
+              FilePart(
+                uri: '/tmp/spec.pdf',
+                name: 'spec.pdf',
+                mime: 'application/pdf',
+              ),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      expect(apiMessages, hasLength(1));
+      expect(apiMessages.single['role'], 'user');
+      expect(apiMessages.single['content'], '');
+      expect(
+        apiMessages.single[MessageBuilderService.internalRevisionIdKey],
+        'u-pdf',
+      );
+      // PDF is a document, not a media-path attachment.
+      expect(
+        apiMessages.single.containsKey(
+          MessageBuilderService.internalMediaPathsKey,
+        ),
+        isFalse,
+      );
+    });
+
+    test('octet-stream video FilePart emits inferred video mime in media refs', () {
+      final refs = MessageBuilderService.mediaRefsFromParts(
+        ChatMessage(
+          role: 'user',
+          conversationId: 'c1',
+          parts: const [
+            FilePart(
+              uri: '/tmp/clip.mp4',
+              name: 'clip.mp4',
+              mime: 'application/octet-stream',
+            ),
+          ],
+        ),
+      );
+      expect(refs, hasLength(1));
+      expect(refs.single['uri'], '/tmp/clip.mp4');
+      expect(refs.single['mime'], 'video/mp4');
+    });
+
+    test('audio FilePart is detectable without processUserMessagesForApi', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          ChatMessage(
+            id: 'u1',
+            role: 'user',
+            conversationId: 'c1',
+            parts: const [
+              FilePart(
+                uri: '/tmp/voice.bin',
+                name: 'voice.bin',
+                mime: 'audio/wav',
+              ),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      final refs = parseInternalMediaRefs(
+        apiMessages.single[MessageBuilderService.internalMediaPathsKey],
+      );
+      expect(refs, isNotEmpty);
+      expect(
+        refs.any(
+          (ref) => isAudioMime(
+            (ref.mime != null && ref.mime!.isNotEmpty)
+                ? ref.mime!
+                : inferMediaMimeFromSource(ref.uri),
+          ),
+        ),
+        isTrue,
+      );
+      expect(refs.single.mime, 'audio/wav');
+    });
+
+    test('assistant audio media refs trip apiMessagesContainAudioAttachments', () {
+      final builder = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+      final apiMessages = builder.buildApiMessages(
+        messages: [
+          _message(id: 'u1', role: 'user', content: 'hi'),
+          ChatMessage(
+            id: 'a1',
+            role: 'assistant',
+            conversationId: 'c1',
+            parts: const [
+              TextPart('voice reply'),
+              FilePart(
+                uri: '/tmp/assistant.wav',
+                name: 'assistant.wav',
+                mime: 'audio/wav',
+              ),
+            ],
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+      final generation = _messageGenerationServiceForAudioCheck();
+      expect(generation.apiMessagesContainAudioAttachments(apiMessages), isTrue);
     });
   });
 
@@ -628,7 +1073,10 @@ void main() {
           if (index.isEven)
             {
               'role': 'user',
-              'content': 'u$index\n[image:/img-$index.png]',
+              'content': 'u$index',
+              MessageBuilderService.internalMediaPathsKey: [
+                '/img-$index.png',
+              ],
               MessageBuilderService.internalRevisionIdKey: 'u$index',
             }
           else
@@ -646,11 +1094,18 @@ void main() {
       );
 
       expect(apiMessages, hasLength(2));
-      final retainedContents = apiMessages
-          .map((message) => (message['content'] ?? '').toString())
+      final retainedMediaPaths = apiMessages
+          .expand(
+            (message) =>
+                (message[MessageBuilderService.internalMediaPathsKey]
+                        as List?) ??
+                    const [],
+          )
+          .map((path) => path.toString())
           .toList();
-      expect(retainedContents.join('\n'), isNot(contains('/img-0.png')));
-      expect(retainedContents.join('\n'), isNot(contains('/img-2.png')));
+      expect(retainedMediaPaths, isNot(contains('/img-0.png')));
+      expect(retainedMediaPaths, isNot(contains('/img-2.png')));
+      expect(retainedMediaPaths, contains('/img-4.png'));
 
       final retainedUser = apiMessages.firstWhere(
         (message) => message['role'] == 'user',
@@ -659,7 +1114,14 @@ void main() {
         retainedUser[MessageBuilderService.internalRevisionIdKey],
         isNotNull,
       );
-      expect((retainedUser['content'] ?? '').toString(), contains('[image:'));
+      expect(
+        retainedUser[MessageBuilderService.internalMediaPathsKey],
+        ['/img-4.png'],
+      );
+      expect(
+        (retainedUser['content'] ?? '').toString(),
+        isNot(contains('[image:')),
+      );
     });
 
     test('无限制上下文不会裁掉一千条以上的消息', () {
@@ -816,8 +1278,19 @@ void main() {
         },
       );
 
+      // Intentional negative: literal marker text in WorldBook lore must be
+      // ignored when the message has no internal revision id.
       const loreContent =
           'lore with markers\n[image:/tmp/lore.png]\n[file:/tmp/lore.txt|lore.txt|text/plain]';
+      final realUser = ChatMessage(
+        id: 'u-real',
+        role: 'user',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('real user'),
+          ImagePart(uri: '/tmp/real.png', mime: 'image/png'),
+        ],
+      );
       final apiMessages = <Map<String, dynamic>>[
         {
           'role': 'user',
@@ -825,8 +1298,8 @@ void main() {
         },
         {
           'role': 'user',
-          'content': 'real user\n[image:/tmp/real.png]',
-          MessageBuilderService.internalRevisionIdKey: 'u-real',
+          'content': realUser.content,
+          MessageBuilderService.internalRevisionIdKey: realUser.id,
         },
       ];
 
@@ -853,6 +1326,7 @@ void main() {
         apiMessages,
         settings,
         const Assistant(id: 'a1', name: 'test'),
+        sourceMessages: [realUser],
       );
 
       expect(apiMessages.first['content'], loreContent);
@@ -867,6 +1341,132 @@ void main() {
         isNot(contains('/tmp/lore.png')),
       );
       expect(ocrCalls.expand((paths) => paths), contains('/tmp/real.png'));
+      expect(apiMessages.last['content'], isNot(contains('[image:')));
+      expect(apiMessages.first['content'], contains('[image:/tmp/lore.png]'));
+    });
+
+    test('writes structured media refs and keeps OCR filtering', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      await settings.loaded;
+
+      final service = MessageBuilderService(
+        chatService: _FakeChatService({}),
+        contextProvider: _FakeBuildContext(),
+        ocrHandler: (imagePaths, {revisionId, session}) async => 'ocr',
+      );
+
+      final realUser = ChatMessage(
+        id: 'u-real',
+        role: 'user',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('real user'),
+          ImagePart(uri: '/tmp/real.png', mime: 'image/png'),
+          FilePart(
+            uri: '/tmp/clip.mp3',
+            name: 'clip.mp3',
+            mime: 'audio/mpeg',
+          ),
+        ],
+      );
+      final apiMessages = <Map<String, dynamic>>[
+        {
+          'role': 'user',
+          'content': realUser.content,
+          MessageBuilderService.internalRevisionIdKey: realUser.id,
+          MessageBuilderService.internalMediaPathsKey:
+              MessageBuilderService.mediaRefsFromParts(realUser),
+        },
+      ];
+
+      await settings.setProviderConfig(
+        'ocr-provider',
+        ProviderConfig(
+          id: 'ocr-provider',
+          enabled: true,
+          name: 'OCR',
+          apiKey: 'key',
+          baseUrl: 'https://example.test',
+          models: const ['ocr-model'],
+          modelOverrides: const {
+            'ocr-model': {
+              'input': ['text', 'image'],
+            },
+          },
+        ),
+      );
+      await settings.setOcrModel('ocr-provider', 'ocr-model');
+      await settings.setOcrEnabled(true);
+
+      await service.processUserMessagesForApi(
+        apiMessages,
+        settings,
+        const Assistant(id: 'a1', name: 'test'),
+        sourceMessages: [realUser],
+      );
+
+      final media =
+          apiMessages.single[MessageBuilderService.internalMediaPathsKey]
+              as List;
+      // OCR active: image paths filtered out, audio kept as structured ref.
+      expect(media, [
+        encodeInternalMediaRef(uri: '/tmp/clip.mp3', mime: 'audio/mpeg'),
+      ]);
+      expect(apiMessages.single['content'], isNot(contains('[image:')));
+    });
+
+    test('octet-stream mp4 FilePart stays video/mp4 in processUserMessagesForApi', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      await settings.loaded;
+
+      final service = MessageBuilderService(
+        chatService: _FakeChatService({}),
+        contextProvider: _FakeBuildContext(),
+      );
+
+      final realUser = ChatMessage(
+        id: 'u-video',
+        role: 'user',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('clip please'),
+          FilePart(
+            uri: '/tmp/clip.mp4',
+            name: 'clip.mp4',
+            mime: 'application/octet-stream',
+          ),
+        ],
+      );
+      final apiMessages = <Map<String, dynamic>>[
+        {
+          'role': 'user',
+          'content': realUser.content,
+          MessageBuilderService.internalRevisionIdKey: realUser.id,
+          // Seed with raw/stale mime so the rebuild path must re-resolve.
+          MessageBuilderService.internalMediaPathsKey: [
+            encodeInternalMediaRef(
+              uri: '/tmp/clip.mp4',
+              mime: 'application/octet-stream',
+            ),
+          ],
+        },
+      ];
+
+      await service.processUserMessagesForApi(
+        apiMessages,
+        settings,
+        const Assistant(id: 'a1', name: 'test'),
+        sourceMessages: [realUser],
+      );
+
+      final media =
+          apiMessages.single[MessageBuilderService.internalMediaPathsKey]
+              as List;
+      expect(media, [
+        encodeInternalMediaRef(uri: '/tmp/clip.mp4', mime: 'video/mp4'),
+      ]);
     });
   });
 }

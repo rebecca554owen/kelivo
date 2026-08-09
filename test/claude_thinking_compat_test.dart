@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/builtin_tools.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 
 ProviderConfig _claudeConfig(
   String baseUrl, {
@@ -1366,9 +1367,12 @@ data: {"type":"message_stop"}
         ),
         modelId: 'claude-sonnet-4-6',
         messages: [
-          {'role': 'user', 'content': 'inspect'},
+          {
+            'role': 'user',
+            'content': 'inspect',
+            multimodalInternalMediaPathsKey: [file.path],
+          },
         ],
-        userImagePaths: [file.path],
         onToolCall: (name, args, {toolCallId}) async => '{"result":"ok"}',
         stream: false,
       ).toList();
@@ -1385,6 +1389,7 @@ data: {"type":"message_stop"}
       );
       expect(imagePart['source']['media_type'], 'image/png');
       expect(imagePart['source']['data'], 'AQIDBA==');
+      expect(jsonEncode(requestBodies[1]), isNot(contains('[image:')));
     });
   });
 }

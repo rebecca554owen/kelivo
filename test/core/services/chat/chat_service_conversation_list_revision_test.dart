@@ -1,3 +1,4 @@
+import 'package:Kelivo/core/models/message_part.dart';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -179,7 +180,7 @@ void main() {
       );
       await service.beginSendGeneration(
         conversationId: conversation.id,
-        userContent: 'hello',
+        userParts: const [TextPart('hello')],
         modelId: 'model',
         providerId: 'provider',
       );

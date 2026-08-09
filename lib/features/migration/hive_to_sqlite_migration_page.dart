@@ -563,6 +563,9 @@ class _CompleteStep extends StatelessWidget {
         _StatsCard(
           conversations: status.conversations,
           messages: status.messages,
+          converted: status.converted,
+          malformed: status.malformed,
+          missingFiles: status.missingFiles,
         ),
         const SizedBox(height: 12),
         if (status.backupPath != null)
@@ -1328,27 +1331,67 @@ class _BackupFileCard extends StatelessWidget {
 }
 
 class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.conversations, required this.messages});
+  const _StatsCard({
+    required this.conversations,
+    required this.messages,
+    this.converted = 0,
+    this.malformed = 0,
+    this.missingFiles = 0,
+  });
 
   final int conversations;
   final int messages;
+  final int converted;
+  final int malformed;
+  final int missingFiles;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return _Card(
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _Stat(
-              label: l10n.migrationConversationCount,
-              value: conversations,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _Stat(
+                  label: l10n.migrationConversationCount,
+                  value: conversations,
+                ),
+              ),
+              Container(width: 1, height: 42, color: cs.outlineVariant),
+              Expanded(
+                child: _Stat(label: l10n.migrationMessageCount, value: messages),
+              ),
+            ],
           ),
-          Container(width: 1, height: 42, color: cs.outlineVariant),
-          Expanded(
-            child: _Stat(label: l10n.migrationMessageCount, value: messages),
+          const SizedBox(height: 12),
+          Container(height: 1, color: cs.outlineVariant),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _Stat(
+                  label: l10n.migrationConvertedCount,
+                  value: converted,
+                ),
+              ),
+              Container(width: 1, height: 42, color: cs.outlineVariant),
+              Expanded(
+                child: _Stat(
+                  label: l10n.migrationMalformedCount,
+                  value: malformed,
+                ),
+              ),
+              Container(width: 1, height: 42, color: cs.outlineVariant),
+              Expanded(
+                child: _Stat(
+                  label: l10n.migrationMissingFilesCount,
+                  value: missingFiles,
+                ),
+              ),
+            ],
           ),
         ],
       ),

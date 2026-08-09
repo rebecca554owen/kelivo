@@ -47,8 +47,50 @@ Future<_ParsedTextAndImages> _parseTextAndImages(
   keepDisallowedImageText: keepDisallowedImageText,
 );
 
-Future<String> _encodeBase64File(String path, {bool withPrefix = false}) =>
-    ChatApiService._encodeBase64File(path, withPrefix: withPrefix);
+Future<String?> _tryEncodeBase64File(String path, {bool withPrefix = false}) =>
+    ChatApiService._tryEncodeBase64File(path, withPrefix: withPrefix);
+
+/// Prefer explicit MIME from a media-ref map; fall back to path/data-URL inference.
+String _mimeForInternalMediaRef(InternalMediaRef ref) {
+  final explicit = ref.mime?.trim() ?? '';
+  if (explicit.isNotEmpty) return explicit;
+  final path = ref.uri;
+  if (path.startsWith('data:')) return _mimeFromDataUrl(path);
+  return _mimeFromPath(path);
+}
+
+/// Merge `_kelivo_media_paths` (String|Map) with optional plain-string user paths.
+List<InternalMediaRef> _supplementalMediaRefs({
+  required dynamic internalRaw,
+  List<String>? userPaths,
+  bool includeUserPaths = false,
+}) {
+  final refs = List<InternalMediaRef>.of(parseInternalMediaRefs(internalRaw));
+  if (!includeUserPaths || userPaths == null || userPaths.isEmpty) {
+    return refs;
+  }
+  final seen = <String>{for (final ref in refs) ref.uri};
+  for (final path in userPaths) {
+    final trimmed = path.trim();
+    if (trimmed.isEmpty || !seen.add(trimmed)) continue;
+    refs.add((uri: trimmed, mime: null, unavailable: false));
+  }
+  return refs;
+}
+
+/// Encode a local file as a data URL, preferring [explicitMime] when present.
+/// Returns null when the file is missing/unreadable.
+Future<String?> _tryEncodeBase64DataUrl(
+  String path, {
+  String? explicitMime,
+}) async {
+  final b64 = await _tryEncodeBase64File(path, withPrefix: false);
+  if (b64 == null) return null;
+  final mime = (explicitMime != null && explicitMime.trim().isNotEmpty)
+      ? explicitMime.trim()
+      : _mimeFromPath(path);
+  return 'data:$mime;base64,$b64';
+}
 
 bool _isOff(int? budget) => ChatApiService._isOff(budget);
 

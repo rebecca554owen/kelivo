@@ -35,14 +35,35 @@ Stream<ChatStreamChunk> _sendGoogleVertexStream(
   );
 }
 
+/// Whether Vertex media downloads may attach Bearer / X-Goog-User-Project.
+///
+/// Strict Google host allowlist only — never broad *.google.com.
+/// Auth headers are HTTPS-only so tokens are never sent in cleartext on
+/// `http://storage.googleapis.com/...` (or any other allowlisted HTTP URL).
+bool _shouldAttachVertexMediaAuth(Uri uri) {
+  if (uri.scheme.toLowerCase() != 'https') return false;
+  final host = uri.host.trim().toLowerCase();
+  if (host.isEmpty) return false;
+  if (host == 'googleapis.com' || host.endsWith('.googleapis.com')) {
+    return true;
+  }
+  if (host == 'googleusercontent.com' ||
+      host.endsWith('.googleusercontent.com')) {
+    return true;
+  }
+  if (host == 'storage.cloud.google.com') return true;
+  return false;
+}
+
 Future<String> _downloadRemoteAsBase64(
   http.Client client,
   ProviderConfig config,
   String url,
 ) async {
-  final req = http.Request('GET', Uri.parse(url));
-  // Add Vertex auth if enabled
-  if (config.vertexAI == true) {
+  final uri = Uri.parse(url);
+  final req = http.Request('GET', uri);
+  // Attach Vertex auth only for allowlisted Google media hosts.
+  if (config.vertexAI == true && _shouldAttachVertexMediaAuth(uri)) {
     try {
       final token = await _maybeVertexAccessToken(config);
       if (token != null && token.isNotEmpty) {
@@ -187,10 +208,12 @@ Stream<ChatStreamChunk> _sendGoogleVertexClaudeStream({
       }
       continue;
     }
-    nonSystemMessages.add({
-      'role': role.isEmpty ? 'user' : role,
-      'content': m['content'] ?? '',
-    });
+    // Keep media-paths through transform; final request only emits role/content.
+    nonSystemMessages.add(
+      Map<String, dynamic>.from(m)
+        ..remove(multimodalInternalRevisionIdKey)
+        ..['role'] = role.isEmpty ? 'user' : role,
+    );
   }
 
   // Transform messages + images (Force Base64 for Vertex)
@@ -198,62 +221,144 @@ Stream<ChatStreamChunk> _sendGoogleVertexClaudeStream({
   for (int i = 0; i < nonSystemMessages.length; i++) {
     final m = nonSystemMessages[i];
     final isLast = i == nonSystemMessages.length - 1;
-    if (isLast &&
-        (userImagePaths?.isNotEmpty == true) &&
-        (m['role'] == 'user')) {
+    final roleName = (m['role'] ?? 'user').toString();
+    final raw = (m['content'] ?? '').toString();
+    // Semantic media detection only - custom attachment markers are not
+    // recognized. Attachments arrive via structured media-path keys /
+    // userImagePaths, plus Markdown ![](...).
+    final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+    final internalMediaRefs = parseInternalMediaRefs(
+      m[multimodalInternalMediaPathsKey],
+    );
+    // Consume injected media refs for user and assistant history turns.
+    final hasInternalMedia = internalMediaRefs.isNotEmpty;
+    final hasAttachedImages =
+        isLast &&
+        roleName == 'user' &&
+        (userImagePaths?.isNotEmpty == true);
+
+    if ((roleName == 'user' || roleName == 'assistant') &&
+        (hasMarkdownImages || hasInternalMedia || hasAttachedImages)) {
       final parts = <Map<String, dynamic>>[];
-      final text = (m['content'] ?? '').toString();
-      if (text.isNotEmpty) parts.add({'type': 'text', 'text': text});
-      for (final p in userImagePaths!) {
+      final seenSources = <String>{};
+      String normalizeSrc(String src) {
+        if (src.startsWith('http') || src.startsWith('data:')) return src;
+        try {
+          return SandboxPathResolver.fix(src);
+        } catch (_) {
+          return src;
+        }
+      }
+
+      Future<void> addVertexClaudeImage(
+        String source, {
+        String? explicitMime,
+      }) async {
+        final normalized = normalizeSrc(source);
+        if (!seenSources.add(normalized)) return;
         // Vertex AI Claude does not support remote URLs in 'image' blocks generally.
         // We must download and encode.
         String mime;
         String b64;
-        if (p.startsWith('http')) {
+        if (source.startsWith('http://') || source.startsWith('https://')) {
           try {
-            b64 = await _downloadRemoteAsBase64(client, config, p);
-            mime = 'image/png'; // TODO: detect mime from response or url
-            if (p.toLowerCase().endsWith('.jpg') ||
-                p.toLowerCase().endsWith('.jpeg')) {
-              mime = 'image/jpeg';
-            }
-            if (p.toLowerCase().endsWith('.webp')) {
-              mime = 'image/webp';
-            }
-            if (p.toLowerCase().endsWith('.gif')) {
-              mime = 'image/gif';
+            b64 = await _downloadRemoteAsBase64(client, config, source);
+            mime = (explicitMime != null && explicitMime.trim().isNotEmpty)
+                ? explicitMime.trim()
+                : 'image/png'; // TODO: detect mime from response or url
+            if (explicitMime == null || explicitMime.trim().isEmpty) {
+              final lower = source.toLowerCase();
+              if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+                mime = 'image/jpeg';
+              }
+              if (lower.endsWith('.webp')) mime = 'image/webp';
+              if (lower.endsWith('.gif')) mime = 'image/gif';
             }
           } catch (_) {
             parts.add({
               'type': 'text',
-              'text': '(image failed to download) $p',
+              'text': '(image failed to download) $source',
             });
-            continue;
+            return;
           }
-        } else if (p.startsWith('data:')) {
-          mime = _mimeFromDataUrl(p);
-          final idx = p.indexOf('base64,');
+        } else if (source.startsWith('data:')) {
+          mime = (explicitMime != null && explicitMime.trim().isNotEmpty)
+              ? explicitMime.trim()
+              : _mimeFromDataUrl(source);
+          final idx = source.indexOf('base64,');
           if (idx > 0) {
-            b64 = p.substring(idx + 7);
+            b64 = source.substring(idx + 7);
           } else {
-            b64 = ''; // Should not happen for valid data uri
+            return;
           }
         } else {
-          mime = _mimeFromPath(p);
-          b64 = await _encodeBase64File(p, withPrefix: false);
+          mime = (explicitMime != null && explicitMime.trim().isNotEmpty)
+              ? explicitMime.trim()
+              : _mimeFromPath(source);
+          final encoded = await _tryEncodeBase64File(source, withPrefix: false);
+          if (encoded == null) return;
+          b64 = encoded;
         }
         if (b64.isNotEmpty) {
           parts.add({
             'type': 'image',
-            'source': {'type': 'base64', 'media_type': mime, 'data': b64},
+            'source': {
+              'type': 'base64',
+              'media_type': _normalizeClaudeImageMime(mime),
+              'data': b64,
+            },
           });
         }
       }
-      initialMessages.add({'role': 'user', 'content': parts});
+
+      final parsed = await _parseTextAndImages(
+        raw,
+        allowRemoteImages: true,
+        allowLocalImages: true,
+        keepRemoteMarkdownText: true,
+      );
+      if (parsed.text.isNotEmpty) {
+        parts.add({'type': 'text', 'text': parsed.text});
+      }
+      for (final ref in parsed.images) {
+        await addVertexClaudeImage(ref.src);
+      }
+      final supplementalRefs = _supplementalMediaRefs(
+        internalRaw: m[multimodalInternalMediaPathsKey],
+        userPaths: userImagePaths,
+        includeUserPaths: hasAttachedImages,
+      );
+      for (final mediaRef in supplementalRefs) {
+        final mime = _mimeForInternalMediaRef(mediaRef);
+        // Never emit Anthropic image blocks for video/audio or other
+        // non-Claude image MIME types (e.g. video/mp4).
+        if (isVideoMime(mime) ||
+            isAudioMime(mime) ||
+            !_isClaudeSupportedImageMime(mime)) {
+          final uri = mediaRef.uri;
+          final isRemote =
+              uri.startsWith('http://') || uri.startsWith('https://');
+          if (isRemote) {
+            final normalized = normalizeSrc(uri);
+            if (seenSources.add(normalized)) {
+              parts.add({'type': 'text', 'text': uri});
+            }
+          }
+          continue;
+        }
+        await addVertexClaudeImage(
+          mediaRef.uri,
+          explicitMime: mediaRef.mime,
+        );
+      }
+      initialMessages.add({
+        'role': roleName,
+        'content': parts.isEmpty ? raw : parts,
+      });
     } else {
       initialMessages.add({
-        'role': m['role'] ?? 'user',
-        'content': m['content'] ?? '',
+        'role': roleName,
+        'content': raw,
       });
     }
   }

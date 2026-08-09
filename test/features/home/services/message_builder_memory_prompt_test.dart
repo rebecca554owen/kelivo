@@ -7,6 +7,7 @@ import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/models/memory_entry.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -148,6 +149,7 @@ void main() {
     required String id,
     required String conversationId,
     String content = 'hi',
+    List<MessagePart>? parts,
     DateTime? timestamp,
     int? messageOrder,
   }) async {
@@ -155,6 +157,7 @@ void main() {
       id: id,
       role: 'user',
       content: content,
+      parts: parts,
       conversationId: conversationId,
       timestamp: timestamp,
     );
@@ -788,7 +791,10 @@ void main() {
         final message = await seedUserMessage(
           id: 'u1',
           conversationId: conversation.id,
-          content: 'describe this\n[image:/tmp/retry.png]',
+          parts: const [
+            TextPart('describe this'),
+            ImagePart(uri: '/tmp/retry.png', mime: 'image/png'),
+          ],
         );
         await settings.setOcrModel('ocr-provider', 'ocr-model');
         await settings.setOcrEnabled(true);
@@ -844,12 +850,18 @@ void main() {
       final first = await seedUserMessage(
         id: 'u1',
         conversationId: 'conv-batch',
-        content: 'first\n[image:/tmp/first.png]',
+        parts: const [
+          TextPart('first'),
+          ImagePart(uri: '/tmp/first.png', mime: 'image/png'),
+        ],
       );
       final second = await seedUserMessage(
         id: 'u2',
         conversationId: 'conv-batch',
-        content: 'second\n[image:/tmp/second.png]',
+        parts: const [
+          TextPart('second'),
+          ImagePart(uri: '/tmp/second.png', mime: 'image/png'),
+        ],
         messageOrder: 1,
       );
       await chatRepository.putMessagePrompt(

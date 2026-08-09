@@ -9,6 +9,8 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../models/chat_message.dart';
 import '../models/conversation.dart';
+import '../models/message_part.dart';
+import '../utils/multimodal_input_utils.dart';
 import '../models/memory_entry.dart';
 import '../models/user_profile_field.dart';
 import 'app_database.dart';
@@ -1073,7 +1075,7 @@ class ChatDatabaseRepository {
   Future<SandboxPathMigrationResult> migrateSandboxPaths({
     required int targetVersion,
     required String targetRoot,
-    required String Function(String content) rewriteContent,
+    required String Function(String uri) rewriteUri,
     int batchSize = 360,
   }) async {
     if (targetVersion <= 0) {
@@ -1126,14 +1128,11 @@ class ChatDatabaseRepository {
       while (true) {
         final rows = await _db
             .customSelect(
-              "SELECT part_id, payload FROM message_part_rows "
-              "WHERE kind = 'text' AND part_id > ? "
-              'AND (payload LIKE ? OR payload LIKE ?) '
+              'SELECT part_id, kind, payload FROM message_part_rows '
+              "WHERE kind IN ('image', 'file') AND part_id > ? "
               'ORDER BY part_id LIMIT ?;',
               variables: [
                 Variable<int>(cursor),
-                const Variable<String>('%[image:%'),
-                const Variable<String>('%[file:%'),
                 Variable<int>(batchSize),
               ],
             )
@@ -1141,8 +1140,13 @@ class ChatDatabaseRepository {
         if (rows.isEmpty) break;
         for (final row in rows) {
           final partId = row.read<int>('part_id');
+          final kind = row.read<String>('kind');
           final payload = row.read<String>('payload');
-          final rewritten = rewriteContent(payload);
+          final rewritten = _rewriteAttachmentPartUri(
+            kind: kind,
+            payload: payload,
+            rewriteUri: rewriteUri,
+          );
           scanned += 1;
           if (rewritten != payload) {
             await _db.customStatement(
@@ -1171,6 +1175,42 @@ class ChatDatabaseRepository {
         updatedMessages: updated,
       );
     });
+  }
+
+  String _rewriteAttachmentPartUri({
+    required String kind,
+    required String payload,
+    required String Function(String uri) rewriteUri,
+  }) {
+    final part = MessagePart.fromRow(kind, payload);
+    if (part is ImagePart) {
+      final nextUri = rewriteUri(part.uri);
+      if (nextUri == part.uri) return payload;
+      return ImagePart(
+        uri: nextUri,
+        mime: part.mime,
+        assetId: part.assetId,
+        unavailable: _unavailableForRewrittenUri(nextUri),
+      ).encodePayload();
+    }
+    if (part is FilePart) {
+      final nextUri = rewriteUri(part.uri);
+      if (nextUri == part.uri) return payload;
+      return FilePart(
+        uri: nextUri,
+        name: part.name,
+        mime: part.mime,
+        assetId: part.assetId,
+        unavailable: _unavailableForRewrittenUri(nextUri),
+      ).encodePayload();
+    }
+    return payload;
+  }
+
+  /// Remote/data URIs stay available; local paths follow [File.existsSync].
+  bool _unavailableForRewrittenUri(String nextUri) {
+    if (isRemoteOrDataUri(nextUri)) return false;
+    return !File(nextUri).existsSync();
   }
 
   Future<bool> needsAssetReferenceBackfill({
@@ -1224,15 +1264,10 @@ class ChatDatabaseRepository {
               SELECT 1 FROM asset_reference_dirty_rows d
               WHERE d.revision_id = m.id
             ) OR (? AND (
-              m.role = 'user' OR
               EXISTS (
                 SELECT 1 FROM message_part_rows p
                 WHERE p.revision_id = m.id
-                  AND p.kind = 'text'
-                  AND (
-                    p.payload LIKE '%[image:%' OR
-                    p.payload LIKE '%[file:%'
-                  )
+                  AND p.kind IN ('image', 'file')
               ) OR
               EXISTS (
                 SELECT 1 FROM message_asset_rows a WHERE a.revision_id = m.id
@@ -1519,6 +1554,38 @@ class ChatDatabaseRepository {
     );
   }
 
+  Future<int> getImagePartCount() async {
+    return _observer.measure(
+      ChatDatabaseOperation.queryImagePartCount,
+      () async {
+        final count = _db.messagePartRows.partId.count();
+        final row =
+            await (_db.selectOnly(_db.messagePartRows)
+                  ..addColumns([count])
+                  ..where(_db.messagePartRows.kind.equals('image')))
+                .getSingle();
+        return row.read(count) ?? 0;
+      },
+      resultCount: (count) => count,
+    );
+  }
+
+  Future<int> getFilePartCount() async {
+    return _observer.measure(
+      ChatDatabaseOperation.queryFilePartCount,
+      () async {
+        final count = _db.messagePartRows.partId.count();
+        final row =
+            await (_db.selectOnly(_db.messagePartRows)
+                  ..addColumns([count])
+                  ..where(_db.messagePartRows.kind.equals('file')))
+                .getSingle();
+        return row.read(count) ?? 0;
+      },
+      resultCount: (count) => count,
+    );
+  }
+
   /// When true, the worker-isolate digest path throws before spawn so tests can
   /// assert the Drift fallback still completes validation.
   @visibleForTesting
@@ -1773,6 +1840,15 @@ class ChatDatabaseRepository {
       "DELETE FROM message_part_rows "
       "WHERE revision_id = ? AND kind = 'text';",
       [revisionId],
+    );
+  }
+
+  @visibleForTesting
+  Future<void> deletePartsByKindForTest(String revisionId, String kind) async {
+    await _db.customStatement(
+      'DELETE FROM message_part_rows '
+      'WHERE revision_id = ? AND kind = ?',
+      [revisionId, kind],
     );
   }
 
@@ -3548,8 +3624,7 @@ class ChatDatabaseRepository {
     List<Map<String, dynamic>>? toolEvents,
     bool preserveUnchangedToolParts = false,
   }) async {
-    if (message.content.contains('[image:') ||
-        message.content.contains('[file:')) {
+    if (_messageHasAttachmentParts(message)) {
       await markMessageAssetReferencesDirty(message.id);
     }
     final preservedToolEvents = toolEvents ?? await getToolEvents(message.id);
@@ -3573,7 +3648,11 @@ class ChatDatabaseRepository {
     if (effectiveReasoningText != null && effectiveReasoningText.isNotEmpty) {
       message = message.copyWith(reasoningText: effectiveReasoningText);
     }
-    if (preserveUnchangedToolParts && preservedToolEvents.isNotEmpty) {
+    // Attachment-bearing messages own interleaved body ordinals; the
+    // text/reasoning fast path cannot preserve them safely.
+    if (preserveUnchangedToolParts &&
+        preservedToolEvents.isNotEmpty &&
+        !_messageHasAttachmentParts(message)) {
       final keptToolParts = await _unchangedToolPartCount(
         message,
         preservedToolEvents,
@@ -3620,19 +3699,22 @@ class ChatDatabaseRepository {
             ),
           );
     }
-    await _db
-        .into(_db.messagePartRows)
-        .insert(
-          MessagePartRowsCompanion.insert(
-            conversationId: message.conversationId,
-            revisionId: message.id,
-            ordinal: ordinal,
-            kind: 'text',
-            payload: message.content,
-            createdAt: message.timestamp,
-            updatedAt: updatedAt,
-          ),
-        );
+    final bodyParts = _bodyPartsForPersistence(message);
+    for (final part in bodyParts) {
+      await _db
+          .into(_db.messagePartRows)
+          .insert(
+            MessagePartRowsCompanion.insert(
+              conversationId: message.conversationId,
+              revisionId: message.id,
+              ordinal: ordinal++,
+              kind: part.kind,
+              payload: part.encodePayload(),
+              createdAt: message.timestamp,
+              updatedAt: updatedAt,
+            ),
+          );
+    }
   }
 
   /// Returns the number of persisted tool_call parts when they already match
@@ -3650,6 +3732,9 @@ class ChatDatabaseRepository {
               ..orderBy([(row) => OrderingTerm.asc(row.ordinal)]))
             .get();
     if (existing.isEmpty) return null;
+    if (existing.any((part) => part.kind == 'image' || part.kind == 'file')) {
+      return null;
+    }
     final reasoning = message.reasoningText;
     final hasReasoning = reasoning != null && reasoning.isNotEmpty;
     final hasPersistedReasoning = existing.any(
@@ -3706,34 +3791,43 @@ class ChatDatabaseRepository {
           );
     }
     ordinal += toolPartCount;
-    await _db
-        .into(_db.messagePartRows)
-        .insert(
-          MessagePartRowsCompanion.insert(
-            conversationId: message.conversationId,
-            revisionId: message.id,
-            ordinal: ordinal,
-            kind: 'text',
-            payload: message.content,
-            createdAt: message.timestamp,
-            updatedAt: updatedAt,
-          ),
-        );
+    final bodyParts = _bodyPartsForPersistence(message);
+    for (final part in bodyParts) {
+      await _db
+          .into(_db.messagePartRows)
+          .insert(
+            MessagePartRowsCompanion.insert(
+              conversationId: message.conversationId,
+              revisionId: message.id,
+              ordinal: ordinal++,
+              kind: part.kind,
+              payload: part.encodePayload(),
+              createdAt: message.timestamp,
+              updatedAt: updatedAt,
+            ),
+          );
+    }
   }
 
   Future<AppendedMessageVersion?> appendMessageVersion({
     required String messageId,
-    required String content,
+    String content = '',
+    List<MessagePart>? parts,
   }) {
     return _observer.measure(
       ChatDatabaseOperation.commandAppendVersion,
-      () => _appendMessageVersion(messageId: messageId, content: content),
+      () => _appendMessageVersion(
+        messageId: messageId,
+        content: content,
+        parts: parts,
+      ),
     );
   }
 
   Future<AppendedMessageVersion?> _appendMessageVersion({
     required String messageId,
     required String content,
+    List<MessagePart>? parts,
   }) async {
     return _db.transaction(() async {
       final originalRow = await (_db.select(
@@ -3762,9 +3856,22 @@ class ChatDatabaseRepository {
                 ))
               .getSingle();
       final nextVersion = (maxVersionRow.read(maxVersion) ?? -1) + 1;
+      // Content-only append must load original parts first and keep non-text
+      // attachments (ImagePart/FilePart/etc.) on the new revision, preserving
+      // ordinal ([Image, Text] stays [Image, Text(new)], not [Text(new), Image]).
+      final List<MessagePart> resolvedParts;
+      if (parts != null) {
+        resolvedParts = parts;
+      } else {
+        final original = await _messageFromRowWithParts(originalRow);
+        resolvedParts = ChatMessage.partsWithReplacedText(
+          original.parts,
+          content,
+        );
+      }
       final message = ChatMessage(
         role: originalRow.role,
-        content: content,
+        parts: resolvedParts,
         conversationId: originalRow.conversationId,
         modelId: originalRow.modelId,
         providerId: originalRow.providerId,
@@ -4386,8 +4493,7 @@ class ChatDatabaseRepository {
     await _db.customStatement(
       'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
       'SELECT DISTINCT revision_id FROM main.message_part_rows '
-      'WHERE conversation_id = ? AND kind = \'text\' '
-      "AND (payload LIKE '%[image:%' OR payload LIKE '%[file:%');",
+      "WHERE conversation_id = ? AND kind IN ('image', 'file');",
       [targetId],
     );
   }
@@ -4455,9 +4561,7 @@ class ChatDatabaseRepository {
     // bulk mark stays as cheap insurance for the asset backfill invariant.
     await _markMessageAssetReferencesDirtyBatch([
       for (final entry in messages)
-        if (entry.message.content.contains('[image:') ||
-            entry.message.content.contains('[file:'))
-          entry.message.id,
+        if (_messageHasAttachmentParts(entry.message)) entry.message.id,
     ]);
   }
 
@@ -5323,32 +5427,30 @@ class ChatDatabaseRepository {
     ];
   }
 
-  /// Body text and reasoning come only from [authoritativeParts]. Missing or
-  /// empty parts yield empty content.
+  /// Parts come only from [authoritativeParts] in ordinal order. Missing or
+  /// empty parts yield empty content via the derived [ChatMessage.content].
   ChatMessage _messageFromRow(
     MessageRow row, {
     List<MessagePartRow>? authoritativeParts,
   }) {
-    final parts = authoritativeParts ?? const <MessagePartRow>[];
-    final text = parts
-        .where((part) => part.kind == 'text')
-        .map((part) => part.payload)
-        .join();
-    final reasoningParts = parts
-        .where((part) => part.kind == 'reasoning')
-        .map((part) => part.payload)
-        .toList(growable: false);
+    final partRows = authoritativeParts ?? const <MessagePartRow>[];
+    final parts = <MessagePart>[
+      for (final part in partRows) MessagePart.fromRow(part.kind, part.payload),
+    ];
+    final reasoningParts = parts.whereType<ReasoningPart>().toList(growable: false);
     return ChatMessage(
       id: row.id,
       role: row.role,
-      content: text,
+      parts: parts,
       timestamp: row.timestamp,
       modelId: row.modelId,
       providerId: row.providerId,
       totalTokens: row.totalTokens,
       conversationId: row.conversationId,
       isStreaming: row.isStreaming,
-      reasoningText: reasoningParts.isEmpty ? null : reasoningParts.join(),
+      reasoningText: reasoningParts.isEmpty
+          ? null
+          : reasoningParts.map((part) => part.text).join(),
       reasoningStartAt: row.reasoningStartAt,
       reasoningFinishedAt: row.reasoningFinishedAt,
       translation: row.translation,
@@ -5360,6 +5462,28 @@ class ChatDatabaseRepository {
       cachedTokens: row.cachedTokens,
       durationMs: row.durationMs,
     );
+  }
+
+  bool _messageHasAttachmentParts(ChatMessage message) {
+    return message.parts.any((part) => part is ImagePart || part is FilePart);
+  }
+
+  /// Body parts persisted after reasoning/tool_call rows. Reasoning and
+  /// tool_call continue to be sourced from [ChatMessage.reasoningText] /
+  /// tool-event arguments so streaming overlays stay equivalent.
+  List<MessagePart> _bodyPartsForPersistence(ChatMessage message) {
+    final body = <MessagePart>[
+      for (final part in message.parts)
+        if (part is TextPart ||
+            part is ImagePart ||
+            part is FilePart ||
+            part is UnknownPart)
+          part,
+    ];
+    if (body.isEmpty) {
+      return <MessagePart>[TextPart(message.content)];
+    }
+    return body;
   }
 
   DateTime _dateTimeFromSqlite(Object? value) {

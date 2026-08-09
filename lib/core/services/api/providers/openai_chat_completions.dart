@@ -48,6 +48,30 @@ Map<String, dynamic> _copyChatCompletionMessage(Map<String, dynamic> m) {
     }
   }
 
+  // Keep structured media refs across tool-followup rebuilds so later
+  // Chat Completions builders can still emit image_url / multimodal parts.
+  final mediaPaths = m[multimodalInternalMediaPathsKey];
+  if (mediaPaths != null) {
+    if (mediaPaths is List) {
+      out[multimodalInternalMediaPathsKey] = [
+        for (final item in mediaPaths)
+          if (item is Map)
+            Map<String, dynamic>.from(item)
+          else
+            item,
+      ];
+    } else if (mediaPaths is Map) {
+      out[multimodalInternalMediaPathsKey] =
+          Map<String, dynamic>.from(mediaPaths);
+    } else {
+      out[multimodalInternalMediaPathsKey] = mediaPaths;
+    }
+  }
+  final revisionId = m[multimodalInternalRevisionIdKey];
+  if (revisionId != null) {
+    out[multimodalInternalRevisionIdKey] = revisionId;
+  }
+
   return out;
 }
 

@@ -242,7 +242,7 @@ CREATE TABLE message_part_rows (
   conversation_id TEXT NOT NULL,
   revision_id TEXT NOT NULL,
   ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
-  kind TEXT NOT NULL CHECK (kind IN ('text', 'reasoning', 'tool_call')),
+  kind TEXT NOT NULL CHECK (kind IN ('text', 'reasoning', 'tool_call', 'image', 'file')),
   payload TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
@@ -370,7 +370,7 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
     _insertConversation(database, 'd4', 'Long streaming Markdown');
     final targetBytes = smoke ? 32 << 10 : 1 << 20;
     const block =
-        '''# Streaming\n```dart\nvoid main() {}\n```\n|列|value|\n|-|-|\n|中文|English|\n```mermaid\ngraph TD; A-->B;\n```\n[image:/fixture/images/stream.png]\n''';
+        '''# Streaming\n```dart\nvoid main() {}\n```\n|列|value|\n|-|-|\n|中文|English|\n```mermaid\ngraph TD; A-->B;\n```\n![stream](/fixture/images/stream.png)\n''';
     final buffer = StringBuffer(block);
     while (buffer.length < targetBytes) {
       buffer.writeln('Streaming plain text 中文 English seed=$seed.');
@@ -401,22 +401,24 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
     final bitmap = image.Image(width: 3840, height: 2160);
     image.fill(bitmap, color: image.ColorRgb8(24, 96, 180));
     final png = image.encodePng(bitmap, level: 1);
-    final content = StringBuffer('# Renderer fixture\n');
+    final imagePaths = <String>[];
     for (var index = 0; index < imageCount; index++) {
       final file = File(p.join(assetDirectory.path, 'image_$index.png'));
       await file.writeAsBytes(png, flush: index == imageCount - 1);
-      content.writeln('[image:${file.path}]');
+      imagePaths.add(file.path);
     }
+    final filePaths = <String>[];
+    final fileNames = <String>[];
     final attachmentCount = smoke ? 2 : 100;
     for (var index = 0; index < attachmentCount; index++) {
       final file = File(p.join(assetDirectory.path, 'attachment_$index.bin'));
       await file.writeAsBytes(
         List<int>.generate(1024, (offset) => (index + offset) & 0xff),
       );
-      content.writeln(
-        '[file:${file.path}|attachment_$index.bin|application/octet-stream]',
-      );
+      filePaths.add(file.path);
+      fileNames.add('attachment_$index.bin');
     }
+    final content = StringBuffer('# Renderer fixture\n');
     content.writeln('|index|中文|value|');
     content.writeln('|-:|:-|:-|');
     for (var index = 0; index < tableRows; index++) {
@@ -435,6 +437,9 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
       groupId: 'd5-slot',
       version: 0,
       content: content.toString(),
+      imageUris: imagePaths,
+      fileUris: filePaths,
+      fileNames: fileNames,
     );
   }
 
@@ -485,8 +490,11 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
         order: 2,
         groupId: 'missing-attachment-slot',
         version: 0,
-        content:
-            '[file:/missing/attachment.bin|missing|application/octet-stream]',
+        content: 'missing attachment owner',
+        fileUris: const ['/missing/attachment.bin'],
+        fileNames: const ['missing'],
+        fileMimes: const ['application/octet-stream'],
+        fileUnavailable: const [true],
       );
       _insertMessage(
         database,
@@ -567,6 +575,11 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
     required int version,
     required String content,
     String? reasoning,
+    List<String> imageUris = const <String>[],
+    List<String> fileUris = const <String>[],
+    List<String> fileNames = const <String>[],
+    List<String> fileMimes = const <String>[],
+    List<bool> fileUnavailable = const <bool>[],
   }) {
     final ts = seed + order;
     database.execute(
@@ -576,20 +589,46 @@ CREATE INDEX idx_conversations_assistant ON conversation_rows(assistant_id);
       [id, conversationId, 'assistant', ts, groupId, version, order],
     );
     var ordinal = 0;
-    if (reasoning != null && reasoning.isNotEmpty) {
+    void insertPart(String kind, String payload) {
       database.execute(
         'INSERT INTO message_part_rows '
         '(conversation_id, revision_id, ordinal, kind, payload, '
         'created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);',
-        [conversationId, id, ordinal++, 'reasoning', reasoning, ts, ts],
+        [conversationId, id, ordinal++, kind, payload, ts, ts],
       );
     }
-    database.execute(
-      'INSERT INTO message_part_rows '
-      '(conversation_id, revision_id, ordinal, kind, payload, '
-      'created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);',
-      [conversationId, id, ordinal, 'text', content, ts, ts],
-    );
+
+    if (reasoning != null && reasoning.isNotEmpty) {
+      insertPart('reasoning', reasoning);
+    }
+    if (content.isNotEmpty) {
+      insertPart('text', content);
+    }
+    for (final uri in imageUris) {
+      insertPart(
+        'image',
+        jsonEncode({'uri': uri, 'mime': 'image/png'}),
+      );
+    }
+    for (var index = 0; index < fileUris.length; index++) {
+      final mime = index < fileMimes.length
+          ? fileMimes[index]
+          : 'application/octet-stream';
+      final name = index < fileNames.length
+          ? fileNames[index]
+          : p.basename(fileUris[index]);
+      final unavailable =
+          index < fileUnavailable.length && fileUnavailable[index];
+      insertPart(
+        'file',
+        jsonEncode({
+          'uri': fileUris[index],
+          'name': name,
+          'mime': mime,
+          if (unavailable) 'unavailable': true,
+        }),
+      );
+    }
   }
 }
 

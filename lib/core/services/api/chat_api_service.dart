@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -55,6 +56,22 @@ class ChatApiService {
   static const String _aihubmixAppCode = 'ZKRT3588';
   static final Map<String, CancelToken> _activeCancelTokens =
       <String, CancelToken>{};
+
+
+  @visibleForTesting
+  static bool shouldAttachVertexMediaAuthForTest(Uri uri) =>
+      _shouldAttachVertexMediaAuth(uri);
+
+  @visibleForTesting
+  static String normalizeClaudeImageMimeForTest(String mime) =>
+      _normalizeClaudeImageMime(mime);
+
+  @visibleForTesting
+  static bool isLongCatHostForTest(String baseUrl) => _isLongCatHost(baseUrl);
+
+  @visibleForTesting
+  static bool shouldIncludeStreamingUsageOptionsForTest(String host) =>
+      _shouldIncludeStreamingUsageOptions(host);
 
   static bool supportsOpenAIImagesApiRouting(
     ProviderConfig config,
@@ -236,9 +253,8 @@ class ChatApiService {
   }) async {
     if (raw.isEmpty) return const _ParsedTextAndImages('', <_ImageRef>[]);
     final mdImg = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
-    // Match custom inline image markers like: [image:/absolute/path.png]
-    // Use a single backslash in a raw string to escape '[' and ']' in regex.
-    final customImg = RegExp(r"\[image:(.+?)\]");
+    // Custom attachment markers are intentionally not recognized here.
+    // Attachments arrive via structured parts / media-path keys.
     final images = <_ImageRef>[];
     final buf = StringBuffer();
     int i = 0;
@@ -310,7 +326,6 @@ class ChatApiService {
       }
 
       final m1 = mdImg.matchAsPrefix(raw, i);
-      final m2 = customImg.matchAsPrefix(raw, i);
       if (m1 != null) {
         final full = raw.substring(m1.start, m1.end);
         final url = (m1.group(1) ?? '').trim();
@@ -380,55 +395,6 @@ class ChatApiService {
         i = m1.end;
         continue;
       }
-      if (m2 != null) {
-        final full = raw.substring(m2.start, m2.end);
-        final p = (m2.group(1) ?? '').trim();
-        if (p.isEmpty) {
-          buf.write(full);
-          i = m2.end;
-          continue;
-        }
-        if (p.startsWith('data:')) {
-          if (allowDataImages) {
-            images.add(_ImageRef('data', p));
-          } else if (keepDisallowedImageText) {
-            buf.write(full);
-          }
-          i = m2.end;
-          continue;
-        }
-        if (p.startsWith('http://') || p.startsWith('https://')) {
-          if (!allowRemoteImages) {
-            if (keepDisallowedImageText) buf.write(full);
-            i = m2.end;
-            continue;
-          }
-          images.add(_ImageRef('url', p));
-          i = m2.end;
-          continue;
-        }
-        if (!allowLocalImages) {
-          if (keepDisallowedImageText) buf.write(full);
-          i = m2.end;
-          continue;
-        }
-        try {
-          final fixed = SandboxPathResolver.fix(p);
-          final file = File(fixed);
-          if (!file.existsSync()) {
-            buf.write(full);
-            i = m2.end;
-            continue;
-          }
-        } catch (_) {
-          buf.write(full);
-          i = m2.end;
-          continue;
-        }
-        images.add(_ImageRef('path', p));
-        i = m2.end;
-        continue;
-      }
       buf.write(raw[i]);
       i++;
     }
@@ -448,6 +414,22 @@ class ChatApiService {
       return 'data:$mime;base64,$b64';
     }
     return b64;
+  }
+
+  /// Like [_encodeBase64File], but returns null for missing/unreadable files
+  /// so provider request builders can skip unavailable attachments.
+  static Future<String?> _tryEncodeBase64File(
+    String path, {
+    bool withPrefix = false,
+  }) async {
+    try {
+      final fixed = SandboxPathResolver.fix(path);
+      final file = File(fixed);
+      if (!await file.exists()) return null;
+      return _encodeBase64File(fixed, withPrefix: withPrefix);
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _textFromContentParts(dynamic content) {
@@ -1459,7 +1441,8 @@ class ChatApiService {
 class _ImageRef {
   final String kind; // 'data' | 'path' | 'url'
   final String src;
-  const _ImageRef(this.kind, this.src);
+  final String? mime;
+  const _ImageRef(this.kind, this.src, {this.mime});
 }
 
 class _ParsedTextAndImages {

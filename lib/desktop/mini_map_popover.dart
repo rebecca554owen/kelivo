@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../core/models/chat_message.dart';
+import '../core/models/message_part.dart';
 
 Future<String?> showDesktopMiniMapPopover(
   BuildContext context, {
@@ -281,6 +282,8 @@ class _MiniMapListState extends State<_MiniMapList> {
   }
 
   String _oneLine(String s) {
+    // Attachment markers are no longer stripped here; summaries are built
+    // from TextPart only by callers.
     var t = s
         .replaceAll(
           RegExp(
@@ -289,8 +292,6 @@ class _MiniMapListState extends State<_MiniMapList> {
           ),
           '',
         )
-        .replaceAll(RegExp(r"\[image:[^\]]+\]"), "")
-        .replaceAll(RegExp(r"\[file:[^\]]+\]"), "")
         .replaceAll('\n', ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
@@ -433,8 +434,22 @@ class _MiniMapRowState extends State<_MiniMapRow> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final userText = widget.user?.content ?? '';
-    final asstText = widget.assistant?.content ?? '';
+    final userText = widget.user == null
+        ? ''
+        : widget.toOneLine(
+            widget.user!.parts
+                .whereType<TextPart>()
+                .map((part) => part.text)
+                .join(),
+          );
+    final asstText = widget.assistant == null
+        ? ''
+        : widget.toOneLine(
+            widget.assistant!.parts
+                .whereType<TextPart>()
+                .map((part) => part.text)
+                .join(),
+          );
     final userBorder = cs.primary.withValues(alpha: isDark ? 0.45 : 0.35);
 
     final assistantSelectedBg = (isDark
@@ -481,7 +496,7 @@ class _MiniMapRowState extends State<_MiniMapRow> {
                       : null,
                 ),
                 child: Text(
-                  userText.isNotEmpty ? widget.toOneLine(userText) : ' ',
+                  userText.isNotEmpty ? userText : ' ',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -530,7 +545,7 @@ class _MiniMapRowState extends State<_MiniMapRow> {
                       : null,
                 ),
                 child: Text(
-                  asstText.isNotEmpty ? widget.toOneLine(asstText) : ' ',
+                  asstText.isNotEmpty ? asstText : ' ',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

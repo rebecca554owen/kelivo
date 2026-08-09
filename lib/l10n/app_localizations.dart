@@ -12541,6 +12541,24 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get migrationMessageCount;
 
+  /// No description provided for @migrationConvertedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get migrationConvertedCount;
+
+  /// No description provided for @migrationMalformedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Malformed'**
+  String get migrationMalformedCount;
+
+  /// No description provided for @migrationMissingFilesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing files'**
+  String get migrationMissingFilesCount;
+
   /// No description provided for @migrationRestartButton.
   ///
   /// In en, this message translates to:

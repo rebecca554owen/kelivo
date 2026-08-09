@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -44,7 +45,9 @@ void main() {
               id: 'path',
               conversationId: 'conversation',
               role: 'user',
-              content: '[image:/old/sandboxoldtoken/a.png]',
+              parts: const [
+                ImagePart(uri: '/old/sandboxoldtoken/a.png'),
+              ],
             ),
             messageOrder: 1,
           ),
@@ -64,34 +67,33 @@ void main() {
         targetVersion: 1,
         targetRoot: '/new',
         batchSize: 1,
-        rewriteContent: (content) =>
-            content.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
+        rewriteUri: (uri) =>
+            uri.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
       );
 
       expect(result.ran, isTrue);
       expect(result.scannedMessages, 1);
       expect(result.updatedMessages, 1);
-      expect(
-        (await repository.getMessagesRange(
-          'conversation',
-          start: 0,
-          limit: 10,
-        )).last.content,
-        '[image:/new/sandboxnewtoken/a.png]',
-      );
+      final migrated = (await repository.getMessagesRange(
+        'conversation',
+        start: 0,
+        limit: 10,
+      )).last;
+      expect(migrated.parts.whereType<ImagePart>().single.uri,
+          '/new/sandboxnewtoken/a.png');
     });
 
     test('同版本后续启动不读取候选消息', () async {
       await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/same',
-        rewriteContent: (content) => content,
+        rewriteUri: (uri) => uri,
       );
 
       final result = await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/same',
-        rewriteContent: (_) => throw StateError('must_not_scan'),
+        rewriteUri: (_) => throw StateError('must_not_scan'),
       );
 
       expect(result.ran, isFalse);
@@ -103,7 +105,7 @@ void main() {
         repository.migrateSandboxPaths(
           targetVersion: 1,
           targetRoot: '/new',
-          rewriteContent: (_) => throw StateError('rewrite_failed'),
+          rewriteUri: (_) => throw StateError('rewrite_failed'),
         ),
         throwsA(
           isA<StateError>().having(
@@ -117,8 +119,8 @@ void main() {
       final retry = await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/new',
-        rewriteContent: (content) =>
-            content.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
+        rewriteUri: (uri) =>
+            uri.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
       );
       expect(retry.ran, isTrue);
       expect(retry.updatedMessages, 1);
@@ -128,13 +130,13 @@ void main() {
       await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/first',
-        rewriteContent: (content) => content,
+        rewriteUri: (uri) => uri,
       );
 
       final result = await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/second',
-        rewriteContent: (content) => content.replaceFirst(
+        rewriteUri: (uri) => uri.replaceFirst(
           '/old/sandboxoldtoken/',
           '/second/sandboxnewtoken/',
         ),
@@ -144,25 +146,29 @@ void main() {
       expect(result.updatedMessages, 1);
     });
 
-    test('路径重写后 FTS 按新路径可搜、旧路径不可搜且索引完整', () async {
+    test('路径重写后 ImagePart URI 更新且 FTS 索引完整', () async {
       await repository.migrateSandboxPaths(
         targetVersion: 1,
         targetRoot: '/new',
-        rewriteContent: (content) =>
-            content.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
+        rewriteUri: (uri) =>
+            uri.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
       );
 
+      final migrated = (await repository.getMessagesRange(
+        'conversation',
+        start: 0,
+        limit: 10,
+      )).last;
+      expect(
+        migrated.parts.whereType<ImagePart>().single.uri,
+        '/new/sandboxnewtoken/a.png',
+      );
+      // Text remains searchable; attachment URIs live outside text FTS.
       expect(
         (await repository.searchConversationMatches(
-          tokens: const ['sandboxnewtoken'],
+          tokens: const ['plain'],
         )).single.messageId,
-        'path',
-      );
-      expect(
-        await repository.searchConversationMatches(
-          tokens: const ['sandboxoldtoken'],
-        ),
-        isEmpty,
+        'plain',
       );
 
       // Force FTS setup path, then integrity-check on a raw connection.
@@ -182,18 +188,70 @@ void main() {
       }
     });
 
+
+    test('stale unavailable cleared when rewritten local file exists', () async {
+      final newFile = File('${directory.path}/sandboxnewtoken/a.png');
+      await newFile.parent.create(recursive: true);
+      await newFile.writeAsBytes(const <int>[0x89, 0x50, 0x4E, 0x47]);
+
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: 'unavailable-conversation',
+            title: 'Unavailable',
+            messageIds: const ['unavailable-path'],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: 'unavailable-path',
+              conversationId: 'unavailable-conversation',
+              role: 'user',
+              parts: [
+                ImagePart(
+                  uri: '/old/sandboxoldtoken/a.png',
+                  unavailable: true,
+                ),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      await repository.migrateSandboxPaths(
+        targetVersion: 1,
+        targetRoot: directory.path,
+        rewriteUri: (uri) => uri.replaceFirst(
+          '/old/sandboxoldtoken/',
+          '${directory.path}/sandboxnewtoken/',
+        ),
+      );
+
+      final migrated = (await repository.getMessagesRange(
+        'unavailable-conversation',
+        start: 0,
+        limit: 10,
+      )).single;
+      final image = migrated.parts.whereType<ImagePart>().single;
+      expect(image.uri, newFile.path);
+      expect(image.unavailable, isFalse);
+    });
     test('拒绝高于当前实现的已有 migration version', () async {
       await repository.migrateSandboxPaths(
         targetVersion: 2,
         targetRoot: '/future',
-        rewriteContent: (content) => content,
+        rewriteUri: (uri) => uri,
       );
 
       await expectLater(
         repository.migrateSandboxPaths(
           targetVersion: 1,
           targetRoot: '/current',
-          rewriteContent: (content) => content,
+          rewriteUri: (uri) => uri,
         ),
         throwsA(
           isA<StateError>().having(

@@ -8,6 +8,7 @@ import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/memory_entry.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/memory_provider_v2.dart';
@@ -213,12 +214,15 @@ void main() {
   });
 
   group('buildConversationText', () {
-    test('uses zh/en prefixes and strips markers', () {
+    test('uses zh/en prefixes and TextPart text only', () {
       final msgs = [
         ChatMessage(
           role: 'user',
-          content: 'hello [image:/tmp/a.png] world',
           conversationId: 'c',
+          parts: const [
+            TextPart('hello  world'),
+            ImagePart(uri: '/tmp/a.png'),
+          ],
         ),
         ChatMessage(role: 'assistant', content: 'hi', conversationId: 'c'),
         ChatMessage(role: 'tool', content: 'ignored', conversationId: 'c'),
@@ -229,6 +233,8 @@ void main() {
       );
       expect(zh, contains('用户：'));
       expect(zh, contains('助手：'));
+      expect(zh, contains('hello  world'));
+      expect(zh, isNot(contains('/tmp/a.png')));
       expect(zh, isNot(contains('[image:')));
       expect(zh, isNot(contains('ignored')));
 

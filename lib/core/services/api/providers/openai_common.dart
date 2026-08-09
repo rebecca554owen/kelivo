@@ -400,23 +400,19 @@ void _sanitizeOpenAIGpt5SamplingParams(
 }
 
 bool _isLongCatHost(String baseUrl) {
-  final host =
-      Uri.tryParse(baseUrl)?.host.toLowerCase() ?? baseUrl.toLowerCase();
-  return host.contains('longcat');
+  // Callers may pass a full URL or a bare hostname (e.g. `api.longcat.chat`).
+  // `Uri.tryParse('api.longcat.chat')?.host` is '' (not null), so never rely on
+  // `??` fallback alone — normalize via an explicit https:// prefix when needed.
+  final raw = baseUrl.trim().toLowerCase();
+  if (raw.isEmpty) return false;
+  final parsed = Uri.tryParse(raw.contains('://') ? raw : 'https://$raw');
+  final host = (parsed?.host ?? '').toLowerCase();
+  if (host.isNotEmpty) return host.contains('longcat');
+  return raw.contains('longcat');
 }
 
-bool _shouldUseLongCatOmniPayload(
-  ProviderConfig config,
-  String upstreamModelId,
-) {
-  return config.useResponseApi != true && isLongCatOmniModelId(upstreamModelId);
-}
-
-bool _shouldIncludeStreamingUsageOptions(
-  String host, {
-  required String upstreamModelId,
-}) {
-  if (isLongCatOmniModelId(upstreamModelId) || _isLongCatHost(host)) {
+bool _shouldIncludeStreamingUsageOptions(String host) {
+  if (_isLongCatHost(host)) {
     return false;
   }
   return !host.contains('mistral.ai') && !host.contains('openrouter');
@@ -452,13 +448,9 @@ void _maybeAddStreamingUsageOptions(
   required bool stream,
   required ProviderConfig config,
   required String host,
-  required String upstreamModelId,
 }) {
   if (!stream || config.useResponseApi == true) return;
-  if (_shouldIncludeStreamingUsageOptions(
-    host,
-    upstreamModelId: upstreamModelId,
-  )) {
+  if (_shouldIncludeStreamingUsageOptions(host)) {
     body['stream_options'] = {'include_usage': true};
   }
 }
@@ -485,201 +477,6 @@ TokenUsage? _mergeOpenAICompatibleUsage(TokenUsage? current, dynamic rawUsage) {
   );
 }
 
-String _stripDataUrlPrefix(String dataUrl) {
-  final commaIndex = dataUrl.indexOf(',');
-  if (commaIndex >= 0 && commaIndex + 1 < dataUrl.length) {
-    return dataUrl.substring(commaIndex + 1);
-  }
-  return dataUrl;
-}
-
-String? _longCatAudioFormatForMimeOrPath(String source, {String? mime}) {
-  final normalizedMime = (mime ?? '').toLowerCase();
-  final normalizedSource = source.toLowerCase();
-  if (normalizedMime.contains('mpeg') || normalizedSource.endsWith('.mp3')) {
-    return 'mp3';
-  }
-  if (normalizedMime.contains('wav') || normalizedSource.endsWith('.wav')) {
-    return 'wav';
-  }
-  if (normalizedMime.endsWith('pcm16') || normalizedSource.endsWith('.pcm16')) {
-    return 'pcm16';
-  }
-  if (normalizedMime.endsWith('/pcm') || normalizedSource.endsWith('.pcm')) {
-    return 'pcm';
-  }
-  return null;
-}
-
-String _normalizeOpenAICompatibleSource(String src) {
-  if (src.startsWith('http://') ||
-      src.startsWith('https://') ||
-      src.startsWith('data:')) {
-    return src;
-  }
-  try {
-    return SandboxPathResolver.fix(src);
-  } catch (_) {
-    return src;
-  }
-}
-
-Future<Map<String, dynamic>?> _buildLongCatOmniAttachmentPart(
-  String source,
-) async {
-  final normalized = source.trim();
-  if (normalized.isEmpty) return null;
-
-  final bool isRemoteUrl =
-      normalized.startsWith('http://') || normalized.startsWith('https://');
-  final bool isDataUrl = normalized.startsWith('data:');
-  final String mime = isDataUrl
-      ? _mimeFromDataUrl(normalized)
-      : _mimeFromPath(normalized);
-
-  if (isAudioMime(mime)) {
-    final format = _longCatAudioFormatForMimeOrPath(normalized, mime: mime);
-    if (format == null) return null;
-    final data = isRemoteUrl
-        ? normalized
-        : isDataUrl
-        ? _stripDataUrlPrefix(normalized)
-        : await _encodeBase64File(normalized, withPrefix: false);
-    return {
-      'type': 'input_audio',
-      'input_audio': {
-        'type': isRemoteUrl ? 'url' : 'base64',
-        'data': data,
-        'format': format,
-        if (format == 'pcm16') 'sample_rate': 16000,
-      },
-    };
-  }
-
-  if (isVideoMime(mime)) {
-    final data = isRemoteUrl
-        ? normalized
-        : isDataUrl
-        ? _stripDataUrlPrefix(normalized)
-        : await _encodeBase64File(normalized, withPrefix: false);
-    return {
-      'type': 'input_video',
-      'input_video': {'type': isRemoteUrl ? 'url' : 'base64', 'data': data},
-    };
-  }
-
-  final imageData = <String>[
-    isRemoteUrl
-        ? normalized
-        : isDataUrl
-        ? _stripDataUrlPrefix(normalized)
-        : await _encodeBase64File(normalized, withPrefix: false),
-  ];
-  return {
-    'type': 'input_image',
-    'input_image': {'type': isRemoteUrl ? 'url' : 'base64', 'data': imageData},
-  };
-}
-
-Future<List<Map<String, dynamic>>> _buildLongCatOmniMessages(
-  List<Map<String, dynamic>> messages, {
-  List<String>? userMediaPaths,
-}) async {
-  int lastUserIndex = -1;
-  for (int i = messages.length - 1; i >= 0; i--) {
-    if ((messages[i]['role'] ?? '').toString() == 'user') {
-      lastUserIndex = i;
-      break;
-    }
-  }
-
-  final out = <Map<String, dynamic>>[];
-  for (int i = 0; i < messages.length; i++) {
-    final original = messages[i];
-    final role = (original['role'] ?? 'user').toString();
-    final raw = (original['content'] ?? '').toString();
-    final outMsg = Map<String, dynamic>.from(original);
-    outMsg.remove(multimodalInternalMediaPathsKey);
-    outMsg.remove(multimodalInternalRevisionIdKey);
-    outMsg['role'] = role;
-    final internalMediaPaths =
-        (original[multimodalInternalMediaPathsKey] as List?)
-            ?.map((e) => e.toString().trim())
-            .where((e) => e.isNotEmpty)
-            .toList(growable: false) ??
-        const <String>[];
-
-    if (role == 'system') {
-      outMsg['content'] = <Map<String, dynamic>>[
-        {'type': 'text', 'text': raw},
-      ];
-      out.add(outMsg);
-      continue;
-    }
-
-    if (role == 'tool' ||
-        (role == 'assistant' &&
-            outMsg['tool_calls'] is List &&
-            (outMsg['tool_calls'] as List).isNotEmpty)) {
-      outMsg['content'] = raw;
-      out.add(outMsg);
-      continue;
-    }
-
-    if (role == 'assistant') {
-      outMsg['content'] = <Map<String, dynamic>>[
-        {'type': 'text', 'text': raw},
-      ];
-      out.add(outMsg);
-      continue;
-    }
-
-    final parsed = await _parseTextAndImages(
-      raw,
-      allowRemoteImages: true,
-      allowLocalImages: true,
-      keepRemoteMarkdownText: true,
-    );
-    final parts = <Map<String, dynamic>>[];
-    final seenSources = <String>{};
-
-    if (parsed.text.isNotEmpty) {
-      parts.add({'type': 'text', 'text': parsed.text});
-    }
-
-    for (final ref in parsed.images) {
-      final normalized = _normalizeOpenAICompatibleSource(ref.src);
-      if (!seenSources.add(normalized)) continue;
-      final source = ref.kind == 'path' ? normalized : ref.src;
-      final part = await _buildLongCatOmniAttachmentPart(source);
-      if (part != null) {
-        parts.add(part);
-      }
-    }
-
-    final supplementalMediaPaths = <String>[
-      ...internalMediaPaths,
-      if (i == lastUserIndex && userMediaPaths != null) ...userMediaPaths,
-    ];
-    for (final path in supplementalMediaPaths) {
-      final normalized = _normalizeOpenAICompatibleSource(path);
-      if (!seenSources.add(normalized)) continue;
-      final part = await _buildLongCatOmniAttachmentPart(normalized);
-      if (part != null) {
-        parts.add(part);
-      }
-    }
-
-    if (parts.isEmpty) {
-      parts.add({'type': 'text', 'text': raw});
-    }
-
-    outMsg['content'] = parts;
-    out.add(outMsg);
-  }
-  return out;
-}
-
 Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
   List<Map<String, dynamic>> messages, {
   List<String>? userMediaPaths,
@@ -688,14 +485,30 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
   bool stripUnsignedReasoningContent = false,
 }) async {
   final out = <Map<String, dynamic>>[];
+  // Assistant turns cannot carry image_url/video_url; stash for the last user
+  // message (same pattern as Responses shouldAttachAssistantImage).
+  // Use last *user* index — not array-tail — so tool follow-ups that append
+  // assistant tool_calls / tool results still receive stashed assistant media.
+  int lastUserIndex = -1;
+  for (int i = messages.length - 1; i >= 0; i--) {
+    if ((messages[i]['role'] ?? '').toString() == 'user') {
+      lastUserIndex = i;
+      break;
+    }
+  }
+  final pendingAssistantMediaUrls = <String>[];
+  final pendingAssistantVideoUrls = <String>{};
   for (int i = 0; i < messages.length; i++) {
     final m = messages[i];
-    final isLast = i == messages.length - 1;
     final originalContent = m['content'];
     final raw = originalContent is List
         ? ChatApiService._textFromContentParts(originalContent)
         : (originalContent ?? '').toString();
     final role = (m['role'] ?? 'user').toString();
+    final isAssistant = role == 'assistant';
+    final internalMediaRefs = parseInternalMediaRefs(
+      m[multimodalInternalMediaPathsKey],
+    );
     final outMsg = Map<String, dynamic>.from(m);
     outMsg.remove(multimodalInternalMediaPathsKey);
     outMsg.remove(multimodalInternalRevisionIdKey);
@@ -715,14 +528,193 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
       }
     }
 
+    // Bare userImagePaths attach to the last *user* turn (not array-tail), so
+    // tool follow-ups that append assistant/tool messages still keep them.
+    final hasAttachedImages =
+        canImageInput &&
+        role == 'user' &&
+        i == lastUserIndex &&
+        (userMediaPaths?.isNotEmpty == true);
+    final shouldAttachAssistantMedia =
+        canImageInput &&
+        role == 'user' &&
+        i == lastUserIndex &&
+        pendingAssistantMediaUrls.isNotEmpty;
+    final hasInternalMedia =
+        canImageInput && internalMediaRefs.isNotEmpty;
+
     if (originalContent is List) {
-      outMsg['content'] = canImageInput
+      dynamic content = canImageInput
           ? (allowRemoteImages
                 ? originalContent
                 : originalContent
                       .where((part) => !_isRemoteImageContentPart(part))
                       .toList(growable: false))
           : raw;
+      // List-shaped content used to early-return before assistant-media /
+      // userImagePaths attachment. Merge those onto the last user turn, and
+      // still stash assistant media — including image_url/video_url already
+      // embedded in the List with no structured sidecar refs.
+      final listHasEmbeddedMedia = canImageInput &&
+          content is List &&
+          content.any((part) {
+            if (part is! Map) return false;
+            final type = (part['type'] ?? '').toString();
+            return type == 'image_url' || type == 'video_url';
+          });
+      if (canImageInput &&
+          (hasInternalMedia ||
+              hasAttachedImages ||
+              shouldAttachAssistantMedia ||
+              (isAssistant && listHasEmbeddedMedia))) {
+        final parts = <Map<String, dynamic>>[
+          if (content is List)
+            for (final part in content)
+              if (part is Map)
+                part.map((key, value) => MapEntry(key.toString(), value)),
+        ];
+        final seenSources = <String>{};
+        final seenImageUrls = <String>{};
+        final seenVideoUrls = <String>{};
+
+        String normalizeSrc(String src) {
+          if (src.startsWith('http') || src.startsWith('data:')) return src;
+          try {
+            return SandboxPathResolver.fix(src);
+          } catch (_) {
+            return src;
+          }
+        }
+
+        void addImageUrl(String url) {
+          if (url.isEmpty) return;
+          if (!allowRemoteImages && _isRemoteHttpUrl(url)) return;
+          if (seenImageUrls.add(url)) {
+            parts.add({
+              'type': 'image_url',
+              'image_url': {'url': url},
+            });
+          }
+        }
+
+        void addVideoUrl(String url) {
+          if (url.isEmpty) return;
+          if (seenVideoUrls.add(url)) {
+            parts.add({
+              'type': 'video_url',
+              'video_url': {'url': url},
+            });
+          }
+        }
+
+        void stashOrAddImageUrl(String url) {
+          if (url.isEmpty) return;
+          if (!allowRemoteImages && _isRemoteHttpUrl(url)) return;
+          if (isAssistant) {
+            if (!pendingAssistantMediaUrls.contains(url)) {
+              pendingAssistantMediaUrls.add(url);
+            }
+            return;
+          }
+          addImageUrl(url);
+        }
+
+        void stashOrAddVideoUrl(String url) {
+          if (url.isEmpty) return;
+          if (isAssistant) {
+            if (!pendingAssistantMediaUrls.contains(url)) {
+              pendingAssistantMediaUrls.add(url);
+            }
+            pendingAssistantVideoUrls.add(url);
+            return;
+          }
+          addVideoUrl(url);
+        }
+
+        // Index existing List media; on assistant turns also stash them so the
+        // role gate moves unsupported image_url/video_url onto the last user.
+        for (final part in List<Map<String, dynamic>>.from(parts)) {
+          final type = (part['type'] ?? '').toString();
+          if (type == 'image_url') {
+            final image = part['image_url'];
+            final url = image is Map
+                ? (image['url'] ?? '').toString()
+                : image?.toString() ?? '';
+            if (url.isNotEmpty) {
+              seenImageUrls.add(url);
+              seenSources.add(normalizeSrc(url));
+              if (isAssistant) stashOrAddImageUrl(url);
+            }
+          } else if (type == 'video_url') {
+            final video = part['video_url'];
+            final url = video is Map
+                ? (video['url'] ?? '').toString()
+                : video?.toString() ?? '';
+            if (url.isNotEmpty) {
+              seenVideoUrls.add(url);
+              seenSources.add(normalizeSrc(url));
+              if (isAssistant) stashOrAddVideoUrl(url);
+            }
+          }
+        }
+
+        final supplementalRefs = _supplementalMediaRefs(
+          internalRaw: m[multimodalInternalMediaPathsKey],
+          userPaths: userMediaPaths,
+          includeUserPaths: hasAttachedImages,
+        );
+        for (final mediaRef in supplementalRefs) {
+          final mediaPath = mediaRef.uri;
+          if (!allowRemoteImages && _isRemoteHttpUrl(mediaPath)) {
+            final normalized = normalizeSrc(mediaPath);
+            if (!seenSources.add(normalized)) continue;
+            if (!isAssistant) {
+              parts.add({'type': 'text', 'text': mediaPath});
+            }
+            continue;
+          }
+          final normalized = normalizeSrc(mediaPath);
+          if (!seenSources.add(normalized)) continue;
+          final bool isInlineUrl =
+              _isRemoteHttpUrl(mediaPath) || mediaPath.startsWith('data:');
+          final String mime = _mimeForInternalMediaRef(mediaRef);
+          if (isAudioMime(mime)) continue;
+          final bool isVideo = isVideoMime(mime);
+          final String? dataUrl = isInlineUrl
+              ? mediaPath
+              : await _tryEncodeBase64DataUrl(
+                  mediaPath,
+                  explicitMime: mediaRef.mime,
+                );
+          if (dataUrl == null) continue;
+          if (isVideo) {
+            stashOrAddVideoUrl(dataUrl);
+          } else {
+            stashOrAddImageUrl(dataUrl);
+          }
+        }
+        if (shouldAttachAssistantMedia) {
+          for (final url in pendingAssistantMediaUrls) {
+            if (pendingAssistantVideoUrls.contains(url)) {
+              addVideoUrl(url);
+            } else {
+              addImageUrl(url);
+            }
+          }
+        }
+        if (isAssistant) {
+          // Keep assistant List content image-free; media is stashed above.
+          content = [
+            for (final part in parts)
+              if (part['type'] != 'image_url' && part['type'] != 'video_url')
+                part,
+          ];
+          if (content.isEmpty) content = raw;
+        } else {
+          content = parts;
+        }
+      }
+      outMsg['content'] = content;
       out.add(outMsg);
       continue;
     }
@@ -743,14 +735,15 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
     }
 
     final hasMarkdownImages = raw.contains('![') && raw.contains('](');
-    final hasCustomImages = raw.contains('[image:');
-    final hasAttachedImages =
-        canImageInput &&
-        isLast &&
-        (userMediaPaths?.isNotEmpty == true) &&
-        (role == 'user');
+    // Semantic media detection only - custom attachment markers are not
+    // recognized. Attachments arrive via structured media-path keys /
+    // userMediaPaths, plus Markdown ![](...).
+    // Consume injected media refs for user and assistant history turns.
 
-    if (!hasMarkdownImages && !hasCustomImages && !hasAttachedImages) {
+    if (!hasMarkdownImages &&
+        !hasAttachedImages &&
+        !hasInternalMedia &&
+        !shouldAttachAssistantMedia) {
       outMsg['content'] = raw;
       out.add(outMsg);
       continue;
@@ -805,44 +798,104 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
       }
     }
 
+    void stashOrAddImageUrl(String url) {
+      if (url.isEmpty) return;
+      if (!allowRemoteImages && _isRemoteHttpUrl(url)) return;
+      if (isAssistant) {
+        if (!pendingAssistantMediaUrls.contains(url)) {
+          pendingAssistantMediaUrls.add(url);
+        }
+        return;
+      }
+      addImageUrl(url);
+    }
+
+    void stashOrAddVideoUrl(String url) {
+      if (url.isEmpty) return;
+      if (isAssistant) {
+        if (!pendingAssistantMediaUrls.contains(url)) {
+          pendingAssistantMediaUrls.add(url);
+        }
+        pendingAssistantVideoUrls.add(url);
+        return;
+      }
+      addVideoUrl(url);
+    }
+
     if (parsed.text.isNotEmpty) {
       parts.add({'type': 'text', 'text': parsed.text});
     }
     for (final ref in parsed.images) {
       final normalized = normalizeSrc(ref.src);
       if (!seenSources.add(normalized)) continue;
-      final String url;
+      final String? url;
       if (ref.kind == 'data') {
         url = ref.src;
       } else if (ref.kind == 'path') {
-        url = await _encodeBase64File(ref.src, withPrefix: true);
+        url = await _tryEncodeBase64DataUrl(ref.src);
+        if (url == null) continue;
       } else {
         url = ref.src;
       }
-      addImageUrl(url);
+      stashOrAddImageUrl(url);
     }
-    if (hasAttachedImages) {
-      for (final p in userMediaPaths!) {
-        if (!allowRemoteImages && _isRemoteHttpUrl(p)) continue;
+    final supplementalRefs = _supplementalMediaRefs(
+      internalRaw: m[multimodalInternalMediaPathsKey],
+      userPaths: userMediaPaths,
+      includeUserPaths: hasAttachedImages,
+    );
+    for (final mediaRef in supplementalRefs) {
+      final p = mediaRef.uri;
+      if (!allowRemoteImages && _isRemoteHttpUrl(p)) {
+        // Keep the remote reference visible as text when image fetch/embed
+        // is disabled for this model (e.g. Kimi K3).
         final normalized = normalizeSrc(p);
         if (!seenSources.add(normalized)) continue;
-        final bool isInlineUrl = _isRemoteHttpUrl(p) || p.startsWith('data:');
-        final String mime = isInlineUrl
-            ? _mimeFromDataUrl(p)
-            : _mimeFromPath(p);
-        if (isAudioMime(mime)) continue;
-        final bool isVideo = isVideoMime(mime);
-        final String dataUrl = isInlineUrl
-            ? p
-            : await _encodeBase64File(p, withPrefix: true);
-        if (isVideo) {
-          addVideoUrl(dataUrl);
+        parts.add({'type': 'text', 'text': p});
+        continue;
+      }
+      final normalized = normalizeSrc(p);
+      if (!seenSources.add(normalized)) continue;
+      final bool isInlineUrl = _isRemoteHttpUrl(p) || p.startsWith('data:');
+      final String mime = _mimeForInternalMediaRef(mediaRef);
+      if (isAudioMime(mime)) continue;
+      final bool isVideo = isVideoMime(mime);
+      final String? dataUrl = isInlineUrl
+          ? p
+          : await _tryEncodeBase64DataUrl(p, explicitMime: mediaRef.mime);
+      if (dataUrl == null) continue;
+      if (isVideo) {
+        stashOrAddVideoUrl(dataUrl);
+      } else {
+        stashOrAddImageUrl(dataUrl);
+      }
+    }
+    // Attach stashed assistant media to the last user message.
+    if (shouldAttachAssistantMedia) {
+      for (final url in pendingAssistantMediaUrls) {
+        if (pendingAssistantVideoUrls.contains(url)) {
+          addVideoUrl(url);
         } else {
-          addImageUrl(dataUrl);
+          addImageUrl(url);
         }
       }
     }
-    outMsg['content'] = parts;
+    // Assistant content stays string or multimodal text-only parts.
+    if (isAssistant) {
+      if (parts.isEmpty) {
+        outMsg['content'] = raw;
+      } else if (parts.length == 1 && parts.first['type'] == 'text') {
+        outMsg['content'] = parts.first['text'] ?? raw;
+      } else {
+        final textOnly = <Map<String, dynamic>>[
+          for (final part in parts)
+            if (part['type'] == 'text') part,
+        ];
+        outMsg['content'] = textOnly.isEmpty ? raw : textOnly;
+      }
+    } else {
+      outMsg['content'] = parts.isEmpty ? raw : parts;
+    }
     out.add(outMsg);
   }
   return out;
@@ -1153,10 +1206,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   // it; other providers may resend the full array-so-far with each chunk.
   final reasoningDetailsAllowSnapshots =
       !BuiltInToolsHelper.isOpenRouterProvider(config);
-  final bool useLongCatOmniPayload = _shouldUseLongCatOmniPayload(
-    config,
-    upstreamModelId,
-  );
   final bool needsReasoningEcho = info.needsReasoningEcho && isReasoning;
   void setMaxTokens(Map<String, dynamic> map) {
     if (maxTokens != null) map[info.completionTokensKey] = maxTokens;
@@ -1260,11 +1309,18 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         }
       }
     }
-    // Collect the last assistant image to attach to the new user message
-    String? lastAssistantImageUrl;
+    // Collect assistant images to attach to the last user message.
+    // Use last *user* index so tool follow-ups still receive stashed media.
+    final List<String> lastAssistantImageUrls = <String>[];
+    int lastResponsesUserIndex = -1;
+    for (int i = messages.length - 1; i >= 0; i--) {
+      if ((messages[i]['role'] ?? '').toString() == 'user') {
+        lastResponsesUserIndex = i;
+        break;
+      }
+    }
     for (int i = 0; i < messages.length; i++) {
       final m = messages[i];
-      final isLast = i == messages.length - 1;
       final originalContent = m['content'];
       final raw = originalContent is List
           ? ChatApiService._textFromContentParts(originalContent)
@@ -1318,24 +1374,32 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         if (raw.trim().isEmpty || raw.trim() == '\n\n') continue;
       }
 
-      // Only parse images if there are images to process
+      // Only parse images if there are images to process.
+      // Semantic media detection only - custom attachment markers are not
+      // recognized. Attachments arrive via structured media-path keys /
+      // userImagePaths, plus Markdown ![](...).
       final hasMarkdownImages = raw.contains('![') && raw.contains('](');
-      final hasCustomImages = raw.contains('[image:');
+      final internalMediaRefs = parseInternalMediaRefs(
+        m[multimodalInternalMediaPathsKey],
+      );
+      // Consume injected media refs for user and assistant history turns.
+      final hasInternalMedia =
+          canImageInput && internalMediaRefs.isNotEmpty;
       final hasAttachedImages =
           canImageInput &&
-          isLast &&
-          (userImagePaths?.isNotEmpty == true) &&
-          (m['role'] == 'user');
+          (m['role'] == 'user') &&
+          i == lastResponsesUserIndex &&
+          (userImagePaths?.isNotEmpty == true);
       // For the last user message, also attach the last assistant image if available
       final shouldAttachAssistantImage =
           canImageInput &&
-          isLast &&
           (m['role'] == 'user') &&
-          lastAssistantImageUrl != null;
+          i == lastResponsesUserIndex &&
+          lastAssistantImageUrls.isNotEmpty;
 
       if (hasMarkdownImages ||
-          hasCustomImages ||
           hasAttachedImages ||
+          hasInternalMedia ||
           shouldAttachAssistantImage) {
         final parsed = await _parseTextAndImages(
           raw,
@@ -1392,44 +1456,99 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         for (final ref in parsed.images) {
           final normalized = normalizeSrc(ref.src);
           if (!seenImageSources.add(normalized)) continue;
-          String url;
+          final String? url;
           if (ref.kind == 'data') {
             url = ref.src;
           } else if (ref.kind == 'path') {
-            url = await _encodeBase64File(ref.src, withPrefix: true);
+            url = await _tryEncodeBase64DataUrl(ref.src);
+            if (url == null) continue;
           } else {
             url = ref.src; // http(s)
           }
-          // For assistant messages, collect the last image; for user messages, add directly
+          // For assistant messages, collect images; for user messages, add directly
           if (isAssistant) {
-            lastAssistantImageUrl = url;
+            if (!lastAssistantImageUrls.contains(url)) {
+              lastAssistantImageUrls.add(url);
+            }
           } else {
             addImage(url);
           }
         }
-        // Additional images explicitly attached to the last user message
-        if (hasAttachedImages) {
-          for (final p in userImagePaths!) {
-            if (!allowRemoteImages && _isRemoteHttpUrl(p)) continue;
+        // Structured / attached media refs (user + assistant history turns)
+        final supplementalRefs = _supplementalMediaRefs(
+          internalRaw: m[multimodalInternalMediaPathsKey],
+          userPaths: userImagePaths,
+          includeUserPaths: hasAttachedImages,
+        );
+        for (final mediaRef in supplementalRefs) {
+          final p = mediaRef.uri;
+          final String mime = _mimeForInternalMediaRef(mediaRef);
+          final bool isAv = isAudioMime(mime) || isVideoMime(mime);
+          if (isAv) {
+            // Responses path has no first-class A/V input parts here; never
+            // encode video/audio as input_image. Keep a text reference for both
+            // remote and local paths so pure A/V attachments do not become
+            // content: [] (API reject / silent drop).
+            final normalized = normalizeSrc(p);
+            if (seenImageSources.add(normalized)) {
+              parts.add({
+                'type': isAssistant ? 'output_text' : 'input_text',
+                'text': p,
+              });
+            }
+            continue;
+          }
+          if (!allowRemoteImages && _isRemoteHttpUrl(p)) {
+            // Keep the remote reference visible as text when image embed is off.
             final normalized = normalizeSrc(p);
             if (!seenImageSources.add(normalized)) continue;
-            final dataUrl = (_isRemoteHttpUrl(p) || p.startsWith('data:'))
-                ? p
-                : await _encodeBase64File(p, withPrefix: true);
+            parts.add({
+              'type': isAssistant ? 'output_text' : 'input_text',
+              'text': p,
+            });
+            continue;
+          }
+          final normalized = normalizeSrc(p);
+          if (!seenImageSources.add(normalized)) continue;
+          final dataUrl = (_isRemoteHttpUrl(p) || p.startsWith('data:'))
+              ? p
+              : await _tryEncodeBase64DataUrl(p, explicitMime: mediaRef.mime);
+          if (dataUrl == null) continue;
+          // Assistant Responses messages may only contain output_text/refusal.
+          // Mirror the markdown path: stash for the following user turn.
+          if (isAssistant) {
+            if (!lastAssistantImageUrls.contains(dataUrl)) {
+              lastAssistantImageUrls.add(dataUrl);
+            }
+          } else {
             addImage(dataUrl);
           }
         }
-        // Attach last assistant image to the last user message
-        if (shouldAttachAssistantImage && lastAssistantImageUrl != null) {
-          addImage(lastAssistantImageUrl);
+        // Attach all stashed assistant images to the last user message
+        if (shouldAttachAssistantImage) {
+          for (final url in lastAssistantImageUrls) {
+            addImage(url);
+          }
         }
         // Use proper message object format for assistant messages
         if (isAssistant) {
+          // Never emit input_image inside assistant completed output.
+          final assistantContent = <Map<String, dynamic>>[
+            for (final part in parts)
+              if (part['type'] == 'output_text' || part['type'] == 'refusal')
+                part,
+          ];
+          if (assistantContent.isEmpty) {
+            assistantContent.add({
+              'type': 'output_text',
+              'text': parsed.text,
+            });
+          }
           input.add({
             'type': 'message',
             'role': 'assistant',
             'status': 'completed',
-            'content': parts,
+            'content': assistantContent,
           });
         } else {
           input.add({'role': roleRaw, 'content': parts});
@@ -1515,44 +1634,25 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       responsesIncludeParam = null;
     }
   } else {
-    if (useLongCatOmniPayload) {
-      body = {
-        'model': upstreamModelId,
-        'messages': await _buildLongCatOmniMessages(
-          messages,
-          userMediaPaths: userImagePaths,
-        ),
-        'stream': stream,
-        'output_modalities': const ['text'],
-        if (temperature != null) 'temperature': temperature,
-        if (topP != null) 'top_p': topP,
-        if (isReasoning && effort != 'off' && effort != 'auto')
-          'reasoning_effort': effort,
-        if (tools != null && tools.isNotEmpty)
-          'tools': _cleanToolsForCompatibility(tools),
-        if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
-      };
-    } else {
-      final mm = await _buildOpenAIChatCompletionMessages(
-        messages,
-        userMediaPaths: userImagePaths,
-        canImageInput: canImageInput,
-        allowRemoteImages: allowRemoteImages,
-        stripUnsignedReasoningContent: isClaudeUpstream,
-      );
-      body = {
-        'model': upstreamModelId,
-        'messages': mm,
-        'stream': stream,
-        if (temperature != null) 'temperature': temperature,
-        if (topP != null) 'top_p': topP,
-        if (isReasoning && effort != 'off' && effort != 'auto')
-          'reasoning_effort': effort,
-        if (tools != null && tools.isNotEmpty)
-          'tools': _cleanToolsForCompatibility(tools),
-        if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
-      };
-    }
+    final mm = await _buildOpenAIChatCompletionMessages(
+      messages,
+      userMediaPaths: userImagePaths,
+      canImageInput: canImageInput,
+      allowRemoteImages: allowRemoteImages,
+      stripUnsignedReasoningContent: isClaudeUpstream,
+    );
+    body = {
+      'model': upstreamModelId,
+      'messages': mm,
+      'stream': stream,
+      if (temperature != null) 'temperature': temperature,
+      if (topP != null) 'top_p': topP,
+      if (isReasoning && effort != 'off' && effort != 'auto')
+        'reasoning_effort': effort,
+      if (tools != null && tools.isNotEmpty)
+        'tools': _cleanToolsForCompatibility(tools),
+      if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
+    };
     setMaxTokens(body);
   }
 
@@ -1591,7 +1691,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     stream: stream,
     config: config,
     host: info.host,
-    upstreamModelId: upstreamModelId,
   );
   _applyCompatibleBuiltInSearch(
     body,
@@ -1862,18 +1961,13 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             });
           }
           final reqBody = Map<String, dynamic>.from(body);
-          reqBody['messages'] = useLongCatOmniPayload
-              ? await _buildLongCatOmniMessages(
-                  next,
-                  userMediaPaths: userImagePaths,
-                )
-              : await _buildOpenAIChatCompletionMessages(
-                  next,
-                  userMediaPaths: userImagePaths,
-                  canImageInput: canImageInput,
-                  allowRemoteImages: allowRemoteImages,
-                  stripUnsignedReasoningContent: isClaudeUpstream,
-                );
+          reqBody['messages'] = await _buildOpenAIChatCompletionMessages(
+            next,
+            userMediaPaths: userImagePaths,
+            canImageInput: canImageInput,
+            allowRemoteImages: allowRemoteImages,
+            stripUnsignedReasoningContent: isClaudeUpstream,
+          );
           reqBody.remove('stream');
           req.body = jsonEncode(reqBody);
           final resp2 = await client.send(req);
@@ -2070,25 +2164,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           // Follow-up request(s) with multi-round tool calls
           var currentMessages = mm2;
           while (true) {
-            final Map<String, dynamic> body2 = useLongCatOmniPayload
-                ? {
-                    'model': upstreamModelId,
-                    'messages': await _buildLongCatOmniMessages(
-                      currentMessages,
-                      userMediaPaths: userImagePaths,
-                    ),
-                    'stream': true,
-                    'output_modalities': const ['text'],
-                    if (temperature != null) 'temperature': temperature,
-                    if (topP != null) 'top_p': topP,
-                    if (isReasoning && effort != 'off' && effort != 'auto')
-                      'reasoning_effort': effort,
-                    if (tools != null && tools.isNotEmpty)
-                      'tools': _cleanToolsForCompatibility(tools),
-                    if (tools != null && tools.isNotEmpty)
-                      'tool_choice': 'auto',
-                  }
-                : {
+            final Map<String, dynamic> body2 = {
                     'model': upstreamModelId,
                     'messages': await _buildOpenAIChatCompletionMessages(
                       currentMessages,
@@ -2128,7 +2204,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               stream: true,
               config: config,
               host: info.host,
-              upstreamModelId: upstreamModelId,
             );
 
             // Apply custom body overrides
@@ -3488,25 +3563,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           // Continue streaming with follow-up request
           var currentMessages = mm2;
           while (true) {
-            final Map<String, dynamic> body2 = useLongCatOmniPayload
-                ? {
-                    'model': upstreamModelId,
-                    'messages': await _buildLongCatOmniMessages(
-                      currentMessages,
-                      userMediaPaths: userImagePaths,
-                    ),
-                    'stream': true,
-                    'output_modalities': const ['text'],
-                    if (temperature != null) 'temperature': temperature,
-                    if (topP != null) 'top_p': topP,
-                    if (isReasoning && effort != 'off' && effort != 'auto')
-                      'reasoning_effort': effort,
-                    if (tools != null && tools.isNotEmpty)
-                      'tools': _cleanToolsForCompatibility(tools),
-                    if (tools != null && tools.isNotEmpty)
-                      'tool_choice': 'auto',
-                  }
-                : {
+            final Map<String, dynamic> body2 = {
                     'model': upstreamModelId,
                     'messages': await _buildOpenAIChatCompletionMessages(
                       currentMessages,
@@ -3543,7 +3600,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               stream: true,
               config: config,
               host: info.host,
-              upstreamModelId: upstreamModelId,
             );
             if (extraBodyCfg.isNotEmpty) {
               body2.addAll(extraBodyCfg);
@@ -4013,25 +4069,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               // Continue streaming with follow-up request - reuse existing multi-round logic from [DONE] handler
               var currentMessages = mm2;
               while (true) {
-                final Map<String, dynamic> body2 = useLongCatOmniPayload
-                    ? {
-                        'model': upstreamModelId,
-                        'messages': await _buildLongCatOmniMessages(
-                          currentMessages,
-                          userMediaPaths: userImagePaths,
-                        ),
-                        'stream': true,
-                        'output_modalities': const ['text'],
-                        if (temperature != null) 'temperature': temperature,
-                        if (topP != null) 'top_p': topP,
-                        if (isReasoning && effort != 'off' && effort != 'auto')
-                          'reasoning_effort': effort,
-                        if (tools != null && tools.isNotEmpty)
-                          'tools': _cleanToolsForCompatibility(tools),
-                        if (tools != null && tools.isNotEmpty)
-                          'tool_choice': 'auto',
-                      }
-                    : {
+                final Map<String, dynamic> body2 = {
                         'model': upstreamModelId,
                         'messages': await _buildOpenAIChatCompletionMessages(
                           currentMessages,
@@ -4068,7 +4106,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   stream: true,
                   config: config,
                   host: info.host,
-                  upstreamModelId: upstreamModelId,
                 );
                 if (extraBodyCfg.isNotEmpty) {
                   body2.addAll(extraBodyCfg);

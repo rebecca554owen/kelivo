@@ -11,6 +11,8 @@ import '../../database/chat_database_repository.dart'
 import '../../models/backup.dart';
 import '../../models/chat_message.dart';
 import '../../models/conversation.dart';
+import '../../models/message_part.dart';
+import '../../utils/multimodal_input_utils.dart';
 import '../../providers/settings_provider.dart'
     show ProviderConfig, ProviderKind;
 import '../chat/chat_service.dart';
@@ -434,7 +436,8 @@ class ChatboxImporter {
           }
 
           final roleRaw = (msg['role'] ?? '').toString();
-          final content = _extractMessageContent(msg, roleHint: roleRaw);
+          final parts = _extractMessageParts(msg, roleHint: roleRaw);
+          final content = _textFromParts(parts);
 
           // System message: first one becomes assistant prompt, others become assistant-visible note.
           if (roleRaw == 'system') {
@@ -455,11 +458,21 @@ class ChatboxImporter {
               exportedAt.add(Duration(milliseconds: fallbackIndex++));
 
           if (role == 'tool') {
+            // Keep tool-result JSON in a TextPart for tool semantics, but do not
+            // drop ImagePart/FilePart attachments extracted from contentParts.
+            final toolPayload =
+                _buildToolMessagePayload(msg, fallbackText: content);
+            final attachmentParts = parts
+                .where((part) => part is ImagePart || part is FilePart)
+                .toList(growable: false);
             messages.add(
               ChatMessage(
                 id: msgId,
                 role: 'tool',
-                content: _buildToolMessagePayload(msg, fallbackText: content),
+                parts: <MessagePart>[
+                  TextPart(toolPayload),
+                  ...attachmentParts,
+                ],
                 timestamp: ts,
                 modelId: null,
                 providerId: null,
@@ -473,16 +486,35 @@ class ChatboxImporter {
             final totalTokens =
                 (msg['tokenCount'] as num?)?.toInt() ??
                 (msg['tokensUsed'] as num?)?.toInt();
+            final messageParts = roleRaw == 'system'
+                ? <MessagePart>[
+                    TextPart(
+                      content.isEmpty ? '[System]' : '[System]\n$content',
+                    ),
+                    ...parts.where((part) => part is! TextPart),
+                  ]
+                : parts;
+            final reasoningTexts = messageParts
+                .whereType<ReasoningPart>()
+                .map((part) => part.text)
+                .where((text) => text.trim().isNotEmpty)
+                .toList(growable: false);
+            final reasoningText = reasoningTexts.isEmpty
+                ? null
+                : reasoningTexts.join('\n');
             messages.add(
               ChatMessage(
                 id: msgId,
                 role: roleRaw == 'system' ? 'assistant' : role,
-                content: roleRaw == 'system' ? '[System]\n$content' : content,
+                parts: messageParts.isEmpty
+                    ? const <MessagePart>[TextPart('')]
+                    : messageParts,
                 timestamp: ts,
                 modelId: inferredModel.isNotEmpty ? inferredModel : null,
                 providerId: providerId.isNotEmpty ? providerId : null,
                 totalTokens: totalTokens,
                 conversationId: tid,
+                reasoningText: reasoningText,
               ),
             );
           }
@@ -730,7 +762,7 @@ class ChatboxImporter {
         if (raw is! Map) continue;
         final m = raw.map((k, v) => MapEntry(k.toString(), v));
         if ((m['role'] ?? '').toString() != 'system') continue;
-        final content = _extractMessageContent(m, roleHint: 'system');
+        final content = _textFromParts(_extractMessageParts(m, roleHint: 'system'));
         if (content.trim().isNotEmpty) return content;
       }
     }
@@ -789,17 +821,54 @@ class ChatboxImporter {
     return _parseEpochMillis(raw);
   }
 
-  static String _extractMessageContent(
+  static String _textFromParts(List<MessagePart> parts) {
+    return parts
+        .whereType<TextPart>()
+        .map((part) => part.text)
+        .join('\n')
+        .trim();
+  }
+
+  static List<MessagePart> _extractMessageParts(
     Map<String, dynamic> msg, {
     required String roleHint,
   }) {
-    final role = roleHint;
+    // roleHint retained for call-site clarity; attachment encoding is role-agnostic.
+    final _ = roleHint;
     final partsRaw = msg['contentParts'];
-    final out = <String>[];
+    final out = <MessagePart>[];
+    final textChunks = <String>[];
+    // When an attachment splits text runs, keep one newline so joining TextPart
+    // payloads (no separator) yields `before\nafter` rather than `beforeafter`.
+    var pendingContentNewline = false;
+
+    void flushText() {
+      if (textChunks.isEmpty) return;
+      out.add(TextPart(textChunks.join('\n')));
+      textChunks.clear();
+    }
+
+    void flushTextForAttachment() {
+      flushText();
+      pendingContentNewline = out.any((part) => part is TextPart);
+    }
 
     void addText(String s) {
       final t = s.replaceAll('\r\n', '\n');
-      if (t.trim().isNotEmpty) out.add(t);
+      if (t.trim().isEmpty) return;
+      if (pendingContentNewline && textChunks.isEmpty) {
+        textChunks.add('');
+      }
+      pendingContentNewline = false;
+      textChunks.add(t);
+    }
+
+    String? mimeFor(String uri, {String? explicit, String? fileName}) {
+      final e = explicit?.trim();
+      if (e != null && e.isNotEmpty) return e;
+      final source = (fileName != null && fileName.isNotEmpty) ? fileName : uri;
+      final inferred = inferMediaMimeFromSource(source);
+      return inferred.isNotEmpty ? inferred : null;
     }
 
     if (partsRaw is List) {
@@ -816,16 +885,23 @@ class ChatboxImporter {
             final storageKey = (part['storageKey'] ?? '').toString().trim();
             final ref = url.isNotEmpty ? url : storageKey;
             if (ref.isEmpty) break;
-            if (url.startsWith('http://') ||
+            final isResolvable = url.startsWith('http://') ||
                 url.startsWith('https://') ||
-                url.startsWith('data:image')) {
-              if (role == 'user') {
-                out.add('[image:$url]');
-              } else {
-                out.add('![]($url)');
-              }
+                url.startsWith('data:image') ||
+                storageKey.isNotEmpty;
+            if (isResolvable) {
+              flushTextForAttachment();
+              out.add(
+                ImagePart(
+                  uri: ref,
+                  mime: mimeFor(ref),
+                  unavailable: !(url.startsWith('http://') ||
+                      url.startsWith('https://') ||
+                      url.startsWith('data:image')),
+                ),
+              );
             } else {
-              out.add('[Chatbox image: $ref]');
+              addText('[Chatbox image: $ref]');
             }
             break;
           case 'info':
@@ -834,7 +910,11 @@ class ChatboxImporter {
           case 'reasoning':
             final t = (part['text'] ?? '').toString();
             if (t.trim().isNotEmpty) {
-              out.add('<think>\n$t\n</think>');
+              flushText();
+              out.add(ReasoningPart(t));
+              // Same bridging newline as attachments so before/reasoning/after
+              // yields derived content `before\nafter`.
+              pendingContentNewline = out.any((p) => p is TextPart);
             }
             break;
           case 'tool-call':
@@ -842,7 +922,7 @@ class ChatboxImporter {
             final toolName = (part['toolName'] ?? '').toString();
             final args = part['args'];
             if (state.isNotEmpty) {
-              out.add(
+              addText(
                 '[tool:$state] ${toolName.isNotEmpty ? toolName : 'tool'} ${args == null ? '' : jsonEncode(args)}'
                     .trim(),
               );
@@ -855,7 +935,7 @@ class ChatboxImporter {
     }
 
     // Fallback to legacy `content`
-    if (out.isEmpty) {
+    if (out.isEmpty && textChunks.isEmpty) {
       final legacy = (msg['content'] ?? '').toString();
       if (legacy.trim().isNotEmpty) addText(legacy);
     }
@@ -869,14 +949,14 @@ class ChatboxImporter {
         if (url.isEmpty) continue;
         final title = (l['title'] ?? '').toString().trim();
         if (title.isNotEmpty) {
-          out.add('[$title]($url)');
+          addText('[$title]($url)');
         } else {
-          out.add(url);
+          addText(url);
         }
       }
     }
 
-    // Files
+    // Files — known attachment objects become FilePart directly
     final files = msg['files'];
     if (files is List) {
       for (final f in files) {
@@ -885,13 +965,15 @@ class ChatboxImporter {
         if (url.isEmpty) continue;
         final name = (f['name'] ?? 'file').toString();
         final type = (f['fileType'] ?? '').toString();
-        if (role == 'user') {
-          out.add(
-            '[file:$url|$name|${type.isEmpty ? 'application/octet-stream' : type}]',
-          );
-        } else {
-          out.add('[$name]($url)');
-        }
+        flushTextForAttachment();
+        out.add(
+          FilePart(
+            uri: url,
+            name: name.isNotEmpty ? name : 'file',
+            mime: mimeFor(url, explicit: type, fileName: name) ??
+                'application/octet-stream',
+          ),
+        );
       }
     }
 
@@ -902,21 +984,24 @@ class ChatboxImporter {
         if (p is! Map) continue;
         final url = (p['url'] ?? '').toString().trim();
         if (url.isEmpty) continue;
-        if (role == 'user') {
-          out.add('[image:$url]');
-        } else {
-          out.add('![]($url)');
-        }
+        flushTextForAttachment();
+        out.add(
+          ImagePart(
+            uri: url,
+            mime: mimeFor(url),
+          ),
+        );
       }
     }
 
     // Error info
     final err = (msg['error'] ?? '').toString();
     if (err.trim().isNotEmpty) {
-      out.add('[Error] $err');
+      addText('[Error] $err');
     }
 
-    return out.join('\n').trim();
+    flushText();
+    return out;
   }
 
   static String _inferModelIdFromChatboxMessage(Map<String, dynamic> msg) {

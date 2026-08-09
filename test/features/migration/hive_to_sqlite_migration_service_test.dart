@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/hive_migration_marker.dart';
 import 'package:Kelivo/features/migration/hive_to_sqlite_migration_service.dart';
@@ -372,7 +373,7 @@ void main() {
           isA<StateError>().having(
             (error) => error.message,
             'message',
-            contains('text part count'),
+            contains('text content digest'),
           ),
         ),
       );
@@ -1159,6 +1160,202 @@ void main() {
       expect(aside.existsSync(), isFalse);
     },
   );
+
+  test(
+    'decodes legacy attachment markers into image/file parts with stats',
+    () async {
+      final imagePath = '${tempDir.path}/images/prompt.png';
+      final filePath = '${tempDir.path}/upload/spec.pdf';
+      await Directory('${tempDir.path}/images').create(recursive: true);
+      await Directory('${tempDir.path}/upload').create(recursive: true);
+      await File(imagePath).writeAsBytes(const <int>[
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+      ]);
+      await File(filePath).writeAsBytes(const <int>[0x25, 0x50, 0x44, 0x46]);
+      final missingPath = '${tempDir.path}/images/missing.png';
+      final content = [
+        'please review',
+        '[image:$imagePath]',
+        '[file:$filePath|spec.pdf|application/pdf]',
+        '[image:$missingPath]',
+        '[file:/tmp/bad|na|me|application/pdf]',
+        'thanks',
+      ].join('\n');
+
+      await _seedHiveChat(
+        tempDir: tempDir,
+        conversationId: 'conversation-attachments',
+        messageId: 'message-attachments',
+        content: content,
+      );
+
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+      final statuses = <HiveToSqliteMigrationStatus>[];
+      final sub = service.statusStream.listen(statuses.add);
+      addTearDown(sub.cancel);
+
+      await service.migrate();
+
+      final complete = statuses.lastWhere(
+        (status) => status.stage == HiveToSqliteMigrationStage.complete,
+      );
+      expect(complete.converted, 3);
+      expect(complete.malformed, 1);
+      expect(complete.missingFiles, 1);
+      expect(
+        complete.log.any(
+          (line) =>
+              line.contains('legacy-content decode:') &&
+              line.contains('converted=3') &&
+              line.contains('malformed=1') &&
+              line.contains('missingFiles=1'),
+        ),
+        isTrue,
+      );
+
+      // Hive retention (AC4).
+      expect(File('${tempDir.path}/conversations.hive').existsSync(), isTrue);
+      expect(File('${tempDir.path}/messages.hive').existsSync(), isTrue);
+
+      final repo = ChatDatabaseRepository.open(
+        file: File('${tempDir.path}/kelivo.db'),
+      );
+      addTearDown(repo.close);
+      expect(await repo.getImagePartCount(), 2);
+      expect(await repo.getFilePartCount(), 1);
+      final message = await repo.getMessage('message-attachments');
+      expect(message, isNotNull);
+      expect(message!.parts.whereType<TextPart>().map((part) => part.text), [
+        'please review',
+        '\n[file:/tmp/bad|na|me|application/pdf]\nthanks',
+      ]);
+      expect(
+        message.parts.whereType<TextPart>().map((part) => part.text).join(),
+        'please review\n[file:/tmp/bad|na|me|application/pdf]\nthanks',
+      );
+      expect(message.parts.whereType<ImagePart>(), hasLength(2));
+      expect(message.parts.whereType<FilePart>(), hasLength(1));
+      final missingImage = message.parts.whereType<ImagePart>().singleWhere(
+        (part) => part.uri == missingPath,
+      );
+      expect(missingImage.unavailable, isTrue);
+      // Markers must not remain only inside TextPart after conversion.
+      expect(
+        message.parts.whereType<TextPart>().any(
+          (part) => part.text.contains('[image:'),
+        ),
+        isFalse,
+      );
+      expect(
+        message.parts.whereType<TextPart>().any(
+          (part) => part.text.contains('[file:$filePath|'),
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'validation fails when an attachment part is missing before validate',
+    () async {
+      final imagePath = '${tempDir.path}/images/keep.png';
+      await Directory('${tempDir.path}/images').create(recursive: true);
+      await File(imagePath).writeAsBytes(const <int>[1, 2, 3, 4]);
+      await _seedHiveChat(
+        tempDir: tempDir,
+        conversationId: 'conversation-missing-image',
+        messageId: 'message-missing-image',
+        content: 'caption\n[image:$imagePath]',
+      );
+      final backupRoot = Directory('${tempDir.path}/backup-target')
+        ..createSync();
+      final decision = await HiveToSqliteMigrationService.check();
+      final service = HiveToSqliteMigrationService(decision);
+      addTearDown(service.dispose);
+      final backupFile = await service.backupTo(backupRoot);
+      service.debugBeforeValidateForTest = (repo) async {
+        await repo.deletePartsByKindForTest('message-missing-image', 'image');
+      };
+
+      await expectLater(
+        service.migrate(backupPath: backupFile.path),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('image part count'),
+          ),
+        ),
+      );
+
+      expect(File('${tempDir.path}/messages.hive').existsSync(), isTrue);
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'failed validation can be retried idempotently with Hive retained',
+    () async {
+      await _seedHiveChat(
+        tempDir: tempDir,
+        conversationId: 'conversation-retry',
+        messageId: 'message-retry',
+        content: 'retry me',
+      );
+      final decision = await HiveToSqliteMigrationService.check();
+      final failing = HiveToSqliteMigrationService(decision);
+      addTearDown(failing.dispose);
+      failing.debugBeforeValidateForTest = (repo) async {
+        await repo.corruptTextPartPayloadForTest('message-retry', 'tampered');
+      };
+
+      await expectLater(failing.migrate(), throwsA(isA<StateError>()));
+      expect(File('${tempDir.path}/messages.hive').existsSync(), isTrue);
+      expect(
+        (await HiveToSqliteMigrationService.check()).needsMigration,
+        isTrue,
+      );
+
+      final retry = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(retry.dispose);
+      await retry.migrate();
+
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isTrue,
+      );
+      expect(File('${tempDir.path}/conversations.hive').existsSync(), isTrue);
+      expect(File('${tempDir.path}/messages.hive').existsSync(), isTrue);
+
+      final repo = ChatDatabaseRepository.open(
+        file: File('${tempDir.path}/kelivo.db'),
+      );
+      addTearDown(repo.close);
+      final message = await repo.getMessage('message-retry');
+      expect(message?.content, 'retry me');
+    },
+  );
+
+
 }
 
 void _registerHiveAdapters() {

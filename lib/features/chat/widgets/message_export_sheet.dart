@@ -18,6 +18,7 @@ import 'image_preview_sheet.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/message_part.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/model_provider.dart';
@@ -111,47 +112,30 @@ String _getRoleNameFromDependencies({
   return msg.role;
 }
 
-_Parsed _parseContent(String raw) {
-  // Robustly parse inline attachments in the form [image:...] and [file:path|name|mime]
-  // without requiring escaping backslashes, and guard against malformed tokens.
+/// Build export payload from structured [MessagePart]s.
+///
+/// Text comes from [textOverride] (e.g. thinking-stripped assistant body) or
+/// [ChatMessage.content] (TextPart join). Attachments are taken from ImagePart /
+/// FilePart only — never reconstructed as legacy marker strings.
+_Parsed _exportPartsFromMessage(ChatMessage message, {String? textOverride}) {
   final images = <String>[];
   final docs = <_DocRef>[];
-  final buffer = StringBuffer();
-  int idx = 0;
-  while (idx < raw.length) {
-    // Fast path: only try to parse when current char is '['
-    if (raw.codeUnitAt(idx) == 0x5B /* '[' */ ) {
-      final sub = raw.substring(idx);
-      // [image:...]
-      final mImg = RegExp(r"^\[image:([^\]]+)\]").firstMatch(sub);
-      if (mImg != null) {
-        final p = (mImg.groupCount >= 1 ? mImg.group(1) : null)?.trim();
-        if (p != null && p.isNotEmpty) images.add(p);
-        idx += mImg.group(0)!.length;
-        continue;
-      }
-      // [file:path|name|mime]
-      final mFile = RegExp(
-        r"^\[file:([^|\]]+)\|([^|\]]+)\|([^\]]+)\]",
-      ).firstMatch(sub);
-      if (mFile != null) {
-        final path =
-            (mFile.groupCount >= 1 ? mFile.group(1) : null)?.trim() ?? '';
-        final name =
-            (mFile.groupCount >= 2 ? mFile.group(2) : null)?.trim() ?? 'file';
-        final mime =
-            (mFile.groupCount >= 3 ? mFile.group(3) : null)?.trim() ??
-            'text/plain';
-        docs.add(_DocRef(path: path, fileName: name, mime: mime));
-        idx += mFile.group(0)!.length;
-        continue;
-      }
+  for (final part in message.parts) {
+    if (part is ImagePart) {
+      final uri = part.uri.trim();
+      if (uri.isNotEmpty) images.add(uri);
+    } else if (part is FilePart) {
+      docs.add(
+        _DocRef(
+          path: part.uri,
+          fileName: part.name,
+          mime: part.mime ?? 'application/octet-stream',
+        ),
+      );
     }
-    // Fallback: normal character
-    buffer.write(raw[idx]);
-    idx++;
   }
-  return _Parsed(buffer.toString().trim(), images, docs);
+  final text = (textOverride ?? message.content).trim();
+  return _Parsed(text, images, docs);
 }
 
 String _softBreakMd(String input) {
@@ -493,7 +477,10 @@ Future<void> exportChatMessagesMarkdown(
           : null;
       final contentForExport = exportData?.cleanedContent ?? msg.content;
 
-      final parsed = _parseContent(contentForExport);
+      final parsed = _exportPartsFromMessage(
+        msg,
+        textOverride: contentForExport,
+      );
       if (parsed.text.isNotEmpty) {
         buf.writeln(parsed.text);
         buf.writeln('');
@@ -605,7 +592,10 @@ Future<void> exportChatMessagesTxt(
           : null;
       final contentForExport = exportData?.cleanedContent ?? msg.content;
 
-      final parsed = _parseContent(contentForExport);
+      final parsed = _exportPartsFromMessage(
+        msg,
+        textOverride: contentForExport,
+      );
       if (parsed.text.isNotEmpty) {
         buf.writeln(parsed.text);
         buf.writeln('');
@@ -2859,7 +2849,12 @@ class _ExportedBubble extends StatelessWidget {
         isAssistant && (assistant?.useAssistantAvatar == true);
     final useAssistName = isAssistant && (assistant?.useAssistantName == true);
 
-    final parsed = _parseContent(messageForExport.content);
+    // Keep attachments from the original message parts. copyWith(content:)
+    // rewrites parts to a single TextPart and would drop ImagePart/FilePart.
+    final parsed = _exportPartsFromMessage(
+      message,
+      textOverride: messageForExport.content,
+    );
     final mdText = StringBuffer();
     if (parsed.text.isNotEmpty) mdText.writeln(_softBreakMd(parsed.text));
     for (final p in parsed.images) {

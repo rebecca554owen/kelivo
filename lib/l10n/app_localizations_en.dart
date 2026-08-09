@@ -6857,6 +6857,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get migrationMessageCount => 'Messages';
 
   @override
+  String get migrationConvertedCount => 'Converted';
+
+  @override
+  String get migrationMalformedCount => 'Malformed';
+
+  @override
+  String get migrationMissingFilesCount => 'Missing files';
+
+  @override
   String get migrationRestartButton => 'Restart Kelivo';
 
   @override

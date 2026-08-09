@@ -13,8 +13,10 @@ import '../../core/database/app_database.dart';
 import '../../core/database/chat_database_repository.dart';
 import '../../core/models/chat_message.dart';
 import '../../core/models/conversation.dart';
+import '../../core/models/message_part.dart';
 import '../../core/services/backup/backup_settings_validator.dart';
 import '../../core/services/backup/restore_durability.dart';
+import '../../core/services/migration/legacy_message_content_decoder.dart';
 import '../../utils/app_directories.dart';
 
 enum HiveToSqliteMigrationStage {
@@ -66,6 +68,9 @@ class HiveToSqliteMigrationStatus {
     this.log = const <String>[],
     this.conversations = 0,
     this.messages = 0,
+    this.converted = 0,
+    this.malformed = 0,
+    this.missingFiles = 0,
     this.backupItems = const <HiveToSqliteBackupItem>[],
     this.chatsExportDegraded = false,
   });
@@ -79,6 +84,15 @@ class HiveToSqliteMigrationStatus {
   final List<String> log;
   final int conversations;
   final int messages;
+
+  /// Legacy attachment markers successfully converted to parts.
+  final int converted;
+
+  /// Marker-shaped lines that could not be parsed and were kept as text.
+  final int malformed;
+
+  /// Converted local attachments whose files were missing on disk.
+  final int missingFiles;
   final List<HiveToSqliteBackupItem> backupItems;
   final bool chatsExportDegraded;
 
@@ -92,6 +106,9 @@ class HiveToSqliteMigrationStatus {
     List<String>? log,
     int? conversations,
     int? messages,
+    int? converted,
+    int? malformed,
+    int? missingFiles,
     List<HiveToSqliteBackupItem>? backupItems,
     bool? chatsExportDegraded,
   }) {
@@ -105,6 +122,9 @@ class HiveToSqliteMigrationStatus {
       log: log ?? this.log,
       conversations: conversations ?? this.conversations,
       messages: messages ?? this.messages,
+      converted: converted ?? this.converted,
+      malformed: malformed ?? this.malformed,
+      missingFiles: missingFiles ?? this.missingFiles,
       backupItems: backupItems ?? this.backupItems,
       chatsExportDegraded: chatsExportDegraded ?? this.chatsExportDegraded,
     );
@@ -166,6 +186,9 @@ class HiveToSqliteMigrationService {
   var _lastBackupItems = const <HiveToSqliteBackupItem>[];
   var _chatsExportDegraded = false;
   var _attemptCount = 0;
+  var _converted = 0;
+  var _malformed = 0;
+  var _missingFiles = 0;
   String? _persistedStageBreadcrumb;
 
   Stream<HiveToSqliteMigrationStatus> get statusStream => _controller.stream;
@@ -358,6 +381,9 @@ class HiveToSqliteMigrationService {
           detail: 'backup',
           error: '$error',
           log: List.of(_log),
+          converted: _converted,
+          malformed: _malformed,
+          missingFiles: _missingFiles,
           backupItems: _lastBackupItems,
           chatsExportDegraded: _chatsExportDegraded,
         ),
@@ -438,6 +464,11 @@ class HiveToSqliteMigrationService {
       );
       var migratedMessages = 0;
       var expectedToolCallParts = 0;
+      var expectedImageParts = 0;
+      var expectedFileParts = 0;
+      _converted = 0;
+      _malformed = 0;
+      _missingFiles = 0;
       final expectedTextContentDigest = Uint8List(32);
       _emit(
         HiveToSqliteMigrationStage.migrating,
@@ -505,24 +536,44 @@ class HiveToSqliteMigrationService {
             // so empty-string groups need version repair too.
             if (groupId != null) {
               var version = message.version;
-              if (!seenGroupVersions.add('$groupId $version')) {
+              if (!seenGroupVersions.add('$groupId\u0000$version')) {
                 version = (maxGroupVersions[groupId] ?? version) + 1;
                 repairStats.versionConflicts++;
                 message = message.copyWith(version: version);
-                seenGroupVersions.add('$groupId $version');
+                seenGroupVersions.add('$groupId\u0000$version');
               }
               final knownMax = maxGroupVersions[groupId];
               if (knownMax == null || version > knownMax) {
                 maxGroupVersions[groupId] = version;
               }
             }
+            final legacyContent = message.content;
+            final decodeResult = await decodeLegacyContent(
+              legacyContent,
+              existingParts: message.parts,
+            );
+            _converted += decodeResult.converted;
+            _malformed += decodeResult.malformed;
+            _missingFiles += decodeResult.missingFiles;
+            var parts = List<MessagePart>.of(decodeResult.parts);
+            if (parts.isEmpty) {
+              // Match repository persistence: empty body becomes one empty text part.
+              parts = const <MessagePart>[TextPart('')];
+            }
+            message = message.copyWith(parts: parts);
+            expectedImageParts += parts.whereType<ImagePart>().length;
+            expectedFileParts += parts.whereType<FilePart>().length;
             batch.add((message: message, messageOrder: order));
             order++;
-            ChatDatabaseRepository.mixTextPartContentDigest(
-              expectedTextContentDigest,
-              message.id,
-              message.content,
-            );
+            // Expected digest comes from independently stripped legacy text,
+            // not merely echoing decoder TextPart objects.
+            for (final segment in stripLegacyContentTextSegments(legacyContent)) {
+              ChatDatabaseRepository.mixTextPartContentDigest(
+                expectedTextContentDigest,
+                message.id,
+                segment,
+              );
+            }
             if (toolEventsBox != null) {
               final events = await _toolEventsFor(toolEventsBox, message.id);
               if (events.isNotEmpty) {
@@ -605,6 +656,10 @@ class HiveToSqliteMigrationService {
       if (beforeValidate != null) {
         await beforeValidate(repo);
       }
+      _logLine(
+        'legacy-content decode: converted=$_converted '
+        'malformed=$_malformed missingFiles=$_missingFiles',
+      );
       await _validate(
         repo,
         expectedConversations: conversations.length,
@@ -613,6 +668,8 @@ class HiveToSqliteMigrationService {
           expectedTextContentDigest,
         ),
         expectedToolCallParts: expectedToolCallParts,
+        expectedImageParts: expectedImageParts,
+        expectedFileParts: expectedFileParts,
         backupPath: backupPath,
         migratedMessages: migratedMessages,
       );
@@ -653,6 +710,9 @@ class HiveToSqliteMigrationService {
           backupPath: backupPath,
           error: '$error',
           log: List.of(_log),
+          converted: _converted,
+          malformed: _malformed,
+          missingFiles: _missingFiles,
           backupItems: _lastBackupItems,
           chatsExportDegraded: _chatsExportDegraded,
         ),
@@ -1333,6 +1393,8 @@ class HiveToSqliteMigrationService {
     required int expectedMessages,
     required String expectedTextContentDigest,
     required int expectedToolCallParts,
+    required int expectedImageParts,
+    required int expectedFileParts,
     String? backupPath,
     int migratedMessages = 0,
   }) async {
@@ -1350,18 +1412,25 @@ class HiveToSqliteMigrationService {
         'expected $expectedMessages, got $messageCount.',
       );
     }
-    final textPartCount = await repo.getTextPartCount();
-    if (textPartCount != expectedMessages) {
-      throw StateError(
-        'Migration validation failed (text part count): '
-        'expected $expectedMessages, got $textPartCount.',
-      );
-    }
     final toolCallPartCount = await repo.getToolCallPartCount();
     if (toolCallPartCount != expectedToolCallParts) {
       throw StateError(
         'Migration validation failed (tool_call part count): '
         'expected $expectedToolCallParts, got $toolCallPartCount.',
+      );
+    }
+    final imagePartCount = await repo.getImagePartCount();
+    if (imagePartCount != expectedImageParts) {
+      throw StateError(
+        'Migration validation failed (image part count): '
+        'expected $expectedImageParts, got $imagePartCount.',
+      );
+    }
+    final filePartCount = await repo.getFilePartCount();
+    if (filePartCount != expectedFileParts) {
+      throw StateError(
+        'Migration validation failed (file part count): '
+        'expected $expectedFileParts, got $filePartCount.',
       );
     }
     // Digest scans multi-GB payloads on a worker isolate; map byte progress
@@ -1602,6 +1671,9 @@ class HiveToSqliteMigrationService {
         log: List.of(_log),
         conversations: conversations,
         messages: messages,
+        converted: _converted,
+        malformed: _malformed,
+        missingFiles: _missingFiles,
         backupItems: backupItems ?? _lastBackupItems,
         chatsExportDegraded: _chatsExportDegraded,
       ),

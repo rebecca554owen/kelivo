@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -27,14 +28,14 @@ void main() {
   Future<void> seedUserMessage({
     required String conversationId,
     required String messageId,
-    required String content,
+    required List<MessagePart> parts,
   }) async {
     await repository.appendLinearMessageToConversation(
       conversation: Conversation(id: conversationId, title: 'OCR'),
       message: ChatMessage(
         id: messageId,
         role: 'user',
-        content: content,
+        parts: parts,
         conversationId: conversationId,
         groupId: messageId,
       ),
@@ -45,12 +46,18 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:/tmp/a.png]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: '/tmp/a.png'),
+      ],
     );
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u2',
-      content: 'world\n[image:/tmp/b.png]',
+      parts: const [
+        TextPart('world'),
+        ImagePart(uri: '/tmp/b.png'),
+      ],
     );
 
     await repository.upsertImageOcrArtifactItems(
@@ -71,7 +78,10 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:/tmp/a.png]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: '/tmp/a.png'),
+      ],
     );
 
     await repository.upsertImageOcrArtifactItems(
@@ -91,7 +101,11 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:/tmp/a.png]\n[image:/tmp/b.png]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: '/tmp/a.png'),
+        ImagePart(uri: '/tmp/b.png'),
+      ],
     );
     await repository.upsertImageOcrArtifactItems(
       revisionId: 'u1',
@@ -100,7 +114,10 @@ void main() {
 
     final appended = await repository.appendMessageVersion(
       messageId: 'u1',
-      content: 'edited\n[image:/tmp/a.png]',
+      parts: const [
+        TextPart('edited'),
+        ImagePart(uri: '/tmp/a.png'),
+      ],
     );
     expect(appended, isNotNull);
 
@@ -120,7 +137,10 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:/tmp/a.png]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: '/tmp/a.png'),
+      ],
     );
     await repository.upsertImageOcrArtifactItems(
       revisionId: 'u1',
@@ -141,7 +161,10 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:/tmp/a.png]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: '/tmp/a.png'),
+      ],
     );
 
     await repository.upsertImageOcrArtifactItems(
@@ -185,7 +208,10 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:/tmp/a.png]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: '/tmp/a.png'),
+      ],
     );
 
     await Future.wait([
@@ -208,7 +234,10 @@ void main() {
     await seedUserMessage(
       conversationId: 'c1',
       messageId: 'u1',
-      content: 'hello\n[image:$dataUrl]',
+      parts: const [
+        TextPart('hello'),
+        ImagePart(uri: dataUrl),
+      ],
     );
     await repository.upsertImageOcrArtifactItems(
       revisionId: 'u1',
@@ -217,7 +246,10 @@ void main() {
 
     final appended = await repository.appendMessageVersion(
       messageId: 'u1',
-      content: 'edited text only\n[image:$dataUrl]',
+      parts: const [
+        TextPart('edited text only'),
+        ImagePart(uri: dataUrl),
+      ],
     );
     expect(appended, isNotNull);
 

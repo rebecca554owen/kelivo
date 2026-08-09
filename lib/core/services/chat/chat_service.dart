@@ -14,6 +14,7 @@ import '../../database/chat_database_gateway.dart';
 import '../../database/chat_database_repository.dart';
 import '../../database/generation_run.dart';
 import '../../models/chat_message.dart';
+import '../../models/message_part.dart';
 import '../../models/conversation.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/app_directories.dart';
@@ -1634,51 +1635,58 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<({String path, String kind})> _extractLocalAttachments(String content) {
-    final out = <String, ({String path, String kind})>{};
-    final imgRe = RegExp(r"\[image:(.+?)\]");
-    for (final m in imgRe.allMatches(content)) {
-      final pth = m.group(1)?.trim();
-      if (pth != null &&
-          pth.isNotEmpty &&
-          !pth.startsWith('http') &&
-          !pth.startsWith('data:')) {
-        final fixed = SandboxPathResolver.fix(pth);
-        out['image:$fixed'] = (path: fixed, kind: 'image');
+  List<({String path, String kind})> _extractLocalAttachmentsFromMessage(
+    ChatMessage message,
+  ) {
+    final fromParts = <String, ({String path, String kind})>{};
+    for (final part in message.parts) {
+      if (part is ImagePart) {
+        // Unavailable placeholders stay in history for UI but must not enter
+        // asset sync — missing files would otherwise dirty/throw forever.
+        if (part.unavailable) continue;
+        final uri = part.uri.trim();
+        if (uri.isEmpty ||
+            uri.startsWith('http') ||
+            uri.startsWith('data:')) {
+          continue;
+        }
+        final fixed = SandboxPathResolver.fix(uri);
+        fromParts['image:$fixed'] = (path: fixed, kind: 'image');
+      } else if (part is FilePart) {
+        if (part.unavailable) continue;
+        final uri = part.uri.trim();
+        if (uri.isEmpty ||
+            uri.startsWith('http') ||
+            uri.startsWith('data:')) {
+          continue;
+        }
+        final fixed = SandboxPathResolver.fix(uri);
+        fromParts['file:$fixed'] = (path: fixed, kind: 'file');
       }
     }
-    final fileRe = RegExp(r"\[file:(.+?)\|(.+?)\|(.+?)\]");
-    for (final m in fileRe.allMatches(content)) {
-      final pth = m.group(1)?.trim();
-      if (pth != null &&
-          pth.isNotEmpty &&
-          !pth.startsWith('http') &&
-          !pth.startsWith('data:')) {
-        final fixed = SandboxPathResolver.fix(pth);
-        out['file:$fixed'] = (path: fixed, kind: 'file');
-      }
-    }
-    return List.unmodifiable(out.values);
+    return List.unmodifiable(fromParts.values);
   }
 
   /// Image sources eligible for OCR identity: local files and data URLs.
-  List<String> _extractOcrImageSources(String content) {
-    final out = <String>[];
-    final imgRe = RegExp(r'\[image:(.+?)\]');
-    for (final match in imgRe.allMatches(content)) {
-      final path = match.group(1)?.trim();
-      if (path == null || path.isEmpty || path.startsWith('http')) continue;
+  ///
+  /// Parts-only — content-marker fallback is intentionally unsupported.
+  List<String> _extractOcrImageSourcesFromMessage(ChatMessage message) {
+    final fromParts = <String>[];
+    for (final part in message.parts) {
+      if (part is! ImagePart) continue;
+      final path = part.uri.trim();
+      if (path.isEmpty || path.startsWith('http')) continue;
       if (path.startsWith('data:')) {
-        out.add(path);
+        fromParts.add(path);
       } else {
-        out.add(SandboxPathResolver.fix(path));
+        fromParts.add(SandboxPathResolver.fix(path));
       }
     }
-    return out;
+    return fromParts;
   }
 
   bool _messageCanOwnAssets(ChatMessage message) =>
-      message.content.contains('[image:') || message.content.contains('[file:');
+      message.parts.any((part) => part is ImagePart || part is FilePart);
 
   Future<void> _backfillAssetReferences(Directory appDataDir) async {
     final targetRoot = p.normalize(appDataDir.absolute.path);
@@ -1747,7 +1755,7 @@ class ChatService extends ChangeNotifier {
       p.normalize(p.join(appDataDir.absolute.path, 'images')),
     ];
     final registrations = <MessageAssetRegistration>[];
-    for (final attachment in _extractLocalAttachments(message.content)) {
+    for (final attachment in _extractLocalAttachmentsFromMessage(message)) {
       final normalizedPath = p.normalize(File(attachment.path).absolute.path);
       if (!allowedRoots.any((root) => p.isWithin(root, normalizedPath))) {
         continue;
@@ -1802,24 +1810,10 @@ class ChatService extends ChangeNotifier {
     if (targetRoot == null || targetRoot.isEmpty) {
       throw StateError('sandbox_path_resolver_not_ready');
     }
-    final imgRe = RegExp(r"\[image:(.+?)\]");
-    final fileRe = RegExp(r"\[file:(.+?)\|(.+?)\|(.+?)\]");
     await _repo.migrateSandboxPaths(
       targetVersion: 1,
       targetRoot: targetRoot,
-      rewriteContent: (content) {
-        var updated = content.replaceAllMapped(imgRe, (match) {
-          final raw = (match.group(1) ?? '').trim();
-          return '[image:${SandboxPathResolver.fix(raw)}]';
-        });
-        updated = updated.replaceAllMapped(fileRe, (match) {
-          final raw = (match.group(1) ?? '').trim();
-          final name = (match.group(2) ?? '').trim();
-          final mime = (match.group(3) ?? '').trim();
-          return '[file:${SandboxPathResolver.fix(raw)}|$name|$mime]';
-        });
-        return updated;
-      },
+      rewriteUri: SandboxPathResolver.fix,
     );
   }
 
@@ -2283,7 +2277,8 @@ class ChatService extends ChangeNotifier {
   Future<ChatMessage> addMessage({
     required String conversationId,
     required String role,
-    required String content,
+    String content = '',
+    List<MessagePart>? parts,
     String? modelId,
     String? providerId,
     int? totalTokens,
@@ -2318,7 +2313,8 @@ class ChatService extends ChangeNotifier {
 
     final message = ChatMessage(
       role: role,
-      content: content,
+      content: parts == null ? content : null,
+      parts: parts,
       conversationId: conversationId,
       modelId: modelId,
       providerId: providerId,
@@ -2382,7 +2378,7 @@ class ChatService extends ChangeNotifier {
 
   Future<GenerationBeginResult> beginSendGeneration({
     required String conversationId,
-    required String userContent,
+    required List<MessagePart> userParts,
     required String modelId,
     required String providerId,
   }) async {
@@ -2399,7 +2395,7 @@ class ChatService extends ChangeNotifier {
     }
     final userMessage = ChatMessage(
       role: 'user',
-      content: userContent,
+      parts: userParts,
       conversationId: conversationId,
     );
     final assistantMessage = ChatMessage(
@@ -2945,7 +2941,7 @@ class ChatService extends ChangeNotifier {
     for (final message in sourceMessages) {
       final forked = ChatMessage(
         role: message.role,
-        content: message.content,
+        parts: message.parts,
         timestamp: message.timestamp,
         modelId: message.modelId,
         providerId: message.providerId,
@@ -2977,7 +2973,8 @@ class ChatService extends ChangeNotifier {
 
   Future<ChatMessage?> appendMessageVersion({
     required String messageId,
-    required String content,
+    String content = '',
+    List<MessagePart>? parts,
   }) async {
     if (!_initialized) await init();
     final temporaryOriginal = _cachedTemporaryMessage(messageId);
@@ -2994,9 +2991,14 @@ class ChatService extends ChangeNotifier {
       final nextVersion = versions.isEmpty
           ? 0
           : versions.reduce((a, b) => a > b ? a : b) + 1;
+      // Content-only append must keep prior ImagePart/FilePart attachments
+      // and preserve ordinal ([Image, Text] stays [Image, Text(new)]).
+      final resolvedParts =
+          parts ??
+          ChatMessage.partsWithReplacedText(temporaryOriginal.parts, content);
       final newMsg = ChatMessage(
         role: temporaryOriginal.role,
-        content: content,
+        parts: resolvedParts,
         conversationId: conversationId,
         modelId: temporaryOriginal.modelId,
         providerId: temporaryOriginal.providerId,
@@ -3017,6 +3019,7 @@ class ChatService extends ChangeNotifier {
     final result = await _repo.appendMessageVersion(
       messageId: messageId,
       content: content,
+      parts: parts,
     );
     if (result == null) return null;
     final newMsg = result.message;
@@ -3155,7 +3158,7 @@ class ChatService extends ChangeNotifier {
       if (hashes.isEmpty) {
         final message = await _repo.getMessage(toRevisionId);
         if (message == null) return;
-        final paths = _extractOcrImageSources(message.content);
+        final paths = _extractOcrImageSourcesFromMessage(message);
         if (paths.isEmpty) return;
         hashes = (await resolveImageContentHashes(paths)).values.toSet();
       }

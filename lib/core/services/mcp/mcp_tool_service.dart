@@ -135,11 +135,11 @@ class McpToolService extends ChangeNotifier {
               prefix: 'mcp_img',
             );
             if (savedPath != null) {
-              buf.writeln('[image:$savedPath]');
+              buf.writeln('![]($savedPath)');
             }
           } else {
             final url = (c.url ?? '').toString();
-            if (url.isNotEmpty) buf.writeln('[image:$url]');
+            if (url.isNotEmpty) buf.writeln('![]($url)');
           }
           continue;
         }
@@ -243,11 +243,11 @@ class McpToolService extends ChangeNotifier {
                   prefix: 'mcp_img',
                 );
                 if (savedPath != null) {
-                  buf.writeln('[image:$savedPath]');
+                  buf.writeln('![]($savedPath)');
                 }
               } else {
                 final url = (c.url ?? '').toString();
-                if (url.isNotEmpty) buf.writeln('[image:$url]');
+                if (url.isNotEmpty) buf.writeln('![]($url)');
               }
               continue;
             }

@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// Hand-maintained for legacy Hive field 2 (content string): read-only migration
+// path. Do not regenerate without restoring field-2 → content mapping.
 
 part of 'chat_message.dart';
 
@@ -16,6 +18,7 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
+    // Field 2 is the legacy content string — hydrate into TextPart via content.
     return ChatMessage(
       id: fields[0] as String?,
       role: fields[1] as String,
@@ -42,6 +45,8 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
 
   @override
   void write(BinaryWriter writer, ChatMessage obj) {
+    // New runtime paths must not write Hive. Kept only so accidental writes
+    // still emit a valid legacy blob using the derived content getter.
     writer
       ..writeByte(20)
       ..writeByte(0)

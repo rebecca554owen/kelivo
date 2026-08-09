@@ -175,8 +175,9 @@ class MessagePartRows extends Table {
       // ignore: recursive_getters
       .check(ordinal.isBiggerOrEqualValue(0))();
   TextColumn get kind => text().check(
+    // Forward-compat: unknown future kinds persist as UnknownPart.
     // ignore: recursive_getters
-    kind.isIn(const ['text', 'reasoning', 'tool_call']),
+    kind.isNotValue(''),
   )();
   TextColumn get payload => text()();
   IntColumn get createdAt =>

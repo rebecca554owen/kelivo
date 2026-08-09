@@ -13,6 +13,7 @@ import 'package:Kelivo/core/database/business_restore_service.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/backup.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/services/backup/chatbox_importer.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
@@ -65,6 +66,20 @@ Map<String, dynamic> _chatboxFixture() => {
         'role': 'user',
         'content': 'Hello',
         'timestamp': 1784332800000,
+        'contentParts': [
+          {'type': 'text', 'text': 'Hello'},
+          {
+            'type': 'image',
+            'url': 'https://example.com/pic.png',
+          },
+        ],
+        'files': [
+          {
+            'url': 'https://example.com/notes.pdf',
+            'name': 'notes.pdf',
+            'fileType': 'application/pdf',
+          },
+        ],
       },
     ],
     'threads': <dynamic>[],
@@ -343,5 +358,263 @@ void main() {
         await otherDatabase.close();
       }
     });
+
+
+    test('Chatbox reasoning survives as reasoningText', () async {
+      final reasoningBackup = await File('${root.path}/chatbox_reasoning.json')
+          .writeAsString(
+            jsonEncode({
+              '__exported_at': '2026-07-18T00:00:00.000Z',
+              'settings': {
+                'providers': {
+                  'openai': {
+                    'apiKey': 'chatbox-secret',
+                    'apiHost': 'https://api.example.test',
+                    'apiPath': '/v1/chat/completions',
+                    'models': [
+                      {'modelId': 'gpt-test'},
+                    ],
+                  },
+                },
+              },
+              'chat-sessions-list': [
+                {'id': 'assistant-r', 'name': 'Reasoning', 'starred': false},
+              ],
+              'session:assistant-r': {
+                'settings': {
+                  'provider': 'openai',
+                  'modelId': 'gpt-test',
+                },
+                'messages': [
+                  {
+                    'id': 'user-r',
+                    'role': 'user',
+                    'content': 'Why?',
+                    'timestamp': 1784332800000,
+                    'contentParts': [
+                      {'type': 'text', 'text': 'Why?'},
+                    ],
+                  },
+                  {
+                    'id': 'assistant-r-msg',
+                    'role': 'assistant',
+                    'content': 'Because.',
+                    'timestamp': 1784332801000,
+                    'contentParts': [
+                      {'type': 'reasoning', 'text': 'first thought'},
+                      {'type': 'reasoning', 'text': 'second thought'},
+                      {'type': 'text', 'text': 'Because.'},
+                    ],
+                  },
+                ],
+                'threads': <dynamic>[],
+              },
+            }),
+            flush: true,
+          );
+
+      await ChatboxImporter.importFromChatbox(
+        file: reasoningBackup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+
+      final messages = await chatService.loadMessages(
+        'chatbox_default_assistant-r',
+      );
+      final assistant = messages.singleWhere((m) => m.id == 'assistant-r-msg');
+      expect(assistant.reasoningText, 'first thought\nsecond thought');
+      expect(assistant.content, 'Because.');
+      expect(
+        assistant.parts.whereType<ReasoningPart>().single.text,
+        'first thought\nsecond thought',
+      );
+    });
+
+    test('preserves newline across attachment boundary', () async {
+      final splitBackup = await File('${root.path}/chatbox_split.json').writeAsString(
+        jsonEncode({
+          ..._chatboxFixture(),
+          'session:assistant-1': {
+            'settings': {
+              'provider': 'openai',
+              'modelId': 'gpt-test',
+            },
+            'messages': [
+              {
+                'id': 'message-split',
+                'role': 'user',
+                'content': 'beforeafter',
+                'timestamp': 1784332800000,
+                'contentParts': [
+                  {'type': 'text', 'text': 'before'},
+                  {
+                    'type': 'image',
+                    'url': 'https://example.com/mid.png',
+                  },
+                  {'type': 'text', 'text': 'after'},
+                ],
+              },
+            ],
+            'threads': <dynamic>[],
+          },
+        }),
+        flush: true,
+      );
+
+      await ChatboxImporter.importFromChatbox(
+        file: splitBackup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+
+      final messages = await chatService.loadMessages(
+        'chatbox_default_assistant-1',
+      );
+      final user = messages.singleWhere((m) => m.id == 'message-split');
+      expect(user.parts.whereType<ImagePart>().single.uri, 'https://example.com/mid.png');
+      expect(
+        user.parts.whereType<TextPart>().map((part) => part.text).join(),
+        'before\nafter',
+      );
+      expect(user.content, 'before\nafter');
+    });
+
+    test('imports image/file attachments as structured parts without markers', () async {
+      final result = await ChatboxImporter.importFromChatbox(
+        file: backup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+      expect(result.messages, 1);
+      final messages = await chatService.loadMessages(
+        'chatbox_default_assistant-1',
+      );
+      final user = messages.singleWhere((m) => m.id == 'message-1');
+      expect(user.content, 'Hello');
+      expect(user.content.contains('[image:'), isFalse);
+      expect(user.content.contains('[file:'), isFalse);
+      expect(user.parts.whereType<TextPart>().single.text, 'Hello');
+      final image = user.parts.whereType<ImagePart>().single;
+      expect(image.uri, 'https://example.com/pic.png');
+      final file = user.parts.whereType<FilePart>().single;
+      expect(file.uri, 'https://example.com/notes.pdf');
+      expect(file.name, 'notes.pdf');
+      expect(file.mime, 'application/pdf');
+      for (final part in user.parts) {
+        expect(part.encodePayload().contains('[image:'), isFalse);
+        expect(part.encodePayload().contains('[file:'), isFalse);
+      }
+    });
+
+
+    test('tool-role import keeps ImagePart attachments', () async {
+      final toolBackup = await File('${root.path}/chatbox_tool_image.json').writeAsString(
+        jsonEncode({
+          ..._chatboxFixture(),
+          'session:assistant-1': {
+            'settings': {
+              'provider': 'openai',
+              'modelId': 'gpt-test',
+            },
+            'messages': [
+              {
+                'id': 'tool-with-image',
+                'role': 'tool',
+                'name': 'screenshot',
+                'content': 'tool result',
+                'timestamp': 1784332800000,
+                'contentParts': [
+                  {
+                    'type': 'tool-call',
+                    'state': 'result',
+                    'toolName': 'screenshot',
+                    'args': {'x': 1},
+                    'result': 'captured',
+                  },
+                  {
+                    'type': 'image',
+                    'url': 'https://example.com/tool.png',
+                  },
+                ],
+              },
+            ],
+            'threads': <dynamic>[],
+          },
+        }),
+        flush: true,
+      );
+
+      await ChatboxImporter.importFromChatbox(
+        file: toolBackup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+
+      final messages = await chatService.loadMessages(
+        'chatbox_default_assistant-1',
+      );
+      final tool = messages.singleWhere((m) => m.id == 'tool-with-image');
+      expect(tool.role, 'tool');
+      final image = tool.parts.whereType<ImagePart>().single;
+      expect(image.uri, 'https://example.com/tool.png');
+      final payload = jsonDecode(tool.content) as Map<String, dynamic>;
+      expect(payload['tool'], 'screenshot');
+      expect(payload['result'], 'captured');
+    });
+
+    test('preserves newline across reasoning boundary', () async {
+      final reasoningSplit = await File('${root.path}/chatbox_reasoning_split.json')
+          .writeAsString(
+        jsonEncode({
+          ..._chatboxFixture(),
+          'session:assistant-1': {
+            'settings': {
+              'provider': 'openai',
+              'modelId': 'gpt-test',
+            },
+            'messages': [
+              {
+                'id': 'assistant-reasoning-split',
+                'role': 'assistant',
+                'content': 'beforeafter',
+                'timestamp': 1784332800000,
+                'contentParts': [
+                  {'type': 'text', 'text': 'before'},
+                  {'type': 'reasoning', 'text': 'think'},
+                  {'type': 'text', 'text': 'after'},
+                ],
+              },
+            ],
+            'threads': <dynamic>[],
+          },
+        }),
+        flush: true,
+      );
+
+      await ChatboxImporter.importFromChatbox(
+        file: reasoningSplit,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+
+      final messages = await chatService.loadMessages(
+        'chatbox_default_assistant-1',
+      );
+      final assistant =
+          messages.singleWhere((m) => m.id == 'assistant-reasoning-split');
+      expect(assistant.reasoningText, 'think');
+      expect(
+        assistant.parts.whereType<TextPart>().map((part) => part.text).join(),
+        'before\nafter',
+      );
+      expect(assistant.content, 'before\nafter');
+    });
+
   });
 }

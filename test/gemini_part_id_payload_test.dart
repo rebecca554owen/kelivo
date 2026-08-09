@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 
 ProviderConfig _geminiConfig(String baseUrl) {
   return ProviderConfig(
@@ -360,7 +361,11 @@ void main() {
         ),
         modelId: 'gemini-2.5-pro',
         messages: [
-          {'role': 'user', 'content': 'inspect [image:${file.path}]'},
+          {
+            'role': 'user',
+            'content': 'inspect',
+            multimodalInternalMediaPathsKey: [file.path],
+          },
         ],
         onToolCall: (name, args, {toolCallId}) async => '{"result":"ok"}',
       ).toList();

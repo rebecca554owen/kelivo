@@ -13,6 +13,7 @@ import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/database/business_restore_service.dart';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/backup.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/services/backup/cherry_direct_backup_reader.dart';
 import 'package:Kelivo/core/services/backup/cherry_importer.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
@@ -1072,6 +1073,213 @@ void main() {
         expect(await readUpload('file-rel', 'rel-doc.bin'), byRelBytes);
         expect(await readUpload(uuidId, 'id-route.bin'), byIdBytes);
         expect(await readUpload('file-large', 'large.bin'), largeBytes);
+
+        final imported = await chatService.loadMessages('topic-files');
+        expect(imported, hasLength(1));
+        final message = imported.single;
+        expect(message.content, 'with-attachments');
+        expect(message.content.contains('[file:'), isFalse);
+        expect(message.content.contains('[image:'), isFalse);
+        final files = message.parts.whereType<FilePart>().toList();
+        expect(files, hasLength(4));
+        expect(
+          files.map((part) => part.name).toSet(),
+          {
+            'by-base.txt',
+            'rel-doc.bin',
+            'id-route.bin',
+            'large.bin',
+          },
+        );
+        for (final part in message.parts) {
+          expect(part.encodePayload().contains('[file:'), isFalse);
+          expect(part.encodePayload().contains('[image:'), isFalse);
+        }
+      },
+    );
+
+
+    test(
+      'missing archive file yields unavailable part',
+      () async {
+        final backup = await _createZip(tempDir, <String, List<int>>{
+          'data.json': utf8.encode(
+            jsonEncode(
+              _legacyBackupWithAttachments(
+                files: <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'file-missing',
+                    'name': 'ghost.png',
+                    // No path/origin_name/url → stable cherry-missing placeholder.
+                    'type': 'image/png',
+                  },
+                  <String, dynamic>{
+                    'id': 'file-missing-path',
+                    'name': 'gone.bin',
+                    'origin_name': 'gone.bin',
+                    'path': 'Data/Files/gone.bin',
+                    'type': 'application/octet-stream',
+                  },
+                ],
+              ),
+            ),
+          ),
+          // Intentionally no Data/Files entries for either id.
+        });
+
+        await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        final imported = await chatService.loadMessages('topic-files');
+        expect(imported, hasLength(1));
+        final parts = imported.single.parts;
+        final image = parts.whereType<ImagePart>().single;
+        expect(image.unavailable, isTrue);
+        expect(image.uri, 'cherry-missing:file-missing');
+        final file = parts.whereType<FilePart>().single;
+        expect(file.unavailable, isTrue);
+        expect(file.uri, 'Data/Files/gone.bin');
+        expect(file.name, 'gone.bin');
+      },
+    );
+
+    test(
+      'missing message_block fileId yields unavailable part',
+      () async {
+        final backup = await _createZip(tempDir, <String, List<int>>{
+          'data.json': utf8.encode(
+            jsonEncode(<String, dynamic>{
+              'version': 5,
+              'localStorage': <String, dynamic>{
+                'persist:cherry-studio': _persistStateJson(),
+              },
+              'indexedDB': <String, dynamic>{
+                'topics': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'topic-blocks',
+                    'messages': <Map<String, dynamic>>[
+                      <String, dynamic>{
+                        'id': 'msg-blocks',
+                        'role': 'user',
+                        'topicId': 'topic-blocks',
+                        'assistantId': 'assistant-1',
+                        'createdAt': '2026-01-01T00:00:00.000Z',
+                        'status': 'success',
+                        'content': 'with-block-attachment',
+                        'blocks': <String>['block-img', 'block-file'],
+                        'files': <dynamic>[],
+                      },
+                    ],
+                  },
+                ],
+                'message_blocks': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'block-img',
+                    'messageId': 'msg-blocks',
+                    'type': 'image',
+                    'createdAt': '2026-01-01T00:00:01.000Z',
+                    'status': 'success',
+                    'file': <String, dynamic>{
+                      'id': 'block-file-missing',
+                      'name': 'shot.png',
+                      'origin_name': 'shot.png',
+                      'type': 'image/png',
+                    },
+                  },
+                  <String, dynamic>{
+                    'id': 'block-file',
+                    'messageId': 'msg-blocks',
+                    'type': 'file',
+                    'createdAt': '2026-01-01T00:00:02.000Z',
+                    'status': 'success',
+                    'file': <String, dynamic>{
+                      'id': 'block-doc-missing',
+                      'name': 'notes.bin',
+                      'origin_name': 'notes.bin',
+                      'path': 'Data/Files/notes.bin',
+                      'type': 'application/octet-stream',
+                    },
+                  },
+                ],
+                'files': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'block-file-missing',
+                    'name': 'shot.png',
+                    'origin_name': 'shot.png',
+                    'type': 'image/png',
+                  },
+                  <String, dynamic>{
+                    'id': 'block-doc-missing',
+                    'name': 'notes.bin',
+                    'origin_name': 'notes.bin',
+                    'path': 'Data/Files/notes.bin',
+                    'type': 'application/octet-stream',
+                  },
+                ],
+              },
+            }),
+          ),
+          // Intentionally omit Data/Files entries.
+        });
+
+        await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        final imported = await chatService.loadMessages('topic-blocks');
+        expect(imported, hasLength(1));
+        final parts = imported.single.parts;
+        final image = parts.whereType<ImagePart>().single;
+        expect(image.unavailable, isTrue);
+        expect(image.uri, 'cherry-missing:block-file-missing');
+        final file = parts.whereType<FilePart>().single;
+        expect(file.unavailable, isTrue);
+        expect(file.uri, 'Data/Files/notes.bin');
+        expect(file.name, 'notes.bin');
+      },
+    );
+
+    test(
+      'extensionless image URL with image MIME becomes ImagePart',
+      () async {
+        final backup = await _createZip(tempDir, <String, List<int>>{
+          'data.json': utf8.encode(
+            jsonEncode(
+              _legacyBackupWithAttachments(
+                files: <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'file-presigned',
+                    'name': 'photo',
+                    'origin_name': 'photo',
+                    'type': 'image/png',
+                    'url': 'https://cdn.example.com/download?id=1',
+                  },
+                ],
+              ),
+            ),
+          ),
+        });
+
+        await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        final imported = await chatService.loadMessages('topic-files');
+        expect(imported, hasLength(1));
+        final image = imported.single.parts.whereType<ImagePart>().single;
+        expect(image.unavailable, isFalse);
+        expect(image.uri, 'https://cdn.example.com/download?id=1');
+        expect(image.mime, 'image/png');
       },
     );
 
@@ -1220,6 +1428,8 @@ Map<String, dynamic> _legacyBackupWithAttachments({
         'name': file['name'],
         'origin_name': file['origin_name'] ?? file['name'],
         'type': file['type'] ?? 'application/octet-stream',
+        if (file['path'] != null) 'path': file['path'],
+        if (file['url'] != null) 'url': file['url'],
       },
   ];
   return <String, dynamic>{

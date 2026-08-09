@@ -2534,7 +2534,7 @@ class $MessagePartRowsTable extends MessagePartRows
     'kind',
     aliasedName,
     false,
-    check: () => kind.isIn(const ['text', 'reasoning', 'tool_call']),
+    check: () => kind.isNotValue(''),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );

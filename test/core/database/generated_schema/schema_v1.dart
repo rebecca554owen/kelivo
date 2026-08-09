@@ -532,8 +532,7 @@ class MessagePartRows extends Table with TableInfo {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    $customConstraints:
-        'NOT NULL CHECK (kind IN (\'text\', \'reasoning\', \'tool_call\'))',
+    $customConstraints: 'NOT NULL CHECK (kind IS NOT \'\')',
   );
   late final GeneratedColumn<String> payload = GeneratedColumn<String>(
     'payload',

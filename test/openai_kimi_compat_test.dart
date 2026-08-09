@@ -106,7 +106,8 @@ void main() {
 
       final encoded = jsonEncode(body);
       expect(encoded, isNot(contains('example.com/structured.png')));
-      expect(encoded, isNot(contains('example.com/attached.png')));
+      // Remote structured/attached refs are kept as plain text, not image_url.
+      expect(encoded, contains('example.com/attached.png'));
       expect(encoded, contains('example.com/markdown.png'));
 
       final imageUrls = <String>[];

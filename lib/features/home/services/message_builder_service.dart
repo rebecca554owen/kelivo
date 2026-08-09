@@ -6,6 +6,7 @@ import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/message_part.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/instruction_injection.dart';
 import '../../../core/models/memory_entry.dart';
@@ -162,7 +163,7 @@ class MessageBuilderService {
 
   /// Build API messages list from current conversation state.
   ///
-  /// Applies truncation, version collapsing, and strips [image:] / [file:] markers.
+  /// Applies truncation and version collapsing. Attachments come from parts.
   List<Map<String, dynamic>> buildApiMessages({
     required List<ChatMessage> messages,
     required Map<String, int> versionSelections,
@@ -262,11 +263,23 @@ class MessageBuilderService {
       if (m.role == 'assistant' && geminiThoughtSignatureHandler != null) {
         content = geminiThoughtSignatureHandler!(m, content);
       }
-      if (content.isEmpty) continue;
+      final mediaRefs = mediaRefsFromParts(m);
+      // Pure-attachment turns have empty text content but still must be sent.
+      // Document FileParts are omitted from mediaRefs (they travel via
+      // document extraction), so also keep messages that still have a usable
+      // ImagePart/FilePart for processUserMessagesForApi to inject text.
+      if (content.isEmpty &&
+          mediaRefs.isEmpty &&
+          !_hasUsableAttachmentPart(m)) {
+        continue;
+      }
       final role = m.role == 'assistant' ? 'assistant' : 'user';
       final message = <String, dynamic>{'role': role, 'content': content};
       if (role == 'user') {
         message[internalRevisionIdKey] = m.id;
+      }
+      if (mediaRefs.isNotEmpty) {
+        message[internalMediaPathsKey] = mediaRefs;
       }
       if (toolContinuationReasoningContent?.isNotEmpty == true) {
         message['reasoning_content'] = toolContinuationReasoningContent;
@@ -278,6 +291,58 @@ class MessageBuilderService {
     }
 
     return out;
+  }
+
+  /// Collect structured `_kelivo_media_paths` entries from image/file parts.
+  ///
+  /// Skips unavailable parts. Document (non-media) FileParts are omitted — they
+  /// travel through document extraction, not media-path attachments.
+  static List<Map<String, dynamic>> mediaRefsFromParts(ChatMessage message) {
+    final refs = <Map<String, dynamic>>[];
+    for (final part in message.parts) {
+      if (part is ImagePart) {
+        if (part.unavailable) continue;
+        final uri = part.uri.trim();
+        if (uri.isEmpty) continue;
+        refs.add(encodeInternalMediaRef(uri: uri, mime: part.mime));
+      } else if (part is FilePart) {
+        if (part.unavailable) continue;
+        final uri = part.uri.trim();
+        if (uri.isEmpty) continue;
+        final effectiveMime = resolveMediaAttachmentMime(
+          explicitMime: part.mime ?? '',
+          fileName: part.name,
+          path: uri,
+        );
+        if (!(isImageMime(effectiveMime) ||
+            isAudioMime(effectiveMime) ||
+            isVideoMime(effectiveMime))) {
+          continue;
+        }
+        // Prefer resolved media mime over stale generics like
+        // application/octet-stream stored on the part.
+        refs.add(
+          encodeInternalMediaRef(
+            uri: uri,
+            mime: effectiveMime.isEmpty ? null : effectiveMime,
+          ),
+        );
+      }
+    }
+    return refs;
+  }
+
+  /// True when the message still has a non-unavailable image/file attachment
+  /// that should survive into API preparation even without media refs.
+  static bool _hasUsableAttachmentPart(ChatMessage message) {
+    for (final part in message.parts) {
+      if (part is ImagePart && !part.unavailable) {
+        if (part.uri.trim().isNotEmpty) return true;
+      } else if (part is FilePart && !part.unavailable) {
+        if (part.uri.trim().isNotEmpty) return true;
+      }
+    }
+    return false;
   }
 
   /// Remove internal user revision IDs before provider requests.
@@ -354,47 +419,87 @@ class MessageBuilderService {
     return pick(persisted);
   }
 
-  /// Parse input data from raw message content (extracts images and documents).
-  ChatInputData parseInputFromRaw(
-    String raw, {
+  /// Parse attachments from structured [ChatMessage.parts].
+  ///
+  /// Parts-only contract for API request building. Content-marker decode is
+  /// not performed here — migration owns that via the legacy decoder.
+  ChatInputData parseInputFromMessage(
+    ChatMessage message, {
     bool includeMediaFilePathsAsImages = true,
   }) {
-    final imgRe = RegExp(r"\[image:(.+?)\]");
-    final fileRe = RegExp(r"\[file:(.+?)\|(.+?)\|(.+?)\]");
     final images = <String>[];
     final docs = <DocumentAttachment>[];
-    final buffer = StringBuffer();
-    int idx = 0;
-    while (idx < raw.length) {
-      final imgMatch = imgRe.matchAsPrefix(raw, idx);
-      final fileMatch = fileRe.matchAsPrefix(raw, idx);
-      if (imgMatch != null) {
-        final p = imgMatch.group(1)?.trim();
-        if (p != null && p.isNotEmpty) images.add(p);
-        idx = imgMatch.end;
-        continue;
-      }
-      if (fileMatch != null) {
-        final path = fileMatch.group(1)?.trim() ?? '';
-        final name = fileMatch.group(2)?.trim() ?? 'file';
-        final mime = fileMatch.group(3)?.trim() ?? 'text/plain';
-        final doc = DocumentAttachment(path: path, fileName: name, mime: mime);
+    final textParts = <String>[];
+    for (final part in message.parts) {
+      if (part is TextPart) {
+        textParts.add(part.text);
+      } else if (part is ImagePart) {
+        // Unavailable parts stay in persisted history for UI placeholders but
+        // must not enter API media paths.
+        if (part.unavailable) continue;
+        final uri = part.uri.trim();
+        if (uri.isNotEmpty) images.add(uri);
+      } else if (part is FilePart) {
+        if (part.unavailable) continue;
+        final doc = DocumentAttachment(
+          path: part.uri,
+          fileName: part.name,
+          mime: part.mime ?? '',
+        );
         docs.add(doc);
-        // Treat media attachments as image-style attachments for downstream API builders.
         final effectiveMime = _effectiveAttachmentMime(doc);
         if (includeMediaFilePathsAsImages &&
-            (isVideoMime(effectiveMime) || isAudioMime(effectiveMime)) &&
-            path.isNotEmpty) {
-          images.add(path);
+            (isImageMime(effectiveMime) ||
+                isVideoMime(effectiveMime) ||
+                isAudioMime(effectiveMime)) &&
+            part.uri.trim().isNotEmpty) {
+          images.add(part.uri.trim());
         }
-        idx = fileMatch.end;
-        continue;
       }
-      buffer.write(raw[idx]);
-      idx++;
     }
     return ChatInputData(
-      text: buffer.toString().trim(),
+      text: textParts.join().trim(),
+      imagePaths: images,
+      documents: docs,
+    );
+  }
+
+  /// Build [ChatInputData] from an API map when no [ChatMessage] is available.
+  ///
+  /// Uses content text plus [internalMediaPathsKey] only — no marker decode.
+  ChatInputData parseInputFromApiMap(
+    Map<String, dynamic> message, {
+    bool includeMediaFilePathsAsImages = true,
+  }) {
+    final text = (message['content'] ?? '').toString();
+    final mediaRefs = parseInternalMediaRefs(message[internalMediaPathsKey]);
+    final mediaPaths = [for (final ref in mediaRefs) ref.uri];
+    if (!includeMediaFilePathsAsImages) {
+      return ChatInputData(text: text.trim(), imagePaths: mediaPaths);
+    }
+    final images = <String>[];
+    final docs = <DocumentAttachment>[];
+    for (final ref in mediaRefs) {
+      final path = ref.uri;
+      final mime = (ref.mime != null && ref.mime!.trim().isNotEmpty)
+          ? ref.mime!.trim()
+          : inferMediaMimeFromSource(path);
+      if (isAudioMime(mime) || isVideoMime(mime)) {
+        final name = path.split(RegExp(r'[\\/]')).last;
+        docs.add(
+          DocumentAttachment(
+            path: path,
+            fileName: name.isEmpty ? 'file' : name,
+            mime: mime,
+          ),
+        );
+        images.add(path);
+      } else {
+        images.add(path);
+      }
+    }
+    return ChatInputData(
+      text: text.trim(),
       imagePaths: images,
       documents: docs,
     );
@@ -461,9 +566,15 @@ class MessageBuilderService {
             .toString()
             .trim();
         if (frozenPrompts?.containsKey(revisionId) ?? false) continue;
-        final parsedUser = parseInputFromRaw(
-          (message['content'] ?? '').toString(),
+        final revisionForParse = revisionId;
+        final chatForParse = _resolveChatMessage(
+          revisionId: revisionForParse,
+          conversation: conversation,
+          sourceMessages: sourceMessages,
         );
+        final parsedUser = chatForParse != null
+            ? parseInputFromMessage(chatForParse)
+            : parseInputFromApiMap(message);
         final videoPaths = <String>{
           for (final d in parsedUser.documents)
             if (isVideoMime(_effectiveAttachmentMime(d))) d.path.trim(),
@@ -546,8 +657,14 @@ class MessageBuilderService {
       final revisionId = (apiMessages[i][internalRevisionIdKey] ?? '')
           .toString()
           .trim();
-      final rawUser = (apiMessages[i]['content'] ?? '').toString();
-      final parsedUser = parseInputFromRaw(rawUser);
+      final chatMessageForParts = _resolveChatMessage(
+        revisionId: revisionId,
+        conversation: conversation,
+        sourceMessages: sourceMessages,
+      );
+      final parsedUser = chatMessageForParts != null
+          ? parseInputFromMessage(chatMessageForParts)
+          : parseInputFromApiMap(apiMessages[i]);
       final videoPaths = <String>{
         for (final d in parsedUser.documents)
           if (isVideoMime(_effectiveAttachmentMime(d))) d.path.trim(),
@@ -557,24 +674,79 @@ class MessageBuilderService {
           if (isAudioMime(_effectiveAttachmentMime(d))) d.path.trim(),
       }..removeWhere((p) => p.isEmpty);
 
-      final messageMediaPaths = parsedUser.imagePaths
-          .map((p) => p.trim())
-          .where(
-            (p) =>
-                p.isNotEmpty &&
-                (!ocrActive ||
-                    videoPaths.contains(p) ||
-                    audioPaths.contains(p)),
-          )
-          .toSet()
-          .toList(growable: false);
+      final mimeByPath = <String, String>{};
+      if (chatMessageForParts != null) {
+        for (final part in chatMessageForParts.parts) {
+          if (part is ImagePart) {
+            if (part.unavailable) continue;
+            final uri = part.uri.trim();
+            if (uri.isEmpty) continue;
+            // Prefer resolved media mime over stale generics like
+            // application/octet-stream stored on the part.
+            final fileName = uri.split(RegExp(r'[\\/]')).last;
+            final effectiveMime = resolveMediaAttachmentMime(
+              explicitMime: part.mime ?? '',
+              fileName: fileName.isEmpty ? uri : fileName,
+              path: uri,
+            );
+            if (effectiveMime.isNotEmpty) mimeByPath[uri] = effectiveMime;
+          } else if (part is FilePart) {
+            if (part.unavailable) continue;
+            final uri = part.uri.trim();
+            if (uri.isEmpty) continue;
+            final effectiveMime = _effectiveAttachmentMime(
+              DocumentAttachment(
+                path: uri,
+                fileName: part.name,
+                mime: part.mime ?? '',
+              ),
+            );
+            if (effectiveMime.isNotEmpty) mimeByPath[uri] = effectiveMime;
+          }
+        }
+      } else {
+        for (final ref in parseInternalMediaRefs(
+          apiMessages[i][internalMediaPathsKey],
+        )) {
+          final uri = ref.uri.trim();
+          if (uri.isEmpty) continue;
+          final fileName = uri.split(RegExp(r'[\\/]')).last;
+          final effectiveMime = resolveMediaAttachmentMime(
+            explicitMime: ref.mime ?? '',
+            fileName: fileName.isEmpty ? uri : fileName,
+            path: uri,
+          );
+          if (effectiveMime.isNotEmpty) mimeByPath[uri] = effectiveMime;
+        }
+        for (final d in parsedUser.documents) {
+          final path = d.path.trim();
+          final mime = _effectiveAttachmentMime(d);
+          if (path.isNotEmpty && mime.isNotEmpty) {
+            mimeByPath.putIfAbsent(path, () => mime);
+          }
+        }
+      }
+
+      final messageMediaPaths = <Map<String, dynamic>>[];
+      final seenPaths = <String>{};
+      for (final rawPath in parsedUser.imagePaths) {
+        final path = rawPath.trim();
+        if (path.isEmpty || !seenPaths.add(path)) continue;
+        if (ocrActive &&
+            !videoPaths.contains(path) &&
+            !audioPaths.contains(path)) {
+          continue;
+        }
+        final mime = mimeByPath[path];
+        messageMediaPaths.add(encodeInternalMediaRef(uri: path, mime: mime));
+      }
       if (messageMediaPaths.isEmpty) {
         apiMessages[i].remove(internalMediaPathsKey);
       } else {
         apiMessages[i][internalMediaPathsKey] = messageMediaPaths;
       }
 
-      // Capture image paths from last user message (from raw markers).
+      // Capture image paths from last user message (from parts).
       if (i == lastUserIdx &&
           lastUserImagePaths == null &&
           parsedUser.imagePaths.isNotEmpty) {
@@ -588,17 +760,7 @@ class MessageBuilderService {
         continue;
       }
 
-      final inlineImagePaths = parsedUser.imagePaths
-          .map((p) => p.trim())
-          .where(
-            (p) =>
-                p.isNotEmpty &&
-                !videoPaths.contains(p) &&
-                !audioPaths.contains(p),
-          )
-          .toList(growable: false);
-
-      // Apply replace-only regexes at send-time on user text (exclude markers).
+      // Apply replace-only regexes at send-time on user text.
       final replacedUserText = applyAssistantRegexes(
         parsedUser.text,
         assistant: assistant,
@@ -606,10 +768,9 @@ class MessageBuilderService {
         target: AssistantRegexTransformTarget.send,
       );
 
-      final imageMarkers = (!ocrActive && inlineImagePaths.isNotEmpty)
-          ? inlineImagePaths.map((p) => '\n[image:$p]').join()
-          : '';
-      final cleanedUser = (replacedUserText + imageMarkers).trim();
+      // Attachments travel via internalMediaPathsKey / lastUserImagePaths —
+      // never re-embed legacy attachment markers into content.
+      final cleanedUser = replacedUserText.trim();
 
       final filePrompts = StringBuffer();
       for (final d in parsedUser.documents) {
@@ -720,12 +881,16 @@ class MessageBuilderService {
     required Conversation? conversation,
     required List<ChatMessage>? sourceMessages,
   }) {
-    if (revisionId.isEmpty || conversation == null) return null;
+    if (revisionId.isEmpty) return null;
+    // Prefer the request's source messages even when Conversation is absent —
+    // otherwise structured ImagePart/FilePart attachments are dropped and the
+    // caller silently falls back to content-only parsing.
     if (sourceMessages != null) {
       for (final candidate in sourceMessages) {
         if (candidate.id == revisionId) return candidate;
       }
     }
+    if (conversation == null) return null;
     for (final candidate in chatService.getMessages(conversation.id)) {
       if (candidate.id == revisionId) return candidate;
     }

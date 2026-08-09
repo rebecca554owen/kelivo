@@ -187,7 +187,7 @@ void main() {
       final file = File('${dir.path}/real.png');
       await file.writeAsBytes(const [1, 2, 3, 4]);
 
-      final input = '```\ncode\n```\n[image:${file.path}]';
+      final input = '```\ncode\n```\n![](${file.path})';
 
       final body = await _sendAndCaptureRequestBody((baseUrl) async {
         return ChatApiService.sendMessageStream(

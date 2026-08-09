@@ -14,6 +14,8 @@ enum ChatDatabaseOperation {
   queryTotalMessageCount,
   queryTextPartCount,
   queryToolCallPartCount,
+  queryImagePartCount,
+  queryFilePartCount,
   queryTextPartContentDigest,
   queryMessageRange,
   queryMessagesByIds,

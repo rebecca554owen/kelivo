@@ -3,13 +3,12 @@ import 'package:flutter/widgets.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/message_part.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
-import '../../../core/services/model_override_payload_parser.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
-import '../../../core/utils/openai_model_compat.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../controllers/stream_controller.dart' as stream_ctrl;
@@ -244,13 +243,14 @@ class MessageGenerationService {
     required ChatInputData input,
     required Assistant? assistant,
   }) async {
+    final parts = await MessageGenerationService.buildPersistedUserMessageParts(
+      input,
+      assistant: assistant,
+    );
     return chatService.addMessage(
       conversationId: conversationId,
       role: 'user',
-      content: MessageGenerationService.buildPersistedUserMessageContent(
-        input,
-        assistant: assistant,
-      ),
+      parts: parts,
     );
   }
 
@@ -264,7 +264,7 @@ class MessageGenerationService {
     required String modelId,
     required String providerKey,
   }) async {
-    final userContent = buildPersistedUserMessageContent(
+    final userParts = await buildPersistedUserMessageParts(
       input,
       assistant: assistant,
     );
@@ -272,7 +272,7 @@ class MessageGenerationService {
       final userMessage = await chatService.addMessage(
         conversationId: conversationId,
         role: 'user',
-        content: userContent,
+        parts: userParts,
       );
       final assistantMessage = await createAssistantPlaceholder(
         conversationId: conversationId,
@@ -287,7 +287,7 @@ class MessageGenerationService {
     }
     final result = await chatService.beginSendGeneration(
       conversationId: conversationId,
-      userContent: userContent,
+      userParts: userParts,
       modelId: modelId,
       providerId: providerKey,
     );
@@ -353,25 +353,56 @@ class MessageGenerationService {
     return (assistantMessage: result.assistantMessage, runId: result.run.id);
   }
 
-  /// Build the persisted content string for a user message.
-  static String buildPersistedUserMessageContent(
+  /// Build structured parts for a persisted user message.
+  ///
+  /// Text is always present (possibly empty). Attachments follow in the
+  /// user's selection order. No legacy attachment markers are produced.
+  static Future<List<MessagePart>> buildPersistedUserMessageParts(
     ChatInputData input, {
     required Assistant? assistant,
-  }) {
-    final content = input.text.trim();
-    final imageMarkers = input.imagePaths.map((p) => '\n[image:$p]').join();
-    final docMarkers = input.documents
-        .map((d) => '\n[file:${d.path}|${d.fileName}|${d.mime}]')
-        .join();
-
+  }) async {
     final processedUserText = applyAssistantRegexes(
-      content,
+      input.text.trim(),
       assistant: assistant,
       scope: AssistantRegexScope.user,
       target: AssistantRegexTransformTarget.persist,
     );
 
-    return processedUserText + imageMarkers + docMarkers;
+    final parts = <MessagePart>[TextPart(processedUserText)];
+    for (final path in input.imagePaths) {
+      parts.add(
+        ImagePart(
+          uri: path,
+          mime: await inferAttachmentMime(uri: path),
+        ),
+      );
+    }
+    for (final document in input.documents) {
+      parts.add(
+        FilePart(
+          uri: document.path,
+          name: document.fileName,
+          mime: await inferAttachmentMime(
+            uri: document.path,
+            explicitMime: document.mime,
+            fileName: document.fileName,
+          ),
+        ),
+      );
+    }
+    return parts;
+  }
+
+  /// Derived text body for callers that still need a plain string.
+  static Future<String> buildPersistedUserMessageContent(
+    ChatInputData input, {
+    required Assistant? assistant,
+  }) async {
+    final parts = await buildPersistedUserMessageParts(
+      input,
+      assistant: assistant,
+    );
+    return parts.whereType<TextPart>().map((part) => part.text).join();
   }
 
   /// Create assistant message placeholder.
@@ -615,17 +646,9 @@ class MessageGenerationService {
     required String providerKey,
     required String modelId,
   }) {
-    final cfg = settings.getProviderConfig(providerKey);
-    if (ProviderConfig.classify(providerKey, explicitType: cfg.providerType) !=
-        ProviderKind.openai) {
-      return false;
-    }
-    final override = ModelOverridePayloadParser.modelOverride(
-      cfg.modelOverrides,
-      modelId,
-    );
-    final upstreamModelId = resolveApiModelIdOverride(override, modelId);
-    return isLongCatOmniModelId(upstreamModelId);
+    // Former Omni audio allowlist removed; OpenAI-compatible providers do not
+    // receive special audio attachment support via this gate.
+    return false;
   }
 
   bool supportsAudioAttachmentsForProvider(
@@ -655,14 +678,15 @@ class MessageGenerationService {
 
   bool apiMessagesContainAudioAttachments(List<Map<String, dynamic>> messages) {
     for (final message in messages) {
-      if ((message['role'] ?? '').toString() != 'user') continue;
-      final parsed = messageBuilderService.parseInputFromRaw(
-        (message['content'] ?? '').toString(),
-      );
-      if (parsed.documents.any(
-        (attachment) => isAudioMime(_effectiveAttachmentMime(attachment)),
+      for (final ref in parseInternalMediaRefs(
+        message[MessageBuilderService.internalMediaPathsKey],
       )) {
-        return true;
+        final mime = (ref.mime != null && ref.mime!.trim().isNotEmpty)
+            ? ref.mime!.trim()
+            : inferMediaMimeFromSource(ref.uri);
+        if (isAudioMime(mime)) {
+          return true;
+        }
       }
     }
     return false;

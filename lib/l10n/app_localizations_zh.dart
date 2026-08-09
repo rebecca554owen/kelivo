@@ -6581,6 +6581,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get migrationMessageCount => '消息';
 
   @override
+  String get migrationConvertedCount => '已转换';
+
+  @override
+  String get migrationMalformedCount => '格式异常';
+
+  @override
+  String get migrationMissingFilesCount => '缺失文件';
+
+  @override
   String get migrationRestartButton => '重启 Kelivo';
 
   @override
@@ -13484,6 +13493,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get migrationMessageCount => '消息';
 
   @override
+  String get migrationConvertedCount => '已转换';
+
+  @override
+  String get migrationMalformedCount => '格式异常';
+
+  @override
+  String get migrationMissingFilesCount => '缺失文件';
+
+  @override
   String get migrationRestartButton => '重启 Kelivo';
 
   @override
@@ -20385,6 +20403,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get migrationMessageCount => '訊息';
+
+  @override
+  String get migrationConvertedCount => '已轉換';
+
+  @override
+  String get migrationMalformedCount => '格式異常';
+
+  @override
+  String get migrationMissingFilesCount => '缺失檔案';
 
   @override
   String get migrationRestartButton => '重啟 Kelivo';

@@ -7,6 +7,7 @@ import '../../database/chat_database_repository.dart';
 import '../../models/assistant.dart';
 import '../../models/chat_message.dart';
 import '../../models/memory_entry.dart';
+import '../../models/message_part.dart';
 import '../../providers/assistant_provider.dart';
 import '../../providers/memory_provider_v2.dart';
 import '../../providers/settings_provider.dart';
@@ -141,18 +142,6 @@ class MemoryPipelineService {
   MemoryOrganizeStatus _lastStatus = const MemoryOrganizeStatus();
   MemoryOrganizeStatus get lastStatus => _lastStatus;
 
-  static final RegExp _imageMarkerRe = RegExp(r'\[image:[^\]]*\]');
-  static final RegExp _fileMarkerRe = RegExp(r'\[file:[^\]]*\]');
-
-  /// Strip `[image:…]` / `[file:…]` markers (§12.3).
-  static String stripAttachmentMarkers(String text) {
-    return text
-        .replaceAll(_imageMarkerRe, '')
-        .replaceAll(_fileMarkerRe, '')
-        .replaceAll(RegExp(r'[ \t]+\n'), '\n')
-        .trim();
-  }
-
   /// Collapse to the selected version chain (same rules as title generation).
   static List<ChatMessage> collapseSelectedVersions(
     List<ChatMessage> messages,
@@ -204,7 +193,12 @@ class MemoryPipelineService {
       } else {
         continue;
       }
-      var text = stripAttachmentMarkers(m.content).trim();
+      // TextPart bodies only — image/file attachments live as structured parts.
+      var text = m.parts
+          .whereType<TextPart>()
+          .map((part) => part.text)
+          .join()
+          .trim();
       if (text.isEmpty) continue;
       if (text.length > 2000) {
         text = '${text.substring(0, 2000)}…';

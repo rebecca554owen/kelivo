@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show defaultTargetPlatform, TargetPlatform, visibleForTesting;
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
@@ -15,6 +15,7 @@ import 'dart:convert';
 import '../../home/widgets/file_processing_indicator.dart';
 import '../pages/image_viewer_page.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/message_part.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../icons/reasoning_icons.dart';
 // import '../../../theme/design_tokens.dart';
@@ -77,24 +78,136 @@ Uri? _tryNormalizeExternalUri(String raw) {
   return uri;
 }
 
-/// Extract image paths from tool result content.
-/// Returns (cleanText, imagePaths). Supports local file paths and HTTP URLs.
+/// Extract markdown images from MCP/tool result content.
+///
+/// Returns `(cleanText, imagePaths)`. Matches `![alt](url)` only — custom
+/// attachment marker strings are left as plain text.
+///
+/// Destinations may contain parentheses (e.g. `/tmp/run (1)/image.png`); the
+/// parser finds `![...](` then scans balanced parentheses to the matching `)`.
 (String, List<String>) _parseMcpImagePaths(String? content) {
   if (content == null || content.isEmpty) return ('', const []);
 
   final images = <String>[];
-  final imgRe = RegExp(r'\[image:(.+?)\]');
-
-  final cleanText = content.replaceAllMapped(imgRe, (m) {
-    final path = m.group(1)!;
-    // Filter invalid values
-    if (path.isNotEmpty && path != 'generated') {
-      images.add(path);
+  final buffer = StringBuffer();
+  var i = 0;
+  while (i < content.length) {
+    if (content.startsWith('![', i)) {
+      final altClose = content.indexOf('](', i + 2);
+      if (altClose != -1) {
+        final destStart = altClose + 2;
+        var depth = 1;
+        var j = destStart;
+        while (j < content.length && depth > 0) {
+          final ch = content.codeUnitAt(j);
+          if (ch == 0x28) {
+            // (
+            depth += 1;
+          } else if (ch == 0x29) {
+            // )
+            depth -= 1;
+            if (depth == 0) break;
+          }
+          j += 1;
+        }
+        if (depth == 0 && j < content.length) {
+          final path = content.substring(destStart, j).trim();
+          if (path.isNotEmpty && path != 'generated') {
+            images.add(path);
+          }
+          i = j + 1;
+          continue;
+        }
+      }
     }
-    return '';
-  });
+    buffer.writeCharCode(content.codeUnitAt(i));
+    i += 1;
+  }
 
-  return (cleanText.trim(), images);
+  return (buffer.toString().trim(), images);
+}
+
+@visibleForTesting
+(String, List<String>) parseMcpImagePathsForTesting(String? content) =>
+    _parseMcpImagePaths(content);
+
+String _resolveAttachmentImageUri(String uri) {
+  final path = uri.trim();
+  if (path.isEmpty) return path;
+  if (path.startsWith('http://') ||
+      path.startsWith('https://') ||
+      path.startsWith('data:')) {
+    return path;
+  }
+  return SandboxPathResolver.fix(path);
+}
+
+/// Shared image widget for tool thumbnails and message attachment previews.
+///
+/// `http(s)` → [Image.network], `data:` → [Image.memory], otherwise local
+/// [Image.file]. Unavailable/empty/decode failures use [placeholder].
+Widget _buildResolvedImage(
+  BuildContext context,
+  String rawPath, {
+  double? width,
+  double? height,
+  BoxFit fit = BoxFit.contain,
+  Widget Function()? placeholder,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  Widget errorWidget() =>
+      placeholder?.call() ??
+      Container(
+        width: width ?? (height != null ? height * 0.67 : 120),
+        height: height ?? 180,
+        color: cs.surfaceContainerHighest,
+        alignment: Alignment.center,
+        child: Icon(
+          Lucide.ImageOff,
+          size: 24,
+          color: cs.onSurface.withValues(alpha: 0.5),
+        ),
+      );
+
+  final path = rawPath.trim();
+  if (path.isEmpty) return errorWidget();
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return Image.network(
+      path,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => errorWidget(),
+    );
+  }
+
+  if (path.startsWith('data:')) {
+    try {
+      const marker = 'base64,';
+      final idx = path.indexOf(marker);
+      if (idx != -1) {
+        final bytes = base64Decode(path.substring(idx + marker.length));
+        return Image.memory(
+          bytes,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, __, ___) => errorWidget(),
+        );
+      }
+    } catch (_) {}
+    return errorWidget();
+  }
+
+  final fixed = SandboxPathResolver.fix(path);
+  return Image.file(
+    File(fixed),
+    width: width,
+    height: height,
+    fit: fit,
+    errorBuilder: (_, __, ___) => errorWidget(),
+  );
 }
 
 IconData _toolIconFor(String name, [Map<String, dynamic> args = const {}]) {
@@ -298,32 +411,11 @@ Widget _buildToolImageFromPath(
   double? height,
   BoxFit fit = BoxFit.contain,
 }) {
-  final cs = Theme.of(context).colorScheme;
-  Widget errorWidget() => Container(
-    width: height != null ? height * 0.67 : 120,
-    height: height ?? 180,
-    color: cs.surfaceContainerHighest,
-    child: Icon(
-      Lucide.ImageOff,
-      size: 24,
-      color: cs.onSurface.withValues(alpha: 0.5),
-    ),
-  );
-
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return Image.network(
-      path,
-      height: height,
-      fit: fit,
-      errorBuilder: (_, __, ___) => errorWidget(),
-    );
-  }
-
-  return Image.file(
-    File(path),
+  return _buildResolvedImage(
+    context,
+    path,
     height: height,
     fit: fit,
-    errorBuilder: (_, __, ___) => errorWidget(),
   );
 }
 
@@ -1150,19 +1242,21 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final userProvider = context.watch<UserProvider>();
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
-    final parsed = _parseUserContent(widget.message.content);
+    // Attachments come from structured parts only. Literal marker-like text
+    // inside TextPart stays plain text and is never re-parsed.
     final assistant = _assistantForMessage();
     final visualText = _applyVisualAssistantRegexes(
-      parsed.text,
+      widget.message.content,
       assistant: assistant,
       scope: AssistantRegexScope.user,
     );
     final showUserActions = settings.showUserMessageActions;
     final showVersionSwitcher = (widget.versionCount ?? 1) > 1;
-    final mediaPreview = _buildUserAttachmentPreview(
+    final mediaPreview = _buildAttachmentPreview(
       context,
-      parsed: parsed,
+      parts: widget.message.parts,
       isDark: isDark,
+      alignEnd: true,
     );
     final textBubble = visualText.isNotEmpty
         ? Container(
@@ -1479,86 +1573,123 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         : content;
   }
 
-  Widget? _buildUserAttachmentPreview(
+  /// Attachment previews in [parts] ordinal order (not images-then-files).
+  ///
+  /// [alignEnd] true for user bubbles (trailing), false for assistant (start).
+  Widget? _buildAttachmentPreview(
     BuildContext context, {
-    required _ParsedUserContent parsed,
+    required List<MessagePart> parts,
     required bool isDark,
+    required bool alignEnd,
   }) {
-    if (parsed.images.isEmpty && parsed.docs.isEmpty) return null;
+    final attachmentEntries = <({int index, MessagePart part})>[
+      for (var i = 0; i < parts.length; i++)
+        if (parts[i] is ImagePart || parts[i] is FilePart)
+          (index: i, part: parts[i]),
+    ];
+    if (attachmentEntries.isEmpty) return null;
 
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final imageItems = <Widget>[];
-    final docItems = <Widget>[];
+    final roleKey = alignEnd ? 'user' : 'assistant';
 
-    if (parsed.images.isNotEmpty) {
-      final imgs = parsed.images;
-      imageItems.addAll(
-        imgs.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final p = entry.value;
-          return IosCardPress(
+    Widget unavailableImagePlaceholder() => Container(
+      width: 112,
+      height: 112,
+      color: cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.06),
+      alignment: Alignment.center,
+      child: Icon(
+        Lucide.ImageOff,
+        color: cs.onSurface.withValues(alpha: 0.45),
+      ),
+    );
+
+    final viewablePaths = <String>[
+      for (final entry in attachmentEntries)
+        if (entry.part is ImagePart)
+          if (!(entry.part as ImagePart).unavailable &&
+              (entry.part as ImagePart).uri.trim().isNotEmpty)
+            _resolveAttachmentImageUri((entry.part as ImagePart).uri),
+    ];
+
+    final items = <Widget>[];
+    for (final entry in attachmentEntries) {
+      final part = entry.part;
+      final partIndex = entry.index;
+      if (part is ImagePart) {
+        final path = part.uri.trim();
+        final fixed = path.isEmpty ? '' : _resolveAttachmentImageUri(path);
+        final viewIndex = viewablePaths.indexOf(fixed);
+        items.add(
+          IosCardPress(
+            key: ValueKey(
+              '$roleKey-message-attachment:${widget.message.id}:$partIndex',
+            ),
             baseColor: Colors.transparent,
             pressedScale: 0.985,
             borderRadius: BorderRadius.circular(10),
             padding: EdgeInsets.zero,
-            onTap: () {
-              Navigator.of(context).push(
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) =>
-                      ImageViewerPage(images: imgs, initialIndex: idx),
-                  transitionDuration: const Duration(milliseconds: 360),
-                  reverseTransitionDuration: const Duration(milliseconds: 280),
-                  transitionsBuilder: (context, anim, sec, child) {
-                    final curved = CurvedAnimation(
-                      parent: anim,
-                      curve: Curves.easeOutCubic,
-                      reverseCurve: Curves.easeInCubic,
-                    );
-                    return FadeTransition(
-                      opacity: curved,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.02),
-                          end: Offset.zero,
-                        ).animate(curved),
-                        child: child,
+            onTap: part.unavailable || viewIndex < 0
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => ImageViewerPage(
+                          images: viewablePaths,
+                          initialIndex: viewIndex,
+                        ),
+                        transitionDuration: const Duration(milliseconds: 360),
+                        reverseTransitionDuration: const Duration(
+                          milliseconds: 280,
+                        ),
+                        transitionsBuilder: (context, anim, sec, child) {
+                          final curved = CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOutCubic,
+                            reverseCurve: Curves.easeInCubic,
+                          );
+                          return FadeTransition(
+                            opacity: curved,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.02),
+                                end: Offset.zero,
+                              ).animate(curved),
+                              child: child,
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
-                ),
-              );
-            },
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Hero(
-                tag: 'img:$p',
-                child: Image.file(
-                  File(SandboxPathResolver.fix(p)),
-                  width: 112,
-                  height: 112,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 112,
-                    height: 112,
-                    color: cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.06),
-                    child: Icon(
-                      Icons.broken_image,
-                      color: cs.onSurface.withValues(alpha: 0.45),
-                    ),
-                  ),
-                ),
+                tag: 'img:${fixed.isNotEmpty ? fixed : 'unavailable-$partIndex'}',
+                child: part.unavailable || fixed.isEmpty
+                    ? unavailableImagePlaceholder()
+                    : _buildResolvedImage(
+                        context,
+                        fixed,
+                        width: 112,
+                        height: 112,
+                        fit: BoxFit.cover,
+                        placeholder: unavailableImagePlaceholder,
+                      ),
               ),
             ),
-          );
-        }),
-      );
-    }
+          ),
+        );
+        continue;
+      }
 
-    if (parsed.docs.isNotEmpty) {
-      docItems.addAll(
-        parsed.docs.map((d) {
-          return IosCardPress(
+      if (part is FilePart) {
+        final d = part;
+        items.add(
+          IosCardPress(
+            key: ValueKey(
+              '$roleKey-message-attachment:${widget.message.id}:$partIndex',
+            ),
             baseColor: isDark
                 ? cs.onSurface.withValues(alpha: 0.08)
                 : cs.surface.withValues(alpha: 0.92),
@@ -1568,42 +1699,89 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               color: cs.outlineVariant.withValues(alpha: 0.18),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            onTap: () async {
-              try {
-                final fixed = SandboxPathResolver.fix(d.path);
-                final f = File(fixed);
-                if (!(await f.exists())) {
-                  if (!context.mounted) return;
-                  showAppSnackBar(
-                    context,
-                    message: l10n.chatMessageWidgetFileNotFound(d.fileName),
-                    type: NotificationType.error,
-                  );
-                  return;
-                }
-                final res = await OpenFilex.open(fixed, type: d.mime);
-                if (res.type != ResultType.done) {
-                  if (!context.mounted) return;
-                  final openMessage = res.message;
-                  showAppSnackBar(
-                    context,
-                    message: l10n.chatMessageWidgetCannotOpenFile(
-                      openMessage.isNotEmpty
-                          ? openMessage
-                          : res.type.toString(),
-                    ),
-                    type: NotificationType.error,
-                  );
-                }
-              } catch (e) {
-                if (!context.mounted) return;
-                showAppSnackBar(
-                  context,
-                  message: l10n.chatMessageWidgetOpenFileError(e.toString()),
-                  type: NotificationType.error,
-                );
-              }
-            },
+            onTap: d.unavailable
+                ? null
+                : () async {
+                    try {
+                      final uri = d.uri.trim();
+                      if (uri.startsWith('http://') ||
+                          uri.startsWith('https://')) {
+                        final normalized = _tryNormalizeExternalUri(uri);
+                        if (normalized == null) {
+                          if (!context.mounted) return;
+                          showAppSnackBar(
+                            context,
+                            message: l10n.chatMessageWidgetOpenLinkError,
+                            type: NotificationType.error,
+                          );
+                          return;
+                        }
+                        final ok = await launchUrl(
+                          normalized,
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (!ok) {
+                          if (!context.mounted) return;
+                          showAppSnackBar(
+                            context,
+                            message: l10n.chatMessageWidgetCannotOpenUrl(
+                              normalized.toString(),
+                            ),
+                            type: NotificationType.error,
+                          );
+                        }
+                        return;
+                      }
+                      if (uri.startsWith('data:')) {
+                        if (!context.mounted) return;
+                        showAppSnackBar(
+                          context,
+                          message: l10n.chatMessageWidgetCannotOpenFile(
+                            'unsupported data URI',
+                          ),
+                          type: NotificationType.warning,
+                        );
+                        return;
+                      }
+                      final fixed = SandboxPathResolver.fix(uri);
+                      final f = File(fixed);
+                      if (!(await f.exists())) {
+                        if (!context.mounted) return;
+                        showAppSnackBar(
+                          context,
+                          message: l10n.chatMessageWidgetFileNotFound(d.name),
+                          type: NotificationType.error,
+                        );
+                        return;
+                      }
+                      final res = await OpenFilex.open(
+                        fixed,
+                        type: d.mime ?? 'application/octet-stream',
+                      );
+                      if (res.type != ResultType.done) {
+                        if (!context.mounted) return;
+                        final openMessage = res.message;
+                        showAppSnackBar(
+                          context,
+                          message: l10n.chatMessageWidgetCannotOpenFile(
+                            openMessage.isNotEmpty
+                                ? openMessage
+                                : res.type.toString(),
+                          ),
+                          type: NotificationType.error,
+                        );
+                      }
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      showAppSnackBar(
+                        context,
+                        message: l10n.chatMessageWidgetOpenFileError(
+                          e.toString(),
+                        ),
+                        type: NotificationType.error,
+                      );
+                    }
+                  },
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1616,7 +1794,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 180),
                   child: Text(
-                    d.fileName,
+                    d.name,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
@@ -1626,36 +1804,19 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 ),
               ],
             ),
-          );
-        }),
-      );
+          ),
+        );
+      }
     }
 
     return Align(
-      key: ValueKey('user-message-attachments:${widget.message.id}'),
-      alignment: Alignment.centerRight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (imageItems.isNotEmpty)
-            Wrap(
-              key: ValueKey('user-message-images:${widget.message.id}'),
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 8,
-              children: imageItems,
-            ),
-          if (imageItems.isNotEmpty && docItems.isNotEmpty)
-            const SizedBox(height: 8),
-          if (docItems.isNotEmpty)
-            Wrap(
-              key: ValueKey('user-message-docs:${widget.message.id}'),
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 8,
-              children: docItems,
-            ),
-        ],
+      key: ValueKey('$roleKey-message-attachments:${widget.message.id}'),
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+      child: Wrap(
+        alignment: alignEnd ? WrapAlignment.end : WrapAlignment.start,
+        spacing: 8,
+        runSpacing: 8,
+        children: items,
       ),
     );
   }
@@ -1688,36 +1849,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   }) {
     // Reuse same styles, but flag as non-user for default fallthrough
     return _buildBubbleContainer(context: context, isUser: false, child: child);
-  }
-
-  _ParsedUserContent _parseUserContent(String raw) {
-    final imgRe = RegExp(r"\[image:(.+?)\]");
-    final fileRe = RegExp(r"\[file:(.+?)\|(.+?)\|(.+?)\]");
-    final images = <String>[];
-    final docs = <_DocRef>[];
-    final buffer = StringBuffer();
-    int idx = 0;
-    while (idx < raw.length) {
-      final m1 = imgRe.matchAsPrefix(raw, idx);
-      final m2 = fileRe.matchAsPrefix(raw, idx);
-      if (m1 != null) {
-        final p = m1.group(1)?.trim();
-        if (p != null && p.isNotEmpty) images.add(p);
-        idx = m1.end;
-        continue;
-      }
-      if (m2 != null) {
-        final path = m2.group(1)?.trim() ?? '';
-        final name = m2.group(2)?.trim() ?? 'file';
-        final mime = m2.group(3)?.trim() ?? 'text/plain';
-        docs.add(_DocRef(path: path, fileName: name, mime: mime));
-        idx = m2.end;
-        continue;
-      }
-      buffer.write(raw[idx]);
-      idx++;
-    }
-    return _ParsedUserContent(buffer.toString().trim(), images, docs);
   }
 
   Widget _buildAssistantTextContent(
@@ -1968,6 +2099,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final bool isTranslating =
         translationText == l10n.chatMessageWidgetTranslating;
     final searchItems = _allSearchItems();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mediaPreview = _buildAttachmentPreview(
+      context,
+      parts: widget.message.parts,
+      isDark: isDark,
+      alignEnd: false,
+    );
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -2037,6 +2175,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             ],
           ),
           const SizedBox(height: 8),
+
+          if (mediaPreview != null) ...[
+            mediaPreview,
+            const SizedBox(height: 8),
+          ],
 
           // File Processing Indicator (inserted before content)
           if (widget.isProcessingFiles) ...[
@@ -3156,20 +3299,6 @@ class _StreamingAssistantMessageMotion extends StatelessWidget {
   }
 }
 
-class _ParsedUserContent {
-  final String text;
-  final List<String> images;
-  final List<_DocRef> docs;
-  _ParsedUserContent(this.text, this.images, this.docs);
-}
-
-class _DocRef {
-  final String path;
-  final String fileName;
-  final String mime;
-  _DocRef({required this.path, required this.fileName, required this.mime});
-}
-
 // UI data for MCP tool calls/results
 class ToolUIPart {
   final String id;
@@ -3926,7 +4055,7 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
       ),
     );
 
-    final (cleanText, _) = _parseMcpImagePaths(widget.part.content);
+    final (cleanText, imagePaths) = _parseMcpImagePaths(widget.part.content);
     final String summaryText = approvalRequest != null
         ? _argsSummary(approvalRequest.arguments)
         : cleanText.isNotEmpty
@@ -3941,7 +4070,7 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     final ttsText = widget.part.toolName == LocalToolNames.textToSpeech
         ? _textToSpeechToolText(widget.part.arguments)
         : '';
-    final Widget? content = _isAskUser
+    final Widget? summaryContent = _isAskUser
         ? _AskUserInlineBody(
             part: widget.part,
             compact: true,
@@ -3966,6 +4095,42 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
               fontFamily: isPendingApproval ? 'monospace' : null,
               color: fg.body,
             ),
+          );
+    final Widget? imageThumbnails = (!_isAskUser && imagePaths.isNotEmpty)
+        ? SizedBox(
+            key: ValueKey('tool-image-thumbnails:${widget.part.id}'),
+            height: 120,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: imagePaths.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (ctx, i) {
+                final path = imagePaths[i];
+                return GestureDetector(
+                  onTap: () => _showToolFullImage(context, path),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: _buildToolImageFromPath(
+                      context,
+                      path,
+                      height: 120,
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        : null;
+    final Widget? content = (summaryContent == null && imageThumbnails == null)
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (summaryContent != null) summaryContent,
+              if (summaryContent != null && imageThumbnails != null)
+                const SizedBox(height: 8),
+              if (imageThumbnails != null) imageThumbnails,
+            ],
           );
 
     final extra = approvalRequest != null
@@ -4046,41 +4211,18 @@ class _ToolCallItemState extends State<_ToolCallItem> {
     _imagePaths = paths;
   }
 
-  /// Build image widget from path (supports local file and HTTP URL)
+  /// Build image widget from path (http(s), data URI, or local file).
   Widget _buildImageFromPath(
     String path, {
     double? height,
     BoxFit fit = BoxFit.contain,
   }) {
-    final cs = Theme.of(context).colorScheme;
-    Widget errorWidget() => Container(
-      width: height != null ? height * 0.67 : 120,
-      height: height ?? 180,
-      color: cs.surfaceContainerHighest,
-      child: Icon(
-        Lucide.ImageOff,
-        size: 24,
-        color: cs.onSurface.withValues(alpha: 0.5),
-      ),
+    return _buildResolvedImage(
+      context,
+      path,
+      height: height,
+      fit: fit,
     );
-
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      // HTTP URL
-      return Image.network(
-        path,
-        height: height,
-        fit: fit,
-        errorBuilder: (_, __, ___) => errorWidget(),
-      );
-    } else {
-      // Local file path
-      return Image.file(
-        File(path),
-        height: height,
-        fit: fit,
-        errorBuilder: (_, __, ___) => errorWidget(),
-      );
-    }
   }
 
   @override
