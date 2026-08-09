@@ -629,6 +629,7 @@ class MessageBuilderService {
       }
 
       String merged = (filePrompts.toString() + cleanedUser).trim();
+      var canFreezePrompt = true;
 
       if (ocrActive && ocrHandler != null) {
         final ocrTargets = parsedUser.imagePaths
@@ -647,7 +648,9 @@ class MessageBuilderService {
             revisionId: revisionId.isEmpty ? null : revisionId,
             session: ocrSession,
           );
-          if (ocrText != null && ocrText.trim().isNotEmpty) {
+          if (ocrText == null) {
+            canFreezePrompt = false;
+          } else if (ocrText.trim().isNotEmpty) {
             final wrapped = ocrTextWrapper != null
                 ? ocrTextWrapper!(ocrText)
                 : _defaultWrapOcrBlock(ocrText);
@@ -673,6 +676,7 @@ class MessageBuilderService {
           apiMessages: apiMessages,
           pass: injectionPass,
           readFrozenPrompt: false,
+          freezePrompt: canFreezePrompt,
         );
       } else {
         // No conversation or no matching stored message: nothing to freeze
@@ -738,6 +742,7 @@ class MessageBuilderService {
     required List<Map<String, dynamic>> apiMessages,
     MemoryInjectionPass? pass,
     bool readFrozenPrompt = true,
+    bool freezePrompt = true,
   }) async {
     final repo = _repo;
     final persist =
@@ -778,7 +783,7 @@ class MessageBuilderService {
 
     // Temporary drafts never land in message_rows; freezing would violate the
     // message_prompt_rows FK. Assemble in-memory only for those.
-    if (persist) {
+    if (persist && freezePrompt) {
       await repo.freezeMessagePrompt(
         revisionId: message.id,
         conversationId: message.conversationId,

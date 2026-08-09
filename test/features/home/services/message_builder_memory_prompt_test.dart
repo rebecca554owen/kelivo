@@ -165,6 +165,12 @@ void main() {
   MessageBuilderService buildService({
     List<ChatMessage> messages = const [],
     ChatDatabaseRepository? repository,
+    Future<String?> Function(
+      List<String> imagePaths, {
+      String? revisionId,
+      OcrPrepareSession? session,
+    })?
+    ocrHandler,
     Future<OcrPrepareSession> Function({
       required List<String> revisionIds,
       required List<String> imagePaths,
@@ -175,6 +181,7 @@ void main() {
       chatService: _FakeChatService(messages),
       contextProvider: _FakeBuildContext(),
       chatRepository: repository ?? chatRepository,
+      ocrHandler: ocrHandler,
       ocrPrefetch: ocrPrefetch,
     );
   }
@@ -770,6 +777,64 @@ void main() {
         expect(frozen, isNotNull);
         expect(frozen!.payload, content);
         expect(frozen.carriesMemorySnapshot, isTrue);
+      },
+    );
+
+    test(
+      'failed OCR is retried instead of freezing an incomplete prompt',
+      () async {
+        await seedAssistant('assistant-1');
+        final conversation = await seedConversation('conv-ocr-retry');
+        final message = await seedUserMessage(
+          id: 'u1',
+          conversationId: conversation.id,
+          content: 'describe this\n[image:/tmp/retry.png]',
+        );
+        await settings.setOcrModel('ocr-provider', 'ocr-model');
+        await settings.setOcrEnabled(true);
+
+        var ocrCalls = 0;
+        final service = buildService(
+          messages: [message],
+          ocrHandler: (imagePaths, {revisionId, session}) async {
+            ocrCalls++;
+            return ocrCalls == 1 ? null : 'recognized image';
+          },
+        );
+
+        List<Map<String, dynamic>> apiMessages() => [
+          {
+            'role': 'user',
+            'content': message.content,
+            MessageBuilderService.internalRevisionIdKey: message.id,
+          },
+        ];
+
+        final first = apiMessages();
+        await service.processUserMessagesForApi(
+          first,
+          settings,
+          assistant,
+          conversation: conversation,
+          sourceMessages: [message],
+        );
+        expect(await chatRepository.getMessagePrompt(message.id), isNull);
+
+        final retry = apiMessages();
+        await service.processUserMessagesForApi(
+          retry,
+          settings,
+          assistant,
+          conversation: conversation,
+          sourceMessages: [message],
+        );
+
+        expect(ocrCalls, 2);
+        expect(retry.single['content'], contains('recognized image'));
+        expect(
+          (await chatRepository.getMessagePrompt(message.id))?.payload,
+          retry.single['content'],
+        );
       },
     );
 
