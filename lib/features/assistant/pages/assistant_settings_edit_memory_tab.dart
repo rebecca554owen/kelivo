@@ -30,8 +30,15 @@ class _MemoryTabState extends State<_MemoryTab> {
     );
   }
 
-  void _goLegacyMemory() {
-    Navigator.of(context).push(
+  Future<void> _goLegacyMemory() async {
+    if (PlatformUtils.isDesktopTarget) {
+      await showDesktopLegacyMemoryDialog(
+        context,
+        assistantId: widget.assistantId,
+      );
+      return;
+    }
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => LegacyMemoryPage(assistantId: widget.assistantId),
       ),
@@ -109,10 +116,21 @@ class _MemoryTabState extends State<_MemoryTab> {
     return l10n.memoryOrganizeDaysAgo(delta.inDays);
   }
 
-  void _goMemorySettings() {
-    Navigator.of(
+  Future<void> _goMemorySettings() async {
+    if (PlatformUtils.isDesktopTarget) {
+      await showDesktopMemorySettingsDialog(context);
+      return;
+    }
+    await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const MemorySettingsPage()));
+  }
+
+  bool get _isDesktopPlatform {
+    final platform = Theme.of(context).platform;
+    return platform == TargetPlatform.macOS ||
+        platform == TargetPlatform.linux ||
+        platform == TargetPlatform.windows;
   }
 
   @override
@@ -208,15 +226,22 @@ class _MemoryTabState extends State<_MemoryTab> {
                                         ),
                                       _MemoryOrganizeFrequencySection(
                                         assistant: a,
+                                        desktop: _isDesktopPlatform,
                                       ),
                                       _iosDivider(context),
-                                      _MemoryDedupeModeSection(assistant: a),
+                                      _MemoryDedupeModeSection(
+                                        assistant: a,
+                                        desktop: _isDesktopPlatform,
+                                      ),
                                     ],
                                   )
                                 : const SizedBox.shrink(),
                           ),
                           _iosDivider(context),
-                          _MemoryWriteScopeSection(assistant: a),
+                          _MemoryWriteScopeSection(
+                            assistant: a,
+                            desktop: _isDesktopPlatform,
+                          ),
                         ],
                       )
                     : const SizedBox.shrink(),
@@ -267,6 +292,7 @@ class _MemoryTabState extends State<_MemoryTab> {
                                       _iosDivider(context),
                                       _RecentChatsSummaryFrequencySection(
                                         assistant: a,
+                                        desktop: _isDesktopPlatform,
                                       ),
                                     ],
                                   )
@@ -379,6 +405,12 @@ class _MemoryTabState extends State<_MemoryTab> {
           child: MemorySectionCard(
             padding: EdgeInsets.zero,
             children: [
+              MemoryNavRow(
+                title: l10n.settingsPageMemory,
+                subtitle: l10n.memorySettingsEntriesSubtitle,
+                onTap: _goMemorySettings,
+              ),
+              _iosDivider(context),
               MemoryNavRow(
                 title: l10n.memoryUiAssistantLegacyTitle,
                 subtitle: l10n.memoryUiAssistantLegacySubtitle,
@@ -607,8 +639,8 @@ class _MemoryTabState extends State<_MemoryTab> {
   }
 }
 
-/// Text/number input sheet whose controller lives in a [State], so it survives
-/// the sheet's exit transition.
+/// Text/number input: centered Dialog on desktop, bottom sheet on mobile.
+/// Controller lives in a [State] so it survives the exit transition.
 Future<String?> _showMemoryTextSheet(
   BuildContext context, {
   required String title,
@@ -621,16 +653,30 @@ Future<String?> _showMemoryTextSheet(
   TextInputType? keyboardType,
   bool allowEmpty = false,
 }) {
-  final l10n = AppLocalizations.of(context)!;
-  return showCustomBottomSheet<String>(
+  if (PlatformUtils.isDesktopTarget) {
+    return showDesktopMemoryTextInputDialog(
+      context,
+      title: title,
+      label: label,
+      initialValue: initialValue,
+      hintText: hintText,
+      description: description,
+      minLines: minLines,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      allowEmpty: allowEmpty,
+    );
+  }
+  final cs = Theme.of(context).colorScheme;
+  return showModalBottomSheet<String>(
     context: context,
-    title: title,
-    closeSemanticLabel: l10n.mcpPageClose,
-    // Pinned footer: the panel must be fully visible from the start.
-    partialHeightFactor: 0.55,
-    expandedHeightFactor: 0.55,
-    builder: (ctx, scrollController) => _MemoryTextInputForm(
-      scrollController: scrollController,
+    isScrollControlled: true,
+    backgroundColor: cs.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) => _MemoryTextInputForm(
+      title: title,
       label: label,
       hintText: hintText,
       description: description,
@@ -645,7 +691,7 @@ Future<String?> _showMemoryTextSheet(
 
 class _MemoryTextInputForm extends StatefulWidget {
   const _MemoryTextInputForm({
-    required this.scrollController,
+    required this.title,
     required this.label,
     required this.initialValue,
     required this.minLines,
@@ -656,7 +702,7 @@ class _MemoryTextInputForm extends StatefulWidget {
     this.keyboardType,
   });
 
-  final ScrollController scrollController;
+  final String title;
   final String label;
   final String initialValue;
   final String? hintText;
@@ -689,71 +735,280 @@ class _MemoryTextInputFormState extends State<_MemoryTextInputForm> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              controller: widget.scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              children: [
-                MemorySectionCard(
-                  children: [
-                    IosFormTextField(
-                      label: widget.label,
-                      controller: _controller,
-                      hintText: widget.hintText,
-                      minLines: widget.minLines,
-                      maxLines: widget.maxLines,
-                      inlineLabel: false,
-                      autofocus: true,
-                      textAlign: TextAlign.start,
-                      keyboardType: widget.keyboardType,
-                    ),
-                  ],
+    final media = MediaQuery.of(context);
+    final bottomInset = media.viewInsets.bottom;
+    // Cap to available height above the keyboard so the Column cannot overflow.
+    final maxHeight = (media.size.height - bottomInset) * 0.9;
+
+    return SafeArea(
+      top: false,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
-                if (widget.description != null) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      widget.description!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.62),
-                      ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _controller,
-              builder: (context, value, _) => MemorySheetActions(
-                confirmLabel: l10n.userProfileSave,
-                confirmEnabled:
-                    widget.allowEmpty || value.text.trim().isNotEmpty,
-                onCancel: () => Navigator.of(context).maybePop(),
-                onConfirm: () =>
-                    Navigator.of(context).pop(_controller.text.trim()),
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  children: [
+                    MemorySectionCard(
+                      children: [
+                        IosFormTextField(
+                          label: widget.label,
+                          controller: _controller,
+                          hintText: widget.hintText,
+                          minLines: widget.minLines,
+                          maxLines: widget.maxLines,
+                          inlineLabel: false,
+                          autofocus: true,
+                          textAlign: TextAlign.start,
+                          keyboardType: widget.keyboardType,
+                        ),
+                      ],
+                    ),
+                    if (widget.description != null) ...[
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          widget.description!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: cs.onSurface.withValues(alpha: 0.62),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, _) => MemorySheetActions(
+                    confirmLabel: l10n.userProfileSave,
+                    confirmEnabled:
+                        widget.allowEmpty || value.text.trim().isNotEmpty,
+                    onCancel: () => Navigator.of(context).maybePop(),
+                    onConfirm: () =>
+                        Navigator.of(context).pop(_controller.text.trim()),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
+const int _kMemoryFrequencyCustomSentinel = -1;
+
+bool _isDesktopMemorySettings(BuildContext context) {
+  final platform = Theme.of(context).platform;
+  return platform == TargetPlatform.macOS ||
+      platform == TargetPlatform.linux ||
+      platform == TargetPlatform.windows;
+}
+
+Future<T?> _showMemoryChoiceSheet<T>(
+  BuildContext context, {
+  required String title,
+  required List<(T value, String label)> options,
+  required T selected,
+  (T value, String label)? trailingAction,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: cs.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      Widget optionRow({
+        required String label,
+        required bool isSelected,
+        required VoidCallback onTap,
+        IconData? trailingIcon,
+      }) {
+        return _TactileRow(
+          onTap: onTap,
+          builder: (pressed) {
+            final base = cs.onSurface;
+            final color = pressed
+                ? (Color.lerp(base, cs.surface, 0.55) ?? base)
+                : base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: AppFontWeights.medium,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                  if (trailingIcon != null)
+                    Icon(trailingIcon, size: 18, color: color)
+                  else if (isSelected)
+                    Icon(Lucide.Check, size: 18, color: cs.primary),
+                ],
+              ),
+            );
+          },
+        );
+      }
+
+      final maxHeight = MediaQuery.sizeOf(ctx).height * 0.8;
+      return SafeArea(
+        top: false,
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(ctx).bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: AppFontWeights.semibold,
+                            color: cs.onSurface.withValues(alpha: 0.62),
+                          ),
+                        ),
+                      ),
+                    ),
+                    for (final option in options)
+                      optionRow(
+                        label: option.$2,
+                        isSelected: option.$1 == selected,
+                        onTap: () => Navigator.of(ctx).pop(option.$1),
+                      ),
+                    if (trailingAction != null)
+                      optionRow(
+                        label: trailingAction.$2,
+                        isSelected: false,
+                        trailingIcon: Lucide.Pencil,
+                        onTap: () =>
+                            Navigator.of(ctx).pop(trailingAction.$1),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _memoryDesktopSelectRow<T>({
+  required BuildContext context,
+  required IconData icon,
+  required String label,
+  required T value,
+  required List<DesktopSelectOption<T>> options,
+  required Future<void> Function(T value) onSelected,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 36,
+          child: Icon(
+            icon,
+            size: 20,
+            color: cs.onSurface.withValues(alpha: 0.9),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              color: cs.onSurface.withValues(alpha: 0.9),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        DesktopSelectDropdown<T>(
+          value: value,
+          options: options,
+          onSelected: onSelected,
+          minWidth: 140,
+          maxLabelWidth: 220,
+        ),
+      ],
+    ),
+  );
+}
+
 class _MemoryOrganizeFrequencySection extends StatelessWidget {
-  const _MemoryOrganizeFrequencySection({required this.assistant});
+  const _MemoryOrganizeFrequencySection({
+    required this.assistant,
+    required this.desktop,
+  });
 
   final Assistant assistant;
+  final bool desktop;
 
   static const _options = [1, 3, 5, 10];
 
@@ -789,288 +1044,228 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
     );
   }
 
+  Future<void> _apply(BuildContext context, int count) async {
+    if (count == _kMemoryFrequencyCustomSentinel) {
+      await _showCustom(context);
+      return;
+    }
+    await context.read<AssistantProvider>().updateAssistant(
+      assistant.copyWith(memoryOrganizeEveryNTurns: count),
+    );
+  }
+
+  Future<void> _openMobilePicker(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final selected = assistant.memoryOrganizeEveryNTurns;
+    final counts = <int>{..._options, selected}.toList()..sort();
+    final choice = await _showMemoryChoiceSheet<int>(
+      context,
+      title: l10n.assistantEditOrganizeFrequencyTitle,
+      selected: selected,
+      options: [
+        for (final count in counts)
+          (count, l10n.assistantEditOrganizeFrequencyOption(count)),
+      ],
+      trailingAction: (
+        _kMemoryFrequencyCustomSentinel,
+        l10n.assistantEditOrganizeFrequencyCustomButton,
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    await _apply(context, choice);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final ap = context.read<AssistantProvider>();
     final selected = assistant.memoryOrganizeEveryNTurns;
-    final options = <int>{..._options, selected}.toList()..sort();
+    final detail = l10n.assistantEditOrganizeFrequencyOption(selected);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 36,
-                child: Icon(
-                  Lucide.FileClock,
-                  size: 20,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.assistantEditOrganizeFrequencyTitle,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: cs.onSurface.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.assistantEditOrganizeFrequencySubtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.only(left: 48),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...options.map((count) {
-                  final isSelected = count == selected;
-                  return MemorySelectChip(
-                    label: l10n.assistantEditOrganizeFrequencyOption(count),
-                    selected: isSelected,
-                    onTap: isSelected
-                        ? null
-                        : () async {
-                            await ap.updateAssistant(
-                              assistant.copyWith(
-                                memoryOrganizeEveryNTurns: count,
-                              ),
-                            );
-                          },
-                  );
-                }),
-                MemorySelectChip(
-                  label: l10n.assistantEditOrganizeFrequencyCustomButton,
-                  icon: Lucide.Pencil,
-                  emphasized: true,
-                  onTap: () => _showCustom(context),
-                ),
-              ],
+    if (desktop || _isDesktopMemorySettings(context)) {
+      final counts = <int>{..._options, selected}.toList()..sort();
+      return _memoryDesktopSelectRow<int>(
+        context: context,
+        icon: Lucide.FileClock,
+        label: l10n.assistantEditOrganizeFrequencyTitle,
+        value: selected,
+        options: [
+          for (final count in counts)
+            DesktopSelectOption(
+              value: count,
+              label: l10n.assistantEditOrganizeFrequencyOption(count),
             ),
+          DesktopSelectOption(
+            value: _kMemoryFrequencyCustomSentinel,
+            label: l10n.assistantEditOrganizeFrequencyCustomButton,
           ),
         ],
-      ),
+        onSelected: (count) => _apply(context, count),
+      );
+    }
+
+    return _iosNavRow(
+      context,
+      icon: Lucide.FileClock,
+      label: l10n.assistantEditOrganizeFrequencyTitle,
+      detailText: detail,
+      onTap: () => _openMobilePicker(context),
     );
   }
 }
 
 class _MemoryDedupeModeSection extends StatelessWidget {
-  const _MemoryDedupeModeSection({required this.assistant});
+  const _MemoryDedupeModeSection({
+    required this.assistant,
+    required this.desktop,
+  });
 
   final Assistant assistant;
+  final bool desktop;
+
+  String _label(AppLocalizations l10n, MemorySmartAddMode mode) {
+    return switch (mode) {
+      MemorySmartAddMode.batched => l10n.assistantEditDedupeModeBatched,
+      MemorySmartAddMode.perItem => l10n.assistantEditDedupeModePerItem,
+    };
+  }
+
+  Future<void> _apply(BuildContext context, MemorySmartAddMode mode) async {
+    await context.read<AssistantProvider>().updateAssistant(
+      assistant.copyWith(memorySmartAddMode: mode),
+    );
+  }
+
+  Future<void> _openMobilePicker(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final choice = await _showMemoryChoiceSheet<MemorySmartAddMode>(
+      context,
+      title: l10n.assistantEditDedupeModeTitle,
+      selected: assistant.memorySmartAddMode,
+      options: [
+        for (final mode in MemorySmartAddMode.values)
+          (mode, _label(l10n, mode)),
+      ],
+    );
+    if (choice == null || !context.mounted) return;
+    await _apply(context, choice);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final ap = context.read<AssistantProvider>();
+    final selected = assistant.memorySmartAddMode;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 36,
-                child: Icon(
-                  Lucide.Layers,
-                  size: 20,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.assistantEditDedupeModeTitle,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: cs.onSurface.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.assistantEditDedupeModeSubtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.only(left: 48),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                MemorySelectChip(
-                  label: l10n.assistantEditDedupeModeBatched,
-                  selected:
-                      assistant.memorySmartAddMode ==
-                      MemorySmartAddMode.batched,
-                  onTap: () async {
-                    await ap.updateAssistant(
-                      assistant.copyWith(
-                        memorySmartAddMode: MemorySmartAddMode.batched,
-                      ),
-                    );
-                  },
-                ),
-                MemorySelectChip(
-                  label: l10n.assistantEditDedupeModePerItem,
-                  selected:
-                      assistant.memorySmartAddMode ==
-                      MemorySmartAddMode.perItem,
-                  onTap: () async {
-                    await ap.updateAssistant(
-                      assistant.copyWith(
-                        memorySmartAddMode: MemorySmartAddMode.perItem,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+    if (desktop || _isDesktopMemorySettings(context)) {
+      return _memoryDesktopSelectRow<MemorySmartAddMode>(
+        context: context,
+        icon: Lucide.Layers,
+        label: l10n.assistantEditDedupeModeTitle,
+        value: selected,
+        options: [
+          for (final mode in MemorySmartAddMode.values)
+            DesktopSelectOption(value: mode, label: _label(l10n, mode)),
         ],
-      ),
+        onSelected: (mode) => _apply(context, mode),
+      );
+    }
+
+    return _iosNavRow(
+      context,
+      icon: Lucide.Layers,
+      label: l10n.assistantEditDedupeModeTitle,
+      detailText: _label(l10n, selected),
+      onTap: () => _openMobilePicker(context),
     );
   }
 }
 
 class _MemoryWriteScopeSection extends StatelessWidget {
-  const _MemoryWriteScopeSection({required this.assistant});
+  const _MemoryWriteScopeSection({
+    required this.assistant,
+    required this.desktop,
+  });
 
   final Assistant assistant;
+  final bool desktop;
+
+  List<(MemoryWriteScope, String)> _items(AppLocalizations l10n) => [
+    (MemoryWriteScope.alwaysGlobal, l10n.assistantEditWriteScopeAlwaysGlobal),
+    (
+      MemoryWriteScope.alwaysAssistant,
+      l10n.assistantEditWriteScopeAlwaysAssistant,
+    ),
+    (
+      MemoryWriteScope.toolDefaultGlobal,
+      l10n.assistantEditWriteScopeToolDefaultGlobal,
+    ),
+    (
+      MemoryWriteScope.toolDefaultAssistant,
+      l10n.assistantEditWriteScopeToolDefaultAssistant,
+    ),
+  ];
+
+  String _label(AppLocalizations l10n, MemoryWriteScope scope) {
+    for (final item in _items(l10n)) {
+      if (item.$1 == scope) return item.$2;
+    }
+    return _items(l10n).first.$2;
+  }
+
+  Future<void> _apply(BuildContext context, MemoryWriteScope scope) async {
+    await context.read<AssistantProvider>().updateAssistant(
+      assistant.copyWith(memoryWriteScope: scope),
+    );
+  }
+
+  Future<void> _openMobilePicker(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final choice = await _showMemoryChoiceSheet<MemoryWriteScope>(
+      context,
+      title: l10n.assistantEditWriteScopeTitle,
+      selected: assistant.memoryWriteScope,
+      options: _items(l10n),
+    );
+    if (choice == null || !context.mounted) return;
+    await _apply(context, choice);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final ap = context.read<AssistantProvider>();
+    final selected = assistant.memoryWriteScope;
 
-    final items = <(MemoryWriteScope, String)>[
-      (MemoryWriteScope.alwaysGlobal, l10n.assistantEditWriteScopeAlwaysGlobal),
-      (
-        MemoryWriteScope.alwaysAssistant,
-        l10n.assistantEditWriteScopeAlwaysAssistant,
-      ),
-      (
-        MemoryWriteScope.toolDefaultGlobal,
-        l10n.assistantEditWriteScopeToolDefaultGlobal,
-      ),
-      (
-        MemoryWriteScope.toolDefaultAssistant,
-        l10n.assistantEditWriteScopeToolDefaultAssistant,
-      ),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 36,
-                child: Icon(
-                  Lucide.Globe,
-                  size: 20,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.assistantEditWriteScopeTitle,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: cs.onSurface.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.assistantEditWriteScopeSubtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.only(left: 48),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final item in items)
-                  MemorySelectChip(
-                    label: item.$2,
-                    selected: assistant.memoryWriteScope == item.$1,
-                    onTap: () async {
-                      await ap.updateAssistant(
-                        assistant.copyWith(memoryWriteScope: item.$1),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
+    if (desktop || _isDesktopMemorySettings(context)) {
+      return _memoryDesktopSelectRow<MemoryWriteScope>(
+        context: context,
+        icon: Lucide.Globe,
+        label: l10n.assistantEditWriteScopeTitle,
+        value: selected,
+        options: [
+          for (final item in _items(l10n))
+            DesktopSelectOption(value: item.$1, label: item.$2),
         ],
-      ),
+        onSelected: (scope) => _apply(context, scope),
+      );
+    }
+
+    return _iosNavRow(
+      context,
+      icon: Lucide.Globe,
+      label: l10n.assistantEditWriteScopeTitle,
+      detailText: _label(l10n, selected),
+      onTap: () => _openMobilePicker(context),
     );
   }
 }
 
 class _RecentChatsSummaryFrequencySection extends StatelessWidget {
-  const _RecentChatsSummaryFrequencySection({required this.assistant});
+  const _RecentChatsSummaryFrequencySection({
+    required this.assistant,
+    required this.desktop,
+  });
 
   final Assistant assistant;
+  final bool desktop;
 
   Future<void> _showCustomCountInput(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
@@ -1092,96 +1287,79 @@ class _RecentChatsSummaryFrequencySection extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Future<void> _apply(BuildContext context, int count) async {
+    if (count == _kMemoryFrequencyCustomSentinel) {
+      await _showCustomCountInput(context);
+      return;
+    }
+    await context.read<AssistantProvider>().updateAssistant(
+      assistant.copyWith(recentChatsSummaryMessageCount: count),
+    );
+  }
+
+  Future<void> _openMobilePicker(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final ap = context.read<AssistantProvider>();
     final selected = assistant.recentChatsSummaryMessageCount;
-    final options = <int>{
+    final counts = <int>{
       ...Assistant.recentChatsSummaryMessageCountOptions,
       selected,
     }.toList()..sort();
+    final choice = await _showMemoryChoiceSheet<int>(
+      context,
+      title: l10n.assistantEditRecentChatsSummaryFrequencyTitle,
+      selected: selected,
+      options: [
+        for (final count in counts)
+          (count, l10n.assistantEditRecentChatsSummaryFrequencyOption(count)),
+      ],
+      trailingAction: (
+        _kMemoryFrequencyCustomSentinel,
+        l10n.assistantEditRecentChatsSummaryFrequencyCustomButton,
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    await _apply(context, choice);
+  }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 36,
-                child: Icon(
-                  Lucide.FileClock,
-                  size: 20,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.assistantEditRecentChatsSummaryFrequencyTitle,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: cs.onSurface.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.assistantEditRecentChatsSummaryFrequencyDescription,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.only(left: 48),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...options.map((count) {
-                  final isSelected = count == selected;
-                  return MemorySelectChip(
-                    label: l10n.assistantEditRecentChatsSummaryFrequencyOption(
-                      count,
-                    ),
-                    selected: isSelected,
-                    onTap: isSelected
-                        ? null
-                        : () async {
-                            await ap.updateAssistant(
-                              assistant.copyWith(
-                                recentChatsSummaryMessageCount: count,
-                              ),
-                            );
-                          },
-                  );
-                }),
-                MemorySelectChip(
-                  label:
-                      l10n.assistantEditRecentChatsSummaryFrequencyCustomButton,
-                  icon: Lucide.Pencil,
-                  emphasized: true,
-                  onTap: () => _showCustomCountInput(context),
-                ),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final selected = assistant.recentChatsSummaryMessageCount;
+    final detail = l10n.assistantEditRecentChatsSummaryFrequencyOption(
+      selected,
+    );
+
+    if (desktop || _isDesktopMemorySettings(context)) {
+      final counts = <int>{
+        ...Assistant.recentChatsSummaryMessageCountOptions,
+        selected,
+      }.toList()..sort();
+      return _memoryDesktopSelectRow<int>(
+        context: context,
+        icon: Lucide.FileClock,
+        label: l10n.assistantEditRecentChatsSummaryFrequencyTitle,
+        value: selected,
+        options: [
+          for (final count in counts)
+            DesktopSelectOption(
+              value: count,
+              label: l10n.assistantEditRecentChatsSummaryFrequencyOption(count),
             ),
+          DesktopSelectOption(
+            value: _kMemoryFrequencyCustomSentinel,
+            label: l10n.assistantEditRecentChatsSummaryFrequencyCustomButton,
           ),
         ],
-      ),
+        onSelected: (count) => _apply(context, count),
+      );
+    }
+
+    return _iosNavRow(
+      context,
+      icon: Lucide.FileClock,
+      label: l10n.assistantEditRecentChatsSummaryFrequencyTitle,
+      detailText: detail,
+      onTap: () => _openMobilePicker(context),
     );
   }
 }

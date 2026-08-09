@@ -182,35 +182,37 @@ class IosFormTextField extends StatelessWidget {
       );
     }
 
+    final fieldBox = Container(
+      constraints: maxLines == 1 ? const BoxConstraints(minHeight: 40) : null,
+      alignment: maxLines == 1 ? Alignment.centerLeft : Alignment.topLeft,
+      decoration: BoxDecoration(
+        color: enabled ? fieldBg : fieldBg.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: maxLines > 1 ? 12 : 9,
+      ),
+      child: field,
+    );
+
     return Padding(
       padding: resolvedOuterPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: AppFontWeights.semibold,
-              color: labelColor,
+          if (label.isNotEmpty) ...[
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: AppFontWeights.semibold,
+                color: labelColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            constraints: maxLines == 1
-                ? const BoxConstraints(minHeight: 40)
-                : null,
-            alignment: maxLines == 1 ? Alignment.centerLeft : Alignment.topLeft,
-            decoration: BoxDecoration(
-              color: enabled ? fieldBg : fieldBg.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: maxLines > 1 ? 12 : 9,
-            ),
-            child: field,
-          ),
+            const SizedBox(height: 6),
+          ],
+          fieldBox,
         ],
       ),
     );

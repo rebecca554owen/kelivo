@@ -6,6 +6,7 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/memory/memory_trace.dart';
+import '../../../desktop/setting/memory_dialogs.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/custom_bottom_sheet.dart';
@@ -13,6 +14,7 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../utils/platform_utils.dart';
 
 /// Debug viewer for the background memory pipeline (Gatekeeper → Extract →
 /// Smart Add → Distiller, plus summaries, recall and memory tool calls).
@@ -114,11 +116,7 @@ class MemoryTraceContent extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _TraceCard(
                     trace: trace,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MemoryTraceDetailPage(trace: trace),
-                      ),
-                    ),
+                    onTap: () => _openTraceDetail(context, trace),
                   ),
                 ),
           ],
@@ -127,50 +125,72 @@ class MemoryTraceContent extends StatelessWidget {
     );
   }
 
+  Future<void> _openTraceDetail(BuildContext context, MemoryTrace trace) async {
+    if (PlatformUtils.isDesktopTarget) {
+      await showDesktopMemoryTraceDetailDialog(context, trace: trace);
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => MemoryTraceDetailPage(trace: trace)),
+    );
+  }
+
   Future<void> _confirmClear(
     BuildContext context,
     MemoryTraceRecorder recorder,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final cleared = await showCustomBottomSheet<bool>(
-      context: context,
-      title: l10n.memoryTraceClearSheetTitle,
-      partialHeightFactor: 0.36,
-      builder: (sheetContext, controller) {
-        final cs = Theme.of(sheetContext).colorScheme;
-        return SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.memoryTraceClearSheetMessage,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.35,
-                  color: cs.onSurface.withValues(alpha: 0.66),
+    final bool cleared;
+    if (PlatformUtils.isDesktopTarget) {
+      cleared = await showDesktopMemoryConfirmDialog(
+        context,
+        title: l10n.memoryTraceClearSheetTitle,
+        message: l10n.memoryTraceClearSheetMessage,
+        confirmLabel: l10n.memoryTraceClearConfirm,
+      );
+    } else {
+      cleared =
+          await showCustomBottomSheet<bool>(
+            context: context,
+            title: l10n.memoryTraceClearSheetTitle,
+            partialHeightFactor: 0.36,
+            builder: (sheetContext, controller) {
+              final cs = Theme.of(sheetContext).colorScheme;
+              return SingleChildScrollView(
+                controller: controller,
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.memoryTraceClearSheetMessage,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.66),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    IosTileButton(
+                      label: l10n.memoryTraceClearConfirm,
+                      icon: Lucide.Trash2,
+                      backgroundColor: cs.error,
+                      onTap: () => Navigator.of(sheetContext).pop(true),
+                    ),
+                    const SizedBox(height: 10),
+                    IosTileButton(
+                      label: l10n.memoryTraceCancel,
+                      icon: Lucide.X,
+                      onTap: () => Navigator.of(sheetContext).pop(false),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 18),
-              IosTileButton(
-                label: l10n.memoryTraceClearConfirm,
-                icon: Lucide.Trash2,
-                backgroundColor: cs.error,
-                onTap: () => Navigator.of(sheetContext).pop(true),
-              ),
-              const SizedBox(height: 10),
-              IosTileButton(
-                label: l10n.memoryTraceCancel,
-                icon: Lucide.X,
-                onTap: () => Navigator.of(sheetContext).pop(false),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (cleared != true) return;
+              );
+            },
+          ) ==
+          true;
+    }
+    if (!cleared) return;
     recorder.clear();
     if (!context.mounted) return;
     showAppSnackBar(
@@ -208,16 +228,29 @@ class MemoryTraceDetailPage extends StatelessWidget {
         ),
         title: Text(l10n.memoryTraceDetailTitle),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          _OverviewCard(trace: trace),
-          for (final step in trace.steps) ...[
-            const SizedBox(height: 12),
-            _StepCard(step: step),
-          ],
+      body: MemoryTraceDetailContent(trace: trace),
+    );
+  }
+}
+
+/// Body of [MemoryTraceDetailPage], reused by the desktop dialog.
+class MemoryTraceDetailContent extends StatelessWidget {
+  const MemoryTraceDetailContent({super.key, required this.trace, this.padding});
+
+  final MemoryTrace trace;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        _OverviewCard(trace: trace),
+        for (final step in trace.steps) ...[
+          const SizedBox(height: 12),
+          _StepCard(step: step),
         ],
-      ),
+      ],
     );
   }
 }

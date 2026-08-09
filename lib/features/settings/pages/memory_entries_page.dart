@@ -6,9 +6,11 @@ import '../../../core/models/memory_entry.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/services/memory/memory_tools.dart';
+import '../../../desktop/widgets/desktop_select_dropdown.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../utils/platform_utils.dart';
 import '../widgets/memory_ui.dart';
 
 /// Global memory list with search, filters, batch delete, orphan cleanup (§14.4).
@@ -136,6 +138,259 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
     );
   }
 
+  Future<void> _toggleBatchDelete() async {
+    if (!_selecting) {
+      setState(() => _selecting = true);
+      return;
+    }
+    if (_selected.isEmpty) {
+      setState(() {
+        _selecting = false;
+        _selected.clear();
+      });
+      return;
+    }
+    final mp = context.read<MemoryProviderV2>();
+    final ids = _selected.toList();
+    if (!await confirmBatchHardDelete(context, count: ids.length)) {
+      return;
+    }
+    if (!mounted) return;
+    await mp.hardDeleteMany(ids);
+    setState(() {
+      _selected.clear();
+      _selecting = false;
+    });
+  }
+
+  Widget _desktopToolbar(AppLocalizations l10n, AssistantProvider ap) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 6),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          DesktopSelectDropdown<_ScopeFilter>(
+            value: _scope,
+            minWidth: 120,
+            maxLabelWidth: 160,
+            options: [
+              for (final v in _ScopeFilter.values)
+                DesktopSelectOption(
+                  value: v,
+                  label: switch (v) {
+                    _ScopeFilter.all => l10n.memoryFilterScopeAll,
+                    _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
+                    _ScopeFilter.assistant => l10n.memoryFilterScopeAssistant,
+                  },
+                ),
+            ],
+            onSelected: (v) => setState(() => _scope = v),
+          ),
+          DesktopSelectDropdown<MemoryType?>(
+            value: _type,
+            minWidth: 120,
+            maxLabelWidth: 160,
+            options: [
+              DesktopSelectOption(value: null, label: l10n.memoryFilterTypeAll),
+              for (final t in MemoryType.values)
+                DesktopSelectOption(
+                  value: t,
+                  label: memoryTypeLabel(l10n, t),
+                ),
+            ],
+            onSelected: (v) async {
+              setState(() => _type = v);
+              if (_search.text.trim().isNotEmpty) {
+                await _runSearch(_search.text);
+              }
+            },
+          ),
+          DesktopSelectDropdown<_StatusFilter>(
+            value: _status,
+            minWidth: 120,
+            maxLabelWidth: 160,
+            options: [
+              for (final v in _StatusFilter.values)
+                DesktopSelectOption(
+                  value: v,
+                  label: switch (v) {
+                    _StatusFilter.all => l10n.memoryFilterStatusAll,
+                    _StatusFilter.active => l10n.memoryFilterStatusActive,
+                    _StatusFilter.archived => l10n.memoryFilterStatusArchived,
+                  },
+                ),
+            ],
+            onSelected: (v) => setState(() => _status = v),
+          ),
+          if (_scope == _ScopeFilter.assistant)
+            DesktopSelectDropdown<String?>(
+              value: _assistantFilterId,
+              minWidth: 140,
+              maxLabelWidth: 200,
+              options: [
+                DesktopSelectOption(
+                  value: null,
+                  label: l10n.memoryUiAssistantAll,
+                ),
+                for (final a in ap.assistants)
+                  DesktopSelectOption(value: a.id, label: a.name),
+              ],
+              onSelected: (v) => setState(() => _assistantFilterId = v),
+            ),
+          MemorySelectChip(
+            label: _selecting
+                ? l10n.memoryEntryActionBatchDelete
+                : l10n.providersPageMultiSelectTooltip,
+            emphasized: _selecting,
+            onTap: _toggleBatchDelete,
+          ),
+          MemorySelectChip(
+            label: l10n.memoryEntryActionAdd,
+            emphasized: true,
+            icon: Lucide.Plus,
+            onTap: () => _showEditSheet(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mobileToolbar(AppLocalizations l10n, AssistantProvider ap) {
+    return MemoryFadingHorizontalScroll(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Row(
+        children: [
+          _FilterChip(
+            label: switch (_scope) {
+              _ScopeFilter.all => l10n.memoryFilterScopeAll,
+              _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
+              _ScopeFilter.assistant => l10n.memoryFilterScopeAssistant,
+            },
+            onTap: () async {
+              final next = await showMemoryOptionPicker<_ScopeFilter>(
+                context,
+                title: l10n.memoryEntryScopeLabel,
+                selected: _scope,
+                options: [
+                  for (final v in _ScopeFilter.values)
+                    MemoryPickerOption(
+                      value: v,
+                      label: switch (v) {
+                        _ScopeFilter.all => l10n.memoryFilterScopeAll,
+                        _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
+                        _ScopeFilter.assistant =>
+                          l10n.memoryFilterScopeAssistant,
+                      },
+                    ),
+                ],
+              );
+              if (next != null) setState(() => _scope = next);
+            },
+          ),
+          if (_scope == _ScopeFilter.assistant) ...[
+            const SizedBox(width: 8),
+            _FilterChip(
+              label: _assistantFilterId == null
+                  ? l10n.memoryUiAssistantAll
+                  : (ap.getById(_assistantFilterId!)?.name ??
+                        l10n.memoryUiAssistantAll),
+              onTap: () async {
+                final next = await showMemoryOptionPicker<String?>(
+                  context,
+                  title: l10n.memoryUiAssistantLabel,
+                  selected: _assistantFilterId,
+                  options: [
+                    MemoryPickerOption(
+                      value: null,
+                      label: l10n.memoryUiAssistantAll,
+                    ),
+                    for (final a in ap.assistants)
+                      MemoryPickerOption(value: a.id, label: a.name),
+                  ],
+                );
+                if (!mounted) return;
+                setState(() => _assistantFilterId = next);
+              },
+            ),
+          ],
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: _type == null
+                ? l10n.memoryFilterTypeAll
+                : memoryTypeLabel(l10n, _type!),
+            onTap: () async {
+              final next = await showMemoryOptionPicker<MemoryType?>(
+                context,
+                title: l10n.memoryEntryTypeLabel,
+                selected: _type,
+                options: [
+                  MemoryPickerOption(
+                    value: null,
+                    label: l10n.memoryFilterTypeAll,
+                  ),
+                  for (final t in MemoryType.values)
+                    MemoryPickerOption(
+                      value: t,
+                      label: memoryTypeLabel(l10n, t),
+                    ),
+                ],
+              );
+              if (!mounted) return;
+              setState(() => _type = next);
+              if (_search.text.trim().isNotEmpty) {
+                await _runSearch(_search.text);
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: switch (_status) {
+              _StatusFilter.all => l10n.memoryFilterStatusAll,
+              _StatusFilter.active => l10n.memoryFilterStatusActive,
+              _StatusFilter.archived => l10n.memoryFilterStatusArchived,
+            },
+            onTap: () async {
+              final next = await showMemoryOptionPicker<_StatusFilter>(
+                context,
+                title: l10n.memoryUiStatusLabel,
+                selected: _status,
+                options: [
+                  for (final v in _StatusFilter.values)
+                    MemoryPickerOption(
+                      value: v,
+                      label: switch (v) {
+                        _StatusFilter.all => l10n.memoryFilterStatusAll,
+                        _StatusFilter.active => l10n.memoryFilterStatusActive,
+                        _StatusFilter.archived =>
+                          l10n.memoryFilterStatusArchived,
+                      },
+                    ),
+                ],
+              );
+              if (next != null) setState(() => _status = next);
+            },
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: _selecting
+                ? l10n.memoryEntryActionBatchDelete
+                : l10n.providersPageMultiSelectTooltip,
+            emphasized: _selecting,
+            onTap: _toggleBatchDelete,
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: l10n.memoryEntryActionAdd,
+            emphasized: true,
+            onTap: () => _showEditSheet(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -150,12 +405,16 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
     final archived = filtered
         .where((e) => e.status == MemoryStatus.archived)
         .toList();
+    final desktop = PlatformUtils.isDesktopTarget;
+    final listPadding = desktop
+        ? (widget.padding ?? const EdgeInsets.fromLTRB(4, 0, 4, 20))
+        : (widget.padding ?? const EdgeInsets.only(bottom: 24));
 
     return Column(
       children: [
         Padding(
           padding: widget.padding == null
-              ? const EdgeInsets.fromLTRB(16, 8, 16, 4)
+              ? EdgeInsets.fromLTRB(desktop ? 12 : 16, 8, desktop ? 12 : 16, 4)
               : const EdgeInsets.fromLTRB(0, 0, 0, 4),
           child: MemorySearchField(
             controller: _search,
@@ -163,169 +422,15 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
             onChanged: _runSearch,
           ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-          child: Row(
-            children: [
-              _FilterChip(
-                label: switch (_scope) {
-                  _ScopeFilter.all => l10n.memoryFilterScopeAll,
-                  _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
-                  _ScopeFilter.assistant => l10n.memoryFilterScopeAssistant,
-                },
-                onTap: () async {
-                  final next = await showMemoryOptionPicker<_ScopeFilter>(
-                    context,
-                    title: l10n.memoryEntryScopeLabel,
-                    selected: _scope,
-                    options: [
-                      for (final v in _ScopeFilter.values)
-                        MemoryPickerOption(
-                          value: v,
-                          label: switch (v) {
-                            _ScopeFilter.all => l10n.memoryFilterScopeAll,
-                            _ScopeFilter.global => l10n.memoryFilterScopeGlobal,
-                            _ScopeFilter.assistant =>
-                              l10n.memoryFilterScopeAssistant,
-                          },
-                        ),
-                    ],
-                  );
-                  if (next != null) setState(() => _scope = next);
-                },
-              ),
-              const SizedBox(width: 8),
-              _FilterChip(
-                label: _type == null
-                    ? l10n.memoryFilterTypeAll
-                    : memoryTypeLabel(l10n, _type!),
-                onTap: () async {
-                  final next = await showMemoryOptionPicker<MemoryType?>(
-                    context,
-                    title: l10n.memoryEntryTypeLabel,
-                    selected: _type,
-                    options: [
-                      MemoryPickerOption(
-                        value: null,
-                        label: l10n.memoryFilterTypeAll,
-                      ),
-                      for (final t in MemoryType.values)
-                        MemoryPickerOption(
-                          value: t,
-                          label: memoryTypeLabel(l10n, t),
-                        ),
-                    ],
-                  );
-                  if (!mounted) return;
-                  setState(() => _type = next);
-                  if (_search.text.trim().isNotEmpty) {
-                    await _runSearch(_search.text);
-                  }
-                },
-              ),
-              const SizedBox(width: 8),
-              _FilterChip(
-                label: switch (_status) {
-                  _StatusFilter.all => l10n.memoryFilterStatusAll,
-                  _StatusFilter.active => l10n.memoryFilterStatusActive,
-                  _StatusFilter.archived => l10n.memoryFilterStatusArchived,
-                },
-                onTap: () async {
-                  final next = await showMemoryOptionPicker<_StatusFilter>(
-                    context,
-                    title: l10n.memoryUiStatusLabel,
-                    selected: _status,
-                    options: [
-                      for (final v in _StatusFilter.values)
-                        MemoryPickerOption(
-                          value: v,
-                          label: switch (v) {
-                            _StatusFilter.all => l10n.memoryFilterStatusAll,
-                            _StatusFilter.active =>
-                              l10n.memoryFilterStatusActive,
-                            _StatusFilter.archived =>
-                              l10n.memoryFilterStatusArchived,
-                          },
-                        ),
-                    ],
-                  );
-                  if (next != null) setState(() => _status = next);
-                },
-              ),
-              const SizedBox(width: 8),
-              _FilterChip(
-                label: _selecting
-                    ? l10n.memoryEntryActionBatchDelete
-                    : l10n.providersPageMultiSelectTooltip,
-                emphasized: _selecting,
-                onTap: () async {
-                  if (!_selecting) {
-                    setState(() => _selecting = true);
-                    return;
-                  }
-                  if (_selected.isEmpty) {
-                    setState(() {
-                      _selecting = false;
-                      _selected.clear();
-                    });
-                    return;
-                  }
-                  final mp = context.read<MemoryProviderV2>();
-                  final ids = _selected.toList();
-                  if (!await confirmBatchHardDelete(
-                    context,
-                    count: ids.length,
-                  )) {
-                    return;
-                  }
-                  if (!mounted) return;
-                  await mp.hardDeleteMany(ids);
-                  setState(() {
-                    _selected.clear();
-                    _selecting = false;
-                  });
-                },
-              ),
-              const SizedBox(width: 8),
-              _FilterChip(
-                label: l10n.memoryEntryActionAdd,
-                emphasized: true,
-                onTap: () => _showEditSheet(),
-              ),
-            ],
-          ),
-        ),
-        if (_scope == _ScopeFilter.assistant)
+        if (desktop)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: _FilterChip(
-                label: _assistantFilterId == null
-                    ? l10n.memoryUiAssistantAll
-                    : (ap.getById(_assistantFilterId!)?.name ??
-                          l10n.memoryUiAssistantAll),
-                onTap: () async {
-                  final next = await showMemoryOptionPicker<String?>(
-                    context,
-                    title: l10n.memoryUiAssistantLabel,
-                    selected: _assistantFilterId,
-                    options: [
-                      MemoryPickerOption(
-                        value: null,
-                        label: l10n.memoryUiAssistantAll,
-                      ),
-                      for (final a in ap.assistants)
-                        MemoryPickerOption(value: a.id, label: a.name),
-                    ],
-                  );
-                  if (!mounted) return;
-                  setState(() => _assistantFilterId = next);
-                },
-              ),
-            ),
-          ),
+            padding: widget.padding == null
+                ? const EdgeInsets.symmetric(horizontal: 12)
+                : EdgeInsets.zero,
+            child: _desktopToolbar(l10n, ap),
+          )
+        else
+          _mobileToolbar(l10n, ap),
         const MemoryOrphanBanner(),
         Expanded(
           child: filtered.isEmpty
@@ -340,7 +445,7 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
                   ),
                 )
               : ListView(
-                  padding: widget.padding ?? const EdgeInsets.only(bottom: 24),
+                  padding: listPadding,
                   children: [
                     ...active.map(
                       (e) => MemoryEntryCard(
@@ -367,11 +472,16 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
                         (_status == _StatusFilter.all ||
                             _status == _StatusFilter.archived)) ...[
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        padding: EdgeInsets.fromLTRB(
+                          desktop ? 8 : 16,
+                          16,
+                          desktop ? 8 : 16,
+                          4,
+                        ),
                         child: Text(
                           l10n.memoryEntryArchivedSection,
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: desktop ? 13.5 : 15,
                             fontWeight: AppFontWeights.emphasis,
                           ),
                         ),

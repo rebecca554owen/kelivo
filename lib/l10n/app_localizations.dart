@@ -1129,15 +1129,8 @@ abstract class AppLocalizations {
   /// No description provided for @assistantProviderSampleAssistantSystemPrompt.
   ///
   /// In en, this message translates to:
-  /// **'You are {model_name}, an AI assistant who gladly provides accurate and helpful assistance. The current time is {cur_datetime}, the device language is {locale}, timezone is {timezone}, the user is using {device_info}, version {system_version}. If the user does not explicitly specify otherwise, please use the user\'s device language when replying.'**
-  String assistantProviderSampleAssistantSystemPrompt(
-    String model_name,
-    String cur_datetime,
-    String locale,
-    String timezone,
-    String device_info,
-    String system_version,
-  );
+  /// **'You are {model_name}, a helpful AI assistant. Answer accurately and concisely; say when you are unsure. Prefer clear structure (short paragraphs or lists) when it helps. Reply in the user\'s language by default.'**
+  String assistantProviderSampleAssistantSystemPrompt(String model_name);
 
   /// No description provided for @displaySettingsPageLanguageTitle.
   ///
@@ -2672,7 +2665,7 @@ abstract class AppLocalizations {
   /// No description provided for @assistantEditPromptAppendTimeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Append the send time to the end of each user message, e.g. Mon 25-07-26 14:03:22. Time stays at the end of the request, so prompt caching is unaffected.'**
+  /// **'Append the send time to the end of each user message. Time stays at the end of the request, so prompt caching is unaffected.'**
   String get assistantEditPromptAppendTimeSubtitle;
 
   /// No description provided for @assistantEditPromptAppendTimeInfoTitle.
@@ -10687,6 +10680,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not selected'**
   String get memorySettingsModelUnset;
+
+  /// No description provided for @memorySettingsModelTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This model is called frequently in the background. Prefer a cheap, fast model.'**
+  String get memorySettingsModelTip;
+
+  /// No description provided for @memorySettingsAboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About memory'**
+  String get memorySettingsAboutTitle;
+
+  /// No description provided for @memorySettingsAboutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How memory works and when it runs'**
+  String get memorySettingsAboutSubtitle;
+
+  /// No description provided for @memorySettingsAboutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.'**
+  String get memorySettingsAboutBody;
 
   /// No description provided for @memorySettingsThinkingTitle.
   ///

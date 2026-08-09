@@ -549,15 +549,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantProviderNewAssistantName => '新助手';
 
   @override
-  String assistantProviderSampleAssistantSystemPrompt(
-    String model_name,
-    String cur_datetime,
-    String locale,
-    String timezone,
-    String device_info,
-    String system_version,
-  ) {
-    return '你是$model_name, 一个人工智能助手，乐意为用户提供准确，有益的帮助。现在时间是$cur_datetime，用户设备语言为$locale，时区为$timezone，用户正在使用$device_info，版本$system_version。如果用户没有明确说明，请使用用户设备语言进行回复。';
+  String assistantProviderSampleAssistantSystemPrompt(String model_name) {
+    return '你是$model_name，一位乐于助人的 AI 助手。请准确、简洁地回答问题；不确定时如实说明。需要时可使用清晰结构（短段落或列表）。默认使用用户的语言回复。';
   }
 
   @override
@@ -1342,7 +1335,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantEditPromptAppendTimeSubtitle =>
-      '在每条用户消息末尾追加发送时刻，例如 Mon 25-07-26 14:03:22。时间在请求末尾，不影响 Prompt 缓存。';
+      '在每条用户消息末尾追加发送时刻。时间在请求末尾，不影响 Prompt 缓存。';
 
   @override
   String get assistantEditPromptAppendTimeInfoTitle => '追加时间格式';
@@ -5569,6 +5562,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memorySettingsModelUnset => '未选择';
 
   @override
+  String get memorySettingsModelTip => '后台会频繁调用此模型，建议选择便宜且速度快的模型。';
+
+  @override
+  String get memorySettingsAboutTitle => '记忆说明';
+
+  @override
+  String get memorySettingsAboutSubtitle => '了解记忆如何运作与触发';
+
+  @override
+  String get memorySettingsAboutBody =>
+      '记忆如何运作\n记忆按「身份 / 工作流 / 语气 / 指令」分类，并区分全局与助手范围。对话时，相关记忆会注入模型上下文；条目较多时先展示摘要，模型可用工具继续查询更多内容。\n\n后台如何处理、如何触发\n处理模型用于后台整理管线：判断是否值得记忆、提取候选、去重合并，必要时再提炼用户画像。助手开启「自动整理」后，会按设定轮数在对话结束后自动触发；也可在助手「记忆」页手动整理。因此该模型会被较频繁调用。\n\n如何保持缓存良好\n尽量让注入对话的记忆前缀保持稳定，避免无意义的大批量改动或频繁重排，有助于 Prompt 缓存命中，从而降低费用与延迟。日常增删改单条记忆通常影响有限。';
+
+  @override
   String get memorySettingsThinkingTitle => '启用思考';
 
   @override
@@ -7353,15 +7359,8 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantProviderNewAssistantName => '新助手';
 
   @override
-  String assistantProviderSampleAssistantSystemPrompt(
-    String model_name,
-    String cur_datetime,
-    String locale,
-    String timezone,
-    String device_info,
-    String system_version,
-  ) {
-    return '你是$model_name, 一个人工智能助手，乐意为用户提供准确，有益的帮助。现在时间是$cur_datetime，用户设备语言为$locale，时区为$timezone，用户正在使用$device_info，版本$system_version。如果用户没有明确说明，请使用用户设备语言进行回复。';
+  String assistantProviderSampleAssistantSystemPrompt(String model_name) {
+    return '你是$model_name，一位乐于助人的 AI 助手。请准确、简洁地回答问题；不确定时如实说明。需要时可使用清晰结构（短段落或列表）。默认使用用户的语言回复。';
   }
 
   @override
@@ -8146,7 +8145,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantEditPromptAppendTimeSubtitle =>
-      '在每条用户消息末尾追加发送时刻，例如 Mon 25-07-26 14:03:22。时间在请求末尾，不影响 Prompt 缓存。';
+      '在每条用户消息末尾追加发送时刻。时间在请求末尾，不影响 Prompt 缓存。';
 
   @override
   String get assistantEditPromptAppendTimeInfoTitle => '追加时间格式';
@@ -12373,6 +12372,19 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memorySettingsModelUnset => '未选择';
 
   @override
+  String get memorySettingsModelTip => '后台会频繁调用此模型，建议选择便宜且速度快的模型。';
+
+  @override
+  String get memorySettingsAboutTitle => '记忆说明';
+
+  @override
+  String get memorySettingsAboutSubtitle => '了解记忆如何运作与触发';
+
+  @override
+  String get memorySettingsAboutBody =>
+      '记忆如何运作\n记忆按「身份 / 工作流 / 语气 / 指令」分类，并区分全局与助手范围。对话时，相关记忆会注入模型上下文；条目较多时先展示摘要，模型可用工具继续查询更多内容。\n\n后台如何处理、如何触发\n处理模型用于后台整理管线：判断是否值得记忆、提取候选、去重合并，必要时再提炼用户画像。助手开启「自动整理」后，会按设定轮数在对话结束后自动触发；也可在助手「记忆」页手动整理。因此该模型会被较频繁调用。\n\n如何保持缓存良好\n尽量让注入对话的记忆前缀保持稳定，避免无意义的大批量改动或频繁重排，有助于 Prompt 缓存命中，从而降低费用与延迟。日常增删改单条记忆通常影响有限。';
+
+  @override
   String get memorySettingsThinkingTitle => '启用思考';
 
   @override
@@ -14157,15 +14169,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get assistantProviderNewAssistantName => '新助理';
 
   @override
-  String assistantProviderSampleAssistantSystemPrompt(
-    String model_name,
-    String cur_datetime,
-    String locale,
-    String timezone,
-    String device_info,
-    String system_version,
-  ) {
-    return '你是$model_name, 一個人工智慧助理，樂意為使用者提供準確，有益的幫助。現在時間是$cur_datetime，使用者裝置語言為$locale，時區為$timezone，使用者正在使用$device_info，版本$system_version。如果使用者沒有明確說明，請使用使用者裝置語言進行回覆。';
+  String assistantProviderSampleAssistantSystemPrompt(String model_name) {
+    return '你是$model_name，一位樂於助人的 AI 助理。請準確、簡潔地回答問題；不確定時如實說明。需要時可使用清晰結構（短段落或列表）。預設使用使用者的語言回覆。';
   }
 
   @override
@@ -14950,7 +14955,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditPromptAppendTimeSubtitle =>
-      '在每條使用者訊息末尾追加傳送時刻，例如 Mon 25-07-26 14:03:22。時間在請求末尾，不影響 Prompt 快取。';
+      '在每條使用者訊息末尾追加傳送時刻。時間在請求末尾，不影響 Prompt 快取。';
 
   @override
   String get assistantEditPromptAppendTimeInfoTitle => '追加時間格式';
@@ -19175,6 +19180,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get memorySettingsModelUnset => '未選擇';
+
+  @override
+  String get memorySettingsModelTip => '後台會頻繁呼叫此模型，建議選擇便宜且速度快的模型。';
+
+  @override
+  String get memorySettingsAboutTitle => '記憶說明';
+
+  @override
+  String get memorySettingsAboutSubtitle => '瞭解記憶如何運作與觸發';
+
+  @override
+  String get memorySettingsAboutBody =>
+      '記憶如何運作\n記憶按「身分 / 工作流 / 語氣 / 指令」分類，並區分全域與助手範圍。對話時，相關記憶會注入模型上下文；條目較多時先展示摘要，模型可用工具繼續查詢更多內容。\n\n後台如何處理、如何觸發\n處理模型用於後台整理管線：判斷是否值得記憶、提取候選、去重合併，必要時再提煉使用者畫像。助手開啟「自動整理」後，會按設定輪數在對話結束後自動觸發；也可在助手「記憶」頁手動整理。因此該模型會被較頻繁呼叫。\n\n如何保持快取良好\n盡量讓注入對話的記憶前綴保持穩定，避免無意義的大批量改動或頻繁重排，有助於 Prompt 快取命中，從而降低費用與延遲。日常增刪改單條記憶通常影響有限。';
 
   @override
   String get memorySettingsThinkingTitle => '啟用思考';

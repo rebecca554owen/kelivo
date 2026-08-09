@@ -5,12 +5,16 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/memory/memory_prompts.dart';
+import '../../../desktop/setting/memory_dialogs.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../utils/platform_utils.dart';
 import '../../model/widgets/model_select_sheet.dart';
+import '../widgets/memory_ui.dart';
 import 'legacy_memory_page.dart';
+import 'memory_about_page.dart';
 import 'memory_entries_page.dart';
 import 'memory_trace_page.dart';
 import 'user_profile_page.dart';
@@ -54,19 +58,30 @@ class MemorySettingsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
+    final modelSet =
+        settings.memoryModelProvider != null && settings.memoryModelId != null;
 
     final modelLabel = () {
       final p = settings.memoryModelProvider;
       final m = settings.memoryModelId;
       if (p == null || m == null) return l10n.memorySettingsModelUnset;
-      return '$p / $m';
+      final cfg = settings.getProviderConfig(p);
+      final providerName = cfg.name.trim().isNotEmpty ? cfg.name.trim() : p;
+      return '$providerName / $m';
     }();
 
     return ListView(
       padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
+        if (!modelSet) ...[
+          MemoryInfoBanner(body: l10n.memorySettingsModelTip),
+          const SizedBox(height: 12),
+        ],
         _SettingsSection(
           title: l10n.memorySettingsModelSection,
+          titleTrailing: modelSet
+              ? _ModelTipInfoIcon(tip: l10n.memorySettingsModelTip)
+              : null,
           children: [
             _NavRow(
               title: l10n.memorySettingsModelTitle,
@@ -129,44 +144,89 @@ class MemorySettingsContent extends StatelessWidget {
             _NavRow(
               title: l10n.memorySettingsEntriesTitle,
               subtitle: l10n.memorySettingsEntriesSubtitle,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MemoryEntriesPage()),
-                );
-              },
+              onTap: () => _openMemoryEntries(context),
             ),
             _NavRow(
               title: l10n.memorySettingsProfileTitle,
               subtitle: l10n.memorySettingsProfileSubtitle,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const UserProfilePage()),
-                );
-              },
+              onTap: () => _openUserProfile(context),
             ),
             _NavRow(
               title: l10n.memorySettingsLegacyTitle,
               subtitle: l10n.memorySettingsLegacySubtitle,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const LegacyMemoryPage()),
-                );
-              },
+              onTap: () => _openLegacyMemory(context),
             ),
             _NavRow(
               title: l10n.memoryTraceSettingsTitle,
               subtitle: l10n.memoryTraceSettingsSubtitle,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MemoryTracePage()),
-                );
-              },
+              onTap: () => _openMemoryTrace(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        MemorySectionCard(
+          padding: EdgeInsets.zero,
+          children: [
+            _NavRow(
+              title: l10n.memorySettingsAboutTitle,
+              subtitle: l10n.memorySettingsAboutSubtitle,
+              onTap: () => _openMemoryAbout(context),
             ),
           ],
         ),
       ],
     );
   }
+}
+
+Future<void> _openMemoryEntries(BuildContext context) async {
+  if (PlatformUtils.isDesktopTarget) {
+    await showDesktopMemoryEntriesDialog(context);
+    return;
+  }
+  await Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const MemoryEntriesPage()));
+}
+
+Future<void> _openUserProfile(BuildContext context) async {
+  if (PlatformUtils.isDesktopTarget) {
+    await showDesktopUserProfileMemoryDialog(context);
+    return;
+  }
+  await Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const UserProfilePage()));
+}
+
+Future<void> _openLegacyMemory(BuildContext context) async {
+  if (PlatformUtils.isDesktopTarget) {
+    await showDesktopLegacyMemoryDialog(context);
+    return;
+  }
+  await Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const LegacyMemoryPage()));
+}
+
+Future<void> _openMemoryTrace(BuildContext context) async {
+  if (PlatformUtils.isDesktopTarget) {
+    await showDesktopMemoryTraceDialog(context);
+    return;
+  }
+  await Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const MemoryTracePage()));
+}
+
+Future<void> _openMemoryAbout(BuildContext context) async {
+  if (PlatformUtils.isDesktopTarget) {
+    await showDesktopMemoryAboutDialog(context);
+    return;
+  }
+  await Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const MemoryAboutPage()));
 }
 
 class _PromptEntry {
@@ -212,15 +272,36 @@ List<_PromptEntry> _promptEntries(AppLocalizations l10n) => [
 ];
 
 Future<void> _openPromptEditor(BuildContext context, _PromptEntry entry) async {
+  if (PlatformUtils.isDesktopTarget) {
+    final cs = Theme.of(context).colorScheme;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: cs.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860, maxHeight: 660),
+          child: _MemoryPromptEditPage(entry: entry, desktopDialog: true),
+        ),
+      ),
+    );
+    return;
+  }
   await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => _MemoryPromptEditPage(entry: entry)),
   );
 }
 
 class _MemoryPromptEditPage extends StatefulWidget {
-  const _MemoryPromptEditPage({required this.entry});
+  const _MemoryPromptEditPage({
+    required this.entry,
+    this.desktopDialog = false,
+  });
 
   final _PromptEntry entry;
+  final bool desktopDialog;
 
   @override
   State<_MemoryPromptEditPage> createState() => _MemoryPromptEditPageState();
@@ -372,10 +453,110 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
     super.dispose();
   }
 
+  Widget _buildEditorBody(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        widget.desktopDialog ? 20 : 16,
+        12,
+        widget.desktopDialog ? 20 : 16,
+        widget.desktopDialog ? 24 : 32,
+      ),
+      children: [
+        Text(
+          widget.entry.subtitle,
+          style: TextStyle(
+            fontSize: 12.5,
+            height: 1.45,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (_isSmartAdd) ...[
+          _PromptFieldLabel(text: l10n.memoryPromptEditSectionPerItem),
+          const SizedBox(height: 6),
+        ],
+        _PromptField(controller: _main),
+        if (_isSmartAdd) ...[
+          const SizedBox(height: 18),
+          _PromptFieldLabel(text: l10n.memoryPromptEditSectionBatch),
+          const SizedBox(height: 6),
+          _PromptField(controller: _batch!),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+
+    if (widget.desktopDialog) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 44,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: AppFontWeights.emphasis,
+                      ),
+                    ),
+                  ),
+                  Tooltip(
+                    message: l10n.memoryPromptEditReset,
+                    child: IosIconButton(
+                      icon: Lucide.RotateCcw,
+                      color: cs.onSurface,
+                      size: 18,
+                      minSize: 36,
+                      semanticLabel: l10n.memoryPromptEditReset,
+                      onTap: _reset,
+                    ),
+                  ),
+                  Tooltip(
+                    message: l10n.memoryPromptEditSave,
+                    child: IosIconButton(
+                      icon: Lucide.Check,
+                      color: cs.primary,
+                      size: 18,
+                      minSize: 36,
+                      semanticLabel: l10n.memoryPromptEditSave,
+                      onTap: _save,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    icon: const Icon(Lucide.X, size: 18),
+                    color: cs.onSurface,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Divider(
+            height: 1,
+            thickness: 0.5,
+            color: cs.outlineVariant.withValues(alpha: 0.12),
+          ),
+          Expanded(child: _buildEditorBody(context)),
+        ],
+      );
+    }
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -418,31 +599,7 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          Text(
-            widget.entry.subtitle,
-            style: TextStyle(
-              fontSize: 12.5,
-              height: 1.45,
-              color: cs.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (_isSmartAdd) ...[
-            _PromptFieldLabel(text: l10n.memoryPromptEditSectionPerItem),
-            const SizedBox(height: 6),
-          ],
-          _PromptField(controller: _main),
-          if (_isSmartAdd) ...[
-            const SizedBox(height: 18),
-            _PromptFieldLabel(text: l10n.memoryPromptEditSectionBatch),
-            const SizedBox(height: 6),
-            _PromptField(controller: _batch!),
-          ],
-        ],
-      ),
+      body: _buildEditorBody(context),
     );
   }
 }
@@ -496,11 +653,45 @@ class _PromptField extends StatelessWidget {
   }
 }
 
+class _ModelTipInfoIcon extends StatelessWidget {
+  const _ModelTipInfoIcon({required this.tip});
+
+  final String tip;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: tip,
+      triggerMode: TooltipTriggerMode.tap,
+      preferBelow: true,
+      waitDuration: const Duration(milliseconds: 200),
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: Center(
+          child: Icon(
+            Lucide.BadgeInfo,
+            size: 16,
+            color: cs.onSurface.withValues(alpha: 0.45),
+            semanticLabel: tip,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({required this.title, required this.children});
+  const _SettingsSection({
+    required this.title,
+    required this.children,
+    this.titleTrailing,
+  });
 
   final String title;
   final List<Widget> children;
+  final Widget? titleTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -514,13 +705,20 @@ class _SettingsSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: AppFontWeights.semibold,
-              color: cs.onSurface.withValues(alpha: 0.8),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: AppFontWeights.semibold,
+                    color: cs.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+              if (titleTrailing != null) titleTrailing!,
+            ],
           ),
         ),
         Container(

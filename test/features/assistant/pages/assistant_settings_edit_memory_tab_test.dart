@@ -21,6 +21,7 @@ import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/tts/tts_playback_models.dart';
 import 'package:Kelivo/features/assistant/pages/assistant_settings_edit_page.dart';
 import 'package:Kelivo/features/settings/pages/legacy_memory_page.dart';
+import 'package:Kelivo/features/settings/pages/memory_settings_page.dart';
 import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
@@ -311,7 +312,7 @@ void main() {
     expect(page.assistantId, _assistantId);
   });
 
-  testWidgets('write scope and dedupe chips persist', (tester) async {
+  testWidgets('write scope and dedupe sheet choices persist', (tester) async {
     final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
     _setLargeSurface(tester);
     await ap.updateAssistant(
@@ -331,24 +332,53 @@ void main() {
     );
     await _openMemoryTab(tester);
 
+    final writeScopeRow = find.text('Memory write scope').hitTestable();
+    await tester.ensureVisible(writeScopeRow);
+    await tester.tap(writeScopeRow);
+    await tester.pumpAndSettle();
     final alwaysAssistant = find.text('Always this assistant').hitTestable();
-    await tester.ensureVisible(alwaysAssistant);
     await tester.tap(alwaysAssistant);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
     expect(
       ap.getById(_assistantId)!.memoryWriteScope,
       MemoryWriteScope.alwaysAssistant,
     );
 
+    final dedupeRow = find.text('Dedupe mode').hitTestable();
+    await tester.ensureVisible(dedupeRow);
+    await tester.tap(dedupeRow);
+    await tester.pumpAndSettle();
     final perItem = find.text('Per item').hitTestable();
-    await tester.ensureVisible(perItem);
     await tester.tap(perItem);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
     expect(
       ap.getById(_assistantId)!.memorySmartAddMode,
       MemorySmartAddMode.perItem,
     );
+  });
+
+  testWidgets('memory tab links to memory settings page', (tester) async {
+    final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+    _setLargeSurface(tester);
+
+    await tester.pumpWidget(
+      _buildHarness(
+        assistantProvider: ap,
+        chatService: chat,
+        memoryV2: memoryV2,
+        pipeline: pipeline,
+        child: const AssistantSettingsEditPage(assistantId: _assistantId),
+      ),
+    );
+    await _openMemoryTab(tester);
+
+    // Title "Memory" also appears on the tab; use the row subtitle.
+    final settingsRow = find
+        .text('Browse, edit, archive, and delete memories')
+        .hitTestable();
+    await tester.ensureVisible(settingsRow);
+    await tester.tap(settingsRow);
+    await tester.pumpAndSettle();
+    expect(find.byType(MemorySettingsPage), findsOneWidget);
   });
 }

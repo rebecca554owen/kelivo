@@ -260,25 +260,10 @@
   "assistantProviderDefaultAssistantName": "Default Assistant",
   "assistantProviderSampleAssistantName": "Sample Assistant",
   "assistantProviderNewAssistantName": "New Assistant",
-  "assistantProviderSampleAssistantSystemPrompt": "You are {model_name}, an AI assistant who gladly provides accurate and helpful assistance. The current time is {cur_datetime}, the device language is {locale}, timezone is {timezone}, the user is using {device_info}, version {system_version}. If the user does not explicitly specify otherwise, please use the user's device language when replying.",
+  "assistantProviderSampleAssistantSystemPrompt": "You are {model_name}, a helpful AI assistant. Answer accurately and concisely; say when you are unsure. Prefer clear structure (short paragraphs or lists) when it helps. Reply in the user's language by default.",
   "@assistantProviderSampleAssistantSystemPrompt": {
     "placeholders": {
       "model_name": {
-        "type": "String"
-      },
-      "cur_datetime": {
-        "type": "String"
-      },
-      "locale": {
-        "type": "String"
-      },
-      "timezone": {
-        "type": "String"
-      },
-      "device_info": {
-        "type": "String"
-      },
-      "system_version": {
         "type": "String"
       }
     }
@@ -566,7 +551,7 @@
   "assistantEditPreviewTitle": "Preview",
   "assistantEditPromptTimeVarWarning": "Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.",
   "assistantEditPromptAppendTimeTitle": "Append current time",
-  "assistantEditPromptAppendTimeSubtitle": "Append the send time to the end of each user message, e.g. Mon 25-07-26 14:03:22. Time stays at the end of the request, so prompt caching is unaffected.",
+  "assistantEditPromptAppendTimeSubtitle": "Append the send time to the end of each user message. Time stays at the end of the request, so prompt caching is unaffected.",
   "assistantEditPromptAppendTimeInfoTitle": "Appended time format",
   "assistantEditPromptAppendTimeInfoBody": "When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n{example}\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.",
   "@assistantEditPromptAppendTimeInfoBody": {
@@ -2425,6 +2410,10 @@
   "memorySettingsModelSection": "Memory model",
   "memorySettingsModelTitle": "Processing model",
   "memorySettingsModelUnset": "Not selected",
+  "memorySettingsModelTip": "This model is called frequently in the background. Prefer a cheap, fast model.",
+  "memorySettingsAboutTitle": "About memory",
+  "memorySettingsAboutSubtitle": "How memory works and when it runs",
+  "memorySettingsAboutBody": "How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.",
   "memorySettingsThinkingTitle": "Enable thinking",
   "memorySettingsThinkingSubtitle": "Allow the memory model to use reasoning when supported",
   "memorySettingsPromptLangSection": "Prompt language",

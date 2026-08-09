@@ -8,11 +8,11 @@ import '../../../core/models/user_profile_field.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/custom_bottom_sheet.dart';
 import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../utils/platform_utils.dart';
 import '../widgets/memory_ui.dart';
 
 /// Structured user profile fields (§14.4 / §5.7).
@@ -90,28 +90,55 @@ class _UserProfileContentState extends State<UserProfileContent> {
     bool isCustom = false,
   }) async {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final isNewCustom = isCustom && current == null;
-
-    final result = await showCustomBottomSheet<_ProfileFieldResult>(
-      context: context,
-      title: isNewCustom
-          ? l10n.userProfileAddCustom
-          : (isCustom ? key : _knownLabel(l10n, key)),
-      closeSemanticLabel: l10n.mcpPageClose,
-      // Pinned footer: the panel must be fully visible from the start.
-      partialHeightFactor: 0.55,
-      expandedHeightFactor: 0.55,
-      builder: (ctx, scrollController) => _ProfileFieldForm(
-        scrollController: scrollController,
-        fieldKey: key,
-        initialValue: current ?? '',
-        isNewCustom: isNewCustom,
-        canClear: current != null && current.isNotEmpty,
-        description: key == 'preferred_name'
-            ? l10n.userProfilePreferredNameHint
-            : null,
-      ),
+    final title = isNewCustom
+        ? l10n.userProfileAddCustom
+        : (isCustom ? key : _knownLabel(l10n, key));
+    _ProfileFieldForm buildForm({required bool desktop}) => _ProfileFieldForm(
+      title: title,
+      fieldKey: key,
+      initialValue: current ?? '',
+      isNewCustom: isNewCustom,
+      canClear: current != null && current.isNotEmpty,
+      desktop: desktop,
     );
+
+    final Future<_ProfileFieldResult?> resultFuture;
+    if (PlatformUtils.isDesktopTarget) {
+      resultFuture = showDialog<_ProfileFieldResult>(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) {
+          final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
+          return Dialog(
+            backgroundColor: cs.surface,
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 24,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 480, maxHeight: maxHeight),
+              child: buildForm(desktop: true),
+            ),
+          );
+        },
+      );
+    } else {
+      resultFuture = showModalBottomSheet<_ProfileFieldResult>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: cs.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) => buildForm(desktop: false),
+      );
+    }
+    final result = await resultFuture;
 
     if (result == null || !mounted) return;
 
@@ -181,9 +208,6 @@ class _UserProfileContentState extends State<UserProfileContent> {
           for (final key in UserProfileField.knownKeys)
             _ProfileRow(
               title: _knownLabel(l10n, key),
-              subtitle: key == 'preferred_name'
-                  ? l10n.userProfilePreferredNameHint
-                  : null,
               value: byKey[key]?.value,
               emptyLabel: l10n.userProfileEmptyValue,
               onTap: () => _clearOrEdit(key: key, current: byKey[key]?.value),
@@ -256,20 +280,20 @@ class _ProfileFieldResult {
 
 class _ProfileFieldForm extends StatefulWidget {
   const _ProfileFieldForm({
-    required this.scrollController,
+    required this.title,
     required this.fieldKey,
     required this.initialValue,
     required this.isNewCustom,
     required this.canClear,
-    this.description,
+    this.desktop = false,
   });
 
-  final ScrollController scrollController;
+  final String title;
   final String fieldKey;
   final String initialValue;
   final bool isNewCustom;
   final bool canClear;
-  final String? description;
+  final bool desktop;
 
   @override
   State<_ProfileFieldForm> createState() => _ProfileFieldFormState();
@@ -305,77 +329,159 @@ class _ProfileFieldFormState extends State<_ProfileFieldForm> {
     );
   }
 
+  Widget _fields(AppLocalizations l10n) {
+    return MemorySectionCard(
+      children: [
+        if (widget.isNewCustom)
+          IosFormTextField(
+            label: l10n.memoryUiCustomKeyLabel,
+            controller: _key,
+            hintText: l10n.userProfileCustomKeyHint,
+            inlineLabel: false,
+            textAlign: TextAlign.start,
+            textInputAction: TextInputAction.next,
+          ),
+        IosFormTextField(
+          label: l10n.memoryUiValueLabel,
+          controller: _value,
+          hintText: l10n.userProfileCustomValueHint,
+          minLines: 1,
+          maxLines: 4,
+          inlineLabel: false,
+          autofocus: true,
+          textAlign: TextAlign.start,
+        ),
+      ],
+    );
+  }
+
+  Widget _actions(AppLocalizations l10n, ColorScheme cs) {
+    return MemorySheetActions(
+      confirmLabel: l10n.userProfileSave,
+      onCancel: () => Navigator.of(context).maybePop(),
+      onConfirm: _pop,
+      extraAction: widget.canClear
+          ? IosTileButton(
+              label: l10n.userProfileClear,
+              icon: Lucide.Trash2,
+              backgroundColor: cs.error,
+              onTap: () => _pop(cleared: true),
+            )
+          : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
+    if (widget.desktop) {
+      final maxBodyHeight = MediaQuery.sizeOf(context).height * 0.5;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: ListView(
-              controller: widget.scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              children: [
-                MemorySectionCard(
-                  children: [
-                    if (widget.isNewCustom)
-                      IosFormTextField(
-                        label: l10n.memoryUiCustomKeyLabel,
-                        controller: _key,
-                        hintText: l10n.userProfileCustomKeyHint,
-                        inlineLabel: false,
-                        textAlign: TextAlign.start,
-                        textInputAction: TextInputAction.next,
-                      ),
-                    IosFormTextField(
-                      label: l10n.memoryUiValueLabel,
-                      controller: _value,
-                      hintText: l10n.userProfileCustomValueHint,
-                      minLines: 1,
-                      maxLines: 4,
-                      inlineLabel: false,
-                      autofocus: true,
-                      textAlign: TextAlign.start,
-                    ),
-                  ],
-                ),
-                if (widget.description != null) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+          SizedBox(
+            height: 44,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Text(
-                      widget.description!,
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
-                        height: 1.35,
-                        color: cs.onSurface.withValues(alpha: 0.62),
+                        fontSize: 13.5,
+                        fontWeight: AppFontWeights.emphasis,
                       ),
                     ),
                   ),
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    icon: const Icon(Lucide.X, size: 18),
+                    color: cs.onSurface,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
                 ],
-              ],
+              ),
+            ),
+          ),
+          Divider(
+            height: 1,
+            thickness: 0.5,
+            color: cs.outlineVariant.withValues(alpha: 0.12),
+          ),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxBodyHeight),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: _fields(l10n),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: MemorySheetActions(
-              confirmLabel: l10n.userProfileSave,
-              onCancel: () => Navigator.of(context).maybePop(),
-              onConfirm: _pop,
-              extraAction: widget.canClear
-                  ? IosTileButton(
-                      label: l10n.userProfileClear,
-                      icon: Lucide.Trash2,
-                      backgroundColor: cs.error,
-                      onTap: () => _pop(cleared: true),
-                    )
-                  : null,
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: _actions(l10n, cs),
           ),
         ],
+      );
+    }
+
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: AppFontWeights.semibold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  children: [_fields(l10n)],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: _actions(l10n, cs),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -384,14 +490,12 @@ class _ProfileFieldFormState extends State<_ProfileFieldForm> {
 class _ProfileRow extends StatelessWidget {
   const _ProfileRow({
     required this.title,
-    this.subtitle,
     required this.value,
     required this.emptyLabel,
     required this.onTap,
   });
 
   final String title;
-  final String? subtitle;
   final String? value;
   final String emptyLabel;
   final VoidCallback onTap;
@@ -420,17 +524,6 @@ class _ProfileRow extends StatelessWidget {
                       color: cs.onSurface.withValues(alpha: 0.9),
                     ),
                   ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.25,
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 4),
                   Text(
                     (value == null || value!.isEmpty) ? emptyLabel : value!,
