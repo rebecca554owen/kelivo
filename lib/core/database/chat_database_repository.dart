@@ -3219,10 +3219,64 @@ class ChatDatabaseRepository {
 
   Future<void> putConversation(Conversation conversation) async {
     await _db.transaction(() async {
-      await _db
-          .into(_db.conversationRows)
-          .insertOnConflictUpdate(_conversationCompanion(conversation));
+      // Existing rows keep the database-owned hash written by prompt freeze;
+      // cached Conversation instances may still hold an older value.
+      final updated =
+          await (_db.update(
+            _db.conversationRows,
+          )..where((row) => row.id.equals(conversation.id))).write(
+            _conversationCompanion(
+              conversation,
+              injectedMemoryHash: const Value.absent(),
+            ),
+          );
+      if (updated == 0) {
+        await _db
+            .into(_db.conversationRows)
+            .insert(_conversationCompanion(conversation));
+      }
       await _replaceMcpServers(conversation.id, conversation.mcpServerIds);
+    });
+  }
+
+  Future<bool> moveConversationToAssistant({
+    required String conversationId,
+    required String assistantId,
+    required DateTime updatedAt,
+  }) {
+    return _db.transaction(() async {
+      final activeRun =
+          await (_db.select(_db.generationRunRows)
+                ..where(
+                  (row) =>
+                      row.conversationId.equals(conversationId) &
+                      row.state.isIn(const [
+                        'preparing',
+                        'requesting',
+                        'streaming',
+                        'waiting_tool',
+                      ]),
+                )
+                ..limit(1))
+              .getSingleOrNull();
+      if (activeRun != null) return false;
+      await (_db.delete(_db.messagePromptRows)..where(
+            (row) =>
+                row.conversationId.equals(conversationId) &
+                row.carriesMemorySnapshot.equals(true),
+          ))
+          .go();
+      final updated =
+          await (_db.update(
+            _db.conversationRows,
+          )..where((row) => row.id.equals(conversationId))).write(
+            ConversationRowsCompanion(
+              assistantId: Value(assistantId),
+              updatedAt: Value(updatedAt),
+              injectedMemoryHash: const Value(null),
+            ),
+          );
+      return updated != 0;
     });
   }
 
@@ -5221,7 +5275,10 @@ class ChatDatabaseRepository {
     );
   }
 
-  ConversationRowsCompanion _conversationCompanion(Conversation conversation) {
+  ConversationRowsCompanion _conversationCompanion(
+    Conversation conversation, {
+    Value<String?>? injectedMemoryHash,
+  }) {
     return ConversationRowsCompanion.insert(
       id: conversation.id,
       title: conversation.title,
@@ -5236,7 +5293,8 @@ class ChatDatabaseRepository {
         conversation.lastSummarizedMessageCount,
       ),
       chatSuggestionsJson: Value(jsonEncode(conversation.chatSuggestions)),
-      injectedMemoryHash: Value(conversation.injectedMemoryHash),
+      injectedMemoryHash:
+          injectedMemoryHash ?? Value(conversation.injectedMemoryHash),
       lastMemoryExtractedOrder: Value(conversation.lastMemoryExtractedOrder),
     );
   }
@@ -5715,6 +5773,17 @@ class ChatDatabaseRepository {
     return (_db.select(
       _db.messagePromptRows,
     )..where((t) => t.revisionId.equals(revisionId))).getSingleOrNull();
+  }
+
+  Future<Map<String, MessagePromptRow>> getMessagePrompts(
+    Iterable<String> revisionIds,
+  ) async {
+    final ids = revisionIds.toSet();
+    if (ids.isEmpty) return const {};
+    final rows = await (_db.select(
+      _db.messagePromptRows,
+    )..where((row) => row.revisionId.isIn(ids))).get();
+    return {for (final row in rows) row.revisionId: row};
   }
 
   Future<void> putMessagePrompt({

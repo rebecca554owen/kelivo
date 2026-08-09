@@ -441,6 +441,15 @@ class MessageBuilderService {
       }
     }
 
+    final persistedRevisionIds = <String>[
+      for (final message in apiMessages)
+        if (isPersistedUserMessage(message))
+          (message[internalRevisionIdKey] ?? '').toString().trim(),
+    ];
+    final frozenPrompts = _repo == null
+        ? null
+        : await _repo!.getMessagePrompts(persistedRevisionIds);
+
     // Prefetch OCR only for messages that still need generation (no freeze yet).
     OcrPrepareSession? ocrSession;
     if (ocrActive && ocrPrefetch != null) {
@@ -451,10 +460,7 @@ class MessageBuilderService {
         final revisionId = (message[internalRevisionIdKey] ?? '')
             .toString()
             .trim();
-        if (revisionId.isNotEmpty && _repo != null) {
-          final existing = await _repo!.getMessagePrompt(revisionId);
-          if (existing != null) continue;
-        }
+        if (frozenPrompts?.containsKey(revisionId) ?? false) continue;
         final parsedUser = parseInputFromRaw(
           (message['content'] ?? '').toString(),
         );
@@ -576,12 +582,10 @@ class MessageBuilderService {
       }
 
       // Prefer frozen promptContent — never recompute (§8.3).
-      if (revisionId.isNotEmpty && _repo != null) {
-        final existing = await _repo!.getMessagePrompt(revisionId);
-        if (existing != null) {
-          apiMessages[i]['content'] = existing.payload;
-          continue;
-        }
+      final existing = frozenPrompts?[revisionId];
+      if (existing != null) {
+        apiMessages[i]['content'] = existing.payload;
+        continue;
       }
 
       final inlineImagePaths = parsedUser.imagePaths
@@ -668,6 +672,7 @@ class MessageBuilderService {
           settings: settings,
           apiMessages: apiMessages,
           pass: injectionPass,
+          readFrozenPrompt: false,
         );
       } else {
         // No conversation or no matching stored message: nothing to freeze
@@ -732,12 +737,13 @@ class MessageBuilderService {
     required SettingsProvider settings,
     required List<Map<String, dynamic>> apiMessages,
     MemoryInjectionPass? pass,
+    bool readFrozenPrompt = true,
   }) async {
     final repo = _repo;
     final persist =
         repo != null &&
         !chatService.isTemporaryConversation(message.conversationId);
-    if (persist) {
+    if (persist && readFrozenPrompt) {
       final existing = await repo.getMessagePrompt(message.id);
       if (existing != null) return existing.payload;
     }
@@ -810,11 +816,6 @@ class MessageBuilderService {
     final hasAnyMemory = totalByType.values.any((count) => count > 0);
     final hasProfile = fields.any((f) => f.value.trim().isNotEmpty);
 
-    // Fully empty: inject nothing and do not write hash.
-    if (!hasProfile && !hasAnyMemory) {
-      return (prefix: '', hash: null);
-    }
-
     final visible = hasAnyMemory
         ? await repo.queryVisibleMemories(assistantId: assistant.id)
         : const <MemoryEntry>[];
@@ -850,6 +851,12 @@ class MessageBuilderService {
           (id) => pass?.snapshotCarriers.contains(id) ?? false,
         ) ||
         await repo.anyPromptCarriesMemorySnapshot(historyUserIds);
+
+    // With no prior snapshot there is nothing to clear. Once a snapshot has
+    // been sent, however, the all-empty state is itself the latest snapshot.
+    if (!hasProfile && !hasAnyMemory && !hasSnapshot) {
+      return (prefix: '', hash: null);
+    }
 
     // CRITICAL: compare against the prior hash BEFORE any write (appendix §6).
     // Writing first makes currentHash == injectedMemoryHash and the update

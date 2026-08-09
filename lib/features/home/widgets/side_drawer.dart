@@ -240,6 +240,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             icon: Lucide.Shuffle,
             label: l10n.sideDrawerMenuMoveTo,
             onTap: () async {
+              if (widget.loadingConversationIds.contains(chat.id)) return;
               final conv = chatService.getConversation(chat.id);
               final movingCurrent =
                   chatService.currentConversationId == chat.id;
@@ -270,11 +271,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               );
               if (!mounted) return;
               if (targetId != null) {
-                await chatService.moveConversationToAssistant(
+                final moved = await chatService.moveConversationToAssistant(
                   conversationId: chat.id,
                   assistantId: targetId,
                 );
-                if (!mounted) return;
+                if (!mounted || !moved) return;
                 if (movingCurrent ||
                     chatService.currentConversationId == null) {
                   final closeDrawer = !keepSidebarOpenOnTopicTap;
@@ -426,6 +427,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       icon: Lucide.Shuffle,
                       label: l10n.sideDrawerMenuMoveTo,
                       action: () async {
+                        if (widget.loadingConversationIds.contains(chat.id)) {
+                          return;
+                        }
                         final conv = chatService.getConversation(chat.id);
                         final movingCurrent =
                             chatService.currentConversationId == chat.id;
@@ -462,11 +466,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         );
                         if (!mounted) return;
                         if (targetId != null) {
-                          await chatService.moveConversationToAssistant(
-                            conversationId: chat.id,
-                            assistantId: targetId,
-                          );
-                          if (!mounted) return;
+                          final moved = await chatService
+                              .moveConversationToAssistant(
+                                conversationId: chat.id,
+                                assistantId: targetId,
+                              );
+                          if (!mounted || !moved) return;
                           if (movingCurrent ||
                               chatService.currentConversationId == null) {
                             final closeDrawer = !keepSidebarOpenOnTopicTap;

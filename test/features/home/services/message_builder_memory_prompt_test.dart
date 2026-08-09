@@ -14,6 +14,7 @@ import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/memory/memory_block_builder.dart';
 import 'package:Kelivo/core/services/memory/memory_prompts.dart';
 import 'package:Kelivo/features/home/services/message_builder_service.dart';
+import 'package:Kelivo/features/home/services/ocr_service.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
@@ -35,6 +36,27 @@ class _FakeChatService extends ChatService {
     return persistedMessages
         .where((message) => message.conversationId == conversationId)
         .toList();
+  }
+}
+
+class _CountingPromptRepository extends ChatDatabaseRepository {
+  _CountingPromptRepository(super.database);
+
+  int singlePromptReads = 0;
+  int batchPromptReads = 0;
+
+  @override
+  Future<MessagePromptRow?> getMessagePrompt(String revisionId) {
+    singlePromptReads++;
+    return super.getMessagePrompt(revisionId);
+  }
+
+  @override
+  Future<Map<String, MessagePromptRow>> getMessagePrompts(
+    Iterable<String> revisionIds,
+  ) {
+    batchPromptReads++;
+    return super.getMessagePrompts(revisionIds);
   }
 }
 
@@ -140,11 +162,20 @@ void main() {
     return message;
   }
 
-  MessageBuilderService buildService({List<ChatMessage> messages = const []}) {
+  MessageBuilderService buildService({
+    List<ChatMessage> messages = const [],
+    ChatDatabaseRepository? repository,
+    Future<OcrPrepareSession> Function({
+      required List<String> revisionIds,
+      required List<String> imagePaths,
+    })?
+    ocrPrefetch,
+  }) {
     return MessageBuilderService(
       chatService: _FakeChatService(messages),
       contextProvider: _FakeBuildContext(),
-      chatRepository: chatRepository,
+      chatRepository: repository ?? chatRepository,
+      ocrPrefetch: ocrPrefetch,
     );
   }
 
@@ -350,6 +381,69 @@ void main() {
       expect(result.prefix, contains('<user_memory_update>'));
       expect(result.hash, isNotNull);
       expect(result.hash, isNot('oldhash012345678'));
+    });
+
+    test('deleting the last memory emits an empty update snapshot', () async {
+      await seedAssistant('assistant-1');
+      await putEntry(id: 'mem_01', content: 'User likes Flutter.');
+      final conversation = await seedConversation('conv-1');
+      await seedUserMessage(id: 'u1', conversationId: 'conv-1');
+      await seedUserMessage(
+        id: 'u-new',
+        conversationId: 'conv-1',
+        content: 'next',
+        messageOrder: 1,
+      );
+      final service = buildService();
+      final first = await service.resolveMemoryPrefix(
+        conversation: conversation,
+        assistant: assistant,
+        apiMessages: [
+          {
+            'role': 'user',
+            'content': 'hi',
+            MessageBuilderService.internalRevisionIdKey: 'u1',
+          },
+        ],
+        currentMessageId: 'u1',
+        lang: MemoryPromptLang.zh,
+      );
+      await chatRepository.freezeMessagePrompt(
+        revisionId: 'u1',
+        conversationId: 'conv-1',
+        payload: '${first.prefix}hi',
+        carriesMemorySnapshot: true,
+        injectedMemoryHash: first.hash,
+      );
+
+      await businessRepository.deleteEntity(
+        BusinessEntityKind.memoryEntry,
+        'mem_01',
+      );
+      final cleared = await service.resolveMemoryPrefix(
+        conversation: conversation,
+        assistant: assistant,
+        apiMessages: [
+          {
+            'role': 'user',
+            'content': 'hi',
+            MessageBuilderService.internalRevisionIdKey: 'u1',
+          },
+          {
+            'role': 'user',
+            'content': 'next',
+            MessageBuilderService.internalRevisionIdKey: 'u-new',
+          },
+        ],
+        currentMessageId: 'u-new',
+        lang: MemoryPromptLang.zh,
+      );
+
+      expect(cleared.prefix, contains('<user_memory_update>'));
+      expect(cleared.prefix, contains('<user_profile/>'));
+      expect(cleared.prefix, contains('<user_memory type="identity"/>'));
+      expect(cleared.hash, isNotNull);
+      expect(cleared.hash, isNot(first.hash));
     });
 
     test(
@@ -678,6 +772,91 @@ void main() {
         expect(frozen.carriesMemorySnapshot, isTrue);
       },
     );
+
+    test('frozen prompts are batch-read once and reused by OCR', () async {
+      await seedAssistant('assistant-1');
+      final conversation = await seedConversation('conv-batch');
+      final first = await seedUserMessage(
+        id: 'u1',
+        conversationId: 'conv-batch',
+        content: 'first\n[image:/tmp/first.png]',
+      );
+      final second = await seedUserMessage(
+        id: 'u2',
+        conversationId: 'conv-batch',
+        content: 'second\n[image:/tmp/second.png]',
+        messageOrder: 1,
+      );
+      await chatRepository.putMessagePrompt(
+        revisionId: 'u1',
+        conversationId: 'conv-batch',
+        payload: 'frozen first',
+        carriesMemorySnapshot: false,
+      );
+      await chatRepository.putMessagePrompt(
+        revisionId: 'u2',
+        conversationId: 'conv-batch',
+        payload: 'frozen second',
+        carriesMemorySnapshot: false,
+      );
+      await settings.setProviderConfig(
+        'ocr-provider',
+        ProviderConfig(
+          id: 'ocr-provider',
+          enabled: true,
+          name: 'OCR',
+          apiKey: 'key',
+          baseUrl: 'https://example.test',
+          models: const ['ocr-model'],
+          modelOverrides: const {
+            'ocr-model': {
+              'input': ['text', 'image'],
+            },
+          },
+        ),
+      );
+      await settings.setOcrModel('ocr-provider', 'ocr-model');
+      await settings.setOcrEnabled(true);
+
+      final countingRepository = _CountingPromptRepository(database);
+      var ocrPrefetchCalls = 0;
+      final service = buildService(
+        messages: [first, second],
+        repository: countingRepository,
+        ocrPrefetch: ({required revisionIds, required imagePaths}) async {
+          ocrPrefetchCalls++;
+          return OcrPrepareSession();
+        },
+      );
+      final apiMessages = <Map<String, dynamic>>[
+        {
+          'role': 'user',
+          'content': first.content,
+          MessageBuilderService.internalRevisionIdKey: first.id,
+        },
+        {
+          'role': 'user',
+          'content': second.content,
+          MessageBuilderService.internalRevisionIdKey: second.id,
+        },
+      ];
+
+      await service.processUserMessagesForApi(
+        apiMessages,
+        settings,
+        assistant,
+        conversation: conversation,
+        sourceMessages: [first, second],
+      );
+
+      expect(apiMessages.map((message) => message['content']), [
+        'frozen first',
+        'frozen second',
+      ]);
+      expect(countingRepository.batchPromptReads, 1);
+      expect(countingRepository.singlePromptReads, 0);
+      expect(ocrPrefetchCalls, 0);
+    });
   });
 
   group('§18.4 item 30 — self-heal after truncateIndex advances', () {

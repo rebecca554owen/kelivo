@@ -3421,7 +3421,7 @@ class ChatService extends ChangeNotifier {
   // Move an existing conversation to a different assistant.
   // If the conversation is still a draft, update it in memory;
   // otherwise persist the assistantId change and updatedAt.
-  Future<void> moveConversationToAssistant({
+  Future<bool> moveConversationToAssistant({
     required String conversationId,
     required String assistantId,
   }) async {
@@ -3433,16 +3433,25 @@ class ChatService extends ChangeNotifier {
       draft.assistantId = assistantId;
       draft.updatedAt = DateTime.now();
       notifyListeners();
-      return;
+      return true;
     }
 
     final c = _conversationsCache[conversationId];
-    if (c == null) return;
+    if (c == null) return false;
+    if (c.assistantId == assistantId) return true;
+    final updatedAt = DateTime.now();
+    final moved = await _repo.moveConversationToAssistant(
+      conversationId: conversationId,
+      assistantId: assistantId,
+      updatedAt: updatedAt,
+    );
+    if (!moved) return false;
     c.assistantId = assistantId;
-    c.updatedAt = DateTime.now();
-    await _saveConversation(c);
+    c.updatedAt = updatedAt;
+    c.injectedMemoryHash = null;
     _bumpConversationListRevision();
     notifyListeners();
+    return true;
   }
 }
 
