@@ -565,7 +565,6 @@ class _CompleteStep extends StatelessWidget {
           messages: status.messages,
           converted: status.converted,
           malformed: status.malformed,
-          missingFiles: status.missingFiles,
         ),
         const SizedBox(height: 12),
         if (status.backupPath != null)
@@ -1336,19 +1335,23 @@ class _StatsCard extends StatelessWidget {
     required this.messages,
     this.converted = 0,
     this.malformed = 0,
-    this.missingFiles = 0,
   });
 
   final int conversations;
   final int messages;
   final int converted;
   final int malformed;
-  final int missingFiles;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    // Match checklist/card hairlines — full-opacity outlineVariant reads too
+    // heavy against surfaceContainerLow cards.
+    final dividerColor = cs.outlineVariant.withValues(alpha: 0.28);
+    Widget verticalDivider() =>
+        Container(width: 1, height: 42, color: dividerColor);
+
     return _Card(
       child: Column(
         children: [
@@ -1360,14 +1363,14 @@ class _StatsCard extends StatelessWidget {
                   value: conversations,
                 ),
               ),
-              Container(width: 1, height: 42, color: cs.outlineVariant),
+              verticalDivider(),
               Expanded(
                 child: _Stat(label: l10n.migrationMessageCount, value: messages),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Container(height: 1, color: cs.outlineVariant),
+          Container(height: 1, color: dividerColor),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1377,18 +1380,11 @@ class _StatsCard extends StatelessWidget {
                   value: converted,
                 ),
               ),
-              Container(width: 1, height: 42, color: cs.outlineVariant),
+              verticalDivider(),
               Expanded(
                 child: _Stat(
                   label: l10n.migrationMalformedCount,
                   value: malformed,
-                ),
-              ),
-              Container(width: 1, height: 42, color: cs.outlineVariant),
-              Expanded(
-                child: _Stat(
-                  label: l10n.migrationMissingFilesCount,
-                  value: missingFiles,
                 ),
               ),
             ],
