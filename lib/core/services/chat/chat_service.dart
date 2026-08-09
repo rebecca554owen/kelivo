@@ -94,6 +94,9 @@ class ChatService extends ChangeNotifier {
   final Map<String, Conversation> _conversationsCache = {};
   final Map<String, Conversation> _draftConversations = {};
   final Set<String> _temporaryConversationIds = <String>{};
+  // Evicting these ids could reopen persistence races with background work.
+  final Set<String> _discardedTemporaryConversationIds = <String>{};
+  final Set<String> _discardedTemporaryMessageIds = <String>{};
   final Map<String, List<Map<String, dynamic>>> _temporaryToolEvents =
       <String, List<Map<String, dynamic>>>{};
   final Map<String, String> _temporaryGeminiThoughtSigs = <String, String>{};
@@ -125,6 +128,14 @@ class ChatService extends ChangeNotifier {
   bool _initialized = false;
   Future<void>? _initFuture;
   bool get initialized => _initialized;
+
+  /// Underlying typed repository when ready (after [init], or the injected
+  /// [existingRepository] before init). Null for uninitialized services.
+  ChatDatabaseRepository? get chatRepositoryOrNull {
+    if (_initialized) return _repo;
+    return _existingRepository;
+  }
+
   int _statisticsRevision = 0;
   int get statisticsRevision => _statisticsRevision;
 
@@ -144,7 +155,9 @@ class ChatService extends ChangeNotifier {
   String? get currentConversationId => _currentConversationId;
 
   bool isTemporaryConversation(String? id) {
-    return id != null && _temporaryConversationIds.contains(id);
+    return id != null &&
+        (_temporaryConversationIds.contains(id) ||
+            _discardedTemporaryConversationIds.contains(id));
   }
 
   Future<void> init() {
@@ -242,6 +255,13 @@ class ChatService extends ChangeNotifier {
       unawaited(close());
     }
     super.dispose();
+  }
+
+  void _clearPersistedMessageCache() {
+    _messagesCache.removeWhere(
+      (conversationId, _) =>
+          !_temporaryConversationIds.contains(conversationId),
+    );
   }
 
   Future<void> _loadConversationsCache() async {
@@ -959,12 +979,16 @@ class ChatService extends ChangeNotifier {
     required List<String> tokens,
     int limit = 200,
     bool includeAllRevisions = false,
+    String? conversationId,
+    String? excludeConversationId,
   }) async {
     if (!_initialized) return const <ConversationSearchMatch>[];
     return _repo.searchConversationMatches(
       tokens: tokens,
       limit: limit,
       includeAllRevisions: includeAllRevisions,
+      conversationId: conversationId,
+      excludeConversationId: excludeConversationId,
     );
   }
 
@@ -1501,8 +1525,15 @@ class ChatService extends ChangeNotifier {
     return conversation;
   }
 
+  void _rememberDiscardedTemporaryConversation(String id) {
+    _discardedTemporaryConversationIds.add(id);
+    final messages = _messagesCache[id] ?? const <ChatMessage>[];
+    _discardedTemporaryMessageIds.addAll(messages.map((message) => message.id));
+  }
+
   void _discardTemporaryConversation(String? id) {
     if (id == null || !_temporaryConversationIds.remove(id)) return;
+    _rememberDiscardedTemporaryConversation(id);
     final messages = _messagesCache[id] ?? const <ChatMessage>[];
     for (final message in messages) {
       _temporaryToolEvents.remove(message.id);
@@ -1533,7 +1564,9 @@ class ChatService extends ChangeNotifier {
     if (!_draftConversations.containsKey(id)) return false;
 
     _draftConversations.remove(id);
-    _temporaryConversationIds.remove(id);
+    if (_temporaryConversationIds.remove(id)) {
+      _rememberDiscardedTemporaryConversation(id);
+    }
     final messages = _messagesCache[id] ?? const <ChatMessage>[];
     for (final message in messages) {
       _temporaryToolEvents.remove(message.id);
@@ -1946,7 +1979,7 @@ class ChatService extends ChangeNotifier {
       await _deleteUploadDirectory();
       return;
     }
-    _messagesCache.clear();
+    _clearPersistedMessageCache();
     await _backfillAssetReferencesForCurrentRoot();
     await _loadConversationsCache();
     notifyListeners();
@@ -1998,7 +2031,7 @@ class ChatService extends ChangeNotifier {
   Future<BackupMergeReport> mergeDatabaseSnapshot(File snapshotFile) async {
     if (!_initialized) await init();
     final report = await _repo.mergeBackupSnapshot(snapshotFile);
-    _messagesCache.clear();
+    _clearPersistedMessageCache();
     await _backfillAssetReferencesForCurrentRoot();
     await _loadConversationsCache();
     notifyListeners();
@@ -2006,6 +2039,9 @@ class ChatService extends ChangeNotifier {
   }
 
   Future<void> _resetAfterOverwriteRestore() async {
+    for (final id in _temporaryConversationIds) {
+      _rememberDiscardedTemporaryConversation(id);
+    }
     _messagesCache.clear();
     _draftConversations.clear();
     _temporaryConversationIds.clear();
@@ -2294,6 +2330,11 @@ class ChatService extends ChangeNotifier {
       groupId: groupId,
       version: version,
     );
+
+    if (_discardedTemporaryConversationIds.contains(conversationId)) {
+      _discardedTemporaryMessageIds.add(message.id);
+      return message;
+    }
 
     if (temporary) {
       conversation.messageIds.add(message.id);
@@ -2661,6 +2702,9 @@ class ChatService extends ChangeNotifier {
   }) async {
     if (!_initialized) return;
 
+    if (_discardedTemporaryConversationIds.contains(message.conversationId)) {
+      return;
+    }
     if (isTemporaryConversation(message.conversationId)) {
       _replaceCachedMessage(message);
       _temporaryToolEvents[message.id] = List<Map<String, dynamic>>.of(
@@ -2837,6 +2881,7 @@ class ChatService extends ChangeNotifier {
     String signature,
   ) async {
     if (!_initialized) await init();
+    if (_discardedTemporaryMessageIds.contains(assistantMessageId)) return;
     if (_isTemporaryMessageId(assistantMessageId)) {
       _temporaryGeminiThoughtSigs[assistantMessageId] = signature;
       notifyListeners();
@@ -3324,6 +3369,9 @@ class ChatService extends ChangeNotifier {
     if (!_initialized) await init();
 
     await _repo.clearAllData();
+    for (final id in _temporaryConversationIds) {
+      _rememberDiscardedTemporaryConversation(id);
+    }
     _messagesCache.clear();
     _conversationsCache.clear();
     _draftConversations.clear();
@@ -3373,7 +3421,7 @@ class ChatService extends ChangeNotifier {
   // Move an existing conversation to a different assistant.
   // If the conversation is still a draft, update it in memory;
   // otherwise persist the assistantId change and updatedAt.
-  Future<void> moveConversationToAssistant({
+  Future<bool> moveConversationToAssistant({
     required String conversationId,
     required String assistantId,
   }) async {
@@ -3385,16 +3433,25 @@ class ChatService extends ChangeNotifier {
       draft.assistantId = assistantId;
       draft.updatedAt = DateTime.now();
       notifyListeners();
-      return;
+      return true;
     }
 
     final c = _conversationsCache[conversationId];
-    if (c == null) return;
+    if (c == null) return false;
+    if (c.assistantId == assistantId) return true;
+    final updatedAt = DateTime.now();
+    final moved = await _repo.moveConversationToAssistant(
+      conversationId: conversationId,
+      assistantId: assistantId,
+      updatedAt: updatedAt,
+    );
+    if (!moved) return false;
     c.assistantId = assistantId;
-    c.updatedAt = DateTime.now();
-    await _saveConversation(c);
+    c.updatedAt = updatedAt;
+    c.injectedMemoryHash = null;
     _bumpConversationListRevision();
     notifyListeners();
+    return true;
   }
 }
 

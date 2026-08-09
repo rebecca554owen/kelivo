@@ -101,12 +101,16 @@ IconData _toolIconFor(String name, [Map<String, dynamic> args = const {}]) {
   final localIcon = _localToolIconFor(name, args);
   if (localIcon != null) return localIcon;
   switch (name) {
-    case 'create_memory':
+    case 'memory_read':
+    case 'memory_update':
+    case 'memory_search_profile':
+    case 'memory_edit':
+    case 'update_user_profile':
       return Lucide.bookHeart;
-    case 'edit_memory':
-      return Lucide.bookHeart;
-    case 'delete_memory':
+    case 'memory_delete':
       return Lucide.bookDashed;
+    case 'chat_search':
+      return Lucide.Search;
     case 'search_web':
       return Lucide.Earth;
     case 'builtin_search':
@@ -246,12 +250,6 @@ String _toolTitleFor(
   final localToolTitle = _localToolTitleFor(l10n, name, args);
   if (localToolTitle != null) return localToolTitle;
   switch (name) {
-    case 'create_memory':
-      return l10n.chatMessageWidgetCreateMemory;
-    case 'edit_memory':
-      return l10n.chatMessageWidgetEditMemory;
-    case 'delete_memory':
-      return l10n.chatMessageWidgetDeleteMemory;
     case 'search_web':
       final q = (args['query'] ?? '').toString();
       return l10n.chatMessageWidgetWebSearch(q);
@@ -374,7 +372,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: context.appColors.surfaceFill,
+                color: sheetContext.appColors.surfaceFill,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -398,7 +396,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: context.appColors.surfaceFill,
+                color: sheetContext.appColors.surfaceFill,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -955,7 +953,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: cs.surfaceContainerHigh.withValues(alpha: 0.66),
+                          color: cs.surfaceContainerHigh.withValues(
+                            alpha: 0.66,
+                          ),
                         ),
                         child: Material(
                           color: Colors.transparent,
@@ -3693,10 +3693,18 @@ class _ChainOfThoughtReasoningStepState
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: const [
-                      Color(0x00FFFFFF), // color-gate: ignore (dstIn alpha mask)
-                      Color(0xFFFFFFFF), // color-gate: ignore (dstIn alpha mask)
-                      Color(0xFFFFFFFF), // color-gate: ignore (dstIn alpha mask)
-                      Color(0x00FFFFFF), // color-gate: ignore (dstIn alpha mask)
+                      Color(
+                        0x00FFFFFF,
+                      ), // color-gate: ignore (dstIn alpha mask)
+                      Color(
+                        0xFFFFFFFF,
+                      ), // color-gate: ignore (dstIn alpha mask)
+                      Color(
+                        0xFFFFFFFF,
+                      ), // color-gate: ignore (dstIn alpha mask)
+                      Color(
+                        0x00FFFFFF,
+                      ), // color-gate: ignore (dstIn alpha mask)
                     ],
                     stops: [0.0, sTop, sBot, 1.0],
                   ).createShader(rect);
@@ -5554,10 +5562,18 @@ class _ReasoningSectionState extends State<_ReasoningSection>
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: const [
-                        Color(0x00FFFFFF), // color-gate: ignore (dstIn alpha mask)
-                        Color(0xFFFFFFFF), // color-gate: ignore (dstIn alpha mask)
-                        Color(0xFFFFFFFF), // color-gate: ignore (dstIn alpha mask)
-                        Color(0x00FFFFFF), // color-gate: ignore (dstIn alpha mask)
+                        Color(
+                          0x00FFFFFF,
+                        ), // color-gate: ignore (dstIn alpha mask)
+                        Color(
+                          0xFFFFFFFF,
+                        ), // color-gate: ignore (dstIn alpha mask)
+                        Color(
+                          0xFFFFFFFF,
+                        ), // color-gate: ignore (dstIn alpha mask)
+                        Color(
+                          0x00FFFFFF,
+                        ), // color-gate: ignore (dstIn alpha mask)
                       ],
                       stops: [0.0, sTop, sBot, 1.0],
                     ).createShader(rect);
@@ -5668,9 +5684,15 @@ class _ShimmerState extends State<_Shimmer> with TickerProviderStateMixin {
             );
             return LinearGradient(
               colors: [
-                Colors.white.withValues(alpha: 0.0), // color-gate: ignore (shimmer effect)
-                Colors.white.withValues(alpha: 0.35), // color-gate: ignore (shimmer effect)
-                Colors.white.withValues(alpha: 0.0), // color-gate: ignore (shimmer effect)
+                Colors.white.withValues(
+                  alpha: 0.0,
+                ), // color-gate: ignore (shimmer effect)
+                Colors.white.withValues(
+                  alpha: 0.35,
+                ), // color-gate: ignore (shimmer effect)
+                Colors.white.withValues(
+                  alpha: 0.0,
+                ), // color-gate: ignore (shimmer effect)
               ],
               stops: const [0.0, 0.5, 1.0],
               begin: Alignment.centerLeft,

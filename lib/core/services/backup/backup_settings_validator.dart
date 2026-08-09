@@ -21,6 +21,8 @@ final class BackupSettingsValidator {
   static const _jsonListKeys = {
     'assistants_v1',
     'assistant_memories_v1',
+    'memory_entries_v1',
+    'user_profile_fields_v1',
     'mcp_servers_v1',
     'provider_groups_v1',
     'world_books_v1',

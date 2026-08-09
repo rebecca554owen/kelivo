@@ -13,6 +13,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
+import '../../../core/services/memory/memory_prompts.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
@@ -30,16 +31,25 @@ import '../../../core/models/quick_phrase.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
-import '../../../core/providers/memory_provider.dart';
+import '../../../core/models/memory_entry.dart';
+import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/memory/memory_gatekeeper.dart';
+import '../../../core/services/memory/memory_pipeline.dart';
+import '../../settings/pages/legacy_memory_page.dart';
+import '../../settings/pages/memory_settings_page.dart';
+import '../../settings/widgets/memory_ui.dart';
 import '../../../core/services/haptics.dart';
 import '../../../desktop/desktop_context_menu.dart';
+import '../../../desktop/setting/memory_dialogs.dart';
+import '../../../desktop/widgets/desktop_select_dropdown.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/emoji_picker_dialog.dart';
 import '../../../shared/widgets/emoji_text.dart';
+import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -47,6 +57,7 @@ import '../../../theme/app_font_weights.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/brand_assets.dart';
+import '../../../utils/platform_utils.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../utils/assistant_edit_tab_layout.dart';
 import 'assistant_regex_tab.dart';
@@ -877,8 +888,7 @@ class _SegTabBar extends StatelessWidget {
             final double rowWidth =
                 segWidth * tabs.length + gap * (tabs.length - 1);
 
-            final Color shellBg =
-                context.appColors.surfaceCard; // 白底胶囊，无边框阴影
+            final Color shellBg = context.appColors.surfaceCard; // 白底胶囊，无边框阴影
 
             List<Widget> children = [];
             for (int index = 0; index < tabs.length; index++) {
@@ -1220,13 +1230,11 @@ class _TactileRow extends StatefulWidget {
     this.onTap,
     this.haptics = true,
     this.pressedScale = 1.0,
-    this.releaseDelayMs = 60,
   });
   final Widget Function(bool pressed) builder;
   final VoidCallback? onTap;
   final bool haptics;
   final double pressedScale;
-  final int releaseDelayMs;
 
   @override
   State<_TactileRow> createState() => _TactileRowState();
@@ -1256,11 +1264,7 @@ class _TactileRowState extends State<_TactileRow> {
       onTapUp: widget.onTap == null
           ? null
           : (_) async {
-              if (widget.releaseDelayMs > 0) {
-                await Future.delayed(
-                  Duration(milliseconds: widget.releaseDelayMs),
-                );
-              }
+              await Future.delayed(const Duration(milliseconds: 60));
               if (mounted) _setPressed(false);
             },
       onTapCancel: widget.onTap == null ? null : () => _setPressed(false),
@@ -1432,9 +1436,7 @@ class _IosButtonState extends State<_IosButton> {
         curve: Curves.easeOutCubic,
         child: Container(
           decoration: BoxDecoration(
-            color: widget.filled
-                ? cs.primary
-                : (context.appColors.surfaceFill),
+            color: widget.filled ? cs.primary : (context.appColors.surfaceFill),
             borderRadius: BorderRadius.circular(12),
             border: widget.filled ? null : Border.all(color: borderColor),
           ),
@@ -2310,8 +2312,12 @@ class _DesktopAssistantBasicPaneState
                       pressedScale: 0.98,
                       builder: (pressed) {
                         final base = context.appColors.surfaceFill;
-                        final pressOv = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
-                        final hoverOv = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.04);
+                        final pressOv = cs.onSurface.withValues(
+                          alpha: isDark ? 0.06 : 0.05,
+                        );
+                        final hoverOv = cs.onSurface.withValues(
+                          alpha: isDark ? 0.04 : 0.04,
+                        );
                         final bgColor = pressed
                             ? Color.alphaBlend(pressOv, base)
                             : (_hoverChatModel
@@ -2397,8 +2403,12 @@ class _DesktopAssistantBasicPaneState
                         pressedScale: 0.98,
                         builder: (pressed) {
                           final base = context.appColors.surfaceFill;
-                          final pressOv = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
-                          final hoverOv = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.04);
+                          final pressOv = cs.onSurface.withValues(
+                            alpha: isDark ? 0.06 : 0.05,
+                          );
+                          final hoverOv = cs.onSurface.withValues(
+                            alpha: isDark ? 0.04 : 0.04,
+                          );
                           final bg = pressed
                               ? Color.alphaBlend(pressOv, base)
                               : (_hoverBgChooser

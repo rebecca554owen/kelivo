@@ -327,7 +327,7 @@ class ChatboxImporter {
         'customHeaders': const <Map<String, String>>[],
         'customBody': const <Map<String, String>>[],
         'enableMemory': false,
-        'enableRecentChatsReference': false,
+        'allowPastConversationRecall': false,
         'presetMessages': const <dynamic>[],
         'regexRules': const <dynamic>[],
       };

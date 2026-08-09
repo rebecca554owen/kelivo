@@ -118,6 +118,84 @@ void main() {
       expect(service.conversationListRevision, last);
     });
 
+    test('assistant move invalidates only memory snapshot prompts', () async {
+      final service = createService();
+      await service.init();
+      final conversation = await service.createConversation(
+        title: 'A',
+        assistantId: 'assistant-a',
+      );
+      final snapshotMessage = await service.addMessage(
+        conversationId: conversation.id,
+        role: 'user',
+        content: 'snapshot',
+      );
+      final plainMessage = await service.addMessage(
+        conversationId: conversation.id,
+        role: 'user',
+        content: 'plain',
+      );
+      final repository = service.chatRepositoryOrNull!;
+      await repository.freezeMessagePrompt(
+        revisionId: snapshotMessage.id,
+        conversationId: conversation.id,
+        payload: 'assistant A memory',
+        carriesMemorySnapshot: true,
+        injectedMemoryHash: 'assistant-a-hash',
+      );
+      await repository.putMessagePrompt(
+        revisionId: plainMessage.id,
+        conversationId: conversation.id,
+        payload: 'plain frozen prompt',
+        carriesMemorySnapshot: false,
+      );
+
+      await service.moveConversationToAssistant(
+        conversationId: conversation.id,
+        assistantId: 'assistant-b',
+      );
+
+      expect(await repository.getMessagePrompt(snapshotMessage.id), isNull);
+      expect(
+        (await repository.getMessagePrompt(plainMessage.id))?.payload,
+        'plain frozen prompt',
+      );
+      expect(
+        await repository.getConversationInjectedMemoryHash(conversation.id),
+        isNull,
+      );
+      expect(
+        service.getConversation(conversation.id)?.assistantId,
+        'assistant-b',
+      );
+    });
+
+    test('assistant move is rejected while generation is active', () async {
+      final service = createService();
+      await service.init();
+      final conversation = await service.createConversation(
+        title: 'A',
+        assistantId: 'assistant-a',
+      );
+      await service.beginSendGeneration(
+        conversationId: conversation.id,
+        userContent: 'hello',
+        modelId: 'model',
+        providerId: 'provider',
+      );
+
+      final moved = await service.moveConversationToAssistant(
+        conversationId: conversation.id,
+        assistantId: 'assistant-b',
+      );
+
+      expect(moved, isFalse);
+      expect(
+        service.getConversation(conversation.id)?.assistantId,
+        'assistant-a',
+      );
+    });
+
     test('persisted message append bumps; temporary draft does not', () async {
       final service = createService();
       await service.init();

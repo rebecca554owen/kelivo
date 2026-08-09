@@ -164,7 +164,7 @@ class MessageGenerationService {
     await messageBuilderService.injectMemoryAndRecentChats(
       apiMessages,
       assistant,
-      currentConversationId: currentConversation?.id,
+      settings: settings,
     );
 
     final hasBuiltInSearch = messageBuilderService.hasBuiltInSearch(
@@ -193,7 +193,13 @@ class MessageGenerationService {
     messageBuilderService.applyContextLimit(apiMessages, assistant);
 
     final lastUserImagePaths = await messageBuilderService
-        .processUserMessagesForApi(apiMessages, settings, assistant);
+        .processUserMessagesForApi(
+          apiMessages,
+          settings,
+          assistant,
+          conversation: currentConversation,
+          sourceMessages: messages,
+        );
 
     onFileProcessingFinished?.call();
 

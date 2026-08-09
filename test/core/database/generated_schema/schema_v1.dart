@@ -106,6 +106,26 @@ class ConversationRows extends Table with TableInfo {
         $customConstraints: 'NOT NULL DEFAULT \'[]\'',
         defaultValue: const CustomExpression('\'[]\''),
       );
+  late final GeneratedColumn<String> injectedMemoryHash =
+      GeneratedColumn<String>(
+        'injected_memory_hash',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: 'NULL',
+      );
+  late final GeneratedColumn<int> lastMemoryExtractedOrder =
+      GeneratedColumn<int>(
+        'last_memory_extracted_order',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        $customConstraints:
+            'NOT NULL DEFAULT (-1) CHECK (last_memory_extracted_order >= -1)',
+        defaultValue: const CustomExpression('-1'),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -119,6 +139,8 @@ class ConversationRows extends Table with TableInfo {
     summary,
     lastSummarizedMessageCount,
     chatSuggestionsJson,
+    injectedMemoryHash,
+    lastMemoryExtractedOrder,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1904,6 +1926,294 @@ class PreferenceRows extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
+class MemoryEntryRows extends Table with TableInfo {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  MemoryEntryRows(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (sort_order >= 0)',
+  );
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+    'scope',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (scope IN (\'global\', \'assistant\'))',
+  );
+  late final GeneratedColumn<String> assistantId = GeneratedColumn<String>(
+    'assistant_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NULL',
+  );
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL CHECK (type IN (\'identity\', \'workflow\', \'voice\', \'instruction\'))',
+  );
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (status IN (\'active\', \'archived\'))',
+  );
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<String> contentNormalized =
+      GeneratedColumn<String>(
+        'content_normalized',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      );
+  late final GeneratedColumn<int> entryCreatedAt = GeneratedColumn<int>(
+    'entry_created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<int> entryUpdatedAt = GeneratedColumn<int>(
+    'entry_updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sortOrder,
+    scope,
+    assistantId,
+    type,
+    status,
+    content,
+    contentNormalized,
+    entryCreatedAt,
+    entryUpdatedAt,
+    payload,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'memory_entry_rows';
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
+    throw UnsupportedError('TableInfo.map in schema verification code');
+  }
+
+  @override
+  MemoryEntryRows createAlias(String alias) {
+    return MemoryEntryRows(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(id)',
+    'CHECK((scope = \'global\' AND assistant_id IS NULL)OR(scope = \'assistant\' AND assistant_id IS NOT NULL))',
+    'CHECK(entry_updated_at >= entry_created_at)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class UserProfileFieldRows extends Table with TableInfo {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  UserProfileFieldRows(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (sort_order >= 0)',
+  );
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, sortOrder, payload, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'user_profile_field_rows';
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
+    throw UnsupportedError('TableInfo.map in schema verification code');
+  }
+
+  @override
+  UserProfileFieldRows createAlias(String alias) {
+    return UserProfileFieldRows(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const ['PRIMARY KEY(id)'];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class MessagePromptRows extends Table with TableInfo {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  MessagePromptRows(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumn<String> revisionId = GeneratedColumn<String>(
+    'revision_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<String> conversationId = GeneratedColumn<String>(
+    'conversation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumn<int> carriesMemorySnapshot = GeneratedColumn<int>(
+    'carries_memory_snapshot',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints:
+        'NOT NULL DEFAULT 0 CHECK (carries_memory_snapshot IN (0, 1))',
+    defaultValue: const CustomExpression('0'),
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    revisionId,
+    conversationId,
+    payload,
+    carriesMemorySnapshot,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'message_prompt_rows';
+  @override
+  Set<GeneratedColumn> get $primaryKey => {revisionId};
+  @override
+  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
+    throw UnsupportedError('TableInfo.map in schema verification code');
+  }
+
+  @override
+  MessagePromptRows createAlias(String alias) {
+    return MessagePromptRows(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(revision_id)',
+    'FOREIGN KEY(revision_id)REFERENCES message_rows(id)ON DELETE CASCADE',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
 class DatabaseAtV1 extends GeneratedDatabase {
   DatabaseAtV1(QueryExecutor e) : super(e);
   late final ConversationRows conversationRows = ConversationRows(this);
@@ -1939,6 +2249,11 @@ class DatabaseAtV1 extends GeneratedDatabase {
       InstructionInjectionRows(this);
   late final AssistantTagRows assistantTagRows = AssistantTagRows(this);
   late final PreferenceRows preferenceRows = PreferenceRows(this);
+  late final MemoryEntryRows memoryEntryRows = MemoryEntryRows(this);
+  late final UserProfileFieldRows userProfileFieldRows = UserProfileFieldRows(
+    this,
+  );
+  late final MessagePromptRows messagePromptRows = MessagePromptRows(this);
   late final Index idxConversationsUpdatedAt = Index(
     'idx_conversations_updated_at',
     'CREATE INDEX idx_conversations_updated_at ON conversation_rows (updated_at DESC, id ASC)',
@@ -1983,6 +2298,22 @@ class DatabaseAtV1 extends GeneratedDatabase {
     'idx_assistant_memories_assistant',
     'CREATE INDEX idx_assistant_memories_assistant ON assistant_memory_rows (assistant_id, id)',
   );
+  late final Index idxMemoryEntriesVisible = Index(
+    'idx_memory_entries_visible',
+    'CREATE INDEX idx_memory_entries_visible ON memory_entry_rows (status, type, scope, assistant_id)',
+  );
+  late final Index idxMemoryEntriesRecent = Index(
+    'idx_memory_entries_recent',
+    'CREATE INDEX idx_memory_entries_recent ON memory_entry_rows (status, type, entry_updated_at, id)',
+  );
+  late final Index idxMemoryEntriesDedupe = Index(
+    'idx_memory_entries_dedupe',
+    'CREATE INDEX idx_memory_entries_dedupe ON memory_entry_rows (scope, assistant_id, type, content_normalized)',
+  );
+  late final Index idxMessagePromptsConversationSnapshot = Index(
+    'idx_message_prompts_conversation_snapshot',
+    'CREATE INDEX idx_message_prompts_conversation_snapshot ON message_prompt_rows (conversation_id, carries_memory_snapshot)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2012,6 +2343,9 @@ class DatabaseAtV1 extends GeneratedDatabase {
     instructionInjectionRows,
     assistantTagRows,
     preferenceRows,
+    memoryEntryRows,
+    userProfileFieldRows,
+    messagePromptRows,
     idxConversationsUpdatedAt,
     idxConversationsAssistant,
     idxMessagesConversationOrder,
@@ -2023,6 +2357,10 @@ class DatabaseAtV1 extends GeneratedDatabase {
     idxGenerationRunsActiveTarget,
     idxGenerationRunsStateUpdated,
     idxAssistantMemoriesAssistant,
+    idxMemoryEntriesVisible,
+    idxMemoryEntriesRecent,
+    idxMemoryEntriesDedupe,
+    idxMessagePromptsConversationSnapshot,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2092,6 +2430,13 @@ class DatabaseAtV1 extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('generation_run_rows', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'message_rows',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('message_prompt_rows', kind: UpdateKind.delete)],
     ),
   ]);
   @override

@@ -419,8 +419,185 @@ void main() {
         expect(service.getMessages(temporary.id), isEmpty);
         expect(service.currentConversationId, ordinary.id);
         expect(service.getAllConversations(), isEmpty);
+        expect(service.isTemporaryConversation(temporary.id), isTrue);
       },
     );
+
+    test(
+      'late message cannot revive a discarded temporary conversation',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final temporary = await service.createDraftConversation(
+          title: 'Temporary Chat',
+          temporary: true,
+        );
+        await service.createDraftConversation(title: 'Next Chat');
+
+        final lateMessage = await service.addMessage(
+          conversationId: temporary.id,
+          role: 'assistant',
+          content: 'late secret',
+        );
+        await service.setGeminiThoughtSignature(
+          lateMessage.id,
+          'late signature',
+        );
+
+        expect(service.getConversation(temporary.id), isNull);
+        expect(service.getMessages(temporary.id), isEmpty);
+        expect(service.getGeminiThoughtSignature(lateMessage.id), isNull);
+        expect(
+          service.getAllConversations().map((conversation) => conversation.id),
+          isNot(contains(temporary.id)),
+        );
+      },
+    );
+
+    test(
+      'late checkpoint leaves no artifacts for a discarded temporary conversation',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final temporary = await service.createDraftConversation(
+          title: 'Temporary Chat',
+          temporary: true,
+        );
+        final assistantMessage = await service.addMessage(
+          conversationId: temporary.id,
+          role: 'assistant',
+          content: '',
+          isStreaming: true,
+        );
+        await service.createDraftConversation(title: 'Next Chat');
+
+        await service.updateStreamingCheckpointSilent(
+          assistantMessage.copyWith(content: 'late secret'),
+          const [
+            {'id': 'tool-1', 'name': 'memory_read'},
+          ],
+        );
+
+        expect(service.getConversation(temporary.id), isNull);
+        expect(service.getMessages(temporary.id), isEmpty);
+        expect(service.getToolEvents(assistantMessage.id), isEmpty);
+      },
+    );
+
+    test('late Gemini signature is ignored after temporary discard', () async {
+      final service = createService();
+      await service.init();
+
+      final temporary = await service.createDraftConversation(
+        title: 'Temporary Chat',
+        temporary: true,
+      );
+      final assistantMessage = await service.addMessage(
+        conversationId: temporary.id,
+        role: 'assistant',
+        content: '',
+        isStreaming: true,
+      );
+      await service.createDraftConversation(title: 'Next Chat');
+
+      await service.setGeminiThoughtSignature(
+        assistantMessage.id,
+        'late signature',
+      );
+
+      expect(service.getGeminiThoughtSignature(assistantMessage.id), isNull);
+    });
+
+    test(
+      'clearing data keeps discarded temporary conversations protected',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final temporary = await service.createDraftConversation(
+          title: 'Temporary Chat',
+          temporary: true,
+        );
+        await service.createDraftConversation(title: 'Next Chat');
+
+        await service.clearAllData(deleteUploads: false);
+
+        expect(service.isTemporaryConversation(temporary.id), isTrue);
+        await service.addMessage(
+          conversationId: temporary.id,
+          role: 'assistant',
+          content: 'late secret',
+        );
+        expect(service.getConversation(temporary.id), isNull);
+        expect(service.getAllConversations(), isEmpty);
+      },
+    );
+
+    test(
+      'overwrite restore protects an active temporary conversation',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final temporary = await service.createDraftConversation(
+          title: 'Temporary Chat',
+          temporary: true,
+        );
+        final assistantMessage = await service.addMessage(
+          conversationId: temporary.id,
+          role: 'assistant',
+          content: '',
+          isStreaming: true,
+        );
+
+        await service.replaceAllDataFromBackup(
+          conversations: const [],
+          messages: const [],
+          toolEventsByMessageId: const {},
+          geminiSignaturesByMessageId: const {},
+        );
+
+        expect(service.isTemporaryConversation(temporary.id), isTrue);
+        await service.setGeminiThoughtSignature(
+          assistantMessage.id,
+          'late signature',
+        );
+        expect(service.getGeminiThoughtSignature(assistantMessage.id), isNull);
+        expect(service.getConversation(temporary.id), isNull);
+      },
+    );
+
+    test('database merge preserves an active temporary conversation', () async {
+      final service = createService();
+      await service.init();
+
+      final temporary = await service.createDraftConversation(
+        title: 'Temporary Chat',
+        temporary: true,
+      );
+      final assistantMessage = await service.addMessage(
+        conversationId: temporary.id,
+        role: 'assistant',
+        content: 'still streaming',
+        isStreaming: true,
+      );
+      final snapshot = File('${tempDir.path}/merge.sqlite');
+      await service.createBackupDatabaseSnapshot(snapshot);
+
+      await service.mergeDatabaseSnapshot(snapshot);
+
+      expect(service.getMessages(temporary.id), [assistantMessage]);
+      await service.setGeminiThoughtSignature(
+        assistantMessage.id,
+        'live signature',
+      );
+      expect(
+        service.getGeminiThoughtSignature(assistantMessage.id),
+        'live signature',
+      );
+    });
 
     test('temporary message deletion only affects memory', () async {
       final service = createService();

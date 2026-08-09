@@ -9,6 +9,8 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../models/chat_message.dart';
 import '../models/conversation.dart';
+import '../models/memory_entry.dart';
+import '../models/user_profile_field.dart';
 import 'app_database.dart';
 import 'business_data.dart';
 import 'business_repository.dart';
@@ -562,6 +564,9 @@ class ChatDatabaseRepository {
       'instruction_injection_rows',
       'assistant_tag_rows',
       'preference_rows',
+      'memory_entry_rows',
+      'user_profile_field_rows',
+      'message_prompt_rows',
     };
     final tableRows = database.select(
       "SELECT name FROM sqlite_master WHERE type = 'table';",
@@ -598,6 +603,8 @@ class ChatDatabaseRepository {
         'summary',
         'last_summarized_message_count',
         'chat_suggestions_json',
+        'injected_memory_hash',
+        'last_memory_extracted_order',
       ],
       'conversation_mcp_server_rows': [
         'conversation_id',
@@ -699,6 +706,28 @@ class ChatDatabaseRepository {
       ],
       'assistant_tag_rows': ['id', 'sort_order', 'payload', 'updated_at'],
       'preference_rows': ['key', 'value', 'updated_at'],
+      'memory_entry_rows': [
+        'id',
+        'sort_order',
+        'scope',
+        'assistant_id',
+        'type',
+        'status',
+        'content',
+        'content_normalized',
+        'entry_created_at',
+        'entry_updated_at',
+        'payload',
+        'updated_at',
+      ],
+      'user_profile_field_rows': ['id', 'sort_order', 'payload', 'updated_at'],
+      'message_prompt_rows': [
+        'revision_id',
+        'conversation_id',
+        'payload',
+        'carries_memory_snapshot',
+        'created_at',
+      ],
     };
     for (final entry in expectedColumns.entries) {
       final tableInfo = database.select('PRAGMA table_info(${entry.key});');
@@ -729,6 +758,9 @@ class ChatDatabaseRepository {
       'instruction_injection_rows': ['id'],
       'assistant_tag_rows': ['id'],
       'preference_rows': ['key'],
+      'memory_entry_rows': ['id'],
+      'user_profile_field_rows': ['id'],
+      'message_prompt_rows': ['revision_id'],
     };
     const sortOrderTables = {
       'assistant_rows',
@@ -742,6 +774,8 @@ class ChatDatabaseRepository {
       'tts_service_rows',
       'instruction_injection_rows',
       'assistant_tag_rows',
+      'memory_entry_rows',
+      'user_profile_field_rows',
     };
     for (final entry in expectedPrimaryKeys.entries) {
       final primaryRows =
@@ -795,6 +829,47 @@ class ChatDatabaseRepository {
     ])) {
       throw StateError('index_schema:$memoryIndexName');
     }
+
+    void requireIndex({
+      required String table,
+      required String name,
+      required List<String> columns,
+    }) {
+      final indexRows = database.select('PRAGMA index_list($table);');
+      final index = indexRows.where((row) => row['name'] == name);
+      if (index.length != 1 || index.single['unique'] != 0) {
+        throw StateError('index_schema:$name');
+      }
+      final actual = database
+          .select('PRAGMA index_info($name);')
+          .map((row) => row['name'])
+          .whereType<String>()
+          .toList(growable: false);
+      if (!_sameOrderedStrings(actual, columns)) {
+        throw StateError('index_schema:$name');
+      }
+    }
+
+    requireIndex(
+      table: 'memory_entry_rows',
+      name: 'idx_memory_entries_visible',
+      columns: const ['status', 'type', 'scope', 'assistant_id'],
+    );
+    requireIndex(
+      table: 'memory_entry_rows',
+      name: 'idx_memory_entries_recent',
+      columns: const ['status', 'type', 'entry_updated_at', 'id'],
+    );
+    requireIndex(
+      table: 'memory_entry_rows',
+      name: 'idx_memory_entries_dedupe',
+      columns: const ['scope', 'assistant_id', 'type', 'content_normalized'],
+    );
+    requireIndex(
+      table: 'message_prompt_rows',
+      name: 'idx_message_prompts_conversation_snapshot',
+      columns: const ['conversation_id', 'carries_memory_snapshot'],
+    );
 
     const assetIndexName = 'idx_message_assets_asset';
     final assetIndexRows = database.select(
@@ -868,6 +943,9 @@ class ChatDatabaseRepository {
       'instruction_injection_rows': <String>{},
       'assistant_tag_rows': <String>{},
       'preference_rows': <String>{},
+      'memory_entry_rows': <String>{},
+      'user_profile_field_rows': <String>{},
+      'message_prompt_rows': {'revision_id->message_rows.id:CASCADE'},
     };
     for (final entry in expectedForeignKeys.entries) {
       final actual = database
@@ -1515,10 +1593,7 @@ class ChatDatabaseRepository {
             'payload_length FROM message_part_rows '
             "WHERE kind = 'text' AND part_id > ? "
             'ORDER BY part_id LIMIT ?;',
-            variables: [
-              Variable<int>(cursor),
-              const Variable<int>(pageSize),
-            ],
+            variables: [Variable<int>(cursor), const Variable<int>(pageSize)],
             readsFrom: {_db.messagePartRows},
           )
           .get();
@@ -1545,11 +1620,10 @@ class ChatDatabaseRepository {
     final receivePort = ReceivePort();
     Isolate? isolate;
     try {
-      isolate = await Isolate.spawn(
-        _textPartContentDigestIsolateMain,
-        (path: databasePath, sendPort: receivePort.sendPort),
-        debugName: 'text_part_content_digest',
-      );
+      isolate = await Isolate.spawn(_textPartContentDigestIsolateMain, (
+        path: databasePath,
+        sendPort: receivePort.sendPort,
+      ), debugName: 'text_part_content_digest');
       await for (final message in receivePort) {
         if (message is! Map) {
           throw StateError('digest_isolate_protocol');
@@ -1596,10 +1670,12 @@ class ChatDatabaseRepository {
       );
       try {
         final totalChars =
-            database.select(
-                  "SELECT COALESCE(SUM(LENGTH(payload)), 0) AS total "
-                  "FROM message_part_rows WHERE kind = 'text';",
-                ).single['total']
+            database
+                    .select(
+                      "SELECT COALESCE(SUM(LENGTH(payload)), 0) AS total "
+                      "FROM message_part_rows WHERE kind = 'text';",
+                    )
+                    .single['total']
                 as int;
         args.sendPort.send({
           'type': 'progress',
@@ -2280,11 +2356,19 @@ class ChatDatabaseRepository {
     });
   }
 
+  /// Searches conversations for [tokens].
+  ///
+  /// [conversationId] restricts the search to one conversation and
+  /// [excludeConversationId] omits one. Both are applied in SQL rather than by
+  /// the caller, because the candidate `LIMIT` is global: a conversation whose
+  /// matches rank below the cut would otherwise be filtered down to nothing.
   Future<List<ConversationSearchMatch>> searchConversationMatches({
     required List<String> tokens,
     int limit = 200,
     int candidateMultiplier = 8,
     bool includeAllRevisions = false,
+    String? conversationId,
+    String? excludeConversationId,
   }) {
     return _observer.measure(
       ChatDatabaseOperation.querySearch,
@@ -2293,6 +2377,8 @@ class ChatDatabaseRepository {
         limit: limit,
         candidateMultiplier: candidateMultiplier,
         includeAllRevisions: includeAllRevisions,
+        conversationId: conversationId,
+        excludeConversationId: excludeConversationId,
       ),
       resultCount: (rows) => rows.length,
     );
@@ -2303,6 +2389,8 @@ class ChatDatabaseRepository {
     required int limit,
     required int candidateMultiplier,
     required bool includeAllRevisions,
+    String? conversationId,
+    String? excludeConversationId,
   }) async {
     final cleanTokens = tokens
         .map((token) => token.trim().toLowerCase())
@@ -2379,6 +2467,19 @@ class ChatDatabaseRepository {
         ..add(ftsQuery);
     }
 
+    // Applied alongside the match predicate so the candidate LIMIT is spent on
+    // rows the caller can actually use.
+    final scopeArgs = <String>[];
+    var scopeSql = '';
+    if (conversationId != null && conversationId.isNotEmpty) {
+      scopeSql = 'AND c.id = ?';
+      scopeArgs.add(conversationId);
+    } else if (excludeConversationId != null &&
+        excludeConversationId.isNotEmpty) {
+      scopeSql = 'AND c.id <> ?';
+      scopeArgs.add(excludeConversationId);
+    }
+
     final candidateLimit = (limit * candidateMultiplier)
         .clamp(limit, 2000)
         .toInt();
@@ -2442,7 +2543,8 @@ class ChatDatabaseRepository {
         AND m.role IN ('user', 'assistant')
         AND (${messageAnyClauses.join(' OR ')})
         ${includeAllRevisions ? '' : 'AND EXISTS (SELECT 1 FROM visible_groups visible WHERE visible.conversation_id = m.conversation_id AND visible.group_id = COALESCE(m.group_id, m.id) AND visible.selected_version = m.version)'}
-      WHERE (${titleClauses.join(' AND ')}) OR (${existsClauses.join(' AND ')})
+      WHERE ((${titleClauses.join(' AND ')}) OR (${existsClauses.join(' AND ')}))
+        $scopeSql
       ORDER BY c.updated_at DESC, m.message_order ASC
       LIMIT ?
       ''',
@@ -2450,6 +2552,7 @@ class ChatDatabaseRepository {
             ...messageArgs.map((value) => Variable<String>(value! as String)),
             ...titleArgs.map((value) => Variable<String>(value! as String)),
             ...existsArgs.map((value) => Variable<String>(value! as String)),
+            ...scopeArgs.map(Variable<String>.new),
             Variable<int>(candidateLimit),
           ],
         )
@@ -3116,10 +3219,64 @@ class ChatDatabaseRepository {
 
   Future<void> putConversation(Conversation conversation) async {
     await _db.transaction(() async {
-      await _db
-          .into(_db.conversationRows)
-          .insertOnConflictUpdate(_conversationCompanion(conversation));
+      // Existing rows keep the database-owned hash written by prompt freeze;
+      // cached Conversation instances may still hold an older value.
+      final updated =
+          await (_db.update(
+            _db.conversationRows,
+          )..where((row) => row.id.equals(conversation.id))).write(
+            _conversationCompanion(
+              conversation,
+              injectedMemoryHash: const Value.absent(),
+            ),
+          );
+      if (updated == 0) {
+        await _db
+            .into(_db.conversationRows)
+            .insert(_conversationCompanion(conversation));
+      }
       await _replaceMcpServers(conversation.id, conversation.mcpServerIds);
+    });
+  }
+
+  Future<bool> moveConversationToAssistant({
+    required String conversationId,
+    required String assistantId,
+    required DateTime updatedAt,
+  }) {
+    return _db.transaction(() async {
+      final activeRun =
+          await (_db.select(_db.generationRunRows)
+                ..where(
+                  (row) =>
+                      row.conversationId.equals(conversationId) &
+                      row.state.isIn(const [
+                        'preparing',
+                        'requesting',
+                        'streaming',
+                        'waiting_tool',
+                      ]),
+                )
+                ..limit(1))
+              .getSingleOrNull();
+      if (activeRun != null) return false;
+      await (_db.delete(_db.messagePromptRows)..where(
+            (row) =>
+                row.conversationId.equals(conversationId) &
+                row.carriesMemorySnapshot.equals(true),
+          ))
+          .go();
+      final updated =
+          await (_db.update(
+            _db.conversationRows,
+          )..where((row) => row.id.equals(conversationId))).write(
+            ConversationRowsCompanion(
+              assistantId: Value(assistantId),
+              updatedAt: Value(updatedAt),
+              injectedMemoryHash: const Value(null),
+            ),
+          );
+      return updated != 0;
     });
   }
 
@@ -4163,12 +4320,15 @@ class ChatDatabaseRepository {
       'INSERT INTO main.conversation_rows '
       '(id, title, created_at, updated_at, is_pinned, assistant_id, '
       'truncate_index, version_selections_json, summary, '
-      'last_summarized_message_count, chat_suggestions_json) '
+      'last_summarized_message_count, chat_suggestions_json, '
+      'injected_memory_hash, last_memory_extracted_order) '
       'SELECT ?, title, created_at, updated_at, is_pinned, assistant_id, '
       'truncate_index, ?, summary, '
-      'last_summarized_message_count, chat_suggestions_json '
+      'last_summarized_message_count, chat_suggestions_json, '
+      'NULL, COALESCE((SELECT MAX(message_order) '
+      'FROM merge_source.message_rows WHERE conversation_id = ?), -1) '
       'FROM merge_source.conversation_rows WHERE id = ?;',
-      [targetId, jsonEncode(targetSelections), sourceId],
+      [targetId, jsonEncode(targetSelections), sourceId, sourceId],
     );
     await _db.customStatement(
       'INSERT INTO main.conversation_mcp_server_rows '
@@ -4309,8 +4469,9 @@ class ChatDatabaseRepository {
   }
 
   Future<void> _updateMessageRow(ChatMessage message) async {
-    await (_db.update(_db.messageRows)..where((t) => t.id.equals(message.id)))
-        .write(_messageUpdate(message));
+    await (_db.update(
+      _db.messageRows,
+    )..where((t) => t.id.equals(message.id))).write(_messageUpdate(message));
   }
 
   /// Partial-column UPDATE: only the non-null fields are written, so
@@ -5109,10 +5270,15 @@ class ChatDatabaseRepository {
       summary: row.summary,
       lastSummarizedMessageCount: row.lastSummarizedMessageCount,
       chatSuggestions: _decodeStringList(row.chatSuggestionsJson),
+      injectedMemoryHash: row.injectedMemoryHash,
+      lastMemoryExtractedOrder: row.lastMemoryExtractedOrder,
     );
   }
 
-  ConversationRowsCompanion _conversationCompanion(Conversation conversation) {
+  ConversationRowsCompanion _conversationCompanion(
+    Conversation conversation, {
+    Value<String?>? injectedMemoryHash,
+  }) {
     return ConversationRowsCompanion.insert(
       id: conversation.id,
       title: conversation.title,
@@ -5127,6 +5293,9 @@ class ChatDatabaseRepository {
         conversation.lastSummarizedMessageCount,
       ),
       chatSuggestionsJson: Value(jsonEncode(conversation.chatSuggestions)),
+      injectedMemoryHash:
+          injectedMemoryHash ?? Value(conversation.injectedMemoryHash),
+      lastMemoryExtractedOrder: Value(conversation.lastMemoryExtractedOrder),
     );
   }
 
@@ -5266,6 +5435,541 @@ class ChatDatabaseRepository {
     } catch (_) {
       return <String>[];
     }
+  }
+
+  // —— Memory system V1 read path (§13.3) ——
+
+  /// Visible memories for [assistantId]: `status='active'` (unless
+  /// [includeArchived]) and `(scope='global' OR (scope='assistant' AND
+  /// assistant_id = :aid))`. When [assistantId] is null, only global rows
+  /// are visible. Ordered for in-block injection (§7.2):
+  /// `scope_rank ASC, entry_created_at ASC, id ASC` (global before assistant).
+  Future<List<MemoryEntry>> queryVisibleMemories({
+    required String? assistantId,
+    MemoryType? type,
+    bool includeArchived = false,
+    int? limit,
+  }) async {
+    final clauses = <String>[_memoryVisibilitySql(assistantId)];
+    final variables = <Variable<Object>>[
+      ..._memoryVisibilityVariables(assistantId),
+    ];
+    if (!includeArchived) {
+      clauses.add("status = 'active'");
+    }
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    final limitSql = limit == null ? '' : ' LIMIT ?';
+    if (limit != null) {
+      variables.add(Variable<int>(limit));
+    }
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          'WHERE ${clauses.join(' AND ')} '
+          'ORDER BY CASE WHEN scope = \'global\' THEN 0 ELSE 1 END ASC, '
+          'entry_created_at ASC, id ASC'
+          '$limitSql;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: assistantId,
+      dropInvisibleRelated: true,
+    );
+  }
+
+  /// Counts active visible memories by [MemoryType] for [assistantId].
+  Future<Map<MemoryType, int>> countVisibleMemoriesByType({
+    required String? assistantId,
+  }) async {
+    final rows = await _db
+        .customSelect(
+          'SELECT type, COUNT(*) AS count FROM memory_entry_rows '
+          "WHERE status = 'active' AND ${_memoryVisibilitySql(assistantId)} "
+          'GROUP BY type;',
+          variables: _memoryVisibilityVariables(assistantId),
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    final result = <MemoryType, int>{
+      for (final type in MemoryType.values) type: 0,
+    };
+    for (final row in rows) {
+      final type = MemoryEntry.typeFromString(row.read<String>('type'));
+      result[type] = row.read<int>('count');
+    }
+    return result;
+  }
+
+  /// Search memories by pre-normalized, LIKE-escaped [tokens].
+  ///
+  /// Callers must lowercase/normalize tokens and escape `%`, `_`, and `\`
+  /// (e.g. via [MemoryTokenizer.escapeLike]) before passing them here.
+  ///
+  /// - [matchAll] `true` (§5.9): every token must match (`AND`), ordered by
+  ///   `entry_updated_at DESC, id ASC`.
+  /// - [matchAll] `false` (§12.6): `hits` = count of matching tokens (`OR`),
+  ///   filter `hits >= 1`, ordered by
+  ///   `hits DESC, entry_updated_at DESC, id ASC`.
+  Future<List<MemoryEntry>> searchMemories({
+    required String? assistantId,
+    required List<String> tokens,
+    MemoryType? type,
+    bool matchAll = true,
+    int limit = 10,
+  }) async {
+    if (tokens.isEmpty || limit <= 0) {
+      return const <MemoryEntry>[];
+    }
+    if (!matchAll) {
+      return _searchMemoriesMatchAny(
+        assistantId: assistantId,
+        tokens: tokens,
+        type: type,
+        limit: limit,
+      );
+    }
+
+    final clauses = <String>[
+      "status = 'active'",
+      _memoryVisibilitySql(assistantId),
+    ];
+    final variables = <Variable<Object>>[
+      ..._memoryVisibilityVariables(assistantId),
+    ];
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    for (final token in tokens) {
+      clauses.add("content_normalized LIKE ? ESCAPE '\\'");
+      variables.add(Variable<String>('%$token%'));
+    }
+    variables.add(Variable<int>(limit));
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          'WHERE ${clauses.join(' AND ')} '
+          'ORDER BY entry_updated_at DESC, id ASC '
+          'LIMIT ?;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: assistantId,
+      dropInvisibleRelated: true,
+    );
+  }
+
+  Future<List<MemoryEntry>> _searchMemoriesMatchAny({
+    required String? assistantId,
+    required List<String> tokens,
+    required MemoryType? type,
+    required int limit,
+  }) async {
+    final hitParts = <String>[
+      for (final _ in tokens)
+        "CASE WHEN content_normalized LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END",
+    ];
+    final hitsExpr = hitParts.join(' + ');
+
+    // Variable order must match `?` appearance: SELECT hits, then WHERE.
+    final clauses = <String>[
+      "status = 'active'",
+      _memoryVisibilitySql(assistantId),
+    ];
+    final variables = <Variable<Object>>[
+      for (final token in tokens) Variable<String>('%$token%'),
+      ..._memoryVisibilityVariables(assistantId),
+    ];
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    clauses.add('($hitsExpr) >= 1');
+    for (final token in tokens) {
+      variables.add(Variable<String>('%$token%'));
+    }
+    variables.add(Variable<int>(limit));
+
+    final rows = await _db
+        .customSelect(
+          'SELECT payload, ($hitsExpr) AS hits FROM memory_entry_rows '
+          'WHERE ${clauses.join(' AND ')} '
+          'ORDER BY hits DESC, entry_updated_at DESC, id ASC '
+          'LIMIT ?;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: assistantId,
+      dropInvisibleRelated: true,
+    );
+  }
+
+  Future<List<MemoryEntry>> memoriesByIds(List<String> ids) async {
+    if (ids.isEmpty) return const <MemoryEntry>[];
+    final unique = ids.toSet().toList(growable: false);
+    final placeholders = List.filled(unique.length, '?').join(',');
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          'WHERE id IN ($placeholders) '
+          'ORDER BY id ASC;',
+          variables: [for (final id in unique) Variable<String>(id)],
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: null,
+      dropInvisibleRelated: false,
+    );
+  }
+
+  Future<MemoryEntry?> findExactMemory({
+    required String? assistantId,
+    required MemoryType type,
+    required String contentNormalized,
+  }) async {
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          "WHERE status = 'active' "
+          'AND ${_memoryVisibilitySql(assistantId)} '
+          'AND type = ? '
+          'AND content_normalized = ? '
+          'LIMIT 1;',
+          variables: [
+            ..._memoryVisibilityVariables(assistantId),
+            Variable<String>(MemoryEntry.typeToString(type)),
+            Variable<String>(contentNormalized),
+          ],
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    if (rows.isEmpty) return null;
+    final entries = await _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: assistantId,
+      dropInvisibleRelated: true,
+    );
+    return entries.single;
+  }
+
+  Future<int> countOrphanAssistantMemories() async {
+    final row = await _db
+        .customSelect(
+          'SELECT COUNT(*) AS count FROM memory_entry_rows m '
+          "WHERE m.scope = 'assistant' "
+          'AND NOT EXISTS ('
+          'SELECT 1 FROM assistant_rows a WHERE a.id = m.assistant_id'
+          ');',
+          readsFrom: {_db.memoryEntryRows, _db.assistantRows},
+        )
+        .getSingle();
+    return row.read<int>('count');
+  }
+
+  /// All memory entries across every assistant (global management UI §14.4).
+  Future<List<MemoryEntry>> queryAllMemories({
+    bool includeArchived = false,
+    MemoryType? type,
+  }) async {
+    final clauses = <String>[];
+    final variables = <Variable<Object>>[];
+    if (!includeArchived) {
+      clauses.add("status = 'active'");
+    }
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    final where = clauses.isEmpty ? '' : 'WHERE ${clauses.join(' AND ')} ';
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          '$where'
+          'ORDER BY entry_updated_at DESC, id ASC;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: null,
+      dropInvisibleRelated: false,
+    );
+  }
+
+  /// Search across every assistant (§14.4 / §5.9 AND semantics).
+  Future<List<MemoryEntry>> searchAllMemories({
+    required List<String> tokens,
+    MemoryType? type,
+    bool includeArchived = false,
+    int limit = 200,
+  }) async {
+    if (tokens.isEmpty || limit <= 0) {
+      return const <MemoryEntry>[];
+    }
+    final clauses = <String>[];
+    final variables = <Variable<Object>>[];
+    if (!includeArchived) {
+      clauses.add("status = 'active'");
+    }
+    if (type != null) {
+      clauses.add('type = ?');
+      variables.add(Variable<String>(MemoryEntry.typeToString(type)));
+    }
+    for (final token in tokens) {
+      clauses.add("content_normalized LIKE ? ESCAPE '\\'");
+      variables.add(Variable<String>('%$token%'));
+    }
+    variables.add(Variable<int>(limit));
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM memory_entry_rows '
+          'WHERE ${clauses.join(' AND ')} '
+          'ORDER BY entry_updated_at DESC, id ASC '
+          'LIMIT ?;',
+          variables: variables,
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return _memoryEntriesFromPayloadRows(
+      rows,
+      assistantId: null,
+      dropInvisibleRelated: false,
+    );
+  }
+
+  Future<List<UserProfileField>> readProfileFields() async {
+    final rows = await _db
+        .customSelect(
+          'SELECT payload FROM user_profile_field_rows '
+          'ORDER BY sort_order ASC, id ASC;',
+          readsFrom: {_db.userProfileFieldRows},
+        )
+        .get();
+    return [
+      for (final row in rows)
+        UserProfileField.fromPayload(
+          (jsonDecode(row.read<String>('payload')) as Map)
+              .cast<String, dynamic>(),
+        ),
+    ];
+  }
+
+  Future<MessagePromptRow?> getMessagePrompt(String revisionId) {
+    return (_db.select(
+      _db.messagePromptRows,
+    )..where((t) => t.revisionId.equals(revisionId))).getSingleOrNull();
+  }
+
+  Future<Map<String, MessagePromptRow>> getMessagePrompts(
+    Iterable<String> revisionIds,
+  ) async {
+    final ids = revisionIds.toSet();
+    if (ids.isEmpty) return const {};
+    final rows = await (_db.select(
+      _db.messagePromptRows,
+    )..where((row) => row.revisionId.isIn(ids))).get();
+    return {for (final row in rows) row.revisionId: row};
+  }
+
+  Future<void> putMessagePrompt({
+    required String revisionId,
+    required String conversationId,
+    required String payload,
+    required bool carriesMemorySnapshot,
+  }) async {
+    final now = DateTime.now().toUtc();
+    await _db
+        .into(_db.messagePromptRows)
+        .insertOnConflictUpdate(
+          MessagePromptRowsCompanion.insert(
+            revisionId: revisionId,
+            conversationId: conversationId,
+            payload: payload,
+            carriesMemorySnapshot: Value(carriesMemorySnapshot),
+            createdAt: now,
+          ),
+        );
+  }
+
+  /// Freezes a message's final prompt string and, when a snapshot was
+  /// injected, advances the conversation's injected-memory hash in the same
+  /// transaction.
+  ///
+  /// The two writes must not be split: a crash between them leaves a hash that
+  /// claims a snapshot was delivered while no message carries one, costing an
+  /// extra full re-injection once self-healing notices (§8.3).
+  Future<void> freezeMessagePrompt({
+    required String revisionId,
+    required String conversationId,
+    required String payload,
+    required bool carriesMemorySnapshot,
+    String? injectedMemoryHash,
+  }) {
+    return _db.transaction(() async {
+      await putMessagePrompt(
+        revisionId: revisionId,
+        conversationId: conversationId,
+        payload: payload,
+        carriesMemorySnapshot: carriesMemorySnapshot,
+      );
+      if (carriesMemorySnapshot) {
+        await setConversationInjectedMemoryHash(
+          conversationId,
+          injectedMemoryHash,
+        );
+      }
+    });
+  }
+
+  Future<bool> anyPromptCarriesMemorySnapshot(List<String> revisionIds) async {
+    if (revisionIds.isEmpty) return false;
+    final unique = revisionIds.toSet().toList(growable: false);
+    final placeholders = List.filled(unique.length, '?').join(',');
+    final row = await _db
+        .customSelect(
+          'SELECT 1 AS hit FROM message_prompt_rows '
+          'WHERE carries_memory_snapshot = 1 '
+          'AND revision_id IN ($placeholders) '
+          'LIMIT 1;',
+          variables: [for (final id in unique) Variable<String>(id)],
+          readsFrom: {_db.messagePromptRows},
+        )
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  /// The last memory snapshot hash delivered to [conversationId].
+  ///
+  /// Read this rather than a cached [Conversation]: the field is written by
+  /// [freezeMessagePrompt] and never loaded back into the in-memory model, so a
+  /// cached copy reports the value from whenever it was constructed.
+  Future<String?> getConversationInjectedMemoryHash(
+    String conversationId,
+  ) async {
+    final row = await _db
+        .customSelect(
+          'SELECT injected_memory_hash FROM conversation_rows '
+          'WHERE id = ? LIMIT 1;',
+          variables: [Variable<String>(conversationId)],
+          readsFrom: {_db.conversationRows},
+        )
+        .getSingleOrNull();
+    return row?.read<String?>('injected_memory_hash');
+  }
+
+  Future<void> setConversationInjectedMemoryHash(
+    String conversationId,
+    String? hash,
+  ) async {
+    await (_db.update(_db.conversationRows)
+          ..where((t) => t.id.equals(conversationId)))
+        .write(ConversationRowsCompanion(injectedMemoryHash: Value(hash)));
+  }
+
+  Future<void> setConversationLastMemoryExtractedOrder(
+    String conversationId,
+    int order,
+  ) async {
+    await (_db.update(
+      _db.conversationRows,
+    )..where((t) => t.id.equals(conversationId))).write(
+      ConversationRowsCompanion(lastMemoryExtractedOrder: Value(order)),
+    );
+  }
+
+  String _memoryVisibilitySql(String? assistantId) {
+    if (assistantId == null) {
+      return "scope = 'global'";
+    }
+    return "(scope = 'global' OR (scope = 'assistant' AND assistant_id = ?))";
+  }
+
+  List<Variable<Object>> _memoryVisibilityVariables(String? assistantId) {
+    if (assistantId == null) return const <Variable<Object>>[];
+    return <Variable<Object>>[Variable<String>(assistantId)];
+  }
+
+  Future<List<MemoryEntry>> _memoryEntriesFromPayloadRows(
+    List<QueryRow> rows, {
+    required String? assistantId,
+    required bool dropInvisibleRelated,
+  }) async {
+    if (rows.isEmpty) return const <MemoryEntry>[];
+    final entries = <MemoryEntry>[
+      for (final row in rows)
+        MemoryEntry.fromPayload(
+          (jsonDecode(row.read<String>('payload')) as Map)
+              .cast<String, dynamic>(),
+        ),
+    ];
+    final related = <String>{for (final entry in entries) ...entry.relatedIds};
+    if (related.isEmpty) return entries;
+
+    final keep = dropInvisibleRelated
+        ? await _filterRelatedIdsVisible(related, assistantId)
+        : await _filterRelatedIdsExisting(related);
+    return [
+      for (final entry in entries)
+        () {
+          final filtered = entry.relatedIds
+              .where(keep.contains)
+              .toList(growable: false);
+          if (filtered.length == entry.relatedIds.length) return entry;
+          return entry.copyWith(relatedIds: filtered);
+        }(),
+    ];
+  }
+
+  Future<Set<String>> _filterRelatedIdsExisting(Set<String> ids) async {
+    if (ids.isEmpty) return const <String>{};
+    final list = ids.toList(growable: false);
+    final placeholders = List.filled(list.length, '?').join(',');
+    final rows = await _db
+        .customSelect(
+          'SELECT id FROM memory_entry_rows WHERE id IN ($placeholders);',
+          variables: [for (final id in list) Variable<String>(id)],
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return {for (final row in rows) row.read<String>('id')};
+  }
+
+  Future<Set<String>> _filterRelatedIdsVisible(
+    Set<String> ids,
+    String? assistantId,
+  ) async {
+    if (ids.isEmpty) return const <String>{};
+    final list = ids.toList(growable: false);
+    final placeholders = List.filled(list.length, '?').join(',');
+    final rows = await _db
+        .customSelect(
+          'SELECT id FROM memory_entry_rows '
+          "WHERE status = 'active' "
+          'AND ${_memoryVisibilitySql(assistantId)} '
+          'AND id IN ($placeholders);',
+          variables: [
+            ..._memoryVisibilityVariables(assistantId),
+            for (final id in list) Variable<String>(id),
+          ],
+          readsFrom: {_db.memoryEntryRows},
+        )
+        .get();
+    return {for (final row in rows) row.read<String>('id')};
   }
 }
 

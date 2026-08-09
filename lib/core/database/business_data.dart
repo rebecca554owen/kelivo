@@ -28,7 +28,12 @@ enum BusinessEntityKind {
     sourceKey: 'instruction_injections_v1',
     tableName: 'instruction_injection_rows',
   ),
-  assistantTag(sourceKey: 'assistant_tags_v1', tableName: 'assistant_tag_rows');
+  assistantTag(sourceKey: 'assistant_tags_v1', tableName: 'assistant_tag_rows'),
+  memoryEntry(sourceKey: 'memory_entries_v1', tableName: 'memory_entry_rows'),
+  userProfileField(
+    sourceKey: 'user_profile_fields_v1',
+    tableName: 'user_profile_field_rows',
+  );
 
   const BusinessEntityKind({required this.sourceKey, required this.tableName});
 

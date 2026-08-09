@@ -1129,15 +1129,8 @@ abstract class AppLocalizations {
   /// No description provided for @assistantProviderSampleAssistantSystemPrompt.
   ///
   /// In en, this message translates to:
-  /// **'You are {model_name}, an AI assistant who gladly provides accurate and helpful assistance. The current time is {cur_datetime}, the device language is {locale}, timezone is {timezone}, the user is using {device_info}, version {system_version}. If the user does not explicitly specify otherwise, please use the user\'s device language when replying.'**
-  String assistantProviderSampleAssistantSystemPrompt(
-    String model_name,
-    String cur_datetime,
-    String locale,
-    String timezone,
-    String device_info,
-    String system_version,
-  );
+  /// **'You are {model_name}, a helpful AI assistant. Answer accurately and concisely; say when you are unsure. Prefer clear structure (short paragraphs or lists) when it helps. Reply in the user\'s language by default.'**
+  String assistantProviderSampleAssistantSystemPrompt(String model_name);
 
   /// No description provided for @displaySettingsPageLanguageTitle.
   ///
@@ -2656,6 +2649,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preview'**
   String get assistantEditPreviewTitle;
+
+  /// No description provided for @assistantEditPromptTimeVarWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.'**
+  String get assistantEditPromptTimeVarWarning;
+
+  /// No description provided for @assistantEditPromptAppendTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Append current time'**
+  String get assistantEditPromptAppendTimeTitle;
+
+  /// No description provided for @assistantEditPromptAppendTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Append the send time to the end of each user message. Time stays at the end of the request, so prompt caching is unaffected.'**
+  String get assistantEditPromptAppendTimeSubtitle;
+
+  /// No description provided for @assistantEditPromptAppendTimeInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appended time format'**
+  String get assistantEditPromptAppendTimeInfoTitle;
+
+  /// No description provided for @assistantEditPromptAppendTimeInfoBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n{example}\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.'**
+  String assistantEditPromptAppendTimeInfoBody(String example);
+
+  /// No description provided for @assistantEditPromptAppendTimeInfoClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get assistantEditPromptAppendTimeInfoClose;
+
+  /// No description provided for @assistantEditPromptTimeVarDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System prompt contains time variables'**
+  String get assistantEditPromptTimeVarDialogTitle;
+
+  /// No description provided for @assistantEditPromptTimeVarDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your system prompt uses {variables}. The system prompt is re-rendered on every request, so time variables make the beginning of every request different and prompt caching cannot hit. Consider removing these variables and using \"Append current time\" instead — it puts the time at the end of the request and does not affect the prefix.'**
+  String assistantEditPromptTimeVarDialogBody(String variables);
+
+  /// No description provided for @assistantEditPromptTimeVarDialogRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Go remove'**
+  String get assistantEditPromptTimeVarDialogRemove;
+
+  /// No description provided for @assistantEditPromptTimeVarDialogKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable anyway'**
+  String get assistantEditPromptTimeVarDialogKeep;
 
   /// No description provided for @codeBlockPreviewButton.
   ///
@@ -4234,24 +4287,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deep Thinking'**
   String get chatMessageWidgetDeepThinking;
-
-  /// No description provided for @chatMessageWidgetCreateMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Create Memory'**
-  String get chatMessageWidgetCreateMemory;
-
-  /// No description provided for @chatMessageWidgetEditMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit Memory'**
-  String get chatMessageWidgetEditMemory;
-
-  /// No description provided for @chatMessageWidgetDeleteMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Memory'**
-  String get chatMessageWidgetDeleteMemory;
 
   /// No description provided for @chatMessageWidgetWebSearch.
   ///
@@ -9830,12 +9865,6 @@ abstract class AppLocalizations {
   /// **'Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.'**
   String get assistantEditLocalToolCalculateSubtitle;
 
-  /// No description provided for @assistantEditMemorySwitchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Memory'**
-  String get assistantEditMemorySwitchTitle;
-
   /// No description provided for @assistantEditMemorySwitchDescription.
   ///
   /// In en, this message translates to:
@@ -9853,12 +9882,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Include recent conversation titles to help with context.'**
   String get assistantEditRecentChatsSwitchDescription;
-
-  /// No description provided for @assistantEditManageMemoryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage Memories'**
-  String get assistantEditManageMemoryTitle;
 
   /// No description provided for @assistantEditAddMemoryButton.
   ///
@@ -10627,6 +10650,1002 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'World Book'**
   String get settingsPageWorldBook;
+
+  /// No description provided for @settingsPageMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get settingsPageMemory;
+
+  /// No description provided for @memorySettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get memorySettingsPageTitle;
+
+  /// No description provided for @memorySettingsModelSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory model'**
+  String get memorySettingsModelSection;
+
+  /// No description provided for @memorySettingsModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing model'**
+  String get memorySettingsModelTitle;
+
+  /// No description provided for @memorySettingsModelUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get memorySettingsModelUnset;
+
+  /// No description provided for @memorySettingsModelTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This model is called frequently in the background. Prefer a cheap, fast model.'**
+  String get memorySettingsModelTip;
+
+  /// No description provided for @memorySettingsAboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About memory'**
+  String get memorySettingsAboutTitle;
+
+  /// No description provided for @memorySettingsAboutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How memory works and when it runs'**
+  String get memorySettingsAboutSubtitle;
+
+  /// No description provided for @memorySettingsAboutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.'**
+  String get memorySettingsAboutBody;
+
+  /// No description provided for @memorySettingsThinkingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable thinking'**
+  String get memorySettingsThinkingTitle;
+
+  /// No description provided for @memorySettingsThinkingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the memory model to use reasoning when supported'**
+  String get memorySettingsThinkingSubtitle;
+
+  /// No description provided for @memorySettingsPromptLangSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt language'**
+  String get memorySettingsPromptLangSection;
+
+  /// No description provided for @memorySettingsPromptLangAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get memorySettingsPromptLangAuto;
+
+  /// No description provided for @memorySettingsPromptLangAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the UI language (Chinese → zh, otherwise en)'**
+  String get memorySettingsPromptLangAutoSubtitle;
+
+  /// No description provided for @memorySettingsPromptLangZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese'**
+  String get memorySettingsPromptLangZh;
+
+  /// No description provided for @memorySettingsPromptLangZhSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Always use Chinese memory prompts and tool descriptions'**
+  String get memorySettingsPromptLangZhSubtitle;
+
+  /// No description provided for @memorySettingsPromptLangEn.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get memorySettingsPromptLangEn;
+
+  /// No description provided for @memorySettingsPromptLangEnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Always use English memory prompts and tool descriptions'**
+  String get memorySettingsPromptLangEnSubtitle;
+
+  /// No description provided for @memorySettingsPromptsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt templates'**
+  String get memorySettingsPromptsSection;
+
+  /// No description provided for @memoryPromptEditRulesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory rules'**
+  String get memoryPromptEditRulesTitle;
+
+  /// No description provided for @memoryPromptEditRulesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Injected into the main chat system prompt'**
+  String get memoryPromptEditRulesSubtitle;
+
+  /// No description provided for @memoryPromptEditGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gatekeeper'**
+  String get memoryPromptEditGateTitle;
+
+  /// No description provided for @memoryPromptEditGateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decides whether a turn is worth remembering'**
+  String get memoryPromptEditGateSubtitle;
+
+  /// No description provided for @memoryPromptEditExtractTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract'**
+  String get memoryPromptEditExtractTitle;
+
+  /// No description provided for @memoryPromptEditExtractSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extracts candidate memory items from a conversation'**
+  String get memoryPromptEditExtractSubtitle;
+
+  /// No description provided for @memoryPromptEditSmartAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Add'**
+  String get memoryPromptEditSmartAddTitle;
+
+  /// No description provided for @memoryPromptEditSmartAddSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW / MERGE / CONFLICT / SKIP dedupe judge'**
+  String get memoryPromptEditSmartAddSubtitle;
+
+  /// No description provided for @memoryPromptEditDistillTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Distiller'**
+  String get memoryPromptEditDistillTitle;
+
+  /// No description provided for @memoryPromptEditDistillSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Distills identity memories into profile fields'**
+  String get memoryPromptEditDistillSubtitle;
+
+  /// No description provided for @memoryPromptEditReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get memoryPromptEditReset;
+
+  /// No description provided for @memoryPromptEditSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get memoryPromptEditSave;
+
+  /// No description provided for @memoryPromptEditSectionPerItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-item prompt'**
+  String get memoryPromptEditSectionPerItem;
+
+  /// No description provided for @memoryPromptEditSectionBatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Batched prompt'**
+  String get memoryPromptEditSectionBatch;
+
+  /// No description provided for @memorySettingsEntriesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'All memories'**
+  String get memorySettingsEntriesSection;
+
+  /// No description provided for @memorySettingsEntriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory list'**
+  String get memorySettingsEntriesTitle;
+
+  /// No description provided for @memorySettingsEntriesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse, edit, archive, and delete memories'**
+  String get memorySettingsEntriesSubtitle;
+
+  /// No description provided for @memorySettingsProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'User profile'**
+  String get memorySettingsProfileTitle;
+
+  /// No description provided for @memorySettingsProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Structured identity fields for the model'**
+  String get memorySettingsProfileSubtitle;
+
+  /// No description provided for @memorySettingsLegacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy memories (read-only)'**
+  String get memorySettingsLegacyTitle;
+
+  /// No description provided for @memorySettingsLegacySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Old memories from previous versions'**
+  String get memorySettingsLegacySubtitle;
+
+  /// No description provided for @memoryEntryTypeIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity'**
+  String get memoryEntryTypeIdentity;
+
+  /// No description provided for @memoryEntryTypeWorkflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow'**
+  String get memoryEntryTypeWorkflow;
+
+  /// No description provided for @memoryEntryTypeVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get memoryEntryTypeVoice;
+
+  /// No description provided for @memoryEntryTypeInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Instruction'**
+  String get memoryEntryTypeInstruction;
+
+  /// No description provided for @memoryEntryScopeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get memoryEntryScopeGlobal;
+
+  /// No description provided for @memoryEntryScopeAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'This assistant'**
+  String get memoryEntryScopeAssistant;
+
+  /// No description provided for @memoryEntryScopeAssistantNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}'**
+  String memoryEntryScopeAssistantNamed(String name);
+
+  /// No description provided for @memoryEntrySourceManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get memoryEntrySourceManual;
+
+  /// No description provided for @memoryEntrySourceTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool'**
+  String get memoryEntrySourceTool;
+
+  /// No description provided for @memoryEntrySourceExtracted.
+  ///
+  /// In en, this message translates to:
+  /// **'Extracted'**
+  String get memoryEntrySourceExtracted;
+
+  /// No description provided for @memoryEntrySourceDistilled.
+  ///
+  /// In en, this message translates to:
+  /// **'Distilled'**
+  String get memoryEntrySourceDistilled;
+
+  /// No description provided for @memoryEntryStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get memoryEntryStatusActive;
+
+  /// No description provided for @memoryEntryStatusArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get memoryEntryStatusArchived;
+
+  /// No description provided for @memoryEntryUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String memoryEntryUpdatedAt(String date);
+
+  /// No description provided for @memoryEntryActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get memoryEntryActionEdit;
+
+  /// No description provided for @memoryEntryActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get memoryEntryActionDelete;
+
+  /// No description provided for @memoryEntryActionArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get memoryEntryActionArchive;
+
+  /// No description provided for @memoryEntryActionRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get memoryEntryActionRestore;
+
+  /// No description provided for @memoryEntryActionSwitchScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Change scope'**
+  String get memoryEntryActionSwitchScope;
+
+  /// No description provided for @memoryEntryActionBatchDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected'**
+  String get memoryEntryActionBatchDelete;
+
+  /// No description provided for @memoryEntryActionAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add memory'**
+  String get memoryEntryActionAdd;
+
+  /// No description provided for @memoryEntryDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete memory?'**
+  String get memoryEntryDeleteConfirmTitle;
+
+  /// No description provided for @memoryEntryDeleteConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes the memory. This cannot be undone.'**
+  String get memoryEntryDeleteConfirmContent;
+
+  /// No description provided for @memoryEntryBatchDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} memories?'**
+  String memoryEntryBatchDeleteConfirmTitle(int count);
+
+  /// No description provided for @memoryEntryBatchDeleteConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected memories will be permanently deleted.'**
+  String get memoryEntryBatchDeleteConfirmContent;
+
+  /// No description provided for @memoryEntrySwitchScopeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change memory scope?'**
+  String get memoryEntrySwitchScopeConfirmTitle;
+
+  /// No description provided for @memoryEntrySwitchScopeToGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Make this memory global (shared across assistants)?'**
+  String get memoryEntrySwitchScopeToGlobal;
+
+  /// No description provided for @memoryEntrySwitchScopeToAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit this memory to the current assistant?'**
+  String get memoryEntrySwitchScopeToAssistant;
+
+  /// No description provided for @memoryEntryArchivedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get memoryEntryArchivedSection;
+
+  /// No description provided for @memoryEntryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No memories yet'**
+  String get memoryEntryEmpty;
+
+  /// No description provided for @memoryEntryEmptyDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-term memory is off for this assistant'**
+  String get memoryEntryEmptyDisabled;
+
+  /// No description provided for @memoryEntryEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit memory'**
+  String get memoryEntryEditTitle;
+
+  /// No description provided for @memoryEntryCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New memory'**
+  String get memoryEntryCreateTitle;
+
+  /// No description provided for @memoryEntryContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter memory content'**
+  String get memoryEntryContentHint;
+
+  /// No description provided for @memoryEntryTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get memoryEntryTypeLabel;
+
+  /// No description provided for @memoryEntryScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope'**
+  String get memoryEntryScopeLabel;
+
+  /// No description provided for @memoryFilterScopeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All scopes'**
+  String get memoryFilterScopeAll;
+
+  /// No description provided for @memoryFilterScopeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global only'**
+  String get memoryFilterScopeGlobal;
+
+  /// No description provided for @memoryFilterScopeAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryFilterScopeAssistant;
+
+  /// No description provided for @memoryFilterTypeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get memoryFilterTypeAll;
+
+  /// No description provided for @memoryFilterStatusAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All statuses'**
+  String get memoryFilterStatusAll;
+
+  /// No description provided for @memoryFilterStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get memoryFilterStatusActive;
+
+  /// No description provided for @memoryFilterStatusArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get memoryFilterStatusArchived;
+
+  /// No description provided for @memorySearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search memories'**
+  String get memorySearchHint;
+
+  /// No description provided for @memorySearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching memories'**
+  String get memorySearchEmpty;
+
+  /// No description provided for @memoryOrphanBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} orphaned assistant memories (assistant deleted)'**
+  String memoryOrphanBanner(int count);
+
+  /// No description provided for @memoryOrphanCleanupButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean up'**
+  String get memoryOrphanCleanupButton;
+
+  /// No description provided for @memoryOrphanConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean up orphaned memories?'**
+  String get memoryOrphanConfirmTitle;
+
+  /// No description provided for @memoryOrphanConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete {count} memories whose assistant no longer exists.'**
+  String memoryOrphanConfirmContent(int count);
+
+  /// No description provided for @memoryOrganizeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize'**
+  String get memoryOrganizeButton;
+
+  /// No description provided for @memoryOrganizeNeedsConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a chat with this assistant to organize memories'**
+  String get memoryOrganizeNeedsConversation;
+
+  /// No description provided for @memoryOrganizeNeedsModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a memory model in Settings → Memory first'**
+  String get memoryOrganizeNeedsModel;
+
+  /// No description provided for @memoryOrganizeStatusNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Not organized yet'**
+  String get memoryOrganizeStatusNever;
+
+  /// No description provided for @memoryOrganizeStatusLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last organized: {when}'**
+  String memoryOrganizeStatusLast(String when);
+
+  /// No description provided for @memoryOrganizeStatusExtracted.
+  ///
+  /// In en, this message translates to:
+  /// **'extracted {count}'**
+  String memoryOrganizeStatusExtracted(int count);
+
+  /// No description provided for @memoryOrganizeStatusSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'nothing to remember'**
+  String get memoryOrganizeStatusSkipped;
+
+  /// No description provided for @memoryOrganizeStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed: {reason}'**
+  String memoryOrganizeStatusFailed(String reason);
+
+  /// No description provided for @memoryOrganizeJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get memoryOrganizeJustNow;
+
+  /// No description provided for @memoryOrganizeMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} min ago'**
+  String memoryOrganizeMinutesAgo(int n);
+
+  /// No description provided for @memoryOrganizeHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} h ago'**
+  String memoryOrganizeHoursAgo(int n);
+
+  /// No description provided for @memoryOrganizeDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} d ago'**
+  String memoryOrganizeDaysAgo(int n);
+
+  /// No description provided for @memoryModelMissingNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a memory processing model in Settings → Memory first.'**
+  String get memoryModelMissingNotice;
+
+  /// No description provided for @memoryModelMissingGoSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose model'**
+  String get memoryModelMissingGoSelect;
+
+  /// No description provided for @memoryEntriesPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All memories'**
+  String get memoryEntriesPageTitle;
+
+  /// No description provided for @userProfilePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'User profile'**
+  String get userProfilePageTitle;
+
+  /// No description provided for @userProfilePreferredName.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred name'**
+  String get userProfilePreferredName;
+
+  /// No description provided for @userProfilePreferredNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How the model should address you — unrelated to the sidebar display name'**
+  String get userProfilePreferredNameHint;
+
+  /// No description provided for @userProfileGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get userProfileGender;
+
+  /// No description provided for @userProfilePronouns.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronouns'**
+  String get userProfilePronouns;
+
+  /// No description provided for @userProfilePreferredLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred language'**
+  String get userProfilePreferredLanguage;
+
+  /// No description provided for @userProfileTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Timezone'**
+  String get userProfileTimezone;
+
+  /// No description provided for @userProfileOccupation.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupation'**
+  String get userProfileOccupation;
+
+  /// No description provided for @userProfileLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get userProfileLocation;
+
+  /// No description provided for @userProfileCustomSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom fields'**
+  String get userProfileCustomSection;
+
+  /// No description provided for @userProfileAddCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Add custom field'**
+  String get userProfileAddCustom;
+
+  /// No description provided for @userProfileCustomKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Key (custom.name)'**
+  String get userProfileCustomKeyHint;
+
+  /// No description provided for @userProfileCustomValueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get userProfileCustomValueHint;
+
+  /// No description provided for @userProfileInvalidKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Key must be custom. followed by 1–32 letters, digits, _ or -'**
+  String get userProfileInvalidKey;
+
+  /// No description provided for @userProfileClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get userProfileClear;
+
+  /// No description provided for @userProfileSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get userProfileSave;
+
+  /// No description provided for @userProfileEmptyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get userProfileEmptyValue;
+
+  /// No description provided for @legacyMemoryPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy memories'**
+  String get legacyMemoryPageTitle;
+
+  /// No description provided for @legacyMemoryBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'These are memories from an older version. They are not used in chats. Migration will arrive in a later release.'**
+  String get legacyMemoryBanner;
+
+  /// No description provided for @legacyMemoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No legacy memories'**
+  String get legacyMemoryEmpty;
+
+  /// No description provided for @legacyMemoryCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get legacyMemoryCopy;
+
+  /// No description provided for @legacyMemoryCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get legacyMemoryCopied;
+
+  /// No description provided for @legacyMemoryExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get legacyMemoryExport;
+
+  /// No description provided for @legacyMemoryExportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kelivo legacy memory export'**
+  String get legacyMemoryExportTitle;
+
+  /// No description provided for @legacyMemoryAssistantHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant: {name}'**
+  String legacyMemoryAssistantHeader(String name);
+
+  /// No description provided for @legacyMemorySearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search legacy memories'**
+  String get legacyMemorySearchHint;
+
+  /// No description provided for @memoryUiContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get memoryUiContentLabel;
+
+  /// No description provided for @memoryUiValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get memoryUiValueLabel;
+
+  /// No description provided for @memoryUiCustomKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Key'**
+  String get memoryUiCustomKeyLabel;
+
+  /// No description provided for @memoryUiStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get memoryUiStatusLabel;
+
+  /// No description provided for @memoryUiAssistantLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryUiAssistantLabel;
+
+  /// No description provided for @memoryUiAssistantAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All assistants'**
+  String get memoryUiAssistantAll;
+
+  /// No description provided for @memoryUiSearchClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get memoryUiSearchClear;
+
+  /// No description provided for @memoryUiAssistantLegacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy memories (read-only)'**
+  String get memoryUiAssistantLegacyTitle;
+
+  /// No description provided for @memoryUiAssistantLegacySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Old memories of this assistant from previous versions'**
+  String get memoryUiAssistantLegacySubtitle;
+
+  /// No description provided for @assistantEditMemorySwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use long-term memory'**
+  String get assistantEditMemorySwitchTitle;
+
+  /// No description provided for @assistantEditAutoOrganizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-organize memory'**
+  String get assistantEditAutoOrganizeTitle;
+
+  /// No description provided for @assistantEditAutoOrganizeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run the memory pipeline after chats'**
+  String get assistantEditAutoOrganizeSubtitle;
+
+  /// No description provided for @assistantEditAllowPastRecallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow recalling past chats'**
+  String get assistantEditAllowPastRecallTitle;
+
+  /// No description provided for @assistantEditAllowPastRecallSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable chat search across past conversations'**
+  String get assistantEditAllowPastRecallSubtitle;
+
+  /// No description provided for @assistantEditGenerateSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate conversation summaries'**
+  String get assistantEditGenerateSummaryTitle;
+
+  /// No description provided for @assistantEditGenerateSummarySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Summaries are only used by chat search'**
+  String get assistantEditGenerateSummarySubtitle;
+
+  /// No description provided for @assistantEditManageMemoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memories visible to this assistant'**
+  String get assistantEditManageMemoryTitle;
+
+  /// No description provided for @assistantEditWriteScopeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory write scope'**
+  String get assistantEditWriteScopeTitle;
+
+  /// No description provided for @assistantEditWriteScopeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Where new memories are stored by default'**
+  String get assistantEditWriteScopeSubtitle;
+
+  /// No description provided for @assistantEditWriteScopeAlwaysGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Always global'**
+  String get assistantEditWriteScopeAlwaysGlobal;
+
+  /// No description provided for @assistantEditWriteScopeAlwaysAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Always this assistant'**
+  String get assistantEditWriteScopeAlwaysAssistant;
+
+  /// No description provided for @assistantEditWriteScopeToolDefaultGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Model chooses (default global)'**
+  String get assistantEditWriteScopeToolDefaultGlobal;
+
+  /// No description provided for @assistantEditWriteScopeToolDefaultAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Model chooses (default assistant)'**
+  String get assistantEditWriteScopeToolDefaultAssistant;
+
+  /// No description provided for @assistantEditDedupeModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dedupe mode'**
+  String get assistantEditDedupeModeTitle;
+
+  /// No description provided for @assistantEditDedupeModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How candidates are judged against existing memories'**
+  String get assistantEditDedupeModeSubtitle;
+
+  /// No description provided for @assistantEditDedupeModeBatched.
+  ///
+  /// In en, this message translates to:
+  /// **'Batched'**
+  String get assistantEditDedupeModeBatched;
+
+  /// No description provided for @assistantEditDedupeModePerItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Per item'**
+  String get assistantEditDedupeModePerItem;
+
+  /// No description provided for @assistantEditOrganizeFrequencyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize every N turns'**
+  String get assistantEditOrganizeFrequencyTitle;
+
+  /// No description provided for @assistantEditOrganizeFrequencySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run auto-organize after this many assistant replies'**
+  String get assistantEditOrganizeFrequencySubtitle;
+
+  /// No description provided for @assistantEditOrganizeFrequencyOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {n}'**
+  String assistantEditOrganizeFrequencyOption(int n);
+
+  /// No description provided for @assistantEditOrganizeFrequencyCustomButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get assistantEditOrganizeFrequencyCustomButton;
+
+  /// No description provided for @assistantEditOrganizeFrequencyCustomTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom frequency'**
+  String get assistantEditOrganizeFrequencyCustomTitle;
+
+  /// No description provided for @assistantEditOrganizeFrequencyCustomDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number between 1 and 20.'**
+  String get assistantEditOrganizeFrequencyCustomDescription;
+
+  /// No description provided for @assistantEditOrganizeFrequencyCustomLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Turns'**
+  String get assistantEditOrganizeFrequencyCustomLabel;
+
+  /// No description provided for @assistantEditOrganizeFrequencyCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'1–20'**
+  String get assistantEditOrganizeFrequencyCustomHint;
+
+  /// No description provided for @assistantEditOrganizeFrequencyCustomInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number between 1 and 20'**
+  String get assistantEditOrganizeFrequencyCustomInvalid;
 
   /// No description provided for @worldBookTitle.
   ///
@@ -11539,6 +12558,438 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.'**
   String get imageSettingsPageFooter;
+
+  /// No description provided for @memoryTraceSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pipeline Traces'**
+  String get memoryTraceSettingsTitle;
+
+  /// No description provided for @memoryTraceSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect every background memory run step by step'**
+  String get memoryTraceSettingsSubtitle;
+
+  /// No description provided for @memoryTracePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Pipeline Traces'**
+  String get memoryTracePageTitle;
+
+  /// No description provided for @memoryTraceRecordingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording'**
+  String get memoryTraceRecordingSection;
+
+  /// No description provided for @memoryTraceToggleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record pipeline traces'**
+  String get memoryTraceToggleTitle;
+
+  /// No description provided for @memoryTraceToggleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps prompts, responses and changes of recent background runs in memory only'**
+  String get memoryTraceToggleSubtitle;
+
+  /// No description provided for @memoryTraceRunsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent runs'**
+  String get memoryTraceRunsSection;
+
+  /// No description provided for @memoryTraceEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No traces yet'**
+  String get memoryTraceEmptyTitle;
+
+  /// No description provided for @memoryTraceEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Traces appear here after the background memory pipeline runs.'**
+  String get memoryTraceEmptySubtitle;
+
+  /// No description provided for @memoryTraceDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording is off'**
+  String get memoryTraceDisabledTitle;
+
+  /// No description provided for @memoryTraceDisabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn recording on to capture the next background memory run.'**
+  String get memoryTraceDisabledSubtitle;
+
+  /// No description provided for @memoryTraceClearAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get memoryTraceClearAction;
+
+  /// No description provided for @memoryTraceClearSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear traces'**
+  String get memoryTraceClearSheetTitle;
+
+  /// No description provided for @memoryTraceClearSheetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes every recorded trace. Traces are never written to disk, so nothing else is affected.'**
+  String get memoryTraceClearSheetMessage;
+
+  /// No description provided for @memoryTraceClearConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear traces'**
+  String get memoryTraceClearConfirm;
+
+  /// No description provided for @memoryTraceCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get memoryTraceCancel;
+
+  /// No description provided for @memoryTraceClearedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Traces cleared'**
+  String get memoryTraceClearedToast;
+
+  /// No description provided for @memoryTraceCopyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get memoryTraceCopyAction;
+
+  /// No description provided for @memoryTraceCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get memoryTraceCopiedToast;
+
+  /// No description provided for @memoryTraceTriggerAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get memoryTraceTriggerAuto;
+
+  /// No description provided for @memoryTraceTriggerManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get memoryTraceTriggerManual;
+
+  /// No description provided for @memoryTraceTriggerTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool call'**
+  String get memoryTraceTriggerTool;
+
+  /// No description provided for @memoryTraceTriggerSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get memoryTraceTriggerSummary;
+
+  /// No description provided for @memoryTraceScopeAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryTraceScopeAssistant;
+
+  /// No description provided for @memoryTraceScopeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get memoryTraceScopeGlobal;
+
+  /// No description provided for @memoryTraceStepGatekeeper.
+  ///
+  /// In en, this message translates to:
+  /// **'Gatekeeper'**
+  String get memoryTraceStepGatekeeper;
+
+  /// No description provided for @memoryTraceStepExtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract'**
+  String get memoryTraceStepExtract;
+
+  /// No description provided for @memoryTraceStepSmartAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Add'**
+  String get memoryTraceStepSmartAdd;
+
+  /// No description provided for @memoryTraceStepDistiller.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Distiller'**
+  String get memoryTraceStepDistiller;
+
+  /// No description provided for @memoryTraceStepSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation Summary'**
+  String get memoryTraceStepSummary;
+
+  /// No description provided for @memoryTraceStepChatSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Past Conversation Recall'**
+  String get memoryTraceStepChatSearch;
+
+  /// No description provided for @memoryTraceStepTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Tool'**
+  String get memoryTraceStepTool;
+
+  /// No description provided for @memoryTraceStatusSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get memoryTraceStatusSuccess;
+
+  /// No description provided for @memoryTraceStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get memoryTraceStatusFailed;
+
+  /// No description provided for @memoryTraceStatusSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get memoryTraceStatusSkipped;
+
+  /// No description provided for @memoryTraceStatusRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get memoryTraceStatusRunning;
+
+  /// No description provided for @memoryTraceOutcomeAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark advanced'**
+  String get memoryTraceOutcomeAdvanced;
+
+  /// No description provided for @memoryTraceOutcomeHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark held'**
+  String get memoryTraceOutcomeHeld;
+
+  /// No description provided for @memoryTraceOutcomeForced.
+  ///
+  /// In en, this message translates to:
+  /// **'Forced advance'**
+  String get memoryTraceOutcomeForced;
+
+  /// No description provided for @memoryTraceDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trace detail'**
+  String get memoryTraceDetailTitle;
+
+  /// No description provided for @memoryTraceSectionOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get memoryTraceSectionOverview;
+
+  /// No description provided for @memoryTraceSectionPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt'**
+  String get memoryTraceSectionPrompt;
+
+  /// No description provided for @memoryTraceSectionResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw response'**
+  String get memoryTraceSectionResponse;
+
+  /// No description provided for @memoryTraceSectionParsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsed result'**
+  String get memoryTraceSectionParsed;
+
+  /// No description provided for @memoryTraceSectionMutations.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes applied'**
+  String get memoryTraceSectionMutations;
+
+  /// No description provided for @memoryTraceFieldTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Started'**
+  String get memoryTraceFieldTime;
+
+  /// No description provided for @memoryTraceFieldDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get memoryTraceFieldDuration;
+
+  /// No description provided for @memoryTraceFieldTrigger.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger'**
+  String get memoryTraceFieldTrigger;
+
+  /// No description provided for @memoryTraceFieldScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope'**
+  String get memoryTraceFieldScope;
+
+  /// No description provided for @memoryTraceFieldConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get memoryTraceFieldConversation;
+
+  /// No description provided for @memoryTraceFieldAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get memoryTraceFieldAssistant;
+
+  /// No description provided for @memoryTraceFieldWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get memoryTraceFieldWindow;
+
+  /// No description provided for @memoryTraceFieldWatermark.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark'**
+  String get memoryTraceFieldWatermark;
+
+  /// No description provided for @memoryTraceFieldOutcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Outcome'**
+  String get memoryTraceFieldOutcome;
+
+  /// No description provided for @memoryTraceFieldError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get memoryTraceFieldError;
+
+  /// No description provided for @memoryTraceMutationCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get memoryTraceMutationCreated;
+
+  /// No description provided for @memoryTraceMutationMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'Merged'**
+  String get memoryTraceMutationMerged;
+
+  /// No description provided for @memoryTraceMutationEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get memoryTraceMutationEdited;
+
+  /// No description provided for @memoryTraceMutationArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get memoryTraceMutationArchived;
+
+  /// No description provided for @memoryTraceMutationLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked'**
+  String get memoryTraceMutationLinked;
+
+  /// No description provided for @memoryTraceMutationProfileWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile field written'**
+  String get memoryTraceMutationProfileWritten;
+
+  /// No description provided for @memoryTraceMutationProfileCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile field cleared'**
+  String get memoryTraceMutationProfileCleared;
+
+  /// No description provided for @memoryTraceMutationSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat summary written'**
+  String get memoryTraceMutationSummary;
+
+  /// No description provided for @memoryTraceBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get memoryTraceBefore;
+
+  /// No description provided for @memoryTraceAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get memoryTraceAfter;
+
+  /// No description provided for @memoryTraceEmptyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'(empty)'**
+  String get memoryTraceEmptyValue;
+
+  /// No description provided for @memoryTraceStepsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} steps'**
+  String memoryTraceStepsCount(int count);
+
+  /// No description provided for @memoryTraceMutationsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes'**
+  String memoryTraceMutationsCount(int count);
+
+  /// No description provided for @memoryTraceRepeatCount.
+  ///
+  /// In en, this message translates to:
+  /// **'repeated {count}×'**
+  String memoryTraceRepeatCount(int count);
+
+  /// No description provided for @memoryTraceWindowValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} messages · #{start}–#{end}'**
+  String memoryTraceWindowValue(int size, int start, int end);
+
+  /// No description provided for @memoryTraceShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show full text'**
+  String get memoryTraceShowMore;
+
+  /// No description provided for @memoryTraceShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get memoryTraceShowLess;
 }
 
 class _AppLocalizationsDelegate

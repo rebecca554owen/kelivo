@@ -39,10 +39,23 @@ void main() {
           id: 'assistant-1',
           name: 'Limited',
           contextMessageSize: 64,
+          limitContextMessages: true,
         ),
         persistedMessageCount: 1507,
       ),
       64,
+    );
+    // Default assistants leave context unlimited (D-30 / 5d42e692).
+    expect(
+      ChatActions.contextReadLimit(
+        assistant: const Assistant(
+          id: 'assistant-1',
+          name: 'Default unlimited',
+          contextMessageSize: 64,
+        ),
+        persistedMessageCount: 1507,
+      ),
+      1507,
     );
     expect(
       ChatActions.contextReadLimit(

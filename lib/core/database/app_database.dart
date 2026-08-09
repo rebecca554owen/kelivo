@@ -55,6 +55,11 @@ class ConversationRows extends Table {
       .withDefault(const Constant(0))();
   TextColumn get chatSuggestionsJson =>
       text().withDefault(const Constant('[]'))();
+  TextColumn get injectedMemoryHash => text().nullable()();
+  IntColumn get lastMemoryExtractedOrder => integer()
+      // ignore: recursive_getters
+      .check(lastMemoryExtractedOrder.isBiggerOrEqualValue(-1))
+      .withDefault(const Constant(-1))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -529,6 +534,96 @@ class PreferenceRows extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
+@TableIndex(
+  name: 'idx_memory_entries_visible',
+  columns: {#status, #type, #scope, #assistantId},
+)
+@TableIndex(
+  name: 'idx_memory_entries_recent',
+  columns: {#status, #type, #entryUpdatedAt, #id},
+)
+@TableIndex(
+  name: 'idx_memory_entries_dedupe',
+  columns: {#scope, #assistantId, #type, #contentNormalized},
+)
+class MemoryEntryRows extends Table {
+  TextColumn get id => text()();
+  IntColumn get sortOrder =>
+      integer()
+      // ignore: recursive_getters
+      .check(sortOrder.isBiggerOrEqualValue(0))();
+  TextColumn get scope => text().check(
+    // ignore: recursive_getters
+    scope.isIn(const ['global', 'assistant']),
+  )();
+  TextColumn get assistantId => text().nullable()();
+  TextColumn get type => text().check(
+    // ignore: recursive_getters
+    type.isIn(const ['identity', 'workflow', 'voice', 'instruction']),
+  )();
+  TextColumn get status => text().check(
+    // ignore: recursive_getters
+    status.isIn(const ['active', 'archived']),
+  )();
+  TextColumn get content => text()();
+  TextColumn get contentNormalized => text()();
+  IntColumn get entryCreatedAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
+  IntColumn get entryUpdatedAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
+  TextColumn get payload => text()();
+  IntColumn get updatedAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<String> get customConstraints => [
+    "CHECK ((scope = 'global' AND assistant_id IS NULL) OR "
+        "(scope = 'assistant' AND assistant_id IS NOT NULL))",
+    'CHECK (entry_updated_at >= entry_created_at)',
+  ];
+}
+
+class UserProfileFieldRows extends Table {
+  TextColumn get id => text()(); // = field key, e.g. preferred_name
+  IntColumn get sortOrder =>
+      integer()
+      // ignore: recursive_getters
+      .check(sortOrder.isBiggerOrEqualValue(0))();
+  TextColumn get payload => text()();
+  IntColumn get updatedAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@TableIndex(
+  name: 'idx_message_prompts_conversation_snapshot',
+  columns: {#conversationId, #carriesMemorySnapshot},
+)
+class MessagePromptRows extends Table {
+  TextColumn get revisionId => text()();
+  TextColumn get conversationId => text()();
+  TextColumn get payload => text()();
+  BoolColumn get carriesMemorySnapshot =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get createdAt =>
+      integer().map(const MicrosecondDateTimeConverter())();
+
+  @override
+  Set<Column<Object>> get primaryKey => {revisionId};
+
+  @override
+  List<String> get customConstraints => [
+    'FOREIGN KEY (revision_id) '
+        'REFERENCES message_rows (id) '
+        'ON DELETE CASCADE',
+  ];
+}
+
 @DriftDatabase(
   tables: [
     ConversationRows,
@@ -555,6 +650,9 @@ class PreferenceRows extends Table {
     InstructionInjectionRows,
     AssistantTagRows,
     PreferenceRows,
+    MemoryEntryRows,
+    UserProfileFieldRows,
+    MessagePromptRows,
   ],
 )
 class AppDatabase extends _$AppDatabase {

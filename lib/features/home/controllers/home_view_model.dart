@@ -10,6 +10,8 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
+import '../../../core/services/memory/memory_pipeline.dart';
+import '../../../core/services/memory/memory_trace.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_builder_service.dart';
@@ -305,6 +307,32 @@ class HomeViewModel extends ChangeNotifier {
 
   void _onAssistantMessageFinished(ChatMessage message) {
     onAssistantMessageFinished?.call(message);
+    _onMaybeOrganizeMemory(message.conversationId);
+  }
+
+  /// Schedule background memory organize after a successful finalize (§12.1).
+  /// Never awaited; failures must not surface as chat errors.
+  void _onMaybeOrganizeMemory(String conversationId) {
+    try {
+      final convo = _chatService.getConversation(conversationId);
+      if (convo == null) return;
+      final assistantProvider = _contextProvider.read<AssistantProvider>();
+      final assistant = convo.assistantId != null
+          ? assistantProvider.getById(convo.assistantId!)
+          : assistantProvider.currentAssistant;
+      if (assistant == null || !assistant.enableMemory) return;
+      if (!assistant.autoOrganizeMemory) return;
+      final pipeline = _contextProvider.read<MemoryPipelineService>();
+      pipeline.scheduleIfNeeded(
+        conversationId: conversationId,
+        assistantId: assistant.id,
+      );
+    } catch (e, st) {
+      FlutterLogger.log(
+        '[MemoryPipeline] schedule failed: $e\n$st',
+        tag: 'HomeViewModel',
+      );
+    }
   }
 
   void _onFileProcessingStarted() {
@@ -1207,6 +1235,11 @@ class HomeViewModel extends ChangeNotifier {
     return defaultLabel;
   }
 
+  /// Test entry for [_maybeGenerateSummaryFor].
+  @visibleForTesting
+  Future<void> debugMaybeGenerateSummaryFor(String conversationId) =>
+      _maybeGenerateSummaryFor(conversationId);
+
   @visibleForTesting
   static int computeClearContextRemainingMessageCount({
     required int totalMessages,
@@ -1310,6 +1343,8 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> _maybeGenerateSummaryFor(String conversationId) async {
     final convo = _chatService.getConversation(conversationId);
     if (convo == null) return;
+    // Summaries only feed past-conversation search; temporary chats are never searchable.
+    if (_chatService.isTemporaryConversation(convo.id)) return;
 
     final settings = _contextProvider.read<SettingsProvider>();
     final msgCount = _chatService.getMessageCount(conversationId);
@@ -1322,8 +1357,15 @@ class HomeViewModel extends ChangeNotifier {
 
     final budget = assistant?.thinkingBudget ?? settings.thinkingBudget;
 
-    // Only generate summary if assistant has recent chats reference enabled
-    if (assistant?.enableRecentChatsReference != true) return;
+    // §12.10 / D-27: both switches must be on.
+    if (!MemoryPipelineService.shouldGenerateConversationSummary(
+      allowPastConversationRecall:
+          assistant?.allowPastConversationRecall == true,
+      generateConversationSummary:
+          assistant?.generateConversationSummary == true,
+    )) {
+      return;
+    }
 
     final triggerMessageCount =
         assistant?.recentChatsSummaryMessageCount ??
@@ -1386,6 +1428,12 @@ class HomeViewModel extends ChangeNotifier {
         .replaceAll('{previous_summary}', previousSummary)
         .replaceAll('{user_messages}', content);
 
+    final traceHandle = _beginSummaryTrace(convo, assistant);
+    final traceStep = traceHandle?.beginStep(
+      MemoryTraceStepKind.conversationSummary,
+    );
+    traceStep?.appendPrompt(prompt);
+
     try {
       final summary = (await ChatApiService.generateText(
         config: cfg,
@@ -1393,6 +1441,7 @@ class HomeViewModel extends ChangeNotifier {
         prompt: prompt,
         thinkingBudget: budget,
       )).trim();
+      traceStep?.appendResponse(summary);
 
       if (summary.isNotEmpty) {
         await _chatService.updateConversationSummary(
@@ -1400,6 +1449,18 @@ class HomeViewModel extends ChangeNotifier {
           summary,
           msgCount,
         );
+        traceStep?.addMutation(
+          MemoryTraceMutation(
+            kind: MemoryTraceMutationKind.conversationSummaryWritten,
+            targetId: convo.id,
+            before: previousSummary.isEmpty ? null : previousSummary,
+            after: summary,
+          ),
+        );
+      }
+      traceStep?.finish(MemoryTraceStepStatus.success);
+      traceHandle?.commit(advanced: summary.isNotEmpty);
+      if (summary.isNotEmpty) {
         if (currentConversation?.id == convo.id) {
           _chatController.updateCurrentConversation(
             _chatService.getConversation(convo.id),
@@ -1407,8 +1468,36 @@ class HomeViewModel extends ChangeNotifier {
           notifyListeners();
         }
       }
-    } catch (_) {
+    } catch (e) {
       // Keep old summary on failure, ignore silently
+      traceStep?.finish(MemoryTraceStepStatus.failed, error: e.toString());
+      traceHandle?.commit(error: e.toString());
+    }
+  }
+
+  /// Open a trace for background summary generation (feeds past-conversation
+  /// recall). Never throws.
+  MemoryTraceHandle? _beginSummaryTrace(
+    Conversation convo,
+    Assistant? assistant,
+  ) {
+    // Temporary chats are discarded on exit; keep their traces out of the UI.
+    if (_chatService.isTemporaryConversation(convo.id)) {
+      return null;
+    }
+    try {
+      return MemoryTraceRecorder.instance.begin(
+        trigger: MemoryTraceTrigger.conversationSummary,
+        scope: assistant == null
+            ? MemoryTraceScope.global
+            : memoryTraceScopeOf(assistant.memoryWriteScope),
+        conversationId: convo.id,
+        conversationTitle: convo.title,
+        assistantId: assistant?.id,
+        assistantName: assistant?.name,
+      );
+    } catch (_) {
+      return null;
     }
   }
 

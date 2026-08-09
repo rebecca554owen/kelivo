@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../models/memory_entry.dart';
 import 'app_database.dart';
 import 'business_data.dart';
 
@@ -316,6 +317,70 @@ final class BusinessRepository {
         ],
       );
     }
+    if (kind == BusinessEntityKind.memoryEntry) {
+      final Object? decoded;
+      try {
+        decoded = jsonDecode(row.payload);
+      } on FormatException {
+        throw ArgumentError.value(row.payload, 'payload');
+      }
+      if (decoded is! Map) {
+        throw ArgumentError.value(row.payload, 'payload');
+      }
+      final payload = decoded.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final content = payload['content'];
+      if (content is! String) {
+        throw ArgumentError.value(row.payload, 'payload');
+      }
+      final scope = payload['scope'];
+      if (scope is! String) {
+        throw ArgumentError.value(row.payload, 'payload');
+      }
+      final type = payload['type'];
+      if (type is! String) {
+        throw ArgumentError.value(row.payload, 'payload');
+      }
+      final status = payload['status'] is String
+          ? payload['status'] as String
+          : 'active';
+      final createdAt = payload['createdAt'];
+      final entryUpdatedAt = payload['updatedAt'];
+      if (createdAt is! num || entryUpdatedAt is! num) {
+        throw ArgumentError.value(row.payload, 'payload');
+      }
+      final rawAssistantId = payload['assistantId'];
+      final assistantId = rawAssistantId is String ? rawAssistantId : null;
+      return _database.customStatement(
+        'INSERT INTO memory_entry_rows '
+        '(id, sort_order, scope, assistant_id, type, status, content, '
+        'content_normalized, entry_created_at, entry_updated_at, payload, '
+        'updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
+        'ON CONFLICT(id) DO UPDATE SET '
+        'sort_order = excluded.sort_order, scope = excluded.scope, '
+        'assistant_id = excluded.assistant_id, type = excluded.type, '
+        'status = excluded.status, content = excluded.content, '
+        'content_normalized = excluded.content_normalized, '
+        'entry_created_at = excluded.entry_created_at, '
+        'entry_updated_at = excluded.entry_updated_at, '
+        'payload = excluded.payload, updated_at = excluded.updated_at;',
+        <Object?>[
+          row.id,
+          row.sortOrder,
+          scope,
+          assistantId,
+          type,
+          status,
+          content,
+          normalizeMemoryContent(content),
+          createdAt.toInt(),
+          entryUpdatedAt.toInt(),
+          row.payload,
+          updatedAt,
+        ],
+      );
+    }
     return _database.customStatement(
       'INSERT INTO ${kind.tableName} '
       '(${kind.idColumn}, sort_order, payload, updated_at) '
@@ -325,6 +390,36 @@ final class BusinessRepository {
       <Object?>[row.id, row.sortOrder, row.payload, updatedAt],
     );
   }
+
+  /// Treats the named conversations as already extracted through their current
+  /// max message_order and clears their injection hash (§6.7).
+  ///
+  /// Scoped to the conversations a merge restore actually touched: bumping the
+  /// watermark of an untouched local conversation would silently skip one round
+  /// of background extraction for messages the user just sent.
+  Future<void> applyPostMergeMemoryConversationState(
+    Iterable<String> conversationIds,
+  ) async {
+    final ids = conversationIds.where((id) => id.isNotEmpty).toSet();
+    if (ids.isEmpty) return;
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    await _database.customStatement('''
+UPDATE conversation_rows SET
+  injected_memory_hash = NULL,
+  last_memory_extracted_order = COALESCE(
+    (SELECT MAX(m.message_order)
+     FROM message_rows m
+     WHERE m.conversation_id = conversation_rows.id),
+    -1
+  )
+WHERE id IN ($placeholders);
+''', ids.toList(growable: false));
+  }
+
+  /// The `content_normalized` projection must match the model's rule exactly,
+  /// or dedupe lookups silently miss rows that differ only in whitespace.
+  static String normalizeMemoryContent(String content) =>
+      MemoryEntry.normalizeContent(content);
 
   Future<void> _deleteEntity(BusinessEntityKind kind, String id) =>
       _database.customStatement(

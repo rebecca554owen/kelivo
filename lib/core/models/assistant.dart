@@ -2,8 +2,20 @@ import 'dart:convert';
 import 'assistant_regex.dart';
 import 'preset_message.dart';
 
+enum MemorySmartAddMode { batched, perItem }
+
+enum MemoryWriteScope {
+  alwaysGlobal,
+  alwaysAssistant,
+  toolDefaultGlobal,
+  toolDefaultAssistant,
+}
+
 class Assistant {
   static const int defaultRecentChatsSummaryMessageCount = 5;
+  static const int defaultMemoryOrganizeEveryNTurns = 1;
+  static const int minMemoryOrganizeEveryNTurns = 1;
+  static const int maxMemoryOrganizeEveryNTurns = 20;
   static const double defaultTemperature = 1.0;
   static const int minContextMessageSize = 1;
   static const int maxContextMessageSize = 1024;
@@ -42,11 +54,17 @@ class Assistant {
   final List<Map<String, String>>
   customHeaders; // [{name:'X-Header', value:'v'}]
   final List<Map<String, String>> customBody; // [{key:'foo', value:'{"a":1}'}]
-  // Memory features
-  final bool enableMemory; // assistant memory feature switch
-  final bool enableRecentChatsReference; // include recent chat titles in prompt
+  // Memory features (§4.1)
+  final bool enableMemory;
+  final bool autoOrganizeMemory;
+  final int memoryOrganizeEveryNTurns;
+  final MemorySmartAddMode memorySmartAddMode;
+  final MemoryWriteScope memoryWriteScope;
+  final bool allowPastConversationRecall;
+  final bool generateConversationSummary;
   final int
   recentChatsSummaryMessageCount; // refresh summary after N new messages
+  final bool appendCurrentTimeToUserMessage;
   // Preset conversation messages (ordered)
   final List<PresetMessage> presetMessages;
   // Regex replacement rules
@@ -76,8 +94,14 @@ class Assistant {
     this.customHeaders = const <Map<String, String>>[],
     this.customBody = const <Map<String, String>>[],
     this.enableMemory = false,
-    this.enableRecentChatsReference = false,
+    this.autoOrganizeMemory = false,
+    this.memoryOrganizeEveryNTurns = defaultMemoryOrganizeEveryNTurns,
+    this.memorySmartAddMode = MemorySmartAddMode.batched,
+    this.memoryWriteScope = MemoryWriteScope.alwaysGlobal,
+    this.allowPastConversationRecall = false,
+    this.generateConversationSummary = false,
     this.recentChatsSummaryMessageCount = defaultRecentChatsSummaryMessageCount,
+    this.appendCurrentTimeToUserMessage = false,
     this.presetMessages = const <PresetMessage>[],
     this.regexRules = const <AssistantRegex>[],
   });
@@ -106,8 +130,14 @@ class Assistant {
     List<Map<String, String>>? customHeaders,
     List<Map<String, String>>? customBody,
     bool? enableMemory,
-    bool? enableRecentChatsReference,
+    bool? autoOrganizeMemory,
+    int? memoryOrganizeEveryNTurns,
+    MemorySmartAddMode? memorySmartAddMode,
+    MemoryWriteScope? memoryWriteScope,
+    bool? allowPastConversationRecall,
+    bool? generateConversationSummary,
     int? recentChatsSummaryMessageCount,
+    bool? appendCurrentTimeToUserMessage,
     List<PresetMessage>? presetMessages,
     List<AssistantRegex>? regexRules,
     bool clearChatModel = false,
@@ -146,10 +176,19 @@ class Assistant {
       customHeaders: customHeaders ?? this.customHeaders,
       customBody: customBody ?? this.customBody,
       enableMemory: enableMemory ?? this.enableMemory,
-      enableRecentChatsReference:
-          enableRecentChatsReference ?? this.enableRecentChatsReference,
+      autoOrganizeMemory: autoOrganizeMemory ?? this.autoOrganizeMemory,
+      memoryOrganizeEveryNTurns:
+          memoryOrganizeEveryNTurns ?? this.memoryOrganizeEveryNTurns,
+      memorySmartAddMode: memorySmartAddMode ?? this.memorySmartAddMode,
+      memoryWriteScope: memoryWriteScope ?? this.memoryWriteScope,
+      allowPastConversationRecall:
+          allowPastConversationRecall ?? this.allowPastConversationRecall,
+      generateConversationSummary:
+          generateConversationSummary ?? this.generateConversationSummary,
       recentChatsSummaryMessageCount:
           recentChatsSummaryMessageCount ?? this.recentChatsSummaryMessageCount,
+      appendCurrentTimeToUserMessage:
+          appendCurrentTimeToUserMessage ?? this.appendCurrentTimeToUserMessage,
       presetMessages: presetMessages ?? this.presetMessages,
       regexRules: regexRules ?? this.regexRules,
     );
@@ -179,8 +218,14 @@ class Assistant {
     'customHeaders': customHeaders,
     'customBody': customBody,
     'enableMemory': enableMemory,
-    'enableRecentChatsReference': enableRecentChatsReference,
+    'autoOrganizeMemory': autoOrganizeMemory,
+    'memoryOrganizeEveryNTurns': memoryOrganizeEveryNTurns,
+    'memorySmartAddMode': memorySmartAddModeToString(memorySmartAddMode),
+    'memoryWriteScope': memoryWriteScopeToString(memoryWriteScope),
+    'allowPastConversationRecall': allowPastConversationRecall,
+    'generateConversationSummary': generateConversationSummary,
     'recentChatsSummaryMessageCount': recentChatsSummaryMessageCount,
+    'appendCurrentTimeToUserMessage': appendCurrentTimeToUserMessage,
     'presetMessages': PresetMessage.encodeList(presetMessages),
     'regexRules': regexRules.map((e) => e.toJson()).toList(),
   };
@@ -239,8 +284,29 @@ class Assistant {
       return const <Map<String, String>>[];
     })(),
     enableMemory: json['enableMemory'] as bool? ?? false,
-    enableRecentChatsReference:
-        json['enableRecentChatsReference'] as bool? ?? false,
+    autoOrganizeMemory: json['autoOrganizeMemory'] as bool? ?? false,
+    memoryOrganizeEveryNTurns: (() {
+      final raw = (json['memoryOrganizeEveryNTurns'] as num?)?.toInt();
+      if (raw == null ||
+          raw < minMemoryOrganizeEveryNTurns ||
+          raw > maxMemoryOrganizeEveryNTurns) {
+        return defaultMemoryOrganizeEveryNTurns;
+      }
+      return raw;
+    })(),
+    memorySmartAddMode: memorySmartAddModeFromString(
+      json['memorySmartAddMode'] as String?,
+    ),
+    memoryWriteScope: memoryWriteScopeFromString(
+      json['memoryWriteScope'] as String?,
+    ),
+    // Legacy `enableRecentChatsReference` maps onto allowPastConversationRecall.
+    allowPastConversationRecall:
+        json['allowPastConversationRecall'] as bool? ??
+        json['enableRecentChatsReference'] as bool? ??
+        false,
+    generateConversationSummary:
+        json['generateConversationSummary'] as bool? ?? false,
     recentChatsSummaryMessageCount: (() {
       final raw = (json['recentChatsSummaryMessageCount'] as num?)?.toInt();
       if (raw == null || raw < 1) {
@@ -248,6 +314,8 @@ class Assistant {
       }
       return raw;
     })(),
+    appendCurrentTimeToUserMessage:
+        json['appendCurrentTimeToUserMessage'] as bool? ?? false,
     presetMessages: (() {
       try {
         return PresetMessage.decodeList(json['presetMessages']);
@@ -266,6 +334,52 @@ class Assistant {
       return const <AssistantRegex>[];
     })(),
   );
+
+  static String memorySmartAddModeToString(MemorySmartAddMode mode) {
+    switch (mode) {
+      case MemorySmartAddMode.batched:
+        return 'batched';
+      case MemorySmartAddMode.perItem:
+        return 'perItem';
+    }
+  }
+
+  static MemorySmartAddMode memorySmartAddModeFromString(String? value) {
+    switch (value) {
+      case 'perItem':
+        return MemorySmartAddMode.perItem;
+      case 'batched':
+      default:
+        return MemorySmartAddMode.batched;
+    }
+  }
+
+  static String memoryWriteScopeToString(MemoryWriteScope scope) {
+    switch (scope) {
+      case MemoryWriteScope.alwaysGlobal:
+        return 'alwaysGlobal';
+      case MemoryWriteScope.alwaysAssistant:
+        return 'alwaysAssistant';
+      case MemoryWriteScope.toolDefaultGlobal:
+        return 'toolDefaultGlobal';
+      case MemoryWriteScope.toolDefaultAssistant:
+        return 'toolDefaultAssistant';
+    }
+  }
+
+  static MemoryWriteScope memoryWriteScopeFromString(String? value) {
+    switch (value) {
+      case 'alwaysAssistant':
+        return MemoryWriteScope.alwaysAssistant;
+      case 'toolDefaultGlobal':
+        return MemoryWriteScope.toolDefaultGlobal;
+      case 'toolDefaultAssistant':
+        return MemoryWriteScope.toolDefaultAssistant;
+      case 'alwaysGlobal':
+      default:
+        return MemoryWriteScope.alwaysGlobal;
+    }
+  }
 
   static String encodeList(List<Assistant> list) =>
       jsonEncode(list.map((e) => e.toJson()).toList());
