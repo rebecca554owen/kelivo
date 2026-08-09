@@ -309,6 +309,56 @@ void main() {
     },
   );
 
+  test('duplicate memory entry merge preserves migration receipts', () {
+    Map<String, Object> memory({
+      required String id,
+      required String content,
+      required List<String> migrationIds,
+    }) => <String, Object>{
+      'id': id,
+      'scope': 'global',
+      'type': 'identity',
+      'status': 'active',
+      'content': content,
+      'source': 'extracted',
+      'relatedIds': <String>[],
+      'migrationIds': migrationIds,
+      'createdAt': 1,
+      'updatedAt': 1,
+    };
+
+    final merged = BusinessSettingsMerger.merge(
+      {
+        'memory_entries_v1': jsonEncode([
+          memory(
+            id: 'mem_local001',
+            content: 'Same memory',
+            migrationIds: const ['local-receipt'],
+          ),
+        ]),
+      },
+      {
+        'memory_entries_v1': jsonEncode([
+          memory(
+            id: 'mem_import01',
+            content: ' same   MEMORY ',
+            migrationIds: const ['local-receipt', 'incoming-receipt'],
+          ),
+        ]),
+      },
+    );
+
+    final memories =
+        jsonDecode(merged['memory_entries_v1']! as String) as List<dynamic>;
+    expect(memories, hasLength(1));
+    expect(memories.single['id'], 'mem_local001');
+    expect(memories.single['content'], 'Same memory');
+    expect(memories.single['migrationIds'], [
+      'local-receipt',
+      'incoming-receipt',
+    ]);
+  });
+
   test(
     'merges id-less entity lists by stable identity without publishing ids',
     () {

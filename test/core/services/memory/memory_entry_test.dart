@@ -23,6 +23,7 @@ void main() {
         content: '用户开发 Flutter 应用时重视跨平台与长列表性能。',
         source: MemorySource.extracted,
         relatedIds: const ['mem_e5f6g7h8'],
+        migrationIds: const ['legacy_memory_v1:receipt'],
         createdAt: created,
         updatedAt: updated,
       );
@@ -41,6 +42,7 @@ void main() {
       expect(roundTrip.type, entry.type);
       expect(roundTrip.content, entry.content);
       expect(roundTrip.relatedIds, entry.relatedIds);
+      expect(roundTrip.migrationIds, entry.migrationIds);
       expect(
         roundTrip.createdAt.microsecondsSinceEpoch,
         entry.createdAt.microsecondsSinceEpoch,

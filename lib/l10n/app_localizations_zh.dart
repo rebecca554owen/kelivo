@@ -5961,7 +5961,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get legacyMemoryPageTitle => '旧版记忆';
 
   @override
-  String get legacyMemoryBanner => '这些是旧版记忆，不会参与对话；迁移功能会在后续版本提供。';
+  String get legacyMemoryBanner => '这些记忆来自旧版本，不会参与对话；你可以将它们迁移到当前记忆系统。';
 
   @override
   String get legacyMemoryEmpty => '没有旧版记忆';
@@ -5985,6 +5985,75 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get legacyMemorySearchHint => '搜索旧版记忆';
+
+  @override
+  String get legacyMemoryMigrate => '迁移';
+
+  @override
+  String get legacyMemoryMigrationTitle => '迁移旧版记忆';
+
+  @override
+  String legacyMemoryMigrationSubtitle(int count) {
+    return '使用模型整理并分类 $count 条旧版记忆，原数据不会改变。';
+  }
+
+  @override
+  String get legacyMemoryMigrationModel => '迁移模型';
+
+  @override
+  String get legacyMemoryMigrationChooseModel => '选择模型';
+
+  @override
+  String get legacyMemoryMigrationTarget => '保存到';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobal => '全局';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistant => '当前助手';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalAssistants => '原助手';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobalDescription => '所有助手均可使用';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistantDescription => '仅当前助手可使用';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalDescription => '每条记忆保留在原来的助手下';
+
+  @override
+  String get legacyMemoryMigrationStart => '开始迁移';
+
+  @override
+  String get legacyMemoryMigrationAnalyzing => '正在使用模型分析';
+
+  @override
+  String get legacyMemoryMigrationWriting => '正在写入记忆';
+
+  @override
+  String legacyMemoryMigrationProgress(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get legacyMemoryMigrationComplete => '迁移完成';
+
+  @override
+  String legacyMemoryMigrationResult(int created, int skipped) {
+    return '已迁移 $created 条 · 跳过已有 $skipped 条';
+  }
+
+  @override
+  String get legacyMemoryMigrationFailed => '迁移已停止。可以重试，已保存的记忆会自动跳过。';
+
+  @override
+  String get legacyMemoryMigrationRetry => '重试';
+
+  @override
+  String get legacyMemoryMigrationClose => '完成';
 
   @override
   String get memoryUiContentLabel => '内容';
@@ -12795,7 +12864,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get legacyMemoryPageTitle => '旧版记忆';
 
   @override
-  String get legacyMemoryBanner => '这些是旧版记忆，不会参与对话；迁移功能会在后续版本提供。';
+  String get legacyMemoryBanner => '这些记忆来自旧版本，不会参与对话；你可以将它们迁移到当前记忆系统。';
 
   @override
   String get legacyMemoryEmpty => '没有旧版记忆';
@@ -12819,6 +12888,75 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get legacyMemorySearchHint => '搜索旧版记忆';
+
+  @override
+  String get legacyMemoryMigrate => '迁移';
+
+  @override
+  String get legacyMemoryMigrationTitle => '迁移旧版记忆';
+
+  @override
+  String legacyMemoryMigrationSubtitle(int count) {
+    return '使用模型整理并分类 $count 条旧版记忆，原数据不会改变。';
+  }
+
+  @override
+  String get legacyMemoryMigrationModel => '迁移模型';
+
+  @override
+  String get legacyMemoryMigrationChooseModel => '选择模型';
+
+  @override
+  String get legacyMemoryMigrationTarget => '保存到';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobal => '全局';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistant => '当前助手';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalAssistants => '原助手';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobalDescription => '所有助手均可使用';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistantDescription => '仅当前助手可使用';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalDescription => '每条记忆保留在原来的助手下';
+
+  @override
+  String get legacyMemoryMigrationStart => '开始迁移';
+
+  @override
+  String get legacyMemoryMigrationAnalyzing => '正在使用模型分析';
+
+  @override
+  String get legacyMemoryMigrationWriting => '正在写入记忆';
+
+  @override
+  String legacyMemoryMigrationProgress(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get legacyMemoryMigrationComplete => '迁移完成';
+
+  @override
+  String legacyMemoryMigrationResult(int created, int skipped) {
+    return '已迁移 $created 条 · 跳过已有 $skipped 条';
+  }
+
+  @override
+  String get legacyMemoryMigrationFailed => '迁移已停止。可以重试，已保存的记忆会自动跳过。';
+
+  @override
+  String get legacyMemoryMigrationRetry => '重试';
+
+  @override
+  String get legacyMemoryMigrationClose => '完成';
 
   @override
   String get memoryUiContentLabel => '内容';
@@ -19629,7 +19767,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get legacyMemoryPageTitle => '舊版記憶';
 
   @override
-  String get legacyMemoryBanner => '這些是舊版記憶，不會參與對話；遷移功能會在後續版本提供。';
+  String get legacyMemoryBanner => '這些記憶來自舊版本，不會參與對話；你可以將它們遷移到目前的記憶系統。';
 
   @override
   String get legacyMemoryEmpty => '沒有舊版記憶';
@@ -19653,6 +19791,75 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get legacyMemorySearchHint => '搜尋舊版記憶';
+
+  @override
+  String get legacyMemoryMigrate => '遷移';
+
+  @override
+  String get legacyMemoryMigrationTitle => '遷移舊版記憶';
+
+  @override
+  String legacyMemoryMigrationSubtitle(int count) {
+    return '使用模型整理並分類 $count 條舊版記憶，原資料不會改變。';
+  }
+
+  @override
+  String get legacyMemoryMigrationModel => '遷移模型';
+
+  @override
+  String get legacyMemoryMigrationChooseModel => '選擇模型';
+
+  @override
+  String get legacyMemoryMigrationTarget => '儲存到';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobal => '全域';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistant => '目前的助手';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalAssistants => '原助手';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobalDescription => '所有助手均可使用';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistantDescription => '僅目前的助手可使用';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalDescription => '每條記憶保留在原來的助手下';
+
+  @override
+  String get legacyMemoryMigrationStart => '開始遷移';
+
+  @override
+  String get legacyMemoryMigrationAnalyzing => '正在使用模型分析';
+
+  @override
+  String get legacyMemoryMigrationWriting => '正在寫入記憶';
+
+  @override
+  String legacyMemoryMigrationProgress(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get legacyMemoryMigrationComplete => '遷移完成';
+
+  @override
+  String legacyMemoryMigrationResult(int created, int skipped) {
+    return '已遷移 $created 條 · 略過已有 $skipped 條';
+  }
+
+  @override
+  String get legacyMemoryMigrationFailed => '遷移已停止。可以重試，已儲存的記憶會自動略過。';
+
+  @override
+  String get legacyMemoryMigrationRetry => '重試';
+
+  @override
+  String get legacyMemoryMigrationClose => '完成';
 
   @override
   String get memoryUiContentLabel => '內容';

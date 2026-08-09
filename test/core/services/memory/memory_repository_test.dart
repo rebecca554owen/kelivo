@@ -204,6 +204,73 @@ void main() {
       );
     });
 
+    test('createMany deduplicates and persists migration receipts', () async {
+      final existing = await memoryRepository.create(
+        scope: MemoryScope.global,
+        type: MemoryType.identity,
+        content: 'Already saved',
+        source: MemorySource.manual,
+      );
+
+      final result = await memoryRepository.createMany(const [
+        MemoryCreateDraft(
+          scope: MemoryScope.global,
+          type: MemoryType.identity,
+          content: ' already   SAVED ',
+          source: MemorySource.extracted,
+          migrationId: 'legacy:1',
+        ),
+        MemoryCreateDraft(
+          scope: MemoryScope.global,
+          type: MemoryType.workflow,
+          content: 'New memory',
+          source: MemorySource.extracted,
+          migrationId: 'legacy:2',
+        ),
+        MemoryCreateDraft(
+          scope: MemoryScope.global,
+          type: MemoryType.workflow,
+          content: 'NEW MEMORY',
+          source: MemorySource.extracted,
+          migrationId: 'legacy:3',
+        ),
+      ]);
+
+      expect(result.created, 1);
+      expect(result.skipped, 2);
+      final entries = await memoryRepository.readAll();
+      expect(entries, hasLength(2));
+      expect(
+        entries.firstWhere((entry) => entry.id == existing.id).migrationIds,
+        ['legacy:1'],
+      );
+      expect(
+        entries.firstWhere((entry) => entry.id != existing.id).migrationIds,
+        ['legacy:2', 'legacy:3'],
+      );
+    });
+
+    test('createMany validates the whole batch before writing', () async {
+      await expectLater(
+        memoryRepository.createMany(const [
+          MemoryCreateDraft(
+            scope: MemoryScope.global,
+            type: MemoryType.identity,
+            content: 'Would otherwise be written',
+            source: MemorySource.extracted,
+          ),
+          MemoryCreateDraft(
+            scope: MemoryScope.assistant,
+            type: MemoryType.identity,
+            content: 'Missing assistant',
+            source: MemorySource.extracted,
+          ),
+        ]),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(await memoryRepository.readAll(), isEmpty);
+    });
+
     test('updateContent refreshes updatedAt and leaves scope/type', () async {
       final created = await memoryRepository.create(
         scope: MemoryScope.global,

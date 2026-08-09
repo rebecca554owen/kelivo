@@ -5,6 +5,33 @@ import '../../models/memory_entry.dart';
 import '../../models/user_profile_field.dart';
 import '../json_blob_store.dart';
 
+class MemoryCreateDraft {
+  const MemoryCreateDraft({
+    required this.scope,
+    this.assistantId,
+    required this.type,
+    required this.content,
+    required this.source,
+    this.relatedIds = const <String>[],
+    this.migrationId,
+  });
+
+  final MemoryScope scope;
+  final String? assistantId;
+  final MemoryType type;
+  final String content;
+  final MemorySource source;
+  final List<String> relatedIds;
+  final String? migrationId;
+}
+
+class MemoryCreateManyResult {
+  const MemoryCreateManyResult({required this.created, required this.skipped});
+
+  final int created;
+  final int skipped;
+}
+
 /// Write-path entry point for memory system V1 (§13.4).
 ///
 /// Every mutation is a full-table read-modify-write through
@@ -37,29 +64,10 @@ class MemoryRepository extends JsonBlobStore<MemoryEntry> {
     List<String> relatedIds = const [],
   }) {
     return runExclusive(() async {
-      if (scope == MemoryScope.global && assistantId != null) {
-        throw ArgumentError.value(
-          assistantId,
-          'assistantId',
-          'Must be null when scope is global',
-        );
-      }
-      if (scope == MemoryScope.assistant &&
-          (assistantId == null || assistantId.isEmpty)) {
-        throw ArgumentError.value(
-          assistantId,
-          'assistantId',
-          'Required when scope is assistant',
-        );
-      }
+      _validateScope(scope, assistantId);
       final all = await readAll();
       final taken = {for (final entry in all) entry.id};
-      var id = MemoryEntry.newId();
-      // Random ids collide occasionally; retry rather than fail the write.
-      for (var attempt = 0; taken.contains(id) && attempt < 16; attempt++) {
-        id = MemoryEntry.newId();
-      }
-      if (taken.contains(id)) throw StateError('memory_id_collision');
+      final id = _newUniqueId(taken);
       final now = DateTime.now().toUtc();
       final entry = MemoryEntry(
         id: id,
@@ -76,6 +84,99 @@ class MemoryRepository extends JsonBlobStore<MemoryEntry> {
       all.add(entry);
       await writeAll(all);
       return entry;
+    });
+  }
+
+  /// Creates a deduplicated batch in one read-modify-write transaction.
+  ///
+  /// Exact scope/content duplicates are skipped. When a skipped draft carries
+  /// a [MemoryCreateDraft.migrationId], the receipt is attached to the existing
+  /// entry so future migration attempts can skip model conversion as well.
+  Future<MemoryCreateManyResult> createMany(List<MemoryCreateDraft> drafts) {
+    if (drafts.isEmpty) {
+      return Future.value(const MemoryCreateManyResult(created: 0, skipped: 0));
+    }
+    return runExclusive(() async {
+      for (final draft in drafts) {
+        _validateScope(draft.scope, draft.assistantId);
+        if (draft.migrationId != null && draft.migrationId!.trim().isEmpty) {
+          throw ArgumentError.value(
+            draft.migrationId,
+            'migrationId',
+            'Must not be empty',
+          );
+        }
+      }
+
+      final all = await readAll();
+      final takenIds = {for (final entry in all) entry.id};
+      final knownMigrationIds = <String>{
+        for (final entry in all) ...entry.migrationIds,
+      };
+      final contentIndexes = <String, int>{};
+      for (var i = 0; i < all.length; i++) {
+        contentIndexes.putIfAbsent(
+          _contentKey(all[i].scope, all[i].assistantId, all[i].content),
+          () => i,
+        );
+      }
+
+      final now = DateTime.now().toUtc();
+      var created = 0;
+      var skipped = 0;
+      var changed = false;
+      for (final draft in drafts) {
+        final migrationId = draft.migrationId;
+        if (migrationId != null && knownMigrationIds.contains(migrationId)) {
+          skipped++;
+          continue;
+        }
+
+        final contentKey = _contentKey(
+          draft.scope,
+          draft.assistantId,
+          draft.content,
+        );
+        final existingIndex = contentIndexes[contentKey];
+        if (existingIndex != null) {
+          skipped++;
+          if (migrationId != null) {
+            final existing = all[existingIndex];
+            all[existingIndex] = existing.copyWith(
+              migrationIds: [...existing.migrationIds, migrationId],
+            );
+            knownMigrationIds.add(migrationId);
+            changed = true;
+          }
+          continue;
+        }
+
+        final id = _newUniqueId(takenIds);
+        takenIds.add(id);
+        final entry = MemoryEntry(
+          id: id,
+          scope: draft.scope,
+          assistantId: draft.assistantId,
+          type: draft.type,
+          status: MemoryStatus.active,
+          content: draft.content,
+          source: draft.source,
+          relatedIds: List<String>.of(draft.relatedIds),
+          migrationIds: migrationId == null
+              ? const <String>[]
+              : <String>[migrationId],
+          createdAt: now,
+          updatedAt: now,
+        );
+        all.add(entry);
+        contentIndexes[contentKey] = all.length - 1;
+        if (migrationId != null) knownMigrationIds.add(migrationId);
+        created++;
+        changed = true;
+      }
+
+      if (changed) await writeAll(all);
+      return MemoryCreateManyResult(created: created, skipped: skipped);
     });
   }
 
@@ -289,6 +390,43 @@ class MemoryRepository extends JsonBlobStore<MemoryEntry> {
       await _writeProfileFields(fields);
       return true;
     });
+  }
+
+  static void _validateScope(MemoryScope scope, String? assistantId) {
+    if (scope == MemoryScope.global && assistantId != null) {
+      throw ArgumentError.value(
+        assistantId,
+        'assistantId',
+        'Must be null when scope is global',
+      );
+    }
+    if (scope == MemoryScope.assistant &&
+        (assistantId == null || assistantId.isEmpty)) {
+      throw ArgumentError.value(
+        assistantId,
+        'assistantId',
+        'Required when scope is assistant',
+      );
+    }
+  }
+
+  static String _newUniqueId(Set<String> taken) {
+    var id = MemoryEntry.newId();
+    // Random ids collide occasionally; retry rather than fail the write.
+    for (var attempt = 0; taken.contains(id) && attempt < 16; attempt++) {
+      id = MemoryEntry.newId();
+    }
+    if (taken.contains(id)) throw StateError('memory_id_collision');
+    return id;
+  }
+
+  static String _contentKey(
+    MemoryScope scope,
+    String? assistantId,
+    String content,
+  ) {
+    return '${MemoryEntry.scopeToString(scope)}\u0000${assistantId ?? ''}\u0000'
+        '${MemoryEntry.normalizeContent(content)}';
   }
 
   static void _stripReverseRelatedIds(List<MemoryEntry> all, String targetId) {

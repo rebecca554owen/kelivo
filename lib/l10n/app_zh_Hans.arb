@@ -2185,7 +2185,7 @@
   "userProfileSave": "保存",
   "userProfileEmptyValue": "未设置",
   "legacyMemoryPageTitle": "旧版记忆",
-  "legacyMemoryBanner": "这些是旧版记忆，不会参与对话；迁移功能会在后续版本提供。",
+  "legacyMemoryBanner": "这些记忆来自旧版本，不会参与对话；你可以将它们迁移到当前记忆系统。",
   "legacyMemoryEmpty": "没有旧版记忆",
   "legacyMemoryCopy": "复制",
   "legacyMemoryCopied": "已复制",
@@ -2198,6 +2198,44 @@
     }
   },
   "legacyMemorySearchHint": "搜索旧版记忆",
+  "legacyMemoryMigrate": "迁移",
+  "legacyMemoryMigrationTitle": "迁移旧版记忆",
+  "legacyMemoryMigrationSubtitle": "使用模型整理并分类 {count} 条旧版记忆，原数据不会改变。",
+  "@legacyMemoryMigrationSubtitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationModel": "迁移模型",
+  "legacyMemoryMigrationChooseModel": "选择模型",
+  "legacyMemoryMigrationTarget": "保存到",
+  "legacyMemoryMigrationTargetGlobal": "全局",
+  "legacyMemoryMigrationTargetAssistant": "当前助手",
+  "legacyMemoryMigrationTargetOriginalAssistants": "原助手",
+  "legacyMemoryMigrationTargetGlobalDescription": "所有助手均可使用",
+  "legacyMemoryMigrationTargetAssistantDescription": "仅当前助手可使用",
+  "legacyMemoryMigrationTargetOriginalDescription": "每条记忆保留在原来的助手下",
+  "legacyMemoryMigrationStart": "开始迁移",
+  "legacyMemoryMigrationAnalyzing": "正在使用模型分析",
+  "legacyMemoryMigrationWriting": "正在写入记忆",
+  "legacyMemoryMigrationProgress": "{current} / {total}",
+  "@legacyMemoryMigrationProgress": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationComplete": "迁移完成",
+  "legacyMemoryMigrationResult": "已迁移 {created} 条 · 跳过已有 {skipped} 条",
+  "@legacyMemoryMigrationResult": {
+    "placeholders": {
+      "created": {"type": "int"},
+      "skipped": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationFailed": "迁移已停止。可以重试，已保存的记忆会自动跳过。",
+  "legacyMemoryMigrationRetry": "重试",
+  "legacyMemoryMigrationClose": "完成",
   "memoryUiContentLabel": "内容",
   "memoryUiValueLabel": "值",
   "memoryUiCustomKeyLabel": "键名",

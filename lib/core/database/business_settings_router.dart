@@ -614,7 +614,7 @@ final class BusinessSettingsRouter {
           requiredStrings: const {'id', 'scope', 'type', 'content'},
           strings: const {'status', 'source', 'assistantId'},
           numbers: const {'createdAt', 'updatedAt'},
-          stringLists: const {'relatedIds'},
+          stringLists: const {'relatedIds', 'migrationIds'},
         );
         final scope = payload['scope'] as String;
         if (scope != 'global' && scope != 'assistant') {

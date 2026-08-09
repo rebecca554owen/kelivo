@@ -6207,7 +6207,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legacyMemoryBanner =>
-      'These are memories from an older version. They are not used in chats. Migration will arrive in a later release.';
+      'These memories came from an older version and are not used in chats. You can migrate them into the current memory system.';
 
   @override
   String get legacyMemoryEmpty => 'No legacy memories';
@@ -6231,6 +6231,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legacyMemorySearchHint => 'Search legacy memories';
+
+  @override
+  String get legacyMemoryMigrate => 'Migrate';
+
+  @override
+  String get legacyMemoryMigrationTitle => 'Migrate legacy memories';
+
+  @override
+  String legacyMemoryMigrationSubtitle(int count) {
+    return 'Use a model to classify and clean up $count legacy memories. The originals stay unchanged.';
+  }
+
+  @override
+  String get legacyMemoryMigrationModel => 'Migration model';
+
+  @override
+  String get legacyMemoryMigrationChooseModel => 'Choose a model';
+
+  @override
+  String get legacyMemoryMigrationTarget => 'Save to';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobal => 'Global';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistant => 'Current assistant';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalAssistants =>
+      'Original assistants';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobalDescription =>
+      'Available to every assistant';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistantDescription =>
+      'Only available to this assistant';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalDescription =>
+      'Keep each memory with its original assistant';
+
+  @override
+  String get legacyMemoryMigrationStart => 'Start migration';
+
+  @override
+  String get legacyMemoryMigrationAnalyzing => 'Analyzing with model';
+
+  @override
+  String get legacyMemoryMigrationWriting => 'Saving memories';
+
+  @override
+  String legacyMemoryMigrationProgress(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String get legacyMemoryMigrationComplete => 'Migration complete';
+
+  @override
+  String legacyMemoryMigrationResult(int created, int skipped) {
+    return '$created migrated · $skipped already existed';
+  }
+
+  @override
+  String get legacyMemoryMigrationFailed =>
+      'Migration stopped. You can retry; memories already saved will be skipped.';
+
+  @override
+  String get legacyMemoryMigrationRetry => 'Retry';
+
+  @override
+  String get legacyMemoryMigrationClose => 'Done';
 
   @override
   String get memoryUiContentLabel => 'Content';

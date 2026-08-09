@@ -11434,7 +11434,7 @@ abstract class AppLocalizations {
   /// No description provided for @legacyMemoryBanner.
   ///
   /// In en, this message translates to:
-  /// **'These are memories from an older version. They are not used in chats. Migration will arrive in a later release.'**
+  /// **'These memories came from an older version and are not used in chats. You can migrate them into the current memory system.'**
   String get legacyMemoryBanner;
 
   /// No description provided for @legacyMemoryEmpty.
@@ -11478,6 +11478,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search legacy memories'**
   String get legacyMemorySearchHint;
+
+  /// No description provided for @legacyMemoryMigrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Migrate'**
+  String get legacyMemoryMigrate;
+
+  /// No description provided for @legacyMemoryMigrationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Migrate legacy memories'**
+  String get legacyMemoryMigrationTitle;
+
+  /// No description provided for @legacyMemoryMigrationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a model to classify and clean up {count} legacy memories. The originals stay unchanged.'**
+  String legacyMemoryMigrationSubtitle(int count);
+
+  /// No description provided for @legacyMemoryMigrationModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Migration model'**
+  String get legacyMemoryMigrationModel;
+
+  /// No description provided for @legacyMemoryMigrationChooseModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a model'**
+  String get legacyMemoryMigrationChooseModel;
+
+  /// No description provided for @legacyMemoryMigrationTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to'**
+  String get legacyMemoryMigrationTarget;
+
+  /// No description provided for @legacyMemoryMigrationTargetGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get legacyMemoryMigrationTargetGlobal;
+
+  /// No description provided for @legacyMemoryMigrationTargetAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Current assistant'**
+  String get legacyMemoryMigrationTargetAssistant;
+
+  /// No description provided for @legacyMemoryMigrationTargetOriginalAssistants.
+  ///
+  /// In en, this message translates to:
+  /// **'Original assistants'**
+  String get legacyMemoryMigrationTargetOriginalAssistants;
+
+  /// No description provided for @legacyMemoryMigrationTargetGlobalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Available to every assistant'**
+  String get legacyMemoryMigrationTargetGlobalDescription;
+
+  /// No description provided for @legacyMemoryMigrationTargetAssistantDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Only available to this assistant'**
+  String get legacyMemoryMigrationTargetAssistantDescription;
+
+  /// No description provided for @legacyMemoryMigrationTargetOriginalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep each memory with its original assistant'**
+  String get legacyMemoryMigrationTargetOriginalDescription;
+
+  /// No description provided for @legacyMemoryMigrationStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start migration'**
+  String get legacyMemoryMigrationStart;
+
+  /// No description provided for @legacyMemoryMigrationAnalyzing.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing with model'**
+  String get legacyMemoryMigrationAnalyzing;
+
+  /// No description provided for @legacyMemoryMigrationWriting.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving memories'**
+  String get legacyMemoryMigrationWriting;
+
+  /// No description provided for @legacyMemoryMigrationProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String legacyMemoryMigrationProgress(int current, int total);
+
+  /// No description provided for @legacyMemoryMigrationComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Migration complete'**
+  String get legacyMemoryMigrationComplete;
+
+  /// No description provided for @legacyMemoryMigrationResult.
+  ///
+  /// In en, this message translates to:
+  /// **'{created} migrated · {skipped} already existed'**
+  String legacyMemoryMigrationResult(int created, int skipped);
+
+  /// No description provided for @legacyMemoryMigrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Migration stopped. You can retry; memories already saved will be skipped.'**
+  String get legacyMemoryMigrationFailed;
+
+  /// No description provided for @legacyMemoryMigrationRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get legacyMemoryMigrationRetry;
+
+  /// No description provided for @legacyMemoryMigrationClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get legacyMemoryMigrationClose;
 
   /// No description provided for @memoryUiContentLabel.
   ///

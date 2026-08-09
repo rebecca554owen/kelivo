@@ -47,6 +47,20 @@ class DesktopLegacyMemoryPane extends StatelessWidget {
                   ),
                 ),
               ),
+              Tooltip(
+                message: l10n.legacyMemoryMigrate,
+                child: IosIconButton(
+                  icon: Lucide.Import,
+                  color: cs.primary,
+                  size: 18,
+                  minSize: 36,
+                  semanticLabel: l10n.legacyMemoryMigrate,
+                  onTap: () => LegacyMemoryContent.showMigration(
+                    context,
+                    assistantId: assistantId,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

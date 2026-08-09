@@ -371,14 +371,14 @@ final class BusinessSettingsMerger {
     List<BusinessEntityValue> incoming,
   ) {
     final out = <BusinessEntityValue>[];
-    final seenKeys = <String>{};
+    final indexByKey = <String, int>{};
     final seenIds = <String>{};
     final idRemap = <String, String>{};
 
     for (final row in _orderedRows(existing)) {
       final item = _jsonMap(row.payload, 'memory_entries_v1');
       final key = _memoryEntryDedupeKey(item);
-      if (key != null) seenKeys.add(key);
+      if (key != null) indexByKey.putIfAbsent(key, () => out.length);
       seenIds.add(row.id);
       out.add(row);
     }
@@ -387,7 +387,11 @@ final class BusinessSettingsMerger {
     for (final row in _orderedRows(incoming)) {
       final item = _jsonMap(row.payload, 'memory_entries_v1');
       final key = _memoryEntryDedupeKey(item);
-      if (key != null && seenKeys.contains(key)) continue;
+      final duplicateIndex = key == null ? null : indexByKey[key];
+      if (duplicateIndex != null) {
+        out[duplicateIndex] = _mergeMigrationIds(out[duplicateIndex], item);
+        continue;
+      }
 
       var selected = row;
       var id = row.id;
@@ -399,8 +403,8 @@ final class BusinessSettingsMerger {
         selected = row.copyWith(id: newId, payload: jsonEncode(item));
       }
 
+      if (key != null) indexByKey[key] = out.length;
       out.add(selected);
-      if (key != null) seenKeys.add(key);
       seenIds.add(id);
     }
 
@@ -440,6 +444,34 @@ final class BusinessSettingsMerger {
     }
 
     return _assignSortOrders(out);
+  }
+
+  static BusinessEntityValue _mergeMigrationIds(
+    BusinessEntityValue kept,
+    Map<String, dynamic> incoming,
+  ) {
+    final incomingIds = incoming['migrationIds'];
+    if (incomingIds is! List) return kept;
+
+    final keptItem = _jsonMap(kept.payload, 'memory_entries_v1');
+    final mergedIds = <String>[];
+    final seen = <String>{};
+    final keptIds = keptItem['migrationIds'];
+    if (keptIds is List) {
+      for (final id in keptIds) {
+        if (id is String && seen.add(id)) mergedIds.add(id);
+      }
+    }
+    var changed = false;
+    for (final id in incomingIds) {
+      if (id is String && seen.add(id)) {
+        mergedIds.add(id);
+        changed = true;
+      }
+    }
+    if (!changed) return kept;
+    keptItem['migrationIds'] = mergedIds;
+    return kept.copyWith(payload: jsonEncode(keptItem));
   }
 
   static bool _sameStringList(List<dynamic> left, List<String> right) {

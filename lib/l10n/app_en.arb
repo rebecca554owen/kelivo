@@ -2590,7 +2590,7 @@
   "userProfileSave": "Save",
   "userProfileEmptyValue": "Not set",
   "legacyMemoryPageTitle": "Legacy memories",
-  "legacyMemoryBanner": "These are memories from an older version. They are not used in chats. Migration will arrive in a later release.",
+  "legacyMemoryBanner": "These memories came from an older version and are not used in chats. You can migrate them into the current memory system.",
   "legacyMemoryEmpty": "No legacy memories",
   "legacyMemoryCopy": "Copy",
   "legacyMemoryCopied": "Copied",
@@ -2603,6 +2603,44 @@
     }
   },
   "legacyMemorySearchHint": "Search legacy memories",
+  "legacyMemoryMigrate": "Migrate",
+  "legacyMemoryMigrationTitle": "Migrate legacy memories",
+  "legacyMemoryMigrationSubtitle": "Use a model to classify and clean up {count} legacy memories. The originals stay unchanged.",
+  "@legacyMemoryMigrationSubtitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationModel": "Migration model",
+  "legacyMemoryMigrationChooseModel": "Choose a model",
+  "legacyMemoryMigrationTarget": "Save to",
+  "legacyMemoryMigrationTargetGlobal": "Global",
+  "legacyMemoryMigrationTargetAssistant": "Current assistant",
+  "legacyMemoryMigrationTargetOriginalAssistants": "Original assistants",
+  "legacyMemoryMigrationTargetGlobalDescription": "Available to every assistant",
+  "legacyMemoryMigrationTargetAssistantDescription": "Only available to this assistant",
+  "legacyMemoryMigrationTargetOriginalDescription": "Keep each memory with its original assistant",
+  "legacyMemoryMigrationStart": "Start migration",
+  "legacyMemoryMigrationAnalyzing": "Analyzing with model",
+  "legacyMemoryMigrationWriting": "Saving memories",
+  "legacyMemoryMigrationProgress": "{current} of {total}",
+  "@legacyMemoryMigrationProgress": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationComplete": "Migration complete",
+  "legacyMemoryMigrationResult": "{created} migrated · {skipped} already existed",
+  "@legacyMemoryMigrationResult": {
+    "placeholders": {
+      "created": {"type": "int"},
+      "skipped": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationFailed": "Migration stopped. You can retry; memories already saved will be skipped.",
+  "legacyMemoryMigrationRetry": "Retry",
+  "legacyMemoryMigrationClose": "Done",
   "memoryUiContentLabel": "Content",
   "memoryUiValueLabel": "Value",
   "memoryUiCustomKeyLabel": "Key",

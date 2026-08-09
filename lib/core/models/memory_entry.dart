@@ -17,6 +17,7 @@ class MemoryEntry {
   final String content;
   final MemorySource source;
   final List<String> relatedIds;
+  final List<String> migrationIds;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,6 +30,7 @@ class MemoryEntry {
     required this.content,
     this.source = MemorySource.manual,
     this.relatedIds = const <String>[],
+    this.migrationIds = const <String>[],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,6 +44,7 @@ class MemoryEntry {
     String? content,
     MemorySource? source,
     List<String>? relatedIds,
+    List<String>? migrationIds,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool clearAssistantId = false,
@@ -54,6 +57,7 @@ class MemoryEntry {
     content: content ?? this.content,
     source: source ?? this.source,
     relatedIds: relatedIds ?? this.relatedIds,
+    migrationIds: migrationIds ?? this.migrationIds,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -67,6 +71,7 @@ class MemoryEntry {
     'content': content,
     'source': sourceToString(source),
     'relatedIds': relatedIds,
+    if (migrationIds.isNotEmpty) 'migrationIds': migrationIds,
     'createdAt': createdAt.microsecondsSinceEpoch,
     'updatedAt': updatedAt.microsecondsSinceEpoch,
   };
@@ -83,6 +88,8 @@ class MemoryEntry {
       source: sourceFromString((json['source'] as String?) ?? 'manual'),
       relatedIds:
           (json['relatedIds'] as List?)?.cast<String>() ?? const <String>[],
+      migrationIds:
+          (json['migrationIds'] as List?)?.cast<String>() ?? const <String>[],
       createdAt: DateTime.fromMicrosecondsSinceEpoch(
         (json['createdAt'] as num).toInt(),
       ),
