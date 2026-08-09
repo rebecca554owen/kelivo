@@ -1275,7 +1275,11 @@ class HiveToSqliteMigrationService {
               if (message != null) {
                 if (!firstMessage) sink.write(',');
                 firstMessage = false;
-                sink.write(jsonEncode(message.toJson()));
+                // Legacy chats backup must stay parts-free so restore paths
+                // that only understand content/markers remain compatible.
+                final json = message.toJson();
+                json.remove('parts');
+                sink.write(jsonEncode(json));
               }
               messageWork++;
               if (messageWork % 64 == 0) {
