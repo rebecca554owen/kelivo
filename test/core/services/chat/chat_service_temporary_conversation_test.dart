@@ -386,6 +386,9 @@ void main() {
         role: 'assistant',
         content: 'second',
       );
+      await service.updateConversationSuggestions(conversation.id, const [
+        'stale suggestion',
+      ]);
 
       final deleted = await service.deleteMessages(
         conversationId: conversation.id,
@@ -397,6 +400,10 @@ void main() {
       expect(deleted, {second.id});
       expect(page!.slots.map((slot) => slot.identity.revisionId), [first.id]);
       expect(await service.loadMessages(conversation.id), [first]);
+      expect(
+        service.getConversation(conversation.id)!.chatSuggestions,
+        isEmpty,
+      );
     });
 
     test(
@@ -649,12 +656,19 @@ void main() {
         role: 'user',
         content: 'secret',
       );
+      await service.updateConversationSuggestions(conversation.id, const [
+        'stale suggestion',
+      ]);
 
       await service.deleteMessage(message.id);
 
       expect(service.getAllConversations(), isEmpty);
       expect(service.getMessages(conversation.id), isEmpty);
       expect(service.getConversation(conversation.id)?.messageIds, isEmpty);
+      expect(
+        service.getConversation(conversation.id)?.chatSuggestions,
+        isEmpty,
+      );
     });
 
     test('temporary message editing appends an in-memory version', () async {

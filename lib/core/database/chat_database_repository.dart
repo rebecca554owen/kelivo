@@ -2737,6 +2737,11 @@ class ChatDatabaseRepository {
           THEN COALESCE(m.total_tokens, 0) ELSE 0 END), 0) AS uncategorized_tokens
       FROM message_rows m
       WHERE m.timestamp >= ? AND m.timestamp < ?
+        AND (NULLIF(TRIM(m.provider_id), '') IS NOT NULL
+          OR COALESCE(m.prompt_tokens, 0) != 0
+          OR COALESCE(m.completion_tokens, 0) != 0
+          OR COALESCE(m.cached_tokens, 0) != 0
+          OR COALESCE(m.total_tokens, 0) != 0)
       GROUP BY day, provider_id ORDER BY day, provider_id;
     ''',
           variables: [

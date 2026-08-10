@@ -3309,6 +3309,7 @@ class ChatService extends ChangeNotifier {
     if (isTemporaryConversation(message.conversationId)) {
       final conversation = _draftConversations[message.conversationId];
       conversation?.messageIds.remove(messageId);
+      conversation?.chatSuggestions = const <String>[];
       final messages = _messagesCache[message.conversationId];
       messages?.removeWhere((m) => m.id == messageId);
       _temporaryToolEvents.remove(messageId);
@@ -3342,6 +3343,7 @@ class ChatService extends ChangeNotifier {
       if (deletedIds.isEmpty) return const <String>{};
       messages.removeWhere((message) => deletedIds.contains(message.id));
       conversation.messageIds.removeWhere(deletedIds.contains);
+      conversation.chatSuggestions = const <String>[];
       for (final entry in versionSelectionChanges.entries) {
         final version = entry.value;
         if (version == null) {

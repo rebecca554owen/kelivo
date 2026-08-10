@@ -65,4 +65,49 @@ void main() {
     expect(aggregate.topics.single.count, 2);
     expect(aggregate.trend.single.activityCount, 2);
   });
+
+  test('SQL stats omit empty-provider activity without token data', () async {
+    final root = await Directory.systemTemp.createTemp('chat_stats_test_');
+    final repository = ChatDatabaseRepository.open(
+      file: File('${root.path}/stats.sqlite'),
+    );
+    addTearDown(() async {
+      await repository.close();
+      await root.delete(recursive: true);
+    });
+    final now = DateTime(2026, 7, 12, 12);
+    final conversation = Conversation(
+      id: 'conversation-1',
+      title: 'Stats',
+      createdAt: now,
+      updatedAt: now,
+      messageIds: const ['user-message'],
+    );
+    final message = ChatMessage(
+      id: 'user-message',
+      role: 'user',
+      content: 'hello',
+      timestamp: now,
+      conversationId: conversation.id,
+      providerId: '',
+      totalTokens: 0,
+    );
+    await repository.putMigrationBatch(
+      conversations: [conversation],
+      messages: [(message: message, messageOrder: 0)],
+      toolEventsByMessageId: const {},
+      geminiSignaturesByMessageId: const {},
+    );
+
+    final aggregate = await repository.queryStatsAggregate(
+      rangeStart: DateTime(2026, 7, 12),
+      rangeEndExclusive: DateTime(2026, 7, 13),
+      heatmapStart: DateTime(2025, 7, 13),
+      trendStart: DateTime(2026, 7, 12),
+      trendEndExclusive: DateTime(2026, 7, 13),
+    );
+
+    expect(aggregate.totals.messages, 1);
+    expect(aggregate.trend, isEmpty);
+  });
 }

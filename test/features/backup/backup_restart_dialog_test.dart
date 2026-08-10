@@ -35,5 +35,10 @@ void main() {
     expect(find.textContaining('identical skipped'), findsNothing);
     expect(find.textContaining('conflicts remapped'), findsNothing);
     expect(find.textContaining('Restart Kelivo'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Restart Required'), findsOneWidget);
   });
 }

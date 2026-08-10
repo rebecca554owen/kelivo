@@ -1218,12 +1218,9 @@ class HomeViewModel extends ChangeNotifier {
     final configured = (assistant?.limitContextMessages ?? false)
         ? (assistant?.contextMessageSize ?? 0)
         : 0;
-    // Pure count from the persisted total: no message bodies needed, exact
-    // even when the cache only holds a tail window.
+    // Timeline totals and truncateIndex both use logical message slots.
     final remaining = computeClearContextRemainingMessageCount(
-      totalMessages: _chatService.getMessageCount(
-        currentConversation?.id ?? '',
-      ),
+      totalMessages: _chatController.totalMessageCount,
       truncateIndex: currentConversation == null
           ? -1
           : _chatService.getContextStartIndex(currentConversation!.id),
