@@ -1195,13 +1195,10 @@ class _StepAsrSession implements CloudAsrSession {
 /// run-task → binary PCM → result-generated → finish-task.
 class _QwenAudioAsrSession implements CloudAsrSession {
   _QwenAudioAsrSession({
-    required QwenAudioAsrOptions options,
-    required AsrWebSocketConnection socket,
-    required Duration completionTimeout,
-  }) : _options = options,
-       _socket = socket,
-       _completionTimeout = completionTimeout,
-       _taskId = const Uuid().v4() {
+    required this._options,
+    required this._socket,
+    required this._completionTimeout,
+  }) : _taskId = const Uuid().v4() {
     _subscription = _socket.messages.listen(
       _handleMessage,
       onError: (Object e, StackTrace st) => _fail(e, stackTrace: st),

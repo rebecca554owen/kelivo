@@ -1989,7 +1989,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           final results = <Map<String, dynamic>>[];
           final resultsInfo = <ToolResultInfo>[];
           for (final c in callInfos) {
-            final res = await effectiveOnToolCall!(c.name, c.arguments, toolCallId: c.id);
+            final res = await effectiveOnToolCall(c.name, c.arguments, toolCallId: c.id);
             results.add({'tool_call_id': c.id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(
@@ -2204,7 +2204,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             final name = m['__name'] as String;
             final id = m['__id'] as String;
             final args = (m['__args'] as Map<String, dynamic>);
-            final res = await effectiveOnToolCall!(name, args, toolCallId: id);
+            final res = await effectiveOnToolCall(name, args, toolCallId: id);
             results.add({'tool_call_id': id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(id: id, name: name, arguments: args, content: res),
@@ -2570,7 +2570,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall!(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall(name, args, toolCallId: id);
                 results2.add({'tool_call_id': id, 'content': res});
                 resultsInfo2.add(
                   ToolResultInfo(
@@ -2946,7 +2946,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final nm = m['__name'] as String;
                 final id2 = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall!(nm, args, toolCallId: id2);
+                final res = await effectiveOnToolCall(nm, args, toolCallId: id2);
                 resultsInfo.add(
                   ToolResultInfo(
                     id: id2,
@@ -3249,7 +3249,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   final nm = m['__name'] as String;
                   final id2 = m['__id'] as String;
                   final args2 = (m['__args'] as Map<String, dynamic>);
-                  final res2 = await effectiveOnToolCall!(nm, args2, toolCallId: id2);
+                  final res2 = await effectiveOnToolCall(nm, args2, toolCallId: id2);
                   resultsInfo2.add(
                     ToolResultInfo(
                       id: id2,
@@ -3604,7 +3604,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             final name = m['__name'] as String;
             final id = m['__id'] as String;
             final args = (m['__args'] as Map<String, dynamic>);
-            final res = await effectiveOnToolCall!(name, args, toolCallId: id);
+            final res = await effectiveOnToolCall(name, args, toolCallId: id);
             results.add({'tool_call_id': id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(id: id, name: name, arguments: args, content: res),
@@ -3993,7 +3993,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall!(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall(name, args, toolCallId: id);
                 results2.add({'tool_call_id': id, 'content': res});
                 resultsInfo2.add(
                   ToolResultInfo(
@@ -4104,7 +4104,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall!(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall(name, args, toolCallId: id);
                 results.add({'tool_call_id': id, 'content': res});
                 resultsInfo.add(
                   ToolResultInfo(
@@ -4475,7 +4475,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     final name = m['__name'] as String;
                     final id = m['__id'] as String;
                     final args = (m['__args'] as Map<String, dynamic>);
-                    final res = await effectiveOnToolCall!(name, args, toolCallId: id);
+                    final res = await effectiveOnToolCall(name, args, toolCallId: id);
                     results2.add({'tool_call_id': id, 'content': res});
                     resultsInfo2.add(
                       ToolResultInfo(
