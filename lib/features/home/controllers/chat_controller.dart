@@ -670,16 +670,37 @@ class ChatController extends ChangeNotifier {
     if (visibleIndex >= 0) {
       // An edited revision belongs to the same logical timeline slot. Keep the
       // current bounded window intact so the list can preserve its visible
-      // anchor while only this slot remeasures its extent.
+      // anchor while only this slot remeasures its extent. Preserve the current
+      // visible-group snapshot until its asynchronous refresh completes so
+      // unrelated version switchers do not briefly disappear.
+      final visibleSnapshot = List<ChatMessage>.of(
+        _messagesWithVisibleGroups(),
+      );
+      final groupInsertIndex = visibleSnapshot.indexWhere(
+        (candidate) => (candidate.groupId ?? candidate.id) == groupId,
+      );
+      final groupMessages =
+          visibleSnapshot
+              .where(
+                (candidate) => (candidate.groupId ?? candidate.id) == groupId,
+              )
+              .where((candidate) => candidate.id != message.id)
+              .toList()
+            ..add(message)
+            ..sort((left, right) => left.version.compareTo(right.version));
+
       _messages[visibleIndex] = message;
       invalidateCache();
+      if (groupInsertIndex >= 0) {
+        visibleSnapshot.removeWhere(
+          (candidate) => (candidate.groupId ?? candidate.id) == groupId,
+        );
+        visibleSnapshot.insertAll(groupInsertIndex, groupMessages);
+        _messagesWithVisibleGroupsCache = visibleSnapshot;
+      }
       _loadVersionSelections();
-      await Future.wait([
-        _chatService.loadMessagesForGroups(conversation.id, [groupId]),
-        _chatService.loadFirstMessageIndicesForGroups(conversation.id, [
-          groupId,
-        ]),
-      ]);
+      await _preloadVisibleGroupData();
+      if (_currentConversation?.id != conversation.id) return false;
       notifyListeners();
       return true;
     }

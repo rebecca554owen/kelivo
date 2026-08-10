@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/models/chat_message.dart';
@@ -23,6 +25,8 @@ class _FakeLazyChatService extends ChatService {
   int? timelineSelectedVersionOverride;
   bool requireGroupLoad = false;
   bool groupsLoaded = false;
+  Completer<void>? groupLoadGate;
+  final List<Set<String>> groupLoadRequests = <Set<String>>[];
 
   @override
   bool isTemporaryConversation(String? id) => temporary;
@@ -262,6 +266,8 @@ class _FakeLazyChatService extends ChatService {
     String conversationId,
     Iterable<String> groupIds,
   ) async {
+    groupLoadRequests.add(groupIds.toSet());
+    await groupLoadGate?.future;
     groupsLoaded = true;
     return getMessagesForGroups(conversationId, groupIds);
   }
@@ -1286,6 +1292,82 @@ void main() {
               )
               .id,
           edited.id,
+        );
+      },
+    );
+
+    test(
+      'visible edit keeps every version switcher while groups reload',
+      () async {
+        messages = <ChatMessage>[
+          _versionedMessage(
+            id: 'answer-a-v0',
+            role: 'assistant',
+            groupId: 'answer-a',
+            version: 0,
+          ),
+          _versionedMessage(
+            id: 'answer-a-v1',
+            role: 'assistant',
+            groupId: 'answer-a',
+            version: 1,
+          ),
+          _versionedMessage(
+            id: 'answer-b-v0',
+            role: 'assistant',
+            groupId: 'answer-b',
+            version: 0,
+          ),
+          _versionedMessage(
+            id: 'answer-b-v1',
+            role: 'assistant',
+            groupId: 'answer-b',
+            version: 1,
+          ),
+        ];
+        conversation = Conversation(
+          id: conversation.id,
+          title: conversation.title,
+          messageIds: messages.map((message) => message.id).toList(),
+        );
+        chatService = _FakeLazyChatService(messages)
+          ..versionSelections = const {'answer-a': 1, 'answer-b': 1}
+          ..requireGroupLoad = true;
+        controller.dispose();
+        controller = ChatController(chatService: chatService);
+        await controller.setCurrentConversationAndLoad(conversation);
+        expect(
+          controller.messageRenderModels.map((model) => model.versionCount),
+          [2, 2],
+        );
+
+        final edited = _versionedMessage(
+          id: 'answer-a-v2',
+          role: 'assistant',
+          groupId: 'answer-a',
+          version: 2,
+        );
+        messages.add(edited);
+        chatService
+          ..versionSelections = const {'answer-a': 2, 'answer-b': 1}
+          ..groupsLoaded = false
+          ..groupLoadRequests.clear()
+          ..groupLoadGate = Completer<void>();
+
+        final opening = controller.openAroundPersistedMessage(edited);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(chatService.groupLoadRequests.single, {'answer-a', 'answer-b'});
+        expect(
+          controller.messageRenderModels.map((model) => model.versionCount),
+          [3, 2],
+        );
+
+        chatService.groupLoadGate!.complete();
+        expect(await opening, isTrue);
+        expect(
+          controller.messageRenderModels.map((model) => model.versionCount),
+          [3, 2],
         );
       },
     );
