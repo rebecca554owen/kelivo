@@ -125,6 +125,7 @@ class DefaultModelPage extends StatelessWidget {
             modelProvider: settings.suggestionModelProvider,
             modelId: settings.suggestionModelId,
             disabledWhenUnset: true,
+            resetIcon: Lucide.Ban,
             onReset: () async {
               await settings.resetSuggestionModel();
             },
@@ -810,6 +811,7 @@ class _ModelCard extends StatelessWidget {
     this.fallbackProvider,
     this.fallbackModelId,
     this.disabledWhenUnset = false,
+    this.resetIcon = Lucide.RotateCcw,
     this.configAction,
   });
 
@@ -821,6 +823,7 @@ class _ModelCard extends StatelessWidget {
   final String? fallbackProvider;
   final String? fallbackModelId;
   final bool disabledWhenUnset;
+  final IconData resetIcon;
   final VoidCallback onPick;
   final VoidCallback? onReset;
   final VoidCallback? configAction;
@@ -902,7 +905,7 @@ class _ModelCard extends StatelessWidget {
                   Tooltip(
                     message: l10n.defaultModelPageResetDefault,
                     child: _TactileIconButton(
-                      icon: Lucide.RotateCcw,
+                      icon: resetIcon,
                       color: cs.onSurface,
                       size: 20,
                       onTap: onReset!,

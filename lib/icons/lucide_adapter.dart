@@ -17,6 +17,7 @@ class Lucide {
   static const IconData Earth = lucide.LucideIcons.earth;
   static const IconData Plus = lucide.LucideIcons.plus;
   static const IconData X = lucide.LucideIcons.x;
+  static const IconData Ban = lucide.LucideIcons.ban;
   static const IconData Mic = lucide.LucideIcons.mic;
   static const IconData ArrowUp = lucide.LucideIcons.arrowUp;
   static const IconData ArrowLeft = lucide.LucideIcons.arrowLeft;

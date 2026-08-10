@@ -153,6 +153,7 @@ class DesktopDefaultModelPane extends StatelessWidget {
                     modelProvider: settings.suggestionModelProvider,
                     modelId: settings.suggestionModelId,
                     disabledWhenUnset: true,
+                    resetIcon: lucide.Lucide.Ban,
                     onReset: () async {
                       await context
                           .read<SettingsProvider>()
@@ -846,6 +847,7 @@ class _ModelCard extends StatefulWidget {
     this.fallbackProvider,
     this.fallbackModelId,
     this.disabledWhenUnset = false,
+    this.resetIcon = lucide.Lucide.RotateCcw,
     this.onReset,
     this.configAction,
   });
@@ -858,6 +860,7 @@ class _ModelCard extends StatefulWidget {
   final String? fallbackProvider;
   final String? fallbackModelId;
   final bool disabledWhenUnset;
+  final IconData resetIcon;
   final VoidCallback? onReset;
   final VoidCallback onPick;
   final VoidCallback? configAction;
@@ -945,7 +948,7 @@ class _ModelCardState extends State<_ModelCard> {
                   Tooltip(
                     message: l10n.defaultModelPageResetDefault,
                     child: _SmallIconBtn(
-                      icon: lucide.Lucide.RotateCcw,
+                      icon: widget.resetIcon,
                       onTap: widget.onReset!,
                     ),
                   ),
