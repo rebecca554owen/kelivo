@@ -15,6 +15,7 @@ import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/core/services/hive_migration_marker.dart';
 import 'package:Kelivo/features/migration/hive_to_sqlite_migration_service.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
@@ -57,6 +58,7 @@ void main() {
   tearDown(() async {
     await Hive.close();
     PathProviderPlatform.instance = previousPathProvider;
+    SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
@@ -293,9 +295,11 @@ void main() {
     );
     addTearDown(raw.close);
     expect(
-      raw.select(
-        "SELECT COUNT(*) AS c FROM message_part_rows WHERE kind = 'tool_result';",
-      ).single['c'],
+      raw
+          .select(
+            "SELECT COUNT(*) AS c FROM message_part_rows WHERE kind = 'tool_result';",
+          )
+          .single['c'],
       0,
     );
   });
@@ -463,9 +467,11 @@ void main() {
       expect(kinds, {'text': 1, 'tool_call': 2});
       expect(kinds.containsKey('tool_result'), isFalse);
       expect(
-        raw.select(
-          "SELECT COUNT(*) AS c FROM message_part_rows WHERE kind = 'tool_result';",
-        ).single['c'],
+        raw
+            .select(
+              "SELECT COUNT(*) AS c FROM message_part_rows WHERE kind = 'tool_result';",
+            )
+            .single['c'],
         0,
       );
     },
@@ -1024,27 +1030,30 @@ void main() {
     expect(File('${hiveFile.path}.retired').existsSync(), isTrue);
   });
 
-  test('replaceSqlite publishes the migrated database on the happy path', () async {
-    final live = File('${tempDir.path}/kelivo.db')
-      ..writeAsStringSync('old-placeholder');
-    final temp = File('${tempDir.path}/kelivo.db.migrating')
-      ..writeAsStringSync('migrated-contents');
-    final service = HiveToSqliteMigrationService(
-      HiveToSqliteMigrationDecision(
-        needsMigration: true,
-        appDataDir: tempDir,
-        sqliteFile: live,
-        hiveFiles: const <File>[],
-      ),
-    );
-    addTearDown(service.dispose);
+  test(
+    'replaceSqlite publishes the migrated database on the happy path',
+    () async {
+      final live = File('${tempDir.path}/kelivo.db')
+        ..writeAsStringSync('old-placeholder');
+      final temp = File('${tempDir.path}/kelivo.db.migrating')
+        ..writeAsStringSync('migrated-contents');
+      final service = HiveToSqliteMigrationService(
+        HiveToSqliteMigrationDecision(
+          needsMigration: true,
+          appDataDir: tempDir,
+          sqliteFile: live,
+          hiveFiles: const <File>[],
+        ),
+      );
+      addTearDown(service.dispose);
 
-    await service.replaceSqliteForTest(temp, live);
+      await service.replaceSqliteForTest(temp, live);
 
-    expect(await live.readAsString(), 'migrated-contents');
-    expect(temp.existsSync(), isFalse);
-    expect(File('${live.path}.previous').existsSync(), isFalse);
-  });
+      expect(await live.readAsString(), 'migrated-contents');
+      expect(temp.existsSync(), isFalse);
+      expect(File('${live.path}.previous').existsSync(), isFalse);
+    },
+  );
 
   test('replaceSqlite fails loudly when a temp -wal sidecar exists', () async {
     final live = File('${tempDir.path}/kelivo.db')
@@ -1105,34 +1114,31 @@ void main() {
     },
   );
 
-  test(
-    'replaceSqlite recovers after rename-aside before move-in',
-    () async {
-      final live = File('${tempDir.path}/kelivo.db');
-      final temp = File('${tempDir.path}/kelivo.db.migrating')
-        ..writeAsStringSync('migrated-contents');
-      final aside = File('${live.path}.previous')
-        ..writeAsStringSync('old-placeholder');
-      // Simulate kill after rename-aside: live gone, aside + temp remain.
-      expect(live.existsSync(), isFalse);
+  test('replaceSqlite recovers after rename-aside before move-in', () async {
+    final live = File('${tempDir.path}/kelivo.db');
+    final temp = File('${tempDir.path}/kelivo.db.migrating')
+      ..writeAsStringSync('migrated-contents');
+    final aside = File('${live.path}.previous')
+      ..writeAsStringSync('old-placeholder');
+    // Simulate kill after rename-aside: live gone, aside + temp remain.
+    expect(live.existsSync(), isFalse);
 
-      final service = HiveToSqliteMigrationService(
-        HiveToSqliteMigrationDecision(
-          needsMigration: true,
-          appDataDir: tempDir,
-          sqliteFile: live,
-          hiveFiles: const <File>[],
-        ),
-      );
-      addTearDown(service.dispose);
+    final service = HiveToSqliteMigrationService(
+      HiveToSqliteMigrationDecision(
+        needsMigration: true,
+        appDataDir: tempDir,
+        sqliteFile: live,
+        hiveFiles: const <File>[],
+      ),
+    );
+    addTearDown(service.dispose);
 
-      await service.replaceSqliteForTest(temp, live);
+    await service.replaceSqliteForTest(temp, live);
 
-      expect(await live.readAsString(), 'migrated-contents');
-      expect(temp.existsSync(), isFalse);
-      expect(aside.existsSync(), isFalse);
-    },
-  );
+    expect(await live.readAsString(), 'migrated-contents');
+    expect(temp.existsSync(), isFalse);
+    expect(aside.existsSync(), isFalse);
+  });
 
   test(
     'replaceSqlite recovers after move-in before retiring the old file',
@@ -1246,9 +1252,15 @@ void main() {
       expect(message.parts.whereType<ImagePart>(), hasLength(2));
       expect(message.parts.whereType<FilePart>(), hasLength(1));
       final missingImage = message.parts.whereType<ImagePart>().singleWhere(
-        (part) => part.uri == missingPath,
+        (part) => part.uri == 'kelivo-file:///images/missing.png',
       );
       expect(missingImage.unavailable, isTrue);
+      final presentImage = message.parts.whereType<ImagePart>().singleWhere(
+        (part) => part.uri == 'kelivo-file:///images/prompt.png',
+      );
+      expect(presentImage.unavailable, isFalse);
+      final presentFile = message.parts.whereType<FilePart>().single;
+      expect(presentFile.uri, 'kelivo-file:///upload/spec.pdf');
       // Markers must not remain only inside TextPart after conversion.
       expect(
         message.parts.whereType<TextPart>().any(
@@ -1354,8 +1366,6 @@ void main() {
       expect(message?.content, 'retry me');
     },
   );
-
-
 }
 
 void _registerHiveAdapters() {

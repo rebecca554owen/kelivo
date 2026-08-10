@@ -32,7 +32,8 @@ Future<String> _saveResponsesImageGenerationMarkdown(
   };
   final savedPath = await AppDirectories.saveBase64Image(mime, imageBase64);
   if (savedPath == null || savedPath.isEmpty) return '';
-  return '\n![image]($savedPath)\n';
+  final uri = SandboxPathResolver.canonicalize(savedPath);
+  return '\n![image]($uri)\n';
 }
 
 void _applyCompatibleBuiltInSearch(
@@ -540,8 +541,7 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
         role == 'user' &&
         i == lastUserIndex &&
         pendingAssistantMediaUrls.isNotEmpty;
-    final hasInternalMedia =
-        canImageInput && internalMediaRefs.isNotEmpty;
+    final hasInternalMedia = canImageInput && internalMediaRefs.isNotEmpty;
 
     if (originalContent is List) {
       dynamic content = canImageInput
@@ -555,7 +555,8 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
       // userImagePaths attachment. Merge those onto the last user turn, and
       // still stash assistant media — including image_url/video_url already
       // embedded in the List with no structured sidecar refs.
-      final listHasEmbeddedMedia = canImageInput &&
+      final listHasEmbeddedMedia =
+          canImageInput &&
           content is List &&
           content.any((part) {
             if (part is! Map) return false;
@@ -1383,8 +1384,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         m[multimodalInternalMediaPathsKey],
       );
       // Consume injected media refs for user and assistant history turns.
-      final hasInternalMedia =
-          canImageInput && internalMediaRefs.isNotEmpty;
+      final hasInternalMedia = canImageInput && internalMediaRefs.isNotEmpty;
       final hasAttachedImages =
           canImageInput &&
           (m['role'] == 'user') &&
@@ -1539,10 +1539,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 part,
           ];
           if (assistantContent.isEmpty) {
-            assistantContent.add({
-              'type': 'output_text',
-              'text': parsed.text,
-            });
+            assistantContent.add({'type': 'output_text', 'text': parsed.text});
           }
           input.add({
             'type': 'message',
@@ -2165,24 +2162,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           var currentMessages = mm2;
           while (true) {
             final Map<String, dynamic> body2 = {
-                    'model': upstreamModelId,
-                    'messages': await _buildOpenAIChatCompletionMessages(
-                      currentMessages,
-                      userMediaPaths: userImagePaths,
-                      canImageInput: canImageInput,
-                      allowRemoteImages: allowRemoteImages,
-                      stripUnsignedReasoningContent: isClaudeUpstream,
-                    ),
-                    'stream': true,
-                    if (temperature != null) 'temperature': temperature,
-                    if (topP != null) 'top_p': topP,
-                    if (isReasoning && effort != 'off' && effort != 'auto')
-                      'reasoning_effort': effort,
-                    if (tools != null && tools.isNotEmpty)
-                      'tools': _cleanToolsForCompatibility(tools),
-                    if (tools != null && tools.isNotEmpty)
-                      'tool_choice': 'auto',
-                  };
+              'model': upstreamModelId,
+              'messages': await _buildOpenAIChatCompletionMessages(
+                currentMessages,
+                userMediaPaths: userImagePaths,
+                canImageInput: canImageInput,
+                allowRemoteImages: allowRemoteImages,
+                stripUnsignedReasoningContent: isClaudeUpstream,
+              ),
+              'stream': true,
+              if (temperature != null) 'temperature': temperature,
+              if (topP != null) 'top_p': topP,
+              if (isReasoning && effort != 'off' && effort != 'auto')
+                'reasoning_effort': effort,
+              if (tools != null && tools.isNotEmpty)
+                'tools': _cleanToolsForCompatibility(tools),
+              if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
+            };
             setMaxTokens(body2);
 
             _applyVendorReasoningKnobs(
@@ -3564,24 +3560,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           var currentMessages = mm2;
           while (true) {
             final Map<String, dynamic> body2 = {
-                    'model': upstreamModelId,
-                    'messages': await _buildOpenAIChatCompletionMessages(
-                      currentMessages,
-                      userMediaPaths: userImagePaths,
-                      canImageInput: canImageInput,
-                      allowRemoteImages: allowRemoteImages,
-                      stripUnsignedReasoningContent: isClaudeUpstream,
-                    ),
-                    'stream': true,
-                    if (temperature != null) 'temperature': temperature,
-                    if (topP != null) 'top_p': topP,
-                    if (isReasoning && effort != 'off' && effort != 'auto')
-                      'reasoning_effort': effort,
-                    if (tools != null && tools.isNotEmpty)
-                      'tools': _cleanToolsForCompatibility(tools),
-                    if (tools != null && tools.isNotEmpty)
-                      'tool_choice': 'auto',
-                  };
+              'model': upstreamModelId,
+              'messages': await _buildOpenAIChatCompletionMessages(
+                currentMessages,
+                userMediaPaths: userImagePaths,
+                canImageInput: canImageInput,
+                allowRemoteImages: allowRemoteImages,
+                stripUnsignedReasoningContent: isClaudeUpstream,
+              ),
+              'stream': true,
+              if (temperature != null) 'temperature': temperature,
+              if (topP != null) 'top_p': topP,
+              if (isReasoning && effort != 'off' && effort != 'auto')
+                'reasoning_effort': effort,
+              if (tools != null && tools.isNotEmpty)
+                'tools': _cleanToolsForCompatibility(tools),
+              if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
+            };
             setMaxTokens(body2);
             _applyVendorReasoningKnobs(
               body2,
@@ -4070,24 +4065,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               var currentMessages = mm2;
               while (true) {
                 final Map<String, dynamic> body2 = {
-                        'model': upstreamModelId,
-                        'messages': await _buildOpenAIChatCompletionMessages(
-                          currentMessages,
-                          userMediaPaths: userImagePaths,
-                          canImageInput: canImageInput,
-                          allowRemoteImages: allowRemoteImages,
-                          stripUnsignedReasoningContent: isClaudeUpstream,
-                        ),
-                        'stream': true,
-                        if (temperature != null) 'temperature': temperature,
-                        if (topP != null) 'top_p': topP,
-                        if (isReasoning && effort != 'off' && effort != 'auto')
-                          'reasoning_effort': effort,
-                        if (tools != null && tools.isNotEmpty)
-                          'tools': _cleanToolsForCompatibility(tools),
-                        if (tools != null && tools.isNotEmpty)
-                          'tool_choice': 'auto',
-                      };
+                  'model': upstreamModelId,
+                  'messages': await _buildOpenAIChatCompletionMessages(
+                    currentMessages,
+                    userMediaPaths: userImagePaths,
+                    canImageInput: canImageInput,
+                    allowRemoteImages: allowRemoteImages,
+                    stripUnsignedReasoningContent: isClaudeUpstream,
+                  ),
+                  'stream': true,
+                  if (temperature != null) 'temperature': temperature,
+                  if (topP != null) 'top_p': topP,
+                  if (isReasoning && effort != 'off' && effort != 'auto')
+                    'reasoning_effort': effort,
+                  if (tools != null && tools.isNotEmpty)
+                    'tools': _cleanToolsForCompatibility(tools),
+                  if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
+                };
                 setMaxTokens(body2);
                 _applyVendorReasoningKnobs(
                   body2,

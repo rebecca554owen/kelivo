@@ -521,7 +521,8 @@ Future<String> _openAIImagesResponseToMarkdown(
         'Failed to save OpenAI Images API base64 image.',
       );
     }
-    lines.add('![image]($path)');
+    final uri = SandboxPathResolver.canonicalize(path);
+    lines.add('![image]($uri)');
   }
   return lines.join('\n\n');
 }

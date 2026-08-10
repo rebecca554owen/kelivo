@@ -17,17 +17,27 @@ class _ExtractorParams {
 
 class DocumentTextExtractor {
   /// Extracts text from a document file at [path] with [mime] type.
-  /// This operation is performed in a background isolate to avoid blocking the UI.
+  ///
+  /// Resolves via [SandboxPathResolver.resolveForIo] once, then delegates to
+  /// [extractResolved]. Prefer [extractResolved] when the caller already
+  /// resolved the path (avoid a second pass).
   static Future<String> extract({
     required String path,
     required String mime,
   }) async {
-    // Fix path before passing to isolate (isolate has no access to main UI context)
-    final fixedPath = SandboxPathResolver.fix(path);
+    final resolved = SandboxPathResolver.resolveForIo(path);
+    if (resolved == null) return '[[File not found: $path]]';
+    return extractResolved(path: resolved, mime: mime);
+  }
 
+  /// Extract using an already-resolved absolute filesystem path.
+  /// Does **not** call [SandboxPathResolver.fix] / [resolveForIo].
+  static Future<String> extractResolved({
+    required String path,
+    required String mime,
+  }) {
     // Offload the heavy work to a separate isolate using compute.
-    // This unblocks the main UI thread.
-    return compute(_extractTask, _ExtractorParams(fixedPath, mime));
+    return compute(_extractTask, _ExtractorParams(path, mime));
   }
 
   /// The heavy extraction logic that runs in a background isolate.

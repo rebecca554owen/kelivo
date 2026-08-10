@@ -4,6 +4,8 @@ import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/utils/kelivo_file_uri.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
@@ -45,9 +47,7 @@ void main() {
               id: 'path',
               conversationId: 'conversation',
               role: 'user',
-              parts: const [
-                ImagePart(uri: '/old/sandboxoldtoken/a.png'),
-              ],
+              parts: const [ImagePart(uri: '/old/sandboxoldtoken/a.png')],
             ),
             messageOrder: 1,
           ),
@@ -79,8 +79,10 @@ void main() {
         start: 0,
         limit: 10,
       )).last;
-      expect(migrated.parts.whereType<ImagePart>().single.uri,
-          '/new/sandboxnewtoken/a.png');
+      expect(
+        migrated.parts.whereType<ImagePart>().single.uri,
+        '/new/sandboxnewtoken/a.png',
+      );
     });
 
     test('同版本后续启动不读取候选消息', () async {
@@ -188,30 +190,150 @@ void main() {
       }
     });
 
+    test(
+      'stale unavailable cleared when rewritten local file exists',
+      () async {
+        final newFile = File('${directory.path}/sandboxnewtoken/a.png');
+        await newFile.parent.create(recursive: true);
+        await newFile.writeAsBytes(const <int>[0x89, 0x50, 0x4E, 0x47]);
 
-    test('stale unavailable cleared when rewritten local file exists', () async {
-      final newFile = File('${directory.path}/sandboxnewtoken/a.png');
-      await newFile.parent.create(recursive: true);
-      await newFile.writeAsBytes(const <int>[0x89, 0x50, 0x4E, 0x47]);
+        await repository.putMigrationBatch(
+          conversations: [
+            Conversation(
+              id: 'unavailable-conversation',
+              title: 'Unavailable',
+              messageIds: const ['unavailable-path'],
+            ),
+          ],
+          messages: [
+            (
+              message: ChatMessage(
+                id: 'unavailable-path',
+                conversationId: 'unavailable-conversation',
+                role: 'user',
+                parts: [
+                  ImagePart(
+                    uri: '/old/sandboxoldtoken/a.png',
+                    unavailable: true,
+                  ),
+                ],
+              ),
+              messageOrder: 0,
+            ),
+          ],
+          toolEventsByMessageId: const {},
+          geminiSignaturesByMessageId: const {},
+        );
+
+        await repository.migrateSandboxPaths(
+          targetVersion: 1,
+          targetRoot: directory.path,
+          rewriteUri: (uri) => uri.replaceFirst(
+            '/old/sandboxoldtoken/',
+            '${directory.path}/sandboxnewtoken/',
+          ),
+        );
+
+        final migrated = (await repository.getMessagesRange(
+          'unavailable-conversation',
+          start: 0,
+          limit: 10,
+        )).single;
+        final image = migrated.parts.whereType<ImagePart>().single;
+        expect(image.uri, newFile.path);
+        expect(image.unavailable, isFalse);
+      },
+    );
+
+    test('kelivo-file URI stays canonical when targetRoot changes', () async {
+      final uploadDir = Directory('${directory.path}/upload')
+        ..createSync(recursive: true);
+      final file = File('${uploadDir.path}/canon.png')
+        ..writeAsBytesSync(const <int>[0x89, 0x50, 0x4E, 0x47]);
+      SandboxPathResolver.debugSetDirs(docsDir: directory.path);
+      addTearDown(() {
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
+      });
 
       await repository.putMigrationBatch(
         conversations: [
           Conversation(
-            id: 'unavailable-conversation',
-            title: 'Unavailable',
-            messageIds: const ['unavailable-path'],
+            id: 'canon-conversation',
+            title: 'Canon',
+            messageIds: const ['canon-msg'],
           ),
         ],
         messages: [
           (
             message: ChatMessage(
-              id: 'unavailable-path',
-              conversationId: 'unavailable-conversation',
+              id: 'canon-msg',
+              conversationId: 'canon-conversation',
               role: 'user',
               parts: [
                 ImagePart(
-                  uri: '/old/sandboxoldtoken/a.png',
+                  uri: 'kelivo-file:///upload/canon.png',
                   unavailable: true,
+                ),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      // Prior receipt with a different root forces a re-run.
+      await repository.migrateSandboxPaths(
+        targetVersion: 1,
+        targetRoot: '/old-root',
+        rewriteUri: (uri) => KelivoFileUri.isKelivoFileUri(uri) ? uri : uri,
+      );
+
+      final result = await repository.migrateSandboxPaths(
+        targetVersion: 1,
+        targetRoot: directory.path,
+        rewriteUri: (uri) => KelivoFileUri.isKelivoFileUri(uri)
+            ? uri
+            : SandboxPathResolver.fix(uri),
+      );
+
+      expect(result.ran, isTrue);
+      final migrated = (await repository.getMessagesRange(
+        'canon-conversation',
+        start: 0,
+        limit: 10,
+      )).single;
+      final image = migrated.parts.whereType<ImagePart>().single;
+      expect(image.uri, 'kelivo-file:///upload/canon.png');
+      expect(image.unavailable, isFalse);
+      expect(file.existsSync(), isTrue);
+    });
+
+    test('kelivo-file unavailable recomputed when file missing', () async {
+      SandboxPathResolver.debugSetDirs(docsDir: directory.path);
+      addTearDown(() {
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
+      });
+
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: 'missing-canon',
+            title: 'Missing',
+            messageIds: const ['missing-msg'],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: 'missing-msg',
+              conversationId: 'missing-canon',
+              role: 'user',
+              parts: const [
+                ImagePart(
+                  uri: 'kelivo-file:///upload/does-not-exist.png',
+                  unavailable: false,
                 ),
               ],
             ),
@@ -224,22 +346,93 @@ void main() {
 
       await repository.migrateSandboxPaths(
         targetVersion: 1,
+        targetRoot: '/previous-root',
+        rewriteUri: (uri) => KelivoFileUri.isKelivoFileUri(uri) ? uri : uri,
+      );
+
+      await repository.migrateSandboxPaths(
+        targetVersion: 1,
         targetRoot: directory.path,
-        rewriteUri: (uri) => uri.replaceFirst(
-          '/old/sandboxoldtoken/',
-          '${directory.path}/sandboxnewtoken/',
-        ),
+        rewriteUri: (uri) => KelivoFileUri.isKelivoFileUri(uri)
+            ? uri
+            : SandboxPathResolver.fix(uri),
       );
 
       final migrated = (await repository.getMessagesRange(
-        'unavailable-conversation',
+        'missing-canon',
         start: 0,
         limit: 10,
       )).single;
       final image = migrated.parts.whereType<ImagePart>().single;
-      expect(image.uri, newFile.path);
-      expect(image.unavailable, isFalse);
+      expect(image.uri, 'kelivo-file:///upload/does-not-exist.png');
+      expect(image.unavailable, isTrue);
     });
+
+    test(
+      'canonicalize rewrite persists kelivo-file and skips UNC I/O',
+      () async {
+        final docs = Directory('${directory.path}/docs')..createSync();
+        final upload = Directory('${docs.path}/upload')..createSync();
+        final file = File('${upload.path}/a.png')
+          ..writeAsBytesSync(const [1, 2, 3]);
+        SandboxPathResolver.debugSetDirs(docsDir: docs.path);
+        addTearDown(() => SandboxPathResolver.debugSetDirs());
+
+        final now = DateTime.utc(2026, 1, 1);
+        await repository.putMigrationBatch(
+          conversations: [
+            Conversation(
+              id: 'canon-conversation',
+              title: 'Canon',
+              createdAt: now,
+              updatedAt: now,
+              messageIds: const ['canon-msg'],
+            ),
+          ],
+          messages: [
+            (
+              message: ChatMessage(
+                id: 'canon-msg',
+                conversationId: 'canon-conversation',
+                role: 'user',
+                content: '',
+                timestamp: now,
+                parts: [
+                  ImagePart(uri: file.path, mime: 'image/png'),
+                  ImagePart(
+                    uri: 'file://attacker/share/a.png',
+                    mime: 'image/png',
+                    unavailable: false,
+                  ),
+                ],
+              ),
+              messageOrder: 0,
+            ),
+          ],
+          toolEventsByMessageId: const {},
+          geminiSignaturesByMessageId: const {},
+        );
+
+        final result = await repository.migrateSandboxPaths(
+          targetVersion: 1,
+          targetRoot: docs.path,
+          rewriteUri: SandboxPathResolver.canonicalize,
+        );
+        expect(result.ran, isTrue);
+
+        final migrated = (await repository.getMessagesRange(
+          'canon-conversation',
+          start: 0,
+          limit: 10,
+        )).single;
+        final parts = migrated.parts.whereType<ImagePart>().toList();
+        expect(parts[0].uri, 'kelivo-file:///upload/a.png');
+        expect(parts[0].unavailable, isFalse);
+        expect(parts[1].uri, 'file://attacker/share/a.png');
+        expect(parts[1].unavailable, isTrue);
+      },
+    );
+
     test('拒绝高于当前实现的已有 migration version', () async {
       await repository.migrateSandboxPaths(
         targetVersion: 2,

@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import '../../models/message_part.dart';
 import '../../utils/multimodal_input_utils.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 
 class LegacyDecodeResult {
   final List<MessagePart> parts;
@@ -116,7 +115,7 @@ Future<LegacyDecodeResult> decodeLegacyContent(
       final mime = await inferAttachmentMime(uri: imageUri);
       parts.add(
         ImagePart(
-          uri: imageUri,
+          uri: SandboxPathResolver.canonicalize(imageUri),
           mime: mime,
           unavailable: missing,
         ),
@@ -144,7 +143,7 @@ Future<LegacyDecodeResult> decodeLegacyContent(
       );
       parts.add(
         FilePart(
-          uri: parsed.uri,
+          uri: SandboxPathResolver.canonicalize(parsed.uri),
           name: parsed.name,
           mime: mime,
           unavailable: missing,
@@ -355,4 +354,8 @@ String? _matchExclusiveFileMarker(String line) {
 
 bool _isLocalPath(String uri) => !isRemoteOrDataUri(uri);
 
-bool _defaultFileExists(String path) => File(path).existsSync();
+bool _defaultFileExists(String path) {
+  // Do not use fix(): its generic `/images/`·basename probe can mark a
+  // missing external path available when a same-named managed file exists.
+  return SandboxPathResolver.localFileExists(path);
+}

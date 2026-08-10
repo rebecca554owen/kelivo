@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import './app_directories.dart';
+import './sandbox_path_resolver.dart';
 
 class MarkdownMediaSanitizer {
   static final Uuid _uuid = const Uuid();
@@ -71,9 +72,10 @@ class MarkdownMediaSanitizer {
       }
 
       // Replace only the URL part inside the parentheses
+      final uri = SandboxPathResolver.canonicalize(file.path);
       final replaced = markdown
           .substring(m.start, m.end)
-          .replaceFirst(dataUrl, file.path);
+          .replaceFirst(dataUrl, uri);
       sb.write(replaced);
       last = m.end;
     }
@@ -112,15 +114,15 @@ class MarkdownMediaSanitizer {
       }
 
       try {
-        // Normalize file path
-        var path = url;
-        if (isFileUri) {
-          path = url.replaceFirst('file://', '');
+        // Single I/O gate: resolveForIo rejects UNC/SMB and avoids fix()'s
+        // generic `/images/` aliasing. null ⇒ do not touch disk.
+        final resolved = SandboxPathResolver.resolveForIo(url);
+        if (resolved == null) {
+          sb.write(markdown.substring(m.start, m.end));
+          last = m.end;
+          continue;
         }
-        // Read bytes and encode
-        final fixed =
-            path; // Caller may already pass sandbox-fixed paths; avoid depending on Flutter layer here
-        final f = File(fixed);
+        final f = File(resolved);
         if (!f.existsSync()) {
           // Fallback to original if missing
           sb.write(markdown.substring(m.start, m.end));
@@ -129,7 +131,7 @@ class MarkdownMediaSanitizer {
         }
         final bytes = await f.readAsBytes();
         final b64 = base64Encode(bytes);
-        final mime = _guessMimeFromPath(fixed);
+        final mime = _guessMimeFromPath(resolved);
         final dataUrl = 'data:$mime;base64,$b64';
         final replaced = markdown
             .substring(m.start, m.end)

@@ -9,6 +9,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../controllers/stream_controller.dart' as stream_ctrl;
@@ -372,7 +373,7 @@ class MessageGenerationService {
     for (final path in input.imagePaths) {
       parts.add(
         ImagePart(
-          uri: path,
+          uri: SandboxPathResolver.canonicalize(path),
           mime: await inferAttachmentMime(uri: path),
         ),
       );
@@ -380,7 +381,7 @@ class MessageGenerationService {
     for (final document in input.documents) {
       parts.add(
         FilePart(
-          uri: document.path,
+          uri: SandboxPathResolver.canonicalize(document.path),
           name: document.fileName,
           mime: await inferAttachmentMime(
             uri: document.path,

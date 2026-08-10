@@ -15,6 +15,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/chat/document_text_extractor.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
 import '../../../core/services/memory/memory_block_builder.dart';
 import '../../../core/services/memory/memory_prompts.dart';
@@ -609,15 +610,19 @@ class MessageBuilderService {
     }
 
     Future<String?> readDocument(DocumentAttachment d) async {
+      // Resolve once so cache key and extractor share the same absolute path.
+      // null means rejected (UNC/SMB) — never fall back to the raw path.
+      final resolvedPath = SandboxPathResolver.resolveForIo(d.path);
+      if (resolvedPath == null) return null;
       // Use file stat to detect content changes without hashing.
       FileStat? stat;
       try {
-        stat = await File(d.path).stat();
+        stat = await File(resolvedPath).stat();
       } catch (_) {
         stat = null;
       }
       if (stat != null) {
-        final cached = _docTextCache[d.path];
+        final cached = _docTextCache[resolvedPath];
         if (cached != null &&
             cached.modifiedMs == stat.modified.millisecondsSinceEpoch &&
             cached.size == stat.size) {
@@ -625,13 +630,13 @@ class MessageBuilderService {
         }
       }
       try {
-        final text = await DocumentTextExtractor.extract(
-          path: d.path,
+        final text = await DocumentTextExtractor.extractResolved(
+          path: resolvedPath,
           mime: d.mime,
         );
         // Cache only when stat is available; otherwise avoid staleness.
         if (stat != null) {
-          _docTextCache[d.path] = _DocTextCacheEntry(
+          _docTextCache[resolvedPath] = _DocTextCacheEntry(
             text: text,
             modifiedMs: stat.modified.millisecondsSinceEpoch,
             size: stat.size,
@@ -640,7 +645,7 @@ class MessageBuilderService {
         return text;
       } catch (_) {
         if (stat != null) {
-          _docTextCache[d.path] = _DocTextCacheEntry(
+          _docTextCache[resolvedPath] = _DocTextCacheEntry(
             text: null,
             modifiedMs: stat.modified.millisecondsSinceEpoch,
             size: stat.size,

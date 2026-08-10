@@ -11,6 +11,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:Kelivo/core/database/app_database.dart';
 import 'package:Kelivo/core/database/generation_run.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.path);
@@ -41,6 +42,10 @@ void main() {
       'kelivo_chat_service_test_',
     );
     PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+    SandboxPathResolver.debugSetDirs(
+      docsDir: tempDir.path,
+      supportDir: tempDir.path,
+    );
   });
 
   tearDown(() async {
@@ -49,6 +54,7 @@ void main() {
     }
     services.clear();
     await Hive.close();
+    SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
@@ -146,11 +152,7 @@ void main() {
         conversationId: conversation.id,
         role: 'user',
         parts: [
-          FilePart(
-            uri: upload.path,
-            name: 'spec.pdf',
-            mime: 'application/pdf',
-          ),
+          FilePart(uri: upload.path, name: 'spec.pdf', mime: 'application/pdf'),
         ],
       );
 
@@ -179,11 +181,7 @@ void main() {
         conversationId: conversation.id,
         role: 'user',
         parts: [
-          ImagePart(
-            uri: missing.path,
-            mime: 'image/png',
-            unavailable: true,
-          ),
+          ImagePart(uri: missing.path, mime: 'image/png', unavailable: true),
         ],
       );
 
@@ -207,11 +205,7 @@ void main() {
         conversationId: conversation.id,
         role: 'user',
         parts: [
-          FilePart(
-            uri: upload.path,
-            name: 'legacy.txt',
-            mime: 'text/plain',
-          ),
+          FilePart(uri: upload.path, name: 'legacy.txt', mime: 'text/plain'),
         ],
       );
       await first.close();

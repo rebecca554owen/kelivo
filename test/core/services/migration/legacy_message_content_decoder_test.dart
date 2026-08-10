@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/services/migration/legacy_message_content_decoder.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 
 void main() {
   late Directory tempDir;
@@ -24,57 +25,78 @@ void main() {
     return file;
   }
 
-  test('normal image and file markers convert with surrounding text merged', () async {
-    final image = await writeTemp('a.png', <int>[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-    final pdf = await writeTemp('spec.pdf', <int>[0x25, 0x50, 0x44, 0x46, 0x2D]); // %PDF-
-    final content = [
-      '帮我看看',
-      '[image:${image.path}]',
-      '[file:${pdf.path}|spec.pdf|application/pdf]',
-      '谢谢',
-    ].join('\n');
+  test(
+    'normal image and file markers convert with surrounding text merged',
+    () async {
+      final image = await writeTemp('a.png', <int>[
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+      ]);
+      final pdf = await writeTemp('spec.pdf', <int>[
+        0x25,
+        0x50,
+        0x44,
+        0x46,
+        0x2D,
+      ]); // %PDF-
+      final content = [
+        '帮我看看',
+        '[image:${image.path}]',
+        '[file:${pdf.path}|spec.pdf|application/pdf]',
+        '谢谢',
+      ].join('\n');
 
-    final result = await decodeLegacyContent(content);
+      final result = await decodeLegacyContent(content);
 
-    expect(result.converted, 2);
-    expect(result.malformed, 0);
-    expect(result.missingFiles, 0);
-    expect(result.parts, hasLength(4));
-    expect(result.parts[0], isA<TextPart>());
-    expect((result.parts[0] as TextPart).text, '帮我看看');
-    expect(result.parts[1], isA<ImagePart>());
-    final imagePart = result.parts[1] as ImagePart;
-    expect(imagePart.uri, image.path);
-    expect(imagePart.mime, 'image/png');
-    expect(imagePart.unavailable, isFalse);
-    expect(result.parts[2], isA<FilePart>());
-    final filePart = result.parts[2] as FilePart;
-    expect(filePart.uri, pdf.path);
-    expect(filePart.name, 'spec.pdf');
-    expect(filePart.mime, 'application/pdf');
-    expect(filePart.unavailable, isFalse);
-    expect(result.parts[3], isA<TextPart>());
-    expect((result.parts[3] as TextPart).text, '\n谢谢');
-    expect(
-      result.parts.whereType<TextPart>().map((part) => part.text).join(),
-      '帮我看看\n谢谢',
-    );
-  });
+      expect(result.converted, 2);
+      expect(result.malformed, 0);
+      expect(result.missingFiles, 0);
+      expect(result.parts, hasLength(4));
+      expect(result.parts[0], isA<TextPart>());
+      expect((result.parts[0] as TextPart).text, '帮我看看');
+      expect(result.parts[1], isA<ImagePart>());
+      final imagePart = result.parts[1] as ImagePart;
+      expect(imagePart.uri, image.path);
+      expect(imagePart.mime, 'image/png');
+      expect(imagePart.unavailable, isFalse);
+      expect(result.parts[2], isA<FilePart>());
+      final filePart = result.parts[2] as FilePart;
+      expect(filePart.uri, pdf.path);
+      expect(filePart.name, 'spec.pdf');
+      expect(filePart.mime, 'application/pdf');
+      expect(filePart.unavailable, isFalse);
+      expect(result.parts[3], isA<TextPart>());
+      expect((result.parts[3] as TextPart).text, '\n谢谢');
+      expect(
+        result.parts.whereType<TextPart>().map((part) => part.text).join(),
+        '帮我看看\n谢谢',
+      );
+    },
+  );
 
-  test('filename containing ] or | stays as text and counts malformed', () async {
-    final content = [
-      '[file:/tmp/a|name].pdf|application/pdf]',
-      '[file:/tmp/a|na|me|application/pdf]',
-    ].join('\n');
+  test(
+    'filename containing ] or | stays as text and counts malformed',
+    () async {
+      final content = [
+        '[file:/tmp/a|name].pdf|application/pdf]',
+        '[file:/tmp/a|na|me|application/pdf]',
+      ].join('\n');
 
-    final result = await decodeLegacyContent(content);
+      final result = await decodeLegacyContent(content);
 
-    expect(result.converted, 0);
-    expect(result.malformed, 2);
-    expect(result.parts, hasLength(1));
-    expect(result.parts.single, isA<TextPart>());
-    expect((result.parts.single as TextPart).text, content);
-  });
+      expect(result.converted, 0);
+      expect(result.malformed, 2);
+      expect(result.parts, hasLength(1));
+      expect(result.parts.single, isA<TextPart>());
+      expect((result.parts.single as TextPart).text, content);
+    },
+  );
 
   test('inline markers remain plain text', () async {
     const content = 'see [image:/tmp/a.png] please';
@@ -183,31 +205,37 @@ void main() {
     }
   });
 
-  test('existing image/file parts skip re-parse (message-level idempotency)', () async {
-    const existing = [
-      TextPart('already structured'),
-      ImagePart(uri: '/tmp/a.png', mime: 'image/png'),
-    ];
-    final result = await decodeLegacyContent(
-      'ignored\n[image:/tmp/other.png]',
-      existingParts: existing,
-    );
+  test(
+    'existing image/file parts skip re-parse (message-level idempotency)',
+    () async {
+      const existing = [
+        TextPart('already structured'),
+        ImagePart(uri: '/tmp/a.png', mime: 'image/png'),
+      ];
+      final result = await decodeLegacyContent(
+        'ignored\n[image:/tmp/other.png]',
+        existingParts: existing,
+      );
 
-    expect(result.converted, 0);
-    expect(result.malformed, 0);
-    expect(result.missingFiles, 0);
-    expect(result.parts, same(existing));
-  });
+      expect(result.converted, 0);
+      expect(result.malformed, 0);
+      expect(result.missingFiles, 0);
+      expect(result.parts, same(existing));
+    },
+  );
 
-  test('content sniff overrides misleading extension for local image', () async {
-    // JPEG magic bytes saved as .bin
-    final file = await writeTemp('weird.bin', <int>[0xFF, 0xD8, 0xFF, 0xE0]);
-    final content = '[image:${file.path}]';
-    final result = await decodeLegacyContent(content);
+  test(
+    'content sniff overrides misleading extension for local image',
+    () async {
+      // JPEG magic bytes saved as .bin
+      final file = await writeTemp('weird.bin', <int>[0xFF, 0xD8, 0xFF, 0xE0]);
+      final content = '[image:${file.path}]';
+      final result = await decodeLegacyContent(content);
 
-    final image = result.parts.single as ImagePart;
-    expect(image.mime, 'image/jpeg');
-  });
+      final image = result.parts.single as ImagePart;
+      expect(image.mime, 'image/jpeg');
+    },
+  );
 
   test('unrecognized marker-like lines are preserved, never dropped', () async {
     const content = '[image:]\n[file:]\nnot a marker';
@@ -219,24 +247,24 @@ void main() {
     expect(text, content);
   });
 
-  test('newlines across converted markers are preserved in joined content', () async {
-    const content = 'a\n[image:https://example.com/x.png]\nb';
-    final result = await decodeLegacyContent(content);
+  test(
+    'newlines across converted markers are preserved in joined content',
+    () async {
+      const content = 'a\n[image:https://example.com/x.png]\nb';
+      final result = await decodeLegacyContent(content);
 
-    expect(result.converted, 1);
-    expect(result.parts, hasLength(3));
-    expect((result.parts[0] as TextPart).text, 'a');
-    expect(result.parts[1], isA<ImagePart>());
-    expect((result.parts[2] as TextPart).text, '\nb');
-    expect(
-      result.parts.whereType<TextPart>().map((part) => part.text).join(),
-      'a\nb',
-    );
-    expect(
-      stripLegacyContentTextSegments(content).join(),
-      'a\nb',
-    );
-  });
+      expect(result.converted, 1);
+      expect(result.parts, hasLength(3));
+      expect((result.parts[0] as TextPart).text, 'a');
+      expect(result.parts[1], isA<ImagePart>());
+      expect((result.parts[2] as TextPart).text, '\nb');
+      expect(
+        result.parts.whereType<TextPart>().map((part) => part.text).join(),
+        'a\nb',
+      );
+      expect(stripLegacyContentTextSegments(content).join(), 'a\nb');
+    },
+  );
 
   test('CRLF-only legacy content round-trips CRLF in TextPart', () async {
     const content = 'a\r\n[image:https://example.com/x.png]\r\nb';
@@ -251,10 +279,7 @@ void main() {
       result.parts.whereType<TextPart>().map((part) => part.text).join(),
       'a\r\nb',
     );
-    expect(
-      stripLegacyContentTextSegments(content).join(),
-      'a\r\nb',
-    );
+    expect(stripLegacyContentTextSegments(content).join(), 'a\r\nb');
   });
 
   test('LF legacy content still joins with LF', () async {
@@ -322,7 +347,11 @@ void main() {
     expect(stripLegacyContentTextSegments(content).join(), 'a\nb\nc');
     // Must not normalize the whole body to CRLF.
     expect(
-      result.parts.whereType<TextPart>().map((part) => part.text).join().contains('\r\n'),
+      result.parts
+          .whereType<TextPart>()
+          .map((part) => part.text)
+          .join()
+          .contains('\r\n'),
       isFalse,
     );
   });
@@ -333,5 +362,59 @@ void main() {
     expect(result.parts, hasLength(1));
     expect((result.parts.single as TextPart).text, content);
     expect(stripLegacyContentTextSegments(content).join(), content);
+  });
+
+  test('managed Documents absolute path becomes kelivo-file URI', () async {
+    final docs = Directory('${tempDir.path}/Documents')..createSync();
+    SandboxPathResolver.debugSetDirs(docsDir: docs.path);
+    addTearDown(() => SandboxPathResolver.debugSetDirs());
+    final uploadDir = Directory('${docs.path}/upload')..createSync();
+    final image = File('${uploadDir.path}/shot.png')
+      ..writeAsBytesSync(const <int>[0x89, 0x50, 0x4E, 0x47]);
+    final content = '[image:${image.path}]';
+
+    final result = await decodeLegacyContent(content);
+
+    expect(result.converted, 1);
+    expect(result.missingFiles, 0);
+    final part = result.parts.single as ImagePart;
+    expect(part.uri, 'kelivo-file:///upload/shot.png');
+    expect(part.unavailable, isFalse);
+
+    final again = await decodeLegacyContent(
+      content,
+      existingParts: result.parts,
+    );
+    expect(again.converted, 0);
+    expect(
+      (again.parts.single as ImagePart).uri,
+      'kelivo-file:///upload/shot.png',
+    );
+  });
+
+  test(
+    'missing managed file still yields unavailable kelivo-file part',
+    () async {
+      final docs = Directory('${tempDir.path}/Documents')..createSync();
+      SandboxPathResolver.debugSetDirs(docsDir: docs.path);
+      addTearDown(() => SandboxPathResolver.debugSetDirs());
+      final missing = '${docs.path}/upload/gone.png';
+      final result = await decodeLegacyContent('[image:$missing]');
+      expect(result.converted, 1);
+      expect(result.missingFiles, 1);
+      final part = result.parts.single as ImagePart;
+      expect(part.uri, 'kelivo-file:///upload/gone.png');
+      expect(part.unavailable, isTrue);
+    },
+  );
+
+  test('ordinary user Documents path is not claimed as kelivo-file', () async {
+    SandboxPathResolver.debugSetDirs(docsDir: '${tempDir.path}/app_docs');
+    addTearDown(() => SandboxPathResolver.debugSetDirs());
+    const external = '/Users/alice/Documents/images/report.png';
+    final result = await decodeLegacyContent('[image:$external]');
+    expect(result.converted, 1);
+    final part = result.parts.single as ImagePart;
+    expect(part.uri, external);
   });
 }

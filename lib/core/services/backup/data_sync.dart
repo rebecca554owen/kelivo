@@ -46,12 +46,102 @@ typedef _VersionedBackupInfo = ({
   String normalizedManifestSha256,
 });
 
-
 /// Recompute [ImagePart]/[FilePart.unavailable] against the live filesystem.
 ///
-/// Remote/data URIs stay available. Local URIs use [SandboxPathResolver.fix]
-/// and [File.existsSync]. Intended for post-file-restore refresh of legacy
-/// chats.json imports that decoded before assets were copied.
+/// Remote/data URIs stay available. Local URIs use
+/// [SandboxPathResolver.localFileExists] (structured remap only; no generic
+/// images/upload basename probe).
+/// Intended for post-file-restore refresh of legacy chats.json imports that
+/// decoded before assets were copied.
+
+List<MessagePart> _normalizeAttachmentPartUris(List<MessagePart> parts) {
+  var changed = false;
+  final out = <MessagePart>[];
+  for (final part in parts) {
+    if (part is ImagePart) {
+      final uri = SandboxPathResolver.canonicalize(part.uri);
+      if (uri != part.uri) {
+        changed = true;
+        out.add(
+          ImagePart(
+            uri: uri,
+            mime: part.mime,
+            assetId: part.assetId,
+            unavailable: part.unavailable,
+          ),
+        );
+      } else {
+        out.add(part);
+      }
+    } else if (part is FilePart) {
+      final uri = SandboxPathResolver.canonicalize(part.uri);
+      if (uri != part.uri) {
+        changed = true;
+        out.add(
+          FilePart(
+            uri: uri,
+            name: part.name,
+            mime: part.mime,
+            assetId: part.assetId,
+            unavailable: part.unavailable,
+          ),
+        );
+      } else {
+        out.add(part);
+      }
+    } else {
+      out.add(part);
+    }
+  }
+  return changed ? out : parts;
+}
+
+List<MessagePart> _remapRestoredAttachmentPartUris(List<MessagePart> parts) {
+  var changed = false;
+  final out = <MessagePart>[];
+  for (final part in parts) {
+    if (part is ImagePart) {
+      final uri =
+          SandboxPathResolver.tryRemapRestoredManagedAbsolute(part.uri) ??
+          part.uri;
+      if (uri != part.uri) {
+        changed = true;
+        out.add(
+          ImagePart(
+            uri: uri,
+            mime: part.mime,
+            assetId: part.assetId,
+            unavailable: part.unavailable,
+          ),
+        );
+      } else {
+        out.add(part);
+      }
+    } else if (part is FilePart) {
+      final uri =
+          SandboxPathResolver.tryRemapRestoredManagedAbsolute(part.uri) ??
+          part.uri;
+      if (uri != part.uri) {
+        changed = true;
+        out.add(
+          FilePart(
+            uri: uri,
+            name: part.name,
+            mime: part.mime,
+            assetId: part.assetId,
+            unavailable: part.unavailable,
+          ),
+        );
+      } else {
+        out.add(part);
+      }
+    } else {
+      out.add(part);
+    }
+  }
+  return changed ? out : parts;
+}
+
 List<MessagePart> recomputeAttachmentAvailability(
   List<MessagePart> parts, {
   bool Function(String path)? fileExists,
@@ -96,8 +186,9 @@ bool _unavailableForUri(String uri, bool Function(String path) exists) {
 }
 
 bool _attachmentExistsOnDisk(String path) {
-  final fixed = SandboxPathResolver.fix(path);
-  return File(fixed).existsSync();
+  // Do not use fix(): its generic `/images/`·basename probe can mark a
+  // missing external path available when a same-named managed file exists.
+  return SandboxPathResolver.localFileExists(path);
 }
 
 class DataSync {
@@ -1385,6 +1476,11 @@ class DataSync {
           message = message.copyWith(parts: decoded.parts);
         }
       }
+      // Import boundary: persist managed local attachments as kelivo-file URIs.
+      final normalized = _normalizeAttachmentPartUris(message.parts);
+      if (!identical(normalized, message.parts)) {
+        message = message.copyWith(parts: normalized);
+      }
       messages.add(message);
     }
     if (converted > 0 || malformed > 0 || missingFiles > 0) {
@@ -1818,6 +1914,14 @@ class DataSync {
           _lastMergeReport = await chatService.mergeDatabaseSnapshot(
             File(p.join(extractDir.path, _databaseEntryName)),
           );
+          // Chats-only: never leave local attachments marked available when
+          // files were not restored (path collision on target is insufficient).
+          if (!restoreFiles && _lastMergeReport != null) {
+            await chatService.recomputeImportedAttachmentAvailability(
+              conversationIds: _lastMergeReport!.importedConversationIds,
+              filesRestored: false,
+            );
+          }
         }
         pendingBusinessRestore = () => businessRestore.merge(
           settings,
@@ -1965,12 +2069,32 @@ class DataSync {
           await _restoreAssetDirectoriesAdditive(restorePayloadDirectory);
         }
       }
-      // Legacy chats.json decodes before assets exist; refresh availability
-      // once upload/images are on disk so local parts are not stuck unavailable.
+      // Legacy chats.json decodes before assets exist. After files land,
+      // directed-remap old absolute roots onto restored managed relatives,
+      // then refresh availability (no global generic canonicalize fallback).
       if (restoreChats && cfg.includeFiles) {
+        if (SandboxPathResolver.docsDir == null) {
+          await SandboxPathResolver.init();
+        }
         final refreshed = <ChatMessage>[];
         for (final message in messages) {
-          final nextParts = recomputeAttachmentAvailability(message.parts);
+          final remapped = _remapRestoredAttachmentPartUris(message.parts);
+          final nextParts = recomputeAttachmentAvailability(remapped);
+          refreshed.add(
+            identical(nextParts, message.parts)
+                ? message
+                : message.copyWith(parts: nextParts),
+          );
+        }
+        messages = refreshed;
+      } else if (restoreChats && !cfg.includeFiles) {
+        // Chats-only legacy import: local attachments unavailable by default.
+        final refreshed = <ChatMessage>[];
+        for (final message in messages) {
+          final nextParts = recomputeAttachmentAvailability(
+            message.parts,
+            fileExists: (_) => false,
+          );
           refreshed.add(
             identical(nextParts, message.parts)
                 ? message

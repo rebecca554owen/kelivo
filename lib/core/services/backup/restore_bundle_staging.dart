@@ -176,6 +176,14 @@ final class RestoreBundleStaging {
         expectedDatabaseInfo: declaredDatabaseInfo,
         durability: resolvedDurability,
       );
+      if (!includeFiles) {
+        // Overwrite chats-only: mark local attachments unavailable before
+        // publish so target same-path files cannot be treated as restored.
+        await ChatDatabaseRepository.recomputeAttachmentAvailabilityOnDatabaseFile(
+          databaseFile: stagedDatabaseFile,
+          filesRestored: false,
+        );
+      }
       stagedEntries[_databaseEntry] = (
         bytes: await stagedDatabaseFile.length(),
         sha256: await _sha256(stagedDatabaseFile),

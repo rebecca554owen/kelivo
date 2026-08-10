@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../models/chat_input_data.dart';
+import '../../utils/sandbox_path_resolver.dart';
 
 const String multimodalInternalMediaPathsKey = '_kelivo_media_paths';
 const String multimodalInternalRevisionIdKey = '_kelivo_revision_id';
@@ -227,7 +228,9 @@ Future<String?> inferAttachmentMime({
 
 Future<String?> sniffMimeFromFile(String path) async {
   try {
-    final file = File(path);
+    final resolved = SandboxPathResolver.resolveForIo(path);
+    if (resolved == null) return null;
+    final file = File(resolved);
     if (!file.existsSync()) return null;
     final raf = await file.open();
     try {

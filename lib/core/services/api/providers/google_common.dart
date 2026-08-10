@@ -480,9 +480,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       final hasInternalMedia = internalMediaRefs.isNotEmpty;
       final hasAttachedImages =
           isLast && role == 'user' && (userImagePaths?.isNotEmpty == true);
-      if (hasMarkdownImages ||
-          hasAttachedImages ||
-          hasInternalMedia) {
+      if (hasMarkdownImages || hasAttachedImages || hasInternalMedia) {
         final parsed = await _parseTextAndImages(
           raw,
           // Gemini API 目前无法直接拉取远程 http(s) 图片
@@ -972,9 +970,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
     final hasAttachedImages =
         isLast && role == 'user' && (userImagePaths?.isNotEmpty == true);
 
-    if (hasMarkdownImages ||
-        hasAttachedImages ||
-        hasInternalMedia) {
+    if (hasMarkdownImages || hasAttachedImages || hasInternalMedia) {
       final parsed = await _parseTextAndImages(
         raw,
         // Gemini API 目前无法直接拉取远程 http(s) 图片
@@ -1304,9 +1300,10 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       pendingImageData = '';
       pendingImageTrailingText = '';
       if (path == null || path.isEmpty) return '';
+      final uri = SandboxPathResolver.canonicalize(path);
       final sb = StringBuffer()
         ..write('\n\n![image](')
-        ..write(path)
+        ..write(uri)
         ..write(')');
       if (trailing.isNotEmpty) {
         sb.write(trailing);

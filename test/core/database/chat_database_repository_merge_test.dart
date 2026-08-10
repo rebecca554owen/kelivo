@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
@@ -130,6 +131,44 @@ void main() {
       );
     }
 
+    Future<void> putConversationWithAttachments(
+      ChatDatabaseRepository repository, {
+      required String conversationId,
+      required String messageId,
+      required String content,
+      required List<MessagePart> parts,
+    }) {
+      final anchor = DateTime.utc(2026, 8, 7, 12);
+      return repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Attachments',
+            createdAt: anchor,
+            updatedAt: anchor,
+            messageIds: [messageId],
+            mcpServerIds: const ['server'],
+            versionSelections: {messageId: 0},
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'user',
+              content: content,
+              conversationId: conversationId,
+              timestamp: anchor,
+              parts: parts,
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+    }
+
     Future<void> reopenLive() async {
       await live.close();
       live = ChatDatabaseRepository.open(
@@ -247,9 +286,11 @@ void main() {
       expect(await live.getAllConversations(), hasLength(2));
 
       expect(
-        (await live.getMessagesRange('swap', start: 0, limit: 10))
-            .map((message) => message.content)
-            .toList(),
+        (await live.getMessagesRange(
+          'swap',
+          start: 0,
+          limit: 10,
+        )).map((message) => message.content).toList(),
         const ['alpha content', 'beta content'],
       );
       final imported = await live.getMessagesRange(
@@ -257,17 +298,121 @@ void main() {
         start: 0,
         limit: 10,
       );
-      expect(
-        imported.map((message) => message.content).toList(),
-        const ['beta content', 'alpha content'],
-      );
-      expect(
-        imported.map((message) => message.reasoningText).toList(),
-        const ['beta reasoning', 'alpha reasoning'],
-      );
+      expect(imported.map((message) => message.content).toList(), const [
+        'beta content',
+        'alpha content',
+      ]);
+      expect(imported.map((message) => message.reasoningText).toList(), const [
+        'beta reasoning',
+        'alpha reasoning',
+      ]);
       expect(await live.getToolEvents(imported.first.id), const [
         {'id': 'tool', 'content': 'beta tool'},
       ]);
+    });
+
+    test('正文相同但附件不同不会被误判为重复', () async {
+      await putConversationWithAttachments(
+        live,
+        conversationId: 'attach',
+        messageId: 'attach-msg',
+        content: 'same body',
+        parts: const [
+          ImagePart(
+            uri: 'kelivo-file:///upload/a.png',
+            mime: 'image/png',
+            assetId: 'asset-a',
+          ),
+        ],
+      );
+      await putConversationWithAttachments(
+        source,
+        conversationId: 'attach',
+        messageId: 'attach-msg',
+        content: 'same body',
+        parts: const [
+          ImagePart(
+            uri: 'kelivo-file:///upload/b.png',
+            mime: 'image/png',
+            assetId: 'asset-b',
+          ),
+        ],
+      );
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+      expect(report.deduplicatedConversations, 0);
+      expect(report.importedConversations, 1);
+      expect(await live.getAllConversations(), hasLength(2));
+    });
+
+    test('仅 unavailable 不同仍按附件身份去重', () async {
+      await putConversationWithAttachments(
+        live,
+        conversationId: 'avail',
+        messageId: 'avail-msg',
+        content: 'same body',
+        parts: const [
+          ImagePart(
+            uri: 'kelivo-file:///upload/a.png',
+            mime: 'image/png',
+            assetId: 'asset-a',
+            unavailable: false,
+          ),
+        ],
+      );
+      await putConversationWithAttachments(
+        source,
+        conversationId: 'avail',
+        messageId: 'avail-msg',
+        content: 'same body',
+        parts: const [
+          ImagePart(
+            uri: 'kelivo-file:///upload/a.png',
+            mime: 'image/png',
+            assetId: 'asset-a',
+            unavailable: true,
+          ),
+        ],
+      );
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+      expect(report.deduplicatedConversations, 1);
+      expect(report.importedConversations, 0);
+      expect(await live.getAllConversations(), hasLength(1));
+    });
+
+    test('附件 ordinal 顺序不同产生不同指纹', () async {
+      await putConversationWithAttachments(
+        live,
+        conversationId: 'order',
+        messageId: 'order-msg',
+        content: 'same body',
+        parts: const [
+          ImagePart(uri: 'kelivo-file:///upload/a.png', mime: 'image/png'),
+          ImagePart(uri: 'kelivo-file:///upload/b.png', mime: 'image/png'),
+        ],
+      );
+      await putConversationWithAttachments(
+        source,
+        conversationId: 'order',
+        messageId: 'order-msg',
+        content: 'same body',
+        parts: const [
+          ImagePart(uri: 'kelivo-file:///upload/b.png', mime: 'image/png'),
+          ImagePart(uri: 'kelivo-file:///upload/a.png', mime: 'image/png'),
+        ],
+      );
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+      expect(report.deduplicatedConversations, 0);
+      expect(report.importedConversations, 1);
+      expect(await live.getAllConversations(), hasLength(2));
     });
 
     test('同 conversation ID 异内容时整会话 remap 并可重复去重', () async {
@@ -409,11 +554,7 @@ void main() {
       );
       await source.putMigrationBatch(
         conversations: [
-          Conversation(
-            id: 'versioned',
-            title: 'Imported',
-            messageIds: [v0.id],
-          ),
+          Conversation(id: 'versioned', title: 'Imported', messageIds: [v0.id]),
         ],
         messages: [(message: v0, messageOrder: 0)],
         toolEventsByMessageId: const {},

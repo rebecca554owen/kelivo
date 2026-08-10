@@ -19,6 +19,9 @@ import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/backup.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/utils/kelivo_file_uri.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 import 'package:Kelivo/core/providers/backup_provider.dart';
 import 'package:Kelivo/core/services/backup/data_sync.dart';
 import 'package:Kelivo/core/services/backup/restore_receipt.dart';
@@ -3111,5 +3114,98 @@ void main() {
         expect(await tmpDir.list().toList(), isEmpty);
       },
     );
+  });
+
+  group('kelivo-file portable attachments', () {
+    test('resolve after root change without rewriting persisted URIs', () async {
+      final rootA = await Directory.systemTemp.createTemp(
+        'kelivo_file_root_a_',
+      );
+      final rootB = await Directory.systemTemp.createTemp(
+        'kelivo_file_root_b_',
+      );
+      addTearDown(() async {
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
+        if (await rootA.exists()) await rootA.delete(recursive: true);
+        if (await rootB.exists()) await rootB.delete(recursive: true);
+      });
+
+      SandboxPathResolver.debugSetDirs(docsDir: rootA.path);
+      final dbFile = File('${rootA.path}/kelivo.db');
+      final repository = ChatDatabaseRepository.open(file: dbFile);
+      await repository.ensureReady();
+
+      final uploadA = Directory('${rootA.path}/upload')
+        ..createSync(recursive: true);
+      final bytes = const <int>[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+      File('${uploadA.path}/pic.png').writeAsBytesSync(bytes);
+
+      const uri = 'kelivo-file:///upload/pic.png';
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: 'c-portable',
+            title: 'Portable',
+            messageIds: const ['m-portable'],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: 'm-portable',
+              conversationId: 'c-portable',
+              role: 'user',
+              content: 'portable',
+              parts: const [ImagePart(uri: uri)],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+      await repository.close();
+
+      // Simulate backup restore onto a different container root: copy DB+file,
+      // switch docsDir, and do NOT rewrite message URIs.
+      final dbB = File('${rootB.path}/kelivo.db');
+      await dbFile.copy(dbB.path);
+      final uploadB = Directory('${rootB.path}/upload')
+        ..createSync(recursive: true);
+      File('${uploadB.path}/pic.png').writeAsBytesSync(bytes);
+
+      SandboxPathResolver.debugSetDirs(docsDir: rootB.path);
+      final restoredRepo = ChatDatabaseRepository.open(file: dbB);
+      addTearDown(restoredRepo.close);
+      await restoredRepo.ensureReady();
+
+      final before = (await restoredRepo.getMessagesRange(
+        'c-portable',
+        start: 0,
+        limit: 1,
+      )).single;
+      expect(before.parts.whereType<ImagePart>().single.uri, uri);
+
+      final resolved = SandboxPathResolver.fix(uri);
+      expect(resolved, '${rootB.path}/upload/pic.png');
+      expect(File(resolved).existsSync(), isTrue);
+
+      // Path-migration pass with the production rewriteUri must leave URI intact.
+      final result = await restoredRepo.migrateSandboxPaths(
+        targetVersion: 1,
+        targetRoot: rootB.path,
+        rewriteUri: (value) => KelivoFileUri.isKelivoFileUri(value)
+            ? value
+            : SandboxPathResolver.fix(value),
+      );
+      expect(result.ran, isTrue);
+      final after = (await restoredRepo.getMessagesRange(
+        'c-portable',
+        start: 0,
+        limit: 1,
+      )).single;
+      expect(after.parts.whereType<ImagePart>().single.uri, uri);
+      expect(after.parts.whereType<ImagePart>().single.unavailable, isFalse);
+    });
   });
 }

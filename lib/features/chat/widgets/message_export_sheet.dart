@@ -3010,6 +3010,8 @@ class _Parsed {
   _Parsed(this.text, this.images, this.docs);
 }
 
+/// Display-only document ref (fileName/MIME). If future code reads [path],
+/// resolve via [SandboxPathResolver.fix] first — it may be a kelivo-file URI.
 class _DocRef {
   final String path;
   final String fileName;

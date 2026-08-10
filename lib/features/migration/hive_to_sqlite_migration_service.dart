@@ -18,6 +18,7 @@ import '../../core/services/backup/backup_settings_validator.dart';
 import '../../core/services/backup/restore_durability.dart';
 import '../../core/services/migration/legacy_message_content_decoder.dart';
 import '../../utils/app_directories.dart';
+import '../../utils/sandbox_path_resolver.dart';
 
 enum HiveToSqliteMigrationStage {
   intro,
@@ -146,10 +147,8 @@ class HiveToSqliteMigrationDecision {
 }
 
 class HiveToSqliteMigrationService {
-  HiveToSqliteMigrationService(
-    this.decision, {
-    RestoreDurability? durability,
-  }) : _durability = durability ?? RestorePlatformDurability();
+  HiveToSqliteMigrationService(this.decision, {RestoreDurability? durability})
+    : _durability = durability ?? RestorePlatformDurability();
 
   static const skipAttemptThreshold = 2;
   static const _attemptStateFileName =
@@ -179,7 +178,8 @@ class HiveToSqliteMigrationService {
   /// Invoked after all batches are written and immediately before [_validate].
   /// Tests use this to corrupt the temporary database and assert rollback.
   @visibleForTesting
-  Future<void> Function(ChatDatabaseRepository repo)? debugBeforeValidateForTest;
+  Future<void> Function(ChatDatabaseRepository repo)?
+  debugBeforeValidateForTest;
   final RestoreDurability _durability;
   final _controller = StreamController<HiveToSqliteMigrationStatus>.broadcast();
   final _log = <String>[];
@@ -229,9 +229,7 @@ class HiveToSqliteMigrationService {
       final repo = ChatDatabaseRepository.open(file: sqliteFile);
       try {
         if (await repo.isMigrationComplete()) {
-          await _deleteSqliteFamilyStatic(
-            File('${sqliteFile.path}.previous'),
-          );
+          await _deleteSqliteFamilyStatic(File('${sqliteFile.path}.previous'));
           return HiveToSqliteMigrationDecision(
             needsMigration: false,
             appDataDir: appDataDir,
@@ -421,6 +419,9 @@ class HiveToSqliteMigrationService {
     LazyBox<dynamic>? toolEventsBox;
     var published = false;
     try {
+      // Bind canonicalize to this process's app data root (refresh even if a
+      // previous test/session left docsDir pointing elsewhere).
+      await SandboxPathResolver.init();
       await _beginAttempt();
       await _recordStageBreadcrumb(
         HiveToSqliteMigrationStage.migrating,
@@ -560,6 +561,7 @@ class HiveToSqliteMigrationService {
               // Match repository persistence: empty body becomes one empty text part.
               parts = const <MessagePart>[TextPart('')];
             }
+            parts = _normalizeAttachmentPartUris(parts);
             message = message.copyWith(parts: parts);
             expectedImageParts += parts.whereType<ImagePart>().length;
             expectedFileParts += parts.whereType<FilePart>().length;
@@ -567,7 +569,9 @@ class HiveToSqliteMigrationService {
             order++;
             // Expected digest comes from independently stripped legacy text,
             // not merely echoing decoder TextPart objects.
-            for (final segment in stripLegacyContentTextSegments(legacyContent)) {
+            for (final segment in stripLegacyContentTextSegments(
+              legacyContent,
+            )) {
               ChatDatabaseRepository.mixTextPartContentDigest(
                 expectedTextContentDigest,
                 message.id,
@@ -664,9 +668,10 @@ class HiveToSqliteMigrationService {
         repo,
         expectedConversations: conversations.length,
         expectedMessages: migratedMessages,
-        expectedTextContentDigest: ChatDatabaseRepository.textPartContentDigestHex(
-          expectedTextContentDigest,
-        ),
+        expectedTextContentDigest:
+            ChatDatabaseRepository.textPartContentDigestHex(
+              expectedTextContentDigest,
+            ),
         expectedToolCallParts: expectedToolCallParts,
         expectedImageParts: expectedImageParts,
         expectedFileParts: expectedFileParts,
@@ -842,9 +847,7 @@ class HiveToSqliteMigrationService {
     }
     // A failed attempt can leave the temporary database family behind.
     await _deleteSqliteFamily(File('${decision.sqliteFile.path}.migrating'));
-    await _deleteSqliteFamily(
-      File('${decision.sqliteFile.path}.previous'),
-    );
+    await _deleteSqliteFamily(File('${decision.sqliteFile.path}.previous'));
     await _clearAttemptState();
     _logLine('skip-migration: legacy hive files retired');
   }
@@ -1554,7 +1557,8 @@ class HiveToSqliteMigrationService {
     }
   }
 
-  Future<void> _deleteSqliteFamily(File file) => _deleteSqliteFamilyStatic(file);
+  Future<void> _deleteSqliteFamily(File file) =>
+      _deleteSqliteFamilyStatic(file);
 
   static Future<void> _deleteSqliteFamilyStatic(File file) async {
     for (final suffix in ['', '-wal', '-shm', '-journal']) {
@@ -1692,6 +1696,48 @@ class HiveToSqliteMigrationService {
       _log.removeRange(0, _log.length - 200);
     }
   }
+}
+
+List<MessagePart> _normalizeAttachmentPartUris(List<MessagePart> parts) {
+  var changed = false;
+  final out = <MessagePart>[];
+  for (final part in parts) {
+    if (part is ImagePart) {
+      final uri = SandboxPathResolver.canonicalize(part.uri);
+      if (uri != part.uri) {
+        changed = true;
+        out.add(
+          ImagePart(
+            uri: uri,
+            mime: part.mime,
+            assetId: part.assetId,
+            unavailable: part.unavailable,
+          ),
+        );
+      } else {
+        out.add(part);
+      }
+    } else if (part is FilePart) {
+      final uri = SandboxPathResolver.canonicalize(part.uri);
+      if (uri != part.uri) {
+        changed = true;
+        out.add(
+          FilePart(
+            uri: uri,
+            name: part.name,
+            mime: part.mime,
+            assetId: part.assetId,
+            unavailable: part.unavailable,
+          ),
+        );
+      } else {
+        out.add(part);
+      }
+    } else {
+      out.add(part);
+    }
+  }
+  return changed ? out : parts;
 }
 
 class _MigrationRepairStats {

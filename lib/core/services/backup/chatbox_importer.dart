@@ -13,6 +13,7 @@ import '../../models/chat_message.dart';
 import '../../models/conversation.dart';
 import '../../models/message_part.dart';
 import '../../utils/multimodal_input_utils.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import '../../providers/settings_provider.dart'
     show ProviderConfig, ProviderKind;
 import '../chat/chat_service.dart';
@@ -460,8 +461,10 @@ class ChatboxImporter {
           if (role == 'tool') {
             // Keep tool-result JSON in a TextPart for tool semantics, but do not
             // drop ImagePart/FilePart attachments extracted from contentParts.
-            final toolPayload =
-                _buildToolMessagePayload(msg, fallbackText: content);
+            final toolPayload = _buildToolMessagePayload(
+              msg,
+              fallbackText: content,
+            );
             final attachmentParts = parts
                 .where((part) => part is ImagePart || part is FilePart)
                 .toList(growable: false);
@@ -469,10 +472,7 @@ class ChatboxImporter {
               ChatMessage(
                 id: msgId,
                 role: 'tool',
-                parts: <MessagePart>[
-                  TextPart(toolPayload),
-                  ...attachmentParts,
-                ],
+                parts: <MessagePart>[TextPart(toolPayload), ...attachmentParts],
                 timestamp: ts,
                 modelId: null,
                 providerId: null,
@@ -762,7 +762,9 @@ class ChatboxImporter {
         if (raw is! Map) continue;
         final m = raw.map((k, v) => MapEntry(k.toString(), v));
         if ((m['role'] ?? '').toString() != 'system') continue;
-        final content = _textFromParts(_extractMessageParts(m, roleHint: 'system'));
+        final content = _textFromParts(
+          _extractMessageParts(m, roleHint: 'system'),
+        );
         if (content.trim().isNotEmpty) return content;
       }
     }
@@ -885,7 +887,8 @@ class ChatboxImporter {
             final storageKey = (part['storageKey'] ?? '').toString().trim();
             final ref = url.isNotEmpty ? url : storageKey;
             if (ref.isEmpty) break;
-            final isResolvable = url.startsWith('http://') ||
+            final isResolvable =
+                url.startsWith('http://') ||
                 url.startsWith('https://') ||
                 url.startsWith('data:image') ||
                 storageKey.isNotEmpty;
@@ -893,11 +896,12 @@ class ChatboxImporter {
               flushTextForAttachment();
               out.add(
                 ImagePart(
-                  uri: ref,
+                  uri: SandboxPathResolver.canonicalize(ref),
                   mime: mimeFor(ref),
-                  unavailable: !(url.startsWith('http://') ||
-                      url.startsWith('https://') ||
-                      url.startsWith('data:image')),
+                  unavailable:
+                      !(url.startsWith('http://') ||
+                          url.startsWith('https://') ||
+                          url.startsWith('data:image')),
                 ),
               );
             } else {
@@ -968,9 +972,10 @@ class ChatboxImporter {
         flushTextForAttachment();
         out.add(
           FilePart(
-            uri: url,
+            uri: SandboxPathResolver.canonicalize(url),
             name: name.isNotEmpty ? name : 'file',
-            mime: mimeFor(url, explicit: type, fileName: name) ??
+            mime:
+                mimeFor(url, explicit: type, fileName: name) ??
                 'application/octet-stream',
           ),
         );
@@ -987,7 +992,7 @@ class ChatboxImporter {
         flushTextForAttachment();
         out.add(
           ImagePart(
-            uri: url,
+            uri: SandboxPathResolver.canonicalize(url),
             mime: mimeFor(url),
           ),
         );

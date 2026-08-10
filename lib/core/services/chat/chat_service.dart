@@ -1645,22 +1645,20 @@ class ChatService extends ChangeNotifier {
         // asset sync — missing files would otherwise dirty/throw forever.
         if (part.unavailable) continue;
         final uri = part.uri.trim();
-        if (uri.isEmpty ||
-            uri.startsWith('http') ||
-            uri.startsWith('data:')) {
+        if (uri.isEmpty || uri.startsWith('http') || uri.startsWith('data:')) {
           continue;
         }
-        final fixed = SandboxPathResolver.fix(uri);
+        final fixed = SandboxPathResolver.resolveForIo(uri);
+        if (fixed == null) continue;
         fromParts['image:$fixed'] = (path: fixed, kind: 'image');
       } else if (part is FilePart) {
         if (part.unavailable) continue;
         final uri = part.uri.trim();
-        if (uri.isEmpty ||
-            uri.startsWith('http') ||
-            uri.startsWith('data:')) {
+        if (uri.isEmpty || uri.startsWith('http') || uri.startsWith('data:')) {
           continue;
         }
-        final fixed = SandboxPathResolver.fix(uri);
+        final fixed = SandboxPathResolver.resolveForIo(uri);
+        if (fixed == null) continue;
         fromParts['file:$fixed'] = (path: fixed, kind: 'file');
       }
     }
@@ -1679,7 +1677,8 @@ class ChatService extends ChangeNotifier {
       if (path.startsWith('data:')) {
         fromParts.add(path);
       } else {
-        fromParts.add(SandboxPathResolver.fix(path));
+        final resolved = SandboxPathResolver.resolveForIo(path);
+        if (resolved != null) fromParts.add(resolved);
       }
     }
     return fromParts;
@@ -1771,7 +1770,7 @@ class ChatService extends ChangeNotifier {
         MessageAssetRegistration(
           assetId: 'asset_$contentHash',
           contentHash: contentHash,
-          path: normalizedPath,
+          path: SandboxPathResolver.canonicalize(normalizedPath),
           byteSize: await file.length(),
           kind: attachment.kind,
         ),
@@ -1813,7 +1812,7 @@ class ChatService extends ChangeNotifier {
     await _repo.migrateSandboxPaths(
       targetVersion: 1,
       targetRoot: targetRoot,
-      rewriteUri: SandboxPathResolver.fix,
+      rewriteUri: SandboxPathResolver.canonicalize,
     );
   }
 
@@ -1846,7 +1845,12 @@ class ChatService extends ChangeNotifier {
         final regularFiles = <File>[];
         var safe = true;
         for (final candidatePath in paths) {
-          final normalized = p.normalize(File(candidatePath).absolute.path);
+          final resolved = SandboxPathResolver.resolveForIo(candidatePath);
+          if (resolved == null) {
+            safe = false;
+            break;
+          }
+          final normalized = p.normalize(File(resolved).absolute.path);
           if (!allowedRoots.any((root) => p.isWithin(root, normalized))) {
             safe = false;
             break;
@@ -1882,6 +1886,7 @@ class ChatService extends ChangeNotifier {
           final completed = await _repo.completeAssetGc(
             assetId: candidate.assetId,
             expectedGeneration: candidate.generation,
+            path: candidate.path,
           );
           if (!completed) continue;
           for (final moved in quarantined) {
@@ -2030,6 +2035,23 @@ class ChatService extends ChangeNotifier {
     await _loadConversationsCache();
     notifyListeners();
     return report;
+  }
+
+  /// Chats-only merge/restore follow-up for imported conversations.
+  Future<int> recomputeImportedAttachmentAvailability({
+    required Iterable<String> conversationIds,
+    required bool filesRestored,
+  }) async {
+    if (!_initialized) await init();
+    final updated = await _repo.recomputeAttachmentAvailabilityForConversations(
+      conversationIds: conversationIds,
+      filesRestored: filesRestored,
+    );
+    if (updated > 0) {
+      _clearPersistedMessageCache();
+      notifyListeners();
+    }
+    return updated;
   }
 
   Future<void> _resetAfterOverwriteRestore() async {
@@ -3068,7 +3090,8 @@ class ChatService extends ChangeNotifier {
           result[path] = await _hashDataUrl(path);
           continue;
         }
-        final fixed = SandboxPathResolver.fix(path);
+        final fixed = SandboxPathResolver.resolveForIo(path);
+        if (fixed == null) continue;
         final normalized = p.normalize(File(fixed).absolute.path);
         final file = File(normalized);
         if (await FileSystemEntity.type(file.path, followLinks: false) !=

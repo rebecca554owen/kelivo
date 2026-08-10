@@ -11,6 +11,8 @@ import '../models/chat_message.dart';
 import '../models/conversation.dart';
 import '../models/message_part.dart';
 import '../utils/multimodal_input_utils.dart';
+import '../../utils/sandbox_path_resolver.dart';
+import '../../utils/kelivo_file_uri.dart';
 import '../models/memory_entry.dart';
 import '../models/user_profile_field.dart';
 import 'app_database.dart';
@@ -83,11 +85,15 @@ class BackupMergeReport {
     required this.importedConversations,
     required this.deduplicatedConversations,
     required this.remappedConversationIds,
+    this.importedConversationIds = const <String>[],
   });
 
   final int importedConversations;
   final int deduplicatedConversations;
   final Map<String, String> remappedConversationIds;
+
+  /// Target conversation ids newly inserted by this merge (post-remap ids).
+  final List<String> importedConversationIds;
 
   int get remappedConversations => remappedConversationIds.length;
 }
@@ -1131,10 +1137,7 @@ class ChatDatabaseRepository {
               'SELECT part_id, kind, payload FROM message_part_rows '
               "WHERE kind IN ('image', 'file') AND part_id > ? "
               'ORDER BY part_id LIMIT ?;',
-              variables: [
-                Variable<int>(cursor),
-                Variable<int>(batchSize),
-              ],
+              variables: [Variable<int>(cursor), Variable<int>(batchSize)],
             )
             .get();
         if (rows.isEmpty) break;
@@ -1185,32 +1188,39 @@ class ChatDatabaseRepository {
     final part = MessagePart.fromRow(kind, payload);
     if (part is ImagePart) {
       final nextUri = rewriteUri(part.uri);
-      if (nextUri == part.uri) return payload;
+      final nextUnavailable = _unavailableForRewrittenUri(nextUri);
+      if (nextUri == part.uri && nextUnavailable == part.unavailable) {
+        return payload;
+      }
       return ImagePart(
         uri: nextUri,
         mime: part.mime,
         assetId: part.assetId,
-        unavailable: _unavailableForRewrittenUri(nextUri),
+        unavailable: nextUnavailable,
       ).encodePayload();
     }
     if (part is FilePart) {
       final nextUri = rewriteUri(part.uri);
-      if (nextUri == part.uri) return payload;
+      final nextUnavailable = _unavailableForRewrittenUri(nextUri);
+      if (nextUri == part.uri && nextUnavailable == part.unavailable) {
+        return payload;
+      }
       return FilePart(
         uri: nextUri,
         name: part.name,
         mime: part.mime,
         assetId: part.assetId,
-        unavailable: _unavailableForRewrittenUri(nextUri),
+        unavailable: nextUnavailable,
       ).encodePayload();
     }
     return payload;
   }
 
-  /// Remote/data URIs stay available; local paths follow [File.existsSync].
+  /// Remote/data URIs stay available; local paths use [localFileExists]
+  /// (no fix→File SMB probe).
   bool _unavailableForRewrittenUri(String nextUri) {
     if (isRemoteOrDataUri(nextUri)) return false;
-    return !File(nextUri).existsSync();
+    return !SandboxPathResolver.localFileExists(nextUri);
   }
 
   Future<bool> needsAssetReferenceBackfill({
@@ -2976,35 +2986,109 @@ class ChatDatabaseRepository {
   Future<List<AssetGcCandidate>> claimAssetGc({
     required DateTime now,
     int limit = 50,
+    @visibleForTesting int maxScan = 500,
   }) async {
     if (limit <= 0) return const <AssetGcCandidate>[];
     return _db.transaction(() async {
-      final dueRows = await _db
-          .customSelect(
-            '''
-            SELECT g.asset_id FROM asset_gc_rows g
+      // Page candidates with keyset pagination, then ask SQLite once per page
+      // whether any dirty text references those paths (set-based instr). Never
+      // pull the full dirty payload corpus into Dart.
+      final ids = <String>[];
+      final protectedIds = <String>[];
+      var scanned = 0;
+      const pageSize = 50;
+      int? cursorNotBefore;
+      String? cursorAssetId;
+
+      while (ids.length < limit && scanned < maxScan) {
+        final List<QueryRow> dueRows;
+        if (cursorNotBefore == null) {
+          dueRows = await _db
+              .customSelect(
+                '''
+            SELECT g.asset_id, a.path, g.not_before FROM asset_gc_rows g
+            JOIN asset_rows a ON a.id = g.asset_id
             WHERE g.not_before <= ?
               AND NOT EXISTS (
                 SELECT 1 FROM message_asset_rows r
                 WHERE r.asset_id = g.asset_id
               )
-              AND NOT EXISTS (
-                SELECT 1 FROM asset_reference_dirty_rows d
-                JOIN message_part_rows p ON p.revision_id = d.revision_id
-                JOIN asset_rows a ON a.id = g.asset_id
-                WHERE p.kind = 'text' AND instr(p.payload, a.path) > 0
-              )
-            ORDER BY g.not_before, g.asset_id LIMIT ?;
+            ORDER BY g.not_before, g.asset_id
+            LIMIT ?;
           ''',
-            variables: [
-              Variable<int>(now.microsecondsSinceEpoch),
-              Variable<int>(limit),
-            ],
-          )
-          .get();
-      final ids = dueRows
-          .map((row) => row.read<String>('asset_id'))
-          .toList(growable: false);
+                variables: [
+                  Variable<int>(now.microsecondsSinceEpoch),
+                  Variable<int>(pageSize),
+                ],
+              )
+              .get();
+        } else {
+          dueRows = await _db
+              .customSelect(
+                '''
+            SELECT g.asset_id, a.path, g.not_before FROM asset_gc_rows g
+            JOIN asset_rows a ON a.id = g.asset_id
+            WHERE g.not_before <= ?
+              AND NOT EXISTS (
+                SELECT 1 FROM message_asset_rows r
+                WHERE r.asset_id = g.asset_id
+              )
+              AND (
+                g.not_before > ?
+                OR (g.not_before = ? AND g.asset_id > ?)
+              )
+            ORDER BY g.not_before, g.asset_id
+            LIMIT ?;
+          ''',
+                variables: [
+                  Variable<int>(now.microsecondsSinceEpoch),
+                  Variable<int>(cursorNotBefore),
+                  Variable<int>(cursorNotBefore),
+                  Variable<String>(cursorAssetId!),
+                  Variable<int>(pageSize),
+                ],
+              )
+              .get();
+        }
+        if (dueRows.isEmpty) break;
+
+        final page = <({String id, String path, int notBefore})>[];
+        for (final row in dueRows) {
+          if (scanned >= maxScan) break;
+          scanned += 1;
+          final assetId = row.read<String>('asset_id');
+          final path = row.read<String>('path');
+          final notBefore = row.read<int>('not_before');
+          cursorNotBefore = notBefore;
+          cursorAssetId = assetId;
+          page.add((id: assetId, path: path, notBefore: notBefore));
+        }
+        if (page.isEmpty) break;
+
+        final protected = await _dirtyTextProtectedAssetIds(page);
+        for (final item in page) {
+          if (ids.length >= limit) break;
+          if (protected.contains(item.id)) {
+            protectedIds.add(item.id);
+            continue;
+          }
+          ids.add(item.id);
+        }
+        if (dueRows.length < pageSize) break;
+      }
+
+      if (protectedIds.isNotEmpty) {
+        final deferUntil = now
+            .add(const Duration(hours: 6))
+            .microsecondsSinceEpoch;
+        final placeholders = List.filled(protectedIds.length, '?').join(',');
+        await _db.customStatement(
+          'UPDATE asset_gc_rows SET not_before = ? '
+          'WHERE asset_id IN ($placeholders);',
+          [deferUntil, ...protectedIds],
+        );
+      }
+
       if (ids.isEmpty) return const <AssetGcCandidate>[];
       for (final id in ids) {
         await _db.customStatement(
@@ -3035,7 +3119,44 @@ class ChatDatabaseRepository {
     });
   }
 
+  /// Set-based dirty-text protection for a candidate page.
+  Future<Set<String>> _dirtyTextProtectedAssetIds(
+    List<({String id, String path, int notBefore})> page,
+  ) async {
+    if (page.isEmpty) return const <String>{};
+    final tuples = List.filled(page.length, '(?, ?, ?)').join(', ');
+    final variables = <Variable<Object>>[];
+    for (final item in page) {
+      final pathForm = item.path.isEmpty ? ' ' : item.path;
+      final altForm = _alternateAssetPathForm(pathForm);
+      variables
+        ..add(Variable<String>(item.id))
+        ..add(Variable<String>(pathForm))
+        ..add(Variable<String>(altForm));
+    }
+    final rows = await _db.customSelect('''
+          WITH candidates(asset_id, path_form, alt_form) AS (
+            VALUES $tuples
+          )
+          SELECT DISTINCT c.asset_id AS asset_id
+          FROM candidates c
+          WHERE EXISTS (
+            SELECT 1
+            FROM asset_reference_dirty_rows d
+            JOIN message_part_rows p ON p.revision_id = d.revision_id
+            WHERE p.kind = 'text'
+              AND (
+                instr(p.payload, c.path_form) > 0
+                OR instr(p.payload, c.alt_form) > 0
+              )
+          );
+        ''', variables: variables).get();
+    return {for (final row in rows) row.read<String>('asset_id')};
+  }
+
   Future<bool> isAssetGcClaimStillValid(AssetGcCandidate candidate) async {
+    final pathForm = candidate.path.isEmpty ? ' ' : candidate.path;
+    final altForm = _alternateAssetPathForm(pathForm);
     final row = await _db
         .customSelect(
           '''
@@ -3048,14 +3169,16 @@ class ChatDatabaseRepository {
             AND NOT EXISTS (
               SELECT 1 FROM asset_reference_dirty_rows d
               JOIN message_part_rows p ON p.revision_id = d.revision_id
-              JOIN asset_rows a ON a.id = g.asset_id
-              WHERE p.kind = 'text' AND instr(p.payload, a.path) > 0
+              WHERE p.kind = 'text'
+                AND (instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0)
             )
           LIMIT 1;
         ''',
           variables: [
             Variable<String>(candidate.assetId),
             Variable<int>(candidate.generation),
+            Variable<String>(pathForm),
+            Variable<String>(altForm),
           ],
         )
         .getSingleOrNull();
@@ -3065,8 +3188,13 @@ class ChatDatabaseRepository {
   Future<bool> completeAssetGc({
     required String assetId,
     required int expectedGeneration,
+    required String path,
     DateTime? completedAt,
   }) async {
+    // Text-part protection must match either stored form. Never pass '' —
+    // instr(x, '') is always true and would stall GC forever.
+    final pathForm = path.isEmpty ? ' ' : path;
+    final altForm = _alternateAssetPathForm(pathForm);
     return _db.transaction(() async {
       final claim = await _db
           .customSelect(
@@ -3080,14 +3208,16 @@ class ChatDatabaseRepository {
               AND NOT EXISTS (
                 SELECT 1 FROM asset_reference_dirty_rows d
                 JOIN message_part_rows p ON p.revision_id = d.revision_id
-                JOIN asset_rows a ON a.id = g.asset_id
-                WHERE p.kind = 'text' AND instr(p.payload, a.path) > 0
+                WHERE p.kind = 'text'
+                  AND (instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0)
               )
             LIMIT 1;
           ''',
             variables: [
               Variable<String>(assetId),
               Variable<int>(expectedGeneration),
+              Variable<String>(pathForm),
+              Variable<String>(altForm),
             ],
           )
           .getSingleOrNull();
@@ -4106,6 +4236,7 @@ class ChatDatabaseRepository {
         var imported = 0;
         var deduplicated = 0;
         final remapped = <String, String>{};
+        final importedIds = <String>[];
 
         for (final sourceRow in sourceRows) {
           final sourceId = sourceRow.read<String>('id');
@@ -4173,6 +4304,7 @@ class ChatDatabaseRepository {
             messageIdMap: messageIdMap,
           );
           imported += 1;
+          importedIds.add(targetId);
         }
 
         final foreignKeyFailures = await _db
@@ -4185,6 +4317,7 @@ class ChatDatabaseRepository {
           importedConversations: imported,
           deduplicatedConversations: deduplicated,
           remappedConversationIds: Map.unmodifiable(remapped),
+          importedConversationIds: List.unmodifiable(importedIds),
         );
       });
     } finally {
@@ -4192,6 +4325,135 @@ class ChatDatabaseRepository {
         await _db.customStatement('DETACH DATABASE merge_source;');
       }
     }
+  }
+
+  /// Chats-only restore/merge: mark local attachment parts unavailable unless
+  /// remote/data. Does not reuse path/hash coincidence from asset_rows.
+  Future<int> recomputeAttachmentAvailabilityForConversations({
+    required Iterable<String> conversationIds,
+    required bool filesRestored,
+  }) async {
+    final ids = conversationIds.toList(growable: false);
+    if (ids.isEmpty) return 0;
+    var updated = 0;
+    for (final conversationId in ids) {
+      final messages = await getMessagesRange(
+        conversationId,
+        start: 0,
+        limit: 100000,
+      );
+      for (final message in messages) {
+        final nextParts = <MessagePart>[];
+        var changed = false;
+        for (final part in message.parts) {
+          if (part is ImagePart) {
+            final unavailable = await _unavailableForRestoredPart(
+              uri: part.uri,
+              filesRestored: filesRestored,
+            );
+            if (unavailable != part.unavailable) changed = true;
+            nextParts.add(
+              ImagePart(
+                uri: part.uri,
+                mime: part.mime,
+                assetId: part.assetId,
+                unavailable: unavailable,
+              ),
+            );
+          } else if (part is FilePart) {
+            final unavailable = await _unavailableForRestoredPart(
+              uri: part.uri,
+              filesRestored: filesRestored,
+            );
+            if (unavailable != part.unavailable) changed = true;
+            nextParts.add(
+              FilePart(
+                uri: part.uri,
+                name: part.name,
+                mime: part.mime,
+                assetId: part.assetId,
+                unavailable: unavailable,
+              ),
+            );
+          } else {
+            nextParts.add(part);
+          }
+        }
+        if (!changed) continue;
+        await updateMessage(message.copyWith(parts: nextParts));
+        updated += 1;
+      }
+    }
+    return updated;
+  }
+
+  Future<bool> _unavailableForRestoredPart({
+    required String uri,
+    required bool filesRestored,
+  }) async {
+    if (isRemoteOrDataUri(uri)) return false;
+    if (filesRestored) {
+      return !SandboxPathResolver.localFileExists(uri);
+    }
+    // Chats-only: never trust candidate asset_rows path / content_hash
+    // coincidence on the target machine (same path may hold different bytes).
+    // Reuse would require hashing the live target file and comparing bytes.
+    return true;
+  }
+
+  /// Open [databaseFile] with raw sqlite3 and mark local attachments
+  /// unavailable when [filesRestored] is false (overwrite chats-only candidate
+  /// processing before publish). Avoids opening a Drift isolate inside
+  /// restore staging.
+  ///
+  /// Minimal policy: every non-remote/data local attachment becomes
+  /// unavailable. We deliberately do **not** reuse candidate `asset_rows`
+  /// content_hash + path existence — that would treat the candidate's own
+  /// absolute path (or a colliding target file with different bytes) as proof.
+  static Future<int> recomputeAttachmentAvailabilityOnDatabaseFile({
+    required File databaseFile,
+    required bool filesRestored,
+  }) async {
+    if (filesRestored) return 0;
+    if (!await databaseFile.exists()) {
+      throw FileSystemException(
+        'Candidate database does not exist',
+        databaseFile.path,
+      );
+    }
+    return Future<int>.sync(() {
+      final db = sqlite.sqlite3.open(databaseFile.absolute.path);
+      try {
+        final rows = db.select(
+          "SELECT revision_id, ordinal, kind, payload "
+          "FROM message_part_rows WHERE kind IN ('image', 'file');",
+        );
+        var updated = 0;
+        final stmt = db.prepare(
+          'UPDATE message_part_rows SET payload = ? '
+          'WHERE revision_id = ? AND ordinal = ?;',
+        );
+        try {
+          for (final row in rows) {
+            final payload = row['payload'] as String;
+            final decoded = jsonDecode(payload);
+            if (decoded is! Map) continue;
+            final map = Map<String, dynamic>.from(decoded);
+            final uri = (map['uri'] ?? '').toString();
+            if (uri.isEmpty || isRemoteOrDataUri(uri)) continue;
+            if (map['unavailable'] == true) continue;
+            map['unavailable'] = true;
+            stmt.execute([jsonEncode(map), row['revision_id'], row['ordinal']]);
+            updated += 1;
+          }
+        } finally {
+          stmt.close();
+        }
+        return updated;
+      } finally {
+        db.close();
+      }
+    });
   }
 
   Future<String?> _conversationFingerprint(String schema, String id) async {
@@ -4242,11 +4504,22 @@ class ChatDatabaseRepository {
         )
         .get();
     final partPayloads = <String, Map<String, List<String>>>{};
+    // Image/file identity payloads in ordinal order (unavailable stripped).
+    final attachmentPayloads = <String, List<String>>{};
     for (final part in partRows) {
+      final revisionId = part.read<String>('revision_id');
+      final kind = part.read<String>('kind');
+      final payload = part.read<String>('payload');
+      if (kind == 'image' || kind == 'file') {
+        attachmentPayloads
+            .putIfAbsent(revisionId, () => [])
+            .add(_fingerprintAttachmentPayload(kind, payload));
+        continue;
+      }
       partPayloads
-          .putIfAbsent(part.read<String>('revision_id'), () => {})
-          .putIfAbsent(part.read<String>('kind'), () => [])
-          .add(part.read<String>('payload'));
+          .putIfAbsent(revisionId, () => {})
+          .putIfAbsent(kind, () => [])
+          .add(payload);
     }
     final signatureRows = await _db
         .customSelect(
@@ -4285,6 +4558,7 @@ class ChatDatabaseRepository {
         payloads?['text'],
         payloads?['reasoning'],
         payloads?['tool_call'],
+        attachmentPayloads[messageId],
         signatures[messageId],
       ]);
     }
@@ -4322,6 +4596,26 @@ class ChatDatabaseRepository {
       normalized['version_selections_json'] = selections;
     }
     return normalized;
+  }
+
+  /// Attachment identity for merge fingerprints. Drops environment-state
+  /// `unavailable` so the same attachment available on one device and missing
+  /// on another still dedupes; keeps uri/name/mime/assetId and ordinal order.
+  String _fingerprintAttachmentPayload(String kind, String payload) {
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map) return jsonEncode({'kind': kind, 'raw': payload});
+      final map = Map<String, Object?>.from(decoded);
+      return jsonEncode({
+        'kind': kind,
+        'uri': map['uri'],
+        if (map['name'] != null) 'name': map['name'],
+        if (map['mime'] != null) 'mime': map['mime'],
+        if (map['assetId'] != null) 'assetId': map['assetId'],
+      });
+    } catch (_) {
+      return jsonEncode({'kind': kind, 'raw': payload});
+    }
   }
 
   Object? _fingerprintTimestamp(Object? value) {
@@ -5437,7 +5731,9 @@ class ChatDatabaseRepository {
     final parts = <MessagePart>[
       for (final part in partRows) MessagePart.fromRow(part.kind, part.payload),
     ];
-    final reasoningParts = parts.whereType<ReasoningPart>().toList(growable: false);
+    final reasoningParts = parts.whereType<ReasoningPart>().toList(
+      growable: false,
+    );
     return ChatMessage(
       id: row.id,
       role: row.role,
@@ -6207,6 +6503,15 @@ final class AssetGcCandidate {
   final String? thumbnailPath;
   final int byteSize;
   final int generation;
+}
+
+String _alternateAssetPathForm(String path) {
+  if (KelivoFileUri.isKelivoFileUri(path)) {
+    final resolved = SandboxPathResolver.fix(path);
+    return resolved.isEmpty ? path : resolved;
+  }
+  final canonical = SandboxPathResolver.canonicalize(path);
+  return canonical.isEmpty ? path : canonical;
 }
 
 final class MessageAssetRegistration {

@@ -8,6 +8,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
 import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 
 ProviderConfig _openAiConfig(String baseUrl, {bool useResponseApi = false}) {
   return ProviderConfig(
@@ -481,10 +482,7 @@ void main() {
             'role': 'user',
             'content': 'make the background blue',
             multimodalInternalMediaPathsKey: [
-              encodeInternalMediaRef(
-                uri: inputImage.path,
-                mime: 'image/jpeg',
-              ),
+              encodeInternalMediaRef(uri: inputImage.path, mime: 'image/jpeg'),
             ],
           },
         ],
@@ -552,7 +550,6 @@ void main() {
       expect(requestBody, contains('filename="source.png"'));
       expect(requestBody, contains('content-type: image/png'));
     });
-
 
     test('skips non-image structured media refs for /images/edits', () async {
       late Uri requestUri;
@@ -718,7 +715,10 @@ void main() {
 
       // Marker text must not force edits; generations path is used instead.
       expect(requestUri.path, '/v1/images/generations');
-      expect(chunks.single.content, '![image](https://example.com/generated.png)');
+      expect(
+        chunks.single.content,
+        '![image](https://example.com/generated.png)',
+      );
     });
 
     test('rejects dall-e-3 edits before sending a request', () async {
@@ -748,8 +748,10 @@ void main() {
       );
       final previousPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+      SandboxPathResolver.debugSetDirs(docsDir: tempDir.path);
       addTearDown(() async {
         PathProviderPlatform.instance = previousPathProvider;
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
         }
@@ -787,11 +789,13 @@ void main() {
         extraBody: const {'output_format': 'webp'},
       ).toList();
 
-      final imagePath = RegExp(
+      final imageUri = RegExp(
         r'!\[image\]\(([^)]+)\)',
       ).firstMatch(chunks.single.content)!.group(1)!;
       expect(requestBody['output_format'], 'webp');
-      expect(imagePath.endsWith('.webp'), isTrue);
+      expect(imageUri, startsWith('kelivo-file:///'));
+      expect(imageUri.endsWith('.webp'), isTrue);
+      final imagePath = SandboxPathResolver.fix(imageUri);
       expect(await File(imagePath).readAsBytes(), const [1, 2, 3, 4]);
     });
 
@@ -803,8 +807,10 @@ void main() {
         );
         final previousPathProvider = PathProviderPlatform.instance;
         PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+        SandboxPathResolver.debugSetDirs(docsDir: tempDir.path);
         addTearDown(() async {
           PathProviderPlatform.instance = previousPathProvider;
+          SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
           if (await tempDir.exists()) {
             await tempDir.delete(recursive: true);
           }
@@ -945,8 +951,10 @@ void main() {
       );
       final previousPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+      SandboxPathResolver.debugSetDirs(docsDir: tempDir.path);
       addTearDown(() async {
         PathProviderPlatform.instance = previousPathProvider;
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
         }
@@ -1019,11 +1027,13 @@ void main() {
       ).toList();
 
       final content = chunks.map((chunk) => chunk.content).join();
-      final imagePath = RegExp(
+      final imageUri = RegExp(
         r'!\[image\]\(([^)]+)\)',
       ).firstMatch(content)!.group(1)!;
       expect(content, contains('![image]('));
-      expect(imagePath.endsWith('.png'), isTrue);
+      expect(imageUri, startsWith('kelivo-file:///'));
+      expect(imageUri.endsWith('.png'), isTrue);
+      final imagePath = SandboxPathResolver.fix(imageUri);
       expect(await File(imagePath).readAsBytes(), const [1, 2, 3, 4]);
       expect(chunks.last.isDone, isTrue);
     });

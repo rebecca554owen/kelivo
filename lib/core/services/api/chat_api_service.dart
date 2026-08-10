@@ -57,7 +57,6 @@ class ChatApiService {
   static final Map<String, CancelToken> _activeCancelTokens =
       <String, CancelToken>{};
 
-
   @visibleForTesting
   static bool shouldAttachVertexMediaAuthForTest(Uri uri) =>
       _shouldAttachVertexMediaAuth(uri);
@@ -376,8 +375,13 @@ class ChatApiService {
           continue;
         }
         try {
-          final fixed = SandboxPathResolver.fix(url);
-          final file = File(fixed);
+          final resolved = SandboxPathResolver.resolveForIo(url);
+          if (resolved == null) {
+            buf.write(full);
+            i = m1.end;
+            continue;
+          }
+          final file = File(resolved);
           if (!file.existsSync()) {
             // Missing local file: do NOT treat as image; keep original markdown.
             buf.write(full);
@@ -405,12 +409,15 @@ class ChatApiService {
     String path, {
     bool withPrefix = false,
   }) async {
-    final fixed = SandboxPathResolver.fix(path);
-    final file = File(fixed);
+    final resolved = SandboxPathResolver.resolveForIo(path);
+    if (resolved == null) {
+      throw FileSystemException('rejected local path', path);
+    }
+    final file = File(resolved);
     final bytes = await file.readAsBytes();
     final b64 = base64Encode(bytes);
     if (withPrefix) {
-      final mime = _mimeFromPath(fixed);
+      final mime = _mimeFromPath(resolved);
       return 'data:$mime;base64,$b64';
     }
     return b64;
@@ -423,10 +430,11 @@ class ChatApiService {
     bool withPrefix = false,
   }) async {
     try {
-      final fixed = SandboxPathResolver.fix(path);
-      final file = File(fixed);
+      final resolved = SandboxPathResolver.resolveForIo(path);
+      if (resolved == null) return null;
+      final file = File(resolved);
       if (!await file.exists()) return null;
-      return _encodeBase64File(fixed, withPrefix: withPrefix);
+      return _encodeBase64File(resolved, withPrefix: withPrefix);
     } catch (_) {
       return null;
     }
