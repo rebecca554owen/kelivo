@@ -337,6 +337,23 @@ void main() {
   });
 
   group('SandboxPathResolver.tryRemapRestoredManagedAbsolute', () {
+    test('maps old Windows company/product root when restored file exists', () {
+      final temp = Directory.systemTemp.createTempSync('sandbox_restore_win_');
+      addTearDown(() {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      });
+      final upload = Directory(p.join(temp.path, 'upload'))..createSync();
+      File(p.join(upload.path, 'legacy.pdf')).writeAsStringSync('restored');
+      SandboxPathResolver.debugSetDirs(docsDir: temp.path);
+
+      expect(
+        SandboxPathResolver.tryRemapRestoredManagedAbsolute(
+          r'C:\Users\old-user\AppData\Roaming\com.psyche\kelivo\upload\legacy.pdf',
+        ),
+        'kelivo-file:///upload/legacy.pdf',
+      );
+    });
+
     test('maps old mac absolute root only when restored file exists', () {
       final temp = Directory.systemTemp.createTempSync('sandbox_restore_');
       addTearDown(() {

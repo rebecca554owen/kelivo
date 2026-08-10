@@ -41,7 +41,14 @@ final class KelivoFileUri {
     final segments = <String>[];
     for (final raw in rawParts) {
       if (raw == '.' || raw == '..') return null;
-      final decoded = Uri.decodeComponent(raw);
+      late final String decoded;
+      try {
+        decoded = Uri.decodeComponent(raw);
+      } on ArgumentError {
+        return null;
+      } on FormatException {
+        return null;
+      }
       if (decoded.isEmpty || decoded == '.' || decoded == '..') return null;
       if (decoded.contains('/') || decoded.contains('\\')) return null;
       segments.add(decoded);
@@ -116,7 +123,7 @@ final class KelivoFileUri {
   /// 2. iOS Simulator `/Users/.../CoreSimulator/...` (path-start anchored)
   /// 3. macOS Kelivo container Documents (exact bundle whitelist)
   /// 4. macOS/Linux Application Support / `.local/share` (exact whitelist)
-  /// 5. Windows AppData\Local|Roaming\<Kelivo> (exact folder name)
+  /// 5. Windows `AppData\Local|Roaming\[com.psyche\]kelivo`
   /// 6. Android package-private app_flutter / files (exact package whitelist)
   /// 7. Generic fallback: first `/<managed>/` occurrence
   ///    (disabled when [allowGenericFallback] is false)
@@ -185,11 +192,12 @@ final class KelivoFileUri {
       }
     }
 
-    // Windows: C:/Users/<user>/AppData/Local|Roaming/<Kelivo>/<managed>/...
+    // Windows: C:/Users/<user>/AppData/Local|Roaming/[com.psyche/]<Kelivo>/...
     // Folder name must equal "kelivo" case-insensitively (not KelivoNotes).
     if (tail == null) {
       final win = RegExp(
-        r'^[A-Za-z]:/Users/[^/]+/AppData/(?:Local|Roaming)/([^/]+)/',
+        r'^[A-Za-z]:/Users/[^/]+/AppData/(?:Local|Roaming)/'
+        r'(?:com\.psyche/)?([^/]+)/',
         caseSensitive: false,
       ).firstMatch(raw);
       if (win != null && win.group(1)!.toLowerCase() == _windowsAppFolder) {

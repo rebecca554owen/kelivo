@@ -70,6 +70,16 @@ void main() {
         isNull,
       );
     });
+
+    test('returns null for malformed percent encoding', () {
+      for (final uri in const [
+        'kelivo-file:///upload/%ZZ.pdf',
+        'kelivo-file:///upload/%.pdf',
+        'kelivo-file:///upload/%FF.pdf',
+      ]) {
+        expect(KelivoFileUri.decodeToSegments(uri), isNull, reason: uri);
+      }
+    });
   });
 
   group('KelivoFileUri.resolveToAbsolute', () {
@@ -127,6 +137,13 @@ void main() {
           allowGenericFallback: false,
         ),
         'kelivo-file:///avatars/a.png',
+      );
+      expect(
+        KelivoFileUri.tryEncodeLegacyAbsolutePath(
+          r'C:\Users\old-user\AppData\Roaming\com.psyche\kelivo\upload\legacy.pdf',
+          allowGenericFallback: false,
+        ),
+        'kelivo-file:///upload/legacy.pdf',
       );
       // Bare .../Kelivo/images without AppData must not match.
       expect(
