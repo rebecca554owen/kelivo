@@ -9493,6 +9493,42 @@ abstract class AppLocalizations {
   /// **'Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.'**
   String get searchProviderGrokDescription;
 
+  /// No description provided for @searchServiceNameStepFun.
+  ///
+  /// In en, this message translates to:
+  /// **'StepFun'**
+  String get searchServiceNameStepFun;
+
+  /// No description provided for @searchProviderStepFunDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'StepFun web search via POST /v1/search.'**
+  String get searchProviderStepFunDescription;
+
+  /// No description provided for @searchServiceNameFirecrawl.
+  ///
+  /// In en, this message translates to:
+  /// **'Firecrawl'**
+  String get searchServiceNameFirecrawl;
+
+  /// No description provided for @searchProviderFirecrawlDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Firecrawl Search API v2. Requires a Bearer API key. Scrape is not supported here.'**
+  String get searchProviderFirecrawlDescription;
+
+  /// No description provided for @searchServiceNameTinyFish.
+  ///
+  /// In en, this message translates to:
+  /// **'TinyFish'**
+  String get searchServiceNameTinyFish;
+
+  /// No description provided for @searchProviderTinyFishDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.'**
+  String get searchProviderTinyFishDescription;
+
   /// No description provided for @searchServicesDialogCountryOptional.
   ///
   /// In en, this message translates to:

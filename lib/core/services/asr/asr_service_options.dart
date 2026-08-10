@@ -5,6 +5,7 @@ enum AsrServiceKind {
   system('system'),
   openAiRealtime('openai_realtime'),
   dashScope('dashscope'),
+  qwenAudio('qwen_audio'),
   volcengine('volcengine'),
   mimo('mimo'),
   step('step');
@@ -26,6 +27,9 @@ enum AsrServiceKind {
       case 'dashscope':
       case 'dashScope':
         return AsrServiceKind.dashScope;
+      case 'qwen_audio':
+      case 'qwenAudio':
+        return AsrServiceKind.qwenAudio;
       case 'volcengine':
         return AsrServiceKind.volcengine;
       case 'mimo':
@@ -111,8 +115,22 @@ abstract class AsrServiceOptions {
             json['websocketUrl'],
             'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel',
           ),
+          // Keep Seed-ASR 2.0 default. Docs also list bigasr (1.0).
+          // See VolcengineAsrOptions.resourceId comment — needs Key verification
+          // before changing user defaults.
           resourceId: _string(json['resourceId'], 'volc.seedasr.sauc.duration'),
           language: _string(json['language']),
+        );
+      case AsrServiceKind.qwenAudio:
+        return QwenAudioAsrOptions(
+          id: id,
+          name: _string(json['name'], 'Qwen Audio'),
+          apiKey: _string(json['apiKey']),
+          workspaceId: _string(json['workspaceId']),
+          region: _string(json['region'], 'cn-beijing'),
+          model: _string(json['model'], 'qwen-audio-3.0-asr-flash-streaming'),
+          sampleRate: _positiveInt(json['sampleRate'], 16000),
+          format: _string(json['format'], 'pcm'),
         );
       case AsrServiceKind.mimo:
         return MimoAsrOptions(
@@ -340,12 +358,24 @@ class DashScopeAsrOptions extends AsrServiceOptions {
 }
 
 class VolcengineAsrOptions extends AsrServiceOptions {
+  /// Compatible resource ids (official docs):
+  /// - ASR 2.0 (Seed-ASR) duration: `volc.seedasr.sauc.duration` (current default)
+  /// - ASR 1.0 (BigASR) duration: `volc.bigasr.sauc.duration`
+  /// Do not auto-migrate existing user configs; wrong id → 403 not-granted.
+  /// Needs real Key verification before changing the app default.
+  static const String seedAsrDurationResourceId = 'volc.seedasr.sauc.duration';
+  static const String bigAsrDurationResourceId = 'volc.bigasr.sauc.duration';
+  static const List<String> knownDurationResourceIds = <String>[
+    seedAsrDurationResourceId,
+    bigAsrDurationResourceId,
+  ];
+
   VolcengineAsrOptions({
     super.id,
     super.name = 'Volcengine',
     this.apiKey = '',
     this.websocketUrl = 'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel',
-    this.resourceId = 'volc.seedasr.sauc.duration',
+    this.resourceId = seedAsrDurationResourceId,
     this.language = '',
   }) : super(kind: AsrServiceKind.volcengine);
 
@@ -438,6 +468,70 @@ class MimoAsrOptions extends AsrServiceOptions {
     'language': language,
     'sampleRate': sampleRate,
     'segmentDurationSec': segmentDurationSec,
+  };
+}
+
+class QwenAudioAsrOptions extends AsrServiceOptions {
+  QwenAudioAsrOptions({
+    super.id,
+    super.name = 'Qwen Audio',
+    this.apiKey = '',
+    this.workspaceId = '',
+    this.region = 'cn-beijing',
+    this.model = 'qwen-audio-3.0-asr-flash-streaming',
+    this.sampleRate = 16000,
+    this.format = 'pcm',
+  }) : super(kind: AsrServiceKind.qwenAudio);
+
+  final String apiKey;
+  final String workspaceId;
+  final String region;
+  final String model;
+  final int sampleRate;
+  final String format;
+
+  String get websocketUrl {
+    final ws = workspaceId.trim();
+    final reg = region.trim().isEmpty ? 'cn-beijing' : region.trim();
+    if (ws.isEmpty) {
+      return 'wss://dashscope.aliyuncs.com/api-ws/v1/inference';
+    }
+    return 'wss://$ws.$reg.maas.aliyuncs.com/api-ws/v1/inference';
+  }
+
+  @override
+  bool get isConfigured =>
+      apiKey.trim().isNotEmpty && model.trim().isNotEmpty;
+
+  QwenAudioAsrOptions copyWith({
+    String? id,
+    String? name,
+    String? apiKey,
+    String? workspaceId,
+    String? region,
+    String? model,
+    int? sampleRate,
+    String? format,
+  }) => QwenAudioAsrOptions(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    apiKey: apiKey ?? this.apiKey,
+    workspaceId: workspaceId ?? this.workspaceId,
+    region: region ?? this.region,
+    model: model ?? this.model,
+    sampleRate: sampleRate ?? this.sampleRate,
+    format: format ?? this.format,
+  );
+
+  @override
+  Map<String, dynamic> toJson() => {
+    ...baseJson(),
+    'apiKey': apiKey,
+    'workspaceId': workspaceId,
+    'region': region,
+    'model': model,
+    'sampleRate': sampleRate,
+    'format': format,
   };
 }
 

@@ -510,6 +510,68 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
         ),
       ];
     }
+    if (service is StepFunOptions) {
+      return [
+        field(
+          key: 'apiKey',
+          label: l10n.searchServicesDialogApiKey,
+          obscure: true,
+          validator: requiredApiKey,
+        ),
+        _buildMultiKeyEntry(context),
+        field(
+          key: 'url',
+          label: l10n.searchServicesFieldCustomUrlOptional,
+          hint: StepFunOptions.defaultUrl,
+          keyboardType: TextInputType.url,
+        ),
+        field(
+          key: 'category',
+          label: 'Category',
+          hint: 'programming / research / gov / business',
+        ),
+      ];
+    }
+    if (service is FirecrawlOptions) {
+      return [
+        field(
+          key: 'apiKey',
+          label: l10n.searchServicesDialogApiKey,
+          obscure: true,
+          validator: requiredApiKey,
+        ),
+        _buildMultiKeyEntry(context),
+        field(
+          key: 'url',
+          label: l10n.searchServicesFieldCustomUrlOptional,
+          hint: FirecrawlOptions.defaultUrl,
+          keyboardType: TextInputType.url,
+        ),
+        field(key: 'country', label: 'Country', hint: 'US'),
+        field(key: 'location', label: 'Location'),
+      ];
+    }
+    if (service is TinyFishOptions) {
+      return [
+        field(
+          key: 'apiKey',
+          label: l10n.searchServicesDialogApiKey,
+          obscure: true,
+          validator: requiredApiKey,
+        ),
+        _buildMultiKeyEntry(context),
+        field(
+          key: 'url',
+          label: l10n.searchServicesFieldCustomUrlOptional,
+          hint: TinyFishOptions.defaultUrl,
+          keyboardType: TextInputType.url,
+        ),
+        field(key: 'location', label: 'Location', hint: 'US'),
+        field(key: 'language', label: 'Language', hint: 'en'),
+        field(key: 'includeDomains', label: 'Include domains'),
+        field(key: 'excludeDomains', label: 'Exclude domains'),
+      ];
+    }
 
     return [
       field(
@@ -1025,6 +1087,22 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
       _putController('reasoningEffort', service.reasoningEffort);
       _putController('customUrl', service.customUrl);
       _putController('systemPrompt', service.systemPrompt);
+    } else if (service is StepFunOptions) {
+      _putController('apiKey', service.apiKey);
+      _putController('url', service.url);
+      _putController('category', service.category);
+    } else if (service is FirecrawlOptions) {
+      _putController('apiKey', service.apiKey);
+      _putController('url', service.url);
+      _putController('country', service.country);
+      _putController('location', service.location);
+    } else if (service is TinyFishOptions) {
+      _putController('apiKey', service.apiKey);
+      _putController('url', service.url);
+      _putController('location', service.location);
+      _putController('language', service.language);
+      _putController('includeDomains', service.includeDomains);
+      _putController('excludeDomains', service.excludeDomains);
     }
   }
 
@@ -1164,6 +1242,37 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           reasoningEffort: _text('reasoningEffort'),
           customUrl: _text('customUrl'),
           systemPrompt: _controller('systemPrompt').text,
+        );
+      case 'stepfun':
+        return StepFunOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+          url: _text('url'),
+          category: _text('category'),
+        );
+      case 'firecrawl':
+        final existing = initial is FirecrawlOptions ? initial : null;
+        return FirecrawlOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+          url: _text('url'),
+          sources: existing?.sources ?? const <String>['web'],
+          categories: existing?.categories ?? const <String>[],
+          country: _text('country'),
+          location: _text('location'),
+        );
+      case 'tinyfish':
+        return TinyFishOptions(
+          id: _serviceId,
+          apiKey: _text('apiKey'),
+          extraApiKeys: _extraApiKeys,
+          url: _text('url'),
+          location: _text('location'),
+          language: _text('language'),
+          includeDomains: _text('includeDomains'),
+          excludeDomains: _text('excludeDomains'),
         );
       default:
         return BingLocalOptions(id: _serviceId);
@@ -2003,6 +2112,9 @@ String _typeForService(SearchServiceOptions service) {
   if (service is SerperOptions) return 'serper';
   if (service is QueritOptions) return 'querit';
   if (service is GrokOptions) return 'grok';
+  if (service is StepFunOptions) return 'stepfun';
+  if (service is FirecrawlOptions) return 'firecrawl';
+  if (service is TinyFishOptions) return 'tinyfish';
   return 'bing_local';
 }
 
@@ -2045,6 +2157,12 @@ SearchServiceOptions _defaultService(String type, String id) {
       return QueritOptions(id: id, apiKey: '');
     case 'grok':
       return GrokOptions(id: id, apiKey: '');
+    case 'stepfun':
+      return StepFunOptions(id: id, apiKey: '');
+    case 'firecrawl':
+      return FirecrawlOptions(id: id, apiKey: '');
+    case 'tinyfish':
+      return TinyFishOptions(id: id, apiKey: '');
     default:
       return BingLocalOptions(id: id);
   }
@@ -2085,6 +2203,12 @@ String _serviceTypeName(BuildContext context, String type) {
       return l10n.searchServiceNameQuerit;
     case 'grok':
       return l10n.searchServiceNameGrok;
+    case 'stepfun':
+      return l10n.searchServiceNameStepFun;
+    case 'firecrawl':
+      return l10n.searchServiceNameFirecrawl;
+    case 'tinyfish':
+      return l10n.searchServiceNameTinyFish;
     default:
       return type;
   }
@@ -2107,6 +2231,9 @@ const _providerTypes = <({String type, String brand})>[
   (type: 'serper', brand: 'serper'),
   (type: 'querit', brand: 'querit'),
   (type: 'grok', brand: 'grok'),
+  (type: 'stepfun', brand: 'stepfun'),
+  (type: 'firecrawl', brand: 'firecrawl'),
+  (type: 'tinyfish', brand: 'tinyfish'),
 ];
 
 @Preview(

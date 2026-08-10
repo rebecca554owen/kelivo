@@ -847,6 +847,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
         ? initial.apiKey
         : (initial is MimoTtsOptions)
         ? initial.apiKey
+        : (initial is QwenAudioTtsOptions)
+        ? initial.apiKey
+        : (initial is StepTtsOptions)
+        ? initial.apiKey
+        : (initial is FishAudioTtsOptions)
+        ? initial.apiKey
         : '',
   );
   final baseCtl = TextEditingController(
@@ -866,6 +872,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
         ? initial.baseUrl
         : (initial is MimoTtsOptions)
         ? initial.baseUrl
+        : (initial is QwenAudioTtsOptions)
+        ? initial.workspaceId
+        : (initial is StepTtsOptions)
+        ? initial.baseUrl
+        : (initial is FishAudioTtsOptions)
+        ? initial.baseUrl
         : '',
   );
   final modelCtl = TextEditingController(
@@ -882,6 +894,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
         : (initial is ElevenLabsTtsOptions)
         ? initial.modelId
         : (initial is MimoTtsOptions)
+        ? initial.model
+        : (initial is QwenAudioTtsOptions)
+        ? initial.model
+        : (initial is StepTtsOptions)
+        ? initial.model
+        : (initial is FishAudioTtsOptions)
         ? initial.model
         : '',
   );
@@ -902,6 +920,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
         ? initial.voiceId
         : (initial is MimoTtsOptions)
         ? initial.voice
+        : (initial is QwenAudioTtsOptions)
+        ? initial.voice
+        : (initial is StepTtsOptions)
+        ? initial.voice
+        : (initial is FishAudioTtsOptions)
+        ? initial.referenceId
         : '',
   );
   final emotionCtl = TextEditingController(
@@ -985,6 +1009,13 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   NetworkTtsKind.elevenlabs,
                                 ),
                                 networkTtsKindDisplayName(NetworkTtsKind.mimo),
+                                networkTtsKindDisplayName(
+                                  NetworkTtsKind.qwenAudio,
+                                ),
+                                networkTtsKindDisplayName(NetworkTtsKind.step),
+                                networkTtsKindDisplayName(
+                                  NetworkTtsKind.fishAudio,
+                                ),
                               ],
                               onSelected: (picked) {
                                 setState(() {
@@ -1035,6 +1066,24 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                         NetworkTtsKind.mimo,
                                       )) {
                                     kind = NetworkTtsKind.mimo;
+                                  }
+                                  if (picked ==
+                                      networkTtsKindDisplayName(
+                                        NetworkTtsKind.qwenAudio,
+                                      )) {
+                                    kind = NetworkTtsKind.qwenAudio;
+                                  }
+                                  if (picked ==
+                                      networkTtsKindDisplayName(
+                                        NetworkTtsKind.step,
+                                      )) {
+                                    kind = NetworkTtsKind.step;
+                                  }
+                                  if (picked ==
+                                      networkTtsKindDisplayName(
+                                        NetworkTtsKind.fishAudio,
+                                      )) {
+                                    kind = NetworkTtsKind.fishAudio;
                                   }
                                 });
                               },
@@ -1221,13 +1270,73 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   voiceId: voice,
                                 );
                               } else if (kind == NetworkTtsKind.mimo) {
+                                final existing =
+                                    initial is MimoTtsOptions ? initial : null;
                                 result = MimoTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
                                   baseUrl: base,
                                   model: model,
                                   voice: voice,
+                                  instruction: existing?.instruction ?? '',
+                                  stream: existing?.stream ?? true,
+                                );
+                              } else if (kind == NetworkTtsKind.qwenAudio) {
+                                final existing = initial is QwenAudioTtsOptions
+                                    ? initial
+                                    : null;
+                                result = QwenAudioTtsOptions(
+                                  id: initial?.id,
+                                  enabled: true,
+                                  name: name,
+                                  apiKey: apiKey,
+                                  workspaceId: base == _defaultBaseUrl(kind)
+                                      ? ''
+                                      : base,
+                                  region: existing?.region ?? 'cn-beijing',
+                                  model: model,
+                                  voice: voice,
+                                  format: existing?.format ?? 'mp3',
+                                  sampleRate: existing?.sampleRate ?? 22050,
+                                );
+                              } else if (kind == NetworkTtsKind.step) {
+                                final existing =
+                                    initial is StepTtsOptions ? initial : null;
+                                result = StepTtsOptions(
+                                  id: initial?.id,
+                                  enabled: true,
+                                  name: name,
+                                  apiKey: apiKey,
+                                  baseUrl: base,
+                                  model: model,
+                                  voice: voice,
+                                  responseFormat:
+                                      existing?.responseFormat ?? 'mp3',
+                                  speed: existing?.speed ?? 1.0,
+                                  volume: existing?.volume ?? 1.0,
+                                  sampleRate: existing?.sampleRate ?? 24000,
+                                  instruction: existing?.instruction ?? '',
+                                );
+                              } else if (kind == NetworkTtsKind.fishAudio) {
+                                final existing = initial is FishAudioTtsOptions
+                                    ? initial
+                                    : null;
+                                result = FishAudioTtsOptions(
+                                  id: initial?.id,
+                                  enabled: true,
+                                  name: name,
+                                  apiKey: apiKey,
+                                  baseUrl: base,
+                                  model: model,
+                                  referenceId: voice,
+                                  format: existing?.format ?? 'mp3',
+                                  temperature: existing?.temperature ?? 0.7,
+                                  topP: existing?.topP ?? 0.7,
+                                  speed: existing?.speed ?? 1.0,
+                                  sampleRate: existing?.sampleRate ?? 44100,
+                                  latency: existing?.latency ?? 'normal',
                                 );
                               }
                               Navigator.of(ctx).pop();
@@ -1280,6 +1389,12 @@ String _defaultBaseUrl(NetworkTtsKind k) {
       return 'https://api.elevenlabs.io';
     case NetworkTtsKind.mimo:
       return 'https://api.xiaomimimo.com/v1';
+    case NetworkTtsKind.qwenAudio:
+      return 'wss://dashscope.aliyuncs.com/api-ws/v1/inference';
+    case NetworkTtsKind.step:
+      return 'https://api.stepfun.com/v1';
+    case NetworkTtsKind.fishAudio:
+      return 'https://api.fish.audio';
   }
 }
 
@@ -1288,9 +1403,9 @@ String _defaultModel(NetworkTtsKind k) {
     case NetworkTtsKind.openai:
       return 'gpt-4o-mini-tts';
     case NetworkTtsKind.gemini:
-      return 'gemini-2.5-flash-preview-tts';
+      return 'gemini-3.1-flash-tts-preview';
     case NetworkTtsKind.minimax:
-      return 'speech-2.6-turbo';
+      return 'speech-2.8-turbo';
     case NetworkTtsKind.qwen:
       return 'qwen3-tts-flash';
     case NetworkTtsKind.groq:
@@ -1300,7 +1415,13 @@ String _defaultModel(NetworkTtsKind k) {
     case NetworkTtsKind.elevenlabs:
       return 'eleven_multilingual_v2';
     case NetworkTtsKind.mimo:
-      return 'mimo-v2-tts';
+      return 'mimo-v2.5-tts';
+    case NetworkTtsKind.qwenAudio:
+      return 'qwen-audio-3.0-tts-flash';
+    case NetworkTtsKind.step:
+      return 'stepaudio-2.5-tts';
+    case NetworkTtsKind.fishAudio:
+      return 's2.1-pro';
   }
 }
 
@@ -1322,6 +1443,12 @@ String _defaultVoice(NetworkTtsKind k) {
       return '';
     case NetworkTtsKind.mimo:
       return 'mimo_default';
+    case NetworkTtsKind.qwenAudio:
+      return 'longanhuan_v3.6';
+    case NetworkTtsKind.step:
+      return 'cixingnansheng';
+    case NetworkTtsKind.fishAudio:
+      return '';
   }
 }
 
@@ -1343,6 +1470,12 @@ String _voiceLabelFor(NetworkTtsKind k, AppLocalizations l10n) {
       return l10n.ttsServicesFieldVoiceIdLabel;
     case NetworkTtsKind.mimo:
       return l10n.ttsServicesFieldVoiceLabel;
+    case NetworkTtsKind.qwenAudio:
+      return l10n.ttsServicesFieldVoiceLabel;
+    case NetworkTtsKind.step:
+      return l10n.ttsServicesFieldVoiceLabel;
+    case NetworkTtsKind.fishAudio:
+      return l10n.ttsServicesFieldVoiceIdLabel;
   }
 }
 

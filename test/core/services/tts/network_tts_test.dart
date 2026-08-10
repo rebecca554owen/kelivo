@@ -45,7 +45,113 @@ void main() {
       expect(xai.language, 'auto');
 
       expect(minimax, isA<MiniMaxTtsOptions>());
-      expect((minimax as MiniMaxTtsOptions).model, 'speech-2.6-turbo');
+      expect((minimax as MiniMaxTtsOptions).model, 'speech-2.8-turbo');
+
+      final gemini = TtsServiceOptions.fromJson({
+        'kind': 'gemini',
+        'enabled': true,
+      });
+      expect(
+        (gemini as GeminiTtsOptions).model,
+        'gemini-3.1-flash-tts-preview',
+      );
+
+      final mimo = TtsServiceOptions.fromJson({
+        'kind': 'mimo',
+        'enabled': true,
+        'model': 'mimo-v2-tts',
+      });
+      expect((mimo as MimoTtsOptions).model, 'mimo-v2.5-tts');
+      expect(migrateMimoTtsModel('mimo-v2-tts'), 'mimo-v2.5-tts');
+
+      final qwenAudio = TtsServiceOptions.fromJson({
+        'kind': 'qwen_audio',
+        'enabled': true,
+      });
+      expect(qwenAudio, isA<QwenAudioTtsOptions>());
+      expect(
+        (qwenAudio as QwenAudioTtsOptions).voice,
+        'longanhuan_v3.6',
+      );
+      expect(qwenAudio.model, 'qwen-audio-3.0-tts-flash');
+    });
+
+    test('round-trips advanced fields for new TTS providers', () {
+      final step = StepTtsOptions(
+        enabled: true,
+        name: 'Step',
+        apiKey: 'k',
+        baseUrl: 'https://api.stepfun.com/v1',
+        model: 'stepaudio-2.5-tts',
+        voice: 'cixingnansheng',
+        responseFormat: 'wav',
+        speed: 1.25,
+        volume: 0.8,
+        sampleRate: 16000,
+        instruction: 'whisper',
+      );
+      final stepAgain =
+          TtsServiceOptions.fromJson(step.toJson()) as StepTtsOptions;
+      expect(stepAgain.responseFormat, 'wav');
+      expect(stepAgain.speed, 1.25);
+      expect(stepAgain.volume, 0.8);
+      expect(stepAgain.sampleRate, 16000);
+      expect(stepAgain.instruction, 'whisper');
+
+      final qwenAudio = QwenAudioTtsOptions(
+        enabled: true,
+        name: 'Qwen Audio',
+        apiKey: 'k',
+        workspaceId: 'ws',
+        region: 'ap-southeast-1',
+        model: 'qwen-audio-3.0-tts-flash',
+        voice: 'longanhuan_v3.6',
+        format: 'wav',
+        sampleRate: 24000,
+      );
+      final qwenAgain =
+          TtsServiceOptions.fromJson(qwenAudio.toJson()) as QwenAudioTtsOptions;
+      expect(qwenAgain.region, 'ap-southeast-1');
+      expect(qwenAgain.format, 'wav');
+      expect(qwenAgain.sampleRate, 24000);
+
+      final fish = FishAudioTtsOptions(
+        enabled: true,
+        name: 'Fish',
+        apiKey: 'k',
+        baseUrl: 'https://api.fish.audio',
+        model: 's2.1-pro',
+        referenceId: 'ref',
+        format: 'opus',
+        temperature: 0.4,
+        topP: 0.5,
+        speed: 1.1,
+        sampleRate: 32000,
+        latency: 'balanced',
+      );
+      final fishAgain =
+          TtsServiceOptions.fromJson(fish.toJson()) as FishAudioTtsOptions;
+      expect(fishAgain.format, 'opus');
+      expect(fishAgain.temperature, 0.4);
+      expect(fishAgain.topP, 0.5);
+      expect(fishAgain.speed, 1.1);
+      expect(fishAgain.sampleRate, 32000);
+      expect(fishAgain.latency, 'balanced');
+
+      final mimo = MimoTtsOptions(
+        enabled: true,
+        name: 'MiMo',
+        apiKey: 'k',
+        baseUrl: 'https://api.xiaomimimo.com/v1',
+        model: 'mimo-v2.5-tts',
+        voice: 'mimo_default',
+        instruction: 'slow',
+        stream: false,
+      );
+      final mimoAgain =
+          TtsServiceOptions.fromJson(mimo.toJson()) as MimoTtsOptions;
+      expect(mimoAgain.instruction, 'slow');
+      expect(mimoAgain.stream, isFalse);
     });
   });
 
@@ -306,7 +412,7 @@ void main() {
             name: 'MiMo',
             apiKey: 'mimo-key',
             baseUrl: _baseUrl(server),
-            model: 'mimo-v2-tts',
+            model: 'mimo-v2.5-tts',
             voice: 'mimo_default',
           ),
           text: 'hello',
@@ -315,6 +421,7 @@ void main() {
         expect(captured.uri.path, '/api/v1/chat/completions');
         expect(captured.headers.value('api-key'), 'mimo-key');
         expect(captured.headers.value(HttpHeaders.authorizationHeader), isNull);
+        expect(requestBody['model'], 'mimo-v2.5-tts');
         expect(requestBody['stream'], isTrue);
         expect(requestBody['audio'], {
           'format': 'pcm16',
@@ -325,6 +432,50 @@ void main() {
         expect(utf8.decode(result.bytes.take(4).toList()), 'RIFF');
       },
     );
+
+    test('synthesizes MiMo V2.5 non-streaming wav response', () async {
+      late Map<String, dynamic> requestBody;
+      final audio = base64Encode(<int>[5, 6, 7, 8]);
+      final server = await _bindServer((request) async {
+        requestBody =
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, dynamic>;
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'audio': {'data': audio},
+                },
+              },
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      addTearDown(() async => server.close(force: true));
+
+      final result = await NetworkTtsService.synthesize(
+        options: MimoTtsOptions(
+          enabled: true,
+          name: 'MiMo',
+          apiKey: 'mimo-key',
+          baseUrl: _baseUrl(server),
+          model: 'mimo-v2.5-tts',
+          voice: 'Chloe',
+          stream: false,
+        ),
+        text: 'hello',
+      );
+
+      expect(requestBody['stream'], isFalse);
+      expect(requestBody['audio'], {'format': 'wav', 'voice': 'Chloe'});
+      expect(result.mime, 'audio/wav');
+      expect(result.bytes, <int>[5, 6, 7, 8]);
+    });
 
     test(
       'throws when MiMo streaming response contains no audio chunks',
@@ -349,7 +500,7 @@ void main() {
               name: 'MiMo',
               apiKey: 'mimo-key',
               baseUrl: _baseUrl(server),
-              model: 'mimo-v2-tts',
+              model: 'mimo-v2.5-tts',
               voice: 'mimo_default',
             ),
             text: 'hello',
@@ -358,6 +509,42 @@ void main() {
         );
       },
     );
+
+    test('StepFun uses snake_case speech fields and chunks long text', () async {
+      final bodies = <Map<String, dynamic>>[];
+      final server = await _bindServer((request) async {
+        bodies.add(
+          jsonDecode(await utf8.decoder.bind(request).join())
+              as Map<String, dynamic>,
+        );
+        request.response.statusCode = HttpStatus.ok;
+        request.response.add(<int>[1, 2, 3]);
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+
+      final long = 'a' * 1001;
+      final result = await NetworkTtsService.synthesize(
+        options: StepTtsOptions(
+          enabled: true,
+          name: 'Step',
+          apiKey: 'step-key',
+          baseUrl: _baseUrl(server),
+          model: 'stepaudio-2.5-tts',
+          voice: 'cixingnansheng',
+          instruction: 'calm',
+          responseFormat: 'mp3',
+        ),
+        text: long,
+      );
+
+      expect(bodies, hasLength(2));
+      expect(bodies.first['response_format'], 'mp3');
+      expect(bodies.first['sample_rate'], 24000);
+      expect(bodies.first['instruction'], 'calm');
+      expect(bodies.first.containsKey('responseFormat'), isFalse);
+      expect(result.bytes.length, greaterThan(3));
+    });
   });
 
   test('combines WAV data after variable RIFF chunks', () {

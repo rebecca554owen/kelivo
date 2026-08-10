@@ -485,6 +485,7 @@ String? _kindBrandAsset(AsrServiceKind kind) {
   final hint = switch (kind) {
     AsrServiceKind.openAiRealtime => 'OpenAI',
     AsrServiceKind.dashScope => 'Qwen',
+    AsrServiceKind.qwenAudio => 'Qwen',
     AsrServiceKind.volcengine => 'Doubao',
     AsrServiceKind.mimo => 'MiMo',
     AsrServiceKind.step => 'Step',
@@ -844,6 +845,23 @@ class _AsrEditorState extends State<_AsrEditor> {
           ),
         );
         return;
+      case AsrServiceKind.qwenAudio:
+        final initial = widget.initial is QwenAudioAsrOptions
+            ? widget.initial as QwenAudioAsrOptions
+            : null;
+        widget.onSubmit(
+          QwenAudioAsrOptions(
+            id: id,
+            name: name,
+            apiKey: _apiKeyController.text.trim(),
+            workspaceId: _endpointController.text.trim(),
+            region: initial?.region ?? 'cn-beijing',
+            model: _valueOrDefault(_modelController.text, _defaultModel(_kind)),
+            sampleRate: initial?.sampleRate ?? 16000,
+            format: initial?.format ?? 'pcm',
+          ),
+        );
+        return;
       case AsrServiceKind.volcengine:
         widget.onSubmit(
           VolcengineAsrOptions(
@@ -1103,6 +1121,7 @@ class _AsrEditorState extends State<_AsrEditor> {
                       AsrServiceKind.sherpaOnnx,
                       AsrServiceKind.openAiRealtime,
                       AsrServiceKind.dashScope,
+                      AsrServiceKind.qwenAudio,
                       AsrServiceKind.volcengine,
                       AsrServiceKind.mimo,
                       AsrServiceKind.step,
@@ -1220,6 +1239,7 @@ class _ProviderChoiceGrid extends StatelessWidget {
             for (final kind in const [
               AsrServiceKind.openAiRealtime,
               AsrServiceKind.dashScope,
+              AsrServiceKind.qwenAudio,
               AsrServiceKind.volcengine,
               AsrServiceKind.mimo,
               AsrServiceKind.step,
@@ -1962,6 +1982,8 @@ IconData _kindIcon(AsrServiceKind kind) {
       return Lucide.AudioWaveform;
     case AsrServiceKind.dashScope:
       return Lucide.Network;
+    case AsrServiceKind.qwenAudio:
+      return Lucide.Network;
     case AsrServiceKind.volcengine:
       return Lucide.AudioWaveform;
     case AsrServiceKind.mimo:
@@ -2014,6 +2036,10 @@ bool _isDefaultServiceName(AsrServiceKind kind, String name) {
       'DashScope 即時辨識',
       'DashScope',
     }.contains(name),
+    AsrServiceKind.qwenAudio => const {
+      'Qwen Audio ASR',
+      'Qwen Audio',
+    }.contains(name),
     AsrServiceKind.volcengine => const {
       'Volcengine ASR',
       'Volcengine Speech Recognition',
@@ -2051,6 +2077,8 @@ String _kindTitle(AppLocalizations l10n, AsrServiceKind kind) {
       return l10n.asrServicesOpenAiTitle;
     case AsrServiceKind.dashScope:
       return l10n.asrServicesDashScopeTitle;
+    case AsrServiceKind.qwenAudio:
+      return 'Qwen Audio';
     case AsrServiceKind.volcengine:
       return l10n.asrServicesVolcengineTitle;
     case AsrServiceKind.mimo:
@@ -2070,6 +2098,8 @@ String _kindSubtitle(AppLocalizations l10n, AsrServiceKind kind) {
       return l10n.asrServicesOpenAiSubtitle;
     case AsrServiceKind.dashScope:
       return l10n.asrServicesDashScopeSubtitle;
+    case AsrServiceKind.qwenAudio:
+      return 'Qwen Audio 3.0 ASR (/api-ws/v1/inference)';
     case AsrServiceKind.volcengine:
       return l10n.asrServicesVolcengineSubtitle;
     case AsrServiceKind.mimo:
@@ -2083,6 +2113,7 @@ String _apiKeyOf(AsrServiceOptions? options) {
   return switch (options) {
     OpenAiRealtimeAsrOptions value => value.apiKey,
     DashScopeAsrOptions value => value.apiKey,
+    QwenAudioAsrOptions value => value.apiKey,
     VolcengineAsrOptions value => value.apiKey,
     MimoAsrOptions value => value.apiKey,
     StepAsrOptions value => value.apiKey,
@@ -2094,6 +2125,7 @@ String _endpointOf(AsrServiceOptions? options) {
   return switch (options) {
     OpenAiRealtimeAsrOptions value => value.websocketUrl,
     DashScopeAsrOptions value => value.websocketUrl,
+    QwenAudioAsrOptions value => value.workspaceId,
     VolcengineAsrOptions value => value.websocketUrl,
     MimoAsrOptions value => value.baseUrl,
     StepAsrOptions value => value.baseUrl,
@@ -2105,6 +2137,7 @@ String _modelOf(AsrServiceOptions? options) {
   return switch (options) {
     OpenAiRealtimeAsrOptions value => value.model,
     DashScopeAsrOptions value => value.model,
+    QwenAudioAsrOptions value => value.model,
     MimoAsrOptions value => value.model,
     StepAsrOptions value => value.model,
     _ => '',
@@ -2137,6 +2170,8 @@ String _defaultEndpoint(AsrServiceKind kind) {
       return 'wss://api.openai.com/v1/realtime?intent=transcription';
     case AsrServiceKind.dashScope:
       return 'wss://dashscope.aliyuncs.com/api-ws/v1/realtime';
+    case AsrServiceKind.qwenAudio:
+      return '';
     case AsrServiceKind.volcengine:
       return 'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel';
     case AsrServiceKind.mimo:
@@ -2155,6 +2190,8 @@ String _defaultModel(AsrServiceKind kind) {
       return 'gpt-live-transcribe';
     case AsrServiceKind.dashScope:
       return 'qwen3-asr-flash-realtime';
+    case AsrServiceKind.qwenAudio:
+      return 'qwen-audio-3.0-asr-flash-streaming';
     case AsrServiceKind.volcengine:
       return '';
     case AsrServiceKind.mimo:
@@ -2168,7 +2205,11 @@ String _defaultModel(AsrServiceKind kind) {
 }
 
 String _defaultResourceId(AsrServiceKind kind) {
-  return kind == AsrServiceKind.volcengine ? 'volc.seedasr.sauc.duration' : '';
+  // Keep Seed-ASR 2.0 default. Compatible: volc.bigasr.sauc.duration (ASR 1.0).
+  // Needs real Key verification before changing the app default.
+  return kind == AsrServiceKind.volcengine
+      ? VolcengineAsrOptions.seedAsrDurationResourceId
+      : '';
 }
 
 String _valueOrDefault(String value, String fallback) {

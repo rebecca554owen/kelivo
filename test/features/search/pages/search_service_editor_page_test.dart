@@ -363,6 +363,35 @@ void main() {
     expect((result!.service! as TavilyOptions).apiKey, 'new-key');
   });
 
+  testWidgets('preserves Firecrawl sources and categories when saving', (
+    tester,
+  ) async {
+    SearchServiceEditorResult? result;
+    await _pumpEditor(
+      tester,
+      initialService: FirecrawlOptions(
+        id: 'firecrawl',
+        apiKey: 'old-key',
+        sources: const ['web', 'news'],
+        categories: const ['github'],
+        country: 'US',
+      ),
+      onResult: (value) => result = value,
+    );
+
+    await tester.enterText(_apiKeyField(), 'new-key');
+    await tester.tap(find.byIcon(Lucide.Check));
+    await tester.pumpAndSettle();
+
+    expect(result?.deleted, isFalse);
+    expect(result?.service, isA<FirecrawlOptions>());
+    final saved = result!.service! as FirecrawlOptions;
+    expect(saved.apiKey, 'new-key');
+    expect(saved.sources, ['web', 'news']);
+    expect(saved.categories, ['github']);
+    expect(saved.country, 'US');
+  });
+
   testWidgets('returns a delete action after confirmation', (tester) async {
     SearchServiceEditorResult? result;
     await _pumpEditor(

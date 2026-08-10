@@ -20,6 +20,9 @@ import 'providers/duckduckgo_search_service.dart';
 import 'providers/serper_search_service.dart';
 import 'providers/grok_search_service.dart';
 import 'providers/querit_search_service.dart';
+import 'providers/stepfun_search_service.dart';
+import 'providers/firecrawl_search_service.dart';
+import 'providers/tinyfish_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -86,6 +89,12 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return GrokSearchService() as SearchService;
       case QueritOptions _:
         return QueritSearchService() as SearchService;
+      case StepFunOptions _:
+        return StepFunSearchService() as SearchService;
+      case FirecrawlOptions _:
+        return FirecrawlSearchService() as SearchService;
+      case TinyFishOptions _:
+        return TinyFishSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -227,6 +236,13 @@ abstract class SearchServiceOptions {
         return GrokOptions.fromJson(json);
       case 'querit':
         return QueritOptions.fromJson(json);
+      case 'stepfun':
+      case 'step':
+        return StepFunOptions.fromJson(json);
+      case 'firecrawl':
+        return FirecrawlOptions.fromJson(json);
+      case 'tinyfish':
+        return TinyFishOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -727,6 +743,158 @@ class QueritOptions extends SearchServiceOptions {
     timeRange: json['timeRange'] ?? '',
     countries: json['countries'] ?? '',
     languages: json['languages'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
+}
+
+class StepFunOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.stepfun.com/v1/search';
+
+  final String apiKey;
+  final String url;
+  final String category;
+
+  StepFunOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    this.category = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'stepfun',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    'category': category.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory StepFunOptions.fromJson(Map<String, dynamic> json) => StepFunOptions(
+    id: json['id'],
+    apiKey: json['apiKey'] ?? '',
+    url: json['url'] ?? '',
+    category: json['category'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
+}
+
+class FirecrawlOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.firecrawl.dev/v2/search';
+
+  final String apiKey;
+  final String url;
+  final List<String> sources;
+  final List<String> categories;
+  final String country;
+  final String location;
+
+  FirecrawlOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    this.sources = const <String>['web'],
+    this.categories = const <String>[],
+    this.country = '',
+    this.location = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'firecrawl',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    'sources': sources,
+    'categories': categories,
+    'country': country.trim(),
+    'location': location.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory FirecrawlOptions.fromJson(Map<String, dynamic> json) =>
+      FirecrawlOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        url: json['url'] ?? '',
+        sources:
+            (json['sources'] as List?)
+                ?.map((e) => e.toString())
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const <String>['web'],
+        categories:
+            (json['categories'] as List?)
+                ?.map((e) => e.toString())
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const <String>[],
+        country: json['country'] ?? '',
+        location: json['location'] ?? '',
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
+}
+
+class TinyFishOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.search.tinyfish.ai';
+
+  final String apiKey;
+  final String url;
+  final String location;
+  final String language;
+  final String includeDomains;
+  final String excludeDomains;
+
+  TinyFishOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    this.location = '',
+    this.language = '',
+    this.includeDomains = '',
+    this.excludeDomains = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'tinyfish',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    'location': location.trim(),
+    'language': language.trim(),
+    'includeDomains': includeDomains.trim(),
+    'excludeDomains': excludeDomains.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory TinyFishOptions.fromJson(Map<String, dynamic> json) => TinyFishOptions(
+    id: json['id'],
+    apiKey: json['apiKey'] ?? '',
+    url: json['url'] ?? '',
+    location: json['location'] ?? '',
+    language: json['language'] ?? '',
+    includeDomains: json['includeDomains'] ?? '',
+    excludeDomains: json['excludeDomains'] ?? '',
     extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }

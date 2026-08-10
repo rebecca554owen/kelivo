@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -68,6 +69,8 @@ class CloudAsrService {
         return _startOpenAi(options);
       case DashScopeAsrOptions():
         return _startDashScope(options);
+      case QwenAudioAsrOptions():
+        return _startQwenAudio(options);
       case VolcengineAsrOptions():
         return _startVolcengine(options);
       case MimoAsrOptions():
@@ -89,6 +92,25 @@ class CloudAsrService {
       default:
         throw AsrException('${options.name} is not a cloud ASR service');
     }
+  }
+
+  Future<CloudAsrSession> _startQwenAudio(QwenAudioAsrOptions options) async {
+    final uri = _webSocketUri(options.websocketUrl, 'Qwen Audio');
+    final socket = await _connect(
+      label: 'Qwen Audio',
+      apiKey: options.apiKey,
+      uri: uri,
+      headers: {
+        'Authorization': 'Bearer ${options.apiKey}',
+        if (options.workspaceId.trim().isNotEmpty)
+          'X-DashScope-WorkSpace': options.workspaceId.trim(),
+      },
+    );
+    return _QwenAudioAsrSession(
+      options: options,
+      socket: socket,
+      completionTimeout: completionTimeout,
+    );
   }
 
   Future<CloudAsrSession> _startOpenAi(OpenAiRealtimeAsrOptions options) async {
@@ -1167,6 +1189,243 @@ class _StepAsrSession implements CloudAsrSession {
     if (_ownsClient) _client.close();
     if (!_partialController.isClosed) await _partialController.close();
   }
+}
+
+/// Qwen Audio 3.0 ASR via `/api-ws/v1/inference`:
+/// run-task → binary PCM → result-generated → finish-task.
+class _QwenAudioAsrSession implements CloudAsrSession {
+  _QwenAudioAsrSession({
+    required QwenAudioAsrOptions options,
+    required AsrWebSocketConnection socket,
+    required Duration completionTimeout,
+  }) : _options = options,
+       _socket = socket,
+       _completionTimeout = completionTimeout,
+       _taskId = const Uuid().v4() {
+    _subscription = _socket.messages.listen(
+      _handleMessage,
+      onError: (Object e, StackTrace st) => _fail(e, stackTrace: st),
+      onDone: () {
+        if (_finishCompleter != null && !_finishCompleter!.isCompleted) {
+          _finishCompleter!.complete(_transcript);
+        }
+      },
+    );
+    _socket.send(
+      jsonEncode({
+        'header': {
+          'action': 'run-task',
+          'task_id': _taskId,
+          'streaming': 'duplex',
+        },
+        'payload': {
+          'task_group': 'audio',
+          'task': 'asr',
+          'function': 'recognition',
+          'model': _options.model,
+          'parameters': {
+            'format': _options.format,
+            'sample_rate': _options.sampleRate,
+          },
+          'input': {},
+        },
+      }),
+    );
+  }
+
+  final QwenAudioAsrOptions _options;
+  final AsrWebSocketConnection _socket;
+  final Duration _completionTimeout;
+  final String _taskId;
+  final StreamController<String> _partialController =
+      StreamController<String>.broadcast(sync: true);
+
+  late final StreamSubscription<Object?> _subscription;
+  final Completer<void> _started = Completer<void>();
+  Completer<String>? _finishCompleter;
+  Future<String>? _finishFuture;
+  /// Finalized sentences accumulated across `result-generated` events.
+  var _finalizedTranscript = '';
+  /// Full transcript shown to callers: finalized + current partial sentence.
+  var _transcript = '';
+  var _cleanedUp = false;
+  var _cancelled = false;
+  AsrException? _terminalError;
+
+  @override
+  Stream<String> get partialTranscripts => _partialController.stream;
+
+  @override
+  Future<void> addPcm16(Uint8List chunk) async {
+    _ensureActive();
+    if (chunk.isEmpty) return;
+    if (!_started.isCompleted) {
+      await _started.future.timeout(_completionTimeout);
+    }
+    _socket.sendBinary(chunk);
+  }
+
+  @override
+  Future<String> finish() {
+    return _finishFuture ??= _finishInternal();
+  }
+
+  Future<String> _finishInternal() async {
+    _ensureActive();
+    final completer = Completer<String>();
+    _finishCompleter = completer;
+    try {
+      if (!_started.isCompleted) {
+        await _started.future.timeout(_completionTimeout);
+      }
+      _socket.send(
+        jsonEncode({
+          'header': {
+            'action': 'finish-task',
+            'task_id': _taskId,
+            'streaming': 'duplex',
+          },
+          'payload': {'input': {}},
+        }),
+      );
+      return await completer.future.timeout(_completionTimeout);
+    } on TimeoutException {
+      throw const AsrException('Qwen Audio ASR timed out');
+    } finally {
+      await _cleanup(1000, 'finished');
+    }
+  }
+
+  @override
+  Future<void> cancel() async {
+    _cancelled = true;
+    _terminalError ??= const AsrException('Qwen Audio ASR session was cancelled');
+    final completer = _finishCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.completeError(_terminalError!);
+    }
+    await _cleanup(1000, 'cancelled');
+  }
+
+  void _handleMessage(Object? event) {
+    if (event is! String) return;
+    Map<String, dynamic>? obj;
+    try {
+      obj = jsonDecode(event) as Map<String, dynamic>;
+    } catch (_) {
+      return;
+    }
+    final header = (obj['header'] as Map?)?.cast<String, dynamic>() ?? {};
+    final name = (header['event'] ?? '').toString();
+    if (name == 'task-started') {
+      if (!_started.isCompleted) _started.complete();
+      return;
+    }
+    if (name == 'result-generated') {
+      final payload = (obj['payload'] as Map?)?.cast<String, dynamic>() ?? {};
+      final output = (payload['output'] as Map?)?.cast<String, dynamic>() ?? {};
+      final sentence =
+          (output['sentence'] as Map?)?.cast<String, dynamic>() ?? {};
+      final text = (sentence['text'] ?? '').toString();
+      if (text.isEmpty) return;
+      // Official Fun-ASR / Qwen Audio protocol returns the *current* sentence
+      // only. Accumulate finalized sentences, then append the active partial.
+      if (_isQwenAudioSentenceEnd(sentence)) {
+        _finalizedTranscript = combineQwenAudioTranscript(
+          _finalizedTranscript,
+          text,
+        );
+        _transcript = _finalizedTranscript;
+      } else {
+        _transcript = combineQwenAudioTranscript(_finalizedTranscript, text);
+      }
+      if (!_partialController.isClosed) {
+        _partialController.add(_transcript);
+      }
+      return;
+    }
+    if (name == 'task-finished') {
+      final completer = _finishCompleter;
+      if (completer != null && !completer.isCompleted) {
+        completer.complete(_transcript);
+      }
+      return;
+    }
+    if (name == 'task-failed') {
+      final msg = (header['error_message'] ?? header['error_code'] ?? name)
+          .toString();
+      _fail(AsrException('Qwen Audio ASR failed: $msg'));
+    }
+  }
+
+  void _fail(Object error, {StackTrace? stackTrace}) {
+    final safe = error is AsrException
+        ? error
+        : const AsrException('Qwen Audio ASR failed');
+    _terminalError = safe;
+    if (!_started.isCompleted) {
+      _started.completeError(safe, stackTrace);
+    }
+    final completer = _finishCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.completeError(safe, stackTrace);
+    }
+    if (!_partialController.isClosed) {
+      _partialController.addError(safe, stackTrace);
+    }
+    unawaited(_cleanup(1011, 'failed'));
+  }
+
+  void _ensureActive() {
+    final terminalError = _terminalError;
+    if (terminalError != null) throw terminalError;
+    if (_cancelled) {
+      throw const AsrException('Qwen Audio ASR session was cancelled');
+    }
+    if (_cleanedUp) {
+      throw const AsrException('Qwen Audio ASR session is already closed');
+    }
+  }
+
+  Future<void> _cleanup(int code, String reason) async {
+    if (_cleanedUp) return;
+    _cleanedUp = true;
+    await _subscription.cancel();
+    try {
+      await _socket.close(code, reason);
+    } catch (_) {}
+    if (!_partialController.isClosed) await _partialController.close();
+  }
+}
+
+/// Mirrors DashScope `RecognitionResult.is_sentence_end`.
+bool _isQwenAudioSentenceEnd(Map<String, dynamic> sentence) {
+  final flag = sentence['sentence_end'];
+  if (flag is bool) return flag;
+  if (flag != null) {
+    final normalized = flag.toString().trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') return true;
+    if (normalized == 'false' || normalized == '0') return false;
+  }
+  return false;
+}
+
+/// Joins Qwen Audio finalized/partial segments.
+///
+/// Inserts a space for Latin text boundaries (including when the previous
+/// segment ends with Latin punctuation) while leaving CJK sentence joins
+/// unspaced.
+@visibleForTesting
+String combineQwenAudioTranscript(String prefix, String next) {
+  if (prefix.isEmpty) return next;
+  if (next.isEmpty) return prefix;
+  if (RegExp(r'^\s').hasMatch(next)) return '$prefix$next';
+  final prefixEndsLatinWord = RegExp(r'[A-Za-z0-9]$').hasMatch(prefix);
+  final prefixEndsLatinPunct = RegExp(r'''[.!?…,;:'")\]]$''').hasMatch(prefix);
+  final nextStartsLatinWord = RegExp(r'^[A-Za-z0-9]').hasMatch(next);
+  final needsSpace =
+      nextStartsLatinWord && (prefixEndsLatinWord || prefixEndsLatinPunct);
+  return needsSpace ? '$prefix $next' : '$prefix$next';
 }
 
 class _IoAsrWebSocketConnection implements AsrWebSocketConnection {

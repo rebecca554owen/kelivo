@@ -1103,6 +1103,7 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
           voiceId: voice,
         );
       case NetworkTtsKind.mimo:
+        final existing = initial is MimoTtsOptions ? initial : null;
         return MimoTtsOptions(
           id: initial?.id,
           enabled: true,
@@ -1111,6 +1112,55 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
           baseUrl: base,
           model: model,
           voice: voice,
+          instruction: existing?.instruction ?? '',
+          stream: existing?.stream ?? true,
+        );
+      case NetworkTtsKind.qwenAudio:
+        final existing = initial is QwenAudioTtsOptions ? initial : null;
+        return QwenAudioTtsOptions(
+          id: initial?.id,
+          enabled: true,
+          name: name,
+          apiKey: apiKey,
+          workspaceId: base == _defaultBaseUrl(_kind) ? '' : base,
+          region: existing?.region ?? 'cn-beijing',
+          model: model,
+          voice: voice,
+          format: existing?.format ?? 'mp3',
+          sampleRate: existing?.sampleRate ?? 22050,
+        );
+      case NetworkTtsKind.step:
+        final existing = initial is StepTtsOptions ? initial : null;
+        return StepTtsOptions(
+          id: initial?.id,
+          enabled: true,
+          name: name,
+          apiKey: apiKey,
+          baseUrl: base,
+          model: model,
+          voice: voice,
+          responseFormat: existing?.responseFormat ?? 'mp3',
+          speed: existing?.speed ?? 1.0,
+          volume: existing?.volume ?? 1.0,
+          sampleRate: existing?.sampleRate ?? 24000,
+          instruction: existing?.instruction ?? '',
+        );
+      case NetworkTtsKind.fishAudio:
+        final existing = initial is FishAudioTtsOptions ? initial : null;
+        return FishAudioTtsOptions(
+          id: initial?.id,
+          enabled: true,
+          name: name,
+          apiKey: apiKey,
+          baseUrl: base,
+          model: model,
+          referenceId: voice,
+          format: existing?.format ?? 'mp3',
+          temperature: existing?.temperature ?? 0.7,
+          topP: existing?.topP ?? 0.7,
+          speed: existing?.speed ?? 1.0,
+          sampleRate: existing?.sampleRate ?? 44100,
+          latency: existing?.latency ?? 'normal',
         );
     }
   }
@@ -1576,10 +1626,13 @@ const List<NetworkTtsKind> _networkTtsKinds = [
   NetworkTtsKind.gemini,
   NetworkTtsKind.minimax,
   NetworkTtsKind.qwen,
+  NetworkTtsKind.qwenAudio,
   NetworkTtsKind.groq,
   NetworkTtsKind.xai,
   NetworkTtsKind.elevenlabs,
   NetworkTtsKind.mimo,
+  NetworkTtsKind.step,
+  NetworkTtsKind.fishAudio,
 ];
 
 String _apiKeyOf(TtsServiceOptions? option) {
@@ -1587,10 +1640,13 @@ String _apiKeyOf(TtsServiceOptions? option) {
   if (option is GeminiTtsOptions) return option.apiKey;
   if (option is MiniMaxTtsOptions) return option.apiKey;
   if (option is QwenTtsOptions) return option.apiKey;
+  if (option is QwenAudioTtsOptions) return option.apiKey;
   if (option is GroqTtsOptions) return option.apiKey;
   if (option is XaiTtsOptions) return option.apiKey;
   if (option is ElevenLabsTtsOptions) return option.apiKey;
   if (option is MimoTtsOptions) return option.apiKey;
+  if (option is StepTtsOptions) return option.apiKey;
+  if (option is FishAudioTtsOptions) return option.apiKey;
   return '';
 }
 
@@ -1599,10 +1655,13 @@ String _baseUrlOf(TtsServiceOptions? option) {
   if (option is GeminiTtsOptions) return option.baseUrl;
   if (option is MiniMaxTtsOptions) return option.baseUrl;
   if (option is QwenTtsOptions) return option.baseUrl;
+  if (option is QwenAudioTtsOptions) return option.workspaceId;
   if (option is GroqTtsOptions) return option.baseUrl;
   if (option is XaiTtsOptions) return option.baseUrl;
   if (option is ElevenLabsTtsOptions) return option.baseUrl;
   if (option is MimoTtsOptions) return option.baseUrl;
+  if (option is StepTtsOptions) return option.baseUrl;
+  if (option is FishAudioTtsOptions) return option.baseUrl;
   return '';
 }
 
@@ -1611,9 +1670,12 @@ String _modelOf(TtsServiceOptions? option) {
   if (option is GeminiTtsOptions) return option.model;
   if (option is MiniMaxTtsOptions) return option.model;
   if (option is QwenTtsOptions) return option.model;
+  if (option is QwenAudioTtsOptions) return option.model;
   if (option is GroqTtsOptions) return option.model;
   if (option is ElevenLabsTtsOptions) return option.modelId;
   if (option is MimoTtsOptions) return option.model;
+  if (option is StepTtsOptions) return option.model;
+  if (option is FishAudioTtsOptions) return option.model;
   return '';
 }
 
@@ -1622,10 +1684,13 @@ String _voiceOf(TtsServiceOptions? option) {
   if (option is GeminiTtsOptions) return option.voiceName;
   if (option is MiniMaxTtsOptions) return option.voiceId;
   if (option is QwenTtsOptions) return option.voice;
+  if (option is QwenAudioTtsOptions) return option.voice;
   if (option is GroqTtsOptions) return option.voice;
   if (option is XaiTtsOptions) return option.voiceId;
   if (option is ElevenLabsTtsOptions) return option.voiceId;
   if (option is MimoTtsOptions) return option.voice;
+  if (option is StepTtsOptions) return option.voice;
+  if (option is FishAudioTtsOptions) return option.referenceId;
   return '';
 }
 
@@ -1647,6 +1712,12 @@ String _defaultBaseUrl(NetworkTtsKind k) {
       return 'https://api.elevenlabs.io';
     case NetworkTtsKind.mimo:
       return 'https://api.xiaomimimo.com/v1';
+    case NetworkTtsKind.qwenAudio:
+      return 'wss://dashscope.aliyuncs.com/api-ws/v1/inference';
+    case NetworkTtsKind.step:
+      return 'https://api.stepfun.com/v1';
+    case NetworkTtsKind.fishAudio:
+      return 'https://api.fish.audio';
   }
 }
 
@@ -1655,9 +1726,9 @@ String _defaultModel(NetworkTtsKind k) {
     case NetworkTtsKind.openai:
       return 'gpt-4o-mini-tts';
     case NetworkTtsKind.gemini:
-      return 'gemini-2.5-flash-preview-tts';
+      return 'gemini-3.1-flash-tts-preview';
     case NetworkTtsKind.minimax:
-      return 'speech-2.6-turbo';
+      return 'speech-2.8-turbo';
     case NetworkTtsKind.qwen:
       return 'qwen3-tts-flash';
     case NetworkTtsKind.groq:
@@ -1667,7 +1738,13 @@ String _defaultModel(NetworkTtsKind k) {
     case NetworkTtsKind.elevenlabs:
       return 'eleven_multilingual_v2';
     case NetworkTtsKind.mimo:
-      return 'mimo-v2-tts';
+      return 'mimo-v2.5-tts';
+    case NetworkTtsKind.qwenAudio:
+      return 'qwen-audio-3.0-tts-flash';
+    case NetworkTtsKind.step:
+      return 'stepaudio-2.5-tts';
+    case NetworkTtsKind.fishAudio:
+      return 's2.1-pro';
   }
 }
 
@@ -1689,6 +1766,12 @@ String _defaultVoice(NetworkTtsKind k) {
       return '';
     case NetworkTtsKind.mimo:
       return 'mimo_default';
+    case NetworkTtsKind.qwenAudio:
+      return 'longanhuan_v3.6';
+    case NetworkTtsKind.step:
+      return 'cixingnansheng';
+    case NetworkTtsKind.fishAudio:
+      return '';
   }
 }
 
@@ -1710,5 +1793,11 @@ String _voiceLabelFor(NetworkTtsKind k, AppLocalizations l10n) {
       return l10n.ttsServicesFieldVoiceIdLabel;
     case NetworkTtsKind.mimo:
       return l10n.ttsServicesFieldVoiceLabel;
+    case NetworkTtsKind.qwenAudio:
+      return l10n.ttsServicesFieldVoiceLabel;
+    case NetworkTtsKind.step:
+      return l10n.ttsServicesFieldVoiceLabel;
+    case NetworkTtsKind.fishAudio:
+      return l10n.ttsServicesFieldVoiceIdLabel;
   }
 }

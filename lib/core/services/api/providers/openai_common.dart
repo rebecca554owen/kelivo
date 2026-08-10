@@ -72,23 +72,58 @@ void _applyCompatibleBuiltInSearch(
   }
 
   if (config.useResponseApi == true) return;
-  if (!BuiltInToolsHelper.isDashScopeProvider(config)) return;
-  if (!BuiltInToolsHelper.isDashScopeChatBuiltInSearchSupportedModel(
-    upstreamModelId,
-  )) {
+
+  if (BuiltInToolsHelper.isDashScopeProvider(config)) {
+    if (!BuiltInToolsHelper.isDashScopeChatBuiltInSearchSupportedModel(
+      upstreamModelId,
+    )) {
+      return;
+    }
+    body['enable_search'] = true;
+    final options = BuiltInToolsHelper.dashScopeSearchOptionsFromOverride(
+      config.modelOverrides[modelId],
+    );
+    if (options.isNotEmpty) {
+      body['search_options'] = options;
+    } else {
+      body.remove('search_options');
+    }
     return;
   }
 
-  body['enable_search'] = true;
-  final options = BuiltInToolsHelper.dashScopeSearchOptionsFromOverride(
-    config.modelOverrides[modelId],
-  );
-  if (options.isNotEmpty) {
-    body['search_options'] = options;
-  } else {
-    body.remove('search_options');
+  // MiMo: native chat Completions `web_search` tool (+ optional web_search_usage).
+  if (BuiltInToolsHelper.isMimoProvider(config) &&
+      BuiltInToolsHelper.isMimoBuiltInSearchSupportedModel(upstreamModelId)) {
+    _appendChatTool(body, {'type': 'web_search'});
+    return;
+  }
+
+  // GLM / Zhipu: native chat web_search tool structure.
+  if (BuiltInToolsHelper.isZhipuProvider(config) &&
+      BuiltInToolsHelper.isGlmBuiltInSearchSupportedModel(upstreamModelId)) {
+    _appendChatTool(body, {
+      'type': 'web_search',
+      'web_search': {'enable': true, 'search_result': true},
+    });
+    return;
   }
 }
+
+void _appendChatTool(Map<String, dynamic> body, Map<String, dynamic> tool) {
+  final tools = <Map<String, dynamic>>[];
+  final existing = body['tools'];
+  if (existing is List) {
+    for (final t in existing) {
+      if (t is Map) tools.add(t.cast<String, dynamic>());
+    }
+  }
+  final type = (tool['type'] ?? '').toString();
+  final exists = tools.any((t) => (t['type'] ?? '').toString() == type);
+  if (!exists) tools.add(tool);
+  body['tools'] = tools;
+  body['tool_choice'] ??= 'auto';
+}
+
 
 void _applyCompatibleResponsesReasoning(
   Map<String, dynamic> body, {
@@ -1212,6 +1247,51 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     if (maxTokens != null) map[info.completionTokensKey] = maxTokens;
   }
 
+  // Kimi K3 Formula web-search: fetch tool decls, then fiber-execute calls.
+  // Only names actually inserted after duplicate resolution are dispatched.
+  final formulaToolNames = <String>{};
+  List<Map<String, dynamic>> kimiFormulaTools = const <Map<String, dynamic>>[];
+  final builtInSearchEnabled = _builtInTools(
+    config,
+    modelId,
+  ).contains(BuiltInToolNames.search);
+  if (config.useResponseApi != true &&
+      BuiltInToolsHelper.isMoonshotProvider(config) &&
+      BuiltInToolsHelper.isKimiK3Model(upstreamModelId) &&
+      builtInSearchEnabled) {
+    try {
+      kimiFormulaTools = await KimiFormulaSearch.fetchTools(
+        client: client,
+        config: config,
+      );
+    } catch (_) {
+      kimiFormulaTools = const <Map<String, dynamic>>[];
+    }
+  }
+  Future<String> resolveToolCall(
+    String name,
+    Map<String, dynamic> args, {
+    String? toolCallId,
+  }) async {
+    if (formulaToolNames.contains(name)) {
+      return KimiFormulaSearch.executeFiber(
+        client: client,
+        config: config,
+        name: name,
+        arguments: jsonEncode(args),
+      );
+    }
+    if (onToolCall != null) {
+      return onToolCall(name, args, toolCallId: toolCallId);
+    }
+    throw Exception('No tool handler for $name');
+  }
+
+  final ToolCallHandler? effectiveOnToolCall =
+      (onToolCall != null || kimiFormulaTools.isNotEmpty)
+      ? resolveToolCall
+      : null;
+
   Map<String, dynamic> body;
   // Keep initial Responses request context so we can perform follow-up requests when tools are called
   List<Map<String, dynamic>> responsesInitialInput =
@@ -1261,12 +1341,18 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           id,
         );
       }
+      if (BuiltInToolsHelper.isArkProvider(config)) {
+        return BuiltInToolsHelper.isDoubaoResponsesBuiltInSearchSupportedModel(
+          id,
+        );
+      }
       return false;
     }
 
     if (isResponsesWebSearchSupported(upstreamModelId)) {
       if (builtIns.contains(BuiltInToolNames.search)) {
-        if (BuiltInToolsHelper.isDashScopeProvider(config)) {
+        if (BuiltInToolsHelper.isDashScopeProvider(config) ||
+            BuiltInToolsHelper.isArkProvider(config)) {
           addResponsesBuiltInTool({'type': 'web_search'});
         } else {
           // Optional per-model configuration under modelOverrides[modelId]['webSearch']
@@ -1695,6 +1781,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     modelId: modelId,
     upstreamModelId: upstreamModelId,
   );
+  if (config.useResponseApi != true) {
+    formulaToolNames.addAll(
+      KimiFormulaSearch.mergeTools(body, kimiFormulaTools),
+    );
+  }
   _applyOpenRouterClaudePromptCaching(
     body,
     config: config,
@@ -1862,7 +1953,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             (msg['reasoning_content'] ?? msg['reasoning'])?.toString() ?? '';
         final reasoningDetailsForTools = msg['reasoning_details'];
         final tcs = (msg['tool_calls'] as List?) ?? const <dynamic>[];
-        if (tcs.isNotEmpty && onToolCall != null) {
+        if (tcs.isNotEmpty && effectiveOnToolCall != null) {
           final calls = <Map<String, dynamic>>[];
           final callInfos = <ToolCallInfo>[];
           for (int i = 0; i < tcs.length; i++) {
@@ -1898,7 +1989,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           final results = <Map<String, dynamic>>[];
           final resultsInfo = <ToolResultInfo>[];
           for (final c in callInfos) {
-            final res = await onToolCall(c.name, c.arguments, toolCallId: c.id);
+            final res = await effectiveOnToolCall!(c.name, c.arguments, toolCallId: c.id);
             results.add({'tool_call_id': c.id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(
@@ -2070,7 +2161,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       if (data == '[DONE]') {
         // If model streamed tool_calls but didn't include finish_reason on prior chunks,
         // execute tool flow now and start follow-up request.
-        if (onToolCall != null && toolAcc.isNotEmpty) {
+        if (effectiveOnToolCall != null && toolAcc.isNotEmpty) {
           final calls = <Map<String, dynamic>>[];
           final callInfos = <ToolCallInfo>[];
           final toolMsgs = <Map<String, dynamic>>[];
@@ -2113,7 +2204,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             final name = m['__name'] as String;
             final id = m['__id'] as String;
             final args = (m['__args'] as Map<String, dynamic>);
-            final res = await onToolCall(name, args, toolCallId: id);
+            final res = await effectiveOnToolCall!(name, args, toolCallId: id);
             results.add({'tool_call_id': id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(id: id, name: name, arguments: args, content: res),
@@ -2479,7 +2570,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await onToolCall(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall!(name, args, toolCallId: id);
                 results2.add({'tool_call_id': id, 'content': res});
                 resultsInfo2.add(
                   ToolResultInfo(
@@ -2784,7 +2875,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             // Responses tool calling follow-up handling
             final bool hasRespCalls =
                 respToolCallsByIndex.isNotEmpty || toolAccResp.isNotEmpty;
-            if (onToolCall != null && hasRespCalls) {
+            if (effectiveOnToolCall != null && hasRespCalls) {
               // Prefer the indexed calls (with call_id); fallback to toolAccResp
               final callInfos = <ToolCallInfo>[];
               final msgs = <Map<String, dynamic>>[]; // for executing tools
@@ -2855,7 +2946,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final nm = m['__name'] as String;
                 final id2 = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await onToolCall(nm, args, toolCallId: id2);
+                final res = await effectiveOnToolCall!(nm, args, toolCallId: id2);
                 resultsInfo.add(
                   ToolResultInfo(
                     id: id2,
@@ -3158,7 +3249,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   final nm = m['__name'] as String;
                   final id2 = m['__id'] as String;
                   final args2 = (m['__args'] as Map<String, dynamic>);
-                  final res2 = await onToolCall(nm, args2, toolCallId: id2);
+                  final res2 = await effectiveOnToolCall!(nm, args2, toolCallId: id2);
                   resultsInfo2.add(
                     ToolResultInfo(
                       id: id2,
@@ -3469,7 +3560,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         if (config.useResponseApi != true &&
             finishReason == 'tool_calls' &&
             toolAcc.isNotEmpty &&
-            onToolCall != null) {
+            effectiveOnToolCall != null) {
           // print('[ChatApi/XinLiu] Executing tools immediately (finishReason=tool_calls, toolAcc.size=${toolAcc.length})');
           // Some providers (like XinLiu) return tool_calls with finish_reason='tool_calls' but no [DONE]
           // Execute tools immediately in this case
@@ -3513,7 +3604,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             final name = m['__name'] as String;
             final id = m['__id'] as String;
             final args = (m['__args'] as Map<String, dynamic>);
-            final res = await onToolCall(name, args, toolCallId: id);
+            final res = await effectiveOnToolCall!(name, args, toolCallId: id);
             results.add({'tool_call_id': id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(id: id, name: name, arguments: args, content: res),
@@ -3902,7 +3993,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await onToolCall(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall!(name, args, toolCallId: id);
                 results2.add({'tool_call_id': id, 'content': res});
                 resultsInfo2.add(
                   ToolResultInfo(
@@ -3970,7 +4061,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           if (hasPendingToolCalls) {
             // Some providers (like XinLiu/iflow.cn) may return tool_calls with finish_reason='stop'
             // and may not send a [DONE] marker. Execute tools immediately in this case.
-            if (onToolCall != null && toolAcc.isNotEmpty) {
+            if (effectiveOnToolCall != null && toolAcc.isNotEmpty) {
               final calls = <Map<String, dynamic>>[];
               final callInfos = <ToolCallInfo>[];
               final toolMsgs = <Map<String, dynamic>>[];
@@ -4013,7 +4104,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await onToolCall(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall!(name, args, toolCallId: id);
                 results.add({'tool_call_id': id, 'content': res});
                 resultsInfo.add(
                   ToolResultInfo(
@@ -4384,7 +4475,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     final name = m['__name'] as String;
                     final id = m['__id'] as String;
                     final args = (m['__args'] as Map<String, dynamic>);
-                    final res = await onToolCall(name, args, toolCallId: id);
+                    final res = await effectiveOnToolCall!(name, args, toolCallId: id);
                     results2.add({'tool_call_id': id, 'content': res});
                     resultsInfo2.add(
                       ToolResultInfo(

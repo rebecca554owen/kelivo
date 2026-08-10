@@ -5139,6 +5139,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.';
 
   @override
+  String get searchServiceNameStepFun => 'StepFun';
+
+  @override
+  String get searchProviderStepFunDescription =>
+      'StepFun web search via POST /v1/search.';
+
+  @override
+  String get searchServiceNameFirecrawl => 'Firecrawl';
+
+  @override
+  String get searchProviderFirecrawlDescription =>
+      'Firecrawl Search API v2. Requires a Bearer API key. Scrape is not supported here.';
+
+  @override
+  String get searchServiceNameTinyFish => 'TinyFish';
+
+  @override
+  String get searchProviderTinyFishDescription =>
+      'TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.';
+
+  @override
   String get searchServicesDialogCountryOptional => 'Country/region (optional)';
 
   @override

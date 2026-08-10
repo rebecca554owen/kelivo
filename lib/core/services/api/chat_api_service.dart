@@ -18,6 +18,7 @@ import 'package:Kelivo/secrets/fallback.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../utils/unicode_sanitizer.dart';
 import 'builtin_tools.dart';
+import 'kimi_formula_search.dart';
 import 'gemini_tool_config.dart';
 import '../logging/flutter_logger.dart';
 import '../model_override_resolver.dart';
@@ -763,13 +764,19 @@ class ChatApiService {
                 id,
               );
             }
+            if (BuiltInToolsHelper.isArkProvider(config)) {
+              return BuiltInToolsHelper.isDoubaoResponsesBuiltInSearchSupportedModel(
+                id,
+              );
+            }
             return false;
           }
 
           if (isResponsesWebSearchSupported(upstreamModelId)) {
             final builtIns = _builtInTools(config, modelId);
             if (builtIns.contains(BuiltInToolNames.search)) {
-              if (BuiltInToolsHelper.isDashScopeProvider(config)) {
+              if (BuiltInToolsHelper.isDashScopeProvider(config) ||
+                  BuiltInToolsHelper.isArkProvider(config)) {
                 toolsList.add({'type': 'web_search'});
               } else {
                 Map<String, dynamic> ws = const <String, dynamic>{};

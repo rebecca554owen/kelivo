@@ -295,7 +295,104 @@ abstract class BuiltInToolsHelper {
           m,
           alias: 'qwen3-max',
           minSnapshot: '2026-01-23',
-        );
+        ) ||
+        // Official Responses web_search whitelist additions:
+        // Qwen3.7 Max / Plus. Do NOT guess-enable 3.7 Flash.
+        _matchesExactOrSnapshot(
+          m,
+          alias: 'qwen3.7-max',
+          minSnapshot: '2026-05-17',
+          extraExact: const <String>['qwen3.7-max-preview'],
+        ) ||
+        _matchesExactOrSnapshot(
+          m,
+          alias: 'qwen3.7-plus',
+          minSnapshot: '2026-05-26',
+        ) ||
+        // Token Plan / Responses only for the preview SKU. Plain
+        // `qwen3.8-max` is intentionally not opened without Key verification.
+        m == 'qwen3.8-max-preview';
+  }
+
+  static bool isArkProvider(ProviderConfig? cfg) {
+    if (cfg == null) return false;
+    final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
+    final providerId = cfg.id.toLowerCase();
+    final providerName = cfg.name.toLowerCase();
+    return host.contains('ark.cn-beijing.volces.com') ||
+        host.contains('volces.com') ||
+        ((host.contains('ark') || host.contains('volc')) &&
+            (providerId.contains('doubao') ||
+                providerId.contains('volc') ||
+                providerId.contains('ark') ||
+                providerName.contains('doubao') ||
+                providerName.contains('火山') ||
+                providerName.contains('方舟')));
+  }
+
+  static bool isMimoProvider(ProviderConfig? cfg) {
+    if (cfg == null) return false;
+    final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
+    final providerId = cfg.id.toLowerCase();
+    final providerName = cfg.name.toLowerCase();
+    return host.contains('xiaomimimo') ||
+        host.contains('mimo') ||
+        providerId.contains('mimo') ||
+        providerName.contains('mimo') ||
+        providerName.contains('小米');
+  }
+
+  static bool isMoonshotProvider(ProviderConfig? cfg) {
+    if (cfg == null) return false;
+    final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
+    final providerId = cfg.id.toLowerCase();
+    final providerName = cfg.name.toLowerCase();
+    return host.contains('moonshot') ||
+        host.contains('kimi.ai') ||
+        providerId.contains('moonshot') ||
+        providerId.contains('kimi') ||
+        providerName.contains('moonshot') ||
+        providerName.contains('kimi') ||
+        providerName.contains('月之暗面');
+  }
+
+  static bool isZhipuProvider(ProviderConfig? cfg) {
+    if (cfg == null) return false;
+    final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
+    final providerId = cfg.id.toLowerCase();
+    final providerName = cfg.name.toLowerCase();
+    return host.contains('open.bigmodel.cn') ||
+        host.contains('bigmodel') ||
+        host == 'api.z.ai' ||
+        providerId.contains('zhipu') ||
+        providerId.contains('智谱') ||
+        providerName.contains('zhipu') ||
+        providerName.contains('智谱');
+  }
+
+  static bool isMimoBuiltInSearchSupportedModel(String? modelId) {
+    final m = _normalizedModelId(modelId);
+    return m.startsWith('mimo-v2') || m.contains('/mimo-v2');
+  }
+
+  static bool isKimiK3Model(String? modelId) {
+    return RegExp(
+      r'(^|[/_:@])kimi-k3(?:$|[-.])',
+      caseSensitive: false,
+    ).hasMatch(_normalizedModelId(modelId));
+  }
+
+  static bool isGlmBuiltInSearchSupportedModel(String? modelId) {
+    final m = _normalizedModelId(modelId);
+    return RegExp(r'(^|[/_:@])glm-').hasMatch(m) || m.startsWith('glm');
+  }
+
+  static bool isDoubaoResponsesBuiltInSearchSupportedModel(String? modelId) {
+    final m = _normalizedModelId(modelId);
+    return m.contains('doubao') ||
+        m.contains('seed-1') ||
+        m.contains('seed-2') ||
+        m.contains('seed-evolving');
   }
 
   static bool supportsBuiltInSearchForModel({
@@ -331,10 +428,24 @@ abstract class BuiltInToolsHelper {
               upstreamModelId,
             );
           }
+          if (isArkProvider(cfg)) {
+            return isDoubaoResponsesBuiltInSearchSupportedModel(
+              upstreamModelId,
+            );
+          }
           return false;
         }
         if (isDashScopeProvider(cfg)) {
           return isDashScopeChatBuiltInSearchSupportedModel(upstreamModelId);
+        }
+        if (isMimoProvider(cfg)) {
+          return isMimoBuiltInSearchSupportedModel(upstreamModelId);
+        }
+        if (isMoonshotProvider(cfg) && isKimiK3Model(upstreamModelId)) {
+          return true;
+        }
+        if (isZhipuProvider(cfg)) {
+          return isGlmBuiltInSearchSupportedModel(upstreamModelId);
         }
         return false;
     }
@@ -475,8 +586,15 @@ abstract class BuiltInToolsHelper {
             isDashScopeResponsesBuiltInSearchSupportedModel(modelId)) {
           return true;
         }
+        if (useResponseApi &&
+            isDoubaoResponsesBuiltInSearchSupportedModel(modelId)) {
+          return true;
+        }
         if (isGrokModel(modelId)) return true;
         if (isDashScopeChatBuiltInSearchSupportedModel(modelId)) return true;
+        if (isMimoBuiltInSearchSupportedModel(modelId)) return true;
+        if (isKimiK3Model(modelId)) return true;
+        if (isGlmBuiltInSearchSupportedModel(modelId)) return true;
         return false;
     }
   }
