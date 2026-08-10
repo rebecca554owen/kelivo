@@ -1137,6 +1137,7 @@ class _MessageListViewState extends State<MessageListView> {
           context,
           message,
           canDeleteAllVersions: total > 1,
+          canCreateBranch: widget.onForkConversation != null,
         );
         if (action == MessageMoreAction.deleteCurrentVersion) {
           await widget.onDeleteMessage?.call(message, widget.byGroup);

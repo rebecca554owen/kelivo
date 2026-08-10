@@ -1171,7 +1171,9 @@ class _HomePageState extends State<HomePage>
           byGroup,
           deleteAllVersions: true,
         ),
-        onForkConversation: (message) => _controller.forkConversation(message),
+        onForkConversation: _controller.isTemporaryConversation
+            ? null
+            : (message) => _controller.forkConversation(message),
         onShareMessage: (index, messages) =>
             _controller.shareMessage(index, messages),
         onSelectMessages: (index, messages) =>

@@ -1515,7 +1515,9 @@ class DataSync {
   /// messageIds order is authoritative, dangling references are pruned
   /// (SQLite derives order from message_order, so pruning matches the old
   /// runtime), duplicate references keep their first occurrence, and
-  /// unreferenced messages were never visible so they are skipped.
+  /// unreferenced messages were never visible so they are skipped. It also
+  /// converts the raw message index and version ordinal used by 1.1.17 into
+  /// the logical slot index and concrete message version used by SQLite.
   static _ParsedChatBackup _sanitizeLegacyChatBackup(_ParsedChatBackup parsed) {
     final conversations = <Conversation>[];
     final conversationIds = <String>{};
@@ -1563,13 +1565,23 @@ class DataSync {
       // the Hive migration does so INSERT OR REPLACE cannot swallow rows.
       final seenGroupVersions = <String>{};
       final maxGroupVersions = <String, int>{};
+      final legacyGroupIds = <String?>[];
+      final versionsBySelectedGroup = <String, List<ChatMessage>>{
+        for (final groupId in conversation.versionSelections.keys)
+          groupId: <ChatMessage>[],
+      };
+      final repairedVersionsByMessageId = <String, int>{};
       for (final messageId in conversation.messageIds) {
         var message = messagesById[messageId];
         if (message == null) {
           danglingReferences++;
           continue;
         }
-        if (!referencedMessageIds.add(messageId)) {
+        final groupId = message.groupId ?? message.id;
+        versionsBySelectedGroup[groupId]?.add(message);
+        final referenceKept = referencedMessageIds.add(messageId);
+        legacyGroupIds.add(referenceKept ? groupId : null);
+        if (!referenceKept) {
           duplicateReferences++;
           continue;
         }
@@ -1578,26 +1590,52 @@ class DataSync {
           rehomedMessages++;
           message = message.copyWith(conversationId: conversation.id);
         }
-        final groupId = message.groupId;
-        if (groupId != null) {
+        final explicitGroupId = message.groupId;
+        if (explicitGroupId != null) {
           var version = message.version;
-          if (!seenGroupVersions.add('$groupId $version')) {
-            version = (maxGroupVersions[groupId] ?? version) + 1;
+          if (!seenGroupVersions.add('$explicitGroupId $version')) {
+            version = (maxGroupVersions[explicitGroupId] ?? version) + 1;
             versionConflicts++;
             message = message.copyWith(version: version);
-            seenGroupVersions.add('$groupId $version');
+            repairedVersionsByMessageId[message.id] = version;
+            seenGroupVersions.add('$explicitGroupId $version');
           }
-          final knownMax = maxGroupVersions[groupId];
+          final knownMax = maxGroupVersions[explicitGroupId];
           if (knownMax == null || version > knownMax) {
-            maxGroupVersions[groupId] = version;
+            maxGroupVersions[explicitGroupId] = version;
           }
         }
         sanitizedMessages.add(message);
+      }
+
+      var truncateIndex = conversation.truncateIndex;
+      if (truncateIndex >= 0 && truncateIndex <= legacyGroupIds.length) {
+        truncateIndex = legacyGroupIds
+            .take(truncateIndex)
+            .whereType<String>()
+            .toSet()
+            .length;
+      }
+      final versionSelections = Map<String, int>.from(
+        conversation.versionSelections,
+      );
+      for (final entry in conversation.versionSelections.entries) {
+        final versions = versionsBySelectedGroup[entry.key]!
+          ..sort((left, right) => left.version.compareTo(right.version));
+        if (versions.isEmpty) continue;
+        final ordinal = entry.value;
+        final selected = ordinal >= 0 && ordinal < versions.length
+            ? versions[ordinal]
+            : versions.last;
+        versionSelections[entry.key] =
+            repairedVersionsByMessageId[selected.id] ?? selected.version;
       }
       sanitizedConversations.add(
         conversation.copyWith(
           messageIds: keptMessageIds,
           mcpServerIds: mcpServerIds,
+          truncateIndex: truncateIndex,
+          versionSelections: versionSelections,
         ),
       );
     }

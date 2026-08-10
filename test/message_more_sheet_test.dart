@@ -17,6 +17,7 @@ ChatMessage _message() {
 Future<void> _openMoreSheet(
   WidgetTester tester, {
   required bool canDeleteAllVersions,
+  bool canCreateBranch = true,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -36,6 +37,7 @@ Future<void> _openMoreSheet(
                   context,
                   _message(),
                   canDeleteAllVersions: canDeleteAllVersions,
+                  canCreateBranch: canCreateBranch,
                 );
               },
               child: const Text('open'),
@@ -55,6 +57,7 @@ void main() {
     await _openMoreSheet(tester, canDeleteAllVersions: true);
 
     expect(find.text('Select Messages'), findsOneWidget);
+    expect(find.text('Create Branch'), findsOneWidget);
     expect(find.text('Delete This Version'), findsOneWidget);
     expect(find.text('Delete All Versions'), findsOneWidget);
   });
@@ -65,5 +68,15 @@ void main() {
     expect(find.text('Select Messages'), findsOneWidget);
     expect(find.text('Delete This Version'), findsOneWidget);
     expect(find.text('Delete All Versions'), findsNothing);
+  });
+
+  testWidgets('临时会话消息菜单不显示创建分支', (tester) async {
+    await _openMoreSheet(
+      tester,
+      canDeleteAllVersions: false,
+      canCreateBranch: false,
+    );
+
+    expect(find.text('Create Branch'), findsNothing);
   });
 }

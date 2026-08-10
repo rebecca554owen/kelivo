@@ -2917,6 +2917,267 @@ void main() {
       },
     );
 
+    test(
+      'remaps a legacy raw truncate index to logical message slots',
+      () async {
+        final chatsFile = File('${root.path}/legacy_truncate_index.json');
+        await chatsFile.writeAsString(
+          jsonEncode({
+            'conversations': [
+              Conversation(
+                id: 'conversation',
+                title: 'Conversation',
+                messageIds: const ['question', 'answer-v0', 'answer-v1'],
+                truncateIndex: 3,
+              ).toJson(),
+              Conversation(
+                id: 'missing-before-kept',
+                title: 'Missing before kept',
+                messageIds: const ['missing', 'kept'],
+                truncateIndex: 1,
+              ).toJson(),
+              Conversation(
+                id: 'duplicate-before-truncate',
+                title: 'Duplicate before truncate',
+                messageIds: const ['truncate-a', 'truncate-a', 'truncate-b'],
+                truncateIndex: 3,
+              ).toJson(),
+              Conversation(
+                id: 'shared-owner',
+                title: 'Shared owner',
+                messageIds: const ['shared'],
+              ).toJson(),
+              Conversation(
+                id: 'cross-reuse',
+                title: 'Cross reuse',
+                messageIds: const ['shared', 'cross-h', 'later-g'],
+                truncateIndex: 1,
+              ).toJson(),
+            ],
+            'messages': [
+              ChatMessage(
+                id: 'question',
+                role: 'user',
+                content: 'question',
+                conversationId: 'conversation',
+              ).toJson(),
+              ChatMessage(
+                id: 'answer-v0',
+                role: 'assistant',
+                content: 'answer v0',
+                conversationId: 'conversation',
+                groupId: 'answer',
+                version: 0,
+              ).toJson(),
+              ChatMessage(
+                id: 'answer-v1',
+                role: 'assistant',
+                content: 'answer v1',
+                conversationId: 'conversation',
+                groupId: 'answer',
+                version: 1,
+              ).toJson(),
+              ChatMessage(
+                id: 'kept',
+                role: 'user',
+                content: 'kept question',
+                conversationId: 'missing-before-kept',
+              ).toJson(),
+              ChatMessage(
+                id: 'truncate-a',
+                role: 'user',
+                content: 'truncate a',
+                conversationId: 'duplicate-before-truncate',
+              ).toJson(),
+              ChatMessage(
+                id: 'truncate-b',
+                role: 'assistant',
+                content: 'truncate b',
+                conversationId: 'duplicate-before-truncate',
+              ).toJson(),
+              ChatMessage(
+                id: 'shared',
+                role: 'user',
+                content: 'shared',
+                conversationId: 'shared-owner',
+                groupId: 'g',
+              ).toJson(),
+              ChatMessage(
+                id: 'cross-h',
+                role: 'user',
+                content: 'cross h',
+                conversationId: 'cross-reuse',
+                groupId: 'h',
+              ).toJson(),
+              ChatMessage(
+                id: 'later-g',
+                role: 'assistant',
+                content: 'later g',
+                conversationId: 'cross-reuse',
+                groupId: 'g',
+              ).toJson(),
+            ],
+          }),
+        );
+        final zipFile = File('${root.path}/legacy_truncate_index.zip');
+        final encoder = ZipFileEncoder();
+        encoder.create(zipFile.path);
+        encoder.addFileSync(validSettingsFile, 'settings.json');
+        encoder.addFileSync(chatsFile, 'chats.json');
+        encoder.closeSync();
+        final chatService = ChatService();
+        await chatService.init();
+        addTearDown(chatService.close);
+
+        await DataSync(
+          businessRepository: businessRepository,
+          chatService: chatService,
+        ).restoreFromLocalFile(
+          zipFile,
+          const WebDavConfig(includeChats: true, includeFiles: false),
+        );
+
+        final restored = chatService.getConversation('conversation')!;
+        expect(restored.truncateIndex, 2);
+        expect(
+          await chatService.loadSelectedContextMessages(
+            restored.id,
+            truncateIndex: restored.truncateIndex,
+            limit: 10,
+          ),
+          isEmpty,
+        );
+        final missingBeforeKept = chatService.getConversation(
+          'missing-before-kept',
+        )!;
+        expect(missingBeforeKept.truncateIndex, 1);
+        expect(
+          await chatService.loadSelectedContextMessages(
+            missingBeforeKept.id,
+            truncateIndex: missingBeforeKept.truncateIndex,
+            limit: 10,
+          ),
+          isEmpty,
+        );
+        final duplicateBeforeTruncate = chatService.getConversation(
+          'duplicate-before-truncate',
+        )!;
+        expect(duplicateBeforeTruncate.truncateIndex, 2);
+        expect(
+          await chatService.loadSelectedContextMessages(
+            duplicateBeforeTruncate.id,
+            truncateIndex: duplicateBeforeTruncate.truncateIndex,
+            limit: 10,
+          ),
+          isEmpty,
+        );
+        final crossReuse = chatService.getConversation('cross-reuse')!;
+        expect(crossReuse.truncateIndex, 0);
+        expect(
+          (await chatService.loadSelectedContextMessages(
+            crossReuse.id,
+            truncateIndex: crossReuse.truncateIndex,
+            limit: 10,
+          )).map((message) => message.id),
+          ['cross-h', 'later-g'],
+        );
+      },
+    );
+
+    test(
+      'remaps a legacy version ordinal to the selected message version',
+      () async {
+        final chatsFile = File('${root.path}/legacy_version_selection.json');
+        await chatsFile.writeAsString(
+          jsonEncode({
+            'conversations': [
+              Conversation(
+                id: 'conversation',
+                title: 'Conversation',
+                messageIds: const ['answer-v1', 'answer-v2'],
+                versionSelections: const {'answer': 1},
+              ).toJson(),
+              Conversation(
+                id: 'duplicate-reference',
+                title: 'Duplicate reference',
+                messageIds: const ['duplicate-a', 'duplicate-a', 'duplicate-b'],
+                versionSelections: const {'duplicate-answer': 1},
+              ).toJson(),
+            ],
+            'messages': [
+              ChatMessage(
+                id: 'answer-v1',
+                role: 'assistant',
+                content: 'answer v1',
+                conversationId: 'conversation',
+                groupId: 'answer',
+                version: 1,
+              ).toJson(),
+              ChatMessage(
+                id: 'answer-v2',
+                role: 'assistant',
+                content: 'answer v2',
+                conversationId: 'conversation',
+                groupId: 'answer',
+                version: 2,
+              ).toJson(),
+              ChatMessage(
+                id: 'duplicate-a',
+                role: 'assistant',
+                content: 'duplicate answer a',
+                conversationId: 'duplicate-reference',
+                groupId: 'duplicate-answer',
+                version: 1,
+              ).toJson(),
+              ChatMessage(
+                id: 'duplicate-b',
+                role: 'assistant',
+                content: 'duplicate answer b',
+                conversationId: 'duplicate-reference',
+                groupId: 'duplicate-answer',
+                version: 2,
+              ).toJson(),
+            ],
+          }),
+        );
+        final zipFile = File('${root.path}/legacy_version_selection.zip');
+        final encoder = ZipFileEncoder();
+        encoder.create(zipFile.path);
+        encoder.addFileSync(validSettingsFile, 'settings.json');
+        encoder.addFileSync(chatsFile, 'chats.json');
+        encoder.closeSync();
+        final chatService = ChatService();
+        await chatService.init();
+        addTearDown(chatService.close);
+
+        await DataSync(
+          businessRepository: businessRepository,
+          chatService: chatService,
+        ).restoreFromLocalFile(
+          zipFile,
+          const WebDavConfig(includeChats: true, includeFiles: false),
+        );
+
+        final restored = chatService.getConversation('conversation')!;
+        expect(restored.versionSelections, const {'answer': 2});
+        final timeline = await chatService.loadActiveTimelineMessages(
+          restored.id,
+        );
+        expect(timeline.single.id, 'answer-v2');
+        expect(timeline.single.content, 'answer v2');
+        final duplicateReference = chatService.getConversation(
+          'duplicate-reference',
+        )!;
+        expect(duplicateReference.versionSelections, const {
+          'duplicate-answer': 1,
+        });
+        final duplicateTimeline = await chatService.loadActiveTimelineMessages(
+          duplicateReference.id,
+        );
+        expect(duplicateTimeline.single.id, 'duplicate-a');
+      },
+    );
+
     test('reassigns duplicate (groupId, version) pairs a 1.1.17 runtime '
         'tolerated instead of rejecting the backup', () async {
       final chatsFile = File('${root.path}/duplicate_group_versions.json');
