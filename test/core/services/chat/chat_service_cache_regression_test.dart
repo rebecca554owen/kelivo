@@ -25,6 +25,16 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => '$path/tmp';
 }
 
+Future<void> _flushIdleTasks() async {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  binding.scheduleFrame();
+  binding.handleBeginFrame(Duration.zero);
+  binding.handleDrawFrame();
+  for (var i = 0; i < 10; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -87,11 +97,20 @@ void main() {
 
       // The regression wrote an empty list here: without the order skeleton the
       // intersection in _cacheLoadedMessages dropped every loaded message.
+      // Bodies are cached on the first-page return path; the full order
+      // skeleton (and ordered projection) arrives via Issue 7 backfill.
+      expect(
+        service.getMessages(conversationId).map((message) => message.id).toSet(),
+        ids.toSet(),
+      );
+      await _flushIdleTasks();
+      await service.debugMessageOrderBackfillFuture(conversationId);
+      expect(service.debugHasMessageOrderSkeleton(conversationId), isTrue);
+      expect(service.getMessageCount(conversationId), ids.length);
       expect(
         service.getMessages(conversationId).map((message) => message.id),
         orderedEquals(ids),
       );
-      expect(service.getMessageCount(conversationId), ids.length);
     },
   );
 

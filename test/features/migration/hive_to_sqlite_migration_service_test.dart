@@ -246,8 +246,8 @@ void main() {
     expect(migratedConversation, isNotNull);
     expect(migratedConversation!.createdAt, conversation.createdAt);
     expect(migratedConversation.updatedAt, conversation.updatedAt);
-    expect(chatService.getMessageCount(conversation.id), 2);
     final migratedMessages = await chatService.loadMessages(conversation.id);
+    expect(chatService.getMessageCount(conversation.id), 2);
     expect(migratedMessages.map((m) => m.content), [
       'hello from hive',
       'hello from sqlite',

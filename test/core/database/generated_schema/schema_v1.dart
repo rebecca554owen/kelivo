@@ -2273,6 +2273,10 @@ class DatabaseAtV1 extends GeneratedDatabase {
     'idx_messages_group',
     'CREATE INDEX idx_messages_group ON message_rows (conversation_id, group_id, version, id)',
   );
+  late final Index idxMessageRowsStreaming = Index(
+    'idx_message_rows_streaming',
+    'CREATE INDEX idx_message_rows_streaming ON message_rows (id) WHERE is_streaming = 1',
+  );
   late final Index idxMessagePartsRevisionOrdinal = Index(
     'idx_message_parts_revision_ordinal',
     'CREATE INDEX idx_message_parts_revision_ordinal ON message_part_rows (conversation_id, revision_id, ordinal)',
@@ -2350,6 +2354,7 @@ class DatabaseAtV1 extends GeneratedDatabase {
     idxMessagesConversationOrder,
     idxMessagesConversationTimestamp,
     idxMessagesGroup,
+    idxMessageRowsStreaming,
     idxMessagePartsRevisionOrdinal,
     idxProviderArtifactsRevisionKind,
     idxMessageAssetsAsset,

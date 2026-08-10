@@ -77,6 +77,10 @@ class ConversationRows extends Table {
   name: 'idx_messages_group',
   columns: {#conversationId, #groupId, #version, #id},
 )
+@TableIndex.sql(
+  'CREATE INDEX idx_message_rows_streaming '
+  'ON message_rows (id) WHERE is_streaming = 1',
+)
 class MessageRows extends Table {
   TextColumn get id => text()();
   TextColumn get conversationId =>

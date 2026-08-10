@@ -922,7 +922,7 @@ class ChatActions {
     final existingContextMessages = await chatController
         .messagesForGenerationContext(
           conversation,
-          maxMessages: _contextReadLimit(assistant, conversation),
+          maxMessages: await _contextReadLimit(assistant, conversation),
         );
     if (_hasUnsupportedAudioAttachments(
       messages: existingContextMessages,
@@ -1046,10 +1046,38 @@ class ChatActions {
     }
   }
 
-  int _contextReadLimit(Assistant? assistant, Conversation conversation) {
+  Future<int> _contextReadLimit(
+    Assistant? assistant,
+    Conversation conversation,
+  ) {
+    return resolveContextReadLimit(
+      assistant: assistant,
+      resolvePersistedCount: () =>
+          chatService.resolveMessageCount(conversation.id),
+    );
+  }
+
+  /// Resolves the generation context window size.
+  ///
+  /// When the assistant limits context, [resolvePersistedCount] is not called.
+  /// Otherwise the real persisted count is awaited so unknown (-1) never
+  /// silently clamps to [Assistant.maxContextMessageSize].
+  @visibleForTesting
+  static Future<int> resolveContextReadLimit({
+    required Assistant? assistant,
+    required Future<int> Function() resolvePersistedCount,
+  }) async {
+    if ((assistant?.limitContextMessages ?? false) &&
+        (assistant?.contextMessageSize ?? 0) > 0) {
+      return contextReadLimit(
+        assistant: assistant,
+        persistedMessageCount: 0,
+      );
+    }
+    final count = await resolvePersistedCount();
     return contextReadLimit(
       assistant: assistant,
-      persistedMessageCount: chatService.getMessageCount(conversation.id),
+      persistedMessageCount: count,
     );
   }
 
@@ -1058,6 +1086,11 @@ class ChatActions {
     required Assistant? assistant,
     required int persistedMessageCount,
   }) {
+    assert(
+      persistedMessageCount >= 0,
+      'contextReadLimit requires a known message count; got '
+      '$persistedMessageCount',
+    );
     if ((assistant?.limitContextMessages ?? false) &&
         (assistant?.contextMessageSize ?? 0) > 0) {
       return assistant!.contextMessageSize.clamp(
@@ -1141,7 +1174,7 @@ class ChatActions {
         ? await chatController.messagesForCompleteHistoryContext(conversation)
         : await chatController.messagesForGenerationContext(
             conversation,
-            maxMessages: _contextReadLimit(assistant, conversation),
+            maxMessages: await _contextReadLimit(assistant, conversation),
             throughRevisionId: message.id,
             includeFollowingAssistant: true,
           );
@@ -1377,7 +1410,7 @@ class ChatActions {
     }
     final completeMessages = await chatController.messagesForGenerationContext(
       conversation,
-      maxMessages: _contextReadLimit(assistant, conversation),
+      maxMessages: await _contextReadLimit(assistant, conversation),
       throughRevisionId: message.id,
     );
     final contextIndex = completeMessages.indexWhere(

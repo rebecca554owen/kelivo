@@ -1344,6 +1344,7 @@ class HomeViewModel extends ChangeNotifier {
     if (_chatService.isTemporaryConversation(convo.id)) return;
 
     final settings = _contextProvider.read<SettingsProvider>();
+    if (!_chatService.isMessageCountKnown(conversationId)) return;
     final msgCount = _chatService.getMessageCount(conversationId);
     final assistantProvider = _contextProvider.read<AssistantProvider>();
 
@@ -1560,6 +1561,8 @@ class HomeViewModel extends ChangeNotifier {
       if (suggestions.isEmpty) return;
 
       final latest = _chatService.getConversation(conversationId);
+      // loadMessages above populates the count; unknown (-1) ≠ loaded length
+      // and correctly aborts publishing stale suggestions.
       if (latest == null ||
           _chatService.getMessageCount(latest.id) != loadedMessageCount) {
         return;

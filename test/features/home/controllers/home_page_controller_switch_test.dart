@@ -27,12 +27,17 @@ class _ControlledChatService extends ChatService {
   _ControlledChatService(this._messagesByConversation);
 
   final Map<String, List<ChatMessage>> _messagesByConversation;
+  final Map<String, Conversation> _draftConversations = <String, Conversation>{};
   final List<_PageRequest> pageRequests = <_PageRequest>[];
   final List<String?> setCurrentCalls = <String?>[];
+  String? _trackedCurrentConversationId;
   int checkpointWrites = 0;
 
   List<ChatMessage> messagesOf(String id) =>
       _messagesByConversation[id] ?? const <ChatMessage>[];
+
+  @override
+  String? get currentConversationId => _trackedCurrentConversationId;
 
   @override
   Future<LoadedTimelinePage?> loadTimelinePage(
@@ -87,6 +92,8 @@ class _ControlledChatService extends ChatService {
 
   @override
   Conversation? getConversation(String id) {
+    final draft = _draftConversations[id];
+    if (draft != null) return draft;
     final messages = _messagesByConversation[id];
     if (messages == null) return null;
     return Conversation(
@@ -94,6 +101,21 @@ class _ControlledChatService extends ChatService {
       title: 'Conversation $id',
       messageIds: messages.map((message) => message.id).toList(),
     );
+  }
+
+  @override
+  Future<Conversation> createDraftConversation({
+    String? title,
+    String? assistantId,
+    bool temporary = false,
+  }) async {
+    final conversation = Conversation(
+      title: title ?? 'Draft',
+      assistantId: assistantId,
+    );
+    _draftConversations[conversation.id] = conversation;
+    _messagesByConversation[conversation.id] = <ChatMessage>[];
+    return conversation;
   }
 
   @override
@@ -107,6 +129,7 @@ class _ControlledChatService extends ChatService {
   @override
   void setCurrentConversation(String? id) {
     setCurrentCalls.add(id);
+    _trackedCurrentConversationId = id;
   }
 
   @override
@@ -168,6 +191,17 @@ void main() {
     }
   }
 
+  /// Runs [body] with the platform overridden to macOS so the desktop
+  /// (prepare/commit, no fade) switching pipeline is exercised.
+  Future<void> runAsDesktop(Future<void> Function() body) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await body();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  }
+
   Future<HomePageController> pumpHarness(
     WidgetTester tester,
     _ControlledChatService service,
@@ -214,13 +248,25 @@ void main() {
 
   /// Drives a switch to [id] to completion: resolves the pending window
   /// fetch and pumps through fade-out, commit, settle, and fade-in.
+  ///
+  /// Desktop flushes progress before issuing the fetch, so the page request
+  /// may not exist on the first microtask; wait until it appears.
   Future<void> switchAndSettle(
     WidgetTester tester,
     HomePageController controller,
     _ControlledChatService service,
     String id,
   ) async {
+    final before = service.pageRequests.length;
     final future = controller.switchConversationAnimated(id);
+    for (var i = 0; i < 40 && service.pageRequests.length <= before; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(
+      service.pageRequests.length,
+      greaterThan(before),
+      reason: 'expected a timeline page fetch for $id',
+    );
     service.completePage(
       service.pageRequests.last,
       service.messagesOf(id),
@@ -366,6 +412,279 @@ void main() {
         });
         expect(controller.messages, hasLength(2));
         expect(controller.convoFadeController.value, 1.0);
+      });
+    });
+  });
+
+  group('selection clears only after successful conversation change', () {
+    void enterSelection(HomePageController controller) {
+      final messages = controller.messages.toList();
+      expect(messages, isNotEmpty);
+      controller.startMessageSelection(
+        messageIndex: 0,
+        messageList: messages,
+        mode: ChatSelectionMode.delete,
+      );
+      expect(controller.selecting, isTrue);
+      expect(controller.selectedItems, isNotEmpty);
+      expect(controller.selectionMode, ChatSelectionMode.delete);
+    }
+
+    testWidgets('successful switch clears selection UI and old ids', (
+      tester,
+    ) async {
+      await runAsMobile(() async {
+        final service = _ControlledChatService({
+          'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+          'conv-b': [_message('conv-b', 0)],
+        });
+        final controller = await pumpHarness(tester, service);
+        await switchAndSettle(tester, controller, service, 'conv-a');
+        enterSelection(controller);
+        final previousSelected = Set<String>.of(controller.selectedItems);
+
+        await switchAndSettle(tester, controller, service, 'conv-b');
+
+        expect(controller.currentConversation?.id, 'conv-b');
+        expect(controller.selecting, isFalse);
+        expect(controller.selectedItems, isEmpty);
+        expect(controller.selectionMode, ChatSelectionMode.share);
+        expect(
+          previousSelected.intersection(controller.selectedItems),
+          isEmpty,
+        );
+      });
+    });
+
+    testWidgets('missing target keeps prior selection', (tester) async {
+      await runAsMobile(() async {
+        final service = _ControlledChatService({
+          'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+        });
+        final controller = await pumpHarness(tester, service);
+        await switchAndSettle(tester, controller, service, 'conv-a');
+        enterSelection(controller);
+        final selectedBefore = Set<String>.of(controller.selectedItems);
+
+        final future = controller.switchConversationAnimated('missing');
+        // prepare returns null when the conversation is gone; still need to
+        // complete any queued page request if one was issued.
+        if (service.pageRequests.length > 1) {
+          service.pageRequests.last.completer.complete(null);
+        }
+        await pumpUntilDone(tester, [future]);
+
+        expect(controller.currentConversation?.id, 'conv-a');
+        expect(controller.selecting, isTrue);
+        expect(controller.selectedItems, selectedBefore);
+        expect(controller.selectionMode, ChatSelectionMode.delete);
+      });
+    });
+
+    testWidgets('same-conversation no-op keeps selection', (tester) async {
+      await runAsMobile(() async {
+        final service = _ControlledChatService({
+          'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+        });
+        final controller = await pumpHarness(tester, service);
+        await switchAndSettle(tester, controller, service, 'conv-a');
+        enterSelection(controller);
+        final selectedBefore = Set<String>.of(controller.selectedItems);
+
+        await controller.switchConversationAnimated('conv-a');
+        await tester.pump();
+
+        expect(controller.currentConversation?.id, 'conv-a');
+        expect(controller.selecting, isTrue);
+        expect(controller.selectedItems, selectedBefore);
+        expect(controller.selectionMode, ChatSelectionMode.delete);
+      });
+    });
+
+    testWidgets('successful new conversation clears selection', (tester) async {
+      await runAsMobile(() async {
+        final service = _ControlledChatService({
+          'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+        });
+        final controller = await pumpHarness(tester, service);
+        await switchAndSettle(tester, controller, service, 'conv-a');
+        enterSelection(controller);
+
+        final future = controller.createNewConversationAnimated();
+        await pumpUntilDone(tester, [future]);
+
+        expect(controller.currentConversation?.id, isNot('conv-a'));
+        expect(controller.selecting, isFalse);
+        expect(controller.selectedItems, isEmpty);
+        expect(controller.selectionMode, ChatSelectionMode.share);
+      });
+    });
+  });
+
+  group('desktop conversation switch is atomic (macOS path)', () {
+    void enterSelection(HomePageController controller) {
+      final messages = controller.messages.toList();
+      expect(messages, isNotEmpty);
+      controller.startMessageSelection(
+        messageIndex: 0,
+        messageList: messages,
+        mode: ChatSelectionMode.delete,
+      );
+      expect(controller.selecting, isTrue);
+      expect(controller.selectedItems, isNotEmpty);
+      expect(controller.selectionMode, ChatSelectionMode.delete);
+    }
+
+    testWidgets('successful switch clears selection', (tester) async {
+      await runAsDesktop(() async {
+        final service = _ControlledChatService({
+          'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+          'conv-b': [_message('conv-b', 0)],
+        });
+        final controller = await pumpHarness(tester, service);
+        await switchAndSettle(tester, controller, service, 'conv-a');
+        enterSelection(controller);
+        final previousSelected = Set<String>.of(controller.selectedItems);
+
+        await switchAndSettle(tester, controller, service, 'conv-b');
+
+        expect(controller.currentConversation?.id, 'conv-b');
+        expect(service.currentConversationId, 'conv-b');
+        expect(controller.selecting, isFalse);
+        expect(controller.selectedItems, isEmpty);
+        expect(controller.selectionMode, ChatSelectionMode.share);
+        expect(
+          previousSelected.intersection(controller.selectedItems),
+          isEmpty,
+        );
+      });
+    });
+
+    testWidgets(
+      'loadTimelinePage error keeps conversation, messages, and selection',
+      (tester) async {
+        await runAsDesktop(() async {
+          final service = _ControlledChatService({
+            'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+            'conv-b': [_message('conv-b', 0)],
+          });
+          final controller = await pumpHarness(tester, service);
+          await switchAndSettle(tester, controller, service, 'conv-a');
+          enterSelection(controller);
+          final selectedBefore = Set<String>.of(controller.selectedItems);
+          final messagesBefore = controller.messages
+              .map((m) => m.id)
+              .toList(growable: false);
+
+          final before = service.pageRequests.length;
+          final future = controller.switchConversationAnimated('conv-b');
+          for (
+            var i = 0;
+            i < 40 && service.pageRequests.length <= before;
+            i++
+          ) {
+            await tester.pump(const Duration(milliseconds: 10));
+          }
+          expect(service.pageRequests.length, greaterThan(before));
+          service.pageRequests.last.completer.completeError(
+            StateError('desktop_load_failed'),
+          );
+          await expectLater(future, throwsA(isA<StateError>()));
+          await tester.pump();
+
+          expect(controller.currentConversation?.id, 'conv-a');
+          expect(service.currentConversationId, 'conv-a');
+          expect(service.setCurrentCalls, isNot(contains('conv-b')));
+          expect(controller.messages.map((m) => m.id), messagesBefore);
+          expect(controller.selecting, isTrue);
+          expect(controller.selectedItems, selectedBefore);
+          expect(controller.selectionMode, ChatSelectionMode.delete);
+        });
+      },
+    );
+
+    testWidgets(
+      'missing target keeps ChatService and ChatController on prior conversation',
+      (tester) async {
+        await runAsDesktop(() async {
+          final service = _ControlledChatService({
+            'conv-a': [_message('conv-a', 0), _message('conv-a', 1)],
+          });
+          final controller = await pumpHarness(tester, service);
+          await switchAndSettle(tester, controller, service, 'conv-a');
+          expect(service.currentConversationId, 'conv-a');
+          expect(controller.currentConversation?.id, 'conv-a');
+
+          final future = controller.switchConversationAnimated('missing');
+          await pumpUntilDone(tester, [future]);
+
+          expect(controller.currentConversation?.id, 'conv-a');
+          expect(service.currentConversationId, 'conv-a');
+          expect(service.setCurrentCalls, isNot(contains('missing')));
+          expect(controller.messages.map((m) => m.conversationId).toSet(), {
+            'conv-a',
+          });
+        });
+      },
+    );
+
+    testWidgets('tap A then B then C: only C commits', (tester) async {
+      await runAsDesktop(() async {
+        final service = _ControlledChatService({
+          'conv-a': [for (var i = 0; i < 3; i++) _message('conv-a', i)],
+          'conv-b': [_message('conv-b', 0)],
+          'conv-c': [_message('conv-c', 0), _message('conv-c', 1)],
+        });
+        final controller = await pumpHarness(tester, service);
+        await switchAndSettle(tester, controller, service, 'conv-a');
+
+        final afterA = service.pageRequests.length;
+        final switchB = controller.switchConversationAnimated('conv-b');
+        for (
+          var i = 0;
+          i < 40 && service.pageRequests.length <= afterA;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(service.pageRequests.length, afterA + 1);
+        final requestB = service.pageRequests.last;
+
+        final switchC = controller.switchConversationAnimated('conv-c');
+        for (
+          var i = 0;
+          i < 40 && service.pageRequests.length <= afterA + 1;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(service.pageRequests.length, afterA + 2);
+        final requestC = service.pageRequests.last;
+
+        service.completePage(
+          requestB,
+          service.messagesOf('conv-b'),
+          startIndex: 0,
+        );
+        await tester.pump();
+        expect(controller.currentConversation?.id, 'conv-a');
+        expect(service.currentConversationId, 'conv-a');
+        expect(service.setCurrentCalls, isNot(contains('conv-b')));
+
+        service.completePage(
+          requestC,
+          service.messagesOf('conv-c'),
+          startIndex: 0,
+        );
+        await pumpUntilDone(tester, [switchB, switchC]);
+
+        expect(controller.currentConversation?.id, 'conv-c');
+        expect(service.currentConversationId, 'conv-c');
+        expect(service.setCurrentCalls, isNot(contains('conv-b')));
+        expect(controller.messages.map((m) => m.conversationId).toSet(), {
+          'conv-c',
+        });
+        expect(controller.messages, hasLength(2));
       });
     });
   });

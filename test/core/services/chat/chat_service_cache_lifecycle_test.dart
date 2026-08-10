@@ -174,7 +174,8 @@ void main() {
 
       await service.deleteConversation(conversation.id);
 
-      expect(service.getMessageCount(conversation.id), 0);
+      expect(service.getMessageCount(conversation.id), -1);
+      expect(service.isMessageCountKnown(conversation.id), isFalse);
       expect(service.getMessages(conversation.id), isEmpty);
       expect(service.getMessageIndex(conversation.id, user.id), -1);
       expect(service.getToolEvents(assistant.id), isEmpty);

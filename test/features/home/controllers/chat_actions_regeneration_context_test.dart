@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
@@ -45,7 +47,7 @@ void main() {
       ),
       64,
     );
-    // Default assistants leave context unlimited (D-30 / 5d42e692).
+    // Default assistants leave context unlimited (D-30 / 5d42eebc).
     expect(
       ChatActions.contextReadLimit(
         assistant: const Assistant(
@@ -68,6 +70,76 @@ void main() {
       ),
       Assistant.maxContextMessageSize,
     );
+  });
+
+  test('unknown sentinel must not be passed into contextReadLimit', () {
+    expect(
+      () => ChatActions.contextReadLimit(
+        assistant: const Assistant(
+          id: 'assistant-1',
+          name: 'Unlimited',
+          limitContextMessages: false,
+        ),
+        persistedMessageCount: -1,
+      ),
+      throwsA(isA<AssertionError>()),
+    );
+  });
+
+  test(
+    'resolveContextReadLimit awaits real count for unlimited assistants',
+    () async {
+      var resolveCalls = 0;
+      final limit = await ChatActions.resolveContextReadLimit(
+        assistant: const Assistant(
+          id: 'assistant-1',
+          name: 'Unlimited',
+          limitContextMessages: false,
+        ),
+        resolvePersistedCount: () async {
+          resolveCalls += 1;
+          return 1507;
+        },
+      );
+      expect(limit, 1507);
+      expect(resolveCalls, 1);
+      expect(limit, isNot(Assistant.maxContextMessageSize));
+    },
+  );
+
+  test(
+    'resolveContextReadLimit skips count lookup when context is limited',
+    () async {
+      var resolveCalls = 0;
+      final limit = await ChatActions.resolveContextReadLimit(
+        assistant: const Assistant(
+          id: 'assistant-1',
+          name: 'Limited',
+          contextMessageSize: 64,
+          limitContextMessages: true,
+        ),
+        resolvePersistedCount: () async {
+          resolveCalls += 1;
+          return 1507;
+        },
+      );
+      expect(limit, 64);
+      expect(resolveCalls, 0);
+    },
+  );
+
+  test('send/regenerate/continue paths await context limit resolution', () {
+    final source = File(
+      'lib/features/home/controllers/chat_actions.dart',
+    ).readAsStringSync();
+    expect(
+      'maxMessages: await _contextReadLimit(assistant, conversation),'
+          .allMatches(source)
+          .length,
+      3,
+      reason: 'send, regenerate, and continue must each await resolved counts',
+    );
+    expect(source.contains('maxMessages: _contextReadLimit('), isFalse);
   });
 
   test('only temporary regeneration physically removes trailing messages', () {

@@ -61,6 +61,8 @@ class ChatController extends ChangeNotifier {
   /// Total persisted message count for the current conversation.
   int _totalMessageCount = 0;
   int get totalMessageCount => _totalMessageCount;
+  /// versionCount from the latest loaded timeline window, keyed by groupId.
+  Map<String, int> _windowVersionCounts = <String, int>{};
   bool get hasMoreBefore => _loadedStartIndex > 0;
   bool get hasMoreAfter =>
       _loadedStartIndex + _messages.length < _totalMessageCount;
@@ -126,13 +128,16 @@ class ChatController extends ChangeNotifier {
 
   /// Sets a newly created empty draft without opening a persisted window.
   void setDraftConversation(Conversation conversation) {
-    if (_chatService.getMessageCount(conversation.id) != 0) {
+    // Unknown count (-1) is not "has messages"; only reject when known non-zero.
+    if (_chatService.isMessageCountKnown(conversation.id) &&
+        _chatService.getMessageCount(conversation.id) != 0) {
       throw StateError('persisted_conversation_requires_async_open');
     }
     _currentConversation = conversation;
     _messages = [];
     _loadedStartIndex = 0;
     _totalMessageCount = 0;
+    _windowVersionCounts = <String, int>{};
     _versionSelections = <String, int>{};
     notifyListeners();
   }
@@ -142,6 +147,7 @@ class ChatController extends ChangeNotifier {
     _messages = [];
     _loadedStartIndex = 0;
     _totalMessageCount = 0;
+    _windowVersionCounts = <String, int>{};
     _versionSelections = <String, int>{};
     if (conversation != null) {
       _loadVersionSelections();
@@ -169,7 +175,8 @@ class ChatController extends ChangeNotifier {
     }
     final groupIds = <String>{
       for (final slot in page?.slots ?? const <LoadedTimelineSlot>[])
-        if (slot.message.version > 0 ||
+        if (slot.identity.versionCount > 1 ||
+            slot.message.version > 0 ||
             versionSelections.containsKey(
               slot.message.groupId ?? slot.message.id,
             ))
@@ -263,6 +270,7 @@ class ChatController extends ChangeNotifier {
     _messages = [];
     _loadedStartIndex = 0;
     _totalMessageCount = 0;
+    _windowVersionCounts = <String, int>{};
     _versionSelections = <String, int>{};
     notifyListeners();
     return conversation;
@@ -279,6 +287,7 @@ class ChatController extends ChangeNotifier {
     _messages = [];
     _loadedStartIndex = 0;
     _totalMessageCount = 0;
+    _windowVersionCounts = <String, int>{};
     _versionSelections = <String, int>{};
   }
 
@@ -345,6 +354,7 @@ class ChatController extends ChangeNotifier {
       _messages = <ChatMessage>[];
       _loadedStartIndex = 0;
       _totalMessageCount = 0;
+      _windowVersionCounts = <String, int>{};
       return;
     }
     _messages = page.slots.map((slot) => slot.message).toList(growable: true);
@@ -352,7 +362,20 @@ class ChatController extends ChangeNotifier {
         ? 0
         : page.slots.first.identity.logicalIndex;
     _totalMessageCount = page.totalSlotCount;
+    _windowVersionCounts = {
+      for (final slot in page.slots)
+        slot.identity.slotId: slot.identity.versionCount,
+    };
     invalidateCache();
+  }
+
+
+  void _mergeWindowVersionCounts(LoadedTimelinePage page) {
+    final next = Map<String, int>.of(_windowVersionCounts);
+    for (final slot in page.slots) {
+      next[slot.identity.slotId] = slot.identity.versionCount;
+    }
+    _windowVersionCounts = next;
   }
 
   Future<bool> loadMoreBefore({
@@ -377,6 +400,7 @@ class ChatController extends ChangeNotifier {
     ]);
     _loadedStartIndex = page.slots.first.identity.logicalIndex;
     _totalMessageCount = page.totalSlotCount;
+    _mergeWindowVersionCounts(page);
     if (_messages.length > ChatService.defaultLoadedWindowMax) {
       _messages.removeRange(
         ChatService.defaultLoadedWindowMax,
@@ -410,6 +434,7 @@ class ChatController extends ChangeNotifier {
         if (existing.add(slot.message.id)) slot.message,
     ]);
     _totalMessageCount = page.totalSlotCount;
+    _mergeWindowVersionCounts(page);
     if (_messages.length > ChatService.defaultLoadedWindowMax) {
       final removeCount = _messages.length - ChatService.defaultLoadedWindowMax;
       _messages.removeRange(0, removeCount);
@@ -538,16 +563,11 @@ class ChatController extends ChangeNotifier {
     return conversation.copyWith(truncateIndex: localTruncateIndex);
   }
 
+  /// Current loaded-window collapsed projection only — never walks the full
+  /// conversation via [ChatService.getMessagesRange] / full order skeleton.
   List<ChatMessage> allCollapsedMessagesForCurrentConversation() {
-    final conversation = _currentConversation;
-    if (conversation == null) return const <ChatMessage>[];
-    return collapseVersions(
-      _chatService.getMessagesRange(
-        conversation.id,
-        start: 0,
-        limit: _chatService.getMessageCount(conversation.id),
-      ),
-    );
+    if (_currentConversation == null) return const <ChatMessage>[];
+    return collapsedMessages;
   }
 
   Future<List<ChatMessage>>
@@ -597,7 +617,8 @@ class ChatController extends ChangeNotifier {
     if (conversation == null || _messages.isEmpty) return;
     final groupIds = <String>{
       for (final message in _messages)
-        if (message.version > 0 ||
+        if ((_windowVersionCounts[message.groupId ?? message.id] ?? 1) > 1 ||
+            message.version > 0 ||
             _versionSelections.containsKey(message.groupId ?? message.id))
           message.groupId ?? message.id,
     };
@@ -793,6 +814,8 @@ class ChatController extends ChangeNotifier {
     // diverge from the row count. The batch must occupy the final rows
     // directly after the loaded tail; anything else means an unseen mutation
     // landed in between.
+    // Unknown count (-1) fails `rowCount < messages.length` and conservatively
+    // skips the fast append path (falls back to a full reload).
     final rowCount = _chatService.getMessageCount(conversationId);
     if (rowCount < messages.length) return false;
     final firstRowIndex = _chatService.getMessageIndex(

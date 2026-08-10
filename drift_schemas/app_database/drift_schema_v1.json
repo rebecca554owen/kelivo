@@ -3168,6 +3168,20 @@
     {
       "id": 32,
       "references": [
+        1
+      ],
+      "type": "index",
+      "data": {
+        "on": 1,
+        "name": "idx_message_rows_streaming",
+        "sql": "CREATE INDEX idx_message_rows_streaming ON message_rows (id) WHERE is_streaming = 1",
+        "unique": false,
+        "columns": []
+      }
+    },
+    {
+      "id": 33,
+      "references": [
         4
       ],
       "type": "index",
@@ -3193,7 +3207,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
       "references": [
         5
       ],
@@ -3220,7 +3234,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 35,
       "references": [
         7
       ],
@@ -3243,7 +3257,7 @@
       }
     },
     {
-      "id": 35,
+      "id": 36,
       "references": [
         11
       ],
@@ -3257,7 +3271,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 37,
       "references": [
         11
       ],
@@ -3284,7 +3298,7 @@
       }
     },
     {
-      "id": 37,
+      "id": 38,
       "references": [
         17
       ],
@@ -3307,7 +3321,7 @@
       }
     },
     {
-      "id": 38,
+      "id": 39,
       "references": [
         24
       ],
@@ -3338,7 +3352,7 @@
       }
     },
     {
-      "id": 39,
+      "id": 40,
       "references": [
         24
       ],
@@ -3369,7 +3383,7 @@
       }
     },
     {
-      "id": 40,
+      "id": 41,
       "references": [
         24
       ],
@@ -3400,7 +3414,7 @@
       }
     },
     {
-      "id": 41,
+      "id": 42,
       "references": [
         26
       ],
@@ -3709,6 +3723,15 @@
         {
           "dialect": "sqlite",
           "sql": "CREATE INDEX idx_messages_group ON message_rows (conversation_id, group_id, version, id)"
+        }
+      ]
+    },
+    {
+      "name": "idx_message_rows_streaming",
+      "sql": [
+        {
+          "dialect": "sqlite",
+          "sql": "CREATE INDEX idx_message_rows_streaming ON message_rows (id) WHERE is_streaming = 1"
         }
       ]
     },

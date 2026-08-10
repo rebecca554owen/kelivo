@@ -637,13 +637,7 @@ class _HomePageState extends State<HomePage>
     required String? modelDisplay,
     required ColorScheme cs,
   }) {
-    final collapsed = _controller.collapseVersions(_controller.messages);
-    final selectable = collapsed
-        .where((m) => m.role == 'user' || m.role == 'assistant')
-        .toList();
-    final allSelected =
-        selectable.isNotEmpty &&
-        selectable.every((m) => _controller.selectedItems.contains(m.id));
+    final allSelected = _controller.allSelectableMessagesSelected;
 
     return HomeMobileScaffold(
       scaffoldKey: _scaffoldKey,
@@ -769,13 +763,7 @@ class _HomePageState extends State<HomePage>
   }) {
     _controller.initDesktopUi();
 
-    final collapsed = _controller.collapseVersions(_controller.messages);
-    final selectable = collapsed
-        .where((m) => m.role == 'user' || m.role == 'assistant')
-        .toList();
-    final allSelected =
-        selectable.isNotEmpty &&
-        selectable.every((m) => _controller.selectedItems.contains(m.id));
+    final allSelected = _controller.allSelectableMessagesSelected;
 
     return HomeDesktopScaffold(
       scaffoldKey: _scaffoldKey,
