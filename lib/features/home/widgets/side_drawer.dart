@@ -110,7 +110,7 @@ class SideDrawer extends StatefulWidget {
   static int debugSidebarRowsComputeCount = 0;
 
   /// Testing hook: forces a host [setState] without changing the sidebar-rows
-  /// memo key `(conversationListRevision, query, assistantId)`.
+  /// memo key `(conversationListRevision, initialized, query, assistantId)`.
   @visibleForTesting
   static VoidCallback? debugRequestConversationListHostRebuild;
 
@@ -166,9 +166,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   int _globalSearchRequestId = 0;
   String? _runningGlobalSearchQuery;
 
-  // Flattened sidebar rows memoized by (conversationListRevision, query,
-  // assistantId) so theme/animation rebuilds skip the O(n) rebuild.
+  // Flattened sidebar rows memoized by (conversationListRevision,
+  // initialized, query, assistantId) so theme/animation rebuilds skip the
+  // O(n) rebuild.
   int? _cachedSidebarRowsRevision;
+  bool? _cachedSidebarRowsInitialized;
   String? _cachedSidebarRowsQuery;
   String? _cachedSidebarRowsAssistantId;
   List<_SidebarRow>? _cachedSidebarRows;
@@ -1178,17 +1180,20 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   }
 
   /// Memoized flatten of pinned section + date groups into sidebar rows.
-  /// Recomputes only when `(revision, query, assistantId)` changes.
+  /// Recomputes only when `(revision, initialized, query, assistantId)`
+  /// changes.
   /// Headers store stable date buckets (not localized labels) so locale
   /// switches can re-render without bumping this memo.
   List<_SidebarRow> _sidebarRowsFor({
     required int revision,
+    required bool initialized,
     required String query,
     required String? assistantId,
     required ChatService chatService,
   }) {
     if (_cachedSidebarRows != null &&
         _cachedSidebarRowsRevision == revision &&
+        _cachedSidebarRowsInitialized == initialized &&
         _cachedSidebarRowsQuery == query &&
         _cachedSidebarRowsAssistantId == assistantId) {
       return _cachedSidebarRows!;
@@ -1201,6 +1206,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     );
     _cachedSidebarRows = rows;
     _cachedSidebarRowsRevision = revision;
+    _cachedSidebarRowsInitialized = initialized;
     _cachedSidebarRowsQuery = query;
     _cachedSidebarRowsAssistantId = assistantId;
     return rows;
@@ -2207,9 +2213,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           .watch<AssistantProvider>()
                           .currentAssistantId;
                       // Use last-activity time (updatedAt) for ordering and grouping.
-                      // Flattened + memoized by (revision, query, assistantId).
+                      // Flattened + memoized by
+                      // (revision, initialized, query, assistantId).
                       final rows = _sidebarRowsFor(
                         revision: selection.revision,
+                        initialized: selection.initialized,
                         query: _query,
                         assistantId: assistantId,
                         chatService: chatService,

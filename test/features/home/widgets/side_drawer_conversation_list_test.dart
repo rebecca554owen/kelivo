@@ -43,6 +43,7 @@ class _TestChatService extends ChatService {
   int notifyCount = 0;
   List<Conversation>? _stubConversations;
   int? _stubRevision;
+  bool? _stubInitialized;
 
   void poke() => notifyListeners();
 
@@ -53,6 +54,24 @@ class _TestChatService extends ChatService {
     notifyListeners();
   }
 
+  /// Reproduces startup ordering: summaries and their revision are published
+  /// before the service flips its public initialized flag.
+  void stageConversationsBeforeInitialization(
+    List<Conversation> conversations,
+  ) {
+    _stubConversations = conversations;
+    _stubRevision = (_stubRevision ?? super.conversationListRevision) + 1;
+    _stubInitialized = false;
+  }
+
+  void completeInitializationForTest() {
+    _stubInitialized = true;
+    notifyListeners();
+  }
+
+  @override
+  bool get initialized => _stubInitialized ?? super.initialized;
+
   @override
   int get conversationListRevision =>
       _stubRevision ?? super.conversationListRevision;
@@ -60,6 +79,7 @@ class _TestChatService extends ChatService {
   @override
   List<Conversation> getAllConversations() {
     if (_stubConversations != null) {
+      if (_stubInitialized == false) return const <Conversation>[];
       return List<Conversation>.of(_stubConversations!);
     }
     return super.getAllConversations();
@@ -304,6 +324,32 @@ void main() {
     });
   });
 
+  testWidgets(
+    'topics appear when initialization completes after revision is published',
+    (tester) async {
+      await asDesktop(() async {
+        final service = createService();
+        service.stageConversationsBeforeInitialization([
+          Conversation(title: 'Recovered topic'),
+        ]);
+
+        await pumpDrawer(tester, service);
+        expect(find.text('Recovered topic'), findsNothing);
+        final computesBeforeReady = SideDrawer.debugSidebarRowsComputeCount;
+
+        service.completeInitializationForTest();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.text('Recovered topic'), findsOneWidget);
+        expect(
+          SideDrawer.debugSidebarRowsComputeCount,
+          greaterThan(computesBeforeReady),
+        );
+      });
+    },
+  );
+
   testWidgets('switching the selected conversation does not rebuild the list', (
     tester,
   ) async {
@@ -395,7 +441,8 @@ void main() {
         final computes = SideDrawer.debugSidebarRowsComputeCount;
         expect(computes, greaterThan(0));
 
-        // Host setState without changing (revision, query, assistantId).
+        // Host setState without changing
+        // (revision, initialized, query, assistantId).
         final rebuild = SideDrawer.debugRequestConversationListHostRebuild;
         expect(rebuild, isNotNull);
         rebuild!();
