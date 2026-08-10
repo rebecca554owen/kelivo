@@ -656,8 +656,13 @@ class ChatController extends ChangeNotifier {
   /// Opens the logical window around an already-persisted revision mutation.
   ///
   /// Editing or selecting a version can target a slot far outside the tail
-  /// window, so it must not reuse the append-to-tail navigation path.
-  Future<bool> openAroundPersistedMessage(ChatMessage message) async {
+  /// window, so it must not reuse the append-to-tail navigation path. Set
+  /// [truncateFollowingSlots] when persistence removed every logical slot
+  /// after the target.
+  Future<bool> openAroundPersistedMessage(
+    ChatMessage message, {
+    bool truncateFollowingSlots = false,
+  }) async {
     final conversation = _currentConversation;
     if (conversation == null || message.conversationId != conversation.id) {
       return false;
@@ -690,12 +695,22 @@ class ChatController extends ChangeNotifier {
             ..sort((left, right) => left.version.compareTo(right.version));
 
       _messages[visibleIndex] = message;
+      if (truncateFollowingSlots) {
+        _messages.removeRange(visibleIndex + 1, _messages.length);
+        _totalMessageCount = _loadedStartIndex + _messages.length;
+      }
       invalidateCache();
       if (groupInsertIndex >= 0) {
         visibleSnapshot.removeWhere(
           (candidate) => (candidate.groupId ?? candidate.id) == groupId,
         );
         visibleSnapshot.insertAll(groupInsertIndex, groupMessages);
+        if (truncateFollowingSlots) {
+          visibleSnapshot.removeRange(
+            groupInsertIndex + groupMessages.length,
+            visibleSnapshot.length,
+          );
+        }
         _messagesWithVisibleGroupsCache = visibleSnapshot;
       }
       _loadVersionSelections();

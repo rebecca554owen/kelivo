@@ -1114,6 +1114,7 @@ class ChatActions {
   }) async {
     // Avoid using BuildContext across async gaps (this class holds a BuildContext).
     final settings = contextProvider.read<SettingsProvider>();
+    final truncateFuture = settings.regenerateDeleteTrailingMessages;
     final assistantProvider = contextProvider.read<AssistantProvider>();
     // Capture approval service reference before async gap
     ToolApprovalService? regenApprovalService;
@@ -1191,7 +1192,7 @@ class ChatActions {
     }
 
     if (shouldPhysicallyRemoveRegenerationTail(
-      deleteTrailingEnabled: settings.regenerateDeleteTrailingMessages,
+      deleteTrailingEnabled: truncateFuture,
       isTemporaryConversation: isTemporaryConversation,
     )) {
       final removeIds = await messageGenerationService.removeTrailingMessages(
@@ -1215,7 +1216,7 @@ class ChatActions {
         modelId: modelId,
         providerKey: providerKey,
         anchorGroupId: message.groupId ?? message.id,
-        truncateFuture: settings.regenerateDeleteTrailingMessages,
+        truncateFuture: truncateFuture,
       );
     } else {
       final targetGroupId = versioning.targetGroupId;
@@ -1235,7 +1236,7 @@ class ChatActions {
         providerKey: providerKey,
         groupId: targetGroupId,
         version: nextVersion,
-        truncateFuture: settings.regenerateDeleteTrailingMessages,
+        truncateFuture: truncateFuture,
       );
     }
     final assistantMessage = begin.assistantMessage;
@@ -1260,7 +1261,10 @@ class ChatActions {
     // Keep the loaded window around the persisted generation message instead
     // of replacing a distant reading position with the conversation tail
     // (which can exclude this streaming revision in a long conversation).
-    if (await chatController.openAroundPersistedMessage(assistantMessage)) {
+    if (await chatController.openAroundPersistedMessage(
+      assistantMessage,
+      truncateFollowingSlots: !isTemporaryConversation && truncateFuture,
+    )) {
       viewModel.restoreMessageUiState();
     }
     onMessagesChanged?.call();

@@ -1297,6 +1297,49 @@ void main() {
     );
 
     test(
+      'visible persisted mutation reconciles the window after truncation',
+      () async {
+        await controller.setCurrentConversationAndLoad(conversation);
+        final timelineLoadsBeforeMutation = chatService.timelinePageCalls;
+        final regenerated = ChatMessage(
+          id: 'message-80-v2',
+          role: messages[80].role,
+          content: '',
+          conversationId: conversation.id,
+          groupId: 'message-80',
+          version: 1,
+          isStreaming: true,
+        );
+        messages
+          ..removeRange(81, messages.length)
+          ..add(regenerated);
+        chatService.versionSelections = const {'message-80': 1};
+
+        final opened = await controller.openAroundPersistedMessage(
+          regenerated,
+          truncateFollowingSlots: true,
+        );
+
+        expect(opened, isTrue);
+        expect(chatService.timelinePageCalls, timelineLoadsBeforeMutation);
+        expect(controller.messages.first.id, 'message-60');
+        expect(controller.messages.last.id, regenerated.id);
+        expect(controller.totalMessageCount, 81);
+        expect(controller.hasMoreAfter, isFalse);
+        expect(
+          controller.messages.any((message) => message.id == 'message-81'),
+          isFalse,
+        );
+        expect(
+          controller.messageRenderModels.any(
+            (model) => model.message.id == 'message-81',
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test(
       'visible edit keeps every version switcher while groups reload',
       () async {
         messages = <ChatMessage>[
