@@ -5607,7 +5607,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memorySettingsModelUnset => '未选择';
 
   @override
-  String get memorySettingsModelTip => '后台会频繁调用此模型，建议选择便宜且速度快的模型。';
+  String get memorySettingsModelTip => '开启「自动整理记忆」后，后台会频繁调用此模型，建议选择便宜且速度快的模型。';
 
   @override
   String get memorySettingsAboutTitle => '记忆说明';
@@ -12540,7 +12540,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memorySettingsModelUnset => '未选择';
 
   @override
-  String get memorySettingsModelTip => '后台会频繁调用此模型，建议选择便宜且速度快的模型。';
+  String get memorySettingsModelTip => '开启「自动整理记忆」后，后台会频繁调用此模型，建议选择便宜且速度快的模型。';
 
   @override
   String get memorySettingsAboutTitle => '记忆说明';
@@ -19473,7 +19473,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memorySettingsModelUnset => '未選擇';
 
   @override
-  String get memorySettingsModelTip => '後台會頻繁呼叫此模型，建議選擇便宜且速度快的模型。';
+  String get memorySettingsModelTip => '開啟「自動整理記憶」後，後台會頻繁呼叫此模型，建議選擇便宜且速度快的模型。';
 
   @override
   String get memorySettingsAboutTitle => '記憶說明';

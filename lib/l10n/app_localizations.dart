@@ -10768,7 +10768,7 @@ abstract class AppLocalizations {
   /// No description provided for @memorySettingsModelTip.
   ///
   /// In en, this message translates to:
-  /// **'This model is called frequently in the background. Prefer a cheap, fast model.'**
+  /// **'After Auto-organize memory is enabled, this model is called frequently in the background. Prefer a cheap, fast model.'**
   String get memorySettingsModelTip;
 
   /// No description provided for @memorySettingsAboutTitle.

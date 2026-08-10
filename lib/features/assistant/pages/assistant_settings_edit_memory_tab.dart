@@ -410,7 +410,13 @@ class _MemoryTabState extends State<_MemoryTab> {
                 subtitle: l10n.memorySettingsEntriesSubtitle,
                 onTap: _goMemorySettings,
               ),
-              _iosDivider(context),
+              Divider(
+                height: 1,
+                thickness: 0.6,
+                indent: 14,
+                endIndent: 12,
+                color: cs.outlineVariant.withValues(alpha: 0.18),
+              ),
               MemoryNavRow(
                 title: l10n.memoryUiAssistantLegacyTitle,
                 subtitle: l10n.memoryUiAssistantLegacySubtitle,

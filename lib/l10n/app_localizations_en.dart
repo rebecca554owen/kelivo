@@ -5831,7 +5831,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memorySettingsModelTip =>
-      'This model is called frequently in the background. Prefer a cheap, fast model.';
+      'After Auto-organize memory is enabled, this model is called frequently in the background. Prefer a cheap, fast model.';
 
   @override
   String get memorySettingsAboutTitle => 'About memory';
