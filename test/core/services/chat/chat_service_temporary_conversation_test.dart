@@ -388,6 +388,83 @@ void main() {
     },
   );
 
+  test(
+    'editing malformed attachment preserves live asset references and dirty state',
+    () async {
+      final first = createService();
+      await first.init();
+      final conversation = await first.createConversation(title: 'Malformed');
+      final upload = File('${tempDir.path}/upload/live.txt');
+      await upload.parent.create(recursive: true);
+      await upload.writeAsString('live attachment');
+      final message = await first.addMessage(
+        conversationId: conversation.id,
+        role: 'user',
+        parts: [
+          FilePart(uri: upload.path, name: 'live.txt', mime: 'text/plain'),
+        ],
+      );
+      await first.close();
+      services.remove(first);
+
+      final databasePath =
+          '${tempDir.path}/${AppDatabase.databaseFileName}';
+      final corrupt = sqlite.sqlite3.open(databasePath);
+      late final String originalAssetId;
+      const secret = '/private/attachment-metadata';
+      final malformedPayload =
+          '{"uri":"${upload.path}","name":"live.txt","mime":["$secret"]}';
+      try {
+        originalAssetId = corrupt
+            .select(
+              'SELECT asset_id FROM message_asset_rows WHERE revision_id = ?;',
+              [message.id],
+            )
+            .single['asset_id'] as String;
+        corrupt.execute(
+          'UPDATE message_part_rows SET payload = ? '
+          'WHERE revision_id = ? AND kind = ?;',
+          [malformedPayload, message.id, 'file'],
+        );
+        corrupt.execute(
+          'DELETE FROM asset_reference_dirty_rows WHERE revision_id = ?;',
+          [message.id],
+        );
+      } finally {
+        corrupt.close();
+      }
+
+      final restarted = createService();
+      await restarted.init();
+      final loaded = await restarted.loadMessages(conversation.id);
+      final malformed = loaded.single.parts.single as MalformedPart;
+      expect(malformed.parseError, 'invalid_mime');
+      expect(malformed.parseError, isNot(contains(secret)));
+
+      await restarted.updateMessage(message.id, content: 'edited');
+
+      final verify = sqlite.sqlite3.open(databasePath);
+      try {
+        final references = verify.select(
+          'SELECT asset_id FROM message_asset_rows WHERE revision_id = ?;',
+          [message.id],
+        );
+        expect(references, hasLength(1));
+        expect(references.single['asset_id'], originalAssetId);
+        expect(
+          verify.select(
+            'SELECT 1 FROM asset_reference_dirty_rows WHERE revision_id = ?;',
+            [message.id],
+          ),
+          hasLength(1),
+        );
+      } finally {
+        verify.close();
+      }
+      expect(await upload.exists(), isTrue);
+    },
+  );
+
   group('ChatService temporary conversations', () {
     test('ordinary draft persists when its first message is added', () async {
       final service = createService();

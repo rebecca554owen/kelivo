@@ -1163,13 +1163,10 @@ class ChatDatabaseRepository {
           if (rewrite.parseError case final parseError?) {
             skipped += 1;
             await markMessageAssetReferencesDirty(revisionId);
-            final logError = payload.isEmpty
-                ? parseError
-                : parseError.replaceAll(payload, '<redacted>');
             debugPrint(
               'Sandbox path migration skipped malformed part: '
               'revisionId=$revisionId ordinal=$ordinal kind=$kind '
-              'parseError=$logError',
+              'parseError=$parseError',
             );
           }
           final rewritten = rewrite.payload;
@@ -1212,7 +1209,10 @@ class ChatDatabaseRepository {
     try {
       part = MessagePart.fromRow(kind, payload);
     } on FormatException catch (error) {
-      return (payload: payload, parseError: error.message.toString());
+      return (
+        payload: payload,
+        parseError: messagePartParseErrorCategory(error),
+      );
     }
     if (part is ImagePart) {
       final nextUri = rewriteUri(part.uri);
@@ -1647,17 +1647,44 @@ class ChatDatabaseRepository {
     final total = totalRow.read<int>('total');
     onProgress?.call(0, total);
 
-    const pageSize = 256;
+    const metadataPageSize = 256;
+    const payloadPageByteBudget = 2 * 1024 * 1024;
     var cursor = 0;
     var processed = 0;
     while (true) {
-      final rows = await _db
+      final metadataRows = await _db
           .customSelect(
-            'SELECT part_id, revision_id, ordinal, kind, payload '
+            'SELECT part_id, LENGTH(CAST(payload AS BLOB)) AS payload_bytes '
             'FROM message_part_rows '
             "WHERE kind IN ('image', 'file') AND part_id > ? "
             'ORDER BY part_id LIMIT ?;',
-            variables: [Variable<int>(cursor), const Variable<int>(pageSize)],
+            variables: [
+              Variable<int>(cursor),
+              const Variable<int>(metadataPageSize),
+            ],
+            readsFrom: {_db.messagePartRows},
+          )
+          .get();
+      if (metadataRows.isEmpty) break;
+
+      final partIds = <int>[];
+      var selectedBytes = 0;
+      for (final row in metadataRows) {
+        final payloadBytes = row.read<int>('payload_bytes');
+        if (partIds.isNotEmpty &&
+            selectedBytes + payloadBytes > payloadPageByteBudget) {
+          break;
+        }
+        partIds.add(row.read<int>('part_id'));
+        selectedBytes += payloadBytes;
+      }
+      final placeholders = List.filled(partIds.length, '?').join(', ');
+      final rows = await _db
+          .customSelect(
+            'SELECT part_id, revision_id, ordinal, kind, payload '
+            'FROM message_part_rows WHERE part_id IN ($placeholders) '
+            'ORDER BY part_id;',
+            variables: [for (final partId in partIds) Variable<int>(partId)],
             readsFrom: {_db.messagePartRows},
           )
           .get();
@@ -1680,7 +1707,6 @@ class ChatDatabaseRepository {
         processed += 1;
       }
       onProgress?.call(processed, total);
-      if (rows.length < pageSize) break;
     }
   }
 
@@ -3230,18 +3256,24 @@ class ChatDatabaseRepository {
     List<({String id, String path, int notBefore})> page,
   ) async {
     if (page.isEmpty) return const <String>{};
-    final tuples = List.filled(page.length, '(?, ?, ?)').join(', ');
+    final tuples = List.filled(page.length, '(?, ?, ?, ?, ?)').join(', ');
     final variables = <Variable<Object>>[];
     for (final item in page) {
       final pathForm = item.path.isEmpty ? ' ' : item.path;
       final altForm = _alternateAssetPathForm(pathForm);
+      final jsonPathForm = _jsonEscapedPathForm(pathForm);
+      final jsonAltForm = _jsonEscapedPathForm(altForm);
       variables
         ..add(Variable<String>(item.id))
         ..add(Variable<String>(pathForm))
-        ..add(Variable<String>(altForm));
+        ..add(Variable<String>(altForm))
+        ..add(Variable<String>(jsonPathForm))
+        ..add(Variable<String>(jsonAltForm));
     }
     final rows = await _db.customSelect('''
-          WITH candidates(asset_id, path_form, alt_form) AS (
+          WITH candidates(
+            asset_id, path_form, alt_form, json_path_form, json_alt_form
+          ) AS (
             VALUES $tuples
           )
           SELECT DISTINCT c.asset_id AS asset_id
@@ -3254,6 +3286,8 @@ class ChatDatabaseRepository {
               AND (
                 instr(p.payload, c.path_form) > 0
                 OR instr(p.payload, c.alt_form) > 0
+                OR instr(p.payload, c.json_path_form) > 0
+                OR instr(p.payload, c.json_alt_form) > 0
               )
           );
         ''', variables: variables).get();
@@ -3263,6 +3297,8 @@ class ChatDatabaseRepository {
   Future<bool> isAssetGcClaimStillValid(AssetGcCandidate candidate) async {
     final pathForm = candidate.path.isEmpty ? ' ' : candidate.path;
     final altForm = _alternateAssetPathForm(pathForm);
+    final jsonPathForm = _jsonEscapedPathForm(pathForm);
+    final jsonAltForm = _jsonEscapedPathForm(altForm);
     final row = await _db
         .customSelect(
           '''
@@ -3276,7 +3312,10 @@ class ChatDatabaseRepository {
               SELECT 1 FROM asset_reference_dirty_rows d
               JOIN message_part_rows p ON p.revision_id = d.revision_id
               WHERE p.kind IN ('text', 'image', 'file')
-                AND (instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0)
+                AND (
+                  instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0
+                  OR instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0
+                )
             )
           LIMIT 1;
         ''',
@@ -3285,6 +3324,8 @@ class ChatDatabaseRepository {
             Variable<int>(candidate.generation),
             Variable<String>(pathForm),
             Variable<String>(altForm),
+            Variable<String>(jsonPathForm),
+            Variable<String>(jsonAltForm),
           ],
         )
         .getSingleOrNull();
@@ -3301,6 +3342,8 @@ class ChatDatabaseRepository {
     // instr(x, '') is always true and would stall GC forever.
     final pathForm = path.isEmpty ? ' ' : path;
     final altForm = _alternateAssetPathForm(pathForm);
+    final jsonPathForm = _jsonEscapedPathForm(pathForm);
+    final jsonAltForm = _jsonEscapedPathForm(altForm);
     return _db.transaction(() async {
       final claim = await _db
           .customSelect(
@@ -3315,7 +3358,10 @@ class ChatDatabaseRepository {
                 SELECT 1 FROM asset_reference_dirty_rows d
                 JOIN message_part_rows p ON p.revision_id = d.revision_id
                 WHERE p.kind IN ('text', 'image', 'file')
-                  AND (instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0)
+                  AND (
+                    instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0
+                    OR instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0
+                  )
               )
             LIMIT 1;
           ''',
@@ -3324,6 +3370,8 @@ class ChatDatabaseRepository {
               Variable<int>(expectedGeneration),
               Variable<String>(pathForm),
               Variable<String>(altForm),
+              Variable<String>(jsonPathForm),
+              Variable<String>(jsonAltForm),
             ],
           )
           .getSingleOrNull();
@@ -5925,13 +5973,10 @@ class ChatDatabaseRepository {
     try {
       return MessagePart.fromRow(kind, payload);
     } on FormatException catch (error) {
-      final parseError = error.message.toString();
-      final logError = payload.isEmpty
-          ? parseError
-          : parseError.replaceAll(payload, '<redacted>');
+      final parseError = messagePartParseErrorCategory(error);
       debugPrint(
         'Malformed message part: revisionId=$revisionId ordinal=$ordinal '
-        'kind=$kind parseError=$logError',
+        'kind=$kind parseError=$parseError',
       );
       return MalformedPart(
         rawKind: kind,
@@ -6671,6 +6716,11 @@ String _alternateAssetPathForm(String path) {
   }
   final canonical = SandboxPathResolver.canonicalize(path);
   return canonical.isEmpty ? path : canonical;
+}
+
+String _jsonEscapedPathForm(String path) {
+  final encoded = jsonEncode(path);
+  return encoded.substring(1, encoded.length - 1);
 }
 
 final class MessageAssetRegistration {

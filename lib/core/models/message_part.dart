@@ -80,10 +80,10 @@ final class ImagePart extends MessagePart {
   });
 
   factory ImagePart.fromPayload(String payload) {
-    final map = _decodeObjectPayload(payload, kind: 'image');
+    final map = _decodeObjectPayload(payload);
     final uri = map['uri'];
     if (uri is! String || uri.isEmpty) {
-      throw FormatException('image payload requires non-empty uri: $payload');
+      throw const _MessagePartFormatException('missing_uri');
     }
     return ImagePart(
       uri: uri,
@@ -120,14 +120,14 @@ final class FilePart extends MessagePart {
   });
 
   factory FilePart.fromPayload(String payload) {
-    final map = _decodeObjectPayload(payload, kind: 'file');
+    final map = _decodeObjectPayload(payload);
     final uri = map['uri'];
     final name = map['name'];
     if (uri is! String || uri.isEmpty) {
-      throw FormatException('file payload requires non-empty uri: $payload');
+      throw const _MessagePartFormatException('missing_uri');
     }
     if (name is! String || name.isEmpty) {
-      throw FormatException('file payload requires non-empty name: $payload');
+      throw const _MessagePartFormatException('missing_name');
     }
     return FilePart(
       uri: uri,
@@ -196,15 +196,27 @@ final class MalformedPart extends MessagePart {
   String encodePayload() => rawPayload;
 }
 
-Map<String, dynamic> _decodeObjectPayload(String payload, {required String kind}) {
+String messagePartParseErrorCategory(FormatException error) {
+  return error is _MessagePartFormatException
+      ? error.category
+      : 'invalid_payload';
+}
+
+final class _MessagePartFormatException extends FormatException {
+  const _MessagePartFormatException(this.category) : super(category);
+
+  final String category;
+}
+
+Map<String, dynamic> _decodeObjectPayload(String payload) {
   late final Object? decoded;
   try {
     decoded = jsonDecode(payload);
-  } on FormatException catch (e) {
-    throw FormatException('invalid $kind payload JSON: ${e.message}');
+  } on FormatException {
+    throw const _MessagePartFormatException('invalid_json');
   }
   if (decoded is! Map) {
-    throw FormatException('$kind payload must be a JSON object: $payload');
+    throw const _MessagePartFormatException('not_object');
   }
   return Map<String, dynamic>.from(decoded);
 }
@@ -213,7 +225,12 @@ String? _optionalString(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value == null) return null;
   if (value is! String) {
-    throw FormatException('$key must be a string or null, got: $value');
+    final category = switch (key) {
+      'mime' => 'invalid_mime',
+      'assetId' => 'invalid_asset_id',
+      _ => 'invalid_optional_string',
+    };
+    throw _MessagePartFormatException(category);
   }
   return value;
 }
@@ -222,7 +239,7 @@ bool _optionalBool(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value == null) return false;
   if (value is! bool) {
-    throw FormatException('$key must be a bool or null, got: $value');
+    throw const _MessagePartFormatException('invalid_unavailable');
   }
   return value;
 }

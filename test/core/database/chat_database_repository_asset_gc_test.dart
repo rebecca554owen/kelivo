@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -213,7 +214,7 @@ void main() {
     });
 
     final now = DateTime.utc(2026, 8, 10);
-    final assetPath = '${root.path}/images/corrupt.png';
+    const assetPath = r'C:\Users\Alice\Kelivo\images\corrupt.png';
     const conversationId = 'conversation-malformed-gc';
     const messageId = 'revision-malformed-gc';
     const assetId = 'asset-malformed-gc';
@@ -267,7 +268,8 @@ void main() {
     expect(await repository.scheduleUnreferencedAssetGc(notBefore: now), 1);
     final candidate = (await repository.claimAssetGc(now: now)).single;
 
-    final malformedPayload = '{"uri":"$assetPath"';
+    final malformedPayload = '${jsonEncode({'uri': assetPath})}broken';
+    expect(malformedPayload.contains(assetPath), isFalse);
     final corrupt = sqlite.sqlite3.open(dbFile.path);
     try {
       corrupt.execute(

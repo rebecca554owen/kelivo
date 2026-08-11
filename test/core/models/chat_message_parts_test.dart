@@ -207,7 +207,8 @@ void main() {
     });
 
     test('fromJson reports message and part context for malformed backup data', () {
-      const payload = '{"uri":"/private/spec.pdf"}';
+      const payload =
+          '{"uri":"/tmp/spec.pdf","name":"spec.pdf","mime":["/private/spec.pdf"]}';
       expect(
         () => ChatMessage.fromJson({
           'id': 'message-malformed-backup',
@@ -228,6 +229,7 @@ void main() {
                   contains('messageId=message-malformed-backup'),
                   contains('ordinal=1'),
                   contains('kind=file'),
+                  contains('parseError=invalid_mime'),
                 ),
               )
               .having(

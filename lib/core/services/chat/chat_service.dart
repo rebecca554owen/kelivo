@@ -1955,26 +1955,15 @@ class ChatService extends ChangeNotifier {
       if (messages.isEmpty) break;
       for (final message in messages) {
         cursor = message.id;
-        final hasMalformedAttachment = message.parts.any(
-          (part) => part is MalformedPart && part.isAttachmentKind,
-        );
-        if (hasMalformedAttachment) {
-          // Keep the revision dirty and its existing message_asset_rows intact.
-          // Without an unresolvable-row schema marker this revision is scanned
-          // once per cold-start maintenance pass; log that known tradeoff once.
-          await _repo.markMessageAssetReferencesDirty(message.id);
-          if (!loggedMalformedAttachment) {
+        try {
+          final synchronized = await _synchronizeMessageAssets(message);
+          if (!synchronized && !loggedMalformedAttachment) {
             debugPrint(
               'Asset reference backfill left malformed attachment revisions '
               'dirty; they will be retried on the next maintenance pass.',
             );
             loggedMalformedAttachment = true;
           }
-          await Future<void>.delayed(Duration.zero);
-          continue;
-        }
-        try {
-          await _synchronizeMessageAssets(message);
         } catch (error) {
           debugPrint('Asset reference backfill skipped ${message.id}: $error');
         }
@@ -2013,8 +2002,16 @@ class ChatService extends ChangeNotifier {
     await runAssetReferenceMaintenance();
   }
 
-  Future<void> _synchronizeMessageAssets(ChatMessage message) async {
-    if (isTemporaryConversation(message.conversationId)) return;
+  Future<bool> _synchronizeMessageAssets(ChatMessage message) async {
+    if (isTemporaryConversation(message.conversationId)) return true;
+    if (message.parts.any(
+      (part) => part is MalformedPart && part.isAttachmentKind,
+    )) {
+      // Parsing is insufficient to build an authoritative replacement set.
+      // Preserve existing message_asset_rows and keep the revision retryable.
+      await _repo.markMessageAssetReferencesDirty(message.id);
+      return false;
+    }
     final appDataDir = await AppDirectories.getAppDataDirectory();
     final allowedRoots = [
       p.normalize(p.join(appDataDir.absolute.path, 'upload')),
@@ -2048,6 +2045,7 @@ class ChatService extends ChangeNotifier {
       revisionId: message.id,
       assets: registrations,
     );
+    return true;
   }
 
   static Future<String> _hashAssetFile(File file) {

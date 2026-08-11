@@ -242,13 +242,10 @@ class ChatMessage extends HiveObject {
         try {
           parts.add(MessagePart.fromRow(kind, payload));
         } on FormatException catch (error) {
-          final parseError = error.message.toString();
-          final safeError = payload.isEmpty
-              ? parseError
-              : parseError.replaceAll(payload, '<redacted>');
+          final parseError = messagePartParseErrorCategory(error);
           throw FormatException(
             'Invalid message part: messageId=${json['id']} '
-            'ordinal=$ordinal kind=$kind parseError=$safeError',
+            'ordinal=$ordinal kind=$kind parseError=$parseError',
           );
         }
       }

@@ -151,7 +151,8 @@ void main() {
     });
 
     test('损坏附件不阻塞迁移并保持原 payload 与 dirty 状态', () async {
-      const malformedPayload = '{"uri":"/old/sandboxoldtoken/a.png"';
+      const malformedPayload =
+          '{"uri":"/old/sandboxoldtoken/a.png","mime":["/private/secret"]}';
       final database = sqlite.sqlite3.open(dbFile.path);
       try {
         database.execute(

@@ -415,4 +415,50 @@ void main() {
     expect(progress, contains((processed: 256, total: 257)));
     expect(progress.last, (processed: 257, total: 257));
   });
+
+  test('attachment payload validation enforces a byte budget per page', () async {
+    final now = DateTime.utc(2026, 8, 10, 12);
+    const conversationId = 'conversation-validation-byte-budget';
+    const messageId = 'message-validation-byte-budget';
+    final inlineBody = List.filled(1100000, 'A').join();
+    final inlineUri = 'data:image/png;base64,$inlineBody';
+    await repository.putMigrationBatch(
+      conversations: [
+        Conversation(
+          id: conversationId,
+          title: 'Validation byte budget',
+          createdAt: now,
+          updatedAt: now,
+          messageIds: const [messageId],
+        ),
+      ],
+      messages: [
+        (
+          message: ChatMessage(
+            id: messageId,
+            role: 'user',
+            conversationId: conversationId,
+            timestamp: now,
+            parts: [ImagePart(uri: inlineUri), ImagePart(uri: inlineUri)],
+          ),
+          messageOrder: 0,
+        ),
+      ],
+      toolEventsByMessageId: const {},
+      geminiSignaturesByMessageId: const {},
+    );
+
+    final progress = <({int processed, int total})>[];
+    await repository.validateAttachmentPartPayloads(
+      onProgress: (processed, total) {
+        progress.add((processed: processed, total: total));
+      },
+    );
+
+    expect(progress, [
+      (processed: 0, total: 2),
+      (processed: 1, total: 2),
+      (processed: 2, total: 2),
+    ]);
+  });
 }
