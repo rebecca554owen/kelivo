@@ -51,6 +51,8 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Kelivo 需要使用相机拍摄照片，以便您将图片发送给 AI 助手进行分析。您可以选择是否上传照片。 / Kelivo uses the camera to capture photos that you can share with AI assistants for analysis. Your photo may be uploaded by your choice.</string>
 	<key>NSMicrophoneUsageDescription</key>
