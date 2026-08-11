@@ -65,6 +65,53 @@ void main() {
     expect(preferences.getString('theme_mode_v1'), 'dark');
   });
 
+  test(
+    'recoverable migration validation failure degrades instead of throwing',
+    () async {
+      final legacy = _LegacyPreferences({
+        'assistants_v1': jsonEncode([
+          {'id': 'assistant-a', 'name': 'Assistant A'},
+        ]),
+        'theme_mode_v1': 'dark',
+      });
+
+      // Simulate the validation-class failure the real engine raises when the
+      // router round-trip is not stable for some legacy value. The engine's
+      // transaction rolls back, so the database stays empty and unreceipted.
+      final preferences = await BusinessStartupGate.migrateAndLoad(
+        repository: repository,
+        legacyPreferences: legacy,
+        debugRunMigration: () async =>
+            throw StateError('business_migration_count:assistant'),
+      );
+
+      // The user enters the app with defaults rather than being locked out.
+      expect(preferences.isLoaded, isTrue);
+      expect(
+        BusinessStartupGate.lastDegradedReason,
+        'business_migration_count:assistant',
+      );
+      // Legacy data is retained for a fixed future build to retry, and the DB
+      // holds no partial migration or receipt.
+      expect(legacy.values, containsPair('theme_mode_v1', 'dark'));
+      expect(await repository.hasMigrationReceipt(), isFalse);
+    },
+  );
+
+  test('unrecoverable migration failure still fails closed', () async {
+    final legacy = _LegacyPreferences({'theme_mode_v1': 'dark'});
+
+    await expectLater(
+      BusinessStartupGate.migrateAndLoad(
+        repository: repository,
+        legacyPreferences: legacy,
+        debugRunMigration: () async => throw StateError('database_corrupt'),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(BusinessStartupGate.lastDegradedReason, isNull);
+  });
+
   test('fresh installs return a loaded empty facade with a receipt', () async {
     final legacy = _LegacyPreferences({'flutter_log_enabled_v1': true});
 
