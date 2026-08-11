@@ -676,9 +676,11 @@ class MyApp extends StatelessWidget {
           // One-time app update check after first build
           if (settings.showAppUpdates && !_didCheckUpdates) {
             _didCheckUpdates = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
-                context.read<UpdateProvider>().checkForUpdates();
+                await settings.loaded;
+                if (!context.mounted || !settings.showAppUpdates) return;
+                await context.read<UpdateProvider>().checkForUpdates();
               } catch (_) {}
             });
           }
