@@ -3202,6 +3202,84 @@ abstract class AppLocalizations {
   /// **'Diagnostic code: {code}'**
   String backupRestoreFailureDiagnostic(String code);
 
+  /// No description provided for @startupRecoveryMoreOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'More recovery options'**
+  String get startupRecoveryMoreOptions;
+
+  /// No description provided for @startupRecoveryRepairButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair and restart'**
+  String get startupRecoveryRepairButton;
+
+  /// No description provided for @startupRecoveryExportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Export a copy of my data'**
+  String get startupRecoveryExportButton;
+
+  /// No description provided for @startupRecoveryResetButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset data'**
+  String get startupRecoveryResetButton;
+
+  /// No description provided for @startupRecoveryBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Working…'**
+  String get startupRecoveryBusy;
+
+  /// No description provided for @startupRecoveryExportSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'A copy of your data was saved.'**
+  String get startupRecoveryExportSucceeded;
+
+  /// No description provided for @startupRecoveryExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export a copy of your data.'**
+  String get startupRecoveryExportFailed;
+
+  /// No description provided for @startupRecoveryRepairFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair could not fix this. Export a copy of your data, then reset.'**
+  String get startupRecoveryRepairFailed;
+
+  /// No description provided for @startupRecoveryResetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset failed. Fully close Kelivo, then open it again.'**
+  String get startupRecoveryResetFailed;
+
+  /// No description provided for @startupRecoveryResetDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all data?'**
+  String get startupRecoveryResetDialogTitle;
+
+  /// No description provided for @startupRecoveryResetDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes Kelivo\'s database on this device and starts fresh. If you might need this data, export a copy first. This cannot be undone.'**
+  String get startupRecoveryResetDialogContent;
+
+  /// No description provided for @startupRecoveryResetDialogConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset and restart'**
+  String get startupRecoveryResetDialogConfirm;
+
+  /// No description provided for @startupRecoveryResetDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get startupRecoveryResetDialogCancel;
+
   /// No description provided for @startupDatabaseUpdateRequiredTitle.
   ///
   /// In en, this message translates to:

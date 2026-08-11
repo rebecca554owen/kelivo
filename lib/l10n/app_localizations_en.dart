@@ -1676,6 +1676,49 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get startupRecoveryMoreOptions => 'More recovery options';
+
+  @override
+  String get startupRecoveryRepairButton => 'Repair and restart';
+
+  @override
+  String get startupRecoveryExportButton => 'Export a copy of my data';
+
+  @override
+  String get startupRecoveryResetButton => 'Reset data';
+
+  @override
+  String get startupRecoveryBusy => 'Working…';
+
+  @override
+  String get startupRecoveryExportSucceeded => 'A copy of your data was saved.';
+
+  @override
+  String get startupRecoveryExportFailed =>
+      'Could not export a copy of your data.';
+
+  @override
+  String get startupRecoveryRepairFailed =>
+      'Repair could not fix this. Export a copy of your data, then reset.';
+
+  @override
+  String get startupRecoveryResetFailed =>
+      'Reset failed. Fully close Kelivo, then open it again.';
+
+  @override
+  String get startupRecoveryResetDialogTitle => 'Reset all data?';
+
+  @override
+  String get startupRecoveryResetDialogContent =>
+      'This permanently deletes Kelivo\'s database on this device and starts fresh. If you might need this data, export a copy first. This cannot be undone.';
+
+  @override
+  String get startupRecoveryResetDialogConfirm => 'Reset and restart';
+
+  @override
+  String get startupRecoveryResetDialogCancel => 'Cancel';
+
+  @override
   String get startupDatabaseUpdateRequiredTitle => 'Update Kelivo to continue';
 
   @override

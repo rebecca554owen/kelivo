@@ -1619,6 +1619,46 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get startupRecoveryMoreOptions => '更多恢复选项';
+
+  @override
+  String get startupRecoveryRepairButton => '修复并重启';
+
+  @override
+  String get startupRecoveryExportButton => '导出我的数据副本';
+
+  @override
+  String get startupRecoveryResetButton => '重置数据';
+
+  @override
+  String get startupRecoveryBusy => '处理中…';
+
+  @override
+  String get startupRecoveryExportSucceeded => '已保存一份数据副本。';
+
+  @override
+  String get startupRecoveryExportFailed => '无法导出数据副本。';
+
+  @override
+  String get startupRecoveryRepairFailed => '修复未能解决问题。请先导出数据副本，然后重置。';
+
+  @override
+  String get startupRecoveryResetFailed => '重置失败。请彻底关闭 Kelivo 后重新打开。';
+
+  @override
+  String get startupRecoveryResetDialogTitle => '重置全部数据？';
+
+  @override
+  String get startupRecoveryResetDialogContent =>
+      '这将永久删除本设备上 Kelivo 的数据库并重新开始。如果之后可能还需要这些数据，请先导出一份副本。此操作无法撤销。';
+
+  @override
+  String get startupRecoveryResetDialogConfirm => '重置并重启';
+
+  @override
+  String get startupRecoveryResetDialogCancel => '取消';
+
+  @override
   String get startupDatabaseUpdateRequiredTitle => '请更新 Kelivo 以继续';
 
   @override
@@ -8641,6 +8681,46 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get startupRecoveryMoreOptions => '更多恢复选项';
+
+  @override
+  String get startupRecoveryRepairButton => '修复并重启';
+
+  @override
+  String get startupRecoveryExportButton => '导出我的数据副本';
+
+  @override
+  String get startupRecoveryResetButton => '重置数据';
+
+  @override
+  String get startupRecoveryBusy => '处理中…';
+
+  @override
+  String get startupRecoveryExportSucceeded => '已保存一份数据副本。';
+
+  @override
+  String get startupRecoveryExportFailed => '无法导出数据副本。';
+
+  @override
+  String get startupRecoveryRepairFailed => '修复未能解决问题。请先导出数据副本，然后重置。';
+
+  @override
+  String get startupRecoveryResetFailed => '重置失败。请彻底关闭 Kelivo 后重新打开。';
+
+  @override
+  String get startupRecoveryResetDialogTitle => '重置全部数据？';
+
+  @override
+  String get startupRecoveryResetDialogContent =>
+      '这将永久删除本设备上 Kelivo 的数据库并重新开始。如果之后可能还需要这些数据，请先导出一份副本。此操作无法撤销。';
+
+  @override
+  String get startupRecoveryResetDialogConfirm => '重置并重启';
+
+  @override
+  String get startupRecoveryResetDialogCancel => '取消';
+
+  @override
   String get startupDatabaseUpdateRequiredTitle => '请更新 Kelivo 以继续';
 
   @override
@@ -15587,6 +15667,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String backupRestoreFailureDiagnostic(String code) {
     return '診斷碼：$code';
   }
+
+  @override
+  String get startupRecoveryMoreOptions => '更多復原選項';
+
+  @override
+  String get startupRecoveryRepairButton => '修復並重新啟動';
+
+  @override
+  String get startupRecoveryExportButton => '匯出我的資料副本';
+
+  @override
+  String get startupRecoveryResetButton => '重設資料';
+
+  @override
+  String get startupRecoveryBusy => '處理中…';
+
+  @override
+  String get startupRecoveryExportSucceeded => '已儲存一份資料副本。';
+
+  @override
+  String get startupRecoveryExportFailed => '無法匯出資料副本。';
+
+  @override
+  String get startupRecoveryRepairFailed => '修復未能解決問題。請先匯出資料副本，然後重設。';
+
+  @override
+  String get startupRecoveryResetFailed => '重設失敗。請完全關閉 Kelivo 後再重新開啟。';
+
+  @override
+  String get startupRecoveryResetDialogTitle => '重設全部資料？';
+
+  @override
+  String get startupRecoveryResetDialogContent =>
+      '這會永久刪除本裝置上 Kelivo 的資料庫並重新開始。如果之後可能還需要這些資料，請先匯出一份副本。此操作無法復原。';
+
+  @override
+  String get startupRecoveryResetDialogConfirm => '重設並重新啟動';
+
+  @override
+  String get startupRecoveryResetDialogCancel => '取消';
 
   @override
   String get startupDatabaseUpdateRequiredTitle => '請更新 Kelivo 以繼續';

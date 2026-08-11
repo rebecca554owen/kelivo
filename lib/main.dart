@@ -105,6 +105,7 @@ Future<void> main() async {
         runApp(
           _RestoreFailureApp(
             diagnosticCode: restoreFailureDiagnosticCode(error),
+            appDataDirectory: appDataDirectory,
           ),
         );
         return;
@@ -202,6 +203,7 @@ Future<void> main() async {
           runApp(
             _RestoreFailureApp(
               diagnosticCode: restoreFailureDiagnosticCode(error),
+              appDataDirectory: appDataDirectory,
             ),
           );
           return;
@@ -320,9 +322,13 @@ Future<void> _initRestoreFailureWindow() async {
 }
 
 class _RestoreFailureApp extends StatelessWidget {
-  const _RestoreFailureApp({required this.diagnosticCode});
+  const _RestoreFailureApp({
+    required this.diagnosticCode,
+    this.appDataDirectory,
+  });
 
   final String diagnosticCode;
+  final Directory? appDataDirectory;
 
   @override
   Widget build(BuildContext context) {
@@ -339,6 +345,7 @@ class _RestoreFailureApp extends StatelessWidget {
           : RestoreFailureScreen(
               diagnosticCode: diagnosticCode,
               restart: PlatformUtils.restartApp,
+              appDataDirectory: appDataDirectory,
             ),
     );
   }

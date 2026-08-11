@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/database/startup_recovery_service.dart';
 import '../../l10n/app_localizations.dart';
 
 String restoreFailureDiagnosticCode(Object error) {
@@ -28,10 +30,16 @@ class RestoreFailureScreen extends StatefulWidget {
     super.key,
     required this.diagnosticCode,
     required this.restart,
+    this.appDataDirectory,
   });
 
   final String diagnosticCode;
   final Future<void> Function() restart;
+
+  /// When provided (and the failure is not a lease conflict), the screen
+  /// offers file-level recovery actions so a fail-closed startup can never be
+  /// a permanent lockout.
+  final Directory? appDataDirectory;
 
   @override
   State<RestoreFailureScreen> createState() => _RestoreFailureScreenState();
@@ -41,6 +49,140 @@ class _RestoreFailureScreenState extends State<RestoreFailureScreen> {
   bool _restarting = false;
   bool _restartFailed = false;
   bool _copied = false;
+  bool _recoveryBusy = false;
+  String? _recoveryMessage;
+  bool _recoveryMessageIsError = false;
+
+  bool get _isDesktop =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+  Future<void> _repairAndRestart() async {
+    final directory = widget.appDataDirectory;
+    if (directory == null || _recoveryBusy || _restarting) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _recoveryBusy = true;
+      _recoveryMessage = null;
+      _restartFailed = false;
+    });
+    try {
+      await StartupRecoveryService.repair(appDataDirectory: directory);
+      await widget.restart();
+      if (!mounted) return;
+      setState(() {
+        _recoveryBusy = false;
+        _restartFailed = true;
+      });
+    } catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'Kelivo restore',
+          context: ErrorDescription('while repairing after startup failure'),
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _recoveryBusy = false;
+        _recoveryMessage = l10n.startupRecoveryRepairFailed;
+        _recoveryMessageIsError = true;
+      });
+    }
+  }
+
+  Future<void> _exportCopy() async {
+    final directory = widget.appDataDirectory;
+    if (directory == null || _recoveryBusy || _restarting) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _recoveryBusy = true;
+      _recoveryMessage = null;
+    });
+    try {
+      final destination = await FilePicker.platform.getDirectoryPath();
+      if (destination == null || destination.trim().isEmpty) {
+        if (mounted) setState(() => _recoveryBusy = false);
+        return;
+      }
+      await StartupRecoveryService.exportDataCopy(
+        appDataDirectory: directory,
+        destinationParent: Directory(destination),
+      );
+      if (!mounted) return;
+      setState(() {
+        _recoveryBusy = false;
+        _recoveryMessage = l10n.startupRecoveryExportSucceeded;
+        _recoveryMessageIsError = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _recoveryBusy = false;
+        _recoveryMessage = l10n.startupRecoveryExportFailed;
+        _recoveryMessageIsError = true;
+      });
+    }
+  }
+
+  Future<void> _resetAndRestart() async {
+    final directory = widget.appDataDirectory;
+    if (directory == null || _recoveryBusy || _restarting) return;
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final colors = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          title: Text(l10n.startupRecoveryResetDialogTitle),
+          content: Text(l10n.startupRecoveryResetDialogContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.startupRecoveryResetDialogCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                l10n.startupRecoveryResetDialogConfirm,
+                style: TextStyle(color: colors.error),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _recoveryBusy = true;
+      _recoveryMessage = null;
+      _restartFailed = false;
+    });
+    try {
+      await StartupRecoveryService.reset(appDataDirectory: directory);
+      await widget.restart();
+      if (!mounted) return;
+      setState(() {
+        _recoveryBusy = false;
+        _restartFailed = true;
+      });
+    } catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'Kelivo restore',
+          context: ErrorDescription('while resetting after startup failure'),
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _recoveryBusy = false;
+        _recoveryMessage = l10n.startupRecoveryResetFailed;
+        _recoveryMessageIsError = true;
+      });
+    }
+  }
 
   Future<void> _restart() async {
     if (_restarting) return;
@@ -168,7 +310,9 @@ class _RestoreFailureScreenState extends State<RestoreFailureScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _restarting ? null : _restart,
+                          onPressed: (_restarting || _recoveryBusy)
+                              ? null
+                              : _restart,
                           icon: _restarting
                               ? SizedBox.square(
                                   dimension: 18,
@@ -192,6 +336,95 @@ class _RestoreFailureScreenState extends State<RestoreFailureScreen> {
                           label: Text(l10n.backupRestoreFailureCopyButton),
                         ),
                       ),
+                      if (widget.appDataDirectory != null &&
+                          !isLeaseUnavailable) ...[
+                        const SizedBox(height: 8),
+                        Divider(color: colors.outlineVariant),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.startupRecoveryMoreOptions,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: (_restarting || _recoveryBusy)
+                                ? null
+                                : _repairAndRestart,
+                            icon: const Icon(Icons.healing_rounded, size: 18),
+                            label: Text(l10n.startupRecoveryRepairButton),
+                          ),
+                        ),
+                        if (_isDesktop) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: (_restarting || _recoveryBusy)
+                                  ? null
+                                  : _exportCopy,
+                              icon: const Icon(
+                                Icons.download_rounded,
+                                size: 18,
+                              ),
+                              label: Text(l10n.startupRecoveryExportButton),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            onPressed: (_restarting || _recoveryBusy)
+                                ? null
+                                : _resetAndRestart,
+                            style: TextButton.styleFrom(
+                              foregroundColor: colors.error,
+                            ),
+                            icon: const Icon(
+                              Icons.delete_forever_rounded,
+                              size: 18,
+                            ),
+                            label: Text(l10n.startupRecoveryResetButton),
+                          ),
+                        ),
+                        if (_recoveryBusy) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                l10n.startupRecoveryBusy,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_recoveryMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _recoveryMessage!,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: _recoveryMessageIsError
+                                  ? colors.error
+                                  : colors.primary,
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
