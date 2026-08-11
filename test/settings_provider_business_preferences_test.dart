@@ -105,7 +105,7 @@ void main() {
         'Grok',
         'ByteDance',
       ];
-      const migratedOrder = <String>[...legacyOrder, '随想AI网关'];
+      const migratedOrder = <String>[...legacyOrder, '随想AI中转站'];
       await repository.replaceSnapshot(
         BusinessSettingsRouter.normalizeAndRoute({
           'providers_order_v1': legacyOrder,
@@ -116,7 +116,7 @@ void main() {
       await settings.loaded;
       expect(settings.providersOrder, migratedOrder);
 
-      final suixiang = settings.getProviderConfig('随想AI网关');
+      final suixiang = settings.getProviderConfig('随想AI中转站');
       expect(suixiang.enabled, isFalse);
       expect(suixiang.providerType, ProviderKind.openai);
       expect(suixiang.baseUrl, 'https://sui-xiang.com/v1');

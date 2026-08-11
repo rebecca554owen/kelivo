@@ -73,7 +73,7 @@ class SettingsProvider extends ChangeNotifier {
     'Tensdaq',
     'DeepSeek',
     'AIhubmix',
-    '随想AI网关',
+    '随想AI中转站',
     'Aliyun',
     'Zhipu AI',
     'Claude',

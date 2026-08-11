@@ -296,7 +296,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
       (name: 'Tensdaq', key: 'Tensdaq'),
       (name: 'DeepSeek', key: 'DeepSeek'),
       (name: 'AIhubmix', key: 'AIhubmix'),
-      (name: '随想AI网关', key: '随想AI网关'),
+      (name: '随想AI中转站', key: '随想AI中转站'),
       (name: l10n.providersPageAliyunName, key: 'Aliyun'),
       (name: l10n.providersPageZhipuName, key: 'Zhipu AI'),
       (name: 'Claude', key: 'Claude'),
@@ -1365,7 +1365,7 @@ class _DesktopProviderDetailPaneState
                 const SizedBox(height: 12),
               ],
 
-              if (widget.providerKey.toLowerCase() == '随想ai网关') ...[
+              if (widget.providerKey.toLowerCase() == '随想ai中转站') ...[
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,

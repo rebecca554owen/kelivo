@@ -139,7 +139,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         'DeepSeek',
         'Tensdaq',
         'AIhubmix',
-        '随想AI网关',
+        '随想AI中转站',
         'Aliyun',
         'Zhipu AI',
         'Claude',
@@ -963,7 +963,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
-        if (widget.keyName.toLowerCase() == '随想ai网关') ...[
+        if (widget.keyName.toLowerCase() == '随想ai中转站') ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
