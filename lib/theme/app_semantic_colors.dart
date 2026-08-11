@@ -32,8 +32,13 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 
   /// Subtle fill for text fields, chips, small cards and tag containers.
   /// Replaces the old `isDark ? Colors.white10 : Color(0xFFF2F3F5/F7F7F9)` idiom.
+  ///
+  /// Dark mode uses a stronger alpha (0.14) than the historical white10/white12
+  /// because these fills most often sit on [surfaceCard] (white@0.10 over
+  /// surface) — at 0.10 the two were indistinguishable (e.g. input fields in
+  /// section cards became invisible).
   static Color _deriveSurfaceFill(ColorScheme cs) {
-    final alpha = cs.brightness == Brightness.dark ? 0.10 : 0.05;
+    final alpha = cs.brightness == Brightness.dark ? 0.16 : 0.05;
     return Color.alphaBlend(cs.onSurface.withValues(alpha: alpha), cs.surface);
   }
 
