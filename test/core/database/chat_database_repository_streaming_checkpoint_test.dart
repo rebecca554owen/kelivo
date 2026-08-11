@@ -113,10 +113,12 @@ void main() {
           'text',
         ]);
         expect(
-          raw.select(
-            "SELECT COUNT(*) AS c FROM message_part_rows "
-            "WHERE kind = 'tool_result';",
-          ).single['c'],
+          raw
+              .select(
+                "SELECT COUNT(*) AS c FROM message_part_rows "
+                "WHERE kind = 'tool_result';",
+              )
+              .single['c'],
           0,
         );
       } finally {
@@ -126,6 +128,50 @@ void main() {
       final authoritative = await repository.getMessage('streaming');
       expect(authoritative?.content, 'partial answer');
       expect(authoritative?.reasoningText, 'thinking');
+    });
+
+    test('已 finalize 的消息不会被迟到的流式 checkpoint 复活', () async {
+      // Terminal write commits the finalized (non-streaming) content.
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          content: 'final answer',
+          conversationId: 'conversation',
+          isStreaming: false,
+        ),
+        const [],
+      );
+
+      // A late flush replays a stale streaming snapshot for the same revision.
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          content: 'stale partial',
+          conversationId: 'conversation',
+          isStreaming: true,
+        ),
+        const [],
+      );
+
+      final message = await repository.getMessage('streaming');
+      expect(message?.content, 'final answer');
+      expect(message?.isStreaming, isFalse);
+
+      final raw = sqlite.sqlite3.open('${directory.path}/chat.sqlite');
+      try {
+        expect(
+          raw
+              .select(
+                "SELECT is_streaming FROM message_rows WHERE id = 'streaming';",
+              )
+              .single['is_streaming'],
+          0,
+        );
+      } finally {
+        raw.close();
+      }
     });
 
     test('不存在的消息不会被 checkpoint 意外插入', () async {

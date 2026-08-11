@@ -454,12 +454,25 @@ class ChatActions {
 
   _StreamingCheckpoint _createStreamingCheckpoint(ChatMessage message) {
     final cursor = _generationCheckpointCursors[message.id];
-    final checkpointSeq = cursor?.nextSeq;
-    if (cursor != null) cursor.nextSeq += 1;
+    // While the run is still `preparing` the checkpoint CAS (which only
+    // matches requesting/streaming/waiting_tool) would raise a conflict and,
+    // through the writer, kill the just-started generation. Persist a plain
+    // message snapshot without a run id/seq until the run reaches
+    // `requesting`, mirroring _finalizeStreamingCheckpoint's preparing case.
+    if (cursor == null || cursor.state == GenerationRunState.preparing) {
+      return _StreamingCheckpoint(
+        message: message,
+        toolEvents: _copyToolEvents(message.id),
+        generationRunId: null,
+        checkpointSeq: null,
+      );
+    }
+    final checkpointSeq = cursor.nextSeq;
+    cursor.nextSeq += 1;
     return _StreamingCheckpoint(
       message: message,
       toolEvents: _copyToolEvents(message.id),
-      generationRunId: cursor?.runId,
+      generationRunId: cursor.runId,
       checkpointSeq: checkpointSeq,
     );
   }
@@ -1069,16 +1082,10 @@ class ChatActions {
   }) async {
     if ((assistant?.limitContextMessages ?? false) &&
         (assistant?.contextMessageSize ?? 0) > 0) {
-      return contextReadLimit(
-        assistant: assistant,
-        persistedMessageCount: 0,
-      );
+      return contextReadLimit(assistant: assistant, persistedMessageCount: 0);
     }
     final count = await resolvePersistedCount();
-    return contextReadLimit(
-      assistant: assistant,
-      persistedMessageCount: count,
-    );
+    return contextReadLimit(assistant: assistant, persistedMessageCount: count);
   }
 
   @visibleForTesting

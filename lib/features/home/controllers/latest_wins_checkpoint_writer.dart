@@ -25,23 +25,17 @@ class LatestWinsCheckpointWriter<T> {
   T? _pending;
   Future<void>? _drainFuture;
   DateTime? _lastWriteStartedAt;
-  Object? _failure;
-  StackTrace? _failureStackTrace;
   bool _accepting = true;
 
   void add(T value) {
     if (!_accepting) {
       throw StateError('Checkpoint writer is closed.');
     }
-    _throwIfFailed();
     _pending = value;
     _drainFuture ??= _drain();
   }
 
-  Future<void> barrier() async {
-    await _drainFuture;
-    _throwIfFailed();
-  }
+  Future<void> barrier() => _drainFuture ?? Future<void>.value();
 
   Future<R> finalize<R>(Future<R> Function() writeFinal) async {
     if (!_accepting) {
@@ -69,26 +63,20 @@ class LatestWinsCheckpointWriter<T> {
         if (value == null) break;
         _pending = null;
         _lastWriteStartedAt = _now();
-        await write(value);
+        try {
+          await write(value);
+        } catch (error, stackTrace) {
+          // Intermediate checkpoints are best-effort. A failed snapshot
+          // (e.g. a transient DB busy/locked) is dropped and reported, but
+          // must never poison the queue or abort the in-flight generation:
+          // the next chunk supersedes it, and the authoritative finalize
+          // write surfaces any persistent failure (such as disk full) on its
+          // own.
+          onError?.call(error, stackTrace);
+        }
       }
-    } catch (error, stackTrace) {
-      _pending = null;
-      _failure = error;
-      _failureStackTrace = stackTrace;
-      onError?.call(error, stackTrace);
     } finally {
       _drainFuture = null;
-    }
-  }
-
-  Never _throwFailure(Object failure, StackTrace? stackTrace) {
-    Error.throwWithStackTrace(failure, stackTrace ?? StackTrace.current);
-  }
-
-  void _throwIfFailed() {
-    final failure = _failure;
-    if (failure != null) {
-      _throwFailure(failure, _failureStackTrace);
     }
   }
 }

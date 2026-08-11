@@ -116,6 +116,38 @@ void main() {
       expect(errors.single, isA<StateError>());
     });
 
+    test('失败的 checkpoint 不会毒化后续写入或 barrier', () async {
+      final errors = <Object>[];
+      var attempt = 0;
+      final writes = <int>[];
+      final writer = LatestWinsCheckpointWriter<int>(
+        minimumInterval: Duration.zero,
+        write: (value) async {
+          attempt++;
+          // The first write fails (e.g. a transient DB busy); later writes
+          // must still be attempted and must succeed.
+          if (attempt == 1) throw StateError('transient busy');
+          writes.add(value);
+        },
+        onError: (error, _) => errors.add(error),
+      );
+
+      writer.add(1);
+      await writer.barrier();
+      expect(errors, hasLength(1));
+
+      // A subsequent add must not throw and must be written.
+      writer.add(2);
+      await writer.barrier();
+
+      expect(writes, const [2]);
+      expect(errors, hasLength(1));
+
+      var finalCalled = false;
+      await writer.finalize(() async => finalCalled = true);
+      expect(finalCalled, isTrue);
+    });
+
     test('没有 checkpoint 时 final 立即执行', () async {
       final writer = LatestWinsCheckpointWriter<int>(
         write: (_) async => fail('no checkpoint expected'),

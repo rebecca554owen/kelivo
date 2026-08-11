@@ -5158,6 +5158,22 @@ class ChatDatabaseRepository {
     int? checkpointSeq,
   }) async {
     await _db.transaction(() async {
+      // Guard against a late flush resurrecting an already-finalized message.
+      // A streaming snapshot (is_streaming = true) that arrives after the
+      // terminal write has committed (row is_streaming = 0) must not overwrite
+      // the terminal content or flip is_streaming back on (which would also
+      // unindex it from search). Final writes carry is_streaming = false and
+      // are unaffected.
+      if (message.isStreaming) {
+        final existing =
+            await (_db.select(_db.messageRows)
+                  ..where((row) => row.id.equals(message.id))
+                  ..limit(1))
+                .getSingleOrNull();
+        if (existing != null && !existing.isStreaming) {
+          return;
+        }
+      }
       // Keep message_rows (incl. is_streaming) ahead of parts rewrite so the
       // FTS finalize trigger indexes the pre-rewrite text part correctly.
       await _updateMessageRow(message);

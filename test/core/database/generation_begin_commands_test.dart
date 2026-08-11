@@ -268,16 +268,18 @@ void main() {
       expect(completed.terminalAt, isNotNull);
       expect((await repository.getMessage(finalMessage.id))?.content, 'final');
       expect(await repository.getActiveStreamingIds(), isEmpty);
-      await expectLater(
-        repository.updateStreamingCheckpoint(
-          finalMessage.copyWith(content: 'late', isStreaming: true),
-          const [],
-          generationRunId: run.id,
-          checkpointSeq: 2,
-        ),
-        throwsA(isA<GenerationRunCheckpointConflict>()),
+      // A late streaming checkpoint for an already-finalized revision must be
+      // ignored silently rather than resurrecting it: the row is no longer
+      // streaming, so the whole checkpoint (row, parts, run CAS) is skipped and
+      // the terminal content is preserved.
+      await repository.updateStreamingCheckpoint(
+        finalMessage.copyWith(content: 'late', isStreaming: true),
+        const [],
+        generationRunId: run.id,
+        checkpointSeq: 2,
       );
       expect((await repository.getMessage(finalMessage.id))?.content, 'final');
+      expect(await repository.getActiveStreamingIds(), isEmpty);
     },
   );
 
