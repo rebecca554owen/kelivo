@@ -120,7 +120,6 @@ class OcrService {
       messages: messages,
       userImagePaths: imagePaths,
       thinkingBudget: settings.ocrGenerationThinkingBudgetFor(null),
-      temperature: 0.0,
       topP: null,
       maxTokens: null,
       tools: null,

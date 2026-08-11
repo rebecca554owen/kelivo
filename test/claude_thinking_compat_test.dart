@@ -609,6 +609,18 @@ void main() {
       );
     });
 
+    test(
+      'generateText Claude path omits temperature when thinking is off',
+      () async {
+        final body = await _captureClaudeGenerateTextBody(
+          modelId: 'claude-haiku-4-5',
+          thinkingBudget: 0,
+        );
+
+        expect(body.containsKey('temperature'), isFalse);
+      },
+    );
+
     test('generateText Claude path reads text after thinking block', () async {
       await _captureClaudeGenerateTextBody(
         modelId: 'deepseek-v4-pro',

@@ -831,7 +831,6 @@ class ChatApiService {
             'messages': [
               {'role': 'user', 'content': safePrompt},
             ],
-            'temperature': 0.3,
             if (isReasoning && effort != 'off' && effort != 'auto')
               'reasoning_effort': effort,
           };
@@ -955,10 +954,6 @@ class ChatApiService {
         final isReasoning = effectiveInfo.abilities.contains(
           ModelAbility.reasoning,
         );
-        final omitSamplingParams = _claudeShouldOmitSamplingParams(
-          upstreamModelId,
-          thinkingBudget,
-        );
         final thinking = isReasoning
             ? _claudeThinkingConfig(
                 upstreamModelId,
@@ -976,8 +971,6 @@ class ChatApiService {
         final body = <String, dynamic>{
           'model': upstreamModelId,
           'max_tokens': 512,
-          if (!omitSamplingParams && !_isClaudeReasoningEnabled(thinkingBudget))
-            'temperature': 0.3,
           'messages': [
             {'role': 'user', 'content': safePrompt},
           ],
@@ -1070,7 +1063,6 @@ class ChatApiService {
               ],
             },
           ],
-          'generationConfig': {'temperature': 0.3},
         };
 
         // Inject Gemini built-in tools with version-aware mutual exclusion.

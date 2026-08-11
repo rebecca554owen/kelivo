@@ -17,6 +17,17 @@ ProviderConfig _openAIConfig(String baseUrl) {
   );
 }
 
+ProviderConfig _googleConfig(String baseUrl) {
+  return ProviderConfig(
+    id: 'GoogleEncodingCompatTest',
+    enabled: true,
+    name: 'GoogleEncodingCompatTest',
+    apiKey: 'test-key',
+    baseUrl: baseUrl,
+    providerType: ProviderKind.google,
+  );
+}
+
 ProviderConfig _openAIReasoningConfig({
   required String id,
   required String baseUrl,
@@ -117,13 +128,16 @@ void main() {
     test(
       'decodes OpenAI compatible JSON as UTF-8 when content type lacks charset',
       () async {
+        late Map<String, dynamic> requestBody;
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
         addTearDown(() async {
           await server.close(force: true);
         });
 
         server.listen((request) async {
-          await utf8.decoder.bind(request).join();
+          requestBody =
+              (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                  .cast<String, dynamic>();
 
           request.response.statusCode = HttpStatus.ok;
           request.response.headers.set(
@@ -144,8 +158,49 @@ void main() {
         );
 
         expect(title, '问候交流');
+        expect(requestBody.containsKey('temperature'), isFalse);
       },
     );
+
+    test('omits temperature from Google utility requests', () async {
+      late Map<String, dynamic> requestBody;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestBody =
+            (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                .cast<String, dynamic>();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'candidates': [
+              {
+                'content': {
+                  'parts': [
+                    {'text': '标题'},
+                  ],
+                },
+              },
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      final baseUrl = 'http://${server.address.address}:${server.port}/v1beta';
+      final title = await ChatApiService.generateText(
+        config: _googleConfig(baseUrl),
+        modelId: 'gemini-test',
+        prompt: 'summarize',
+      );
+
+      expect(title, '标题');
+      expect(requestBody.containsKey('generationConfig'), isFalse);
+    });
 
     test(
       'omits fixed Kimi K2.7 Code params from OpenAI compatible JSON',
