@@ -329,9 +329,9 @@ class _MessageListViewState extends State<MessageListView> {
         controller.addItem(index);
       }
       if (anchor != null) {
-        controller.jumpToItem(
+        _restoreVisibleAnchorAfterLayout(
+          controller,
           index: anchor.index + added,
-          scrollController: widget.scrollController,
           alignment: anchor.alignment,
         );
       }
@@ -349,9 +349,9 @@ class _MessageListViewState extends State<MessageListView> {
         controller.removeItem(0);
       }
       if (anchor != null && anchor.index >= removed) {
-        controller.jumpToItem(
+        _restoreVisibleAnchorAfterLayout(
+          controller,
           index: anchor.index - removed,
-          scrollController: widget.scrollController,
           alignment: anchor.alignment,
         );
       }
@@ -359,6 +359,25 @@ class _MessageListViewState extends State<MessageListView> {
     }
 
     if (oldModels.length == newModels.length) {
+      final added = _leadingShiftForEqualWindow(oldModels, newModels);
+      if (added != null) {
+        final anchor = _captureVisibleAnchor(controller);
+        for (var index = 0; index < added; index++) {
+          controller.addItem(index);
+        }
+        for (var index = 0; index < added; index++) {
+          controller.removeItem(newModels.length);
+        }
+        if (anchor != null && anchor.index + added < newModels.length) {
+          _restoreVisibleAnchorAfterLayout(
+            controller,
+            index: anchor.index + added,
+            alignment: anchor.alignment,
+          );
+        }
+        return;
+      }
+
       var slotsMatch = true;
       final changedIndices = <int>[];
       for (var index = 0; index < newModels.length; index++) {
@@ -420,6 +439,29 @@ class _MessageListViewState extends State<MessageListView> {
     return (index: index, alignment: alignment);
   }
 
+  void _restoreVisibleAnchorAfterLayout(
+    ListController controller, {
+    required int index,
+    required double alignment,
+  }) {
+    final scrollController = widget.scrollController;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !controller.isAttached ||
+          controller.isLocked ||
+          !scrollController.hasClients ||
+          index < 0 ||
+          index >= _effectiveRenderModels.length) {
+        return;
+      }
+      controller.jumpToItem(
+        index: index,
+        scrollController: scrollController,
+        alignment: alignment,
+      );
+    });
+  }
+
   bool _messageExtentMayHaveChanged(ChatMessage old, ChatMessage current) {
     return old.id != current.id ||
         old.role != current.role ||
@@ -457,6 +499,23 @@ class _MessageListViewState extends State<MessageListView> {
       if (suffix[index].slotId != values[offset + index].slotId) return false;
     }
     return true;
+  }
+
+  int? _leadingShiftForEqualWindow(
+    List<MessageRenderModel> oldModels,
+    List<MessageRenderModel> newModels,
+  ) {
+    if (oldModels.isEmpty || oldModels.length != newModels.length) return null;
+    final shift = newModels.indexWhere(
+      (model) => model.slotId == oldModels.first.slotId,
+    );
+    if (shift <= 0) return null;
+    for (var index = 0; index < oldModels.length - shift; index++) {
+      if (oldModels[index].slotId != newModels[index + shift].slotId) {
+        return null;
+      }
+    }
+    return shift;
   }
 
   bool get _isDesktopPlatform =>
@@ -772,6 +831,9 @@ class _MessageListViewState extends State<MessageListView> {
         return;
       }
 
+      // Keep pagination locked through the rebuild and anchor restoration.
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
       _historyLoadScheduled = false;
     });
   }

@@ -713,14 +713,7 @@ void main() {
     await tester.pumpWidget(_PrependingMessageListHarness(key: key));
 
     final state = key.currentState!;
-    state.listController.jumpToItem(
-      index: 15,
-      scrollController: state.scrollController,
-      alignment: 0.2,
-    );
-    await tester.pumpAndSettle();
-
-    final target = find.byKey(const ValueKey<String>('window-message-15'));
+    final target = find.byKey(const ValueKey<String>('window-message-0'));
     expect(target, findsOneWidget);
     final topBeforePrepend = tester.getTopLeft(target).dy;
 
@@ -731,6 +724,25 @@ void main() {
     expect(
       tester.getTopLeft(target).dy,
       moreOrLessEquals(topBeforePrepend, epsilon: 1),
+    );
+  });
+
+  testWidgets('等长窗口向前滑动时保持当前可见消息位置', (tester) async {
+    final key = GlobalKey<_PrependingMessageListHarnessState>();
+    await tester.pumpWidget(_PrependingMessageListHarness(key: key));
+
+    final state = key.currentState!;
+    final target = find.byKey(const ValueKey<String>('window-message-0'));
+    expect(target, findsOneWidget);
+    final topBeforeShift = tester.getTopLeft(target).dy;
+
+    state.shiftWindowEarlier();
+    await tester.pumpAndSettle();
+
+    expect(target, findsOneWidget);
+    expect(
+      tester.getTopLeft(target).dy,
+      moreOrLessEquals(topBeforeShift, epsilon: 1),
     );
   });
 
@@ -827,6 +839,21 @@ class _PrependingMessageListHarnessState
     });
   }
 
+  void shiftWindowEarlier() {
+    setState(() {
+      messages = <ChatMessage>[
+        for (var index = 0; index < 5; index++)
+          ChatMessage(
+            id: 'earlier-message-$index',
+            role: index.isEven ? 'user' : 'assistant',
+            content: 'earlier message $index',
+            conversationId: 'conversation-1',
+          ),
+        ...messages.take(messages.length - 5),
+      ];
+    });
+  }
+
   @override
   void dispose() {
     scrollController.dispose();
@@ -861,6 +888,7 @@ class _PrependingMessageListHarnessState
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
+          appBar: AppBar(),
           body: MessageListView(
             scrollController: scrollController,
             listController: listController,
