@@ -263,4 +263,112 @@ void main() {
     }
   });
 
+  test(
+    'malformed attachment is isolated and survives an edited message write-back',
+    () async {
+      final now = DateTime.utc(2026, 8, 10, 10);
+      const conversationId = 'conversation-malformed';
+      const malformedId = 'message-malformed';
+      const healthyId = 'message-healthy';
+      const malformedPayload = '{"uri":"/tmp/corrupt.png",broken';
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Malformed',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [malformedId, healthyId],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: malformedId,
+              role: 'user',
+              conversationId: conversationId,
+              timestamp: now,
+              parts: const [
+                TextPart('before'),
+                ImagePart(uri: '/tmp/corrupt.png'),
+                TextPart('after'),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+          (
+            message: ChatMessage(
+              id: healthyId,
+              role: 'assistant',
+              conversationId: conversationId,
+              timestamp: now,
+              content: 'healthy',
+            ),
+            messageOrder: 1,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final raw = sqlite.sqlite3.open('${root.path}/parts.sqlite');
+      try {
+        raw.execute(
+          'UPDATE message_part_rows SET payload = ? '
+          'WHERE revision_id = ? AND ordinal = 1;',
+          [malformedPayload, malformedId],
+        );
+        raw.execute(
+          'DELETE FROM asset_reference_dirty_rows WHERE revision_id = ?;',
+          [malformedId],
+        );
+      } finally {
+        raw.close();
+      }
+
+      final single = await repository.getMessage(malformedId);
+      expect(single, isNotNull);
+      expect(single!.content, 'beforeafter');
+      expect(single.parts, hasLength(3));
+      expect(single.parts[0], isA<TextPart>());
+      expect(single.parts[1], isA<MalformedPart>());
+      expect(single.parts[2], isA<TextPart>());
+      final malformed = single.parts[1] as MalformedPart;
+      expect(malformed.rawKind, 'image');
+      expect(malformed.rawPayload, malformedPayload);
+      expect(malformed.isAttachmentKind, isTrue);
+
+      final batch = await repository.getMessagesRange(
+        conversationId,
+        start: 0,
+        limit: 10,
+      );
+      expect(batch, hasLength(2));
+      expect(batch[0].parts[1], isA<MalformedPart>());
+      expect(batch[1].content, 'healthy');
+
+      await repository.updateMessage(single.copyWith(content: 'edited'));
+
+      final persisted = sqlite.sqlite3.open('${root.path}/parts.sqlite');
+      try {
+        final row = persisted.select(
+          'SELECT ordinal, kind, payload FROM message_part_rows '
+          'WHERE revision_id = ? AND kind = ?;',
+          [malformedId, 'image'],
+        ).single;
+        expect(row['ordinal'], 1);
+        expect(row['payload'], malformedPayload);
+        expect(
+          persisted.select(
+            'SELECT 1 FROM asset_reference_dirty_rows '
+            'WHERE revision_id = ?;',
+            [malformedId],
+          ).length,
+          1,
+        );
+      } finally {
+        persisted.close();
+      }
+    },
+  );
 }

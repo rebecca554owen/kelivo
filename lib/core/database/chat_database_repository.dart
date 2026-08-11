@@ -4,7 +4,7 @@ import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../models/chat_message.dart';
@@ -5752,7 +5752,13 @@ class ChatDatabaseRepository {
   }) {
     final partRows = authoritativeParts ?? const <MessagePartRow>[];
     final parts = <MessagePart>[
-      for (final part in partRows) MessagePart.fromRow(part.kind, part.payload),
+      for (final part in partRows)
+        _hydratePart(
+          revisionId: part.revisionId,
+          ordinal: part.ordinal,
+          kind: part.kind,
+          payload: part.payload,
+        ),
     ];
     final reasoningParts = parts.whereType<ReasoningPart>().toList(
       growable: false,
@@ -5784,7 +5790,12 @@ class ChatDatabaseRepository {
   }
 
   bool _messageHasAttachmentParts(ChatMessage message) {
-    return message.parts.any((part) => part is ImagePart || part is FilePart);
+    return message.parts.any(
+      (part) =>
+          part is ImagePart ||
+          part is FilePart ||
+          (part is MalformedPart && part.isAttachmentKind),
+    );
   }
 
   /// Body parts persisted after reasoning/tool_call rows. Reasoning and
@@ -5796,6 +5807,7 @@ class ChatDatabaseRepository {
         if (part is TextPart ||
             part is ImagePart ||
             part is FilePart ||
+            part is MalformedPart ||
             part is UnknownPart)
           part,
     ];
@@ -5803,6 +5815,31 @@ class ChatDatabaseRepository {
       return <MessagePart>[TextPart(message.content)];
     }
     return body;
+  }
+
+  MessagePart _hydratePart({
+    required String revisionId,
+    required int ordinal,
+    required String kind,
+    required String payload,
+  }) {
+    try {
+      return MessagePart.fromRow(kind, payload);
+    } on FormatException catch (error) {
+      final parseError = error.message.toString();
+      final logError = payload.isEmpty
+          ? parseError
+          : parseError.replaceAll(payload, '<redacted>');
+      debugPrint(
+        'Malformed message part: revisionId=$revisionId ordinal=$ordinal '
+        'kind=$kind parseError=$logError',
+      );
+      return MalformedPart(
+        rawKind: kind,
+        rawPayload: payload,
+        parseError: parseError,
+      );
+    }
   }
 
   DateTime _dateTimeFromSqlite(Object? value) {

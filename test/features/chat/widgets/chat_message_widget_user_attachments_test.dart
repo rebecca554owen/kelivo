@@ -170,6 +170,56 @@ void main() {
     );
   });
 
+  testWidgets('MalformedPart 显示附件不可用占位', (tester) async {
+    const messageId = 'user-malformed-attachments';
+
+    await tester.pumpWidget(
+      _harness(
+        ChatMessageWidget(
+          showUserAvatar: false,
+          message: ChatMessage(
+            id: messageId,
+            role: 'user',
+            conversationId: 'conversation-malformed-attachments',
+            parts: const [
+              TextPart('附件损坏'),
+              MalformedPart(
+                rawKind: 'image',
+                rawPayload: '{',
+                parseError: 'invalid image payload JSON',
+              ),
+              MalformedPart(
+                rawKind: 'file',
+                rawPayload: '{}',
+                parseError: 'file payload requires non-empty uri',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final attachmentsFinder = find.byKey(
+      const ValueKey('user-message-attachments:$messageId'),
+    );
+    expect(attachmentsFinder, findsOneWidget);
+    expect(
+      find.descendant(
+        of: attachmentsFinder,
+        matching: find.text('Attachment unavailable'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('user-message-attachment:$messageId:1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('user-message-attachment:$messageId:2')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('FilePart 在 ImagePart 之前时保持 parts 序号顺序', (tester) async {
     const messageId = 'user-file-before-image';
 

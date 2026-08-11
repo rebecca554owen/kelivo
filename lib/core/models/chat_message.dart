@@ -114,7 +114,8 @@ class ChatMessage extends HiveObject {
   ///
   /// Walks [original] in order: emits [TextPart] with [newContent] at the first
   /// TextPart position, skips later TextParts, and keeps Image/File/ToolCall/
-  /// Reasoning/Unknown parts in place. If there is no TextPart, prepends one.
+  /// Reasoning/Unknown/Malformed parts in place. If there is no TextPart,
+  /// prepends one.
   static List<MessagePart> partsWithReplacedText(
     List<MessagePart> original,
     String newContent,

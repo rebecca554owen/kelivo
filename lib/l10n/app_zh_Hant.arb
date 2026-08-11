@@ -746,6 +746,7 @@
   "chatMessageWidgetCitationNotFound": "未找到引用來源",
   "chatMessageWidgetCannotOpenUrl": "無法開啟連結: {url}",
   "chatMessageWidgetOpenLinkError": "開啟連結失敗",
+  "chatMessageWidgetAttachmentUnavailable": "附件不可用",
   "chatMessageWidgetCitationsTitle": "引用（共{count}條）",
   "chatMessageWidgetSearchResultsTitle": "搜尋結果",
   "chatMessageWidgetCitationSourcesTitle": "引用來源",

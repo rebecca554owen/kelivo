@@ -2218,6 +2218,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetOpenLinkError => 'Failed to open link';
 
   @override
+  String get chatMessageWidgetAttachmentUnavailable => 'Attachment unavailable';
+
+  @override
   String chatMessageWidgetCitationsTitle(int count) {
     return 'Citations ($count)';
   }

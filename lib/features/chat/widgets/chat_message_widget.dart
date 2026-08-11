@@ -1584,7 +1584,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   }) {
     final attachmentEntries = <({int index, MessagePart part})>[
       for (var i = 0; i < parts.length; i++)
-        if (parts[i] is ImagePart || parts[i] is FilePart)
+        if (parts[i] is ImagePart ||
+            parts[i] is FilePart ||
+            (parts[i] is MalformedPart &&
+                (parts[i] as MalformedPart).isAttachmentKind))
           (index: i, part: parts[i]),
     ];
     if (attachmentEntries.isEmpty) return null;
@@ -1616,6 +1619,63 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     for (final entry in attachmentEntries) {
       final part = entry.part;
       final partIndex = entry.index;
+      if (part is MalformedPart) {
+        if (part.rawKind == 'image') {
+          items.add(
+            IosCardPress(
+              key: ValueKey(
+                '$roleKey-message-attachment:${widget.message.id}:$partIndex',
+              ),
+              baseColor: Colors.transparent,
+              pressedScale: 0.985,
+              borderRadius: BorderRadius.circular(10),
+              padding: EdgeInsets.zero,
+              onTap: null,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: unavailableImagePlaceholder(),
+              ),
+            ),
+          );
+        } else {
+          items.add(
+            IosCardPress(
+              key: ValueKey(
+                '$roleKey-message-attachment:${widget.message.id}:$partIndex',
+              ),
+              baseColor: isDark
+                  ? cs.onSurface.withValues(alpha: 0.08)
+                  : cs.surface.withValues(alpha: 0.92),
+              pressedScale: 0.99,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.18),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              onTap: null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.insert_drive_file,
+                    size: 16,
+                    color: cs.onSurface.withValues(alpha: 0.45),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    l10n.chatMessageWidgetAttachmentUnavailable,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        continue;
+      }
       if (part is ImagePart) {
         final path = part.uri.trim();
         final fixed = path.isEmpty ? '' : _resolveAttachmentImageUri(path);

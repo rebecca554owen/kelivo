@@ -1928,8 +1928,12 @@ class ChatService extends ChangeNotifier {
     return fromParts;
   }
 
-  bool _messageCanOwnAssets(ChatMessage message) =>
-      message.parts.any((part) => part is ImagePart || part is FilePart);
+  bool _messageCanOwnAssets(ChatMessage message) => message.parts.any(
+    (part) =>
+        part is ImagePart ||
+        part is FilePart ||
+        (part is MalformedPart && part.isAttachmentKind),
+  );
 
   Future<void> _backfillAssetReferences(Directory appDataDir) async {
     final targetRoot = p.normalize(appDataDir.absolute.path);

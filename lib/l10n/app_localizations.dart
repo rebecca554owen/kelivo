@@ -4210,6 +4210,12 @@ abstract class AppLocalizations {
   /// **'Failed to open link'**
   String get chatMessageWidgetOpenLinkError;
 
+  /// No description provided for @chatMessageWidgetAttachmentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment unavailable'**
+  String get chatMessageWidgetAttachmentUnavailable;
+
   /// No description provided for @chatMessageWidgetCitationsTitle.
   ///
   /// In en, this message translates to:

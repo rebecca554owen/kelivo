@@ -8,6 +8,8 @@ import 'dart:convert';
 /// - `image`: `{"uri","mime"?,"assetId"?,"unavailable"?}`
 /// - `file`: `{"uri","name","mime"?,"assetId"?,"unavailable"?}`
 /// - unknown kinds: stored in [UnknownPart] and written back unchanged
+/// - malformed known kinds: created only while hydrating database rows and
+///   stored in [MalformedPart] for lossless write-back
 sealed class MessagePart {
   const MessagePart();
 
@@ -167,6 +169,31 @@ final class UnknownPart extends MessagePart {
 
   @override
   String encodePayload() => payload;
+}
+
+/// A known part kind whose persisted payload cannot be parsed.
+///
+/// Unlike [UnknownPart], an attachment-shaped malformed part may still own an
+/// asset reference. Database hydration uses this carrier to isolate corrupt
+/// rows while preserving their exact payload for a later repair or write-back.
+final class MalformedPart extends MessagePart {
+  const MalformedPart({
+    required this.rawKind,
+    required this.rawPayload,
+    required this.parseError,
+  });
+
+  final String rawKind;
+  final String rawPayload;
+  final String parseError;
+
+  bool get isAttachmentKind => rawKind == 'image' || rawKind == 'file';
+
+  @override
+  String get kind => rawKind;
+
+  @override
+  String encodePayload() => rawPayload;
 }
 
 Map<String, dynamic> _decodeObjectPayload(String payload, {required String kind}) {

@@ -910,6 +910,7 @@
     }
   },
   "chatMessageWidgetOpenLinkError": "Failed to open link",
+  "chatMessageWidgetAttachmentUnavailable": "Attachment unavailable",
   "chatMessageWidgetCitationsTitle": "Citations ({count})",
   "@chatMessageWidgetCitationsTitle": {
     "placeholders": {

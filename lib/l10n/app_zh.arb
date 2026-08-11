@@ -743,6 +743,7 @@
   "chatMessageWidgetCitationNotFound": "未找到引用来源",
   "chatMessageWidgetCannotOpenUrl": "无法打开链接: {url}",
   "chatMessageWidgetOpenLinkError": "打开链接失败",
+  "chatMessageWidgetAttachmentUnavailable": "附件不可用",
   "chatMessageWidgetCitationsTitle": "引用（共{count}条）",
   "chatMessageWidgetSearchResultsTitle": "搜索结果",
   "chatMessageWidgetCitationSourcesTitle": "引用来源",

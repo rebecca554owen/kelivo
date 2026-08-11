@@ -2145,6 +2145,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatMessageWidgetOpenLinkError => '打开链接失败';
 
   @override
+  String get chatMessageWidgetAttachmentUnavailable => '附件不可用';
+
+  @override
   String chatMessageWidgetCitationsTitle(int count) {
     return '引用（共$count条）';
   }
@@ -9090,6 +9093,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get chatMessageWidgetOpenLinkError => '打开链接失败';
 
   @override
+  String get chatMessageWidgetAttachmentUnavailable => '附件不可用';
+
+  @override
   String chatMessageWidgetCitationsTitle(int count) {
     return '引用（共$count条）';
   }
@@ -16032,6 +16038,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatMessageWidgetOpenLinkError => '開啟連結失敗';
+
+  @override
+  String get chatMessageWidgetAttachmentUnavailable => '附件不可用';
 
   @override
   String chatMessageWidgetCitationsTitle(int count) {
