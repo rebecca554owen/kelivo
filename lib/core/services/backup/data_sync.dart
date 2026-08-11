@@ -879,11 +879,19 @@ class DataSync {
         ..._authHeaders(cfg),
         ..._extraHeaders(cfg),
       });
-      // Pipe the file stream into the request body.
-      file.openRead().listen(
-        req.sink.add,
-        onDone: req.sink.close,
-        onError: req.sink.addError,
+      // Pipe the file stream into the request body. addStream honors the
+      // sink's pause signal, so a slow network throttles disk reads instead of
+      // buffering the whole zip in RAM (which OOM-killed large mobile uploads).
+      unawaited(
+        req.sink
+            .addStream(file.openRead())
+            .then(
+              (_) => req.sink.close(),
+              onError: (Object error) {
+                req.sink.addError(error);
+                req.sink.close();
+              },
+            ),
       );
       final client = http.Client();
       try {
