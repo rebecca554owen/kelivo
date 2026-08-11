@@ -60,7 +60,13 @@ final class DatabaseInstallationGate {
 
   static const _receiptPrefix = 'database_installation_receipt_';
   static const _receiptSuffix = '.json';
-  static const _temporaryFileName = '.database_installation_receipt.tmp';
+  // A crash between creating the temp file and renaming it must not brick the
+  // next launch, so each publish uses a unique temp name and sweeps stale ones
+  // rather than reusing a single fixed name that a leftover could block. The
+  // prefix intentionally omits the trailing separator so the sweep also clears
+  // the legacy fixed-name temp ('.database_installation_receipt.tmp').
+  static const _temporaryPrefix = '.database_installation_receipt';
+  static const _temporarySuffix = '.tmp';
   static const _maximumReceiptBytes = 4096;
 
   static Future<DatabaseInstallationReceipt> ensureReady({
@@ -329,11 +335,17 @@ final class DatabaseInstallationGate {
     DatabaseInstallationReceipt receipt, {
     required RestoreDurability durability,
   }) async {
-    final temporary = File(p.join(target.parent.path, _temporaryFileName));
-    if (await FileSystemEntity.type(temporary.path, followLinks: false) !=
-        FileSystemEntityType.notFound) {
-      throw StateError('database_installation_receipt_temporary');
-    }
+    // Remove any temp files left by a crashed earlier publish; they carry no
+    // authoritative state (the database identity is the source of truth) and
+    // must never block a fresh publish.
+    await _sweepStaleTemporaries(target.parent);
+    final temporary = File(
+      p.join(
+        target.parent.path,
+        '${_temporaryPrefix}_${pid}_'
+        '${DateTime.now().microsecondsSinceEpoch}$_temporarySuffix',
+      ),
+    );
     try {
       await temporary.create(exclusive: true);
       await durability.restrictFile(temporary);
@@ -356,6 +368,25 @@ final class DatabaseInstallationGate {
           FileSystemEntityType.file) {
         await temporary.delete();
         await durability.syncDirectory(target.parent, fullBarrier: true);
+      }
+    }
+  }
+
+  static Future<void> _sweepStaleTemporaries(Directory directory) async {
+    await for (final entity in directory.list(followLinks: false)) {
+      final name = p.basename(entity.path);
+      if (!name.startsWith(_temporaryPrefix) ||
+          !name.endsWith(_temporarySuffix)) {
+        continue;
+      }
+      if (await FileSystemEntity.type(entity.path, followLinks: false) ==
+          FileSystemEntityType.file) {
+        try {
+          await File(entity.path).delete();
+        } catch (_) {
+          // Best-effort: a temp we cannot delete still does not block publish,
+          // which now uses a unique name.
+        }
       }
     }
   }

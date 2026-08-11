@@ -42,6 +42,35 @@ void main() {
       );
     });
 
+    test('残留的 publish 临时文件不会阻塞首次安装', () async {
+      // Simulate a crash between temp creation and rename during a previous
+      // publish attempt, using the legacy fixed temp name. The leftover must
+      // not brick the next launch and should be swept.
+      final legacyTemp = File(
+        p.join(directory.path, '.database_installation_receipt.tmp'),
+      );
+      await legacyTemp.create();
+
+      final receipt = await DatabaseInstallationGate.ensureReady(
+        appDataDirectory: directory,
+      );
+
+      expect(receipt.databaseId, isNotEmpty);
+      // The stale temp is swept and a real receipt is published.
+      expect(await legacyTemp.exists(), isFalse);
+      final receiptCount = directory
+          .listSync()
+          .where(
+            (entity) =>
+                p
+                    .basename(entity.path)
+                    .startsWith('database_installation_receipt_') &&
+                entity.path.endsWith('.json'),
+          )
+          .length;
+      expect(receiptCount, 1);
+    });
+
     test('identity 一致的重复启动不改 receipt', () async {
       final first = await DatabaseInstallationGate.ensureReady(
         appDataDirectory: directory,
