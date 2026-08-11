@@ -28,11 +28,11 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import 'multi_key_manager_page.dart';
 import 'provider_balance_page.dart';
+import 'provider_custom_request_page.dart';
 import 'provider_network_page.dart';
 import '../../../core/services/haptics.dart';
 import '../../provider/widgets/provider_balance_badge.dart';
 import '../../provider/widgets/provider_avatar.dart';
-import '../../provider/widgets/provider_custom_request_editor.dart';
 import '../../../utils/model_grouping.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -1167,6 +1167,50 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 );
               },
             ),
+            _TactileRow(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ProviderCustomRequestPage(
+                      providerKey: widget.keyName,
+                      providerDisplayName: widget.displayName,
+                    ),
+                  ),
+                );
+              },
+              builder: (pressed) {
+                final cs2 = Theme.of(context).colorScheme;
+                final base = cs2.onSurface;
+                final target = pressed
+                    ? (Color.lerp(base, cs2.surface, 0.55) ?? base)
+                    : base;
+                return TweenAnimationBuilder<Color?>(
+                  tween: ColorTween(end: target),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, color, _) {
+                    final c = color ?? base;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.providerDetailPageCustomRequestTitle,
+                              style: TextStyle(fontSize: 15, color: c),
+                            ),
+                          ),
+                          Icon(Lucide.ChevronRight, size: 16, color: c),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -1266,41 +1310,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             ),
           ],
         ],
-        const SizedBox(height: 16),
-        ProviderCustomRequestEditor(
-          headers: sp
-              .getProviderConfig(
-                widget.keyName,
-                defaultName: widget.displayName,
-              )
-              .customHeaders,
-          body: sp
-              .getProviderConfig(
-                widget.keyName,
-                defaultName: widget.displayName,
-              )
-              .customBody,
-          onHeadersChanged: (rows) async {
-            final old = sp.getProviderConfig(
-              widget.keyName,
-              defaultName: widget.displayName,
-            );
-            await sp.setProviderConfig(
-              widget.keyName,
-              old.copyWith(customHeaders: rows),
-            );
-          },
-          onBodyChanged: (rows) async {
-            final old = sp.getProviderConfig(
-              widget.keyName,
-              defaultName: widget.displayName,
-            );
-            await sp.setProviderConfig(
-              widget.keyName,
-              old.copyWith(customBody: rows),
-            );
-          },
-        ),
         const SizedBox(height: 12),
         if (widget.keyName.toLowerCase() == 'siliconflow') ...[
           const SizedBox(height: 6),

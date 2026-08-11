@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/features/provider/widgets/provider_custom_request_editor.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/ios_tactile.dart';
 
 void main() {
   testWidgets('adds, edits, and removes provider request rows', (tester) async {
@@ -117,10 +118,10 @@ void main() {
     );
 
     tester
-        .widget<IconButton>(
+        .widget<IosIconButton>(
           find.byKey(const ValueKey('provider-custom-header-delete-0')),
         )
-        .onPressed!();
+        .onTap!();
     await tester.pump();
 
     expect(
@@ -141,10 +142,10 @@ void main() {
     expect(tester.widget<TextField>(firstBodyName).focusNode?.hasFocus, isTrue);
 
     tester
-        .widget<IconButton>(
+        .widget<IosIconButton>(
           find.byKey(const ValueKey('provider-custom-body-delete-0')),
         )
-        .onPressed!();
+        .onTap!();
     await tester.pump();
 
     expect(tester.widget<TextField>(firstBodyName).controller?.text, 'body-b');

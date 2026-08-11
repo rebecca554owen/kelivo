@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 typedef ProviderRequestRowsChanged =
     Future<void> Function(List<Map<String, String>> rows);
@@ -16,12 +19,14 @@ class ProviderCustomRequestEditor extends StatelessWidget {
     required this.body,
     required this.onHeadersChanged,
     required this.onBodyChanged,
+    this.showHeader = true,
   });
 
   final List<Map<String, String>> headers;
   final List<Map<String, String>> body;
   final ProviderRequestRowsChanged onHeadersChanged;
   final ProviderRequestRowsChanged onBodyChanged;
+  final bool showHeader;
 
   void _addHeader() {
     unawaited(
@@ -74,19 +79,22 @@ class ProviderCustomRequestEditor extends StatelessWidget {
       key: const ValueKey('provider-custom-request-editor'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          l10n.providerDetailPageCustomRequestTitle,
-          style: TextStyle(fontSize: 15, fontWeight: AppFontWeights.semibold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.providerDetailPageCustomRequestDescription,
-          style: TextStyle(
-            fontSize: 12.5,
-            color: cs.onSurface.withValues(alpha: 0.65),
+        if (showHeader) ...[
+          Text(
+            l10n.providerDetailPageCustomRequestTitle,
+            style: TextStyle(fontSize: 14, fontWeight: AppFontWeights.semibold),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 4),
+          Text(
+            l10n.providerDetailPageCustomRequestDescription,
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.4,
+              color: cs.onSurface.withValues(alpha: 0.65),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         _RequestSection(
           title: l10n.modelDetailSheetCustomHeadersTitle,
           addLabel: l10n.modelDetailSheetAddHeader,
@@ -152,39 +160,58 @@ class _RequestSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: AppFontWeights.semibold,
-                  ),
-                ),
-              ),
-              TextButton.icon(
-                key: addKey,
-                onPressed: onAdd,
-                icon: const Icon(Lucide.Plus, size: 16),
-                label: Text(addLabel),
-              ),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 440;
+        final titleWidget = Padding(
+          padding: const EdgeInsets.only(left: 2),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: AppFontWeights.emphasis,
+              color: cs.onSurface.withValues(alpha: 0.8),
+            ),
           ),
-          if (children.isNotEmpty) const SizedBox(height: 8),
-          ...children,
-        ],
-      ),
+        );
+        final addButton = IosTileButton(
+          key: addKey,
+          label: addLabel,
+          icon: Lucide.Plus,
+          fontSize: 13,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          onTap: onAdd,
+        );
+
+        if (isWide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: titleWidget),
+                  const SizedBox(width: 12),
+                  addButton,
+                ],
+              ),
+              if (children.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ...children,
+              ],
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            titleWidget,
+            const SizedBox(height: 8),
+            ...children,
+            addButton,
+          ],
+        );
+      },
     );
   }
 }
@@ -262,15 +289,33 @@ class _RequestRowState extends State<_RequestRow> {
       hintText: hint,
       isDense: true,
       filled: true,
-      fillColor: cs.surface,
+      fillColor: context.appColors.surfaceFill,
+      hintStyle: TextStyle(
+        fontSize: 14,
+        color: cs.onSurface.withValues(alpha: 0.5),
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        borderSide: BorderSide(
+          color: cs.outlineVariant.withValues(alpha: 0.12),
+          width: 0.6,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        borderSide: BorderSide(
+          color: cs.outlineVariant.withValues(alpha: 0.12),
+          width: 0.6,
+        ),
       ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(
+          color: cs.primary.withValues(alpha: 0.35),
+          width: 0.8,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     );
   }
 
@@ -278,46 +323,73 @@ class _RequestRowState extends State<_RequestRow> {
   Widget build(BuildContext context) {
     final deleteTooltip = MaterialLocalizations.of(context).deleteButtonTooltip;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: TextField(
-                  key: ValueKey(
-                    'provider-custom-${widget.fieldPrefix}-name-${widget.index}',
-                  ),
-                  controller: _nameController,
-                  focusNode: _nameFocus,
-                  decoration: _decoration(context, widget.nameHint),
-                  onChanged: (_) => _notifyChanged(),
-                ),
-              ),
-              IconButton(
-                key: ValueKey(
-                  'provider-custom-${widget.fieldPrefix}-delete-${widget.index}',
-                ),
-                tooltip: deleteTooltip,
-                onPressed: widget.onDelete,
-                icon: const Icon(Lucide.Trash2, size: 18),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final nameField = TextField(
+            key: ValueKey(
+              'provider-custom-${widget.fieldPrefix}-name-${widget.index}',
+            ),
+            controller: _nameController,
+            focusNode: _nameFocus,
+            style: const TextStyle(fontSize: 14),
+            decoration: _decoration(context, widget.nameHint),
+            onChanged: (_) => _notifyChanged(),
+          );
+          final valueField = TextField(
             key: ValueKey(
               'provider-custom-${widget.fieldPrefix}-value-${widget.index}',
             ),
             controller: _valueController,
             focusNode: _valueFocus,
+            style: const TextStyle(fontSize: 14),
             minLines: widget.multilineValue ? 2 : 1,
             maxLines: widget.multilineValue ? 5 : 1,
             decoration: _decoration(context, widget.valueHint),
             onChanged: (_) => _notifyChanged(),
-          ),
-        ],
+          );
+          final deleteButton = IosIconButton(
+            key: ValueKey(
+              'provider-custom-${widget.fieldPrefix}-delete-${widget.index}',
+            ),
+            icon: Lucide.Trash2,
+            size: 18,
+            minSize: 44,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.62),
+            semanticLabel: deleteTooltip,
+            onTap: widget.onDelete,
+          );
+
+          if (constraints.maxWidth >= 440) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 4, child: nameField),
+                const SizedBox(width: 8),
+                Expanded(flex: 6, child: valueField),
+                const SizedBox(width: 4),
+                deleteButton,
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: nameField),
+                  const SizedBox(width: 4),
+                  deleteButton,
+                ],
+              ),
+              const SizedBox(height: 8),
+              valueField,
+            ],
+          );
+        },
       ),
     );
   }
