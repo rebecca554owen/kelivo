@@ -449,12 +449,15 @@ void main() {
     );
 
     final progress = <({int processed, int total})>[];
+    final metadataWindows = <int>[];
     await repository.validateAttachmentPartPayloads(
       onProgress: (processed, total) {
         progress.add((processed: processed, total: total));
       },
+      onMetadataWindow: metadataWindows.add,
     );
 
+    expect(metadataWindows, [2]);
     expect(progress, [
       (processed: 0, total: 2),
       (processed: 1, total: 2),

@@ -1636,6 +1636,7 @@ class ChatDatabaseRepository {
   /// malformed rows fail the migration instead of becoming [MalformedPart]s.
   Future<void> validateAttachmentPartPayloads({
     void Function(int processed, int total)? onProgress,
+    @visibleForTesting void Function(int rowCount)? onMetadataWindow,
   }) async {
     final totalRow = await _db
         .customSelect(
@@ -1666,47 +1667,53 @@ class ChatDatabaseRepository {
           )
           .get();
       if (metadataRows.isEmpty) break;
+      onMetadataWindow?.call(metadataRows.length);
 
-      final partIds = <int>[];
-      var selectedBytes = 0;
-      for (final row in metadataRows) {
-        final payloadBytes = row.read<int>('payload_bytes');
-        if (partIds.isNotEmpty &&
-            selectedBytes + payloadBytes > payloadPageByteBudget) {
-          break;
+      var metadataIndex = 0;
+      while (metadataIndex < metadataRows.length) {
+        final partIds = <int>[];
+        var selectedBytes = 0;
+        while (metadataIndex < metadataRows.length) {
+          final row = metadataRows[metadataIndex];
+          final payloadBytes = row.read<int>('payload_bytes');
+          if (partIds.isNotEmpty &&
+              selectedBytes + payloadBytes > payloadPageByteBudget) {
+            break;
+          }
+          partIds.add(row.read<int>('part_id'));
+          selectedBytes += payloadBytes;
+          metadataIndex += 1;
         }
-        partIds.add(row.read<int>('part_id'));
-        selectedBytes += payloadBytes;
-      }
-      final placeholders = List.filled(partIds.length, '?').join(', ');
-      final rows = await _db
-          .customSelect(
-            'SELECT part_id, revision_id, ordinal, kind, payload '
-            'FROM message_part_rows WHERE part_id IN ($placeholders) '
-            'ORDER BY part_id;',
-            variables: [for (final partId in partIds) Variable<int>(partId)],
-            readsFrom: {_db.messagePartRows},
-          )
-          .get();
-      if (rows.isEmpty) break;
-      for (final row in rows) {
-        final partId = row.read<int>('part_id');
-        final revisionId = row.read<String>('revision_id');
-        final ordinal = row.read<int>('ordinal');
-        final kind = row.read<String>('kind');
-        final payload = row.read<String>('payload');
-        try {
-          MessagePart.fromRow(kind, payload);
-        } on FormatException {
-          throw StateError(
-            'Migration validation failed (attachment part payload): '
-            'revisionId=$revisionId ordinal=$ordinal kind=$kind.',
-          );
+        final placeholders = List.filled(partIds.length, '?').join(', ');
+        final rows = await _db
+            .customSelect(
+              'SELECT part_id, revision_id, ordinal, kind, payload '
+              'FROM message_part_rows WHERE part_id IN ($placeholders) '
+              'ORDER BY part_id;',
+              variables: [for (final partId in partIds) Variable<int>(partId)],
+              readsFrom: {_db.messagePartRows},
+            )
+            .get();
+        if (rows.isEmpty) return;
+        for (final row in rows) {
+          final partId = row.read<int>('part_id');
+          final revisionId = row.read<String>('revision_id');
+          final ordinal = row.read<int>('ordinal');
+          final kind = row.read<String>('kind');
+          final payload = row.read<String>('payload');
+          try {
+            MessagePart.fromRow(kind, payload);
+          } on FormatException {
+            throw StateError(
+              'Migration validation failed (attachment part payload): '
+              'revisionId=$revisionId ordinal=$ordinal kind=$kind.',
+            );
+          }
+          cursor = partId;
+          processed += 1;
         }
-        cursor = partId;
-        processed += 1;
+        onProgress?.call(processed, total);
       }
-      onProgress?.call(processed, total);
     }
   }
 
