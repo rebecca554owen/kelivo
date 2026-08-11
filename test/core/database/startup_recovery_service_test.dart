@@ -179,6 +179,34 @@ void main() {
     });
   });
 
+  group('exportDataCopy destination guard', () {
+    test('rejects a destination inside the data directory', () async {
+      await DatabaseInstallationGate.ensureReady(appDataDirectory: directory);
+      final inside = Directory(p.join(directory.path, 'exports'));
+
+      await expectLater(
+        StartupRecoveryService.exportDataCopy(
+          appDataDirectory: directory,
+          destinationParent: inside,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'startup_recovery_export_inside_source',
+          ),
+        ),
+      );
+      await expectLater(
+        StartupRecoveryService.exportDataCopy(
+          appDataDirectory: directory,
+          destinationParent: directory,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
+
   group('reset', () {
     test('rebuilds a fresh installation after the database is lost', () async {
       await DatabaseInstallationGate.ensureReady(appDataDirectory: directory);

@@ -41,6 +41,14 @@ final class StartupRecoveryService {
     if (!await appDataDirectory.exists()) {
       throw StateError('startup_recovery_source_missing');
     }
+    // A destination inside the data directory would make the copy recurse
+    // into itself (the target shows up while the source is being listed).
+    final sourcePath = p.normalize(appDataDirectory.absolute.path);
+    final destinationPath = p.normalize(destinationParent.absolute.path);
+    if (destinationPath == sourcePath ||
+        p.isWithin(sourcePath, destinationPath)) {
+      throw StateError('startup_recovery_export_inside_source');
+    }
     await destinationParent.create(recursive: true);
     final stamp = (clock?.call() ?? DateTime.now())
         .toUtc()
