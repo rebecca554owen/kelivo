@@ -110,8 +110,21 @@ abstract class TtsServiceOptions {
           // New configs default to 2.8; existing persisted model strings are kept.
           model: (json['model'] ?? 'speech-2.8-turbo').toString(),
           voiceId: (json['voiceId'] ?? 'female-shaonv').toString(),
-          emotion: (json['emotion'] ?? 'calm').toString(),
+          emotion: (json['emotion'] ?? '').toString(),
           speed: _toDouble(json['speed'], 1.0),
+          volume: _toDouble(json['volume'], 1.0),
+          pitch: _toInt(json['pitch'], 0),
+          languageBoost: (json['languageBoost'] ?? '').toString(),
+          format: (json['format'] ?? 'mp3').toString(),
+          sampleRate: _toInt(json['sampleRate'], 32000),
+          bitrate: _toInt(json['bitrate'], 128000),
+          channel: _toInt(json['channel'], 1),
+          subtitleEnable: json['subtitleEnable'] == true,
+          pronunciationDictionary:
+              (json['pronunciationDictionary'] as List?)
+                  ?.map((value) => value.toString())
+                  .toList(growable: false) ??
+              const <String>[],
         );
       case 'qwen':
         return QwenTtsOptions(
@@ -183,6 +196,7 @@ abstract class TtsServiceOptions {
           voice: (json['voice'] ?? 'mimo_default').toString(),
           instruction: (json['instruction'] ?? '').toString(),
           stream: json['stream'] != false,
+          optimizeTextPreview: json['optimizeTextPreview'] == true,
         );
       case 'step':
         return StepTtsOptions(
@@ -311,6 +325,15 @@ class MiniMaxTtsOptions extends TtsServiceOptions {
   final String voiceId;
   final String emotion;
   final double speed;
+  final double volume;
+  final int pitch;
+  final String languageBoost;
+  final String format;
+  final int sampleRate;
+  final int bitrate;
+  final int channel;
+  final bool subtitleEnable;
+  final List<String> pronunciationDictionary;
   MiniMaxTtsOptions({
     super.id,
     required super.enabled,
@@ -319,8 +342,17 @@ class MiniMaxTtsOptions extends TtsServiceOptions {
     required this.baseUrl,
     required this.model,
     required this.voiceId,
-    required this.emotion,
-    required this.speed,
+    this.emotion = '',
+    this.speed = 1.0,
+    this.volume = 1.0,
+    this.pitch = 0,
+    this.languageBoost = '',
+    this.format = 'mp3',
+    this.sampleRate = 32000,
+    this.bitrate = 128000,
+    this.channel = 1,
+    this.subtitleEnable = false,
+    this.pronunciationDictionary = const <String>[],
   }) : super(kind: NetworkTtsKind.minimax);
 
   @override
@@ -335,6 +367,15 @@ class MiniMaxTtsOptions extends TtsServiceOptions {
     'voiceId': voiceId,
     'emotion': emotion,
     'speed': speed,
+    'volume': volume,
+    'pitch': pitch,
+    'languageBoost': languageBoost,
+    'format': format,
+    'sampleRate': sampleRate,
+    'bitrate': bitrate,
+    'channel': channel,
+    'subtitleEnable': subtitleEnable,
+    'pronunciationDictionary': pronunciationDictionary,
   };
 }
 
@@ -371,6 +412,8 @@ class QwenTtsOptions extends TtsServiceOptions {
 }
 
 class GroqTtsOptions extends TtsServiceOptions {
+  static const int maxCharsPerRequest = 200;
+
   final String apiKey;
   final String baseUrl;
   final String model;
@@ -467,6 +510,7 @@ class MimoTtsOptions extends TtsServiceOptions {
   final String voice;
   final String instruction;
   final bool stream;
+  final bool optimizeTextPreview;
 
   MimoTtsOptions({
     super.id,
@@ -478,6 +522,7 @@ class MimoTtsOptions extends TtsServiceOptions {
     required this.voice,
     this.instruction = '',
     this.stream = true,
+    this.optimizeTextPreview = false,
   }) : super(kind: NetworkTtsKind.mimo);
 
   @override
@@ -492,6 +537,7 @@ class MimoTtsOptions extends TtsServiceOptions {
     'voice': voice,
     'instruction': instruction,
     'stream': stream,
+    'optimizeTextPreview': optimizeTextPreview,
   };
 }
 
@@ -642,12 +688,59 @@ class NetworkTtsResult {
   NetworkTtsResult({required this.bytes, required this.mime, this.sampleRate});
 }
 
+const List<String> miniMaxEmotionValues = <String>[
+  '',
+  'happy',
+  'sad',
+  'angry',
+  'fearful',
+  'disgusted',
+  'surprised',
+  'calm',
+  'fluent',
+  'whipser',
+];
+
+// FLAC remains accepted for existing profiles, but is not offered until the
+// app can safely merge multiple encoded FLAC responses.
+const List<String> miniMaxAudioFormats = <String>['mp3', 'pcm'];
+const Set<String> _miniMaxSupportedAudioFormats = <String>{
+  'mp3',
+  'pcm',
+  'flac',
+};
+
+const List<int> miniMaxSampleRates = <int>[
+  8000,
+  16000,
+  22050,
+  24000,
+  32000,
+  44100,
+];
+
+const List<int> miniMaxBitrates = <int>[32000, 64000, 128000, 256000];
+
+const Map<String, List<int>> fishAudioSampleRates = <String, List<int>>{
+  'wav': <int>[8000, 16000, 24000, 32000, 44100],
+  'pcm': <int>[8000, 16000, 24000, 32000, 44100],
+  'mp3': <int>[32000, 44100],
+  'opus': <int>[48000],
+};
+
+int networkTtsMaxCharsPerRequest(TtsServiceOptions options) =>
+    options is GroqTtsOptions ? GroqTtsOptions.maxCharsPerRequest : 220;
+
+typedef QwenAudioWebSocketConnector =
+    Future<WebSocket> Function(String url, {Map<String, dynamic>? headers});
+
 class NetworkTtsService {
   static Future<NetworkTtsResult> synthesize({
     required TtsServiceOptions options,
     required String text,
     http.Client? client,
     FutureOr<bool> Function()? cancelled,
+    QwenAudioWebSocketConnector? qwenAudioWebSocketConnector,
   }) async {
     final c = client ?? http.Client();
     try {
@@ -685,6 +778,7 @@ class NetworkTtsService {
             options as QwenAudioTtsOptions,
             text,
             cancelled,
+            qwenAudioWebSocketConnector,
           );
         case NetworkTtsKind.groq:
           return await _groqSpeech(
@@ -843,22 +937,37 @@ class NetworkTtsService {
     http.Client c,
     FutureOr<bool> Function()? cancelled,
   ) async {
+    _validateMiniMaxOptions(opt);
     final uri = Uri.parse(
       opt.baseUrl.endsWith('/')
           ? '${opt.baseUrl}t2a_v2'
           : '${opt.baseUrl}/t2a_v2',
     );
+    final voiceSetting = <String, dynamic>{
+      'voice_id': opt.voiceId,
+      'speed': opt.speed,
+      'vol': opt.volume,
+      'pitch': opt.pitch,
+      if (opt.emotion.trim().isNotEmpty) 'emotion': opt.emotion.trim(),
+    };
     final body = jsonEncode({
       'model': opt.model,
       'text': text,
       'stream': true,
       'output_format': 'hex',
       'stream_options': {'exclude_aggregated_audio': true},
-      'voice_setting': {
-        'voice_id': opt.voiceId,
-        'emotion': opt.emotion,
-        'speed': opt.speed,
+      'voice_setting': voiceSetting,
+      'audio_setting': {
+        'sample_rate': opt.sampleRate,
+        'bitrate': opt.bitrate,
+        'format': opt.format,
+        'channel': opt.channel,
       },
+      if (opt.languageBoost.trim().isNotEmpty)
+        'language_boost': opt.languageBoost.trim(),
+      if (opt.pronunciationDictionary.isNotEmpty)
+        'pronunciation_dict': {'tone': opt.pronunciationDictionary},
+      'subtitle_enable': opt.subtitleEnable,
     });
 
     final req = http.Request('POST', uri)
@@ -868,6 +977,9 @@ class NetworkTtsService {
       ..body = body;
 
     final resp = await c.send(req);
+    if (cancelled != null && await cancelled()) {
+      throw _Cancelled();
+    }
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
       final txt = await resp.stream.bytesToString();
       throw Exception(
@@ -875,62 +987,59 @@ class NetworkTtsService {
       );
     }
 
-    final controller = StreamController<List<int>>();
     final buf = BytesBuilder(copy: false);
-    // Parse SSE line-by-line
-    final completer = Completer<void>();
-    final sub = resp.stream.listen(
-      (chunk) {
-        controller.add(chunk);
-      },
-      onDone: () {
-        controller.close();
-      },
-      onError: (e, st) {
-        controller.addError(e, st);
-        controller.close();
-      },
-    );
-
-    final transformer = const Utf8Decoder()
-        .bind(controller.stream)
-        .transform(const LineSplitter());
-    transformer.listen(
-      (line) {
-        if (cancelled != null) {
-          // best-effort cancellation gate
-        }
-        if (!line.startsWith('data:')) return;
-        final dataStr = line.substring(5).trim();
-        if (dataStr == '[DONE]') return;
-        try {
-          final obj = jsonDecode(dataStr) as Map<String, dynamic>;
-          final data = obj['data'] as Map<String, dynamic>?;
-          final audioHex = (data?['audio'] ?? '').toString();
-          if (audioHex.isEmpty) return;
-          buf.add(_hexToBytes(audioHex));
-        } catch (_) {
-          // ignore malformed lines
-        }
-      },
-      onDone: () {
-        if (!completer.isCompleted) completer.complete();
-      },
-      onError: (e, st) {
-        if (!completer.isCompleted) completer.completeError(e, st);
-      },
-    );
-
-    await completer.future;
+    final events = StreamIterator<String>(_sseDataStream(resp.stream));
     try {
-      await sub.cancel();
-    } catch (_) {}
+      while (await _moveNextWithCancellation(events, cancelled)) {
+        final dataStr = events.current;
+        if (dataStr == '[DONE]') continue;
+        late final Map<String, dynamic> obj;
+        try {
+          obj = Map<String, dynamic>.from(jsonDecode(dataStr) as Map);
+        } catch (error) {
+          throw FormatException(
+            'MiniMax TTS returned malformed SSE data.',
+            error,
+          );
+        }
+        _throwForMiniMaxBusinessError(obj);
+        final data = obj['data'] as Map?;
+        final audioHex = (data?['audio'] ?? '').toString();
+        if (audioHex.isEmpty) continue;
+        try {
+          buf.add(_hexToBytes(audioHex));
+        } catch (error) {
+          throw FormatException(
+            'MiniMax TTS returned invalid hex audio.',
+            error,
+          );
+        }
+      }
+    } finally {
+      await events.cancel();
+    }
 
     final bytes = buf.takeBytes();
+    if (bytes.isEmpty) {
+      throw Exception('MiniMax TTS returned no audio data');
+    }
+    final format = opt.format.toLowerCase();
+    final audioBytes = Uint8List.fromList(bytes);
+    if (format == 'pcm') {
+      return NetworkTtsResult(
+        bytes: _pcmToWav(
+          audioBytes,
+          sampleRate: opt.sampleRate,
+          channels: opt.channel,
+        ),
+        mime: 'audio/wav',
+        sampleRate: opt.sampleRate,
+      );
+    }
     return NetworkTtsResult(
-      bytes: Uint8List.fromList(bytes),
-      mime: 'audio/mpeg',
-      sampleRate: 32000,
+      bytes: audioBytes,
+      mime: _audioMimeForFormat(format),
+      sampleRate: opt.sampleRate,
     );
   }
 
@@ -1117,20 +1226,36 @@ class NetworkTtsService {
     http.Client c,
     FutureOr<bool> Function()? cancelled,
   ) async {
+    final model = migrateMimoTtsModel(opt.model);
+    final isVoiceDesign = model == 'mimo-v2.5-tts-voicedesign';
+    final isVoiceClone = model == 'mimo-v2.5-tts-voiceclone';
+    if (isVoiceDesign && opt.instruction.trim().isEmpty) {
+      throw ArgumentError('MiMo Voice Design requires a voice description.');
+    }
+    if (isVoiceClone) {
+      _validateMimoVoiceCloneReference(opt.voice);
+    } else if (!isVoiceDesign && opt.voice.trim().isEmpty) {
+      throw ArgumentError('MiMo TTS requires a built-in voice.');
+    }
     final uri = Uri.parse(_joinUrl(opt.baseUrl, '/chat/completions'));
+    final instruction = opt.instruction.trim();
     final messages = <Map<String, dynamic>>[
-      if (opt.instruction.trim().isNotEmpty)
-        {'role': 'user', 'content': opt.instruction.trim()},
+      if (instruction.isNotEmpty || isVoiceClone)
+        {'role': 'user', 'content': instruction},
       {'role': 'assistant', 'content': text},
     ];
     final useStream = opt.stream;
+    final audio = <String, dynamic>{
+      'format': useStream ? 'pcm16' : 'wav',
+      if (isVoiceDesign)
+        'optimize_text_preview': opt.optimizeTextPreview
+      else
+        'voice': opt.voice.trim(),
+    };
     final body = jsonEncode({
-      'model': migrateMimoTtsModel(opt.model),
+      'model': model,
       'messages': messages,
-      'audio': {
-        'format': useStream ? 'pcm16' : 'wav',
-        'voice': opt.voice.trim().isEmpty ? 'mimo_default' : opt.voice,
-      },
+      'audio': audio,
       'stream': useStream,
     });
     final req = http.Request('POST', uri)
@@ -1247,11 +1372,30 @@ class NetworkTtsService {
       throw Exception('StepFun TTS returned empty audio');
     }
     final format = opt.responseFormat.toLowerCase();
+    if (format == 'pcm') {
+      final pcm = BytesBuilder(copy: false);
+      for (final part in parts) {
+        pcm.add(part);
+      }
+      return NetworkTtsResult(
+        bytes: _pcmToWav(
+          Uint8List.fromList(pcm.takeBytes()),
+          sampleRate: opt.sampleRate,
+        ),
+        mime: 'audio/wav',
+        sampleRate: opt.sampleRate,
+      );
+    }
     if (format == 'wav' && parts.length > 1) {
       return NetworkTtsResult(
         bytes: combineWavAudio(parts),
         mime: 'audio/wav',
         sampleRate: opt.sampleRate,
+      );
+    }
+    if (format == 'flac' && parts.length > 1) {
+      throw StateError(
+        'StepFun FLAC cannot be merged across multiple text chunks.',
       );
     }
     if (parts.length == 1) {
@@ -1278,6 +1422,7 @@ class NetworkTtsService {
     http.Client c,
     FutureOr<bool> Function()? cancelled,
   ) async {
+    _validateFishAudioOptions(opt);
     final uri = Uri.parse(_joinUrl(opt.baseUrl, '/v1/tts'));
     final body = <String, dynamic>{
       'text': text,
@@ -1287,8 +1432,7 @@ class NetworkTtsService {
       'prosody': {'speed': opt.speed},
       'sample_rate': opt.sampleRate,
       'latency': opt.latency,
-      if (opt.referenceId.trim().isNotEmpty)
-        'reference_id': opt.referenceId.trim(),
+      'reference_id': opt.referenceId.trim(),
     };
     final req = http.Request('POST', uri)
       ..headers['Authorization'] = 'Bearer ${opt.apiKey}'
@@ -1306,6 +1450,16 @@ class NetworkTtsService {
       );
     }
     final bytes = Uint8List.fromList(await resp.stream.toBytes());
+    if (bytes.isEmpty) {
+      throw Exception('Fish Audio TTS returned empty audio');
+    }
+    if (opt.format.toLowerCase() == 'pcm') {
+      return NetworkTtsResult(
+        bytes: _pcmToWav(bytes, sampleRate: opt.sampleRate),
+        mime: 'audio/wav',
+        sampleRate: opt.sampleRate,
+      );
+    }
     return NetworkTtsResult(
       bytes: bytes,
       mime: _audioMimeForFormat(opt.format),
@@ -1317,11 +1471,16 @@ class NetworkTtsService {
     QwenAudioTtsOptions opt,
     String text,
     FutureOr<bool> Function()? cancelled,
+    QwenAudioWebSocketConnector? connector,
   ) async {
     final uri = Uri.parse(opt.websocketUrl);
-    final socket = await WebSocket.connect(
+    final connect =
+        connector ??
+        (String url, {Map<String, dynamic>? headers}) =>
+            WebSocket.connect(url, headers: headers);
+    final socket = await connect(
       uri.toString(),
-      headers: {
+      headers: <String, dynamic>{
         'Authorization': 'Bearer ${opt.apiKey}',
         if (opt.workspaceId.trim().isNotEmpty)
           'X-DashScope-WorkSpace': opt.workspaceId.trim(),
@@ -1331,14 +1490,40 @@ class NetworkTtsService {
     final audio = BytesBuilder(copy: false);
     final started = Completer<void>();
     final finished = Completer<void>();
+    // Lifecycle failures can arrive before the corresponding await is
+    // attached. Keep a listener present while preserving errors for awaits.
+    unawaited(started.future.catchError((Object _) {}));
+    unawaited(finished.future.catchError((Object _) {}));
+    void fail(Object error, [StackTrace? stackTrace]) {
+      if (!started.isCompleted) {
+        started.completeError(error, stackTrace ?? StackTrace.current);
+      }
+      if (!finished.isCompleted) {
+        finished.completeError(error, stackTrace ?? StackTrace.current);
+      }
+    }
+
     late final StreamSubscription<dynamic> sub;
     sub = socket.listen(
       (event) {
-        if (event is! String) return;
-        Map<String, dynamic>? obj;
+        if (event is List<int>) {
+          audio.add(event);
+          return;
+        }
+        if (event is! String) {
+          fail(FormatException('Qwen Audio TTS returned an unknown frame.'));
+          return;
+        }
+        late final Map<String, dynamic> obj;
         try {
-          obj = jsonDecode(event) as Map<String, dynamic>;
-        } catch (_) {
+          obj = Map<String, dynamic>.from(jsonDecode(event) as Map);
+        } catch (error) {
+          fail(
+            FormatException(
+              'Qwen Audio TTS returned malformed lifecycle JSON.',
+              error,
+            ),
+          );
           return;
         }
         final header = (obj['header'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -1346,39 +1531,27 @@ class NetworkTtsService {
         if (name == 'task-started' && !started.isCompleted) {
           started.complete();
         } else if (name == 'result-generated') {
-          final payload =
-              (obj['payload'] as Map?)?.cast<String, dynamic>() ?? {};
-          final output =
-              (payload['output'] as Map?)?.cast<String, dynamic>() ?? {};
-          final audioObj = output['audio'];
-          final dataB64 = (
-            (audioObj is Map ? audioObj['data'] : null) ?? output['data'] ?? ''
-          ).toString();
-          if (dataB64.isNotEmpty) {
-            audio.add(base64Decode(dataB64));
-          }
+          // Sentence/timestamp metadata only. Audio arrives in binary frames.
         } else if (name == 'task-finished' && !finished.isCompleted) {
           finished.complete();
-        } else if (name == 'task-failed') {
-          final msg = (header['error_message'] ?? header['error_code'] ?? name)
-              .toString();
-          if (!started.isCompleted) {
-            started.completeError(Exception('Qwen Audio TTS failed: $msg'));
-          }
-          if (!finished.isCompleted) {
-            finished.completeError(Exception('Qwen Audio TTS failed: $msg'));
-          }
+        } else if (name == 'task-failed' || name == 'error') {
+          final payload = obj['payload'] as Map?;
+          final msg =
+              (header['error_message'] ??
+                      header['error_code'] ??
+                      payload?['message'] ??
+                      name)
+                  .toString();
+          fail(Exception('Qwen Audio TTS failed: $msg'));
         }
       },
       onError: (Object e, StackTrace st) {
-        if (!started.isCompleted) started.completeError(e, st);
-        if (!finished.isCompleted) finished.completeError(e, st);
+        fail(e, st);
       },
       onDone: () {
-        if (!started.isCompleted) {
-          started.completeError(Exception('Qwen Audio TTS socket closed'));
+        if (!started.isCompleted || !finished.isCompleted) {
+          fail(Exception('Qwen Audio TTS socket closed before task-finished'));
         }
-        if (!finished.isCompleted) finished.complete();
       },
       cancelOnError: false,
     );
@@ -1405,10 +1578,10 @@ class NetworkTtsService {
           },
         }),
       );
-      await started.future.timeout(const Duration(seconds: 30));
-      if (cancelled != null && await cancelled()) {
-        throw _Cancelled();
-      }
+      await _waitWithCancellation(
+        started.future.timeout(const Duration(seconds: 30)),
+        cancelled,
+      );
       socket.add(
         jsonEncode({
           'header': {
@@ -1431,7 +1604,10 @@ class NetworkTtsService {
           'payload': {'input': {}},
         }),
       );
-      await finished.future.timeout(const Duration(seconds: 120));
+      await _waitWithCancellation(
+        finished.future.timeout(const Duration(seconds: 120)),
+        cancelled,
+      );
       final bytes = audio.takeBytes();
       if (bytes.isEmpty) {
         throw Exception('Qwen Audio TTS returned no audio');
@@ -1439,7 +1615,10 @@ class NetworkTtsService {
       final fmt = opt.format.toLowerCase();
       if (fmt == 'pcm') {
         return NetworkTtsResult(
-          bytes: _pcmToWav(Uint8List.fromList(bytes), sampleRate: opt.sampleRate),
+          bytes: _pcmToWav(
+            Uint8List.fromList(bytes),
+            sampleRate: opt.sampleRate,
+          ),
           mime: 'audio/wav',
           sampleRate: opt.sampleRate,
         );
@@ -1484,6 +1663,149 @@ String _audioMimeForFormat(String format) {
     case 'mp3':
     default:
       return 'audio/mpeg';
+  }
+}
+
+void _validateMiniMaxOptions(MiniMaxTtsOptions opt) {
+  if (opt.voiceId.trim().isEmpty) {
+    throw ArgumentError('MiniMax TTS requires a voice ID.');
+  }
+  final emotion = opt.emotion.trim();
+  if (!miniMaxEmotionValues.contains(emotion)) {
+    throw ArgumentError.value(
+      opt.emotion,
+      'emotion',
+      'Unsupported MiniMax emotion.',
+    );
+  }
+  if (opt.speed < 0.5 || opt.speed > 2.0) {
+    throw RangeError.value(opt.speed, 'speed', 'Must be between 0.5 and 2.0.');
+  }
+  if (opt.volume < 0.1 || opt.volume > 10.0) {
+    throw RangeError.value(
+      opt.volume,
+      'volume',
+      'Must be between 0.1 and 10.0.',
+    );
+  }
+  if (opt.pitch < -12 || opt.pitch > 12) {
+    throw RangeError.range(opt.pitch, -12, 12, 'pitch');
+  }
+  final format = opt.format.toLowerCase();
+  if (!_miniMaxSupportedAudioFormats.contains(format)) {
+    throw ArgumentError.value(
+      opt.format,
+      'format',
+      'Unsupported audio format.',
+    );
+  }
+  if (!miniMaxSampleRates.contains(opt.sampleRate)) {
+    throw ArgumentError.value(
+      opt.sampleRate,
+      'sampleRate',
+      'Unsupported MiniMax sample rate.',
+    );
+  }
+  if (!miniMaxBitrates.contains(opt.bitrate)) {
+    throw ArgumentError.value(
+      opt.bitrate,
+      'bitrate',
+      'Unsupported MiniMax bitrate.',
+    );
+  }
+  if (opt.channel != 1 && opt.channel != 2) {
+    throw ArgumentError.value(opt.channel, 'channel', 'Must be 1 or 2.');
+  }
+}
+
+void _throwForMiniMaxBusinessError(Map<String, dynamic> event) {
+  final baseResponse = event['base_resp'] as Map?;
+  if (baseResponse == null) return;
+  final statusCode = _toInt(baseResponse['status_code'], 0);
+  if (statusCode == 0) return;
+  final message = (baseResponse['status_msg'] ?? 'Unknown error').toString();
+  throw Exception('MiniMax TTS failed: $statusCode $message');
+}
+
+void _validateMimoVoiceCloneReference(String voice) {
+  final value = voice.trim();
+  final match = RegExp(
+    r'^data:audio/(?:mpeg|mp3|wav);base64,',
+    caseSensitive: false,
+  ).firstMatch(value);
+  if (match == null) {
+    throw ArgumentError('MiMo Voice Clone requires a WAV/MP3 Base64 data URI.');
+  }
+  late final List<int> bytes;
+  try {
+    bytes = base64Decode(value.substring(match.end));
+  } catch (_) {
+    throw ArgumentError(
+      'MiMo Voice Clone reference audio is not valid Base64.',
+    );
+  }
+  if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
+    throw ArgumentError(
+      'MiMo Voice Clone reference audio must be between 1 byte and 10 MB.',
+    );
+  }
+}
+
+void _validateFishAudioOptions(FishAudioTtsOptions opt) {
+  if (opt.referenceId.trim().isEmpty) {
+    throw ArgumentError('Fish Audio TTS requires a voice/reference ID.');
+  }
+  final format = opt.format.toLowerCase();
+  final sampleRates = fishAudioSampleRates[format];
+  if (sampleRates == null) {
+    throw ArgumentError.value(
+      opt.format,
+      'format',
+      'Unsupported audio format.',
+    );
+  }
+  if (!sampleRates.contains(opt.sampleRate)) {
+    throw ArgumentError.value(
+      opt.sampleRate,
+      'sampleRate',
+      'Fish Audio $format requires one of: ${sampleRates.join(', ')} Hz.',
+    );
+  }
+}
+
+Future<bool> _moveNextWithCancellation<T>(
+  StreamIterator<T> iterator,
+  FutureOr<bool> Function()? cancelled,
+) async {
+  if (cancelled == null) return iterator.moveNext();
+  final pending = iterator.moveNext();
+  while (true) {
+    final result = await Future.any<({bool moved, bool value})>([
+      pending.then((value) => (moved: true, value: value)),
+      Future<({bool moved, bool value})>.delayed(
+        const Duration(milliseconds: 50),
+        () => (moved: false, value: false),
+      ),
+    ]);
+    if (result.moved) return result.value;
+    if (await cancelled()) {
+      throw _Cancelled();
+    }
+  }
+}
+
+Future<void> _waitWithCancellation(
+  Future<void> future,
+  FutureOr<bool> Function()? cancelled,
+) async {
+  if (cancelled == null) return future;
+  while (true) {
+    final completed = await Future.any<bool>([
+      future.then((_) => true),
+      Future<bool>.delayed(const Duration(milliseconds: 50), () => false),
+    ]);
+    if (completed) return;
+    if (await cancelled()) throw _Cancelled();
   }
 }
 

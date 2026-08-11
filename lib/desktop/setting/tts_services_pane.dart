@@ -10,7 +10,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../utils/brand_assets.dart';
 import '../../features/settings/pages/tts_settings_page.dart';
 import '../../features/settings/widgets/asr_services_section.dart';
+import '../../features/settings/widgets/mimo_reference_audio_picker.dart';
 import '../../features/settings/widgets/voice_service_widgets.dart';
+import '../../shared/widgets/ios_switch.dart';
+import '../../shared/widgets/snackbar.dart';
 import '../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -34,7 +37,7 @@ class _DesktopTtsServicesPaneState extends State<DesktopTtsServicesPane> {
       ..add(created);
     await settingsProvider.setTtsServices(list);
     if (settingsProvider.usingSystemTts) {
-      await settingsProvider.setTtsServiceSelected(list.length - 1);
+      await settingsProvider.setSelectedTtsServiceId(created.id);
     }
   }
 
@@ -109,9 +112,10 @@ class _NetworkTtsList extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: _NetworkServiceCard(
               service: services[i],
-              selected: sp.ttsServiceSelected == i,
-              onTap: () async =>
-                  context.read<SettingsProvider>().setTtsServiceSelected(i),
+              selected: sp.selectedTtsServiceId == services[i].id,
+              onTap: () async => context
+                  .read<SettingsProvider>()
+                  .setSelectedTtsServiceId(services[i].id),
               onEdit: () async {
                 final settingsProvider = context.read<SettingsProvider>();
                 final updated = await _showEditNetworkDialog(
@@ -131,11 +135,6 @@ class _NetworkTtsList extends StatelessWidget {
                 final list = List<TtsServiceOptions>.from(sp.ttsServices);
                 list.removeAt(i);
                 await sp.setTtsServices(list);
-                var idx = sp.ttsServiceSelected;
-                if (idx >= list.length) {
-                  idx = list.isEmpty ? -1 : list.length - 1;
-                }
-                await sp.setTtsServiceSelected(idx);
               },
             ),
           ),
@@ -490,7 +489,9 @@ class _SystemTtsCardState extends State<_SystemTtsCard> {
       child: GestureDetector(
         onTap: () async {
           try {
-            await context.read<SettingsProvider>().setTtsServiceSelected(-1);
+            await context.read<SettingsProvider>().setSelectedTtsServiceId(
+              null,
+            );
           } catch (_) {}
         },
         child: Container(
@@ -796,19 +797,60 @@ class _SelectRow extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onSelected,
+    this.labelFor,
   });
   final String label;
   final String value;
   final List<String> options;
   final ValueChanged<String> onSelected;
+  final String Function(String option)? labelFor;
   @override
   Widget build(BuildContext context) {
+    final values = <String>[if (!options.contains(value)) value, ...options];
     return VoiceServiceSelectRow<String>(
       label: label,
       value: value,
-      options: options,
-      labelFor: (option) => option,
+      options: values,
+      labelFor: labelFor ?? (option) => option,
       onSelected: onSelected,
+    );
+  }
+}
+
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return VoiceServiceTactileRow(
+      onTap: () => onChanged(!value),
+      builder: (pressed) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: AppFontWeights.medium,
+                  color: cs.onSurface.withValues(alpha: pressed ? 0.68 : 0.9),
+                ),
+              ),
+            ),
+            IosSwitch(value: value, onChanged: onChanged, semanticLabel: label),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -929,10 +971,16 @@ Future<TtsServiceOptions?> _showNetworkDialog(
         : '',
   );
   final emotionCtl = TextEditingController(
-    text: (initial is MiniMaxTtsOptions) ? initial.emotion : 'calm',
+    text: (initial is MiniMaxTtsOptions) ? initial.emotion : '',
   );
   final speedCtl = TextEditingController(
-    text: (initial is MiniMaxTtsOptions) ? initial.speed.toString() : '1.0',
+    text: initial is MiniMaxTtsOptions
+        ? initial.speed.toString()
+        : initial is StepTtsOptions
+        ? initial.speed.toString()
+        : initial is FishAudioTtsOptions
+        ? initial.speed.toString()
+        : '1.0',
   );
   final languageTypeCtl = TextEditingController(
     text: (initial is QwenTtsOptions) ? initial.languageType : 'Auto',
@@ -940,6 +988,85 @@ Future<TtsServiceOptions?> _showNetworkDialog(
   final languageCtl = TextEditingController(
     text: (initial is XaiTtsOptions) ? initial.language : 'auto',
   );
+  final volumeCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions
+        ? initial.volume.toString()
+        : initial is StepTtsOptions
+        ? initial.volume.toString()
+        : '1.0',
+  );
+  final pitchCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions ? initial.pitch.toString() : '0',
+  );
+  final languageBoostCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions ? initial.languageBoost : '',
+  );
+  final formatCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions
+        ? initial.format
+        : initial is QwenAudioTtsOptions
+        ? initial.format
+        : initial is FishAudioTtsOptions
+        ? initial.format
+        : 'mp3',
+  );
+  final sampleRateCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions
+        ? initial.sampleRate.toString()
+        : initial is QwenAudioTtsOptions
+        ? initial.sampleRate.toString()
+        : initial is StepTtsOptions
+        ? initial.sampleRate.toString()
+        : initial is FishAudioTtsOptions
+        ? initial.sampleRate.toString()
+        : '32000',
+  );
+  final bitrateCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions ? initial.bitrate.toString() : '128000',
+  );
+  final channelCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions ? initial.channel.toString() : '1',
+  );
+  final pronunciationCtl = TextEditingController(
+    text: initial is MiniMaxTtsOptions
+        ? initial.pronunciationDictionary.join('\n')
+        : '',
+  );
+  final regionCtl = TextEditingController(
+    text: initial is QwenAudioTtsOptions ? initial.region : 'cn-beijing',
+  );
+  final instructionCtl = TextEditingController(
+    text: initial is MimoTtsOptions
+        ? initial.instruction
+        : initial is StepTtsOptions
+        ? initial.instruction
+        : '',
+  );
+  final outputFormatCtl = TextEditingController(
+    text: initial is ElevenLabsTtsOptions
+        ? initial.outputFormat
+        : initial is StepTtsOptions
+        ? initial.responseFormat
+        : 'mp3_44100_128',
+  );
+  final temperatureCtl = TextEditingController(
+    text: initial is FishAudioTtsOptions
+        ? initial.temperature.toString()
+        : '0.7',
+  );
+  final topPCtl = TextEditingController(
+    text: initial is FishAudioTtsOptions ? initial.topP.toString() : '0.7',
+  );
+  final latencyCtl = TextEditingController(
+    text: initial is FishAudioTtsOptions ? initial.latency : 'normal',
+  );
+  var subtitleEnable = initial is MiniMaxTtsOptions
+      ? initial.subtitleEnable
+      : false;
+  var stream = initial is MimoTtsOptions ? initial.stream : true;
+  var optimizeTextPreview = initial is MimoTtsOptions
+      ? initial.optimizeTextPreview
+      : false;
 
   TtsServiceOptions? result;
   await showDialog<void>(
@@ -956,6 +1083,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: StatefulBuilder(
               builder: (ctx2, setState) {
+                final isMimoVoiceDesign =
+                    kind == NetworkTtsKind.mimo &&
+                    modelCtl.text.trim() == 'mimo-v2.5-tts-voicedesign';
+                final isMimoVoiceClone =
+                    kind == NetworkTtsKind.mimo &&
+                    modelCtl.text.trim() == 'mimo-v2.5-tts-voiceclone';
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1018,6 +1151,7 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 ),
                               ],
                               onSelected: (picked) {
+                                final previousKind = kind;
                                 setState(() {
                                   if (picked ==
                                       networkTtsKindDisplayName(
@@ -1085,6 +1219,41 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                       )) {
                                     kind = NetworkTtsKind.fishAudio;
                                   }
+                                  if (kind != previousKind) {
+                                    baseCtl.text =
+                                        kind == NetworkTtsKind.qwenAudio
+                                        ? ''
+                                        : _defaultBaseUrl(kind);
+                                    modelCtl.text = _defaultModel(kind);
+                                    voiceCtl.text = _defaultVoice(kind);
+                                    emotionCtl.text = '';
+                                    speedCtl.text = '1.0';
+                                    volumeCtl.text = '1.0';
+                                    pitchCtl.text = '0';
+                                    languageBoostCtl.clear();
+                                    formatCtl.text = 'mp3';
+                                    sampleRateCtl.text = switch (kind) {
+                                      NetworkTtsKind.qwenAudio => '22050',
+                                      NetworkTtsKind.step => '24000',
+                                      _ => '32000',
+                                    };
+                                    bitrateCtl.text = '128000';
+                                    channelCtl.text = '1';
+                                    pronunciationCtl.clear();
+                                    regionCtl.text = 'cn-beijing';
+                                    instructionCtl.clear();
+                                    outputFormatCtl.text = switch (kind) {
+                                      NetworkTtsKind.elevenlabs =>
+                                        'mp3_44100_128',
+                                      _ => 'mp3',
+                                    };
+                                    temperatureCtl.text = '0.7';
+                                    topPCtl.text = '0.7';
+                                    latencyCtl.text = 'normal';
+                                    subtitleEnable = false;
+                                    stream = true;
+                                    optimizeTextPreview = false;
+                                  }
                                 });
                               },
                             ),
@@ -1102,9 +1271,13 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                             ),
                             const SizedBox(height: 6),
                             _InputRow(
-                              label: l10n.ttsServicesFieldBaseUrlLabel,
+                              label: kind == NetworkTtsKind.qwenAudio
+                                  ? l10n.ttsServicesFieldWorkspaceIdLabel
+                                  : l10n.ttsServicesFieldBaseUrlLabel,
                               controller: baseCtl,
-                              hint: _defaultBaseUrl(kind),
+                              hint: kind == NetworkTtsKind.qwenAudio
+                                  ? null
+                                  : _defaultBaseUrl(kind),
                             ),
                             const SizedBox(height: 6),
                             if (kind != NetworkTtsKind.xai) ...[
@@ -1112,26 +1285,128 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 label: l10n.ttsServicesFieldModelLabel,
                                 controller: modelCtl,
                                 hint: _defaultModel(kind),
+                                onChanged: kind == NetworkTtsKind.mimo
+                                    ? (_) => setState(() {})
+                                    : null,
                               ),
                               const SizedBox(height: 6),
                             ],
-                            _InputRow(
-                              label: _voiceLabelFor(kind, l10n),
-                              controller: voiceCtl,
-                              hint: _defaultVoice(kind),
-                            ),
+                            if (!isMimoVoiceDesign)
+                              _InputRow(
+                                label: isMimoVoiceClone
+                                    ? l10n.ttsServicesFieldReferenceAudioLabel
+                                    : _voiceLabelFor(kind, l10n),
+                                controller: voiceCtl,
+                                hint: _defaultVoice(kind),
+                              ),
+                            if (isMimoVoiceClone) ...[
+                              const SizedBox(height: 4),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: () async {
+                                    try {
+                                      final dataUri =
+                                          await pickMimoReferenceAudioDataUri();
+                                      if (dataUri != null) {
+                                        setState(() => voiceCtl.text = dataUri);
+                                      }
+                                    } catch (error) {
+                                      if (!ctx2.mounted) return;
+                                      showAppSnackBar(
+                                        ctx2,
+                                        message: error.toString(),
+                                        type: NotificationType.error,
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    lucide.Lucide.FileText,
+                                    size: 17,
+                                  ),
+                                  label: Text(
+                                    l10n.ttsServicesFieldChooseReferenceAudioButton,
+                                  ),
+                                ),
+                              ),
+                            ],
                             if (kind == NetworkTtsKind.minimax) ...[
                               const SizedBox(height: 6),
-                              _InputRow(
+                              _SelectRow(
                                 label: l10n.ttsServicesFieldEmotionLabel,
-                                controller: emotionCtl,
-                                hint: 'calm',
+                                value: emotionCtl.text,
+                                options: miniMaxEmotionValues,
+                                labelFor: (value) => value.isEmpty
+                                    ? l10n.ttsServicesEmotionAutoLabel
+                                    : value,
+                                onSelected: (value) =>
+                                    setState(() => emotionCtl.text = value),
                               ),
                               const SizedBox(height: 6),
                               _InputRow(
                                 label: l10n.ttsServicesFieldSpeedLabel,
                                 controller: speedCtl,
                                 hint: '1.0',
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldVolumeLabel,
+                                controller: volumeCtl,
+                                hint: '1.0',
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldPitchLabel,
+                                controller: pitchCtl,
+                                hint: '0',
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldLanguageBoostLabel,
+                                controller: languageBoostCtl,
+                                hint: 'auto',
+                              ),
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldFormatLabel,
+                                value: formatCtl.text,
+                                options: miniMaxAudioFormats,
+                                onSelected: (value) =>
+                                    setState(() => formatCtl.text = value),
+                              ),
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldSampleRateLabel,
+                                value: sampleRateCtl.text,
+                                options: miniMaxSampleRates
+                                    .map((value) => value.toString())
+                                    .toList(growable: false),
+                                onSelected: (value) =>
+                                    setState(() => sampleRateCtl.text = value),
+                              ),
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldBitrateLabel,
+                                value: bitrateCtl.text,
+                                options: miniMaxBitrates
+                                    .map((value) => value.toString())
+                                    .toList(growable: false),
+                                onSelected: (value) =>
+                                    setState(() => bitrateCtl.text = value),
+                              ),
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldChannelLabel,
+                                value: channelCtl.text,
+                                options: const <String>['1', '2'],
+                                onSelected: (value) =>
+                                    setState(() => channelCtl.text = value),
+                              ),
+                              _InputRow(
+                                label: l10n
+                                    .ttsServicesFieldPronunciationDictionaryLabel,
+                                controller: pronunciationCtl,
+                                maxLines: 3,
                               ),
                             ],
                             if (kind == NetworkTtsKind.qwen) ...[
@@ -1148,6 +1423,145 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 label: l10n.ttsServicesFieldLanguageLabel,
                                 controller: languageCtl,
                                 hint: 'auto',
+                              ),
+                            ],
+                            if (kind == NetworkTtsKind.elevenlabs) ...[
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldOutputFormatLabel,
+                                controller: outputFormatCtl,
+                                hint: 'mp3_44100_128',
+                              ),
+                            ],
+                            if (kind == NetworkTtsKind.mimo) ...[
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldInstructionLabel,
+                                controller: instructionCtl,
+                                maxLines: 3,
+                              ),
+                              _SwitchRow(
+                                label: l10n.ttsServicesFieldStreamingLabel,
+                                value: stream,
+                                onChanged: (value) =>
+                                    setState(() => stream = value),
+                              ),
+                              if (isMimoVoiceDesign)
+                                _SwitchRow(
+                                  label: l10n
+                                      .ttsServicesFieldOptimizeTextPreviewLabel,
+                                  value: optimizeTextPreview,
+                                  onChanged: (value) => setState(
+                                    () => optimizeTextPreview = value,
+                                  ),
+                                ),
+                            ],
+                            if (kind == NetworkTtsKind.qwenAudio) ...[
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldRegionLabel,
+                                controller: regionCtl,
+                                hint: 'cn-beijing',
+                              ),
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldFormatLabel,
+                                value: formatCtl.text,
+                                options: const <String>['mp3', 'wav', 'pcm'],
+                                onSelected: (value) =>
+                                    setState(() => formatCtl.text = value),
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldSampleRateLabel,
+                                controller: sampleRateCtl,
+                              ),
+                            ],
+                            if (kind == NetworkTtsKind.step) ...[
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldOutputFormatLabel,
+                                value: outputFormatCtl.text,
+                                options: const <String>['mp3', 'wav', 'pcm'],
+                                onSelected: (value) => setState(
+                                  () => outputFormatCtl.text = value,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldSpeedLabel,
+                                controller: speedCtl,
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldVolumeLabel,
+                                controller: volumeCtl,
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldSampleRateLabel,
+                                controller: sampleRateCtl,
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldInstructionLabel,
+                                controller: instructionCtl,
+                                maxLines: 3,
+                              ),
+                            ],
+                            if (kind == NetworkTtsKind.fishAudio) ...[
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldFormatLabel,
+                                value: formatCtl.text,
+                                options: fishAudioSampleRates.keys.toList(
+                                  growable: false,
+                                ),
+                                onSelected: (value) {
+                                  final allowed = fishAudioSampleRates[value]!;
+                                  setState(() {
+                                    formatCtl.text = value;
+                                    if (!allowed.contains(
+                                      int.tryParse(sampleRateCtl.text),
+                                    )) {
+                                      sampleRateCtl.text = allowed.last
+                                          .toString();
+                                    }
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldTemperatureLabel,
+                                controller: temperatureCtl,
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldTopPLabel,
+                                controller: topPCtl,
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldSpeedLabel,
+                                controller: speedCtl,
+                              ),
+                              const SizedBox(height: 6),
+                              _SelectRow(
+                                label: l10n.ttsServicesFieldSampleRateLabel,
+                                value: sampleRateCtl.text,
+                                options:
+                                    (fishAudioSampleRates[formatCtl.text] ??
+                                            const <int>[44100])
+                                        .map((value) => value.toString())
+                                        .toList(growable: false),
+                                onSelected: (value) =>
+                                    setState(() => sampleRateCtl.text = value),
+                              ),
+                              const SizedBox(height: 6),
+                              _InputRow(
+                                label: l10n.ttsServicesFieldLatencyLabel,
+                                controller: latencyCtl,
+                                hint: 'normal',
                               ),
                             ],
                             const SizedBox(height: 14),
@@ -1187,12 +1601,54 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                               final model = modelCtl.text.trim().isEmpty
                                   ? _defaultModel(kind)
                                   : modelCtl.text.trim();
-                              final voice = voiceCtl.text.trim().isEmpty
+                              final rawVoice = voiceCtl.text.trim();
+                              final voice = rawVoice.isEmpty
                                   ? _defaultVoice(kind)
-                                  : voiceCtl.text.trim();
+                                  : rawVoice;
                               if (apiKey.isEmpty) return; // guard
+                              if ((kind == NetworkTtsKind.fishAudio ||
+                                      isMimoVoiceClone) &&
+                                  rawVoice.isEmpty) {
+                                showAppSnackBar(
+                                  ctx2,
+                                  message: l10n
+                                      .ttsServicesValidationReferenceIdRequired,
+                                  type: NotificationType.error,
+                                );
+                                return;
+                              }
+                              if (isMimoVoiceDesign &&
+                                  instructionCtl.text.trim().isEmpty) {
+                                showAppSnackBar(
+                                  ctx2,
+                                  message: l10n
+                                      .ttsServicesValidationInstructionRequired,
+                                  type: NotificationType.error,
+                                );
+                                return;
+                              }
+                              if (kind == NetworkTtsKind.fishAudio) {
+                                final allowed =
+                                    fishAudioSampleRates[formatCtl.text] ??
+                                    const <int>[];
+                                if (!allowed.contains(
+                                  int.tryParse(sampleRateCtl.text),
+                                )) {
+                                  showAppSnackBar(
+                                    ctx2,
+                                    message: l10n
+                                        .ttsServicesValidationSampleRate(
+                                          formatCtl.text,
+                                          allowed.join(', '),
+                                        ),
+                                    type: NotificationType.error,
+                                  );
+                                  return;
+                                }
+                              }
                               if (kind == NetworkTtsKind.openai) {
                                 result = OpenAiTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
@@ -1202,6 +1658,7 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 );
                               } else if (kind == NetworkTtsKind.gemini) {
                                 result = GeminiTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
@@ -1214,19 +1671,40 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                     double.tryParse(speedCtl.text.trim()) ??
                                     1.0;
                                 result = MiniMaxTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
                                   baseUrl: base,
                                   model: model,
                                   voiceId: voice,
-                                  emotion: emotionCtl.text.trim().isEmpty
-                                      ? 'calm'
-                                      : emotionCtl.text.trim(),
+                                  emotion: emotionCtl.text.trim(),
                                   speed: spd,
+                                  volume:
+                                      double.tryParse(volumeCtl.text.trim()) ??
+                                      1.0,
+                                  pitch:
+                                      int.tryParse(pitchCtl.text.trim()) ?? 0,
+                                  languageBoost: languageBoostCtl.text.trim(),
+                                  format: formatCtl.text.trim(),
+                                  sampleRate:
+                                      int.tryParse(sampleRateCtl.text.trim()) ??
+                                      32000,
+                                  bitrate:
+                                      int.tryParse(bitrateCtl.text.trim()) ??
+                                      128000,
+                                  channel:
+                                      int.tryParse(channelCtl.text.trim()) ?? 1,
+                                  subtitleEnable: subtitleEnable,
+                                  pronunciationDictionary: pronunciationCtl.text
+                                      .split('\n')
+                                      .map((value) => value.trim())
+                                      .where((value) => value.isNotEmpty)
+                                      .toList(growable: false),
                                 );
                               } else if (kind == NetworkTtsKind.qwen) {
                                 result = QwenTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
@@ -1240,6 +1718,7 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 );
                               } else if (kind == NetworkTtsKind.groq) {
                                 result = GroqTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
@@ -1249,6 +1728,7 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 );
                               } else if (kind == NetworkTtsKind.xai) {
                                 result = XaiTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
@@ -1260,6 +1740,7 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                 );
                               } else if (kind == NetworkTtsKind.elevenlabs) {
                                 result = ElevenLabsTtsOptions(
+                                  id: initial?.id,
                                   enabled: true,
                                   name: name,
                                   apiKey: apiKey,
@@ -1268,10 +1749,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                       ? _defaultModel(kind)
                                       : model,
                                   voiceId: voice,
+                                  outputFormat:
+                                      outputFormatCtl.text.trim().isEmpty
+                                      ? 'mp3_44100_128'
+                                      : outputFormatCtl.text.trim(),
                                 );
                               } else if (kind == NetworkTtsKind.mimo) {
-                                final existing =
-                                    initial is MimoTtsOptions ? initial : null;
                                 result = MimoTtsOptions(
                                   id: initial?.id,
                                   enabled: true,
@@ -1279,14 +1762,12 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   apiKey: apiKey,
                                   baseUrl: base,
                                   model: model,
-                                  voice: voice,
-                                  instruction: existing?.instruction ?? '',
-                                  stream: existing?.stream ?? true,
+                                  voice: isMimoVoiceDesign ? '' : voice,
+                                  instruction: instructionCtl.text.trim(),
+                                  stream: stream,
+                                  optimizeTextPreview: optimizeTextPreview,
                                 );
                               } else if (kind == NetworkTtsKind.qwenAudio) {
-                                final existing = initial is QwenAudioTtsOptions
-                                    ? initial
-                                    : null;
                                 result = QwenAudioTtsOptions(
                                   id: initial?.id,
                                   enabled: true,
@@ -1295,15 +1776,19 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   workspaceId: base == _defaultBaseUrl(kind)
                                       ? ''
                                       : base,
-                                  region: existing?.region ?? 'cn-beijing',
+                                  region: regionCtl.text.trim().isEmpty
+                                      ? 'cn-beijing'
+                                      : regionCtl.text.trim(),
                                   model: model,
                                   voice: voice,
-                                  format: existing?.format ?? 'mp3',
-                                  sampleRate: existing?.sampleRate ?? 22050,
+                                  format: formatCtl.text.trim().isEmpty
+                                      ? 'mp3'
+                                      : formatCtl.text.trim(),
+                                  sampleRate:
+                                      int.tryParse(sampleRateCtl.text.trim()) ??
+                                      22050,
                                 );
                               } else if (kind == NetworkTtsKind.step) {
-                                final existing =
-                                    initial is StepTtsOptions ? initial : null;
                                 result = StepTtsOptions(
                                   id: initial?.id,
                                   enabled: true,
@@ -1313,16 +1798,22 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   model: model,
                                   voice: voice,
                                   responseFormat:
-                                      existing?.responseFormat ?? 'mp3',
-                                  speed: existing?.speed ?? 1.0,
-                                  volume: existing?.volume ?? 1.0,
-                                  sampleRate: existing?.sampleRate ?? 24000,
-                                  instruction: existing?.instruction ?? '',
+                                      outputFormatCtl.text.trim().isEmpty ||
+                                          outputFormatCtl.text.contains('_')
+                                      ? 'mp3'
+                                      : outputFormatCtl.text.trim(),
+                                  speed:
+                                      double.tryParse(speedCtl.text.trim()) ??
+                                      1.0,
+                                  volume:
+                                      double.tryParse(volumeCtl.text.trim()) ??
+                                      1.0,
+                                  sampleRate:
+                                      int.tryParse(sampleRateCtl.text.trim()) ??
+                                      24000,
+                                  instruction: instructionCtl.text.trim(),
                                 );
                               } else if (kind == NetworkTtsKind.fishAudio) {
-                                final existing = initial is FishAudioTtsOptions
-                                    ? initial
-                                    : null;
                                 result = FishAudioTtsOptions(
                                   id: initial?.id,
                                   enabled: true,
@@ -1331,12 +1822,26 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   baseUrl: base,
                                   model: model,
                                   referenceId: voice,
-                                  format: existing?.format ?? 'mp3',
-                                  temperature: existing?.temperature ?? 0.7,
-                                  topP: existing?.topP ?? 0.7,
-                                  speed: existing?.speed ?? 1.0,
-                                  sampleRate: existing?.sampleRate ?? 44100,
-                                  latency: existing?.latency ?? 'normal',
+                                  format: formatCtl.text.trim().isEmpty
+                                      ? 'mp3'
+                                      : formatCtl.text.trim(),
+                                  temperature:
+                                      double.tryParse(
+                                        temperatureCtl.text.trim(),
+                                      ) ??
+                                      0.7,
+                                  topP:
+                                      double.tryParse(topPCtl.text.trim()) ??
+                                      0.7,
+                                  speed:
+                                      double.tryParse(speedCtl.text.trim()) ??
+                                      1.0,
+                                  sampleRate:
+                                      int.tryParse(sampleRateCtl.text.trim()) ??
+                                      44100,
+                                  latency: latencyCtl.text.trim().isEmpty
+                                      ? 'normal'
+                                      : latencyCtl.text.trim(),
                                 );
                               }
                               Navigator.of(ctx).pop();
@@ -1367,7 +1872,34 @@ Future<TtsServiceOptions?> _showNetworkDialog(
         ),
       );
     },
-  ).then((_) {});
+  );
+  for (final controller in <TextEditingController>[
+    nameCtl,
+    apiKeyCtl,
+    baseCtl,
+    modelCtl,
+    voiceCtl,
+    emotionCtl,
+    speedCtl,
+    languageTypeCtl,
+    languageCtl,
+    volumeCtl,
+    pitchCtl,
+    languageBoostCtl,
+    formatCtl,
+    sampleRateCtl,
+    bitrateCtl,
+    channelCtl,
+    pronunciationCtl,
+    regionCtl,
+    instructionCtl,
+    outputFormatCtl,
+    temperatureCtl,
+    topPCtl,
+    latencyCtl,
+  ]) {
+    controller.dispose();
+  }
   return result;
 }
 
@@ -1485,11 +2017,16 @@ class _InputRow extends StatelessWidget {
     required this.controller,
     this.hint,
     this.obscure = false,
+    this.maxLines = 1,
+    this.onChanged,
   });
   final String label;
   final TextEditingController controller;
   final String? hint;
   final bool obscure;
+  final int maxLines;
+  final ValueChanged<String>? onChanged;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1509,6 +2046,10 @@ class _InputRow extends StatelessWidget {
           TextField(
             controller: controller,
             obscureText: obscure,
+            autocorrect: !obscure,
+            enableSuggestions: !obscure,
+            maxLines: obscure ? 1 : maxLines,
+            onChanged: onChanged,
             decoration: InputDecoration(
               hintText: hint,
               isDense: true,

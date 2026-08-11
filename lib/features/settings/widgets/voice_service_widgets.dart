@@ -406,6 +406,156 @@ class VoiceServiceSelectRow<T> extends StatelessWidget {
   }
 }
 
+class VoiceServiceMobileSelectRow<T> extends StatelessWidget {
+  const VoiceServiceMobileSelectRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.labelFor,
+    required this.onSelected,
+  });
+
+  final String label;
+  final T value;
+  final List<T> options;
+  final String Function(T value) labelFor;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      child: VoiceServiceTactileRow(
+        haptics: true,
+        onTap: () async {
+          if (options.isEmpty) return;
+          final selected = await _showVoiceServiceMobileOptions<T>(
+            context,
+            current: value,
+            options: options,
+            labelFor: labelFor,
+          );
+          if (selected != null) onSelected(selected);
+        },
+        builder: (pressed) {
+          final foreground = cs.onSurface.withValues(
+            alpha: pressed ? 0.68 : 0.9,
+          );
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: AppFontWeights.medium,
+                      color: foreground,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  labelFor(value),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: AppFontWeights.regular,
+                    color: cs.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Lucide.ChevronRight, size: 16, color: foreground),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+Future<T?> _showVoiceServiceMobileOptions<T>(
+  BuildContext context, {
+  required T current,
+  required List<T> options,
+  required String Function(T value) labelFor,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return showModalBottomSheet<T>(
+    context: context,
+    backgroundColor: cs.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 6, bottom: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var index = 0; index < options.length; index++) ...[
+                VoiceServiceTactileRow(
+                  onTap: () => Navigator.of(sheetContext).pop(options[index]),
+                  haptics: true,
+                  builder: (pressed) {
+                    final selected = options[index] == current;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              labelFor(options[index]),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: selected
+                                    ? AppFontWeights.semibold
+                                    : AppFontWeights.regular,
+                                color: cs.onSurface.withValues(
+                                  alpha: pressed ? 0.68 : 0.9,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            Icon(Lucide.Check, size: 18, color: cs.primary),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                if (index != options.length - 1)
+                  Divider(
+                    height: 1,
+                    thickness: 0.6,
+                    indent: 16,
+                    endIndent: 16,
+                    color: cs.outlineVariant.withValues(alpha: 0.18),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _VoiceServiceSelectButton<T> extends StatefulWidget {
   const _VoiceServiceSelectButton({
     required this.value,

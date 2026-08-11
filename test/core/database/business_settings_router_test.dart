@@ -36,6 +36,10 @@ void main() {
           BusinessKeyDisposition.preference,
         );
         expect(
+          BusinessKeyRegistry.classify('tts_selected_service_id_v1'),
+          BusinessKeyDisposition.preference,
+        );
+        expect(
           BusinessKeyRegistry.classify('providers_order_v1'),
           BusinessKeyDisposition.providerOrder,
         );

@@ -4656,7 +4656,81 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsServicesFieldLanguageLabel => '语言';
 
   @override
+  String get ttsServicesFieldWorkspaceIdLabel => '业务空间 ID';
+
+  @override
+  String get ttsServicesFieldRegionLabel => '地域';
+
+  @override
+  String get ttsServicesFieldFormatLabel => '音频格式';
+
+  @override
+  String get ttsServicesFieldOutputFormatLabel => '输出格式';
+
+  @override
+  String get ttsServicesFieldSampleRateLabel => '采样率';
+
+  @override
+  String get ttsServicesFieldVolumeLabel => '音量';
+
+  @override
+  String get ttsServicesFieldPitchLabel => '音调';
+
+  @override
+  String get ttsServicesFieldLanguageBoostLabel => '语言增强';
+
+  @override
+  String get ttsServicesFieldBitrateLabel => '比特率';
+
+  @override
+  String get ttsServicesFieldChannelLabel => '声道数';
+
+  @override
+  String get ttsServicesFieldSubtitlesLabel => '生成字幕';
+
+  @override
+  String get ttsServicesFieldPronunciationDictionaryLabel => '发音词典（每行一项）';
+
+  @override
+  String get ttsServicesFieldInstructionLabel => '风格／音色描述';
+
+  @override
+  String get ttsServicesFieldStreamingLabel => '流式输出';
+
+  @override
+  String get ttsServicesFieldOptimizeTextPreviewLabel => '优化播报文本';
+
+  @override
+  String get ttsServicesFieldReferenceAudioLabel => '参考音频（WAV/MP3 数据 URI）';
+
+  @override
+  String get ttsServicesFieldChooseReferenceAudioButton => '选择参考音频';
+
+  @override
+  String get ttsServicesFieldTemperatureLabel => '随机度';
+
+  @override
+  String get ttsServicesFieldTopPLabel => 'Top P';
+
+  @override
+  String get ttsServicesFieldLatencyLabel => '延迟模式';
+
+  @override
+  String get ttsServicesEmotionAutoLabel => '自动匹配';
+
+  @override
   String get ttsServicesValidationApiKeyRequired => 'API Key 不能为空';
+
+  @override
+  String get ttsServicesValidationReferenceIdRequired => '音色／参考 ID 不能为空';
+
+  @override
+  String get ttsServicesValidationInstructionRequired => '音色描述不能为空';
+
+  @override
+  String ttsServicesValidationSampleRate(String format, String rates) {
+    return '$format 格式要求使用 $rates Hz。';
+  }
 
   @override
   String get ttsServicesViewDetailsButton => '查看详情';
@@ -18550,7 +18624,81 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get ttsServicesFieldLanguageLabel => '語言';
 
   @override
+  String get ttsServicesFieldWorkspaceIdLabel => '業務空間 ID';
+
+  @override
+  String get ttsServicesFieldRegionLabel => '地域';
+
+  @override
+  String get ttsServicesFieldFormatLabel => '音訊格式';
+
+  @override
+  String get ttsServicesFieldOutputFormatLabel => '輸出格式';
+
+  @override
+  String get ttsServicesFieldSampleRateLabel => '取樣率';
+
+  @override
+  String get ttsServicesFieldVolumeLabel => '音量';
+
+  @override
+  String get ttsServicesFieldPitchLabel => '音調';
+
+  @override
+  String get ttsServicesFieldLanguageBoostLabel => '語言增強';
+
+  @override
+  String get ttsServicesFieldBitrateLabel => '位元率';
+
+  @override
+  String get ttsServicesFieldChannelLabel => '聲道數';
+
+  @override
+  String get ttsServicesFieldSubtitlesLabel => '產生字幕';
+
+  @override
+  String get ttsServicesFieldPronunciationDictionaryLabel => '發音詞典（每行一項）';
+
+  @override
+  String get ttsServicesFieldInstructionLabel => '風格／音色描述';
+
+  @override
+  String get ttsServicesFieldStreamingLabel => '串流輸出';
+
+  @override
+  String get ttsServicesFieldOptimizeTextPreviewLabel => '最佳化播報文字';
+
+  @override
+  String get ttsServicesFieldReferenceAudioLabel => '參考音訊（WAV/MP3 資料 URI）';
+
+  @override
+  String get ttsServicesFieldChooseReferenceAudioButton => '選擇參考音訊';
+
+  @override
+  String get ttsServicesFieldTemperatureLabel => '隨機度';
+
+  @override
+  String get ttsServicesFieldTopPLabel => 'Top P';
+
+  @override
+  String get ttsServicesFieldLatencyLabel => '延遲模式';
+
+  @override
+  String get ttsServicesEmotionAutoLabel => '自動配對';
+
+  @override
   String get ttsServicesValidationApiKeyRequired => 'API Key 不能為空';
+
+  @override
+  String get ttsServicesValidationReferenceIdRequired => '音色／參考 ID 不能為空';
+
+  @override
+  String get ttsServicesValidationInstructionRequired => '音色描述不能為空';
+
+  @override
+  String ttsServicesValidationSampleRate(String format, String rates) {
+    return '$format 格式要求使用 $rates Hz。';
+  }
 
   @override
   String get ttsServicesViewDetailsButton => '檢視詳細';

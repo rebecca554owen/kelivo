@@ -8977,11 +8977,155 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get ttsServicesFieldLanguageLabel;
 
+  /// No description provided for @ttsServicesFieldWorkspaceIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace ID'**
+  String get ttsServicesFieldWorkspaceIdLabel;
+
+  /// No description provided for @ttsServicesFieldRegionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Region'**
+  String get ttsServicesFieldRegionLabel;
+
+  /// No description provided for @ttsServicesFieldFormatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio format'**
+  String get ttsServicesFieldFormatLabel;
+
+  /// No description provided for @ttsServicesFieldOutputFormatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Output format'**
+  String get ttsServicesFieldOutputFormatLabel;
+
+  /// No description provided for @ttsServicesFieldSampleRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample rate'**
+  String get ttsServicesFieldSampleRateLabel;
+
+  /// No description provided for @ttsServicesFieldVolumeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get ttsServicesFieldVolumeLabel;
+
+  /// No description provided for @ttsServicesFieldPitchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get ttsServicesFieldPitchLabel;
+
+  /// No description provided for @ttsServicesFieldLanguageBoostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language boost'**
+  String get ttsServicesFieldLanguageBoostLabel;
+
+  /// No description provided for @ttsServicesFieldBitrateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get ttsServicesFieldBitrateLabel;
+
+  /// No description provided for @ttsServicesFieldChannelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Channels'**
+  String get ttsServicesFieldChannelLabel;
+
+  /// No description provided for @ttsServicesFieldSubtitlesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate subtitles'**
+  String get ttsServicesFieldSubtitlesLabel;
+
+  /// No description provided for @ttsServicesFieldPronunciationDictionaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronunciation dictionary (one entry per line)'**
+  String get ttsServicesFieldPronunciationDictionaryLabel;
+
+  /// No description provided for @ttsServicesFieldInstructionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Style / voice description'**
+  String get ttsServicesFieldInstructionLabel;
+
+  /// No description provided for @ttsServicesFieldStreamingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming'**
+  String get ttsServicesFieldStreamingLabel;
+
+  /// No description provided for @ttsServicesFieldOptimizeTextPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize text preview'**
+  String get ttsServicesFieldOptimizeTextPreviewLabel;
+
+  /// No description provided for @ttsServicesFieldReferenceAudioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference audio (WAV/MP3 data URI)'**
+  String get ttsServicesFieldReferenceAudioLabel;
+
+  /// No description provided for @ttsServicesFieldChooseReferenceAudioButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose reference audio'**
+  String get ttsServicesFieldChooseReferenceAudioButton;
+
+  /// No description provided for @ttsServicesFieldTemperatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get ttsServicesFieldTemperatureLabel;
+
+  /// No description provided for @ttsServicesFieldTopPLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Top P'**
+  String get ttsServicesFieldTopPLabel;
+
+  /// No description provided for @ttsServicesFieldLatencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Latency'**
+  String get ttsServicesFieldLatencyLabel;
+
+  /// No description provided for @ttsServicesEmotionAutoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto match'**
+  String get ttsServicesEmotionAutoLabel;
+
   /// No description provided for @ttsServicesValidationApiKeyRequired.
   ///
   /// In en, this message translates to:
   /// **'API Key is required'**
   String get ttsServicesValidationApiKeyRequired;
+
+  /// No description provided for @ttsServicesValidationReferenceIdRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice/reference ID is required'**
+  String get ttsServicesValidationReferenceIdRequired;
+
+  /// No description provided for @ttsServicesValidationInstructionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'A voice description is required'**
+  String get ttsServicesValidationInstructionRequired;
+
+  /// No description provided for @ttsServicesValidationSampleRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{format} requires {rates} Hz.'**
+  String ttsServicesValidationSampleRate(String format, String rates);
 
   /// No description provided for @ttsServicesViewDetailsButton.
   ///

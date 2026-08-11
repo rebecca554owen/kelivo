@@ -325,6 +325,8 @@ class SettingsProvider extends ChangeNotifier {
       'localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1';
   // TTS services (network)
   static const String _ttsServicesKey = 'tts_services_v1';
+  static const String _ttsSelectedServiceIdKey = 'tts_selected_service_id_v1';
+  // Legacy index key, read once during migration.
   static const String _ttsSelectedKey = 'tts_selected_v1';
   static const String _ttsAutoPlayAssistantRepliesKey =
       'tts_auto_play_assistant_replies_v1';
@@ -339,18 +341,28 @@ class SettingsProvider extends ChangeNotifier {
 
   // ===== Network TTS services =====
   List<TtsServiceOptions> _ttsServices = const <TtsServiceOptions>[];
-  int _ttsServiceSelected = -1; // -1 => use System TTS
+  String? _selectedTtsServiceId; // null => use System TTS
   bool _ttsAutoPlayAssistantReplies = false;
   TtsTextSelectionMode _ttsTextSelectionMode = TtsTextSelectionMode.fullText;
   List<TtsServiceOptions> get ttsServices => _ttsServices;
-  int get ttsServiceSelected => _ttsServiceSelected;
-  bool get usingSystemTts => _ttsServiceSelected < 0;
+  String? get selectedTtsServiceId => _selectedTtsServiceId;
+  int get ttsServiceSelected {
+    final selectedId = _selectedTtsServiceId;
+    if (selectedId == null) return -1;
+    return _ttsServices.indexWhere((service) => service.id == selectedId);
+  }
+
+  bool get usingSystemTts => _selectedTtsServiceId == null;
   bool get ttsAutoPlayAssistantReplies => _ttsAutoPlayAssistantReplies;
   TtsTextSelectionMode get ttsTextSelectionMode => _ttsTextSelectionMode;
-  TtsServiceOptions? get selectedTtsService =>
-      (_ttsServiceSelected >= 0 && _ttsServiceSelected < _ttsServices.length)
-      ? _ttsServices[_ttsServiceSelected]
-      : null;
+  TtsServiceOptions? get selectedTtsService {
+    final selectedId = _selectedTtsServiceId;
+    if (selectedId == null) return null;
+    for (final service in _ttsServices) {
+      if (service.id == selectedId) return service;
+    }
+    return null;
+  }
 
   // ASR is opt-in. An empty list intentionally keeps voice input hidden.
   List<AsrServiceOptions> _asrServices = const <AsrServiceOptions>[];
@@ -1243,24 +1255,50 @@ class SettingsProvider extends ChangeNotifier {
       final ttsStr = prefs.getString(_ttsServicesKey) ?? '';
       if (ttsStr.isNotEmpty) {
         final list = jsonDecode(ttsStr) as List;
+        var generatedMissingIds = false;
         _ttsServices = [
-          for (final e in list)
-            if (e is Map<String, dynamic>)
-              TtsServiceOptions.fromJson(e)
-            else
-              TtsServiceOptions.fromJson(Map<String, dynamic>.from(e as Map)),
+          for (final value in list)
+            TtsServiceOptions.fromJson(() {
+              final map = value is Map<String, dynamic>
+                  ? value
+                  : Map<String, dynamic>.from(value as Map);
+              if ((map['id'] ?? '').toString().trim().isEmpty) {
+                generatedMissingIds = true;
+              }
+              return map;
+            }()),
         ];
+        // Legacy rows had no stable identifier. Persist generated IDs before
+        // migrating the selected index so the UUID remains valid next launch.
+        if (generatedMissingIds) {
+          await prefs.setString(
+            _ttsServicesKey,
+            jsonEncode(
+              _ttsServices.map((service) => service.toJson()).toList(),
+            ),
+          );
+        }
       } else {
         _ttsServices = const <TtsServiceOptions>[];
       }
     } catch (_) {
       _ttsServices = const <TtsServiceOptions>[];
     }
-    _ttsServiceSelected = prefs.getInt(_ttsSelectedKey) ?? -1;
-    if (_ttsServiceSelected >= _ttsServices.length) {
-      _ttsServiceSelected = _ttsServices.isEmpty ? -1 : 0;
-      await prefs.setInt(_ttsSelectedKey, _ttsServiceSelected);
+    final storedTtsId = prefs.getString(_ttsSelectedServiceIdKey);
+    if (storedTtsId != null) {
+      _selectedTtsServiceId =
+          _ttsServices.any((service) => service.id == storedTtsId)
+          ? storedTtsId
+          : (_ttsServices.isEmpty ? null : _ttsServices.first.id);
+    } else {
+      final legacyIndex = prefs.getInt(_ttsSelectedKey) ?? -1;
+      _selectedTtsServiceId =
+          legacyIndex >= 0 && legacyIndex < _ttsServices.length
+          ? _ttsServices[legacyIndex].id
+          : null;
     }
+    await _persistSelectedTtsServiceId(prefs);
+    await prefs.remove(_ttsSelectedKey);
     _ttsAutoPlayAssistantReplies =
         prefs.getBool(_ttsAutoPlayAssistantRepliesKey) ?? false;
     _ttsTextSelectionMode = TtsTextSelectionModeStorage.fromStorageValue(
@@ -1451,21 +1489,43 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setTtsServices(List<TtsServiceOptions> v) async {
     _ttsServices = List.unmodifiable(v);
-    notifyListeners();
     final prefs = _preferences;
     final list = v.map((e) => e.toJson()).toList();
     await prefs.setString(_ttsServicesKey, jsonEncode(list));
-    if (_ttsServiceSelected >= _ttsServices.length) {
-      _ttsServiceSelected = _ttsServices.isEmpty ? -1 : 0;
-      await prefs.setInt(_ttsSelectedKey, _ttsServiceSelected);
+    if (_selectedTtsServiceId != null &&
+        !_ttsServices.any((service) => service.id == _selectedTtsServiceId)) {
+      _selectedTtsServiceId = _ttsServices.isEmpty
+          ? null
+          : _ttsServices.first.id;
+      await _persistSelectedTtsServiceId(prefs);
     }
+    notifyListeners();
   }
 
   Future<void> setTtsServiceSelected(int index) async {
-    _ttsServiceSelected = index;
+    await setSelectedTtsServiceId(
+      index >= 0 && index < _ttsServices.length ? _ttsServices[index].id : null,
+    );
+  }
+
+  Future<void> setSelectedTtsServiceId(String? id) async {
+    final normalized =
+        id != null && _ttsServices.any((service) => service.id == id)
+        ? id
+        : null;
+    if (_selectedTtsServiceId == normalized) return;
+    _selectedTtsServiceId = normalized;
+    await _persistSelectedTtsServiceId(_preferences);
     notifyListeners();
-    final prefs = _preferences;
-    await prefs.setInt(_ttsSelectedKey, _ttsServiceSelected);
+  }
+
+  Future<void> _persistSelectedTtsServiceId(BusinessPreferences prefs) async {
+    final selectedId = _selectedTtsServiceId;
+    if (selectedId == null) {
+      await prefs.remove(_ttsSelectedServiceIdKey);
+    } else {
+      await prefs.setString(_ttsSelectedServiceIdKey, selectedId);
+    }
   }
 
   Future<void> setTtsAutoPlayAssistantReplies(bool value) async {
@@ -4839,7 +4899,7 @@ Requirements:
     copy._searchAutoTestOnLaunch =
         searchAutoTestOnLaunch ?? _searchAutoTestOnLaunch;
     copy._ttsServices = _ttsServices;
-    copy._ttsServiceSelected = _ttsServiceSelected;
+    copy._selectedTtsServiceId = _selectedTtsServiceId;
     copy._ttsAutoPlayAssistantReplies = _ttsAutoPlayAssistantReplies;
     copy._ttsTextSelectionMode = _ttsTextSelectionMode;
     copy._asrServices = _asrServices;

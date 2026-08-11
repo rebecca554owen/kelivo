@@ -98,6 +98,13 @@ void main() {
     return harness.dispose();
   });
 
+  test('maps network audio MIME types to matching file extensions', () {
+    expect(ttsAudioFileExtensionForMime('audio/mpeg'), 'mp3');
+    expect(ttsAudioFileExtensionForMime('audio/wav'), 'wav');
+    expect(ttsAudioFileExtensionForMime('audio/flac'), 'flac');
+    expect(ttsAudioFileExtensionForMime('audio/pcm'), 'pcm');
+  });
+
   test(
     'changing system TTS speed keeps the current playback position',
     () async {

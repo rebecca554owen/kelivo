@@ -46,6 +46,7 @@ void main() {
 
       expect(minimax, isA<MiniMaxTtsOptions>());
       expect((minimax as MiniMaxTtsOptions).model, 'speech-2.8-turbo');
+      expect(minimax.emotion, isEmpty);
 
       final gemini = TtsServiceOptions.fromJson({
         'kind': 'gemini',
@@ -69,14 +70,41 @@ void main() {
         'enabled': true,
       });
       expect(qwenAudio, isA<QwenAudioTtsOptions>());
-      expect(
-        (qwenAudio as QwenAudioTtsOptions).voice,
-        'longanhuan_v3.6',
-      );
+      expect((qwenAudio as QwenAudioTtsOptions).voice, 'longanhuan_v3.6');
       expect(qwenAudio.model, 'qwen-audio-3.0-tts-flash');
     });
 
     test('round-trips advanced fields for new TTS providers', () {
+      final miniMax = MiniMaxTtsOptions(
+        enabled: true,
+        name: 'MiniMax',
+        apiKey: 'k',
+        baseUrl: 'https://api.minimaxi.com/v1',
+        model: 'speech-2.8-turbo',
+        voiceId: 'female-shaonv',
+        volume: 0.8,
+        pitch: 2,
+        languageBoost: 'Chinese',
+        format: 'flac',
+        sampleRate: 24000,
+        bitrate: 64000,
+        channel: 2,
+        subtitleEnable: true,
+        pronunciationDictionary: const <String>['Kelivo/ke-li-vo'],
+      );
+      final miniMaxAgain =
+          TtsServiceOptions.fromJson(miniMax.toJson()) as MiniMaxTtsOptions;
+      expect(miniMaxAgain.emotion, isEmpty);
+      expect(miniMaxAgain.volume, 0.8);
+      expect(miniMaxAgain.pitch, 2);
+      expect(miniMaxAgain.languageBoost, 'Chinese');
+      expect(miniMaxAgain.format, 'flac');
+      expect(miniMaxAgain.sampleRate, 24000);
+      expect(miniMaxAgain.bitrate, 64000);
+      expect(miniMaxAgain.channel, 2);
+      expect(miniMaxAgain.subtitleEnable, isTrue);
+      expect(miniMaxAgain.pronunciationDictionary, <String>['Kelivo/ke-li-vo']);
+
       final step = StepTtsOptions(
         enabled: true,
         name: 'Step',
@@ -126,7 +154,7 @@ void main() {
         temperature: 0.4,
         topP: 0.5,
         speed: 1.1,
-        sampleRate: 32000,
+        sampleRate: 48000,
         latency: 'balanced',
       );
       final fishAgain =
@@ -135,7 +163,7 @@ void main() {
       expect(fishAgain.temperature, 0.4);
       expect(fishAgain.topP, 0.5);
       expect(fishAgain.speed, 1.1);
-      expect(fishAgain.sampleRate, 32000);
+      expect(fishAgain.sampleRate, 48000);
       expect(fishAgain.latency, 'balanced');
 
       final mimo = MimoTtsOptions(
@@ -147,11 +175,39 @@ void main() {
         voice: 'mimo_default',
         instruction: 'slow',
         stream: false,
+        optimizeTextPreview: true,
       );
       final mimoAgain =
           TtsServiceOptions.fromJson(mimo.toJson()) as MimoTtsOptions;
       expect(mimoAgain.instruction, 'slow');
       expect(mimoAgain.stream, isFalse);
+      expect(mimoAgain.optimizeTextPreview, isTrue);
+    });
+
+    test('only advertises MiniMax formats safe for chunked playback', () {
+      expect(miniMaxAudioFormats, <String>['mp3', 'pcm']);
+    });
+
+    test('uses Groq provider-specific 200 character chunks', () {
+      final groq = GroqTtsOptions(
+        enabled: true,
+        name: 'Groq',
+        apiKey: 'key',
+        baseUrl: 'https://api.groq.com/openai/v1',
+        model: 'canopylabs/orpheus-v1-english',
+        voice: 'austin',
+      );
+      final openAi = OpenAiTtsOptions(
+        enabled: true,
+        name: 'OpenAI',
+        apiKey: 'key',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini-tts',
+        voice: 'alloy',
+      );
+
+      expect(networkTtsMaxCharsPerRequest(groq), 200);
+      expect(networkTtsMaxCharsPerRequest(openAi), 220);
     });
   });
 
@@ -256,6 +312,354 @@ void main() {
       expect(requestBody['response_format'], 'wav');
       expect(result.bytes, audioBytes);
       expect(result.mime, 'audio/wav');
+    });
+
+    test('Qwen Audio consumes real WebSocket binary audio frames', () async {
+      late HttpRequest upgradeRequest;
+      final clientActions = <String>[];
+      final server = await _bindServer((request) async {
+        upgradeRequest = request;
+        final socket = await WebSocketTransformer.upgrade(request);
+        await for (final event in socket) {
+          if (event is! String) continue;
+          final message = jsonDecode(event) as Map<String, dynamic>;
+          final header = message['header'] as Map<String, dynamic>;
+          final action = header['action'].toString();
+          clientActions.add(action);
+          if (action == 'run-task') {
+            socket.add(
+              jsonEncode({
+                'header': {'event': 'task-started'},
+              }),
+            );
+          } else if (action == 'finish-task') {
+            socket.add(Uint8List.fromList(<int>[1, 2, 3]));
+            socket.add(
+              jsonEncode({
+                'header': {'event': 'result-generated'},
+                'payload': {
+                  'output': {
+                    'sentence': {'text': 'hello'},
+                  },
+                },
+              }),
+            );
+            socket.add(Uint8List.fromList(<int>[4, 5]));
+            socket.add(
+              jsonEncode({
+                'header': {'event': 'task-finished'},
+              }),
+            );
+          }
+        }
+      });
+      addTearDown(() async => server.close(force: true));
+
+      final result = await NetworkTtsService.synthesize(
+        options: QwenAudioTtsOptions(
+          enabled: true,
+          name: 'Qwen Audio',
+          apiKey: 'qwen-audio-key',
+          workspaceId: 'workspace',
+          model: 'qwen-audio-3.0-tts-flash',
+          voice: 'longanhuan_v3.6',
+          format: 'mp3',
+          sampleRate: 22050,
+        ),
+        text: 'hello',
+        qwenAudioWebSocketConnector: (_, {headers}) => WebSocket.connect(
+          'ws://${server.address.address}:${server.port}',
+          headers: headers,
+        ),
+      );
+
+      expect(
+        upgradeRequest.headers.value(HttpHeaders.authorizationHeader),
+        'Bearer qwen-audio-key',
+      );
+      expect(
+        upgradeRequest.headers.value('X-DashScope-WorkSpace'),
+        'workspace',
+      );
+      expect(clientActions, <String>[
+        'run-task',
+        'continue-task',
+        'finish-task',
+      ]);
+      expect(result.bytes, <int>[1, 2, 3, 4, 5]);
+      expect(result.mime, 'audio/mpeg');
+    });
+
+    test(
+      'MiniMax omits automatic emotion and sends advanced settings',
+      () async {
+        late Map<String, dynamic> requestBody;
+        final server = await _bindServer((request) async {
+          requestBody =
+              jsonDecode(await utf8.decoder.bind(request).join())
+                  as Map<String, dynamic>;
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType(
+            'text',
+            'event-stream',
+          );
+          request.response.write(
+            'data: ${jsonEncode({
+              'data': {'audio': '010203'},
+              'base_resp': {'status_code': 0, 'status_msg': 'success'},
+            })}\n\n',
+          );
+          request.response.write('data: [DONE]\n\n');
+          await request.response.close();
+        });
+        addTearDown(() async => server.close(force: true));
+
+        final result = await NetworkTtsService.synthesize(
+          options: MiniMaxTtsOptions(
+            enabled: true,
+            name: 'MiniMax',
+            apiKey: 'minimax-key',
+            baseUrl: _baseUrl(server),
+            model: 'speech-2.8-turbo',
+            voiceId: 'female-shaonv',
+            emotion: '',
+            speed: 1.1,
+            volume: 0.8,
+            pitch: 2,
+            languageBoost: 'Chinese',
+            format: 'mp3',
+            sampleRate: 32000,
+            bitrate: 128000,
+            channel: 2,
+            subtitleEnable: true,
+            pronunciationDictionary: const <String>['Kelivo/ke-li-vo'],
+          ),
+          text: 'hello',
+        );
+
+        final voiceSetting =
+            requestBody['voice_setting'] as Map<String, dynamic>;
+        expect(voiceSetting.containsKey('emotion'), isFalse);
+        expect(voiceSetting['vol'], 0.8);
+        expect(voiceSetting['pitch'], 2);
+        expect(requestBody['language_boost'], 'Chinese');
+        expect(requestBody['audio_setting'], {
+          'sample_rate': 32000,
+          'bitrate': 128000,
+          'format': 'mp3',
+          'channel': 2,
+        });
+        expect(requestBody['pronunciation_dict'], {
+          'tone': <String>['Kelivo/ke-li-vo'],
+        });
+        expect(requestBody['subtitle_enable'], isTrue);
+        expect(result.bytes, <int>[1, 2, 3]);
+      },
+    );
+
+    test('MiniMax accepts official fluent and whipser emotions', () async {
+      final emotions = <String>[];
+      final server = await _bindServer((request) async {
+        final body =
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, dynamic>;
+        emotions.add(
+          ((body['voice_setting'] as Map)['emotion'] ?? '').toString(),
+        );
+        request.response.statusCode = HttpStatus.ok;
+        request.response.write(
+          'data: ${jsonEncode({
+            'data': {'audio': '0102'},
+            'base_resp': {'status_code': 0},
+          })}\n\n',
+        );
+        request.response.write('data: [DONE]\n\n');
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+
+      for (final emotion in const <String>['fluent', 'whipser']) {
+        await NetworkTtsService.synthesize(
+          options: MiniMaxTtsOptions(
+            enabled: true,
+            name: 'MiniMax',
+            apiKey: 'minimax-key',
+            baseUrl: _baseUrl(server),
+            model: 'speech-2.6-turbo',
+            voiceId: 'female-shaonv',
+            emotion: emotion,
+          ),
+          text: 'hello',
+        );
+      }
+
+      expect(emotions, <String>['fluent', 'whipser']);
+    });
+
+    test('MiniMax wraps PCM audio as WAV', () async {
+      final server = await _bindServer((request) async {
+        await utf8.decoder.bind(request).join();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.write(
+          'data: ${jsonEncode({
+            'data': {'audio': '01020304'},
+            'base_resp': {'status_code': 0},
+          })}\n\n',
+        );
+        request.response.write('data: [DONE]\n\n');
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+
+      final result = await NetworkTtsService.synthesize(
+        options: MiniMaxTtsOptions(
+          enabled: true,
+          name: 'MiniMax',
+          apiKey: 'minimax-key',
+          baseUrl: _baseUrl(server),
+          model: 'speech-2.8-turbo',
+          voiceId: 'female-shaonv',
+          format: 'pcm',
+          sampleRate: 16000,
+        ),
+        text: 'hello',
+      );
+
+      expect(result.mime, 'audio/wav');
+      expect(result.sampleRate, 16000);
+      expect(_riffChunkData(result.bytes, 'data'), <int>[1, 2, 3, 4]);
+    });
+
+    test('MiniMax surfaces business errors from HTTP 200 SSE', () async {
+      final server = await _bindServer((request) async {
+        await utf8.decoder.bind(request).join();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.write(
+          'data: ${jsonEncode({
+            'base_resp': {'status_code': 1004, 'status_msg': 'bad request'},
+          })}\n\n',
+        );
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+
+      expect(
+        () => NetworkTtsService.synthesize(
+          options: _miniMaxOptions(_baseUrl(server)),
+          text: 'hello',
+        ),
+        throwsA(
+          predicate((error) => error.toString().contains('1004 bad request')),
+        ),
+      );
+    });
+
+    test(
+      'MiniMax rejects malformed SSE instead of returning empty MP3',
+      () async {
+        final server = await _bindServer((request) async {
+          await utf8.decoder.bind(request).join();
+          request.response.statusCode = HttpStatus.ok;
+          request.response.write('data: {not-json}\n\n');
+          await request.response.close();
+        });
+        addTearDown(() async => server.close(force: true));
+
+        expect(
+          () => NetworkTtsService.synthesize(
+            options: _miniMaxOptions(_baseUrl(server)),
+            text: 'hello',
+          ),
+          throwsFormatException,
+        );
+      },
+    );
+
+    test('MiniMax cancellation aborts a stalled SSE parser', () async {
+      final server = await _bindServer((request) async {
+        await utf8.decoder.bind(request).join();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.write(
+          'data: ${jsonEncode({
+            'base_resp': {'status_code': 0},
+          })}\n\n',
+        );
+        await request.response.flush();
+        await Future<void>.delayed(const Duration(seconds: 1));
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+      var checks = 0;
+
+      expect(
+        () => NetworkTtsService.synthesize(
+          options: _miniMaxOptions(_baseUrl(server)),
+          text: 'hello',
+          cancelled: () => checks++ > 0,
+        ),
+        throwsA(anything),
+      );
+    });
+
+    test('Fish Audio validates reference ID and format/sample rate pair', () {
+      expect(
+        () => NetworkTtsService.synthesize(
+          options: FishAudioTtsOptions(
+            enabled: true,
+            name: 'Fish',
+            apiKey: 'fish-key',
+            baseUrl: 'https://api.fish.audio',
+            model: 's2.1-pro',
+            referenceId: 'ref',
+            format: 'opus',
+            sampleRate: 32000,
+          ),
+          text: 'hello',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => NetworkTtsService.synthesize(
+          options: FishAudioTtsOptions(
+            enabled: true,
+            name: 'Fish',
+            apiKey: 'fish-key',
+            baseUrl: 'https://api.fish.audio',
+            model: 's2.1-pro',
+            referenceId: '',
+          ),
+          text: 'hello',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('Fish Audio wraps raw PCM response as WAV', () async {
+      final server = await _bindServer((request) async {
+        await utf8.decoder.bind(request).join();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.add(<int>[1, 2, 3, 4]);
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+
+      final result = await NetworkTtsService.synthesize(
+        options: FishAudioTtsOptions(
+          enabled: true,
+          name: 'Fish',
+          apiKey: 'fish-key',
+          baseUrl: _hostOnlyBaseUrl(server),
+          model: 's2.1-pro',
+          referenceId: 'reference-id',
+          format: 'pcm',
+          sampleRate: 16000,
+        ),
+        text: 'hello',
+      );
+
+      expect(result.mime, 'audio/wav');
+      expect(result.sampleRate, 16000);
+      expect(_riffChunkData(result.bytes, 'data'), <int>[1, 2, 3, 4]);
     });
 
     test('synthesizes xAI tts response as mp3', () async {
@@ -478,6 +882,120 @@ void main() {
     });
 
     test(
+      'MiMo Voice Design sends description without a built-in voice',
+      () async {
+        late Map<String, dynamic> requestBody;
+        final audio = base64Encode(<int>[5, 6, 7, 8]);
+        final server = await _bindServer((request) async {
+          requestBody =
+              jsonDecode(await utf8.decoder.bind(request).join())
+                  as Map<String, dynamic>;
+          request.response.statusCode = HttpStatus.ok;
+          request.response.write(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'audio': {'data': audio},
+                  },
+                },
+              ],
+            }),
+          );
+          await request.response.close();
+        });
+        addTearDown(() async => server.close(force: true));
+
+        await NetworkTtsService.synthesize(
+          options: MimoTtsOptions(
+            enabled: true,
+            name: 'MiMo Design',
+            apiKey: 'mimo-key',
+            baseUrl: _baseUrl(server),
+            model: 'mimo-v2.5-tts-voicedesign',
+            voice: '',
+            instruction: 'A warm young narrator',
+            stream: false,
+            optimizeTextPreview: true,
+          ),
+          text: 'hello',
+        );
+
+        expect(requestBody['messages'], [
+          {'role': 'user', 'content': 'A warm young narrator'},
+          {'role': 'assistant', 'content': 'hello'},
+        ]);
+        expect(requestBody['audio'], {
+          'format': 'wav',
+          'optimize_text_preview': true,
+        });
+      },
+    );
+
+    test('MiMo Voice Clone requires a valid audio data URI', () {
+      expect(
+        () => NetworkTtsService.synthesize(
+          options: MimoTtsOptions(
+            enabled: true,
+            name: 'MiMo Clone',
+            apiKey: 'mimo-key',
+            baseUrl: 'https://api.xiaomimimo.com/v1',
+            model: 'mimo-v2.5-tts-voiceclone',
+            voice: 'not-a-data-uri',
+            stream: false,
+          ),
+          text: 'hello',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('MiMo Voice Clone sends Base64 reference audio', () async {
+      late Map<String, dynamic> requestBody;
+      final outputAudio = base64Encode(<int>[5, 6, 7, 8]);
+      final server = await _bindServer((request) async {
+        requestBody =
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, dynamic>;
+        request.response.statusCode = HttpStatus.ok;
+        request.response.write(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'audio': {'data': outputAudio},
+                },
+              },
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+      addTearDown(() async => server.close(force: true));
+      final reference =
+          'data:audio/mpeg;base64,${base64Encode(<int>[1, 2, 3, 4])}';
+
+      await NetworkTtsService.synthesize(
+        options: MimoTtsOptions(
+          enabled: true,
+          name: 'MiMo Clone',
+          apiKey: 'mimo-key',
+          baseUrl: _baseUrl(server),
+          model: 'mimo-v2.5-tts-voiceclone',
+          voice: reference,
+          stream: false,
+        ),
+        text: 'hello',
+      );
+
+      expect(requestBody['messages'], [
+        {'role': 'user', 'content': ''},
+        {'role': 'assistant', 'content': 'hello'},
+      ]);
+      expect(requestBody['audio'], {'format': 'wav', 'voice': reference});
+    });
+
+    test(
       'throws when MiMo streaming response contains no audio chunks',
       () async {
         final server = await _bindServer((request) async {
@@ -510,20 +1028,56 @@ void main() {
       },
     );
 
-    test('StepFun uses snake_case speech fields and chunks long text', () async {
-      final bodies = <Map<String, dynamic>>[];
-      final server = await _bindServer((request) async {
-        bodies.add(
-          jsonDecode(await utf8.decoder.bind(request).join())
-              as Map<String, dynamic>,
+    test(
+      'StepFun uses snake_case speech fields and chunks long text',
+      () async {
+        final bodies = <Map<String, dynamic>>[];
+        final server = await _bindServer((request) async {
+          bodies.add(
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, dynamic>,
+          );
+          request.response.statusCode = HttpStatus.ok;
+          request.response.add(<int>[1, 2, 3]);
+          await request.response.close();
+        });
+        addTearDown(() async => server.close(force: true));
+
+        final long = 'a' * 1001;
+        final result = await NetworkTtsService.synthesize(
+          options: StepTtsOptions(
+            enabled: true,
+            name: 'Step',
+            apiKey: 'step-key',
+            baseUrl: _baseUrl(server),
+            model: 'stepaudio-2.5-tts',
+            voice: 'cixingnansheng',
+            instruction: 'calm',
+            responseFormat: 'mp3',
+          ),
+          text: long,
         );
+
+        expect(bodies, hasLength(2));
+        expect(bodies.first['response_format'], 'mp3');
+        expect(bodies.first['sample_rate'], 24000);
+        expect(bodies.first['instruction'], 'calm');
+        expect(bodies.first.containsKey('responseFormat'), isFalse);
+        expect(result.bytes.length, greaterThan(3));
+      },
+    );
+
+    test('StepFun merges PCM chunks and wraps them as one WAV', () async {
+      var requestCount = 0;
+      final server = await _bindServer((request) async {
+        requestCount++;
+        await utf8.decoder.bind(request).join();
         request.response.statusCode = HttpStatus.ok;
-        request.response.add(<int>[1, 2, 3]);
+        request.response.add(<int>[1, 2, 3, 4]);
         await request.response.close();
       });
       addTearDown(() async => server.close(force: true));
 
-      final long = 'a' * 1001;
       final result = await NetworkTtsService.synthesize(
         options: StepTtsOptions(
           enabled: true,
@@ -532,18 +1086,25 @@ void main() {
           baseUrl: _baseUrl(server),
           model: 'stepaudio-2.5-tts',
           voice: 'cixingnansheng',
-          instruction: 'calm',
-          responseFormat: 'mp3',
+          responseFormat: 'pcm',
+          sampleRate: 16000,
         ),
-        text: long,
+        text: 'a' * 1001,
       );
 
-      expect(bodies, hasLength(2));
-      expect(bodies.first['response_format'], 'mp3');
-      expect(bodies.first['sample_rate'], 24000);
-      expect(bodies.first['instruction'], 'calm');
-      expect(bodies.first.containsKey('responseFormat'), isFalse);
-      expect(result.bytes.length, greaterThan(3));
+      expect(requestCount, 2);
+      expect(result.mime, 'audio/wav');
+      expect(result.sampleRate, 16000);
+      expect(_riffChunkData(result.bytes, 'data'), <int>[
+        1,
+        2,
+        3,
+        4,
+        1,
+        2,
+        3,
+        4,
+      ]);
     });
   });
 
@@ -594,6 +1155,17 @@ String _baseUrl(HttpServer server) {
 
 String _hostOnlyBaseUrl(HttpServer server) {
   return 'http://${server.address.address}:${server.port}';
+}
+
+MiniMaxTtsOptions _miniMaxOptions(String baseUrl) {
+  return MiniMaxTtsOptions(
+    enabled: true,
+    name: 'MiniMax',
+    apiKey: 'minimax-key',
+    baseUrl: baseUrl,
+    model: 'speech-2.8-turbo',
+    voiceId: 'female-shaonv',
+  );
 }
 
 Uint8List _pcmFormat(int sampleRate) {

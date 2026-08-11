@@ -14,6 +14,26 @@ import '../services/tts/network_tts.dart';
 import '../services/tts/tts_playback_models.dart';
 import '../services/tts/tts_text_chunker.dart';
 
+String ttsAudioFileExtensionForMime(String? mime) {
+  switch ((mime ?? '').toLowerCase()) {
+    case 'audio/mpeg':
+    case 'audio/mp3':
+      return 'mp3';
+    case 'audio/wav':
+    case 'audio/x-wav':
+      return 'wav';
+    case 'audio/ogg':
+    case 'audio/opus':
+      return 'ogg';
+    case 'audio/flac':
+      return 'flac';
+    case 'audio/pcm':
+      return 'pcm';
+    default:
+      return 'mp3';
+  }
+}
+
 /// System and network TTS coordinator.
 ///
 /// Long text is split into smaller chunks. Network TTS chunks are prefetched
@@ -27,7 +47,6 @@ class TtsProvider extends ChangeNotifier {
   static const String _cacheNetworkAudioForReplayKey =
       'tts_cache_network_audio_for_replay_v1';
   static const int _systemChunkMaxLength = 360;
-  static const int _networkChunkMaxLength = 220;
   static const int _networkPrefetchCount = 3;
   static const Duration _seekStep = Duration(seconds: 15);
 
@@ -425,7 +444,7 @@ class TtsProvider extends ChangeNotifier {
         TtsTextChunker.split(
           content,
           maxChunkLength: _usingNetwork
-              ? _networkChunkMaxLength
+              ? networkTtsMaxCharsPerRequest(networkService!)
               : _systemChunkMaxLength,
         ),
       );
@@ -998,20 +1017,7 @@ class TtsProvider extends ChangeNotifier {
     }
   }
 
-  String _extForMime(String? mime) {
-    switch ((mime ?? '').toLowerCase()) {
-      case 'audio/mpeg':
-      case 'audio/mp3':
-        return 'mp3';
-      case 'audio/wav':
-      case 'audio/x-wav':
-        return 'wav';
-      case 'audio/ogg':
-        return 'ogg';
-      default:
-        return 'mp3';
-    }
-  }
+  String _extForMime(String? mime) => ttsAudioFileExtensionForMime(mime);
 
   Future<(Uint8List, String)?> synthesizeAllAndCollect() async {
     final cached = _collectResolvedNetworkAudio();
@@ -1055,6 +1061,9 @@ class TtsProvider extends ChangeNotifier {
       );
     }
     if (results.length == 1) return (results.single.bytes, extension);
+    if (extension == 'flac') {
+      throw StateError('FLAC TTS chunks cannot be exported as one audio file.');
+    }
 
     final parts = <Uint8List>[];
     var totalSize = 0;
@@ -1077,17 +1086,31 @@ class TtsProvider extends ChangeNotifier {
   Future<TtsServiceOptions?> _getSelectedNetworkService() async {
     try {
       await preferences.load();
-      final selected = preferences.getInt('tts_selected_v1') ?? -1;
-      if (selected < 0) return null;
       final jsonStr = preferences.getString('tts_services_v1') ?? '';
       if (jsonStr.isEmpty) return null;
       final list = jsonDecode(jsonStr) as List;
-      if (selected >= list.length) return null;
-      final obj = list[selected];
-      final map = obj is Map<String, dynamic>
-          ? obj
-          : Map<String, dynamic>.from(obj as Map);
-      return TtsServiceOptions.fromJson(map);
+      final selectedId = preferences.getString('tts_selected_service_id_v1');
+      if (selectedId != null && selectedId.isNotEmpty) {
+        for (final obj in list) {
+          final map = obj is Map<String, dynamic>
+              ? obj
+              : Map<String, dynamic>.from(obj as Map);
+          if ((map['id'] ?? '').toString() == selectedId) {
+            return TtsServiceOptions.fromJson(map);
+          }
+        }
+        return null;
+      }
+
+      // Compatibility for profiles not yet loaded by SettingsProvider.
+      final legacyIndex = preferences.getInt('tts_selected_v1') ?? -1;
+      if (legacyIndex < 0 || legacyIndex >= list.length) return null;
+      final obj = list[legacyIndex];
+      return TtsServiceOptions.fromJson(
+        obj is Map<String, dynamic>
+            ? obj
+            : Map<String, dynamic>.from(obj as Map),
+      );
     } catch (_) {
       return null;
     }

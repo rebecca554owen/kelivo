@@ -55,6 +55,7 @@ final class BusinessKeyRegistry {
     'search_enabled_v1',
     'search_auto_test_on_launch_v1',
     'tts_selected_v1',
+    'tts_selected_service_id_v1',
     'tts_auto_play_assistant_replies_v1',
     'tts_text_selection_mode_v1',
     'tts_speech_rate_v1',
