@@ -961,6 +961,19 @@ class HiveToSqliteMigrationService {
       ),
     );
 
+    // Snapshot the raw .hive files before anything opens Hive: openLazyBox
+    // (used by the chats.json export below) runs crash recovery, which can
+    // truncate a damaged box in place. The archive must preserve the original
+    // bytes — they are the authoritative fallback the backup promises.
+    final hiveSnapshots = <String, File>{};
+    for (final hiveFile in decision.hiveFiles) {
+      final snapshot = File(
+        p.join(workDir.path, 'raw_${p.basename(hiveFile.path)}'),
+      );
+      await hiveFile.copy(snapshot.path);
+      hiveSnapshots[hiveFile.path] = snapshot;
+    }
+
     items = _updateBackupItem(
       items,
       _chatsBackupName,
@@ -1034,7 +1047,10 @@ class HiveToSqliteMigrationService {
 
     for (final hiveFile in decision.hiveFiles) {
       final itemName = p.basename(hiveFile.path);
-      final bytes = await hiveFile.length();
+      // Archive the pre-open snapshot, not the live file that Hive may have
+      // crash-recovered (truncated) in the meantime.
+      final source = hiveSnapshots[hiveFile.path] ?? hiveFile;
+      final bytes = await source.length();
       items = _updateBackupItem(items, itemName, bytes: bytes);
       _lastBackupItems = items;
       _emit(
@@ -1047,7 +1063,7 @@ class HiveToSqliteMigrationService {
       );
       files.add(
         _MigrationBackupFile(
-          file: hiveFile,
+          file: source,
           entryName: itemName,
           itemName: itemName,
           bytes: bytes,
