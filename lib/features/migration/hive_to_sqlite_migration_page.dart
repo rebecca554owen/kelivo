@@ -1491,7 +1491,10 @@ class _LogCard extends StatelessWidget {
             constraints: const BoxConstraints(maxHeight: 120),
             child: SingleChildScrollView(
               child: Text(
-                lines.take(24).join('\n'),
+                // The error and stack trace are appended at the end of the
+                // log; the head is progress noise, so show the tail.
+                (lines.length <= 24 ? lines : lines.sublist(lines.length - 24))
+                    .join('\n'),
                 style: TextStyle(
                   fontSize: 11,
                   height: 1.45,
