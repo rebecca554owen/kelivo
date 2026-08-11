@@ -90,8 +90,22 @@ final class _PosixRestoreDurability implements RestoreDurability {
   late final _ChmodDart _chmod;
   late final _ErrnoDart _errno;
 
-  int get _oDirectory => _isApple ? 0x00100000 : 0x00010000;
-  int get _oNoFollow => _isApple ? 0x00000100 : 0x00020000;
+  // Android ARM uses architecture-specific O_DIRECTORY/O_NOFOLLOW values.
+  bool get _usesAndroidArmOpenFlags {
+    final abi = Abi.current();
+    return abi == Abi.androidArm || abi == Abi.androidArm64;
+  }
+
+  int get _oDirectory => _isApple
+      ? 0x00100000
+      : _usesAndroidArmOpenFlags
+      ? 0x00004000
+      : 0x00010000;
+  int get _oNoFollow => _isApple
+      ? 0x00000100
+      : _usesAndroidArmOpenFlags
+      ? 0x00008000
+      : 0x00020000;
   int get _oCloseOnExec => _isApple ? 0x01000000 : 0x00080000;
   int get _lastError => _errno().value;
 
