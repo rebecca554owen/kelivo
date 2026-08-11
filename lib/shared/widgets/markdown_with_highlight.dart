@@ -5766,11 +5766,12 @@ class HtmlAnchorMd extends InlineMd {
 }
 
 /// Whitelist-based HTML tag renderer.
-/// Currently supports simple paragraph and line-break tags.
 class AllowedHtmlTagsMd extends InlineMd {
   @override
-  RegExp get exp =>
-      RegExp(r"<br\s*/?>|<p(?:\s+[^>]*)?>|<\/p\s*>", caseSensitive: false);
+  RegExp get exp => RegExp(
+    r"<br\s*/?>|<p(?:\s+[^>]*)?>|<\/p\s*>|<\/?theater\s*>",
+    caseSensitive: false,
+  );
 
   @override
   InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {

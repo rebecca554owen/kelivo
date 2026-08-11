@@ -3120,13 +3120,26 @@ press5
   );
 
   testWidgets(
-    'MarkdownWithCodeHighlight renders details collapsed then expands',
+    'MarkdownWithCodeHighlight renders wrapped details collapsed then expands',
     (tester) async {
       await tester.pumpWidget(
-        _markdownHarness('<details><summary>更多信息</summary>隐藏内容</details>'),
+        _markdownHarness('''
+<theater>
+<details><summary>更多信息</summary>隐藏内容</details>
+</theater>
+返回 List<String> 给 <username>
+'''),
       );
       await tester.pump();
 
+      expect(
+        find.textContaining(RegExp(r'</?theater>'), findRichText: true),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('返回 List<String> 给 <username>', findRichText: true),
+        findsOneWidget,
+      );
       expect(find.text('更多信息'), findsOneWidget);
       expect(find.text('隐藏内容', findRichText: true), findsNothing);
 
