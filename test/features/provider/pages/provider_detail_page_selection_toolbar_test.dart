@@ -149,4 +149,50 @@ void main() {
     expect(find.text('使用流式'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('mobile provider config persists custom request rows', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settings = await _createSettings(tester);
+    addTearDown(settings.dispose);
+    await tester.pumpWidget(
+      _buildHarness(
+        settings: settings,
+        child: const ProviderDetailPage(
+          keyName: 'TestProvider',
+          displayName: 'Test Provider',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final addHeader = find.byKey(const ValueKey('provider-custom-header-add'));
+    await tester.ensureVisible(addHeader);
+    await tester.pumpAndSettle();
+    await tester.tap(addHeader);
+    await tester.pump();
+
+    expect(
+      settings.getProviderConfig('TestProvider').customHeaders,
+      hasLength(1),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('provider-custom-header-name-0')),
+      'X-Mobile',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('provider-custom-header-value-0')),
+      'saved',
+    );
+    await tester.pump();
+
+    expect(settings.getProviderConfig('TestProvider').customHeaders, [
+      {'name': 'X-Mobile', 'value': 'saved'},
+    ]);
+  });
 }

@@ -5215,6 +5215,9 @@ class ProviderConfig {
   // multiple logical models can share the same backend model with different params.
   // {'<key>': {'apiModelId': String?, 'name': String?, 'type': 'chat'|'embedding', 'input': ['text','image'], 'output': [...], 'abilities': ['tool','reasoning']}}
   final Map<String, dynamic> modelOverrides;
+  // Per-provider custom request overrides.
+  final List<Map<String, String>> customHeaders;
+  final List<Map<String, String>> customBody;
   // Per-provider proxy
   final bool? proxyEnabled;
   final String? proxyType; // http|https|socks5
@@ -5285,6 +5288,8 @@ class ProviderConfig {
     this.serviceAccountJson,
     this.models = const [],
     this.modelOverrides = const {},
+    this.customHeaders = const <Map<String, String>>[],
+    this.customBody = const <Map<String, String>>[],
     this.proxyEnabled,
     this.proxyType,
     this.proxyHost,
@@ -5322,6 +5327,8 @@ class ProviderConfig {
     String? serviceAccountJson,
     List<String>? models,
     Map<String, dynamic>? modelOverrides,
+    List<Map<String, String>>? customHeaders,
+    List<Map<String, String>>? customBody,
     bool? proxyEnabled,
     String? proxyType,
     String? proxyHost,
@@ -5354,6 +5361,8 @@ class ProviderConfig {
     serviceAccountJson: serviceAccountJson ?? this.serviceAccountJson,
     models: models ?? this.models,
     modelOverrides: modelOverrides ?? this.modelOverrides,
+    customHeaders: customHeaders ?? this.customHeaders,
+    customBody: customBody ?? this.customBody,
     proxyEnabled: proxyEnabled ?? this.proxyEnabled,
     proxyType: proxyType ?? this.proxyType,
     proxyHost: proxyHost ?? this.proxyHost,
@@ -5395,6 +5404,8 @@ class ProviderConfig {
     'serviceAccountJson': serviceAccountJson,
     'models': models,
     'modelOverrides': modelOverrides,
+    'customHeaders': customHeaders,
+    'customBody': customBody,
     'proxyEnabled': proxyEnabled,
     'proxyType': proxyType,
     'proxyHost': proxyHost,
@@ -5442,6 +5453,16 @@ class ProviderConfig {
           (k, v) => MapEntry(k.toString(), v),
         ) ??
         const {},
+    customHeaders: _customRequestRowsFromJson(
+      json['customHeaders'],
+      keyName: 'name',
+      fallbackKeyName: 'key',
+    ),
+    customBody: _customRequestRowsFromJson(
+      json['customBody'],
+      keyName: 'key',
+      fallbackKeyName: 'name',
+    ),
     proxyEnabled: json['proxyEnabled'] as bool?,
     proxyType: json['proxyType'] as String?,
     proxyHost: json['proxyHost'] as String?,
@@ -5474,6 +5495,24 @@ class ProviderConfig {
     if (stored.isNotEmpty) return stored;
     final id = json['id'] as String? ?? json['name'] as String? ?? '';
     return id.trim().toLowerCase() == 'kelivoin' ? _kelivoInPublicApiKey : '';
+  }
+
+  static List<Map<String, String>> _customRequestRowsFromJson(
+    Object? raw, {
+    required String keyName,
+    required String fallbackKeyName,
+  }) {
+    if (raw is! List) return const <Map<String, String>>[];
+    return raw
+        .whereType<Map>()
+        .map(
+          (entry) => <String, String>{
+            keyName: (entry[keyName] ?? entry[fallbackKeyName] ?? '')
+                .toString(),
+            'value': (entry['value'] ?? '').toString(),
+          },
+        )
+        .toList();
   }
 
   static ProviderKind classify(String key, {ProviderKind? explicitType}) {

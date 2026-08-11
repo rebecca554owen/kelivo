@@ -23,6 +23,7 @@ import 'gemini_tool_config.dart';
 import '../logging/flutter_logger.dart';
 import '../model_override_resolver.dart';
 import '../model_override_payload_parser.dart';
+import '../custom_request_merger.dart';
 import 'provider_request_headers.dart';
 import '../../utils/multimodal_input_utils.dart';
 
@@ -155,27 +156,38 @@ class ChatApiService {
 
   static Map<String, String> _customHeaders(
     ProviderConfig cfg,
-    String modelId,
-  ) {
+    String modelId, {
+    Map<String, String> baseHeaders = const <String, String>{},
+    Map<String, String>? assistantHeaders,
+  }) {
     final ov = _modelOverride(cfg, modelId);
-    final out = <String, String>{
-      ...providerDefaultHeaders(cfg),
-      ...ModelOverridePayloadParser.customHeaders(ov),
-    };
+    final automatic = <String, String>{...providerDefaultHeaders(cfg)};
     // AIhubmix promo header (opt-in per-provider)
     if (_isAihubmix(cfg) && cfg.aihubmixAppCodeEnabled == true) {
-      out.putIfAbsent('APP-Code', () => _aihubmixAppCode);
+      automatic.putIfAbsent('APP-Code', () => _aihubmixAppCode);
     }
-    return out;
+    return CustomRequestMerger.mergeHeaders(
+      base: baseHeaders,
+      assistant: assistantHeaders,
+      providerAutomatic: automatic,
+      provider: ModelOverridePayloadParser.customHeadersFromRows(
+        cfg.customHeaders,
+      ),
+      model: ModelOverridePayloadParser.customHeaders(ov),
+    );
   }
 
-  static dynamic _parseOverrideValue(String v) {
-    return ModelOverridePayloadParser.parseOverrideValue(v);
-  }
-
-  static Map<String, dynamic> _customBody(ProviderConfig cfg, String modelId) {
+  static Map<String, dynamic> _customBody(
+    ProviderConfig cfg,
+    String modelId, {
+    Map<String, dynamic>? assistantBody,
+  }) {
     final ov = _modelOverride(cfg, modelId);
-    return ModelOverridePayloadParser.customBody(ov);
+    return CustomRequestMerger.mergeBody(
+      assistant: assistantBody,
+      providerRows: cfg.customBody,
+      model: ModelOverridePayloadParser.customBody(ov),
+    );
   }
 
   static bool _isAihubmix(ProviderConfig cfg) {
@@ -854,21 +866,17 @@ class ChatApiService {
           isReasoning: isReasoning,
           thinkingBudget: thinkingBudget,
         );
-        final headers = <String, String>{
-          'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-          'Content-Type': 'application/json',
-        };
-        headers.addAll(_customHeaders(config, modelId));
-        if (extraHeaders != null && extraHeaders.isNotEmpty) {
-          headers.addAll(extraHeaders);
-        }
-        final extra = _customBody(config, modelId);
+        final headers = _customHeaders(
+          config,
+          modelId,
+          baseHeaders: <String, String>{
+            'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+            'Content-Type': 'application/json',
+          },
+          assistantHeaders: extraHeaders,
+        );
+        final extra = _customBody(config, modelId, assistantBody: extraBody);
         if (extra.isNotEmpty) body.addAll(extra);
-        if (extraBody != null && extraBody.isNotEmpty) {
-          (extraBody).forEach((k, v) {
-            body[k] = (v is String) ? _parseOverrideValue(v) : v;
-          });
-        }
         // Vendor-specific reasoning knobs for chat-completions compatible hosts (non-streaming)
         if (config.useResponseApi != true) {
           _applyVendorReasoningKnobs(
@@ -977,22 +985,18 @@ class ChatApiService {
           if (thinking != null) 'thinking': thinking,
           if (outputConfig != null) 'output_config': outputConfig,
         };
-        final headers = <String, String>{
-          'x-api-key': _apiKeyForRequest(config, modelId),
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
-        };
-        headers.addAll(_customHeaders(config, modelId));
-        if (extraHeaders != null && extraHeaders.isNotEmpty) {
-          headers.addAll(extraHeaders);
-        }
-        final extra = _customBody(config, modelId);
+        final headers = _customHeaders(
+          config,
+          modelId,
+          baseHeaders: <String, String>{
+            'x-api-key': _apiKeyForRequest(config, modelId),
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json',
+          },
+          assistantHeaders: extraHeaders,
+        );
+        final extra = _customBody(config, modelId, assistantBody: extraBody);
         if (extra.isNotEmpty) body.addAll(extra);
-        if (extraBody != null && extraBody.isNotEmpty) {
-          (extraBody).forEach((k, v) {
-            body[k] = (v is String) ? _parseOverrideValue(v) : v;
-          });
-        }
         final resp = await client.post(
           url,
           headers: headers,
@@ -1081,34 +1085,33 @@ class ChatApiService {
             body['tools'] = toolsArr;
           }
         }
-        final headers = <String, String>{'Content-Type': 'application/json'};
+        final baseHeaders = <String, String>{
+          'Content-Type': 'application/json',
+        };
         // Add API Key header for non-Vertex
         if (!(config.vertexAI == true)) {
           final apiKey = _apiKeyForRequest(config, modelId);
           if (apiKey.isNotEmpty) {
-            headers['x-goog-api-key'] = apiKey;
+            baseHeaders['x-goog-api-key'] = apiKey;
           }
         }
         // Add Bearer for Vertex via service account JSON
         if (config.vertexAI == true) {
           final token = await _maybeVertexAccessToken(config);
           if (token != null && token.isNotEmpty) {
-            headers['Authorization'] = 'Bearer $token';
+            baseHeaders['Authorization'] = 'Bearer $token';
           }
           final proj = (config.projectId ?? '').trim();
-          if (proj.isNotEmpty) headers['X-Goog-User-Project'] = proj;
+          if (proj.isNotEmpty) baseHeaders['X-Goog-User-Project'] = proj;
         }
-        headers.addAll(_customHeaders(config, modelId));
-        if (extraHeaders != null && extraHeaders.isNotEmpty) {
-          headers.addAll(extraHeaders);
-        }
-        final extra = _customBody(config, modelId);
+        final headers = _customHeaders(
+          config,
+          modelId,
+          baseHeaders: baseHeaders,
+          assistantHeaders: extraHeaders,
+        );
+        final extra = _customBody(config, modelId, assistantBody: extraBody);
         if (extra.isNotEmpty) body.addAll(extra);
-        if (extraBody != null && extraBody.isNotEmpty) {
-          (extraBody).forEach((k, v) {
-            body[k] = (v is String) ? _parseOverrideValue(v) : v;
-          });
-        }
         final resp = await client.post(
           Uri.parse(url),
           headers: headers,

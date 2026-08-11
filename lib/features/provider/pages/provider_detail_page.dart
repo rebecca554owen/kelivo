@@ -32,6 +32,7 @@ import 'provider_network_page.dart';
 import '../../../core/services/haptics.dart';
 import '../../provider/widgets/provider_balance_badge.dart';
 import '../../provider/widgets/provider_avatar.dart';
+import '../../provider/widgets/provider_custom_request_editor.dart';
 import '../../../utils/model_grouping.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -265,7 +266,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                           onPressed: () => Navigator.of(ctx).pop(true),
                           child: Text(
                             l10n.providerDetailPageDeleteButton,
-                            style: TextStyle(color: Theme.of(context).colorScheme.error),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
                           ),
                         ),
                       ],
@@ -1263,6 +1266,41 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             ),
           ],
         ],
+        const SizedBox(height: 16),
+        ProviderCustomRequestEditor(
+          headers: sp
+              .getProviderConfig(
+                widget.keyName,
+                defaultName: widget.displayName,
+              )
+              .customHeaders,
+          body: sp
+              .getProviderConfig(
+                widget.keyName,
+                defaultName: widget.displayName,
+              )
+              .customBody,
+          onHeadersChanged: (rows) async {
+            final old = sp.getProviderConfig(
+              widget.keyName,
+              defaultName: widget.displayName,
+            );
+            await sp.setProviderConfig(
+              widget.keyName,
+              old.copyWith(customHeaders: rows),
+            );
+          },
+          onBodyChanged: (rows) async {
+            final old = sp.getProviderConfig(
+              widget.keyName,
+              defaultName: widget.displayName,
+            );
+            await sp.setProviderConfig(
+              widget.keyName,
+              old.copyWith(customBody: rows),
+            );
+          },
+        ),
         const SizedBox(height: 12),
         if (widget.keyName.toLowerCase() == 'siliconflow') ...[
           const SizedBox(height: 6),
@@ -3305,8 +3343,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             decoration: InputDecoration(
                               hintText: l10n.providerDetailPageFilterHint,
                               filled: true,
-                              fillColor:
-                                  ctx.appColors.surfaceFill,
+                              fillColor: ctx.appColors.surfaceFill,
                               prefixIcon: Icon(
                                 Lucide.Search,
                                 size: 20,
@@ -3495,8 +3532,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                           builder: (_) {
                                             return Container(
                                               decoration: BoxDecoration(
-                                                color:
-                                                    context.appColors.surfaceFill,
+                                                color: context
+                                                    .appColors
+                                                    .surfaceFill,
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),

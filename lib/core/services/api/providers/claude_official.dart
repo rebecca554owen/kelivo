@@ -31,7 +31,6 @@ TokenUsage _claudeUsageFromMap(Map<String, dynamic> usage) {
   );
 }
 
-
 String _normalizeClaudeImageMime(String mime) {
   final normalized = mime.trim().toLowerCase();
   if (normalized == 'image/jpg') return 'image/jpeg';
@@ -273,10 +272,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
         }
       }
 
-      Future<void> addClaudeImage(
-        String source, {
-        String? explicitMime,
-      }) async {
+      Future<void> addClaudeImage(String source, {String? explicitMime}) async {
         final normalized = normalizeSrc(source);
         if (!seenSources.add(normalized)) return;
         if (source.startsWith('http://') || source.startsWith('https://')) {
@@ -360,10 +356,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
         'content': parts.isEmpty ? raw : parts,
       });
     } else {
-      initialMessages.add({
-        'role': role,
-        'content': raw,
-      });
+      initialMessages.add({'role': role, 'content': raw});
     }
   }
   flushPendingToolResults();
@@ -446,16 +439,17 @@ Stream<ChatStreamChunk> _sendClaudeStream(
   }
 
   // Headers (constant across rounds)
-  final baseHeaders = <String, String>{
-    'x-api-key': _effectiveApiKey(config),
-    'anthropic-version': '2023-06-01',
-    'Content-Type': 'application/json',
-    'Accept': stream ? 'text/event-stream' : 'application/json',
-  };
-  baseHeaders.addAll(_customHeaders(config, modelId));
-  if (extraHeaders != null && extraHeaders.isNotEmpty) {
-    baseHeaders.addAll(extraHeaders);
-  }
+  final baseHeaders = _customHeaders(
+    config,
+    modelId,
+    baseHeaders: <String, String>{
+      'x-api-key': _effectiveApiKey(config),
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+      'Accept': stream ? 'text/event-stream' : 'application/json',
+    },
+    assistantHeaders: extraHeaders,
+  );
 
   // Running conversation across rounds
   List<Map<String, dynamic>> convo = List<Map<String, dynamic>>.from(
@@ -501,14 +495,9 @@ Stream<ChatStreamChunk> _sendClaudeStream(
       if (thinking != null) 'thinking': thinking,
       if (outputConfig != null) 'output_config': outputConfig,
     };
-    final extraClaude = _customBody(config, modelId);
+    final extraClaude = _customBody(config, modelId, assistantBody: extraBody);
     if (extraClaude.isNotEmpty) {
       body.addAll(extraClaude);
-    }
-    if (extraBody != null && extraBody.isNotEmpty) {
-      extraBody.forEach((k, v) {
-        body[k] = (v is String) ? _parseOverrideValue(v) : v;
-      });
     }
 
     final request = http.Request('POST', url);

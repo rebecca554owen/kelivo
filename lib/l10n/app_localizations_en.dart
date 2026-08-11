@@ -3315,6 +3315,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageModelsTab => 'Models';
 
   @override
+  String get providerDetailPageCustomRequestTitle => 'Custom Request';
+
+  @override
+  String get providerDetailPageCustomRequestDescription =>
+      'Applies to every model from this provider. Model settings override these values; these values override assistant settings.';
+
+  @override
   String get providerDetailPageNetworkTab => 'Network';
 
   @override

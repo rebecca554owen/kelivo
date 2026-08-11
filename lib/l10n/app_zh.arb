@@ -1084,6 +1084,8 @@
   "providerDetailPageProviderDeletedSnackbar": "已删除供应商",
   "providerDetailPageConfigTab": "配置",
   "providerDetailPageModelsTab": "模型",
+  "providerDetailPageCustomRequestTitle": "自定义请求",
+  "providerDetailPageCustomRequestDescription": "应用于此供应商的所有模型。模型配置优先于此处，此处配置优先于助手配置。",
   "providerDetailPageNetworkTab": "网络代理",
   "providerDetailPageEnabledTitle": "是否启用",
   "providerDetailPageManageSectionTitle": "管理",

@@ -72,6 +72,12 @@ void main() {
               'id': 'first',
               'apiKey': 'first-secret',
               'proxyPassword': 'proxy-secret',
+              'customHeaders': [
+                {'name': 'X-Provider', 'value': 'header-value'},
+              ],
+              'customBody': [
+                {'key': 'metadata', 'value': '{"source":"provider"}'},
+              ],
             },
           }),
           // The order-only entry is retained; the configured provider omitted
@@ -115,6 +121,12 @@ void main() {
           jsonDecode(providers.first.payload)['proxyPassword'],
           'proxy-secret',
         );
+        expect(jsonDecode(providers.first.payload)['customHeaders'], [
+          {'name': 'X-Provider', 'value': 'header-value'},
+        ]);
+        expect(jsonDecode(providers.first.payload)['customBody'], [
+          {'key': 'metadata', 'value': '{"source":"provider"}'},
+        ]);
       },
     );
 

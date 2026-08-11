@@ -3194,6 +3194,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageModelsTab => '模型';
 
   @override
+  String get providerDetailPageCustomRequestTitle => '自定义请求';
+
+  @override
+  String get providerDetailPageCustomRequestDescription =>
+      '应用于此供应商的所有模型。模型配置优先于此处，此处配置优先于助手配置。';
+
+  @override
   String get providerDetailPageNetworkTab => '网络代理';
 
   @override
@@ -10132,6 +10139,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageModelsTab => '模型';
 
   @override
+  String get providerDetailPageCustomRequestTitle => '自定义请求';
+
+  @override
+  String get providerDetailPageCustomRequestDescription =>
+      '应用于此供应商的所有模型。模型配置优先于此处，此处配置优先于助手配置。';
+
+  @override
   String get providerDetailPageNetworkTab => '网络代理';
 
   @override
@@ -17067,6 +17081,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageModelsTab => '模型';
+
+  @override
+  String get providerDetailPageCustomRequestTitle => '自訂請求';
+
+  @override
+  String get providerDetailPageCustomRequestDescription =>
+      '套用於此供應商的所有模型。模型設定優先於此處，此處設定優先於助手設定。';
 
   @override
   String get providerDetailPageNetworkTab => '網路代理';

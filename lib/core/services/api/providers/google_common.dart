@@ -600,26 +600,28 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       }
     }
 
-    final headers = <String, String>{'Content-Type': 'application/json'};
+    final requestHeaders = <String, String>{'Content-Type': 'application/json'};
     if (isVertex) {
       final token = await GoogleServiceAccountAuth.getAccessTokenFromJson(
         config.serviceAccountJson ?? '',
       );
-      headers['Authorization'] = 'Bearer $token';
+      requestHeaders['Authorization'] = 'Bearer $token';
       final proj = (config.projectId ?? '').trim();
       if (proj.isNotEmpty) {
-        headers['X-Goog-User-Project'] = proj;
+        requestHeaders['X-Goog-User-Project'] = proj;
       }
     } else {
       final apiKey = _effectiveApiKey(config);
       if (apiKey.isNotEmpty) {
-        headers['x-goog-api-key'] = apiKey;
+        requestHeaders['x-goog-api-key'] = apiKey;
       }
     }
-    headers.addAll(_customHeaders(config, modelId));
-    if (extraHeaders != null && extraHeaders.isNotEmpty) {
-      headers.addAll(extraHeaders);
-    }
+    final headers = _customHeaders(
+      config,
+      modelId,
+      baseHeaders: requestHeaders,
+      assistantHeaders: extraHeaders,
+    );
 
     final toolsArr = _buildGeminiToolsArray(
       builtIns: builtIns,
@@ -659,13 +661,8 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       if (toolsArr.isNotEmpty) 'tools': toolsArr,
       if (geminiToolConfig != null) 'toolConfig': geminiToolConfig,
     };
-    final extraG = _customBody(config, modelId);
+    final extraG = _customBody(config, modelId, assistantBody: extraBody);
     if (extraG.isNotEmpty) baseBody.addAll(extraG);
-    if (extraBody != null && extraBody.isNotEmpty) {
-      extraBody.forEach((k, v) {
-        baseBody[k] = (v is String) ? _parseOverrideValue(v) : v;
-      });
-    }
 
     TokenUsage? totalUsage;
     List<Map<String, dynamic>> currentContents =
@@ -1183,36 +1180,33 @@ Stream<ChatStreamChunk> _sendGoogleStream(
     };
 
     final request = http.Request('POST', uri);
-    final headers = <String, String>{
+    final requestHeaders = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     };
     if (config.vertexAI == true) {
       final token = await _maybeVertexAccessToken(config);
       if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
+        requestHeaders['Authorization'] = 'Bearer $token';
       }
       final proj = (config.projectId ?? '').trim();
-      if (proj.isNotEmpty) headers['X-Goog-User-Project'] = proj;
+      if (proj.isNotEmpty) requestHeaders['X-Goog-User-Project'] = proj;
     } else {
       final apiKey = _effectiveApiKey(config);
       if (apiKey.isNotEmpty) {
-        headers['x-goog-api-key'] = apiKey;
+        requestHeaders['x-goog-api-key'] = apiKey;
       }
     }
-    headers.addAll(_customHeaders(config, modelId));
-    if (extraHeaders != null && extraHeaders.isNotEmpty) {
-      headers.addAll(extraHeaders);
-    }
+    final headers = _customHeaders(
+      config,
+      modelId,
+      baseHeaders: requestHeaders,
+      assistantHeaders: extraHeaders,
+    );
     request.headers.addAll(headers);
-    final extra = _customBody(config, modelId);
+    final extra = _customBody(config, modelId, assistantBody: extraBody);
     if (extra.isNotEmpty) {
       body.addAll(extra);
-    }
-    if (extraBody != null && extraBody.isNotEmpty) {
-      extraBody.forEach((k, v) {
-        body[k] = (v is String) ? _parseOverrideValue(v) : v;
-      });
     }
     body['contents'] = _googleApiContents(convo);
     request.body = jsonEncode(body);

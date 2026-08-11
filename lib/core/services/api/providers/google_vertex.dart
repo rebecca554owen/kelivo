@@ -187,14 +187,17 @@ Stream<ChatStreamChunk> _sendGoogleVertexClaudeStream({
     }
   }
 
-  final headers = <String, String>{'Content-Type': 'application/json'};
+  final requestHeaders = <String, String>{'Content-Type': 'application/json'};
   final token = await _maybeVertexAccessToken(config);
   if (token != null && token.isNotEmpty) {
-    headers['Authorization'] = 'Bearer $token';
+    requestHeaders['Authorization'] = 'Bearer $token';
   }
-  if (extraHeaders != null) {
-    headers.addAll(extraHeaders);
-  }
+  final headers = _customHeaders(
+    config,
+    modelId,
+    baseHeaders: requestHeaders,
+    assistantHeaders: extraHeaders,
+  );
 
   // Extract system prompt
   String systemPrompt = '';
@@ -233,9 +236,7 @@ Stream<ChatStreamChunk> _sendGoogleVertexClaudeStream({
     // Consume injected media refs for user and assistant history turns.
     final hasInternalMedia = internalMediaRefs.isNotEmpty;
     final hasAttachedImages =
-        isLast &&
-        roleName == 'user' &&
-        (userImagePaths?.isNotEmpty == true);
+        isLast && roleName == 'user' && (userImagePaths?.isNotEmpty == true);
 
     if ((roleName == 'user' || roleName == 'assistant') &&
         (hasMarkdownImages || hasInternalMedia || hasAttachedImages)) {
@@ -346,20 +347,14 @@ Stream<ChatStreamChunk> _sendGoogleVertexClaudeStream({
           }
           continue;
         }
-        await addVertexClaudeImage(
-          mediaRef.uri,
-          explicitMime: mediaRef.mime,
-        );
+        await addVertexClaudeImage(mediaRef.uri, explicitMime: mediaRef.mime);
       }
       initialMessages.add({
         'role': roleName,
         'content': parts.isEmpty ? raw : parts,
       });
     } else {
-      initialMessages.add({
-        'role': roleName,
-        'content': raw,
-      });
+      initialMessages.add({'role': roleName, 'content': raw});
     }
   }
 
@@ -466,11 +461,7 @@ Stream<ChatStreamChunk> _sendGoogleVertexClaudeStream({
       if (thinking != null) 'thinking': thinking,
       if (outputConfig != null) 'output_config': outputConfig,
     };
-    if (extraBody != null) {
-      extraBody.forEach((k, v) {
-        body[k] = (v is String) ? _parseOverrideValue(v) : v;
-      });
-    }
+    body.addAll(_customBody(config, modelId, assistantBody: extraBody));
 
     final request = http.Request('POST', url);
     request.headers.addAll(headers);

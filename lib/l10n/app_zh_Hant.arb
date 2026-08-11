@@ -1077,6 +1077,8 @@
   "providerDetailPageProviderDeletedSnackbar": "已刪除供應商",
   "providerDetailPageConfigTab": "設定",
   "providerDetailPageModelsTab": "模型",
+  "providerDetailPageCustomRequestTitle": "自訂請求",
+  "providerDetailPageCustomRequestDescription": "套用於此供應商的所有模型。模型設定優先於此處，此處設定優先於助手設定。",
   "providerDetailPageNetworkTab": "網路代理",
   "providerDetailPageEnabledTitle": "是否啟用",
   "providerDetailPageManageSectionTitle": "管理",

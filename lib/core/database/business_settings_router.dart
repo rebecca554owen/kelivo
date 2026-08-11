@@ -542,7 +542,7 @@ final class BusinessSettingsRouter {
             'balanceEnabled',
             'claudePromptCachingEnabled',
           },
-          lists: const {'models', 'apiKeys'},
+          lists: const {'models', 'apiKeys', 'customHeaders', 'customBody'},
           maps: const {'modelOverrides', 'keyManagement'},
         );
         _validateProviderChildren(kind, payload);

@@ -15,13 +15,23 @@ String _effectiveApiKey(ProviderConfig cfg) =>
 Set<String> _builtInTools(ProviderConfig cfg, String modelId) =>
     ChatApiService._builtInTools(cfg, modelId);
 
-Map<String, String> _customHeaders(ProviderConfig cfg, String modelId) =>
-    ChatApiService._customHeaders(cfg, modelId);
+Map<String, String> _customHeaders(
+  ProviderConfig cfg,
+  String modelId, {
+  Map<String, String> baseHeaders = const <String, String>{},
+  Map<String, String>? assistantHeaders,
+}) => ChatApiService._customHeaders(
+  cfg,
+  modelId,
+  baseHeaders: baseHeaders,
+  assistantHeaders: assistantHeaders,
+);
 
-dynamic _parseOverrideValue(String v) => ChatApiService._parseOverrideValue(v);
-
-Map<String, dynamic> _customBody(ProviderConfig cfg, String modelId) =>
-    ChatApiService._customBody(cfg, modelId);
+Map<String, dynamic> _customBody(
+  ProviderConfig cfg,
+  String modelId, {
+  Map<String, dynamic>? assistantBody,
+}) => ChatApiService._customBody(cfg, modelId, assistantBody: assistantBody);
 
 ModelInfo _effectiveModelInfo(ProviderConfig cfg, String modelId) =>
     ChatApiService._effectiveModelInfo(cfg, modelId);

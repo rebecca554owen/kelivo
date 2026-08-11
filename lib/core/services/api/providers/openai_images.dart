@@ -425,12 +425,15 @@ Map<String, String> _openAIImagesJsonHeaders(
   String modelId, {
   Map<String, String>? extraHeaders,
 }) {
-  return <String, String>{
-    'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-    'Content-Type': 'application/json',
-    ..._customHeaders(config, modelId),
-    if (extraHeaders != null) ...extraHeaders,
-  };
+  return _customHeaders(
+    config,
+    modelId,
+    baseHeaders: <String, String>{
+      'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+      'Content-Type': 'application/json',
+    },
+    assistantHeaders: extraHeaders,
+  );
 }
 
 Map<String, String> _openAIImagesMultipartHeaders(
@@ -438,11 +441,14 @@ Map<String, String> _openAIImagesMultipartHeaders(
   String modelId, {
   Map<String, String>? extraHeaders,
 }) {
-  final headers = <String, String>{
-    'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-    ..._customHeaders(config, modelId),
-    if (extraHeaders != null) ...extraHeaders,
-  };
+  final headers = _customHeaders(
+    config,
+    modelId,
+    baseHeaders: <String, String>{
+      'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+    },
+    assistantHeaders: extraHeaders,
+  );
   headers.removeWhere((key, _) => key.toLowerCase() == 'content-type');
   return headers;
 }
@@ -453,13 +459,8 @@ void _applyOpenAIImagesExtraBody(
   String modelId,
   Map<String, dynamic>? extraBody,
 ) {
-  final custom = _customBody(config, modelId);
+  final custom = _customBody(config, modelId, assistantBody: extraBody);
   if (custom.isNotEmpty) body.addAll(custom);
-  if (extraBody != null && extraBody.isNotEmpty) {
-    extraBody.forEach((key, value) {
-      body[key] = value is String ? _parseOverrideValue(value) : value;
-    });
-  }
 }
 
 String _openAIImagesOutputMime(

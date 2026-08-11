@@ -124,7 +124,6 @@ void _appendChatTool(Map<String, dynamic> body, Map<String, dynamic> tool) {
   body['tool_choice'] ??= 'auto';
 }
 
-
 void _applyCompatibleResponsesReasoning(
   Map<String, dynamic> body, {
   required ProviderConfig config,
@@ -1758,16 +1757,16 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   }
 
   final request = http.Request('POST', url);
-  final headers = <String, String>{
-    'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-    'Content-Type': 'application/json',
-    'Accept': stream ? 'text/event-stream' : 'application/json',
-  };
-  // Merge custom headers (override takes precedence)
-  headers.addAll(_customHeaders(config, modelId));
-  if (extraHeaders != null && extraHeaders.isNotEmpty) {
-    headers.addAll(extraHeaders);
-  }
+  final headers = _customHeaders(
+    config,
+    modelId,
+    baseHeaders: <String, String>{
+      'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+      'Content-Type': 'application/json',
+      'Accept': stream ? 'text/event-stream' : 'application/json',
+    },
+    assistantHeaders: extraHeaders,
+  );
   request.headers.addAll(headers);
   _maybeAddStreamingUsageOptions(
     body,
@@ -1793,14 +1792,9 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   );
 
   // Merge custom body keys (override takes precedence)
-  final extraBodyCfg = _customBody(config, modelId);
+  final extraBodyCfg = _customBody(config, modelId, assistantBody: extraBody);
   if (extraBodyCfg.isNotEmpty) {
     body.addAll(extraBodyCfg);
-  }
-  if (extraBody != null && extraBody.isNotEmpty) {
-    extraBody.forEach((k, v) {
-      body[k] = (v is String) ? _parseOverrideValue(v) : v;
-    });
   }
   _sanitizeOpenAIGpt5SamplingParams(
     body,
@@ -1989,7 +1983,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           final results = <Map<String, dynamic>>[];
           final resultsInfo = <ToolResultInfo>[];
           for (final c in callInfos) {
-            final res = await effectiveOnToolCall(c.name, c.arguments, toolCallId: c.id);
+            final res = await effectiveOnToolCall(
+              c.name,
+              c.arguments,
+              toolCallId: c.id,
+            );
             results.add({'tool_call_id': c.id, 'content': res});
             resultsInfo.add(
               ToolResultInfo(
@@ -2011,15 +2009,16 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           }
           // Follow-up request
           final req = http.Request('POST', url);
-          final headers2 = <String, String>{
-            'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          };
-          headers2.addAll(_customHeaders(config, modelId));
-          if (extraHeaders != null && extraHeaders.isNotEmpty) {
-            headers2.addAll(extraHeaders);
-          }
+          final headers2 = _customHeaders(
+            config,
+            modelId,
+            baseHeaders: <String, String>{
+              'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            assistantHeaders: extraHeaders,
+          );
           req.headers.addAll(headers2);
           final next = <Map<String, dynamic>>[];
           for (final m in messages) {
@@ -2297,11 +2296,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             if (extraBodyCfg.isNotEmpty) {
               body2.addAll(extraBodyCfg);
             }
-            if (extraBody != null && extraBody.isNotEmpty) {
-              extraBody.forEach((k, v) {
-                body2[k] = (v is String) ? _parseOverrideValue(v) : v;
-              });
-            }
 
             _sanitizeOpenAIGpt5SamplingParams(
               body2,
@@ -2317,16 +2311,16 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             );
 
             final req2 = http.Request('POST', url);
-            final headers2 = <String, String>{
-              'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-              'Content-Type': 'application/json',
-              'Accept': 'text/event-stream',
-            };
-            // Apply custom headers
-            headers2.addAll(_customHeaders(config, modelId));
-            if (extraHeaders != null && extraHeaders.isNotEmpty) {
-              headers2.addAll(extraHeaders);
-            }
+            final headers2 = _customHeaders(
+              config,
+              modelId,
+              baseHeaders: <String, String>{
+                'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+              },
+              assistantHeaders: extraHeaders,
+            );
             req2.headers.addAll(headers2);
             req2.body = jsonEncode(body2);
             final resp2 = await client.send(req2);
@@ -2570,7 +2564,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall(
+                  name,
+                  args,
+                  toolCallId: id,
+                );
                 results2.add({'tool_call_id': id, 'content': res});
                 resultsInfo2.add(
                   ToolResultInfo(
@@ -2946,7 +2944,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final nm = m['__name'] as String;
                 final id2 = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall(nm, args, toolCallId: id2);
+                final res = await effectiveOnToolCall(
+                  nm,
+                  args,
+                  toolCallId: id2,
+                );
                 resultsInfo.add(
                   ToolResultInfo(
                     id: id2,
@@ -3019,13 +3021,12 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 );
 
                 // Apply overrides
-                final extraCfg = _customBody(config, modelId);
+                final extraCfg = _customBody(
+                  config,
+                  modelId,
+                  assistantBody: extraBody,
+                );
                 if (extraCfg.isNotEmpty) body2.addAll(extraCfg);
-                if (extraBody != null && extraBody.isNotEmpty) {
-                  extraBody.forEach((k, v) {
-                    body2[k] = (v is String) ? _parseOverrideValue(v) : v;
-                  });
-                }
                 // Ensure tools are flattened
                 try {
                   if (body2['tools'] is List) {
@@ -3046,16 +3047,17 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 );
 
                 final req2 = http.Request('POST', url);
-                final headers2 = <String, String>{
-                  'Authorization':
-                      'Bearer ${_apiKeyForRequest(config, modelId)}',
-                  'Content-Type': 'application/json',
-                  'Accept': 'text/event-stream',
-                };
-                headers2.addAll(_customHeaders(config, modelId));
-                if (extraHeaders != null && extraHeaders.isNotEmpty) {
-                  headers2.addAll(extraHeaders);
-                }
+                final headers2 = _customHeaders(
+                  config,
+                  modelId,
+                  baseHeaders: <String, String>{
+                    'Authorization':
+                        'Bearer ${_apiKeyForRequest(config, modelId)}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream',
+                  },
+                  assistantHeaders: extraHeaders,
+                );
                 req2.headers.addAll(headers2);
                 req2.body = jsonEncode(body2);
                 final http.StreamedResponse resp2;
@@ -3249,7 +3251,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   final nm = m['__name'] as String;
                   final id2 = m['__id'] as String;
                   final args2 = (m['__args'] as Map<String, dynamic>);
-                  final res2 = await effectiveOnToolCall(nm, args2, toolCallId: id2);
+                  final res2 = await effectiveOnToolCall(
+                    nm,
+                    args2,
+                    toolCallId: id2,
+                  );
                   resultsInfo2.add(
                     ToolResultInfo(
                       id: id2,
@@ -3690,11 +3696,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             if (extraBodyCfg.isNotEmpty) {
               body2.addAll(extraBodyCfg);
             }
-            if (extraBody != null && extraBody.isNotEmpty) {
-              extraBody.forEach((k, v) {
-                body2[k] = (v is String) ? _parseOverrideValue(v) : v;
-              });
-            }
             _sanitizeOpenAIGpt5SamplingParams(
               body2,
               upstreamModelId,
@@ -3708,15 +3709,16 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               thinkingBudget: thinkingBudget,
             );
             final req2 = http.Request('POST', url);
-            final headers2 = <String, String>{
-              'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
-              'Content-Type': 'application/json',
-              'Accept': 'text/event-stream',
-            };
-            headers2.addAll(_customHeaders(config, modelId));
-            if (extraHeaders != null && extraHeaders.isNotEmpty) {
-              headers2.addAll(extraHeaders);
-            }
+            final headers2 = _customHeaders(
+              config,
+              modelId,
+              baseHeaders: <String, String>{
+                'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+              },
+              assistantHeaders: extraHeaders,
+            );
             req2.headers.addAll(headers2);
             req2.body = jsonEncode(body2);
             final http.StreamedResponse resp2;
@@ -3993,7 +3995,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall(
+                  name,
+                  args,
+                  toolCallId: id,
+                );
                 results2.add({'tool_call_id': id, 'content': res});
                 resultsInfo2.add(
                   ToolResultInfo(
@@ -4104,7 +4110,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final name = m['__name'] as String;
                 final id = m['__id'] as String;
                 final args = (m['__args'] as Map<String, dynamic>);
-                final res = await effectiveOnToolCall(name, args, toolCallId: id);
+                final res = await effectiveOnToolCall(
+                  name,
+                  args,
+                  toolCallId: id,
+                );
                 results.add({'tool_call_id': id, 'content': res});
                 resultsInfo.add(
                   ToolResultInfo(
@@ -4195,11 +4205,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 if (extraBodyCfg.isNotEmpty) {
                   body2.addAll(extraBodyCfg);
                 }
-                if (extraBody != null && extraBody.isNotEmpty) {
-                  extraBody.forEach((k, v) {
-                    body2[k] = (v is String) ? _parseOverrideValue(v) : v;
-                  });
-                }
                 _sanitizeOpenAIGpt5SamplingParams(
                   body2,
                   upstreamModelId,
@@ -4213,16 +4218,17 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   thinkingBudget: thinkingBudget,
                 );
                 final req2 = http.Request('POST', url);
-                final headers2 = <String, String>{
-                  'Authorization':
-                      'Bearer ${_apiKeyForRequest(config, modelId)}',
-                  'Content-Type': 'application/json',
-                  'Accept': 'text/event-stream',
-                };
-                headers2.addAll(_customHeaders(config, modelId));
-                if (extraHeaders != null && extraHeaders.isNotEmpty) {
-                  headers2.addAll(extraHeaders);
-                }
+                final headers2 = _customHeaders(
+                  config,
+                  modelId,
+                  baseHeaders: <String, String>{
+                    'Authorization':
+                        'Bearer ${_apiKeyForRequest(config, modelId)}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream',
+                  },
+                  assistantHeaders: extraHeaders,
+                );
                 req2.headers.addAll(headers2);
                 req2.body = jsonEncode(body2);
                 final http.StreamedResponse resp2;
@@ -4475,7 +4481,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     final name = m['__name'] as String;
                     final id = m['__id'] as String;
                     final args = (m['__args'] as Map<String, dynamic>);
-                    final res = await effectiveOnToolCall(name, args, toolCallId: id);
+                    final res = await effectiveOnToolCall(
+                      name,
+                      args,
+                      toolCallId: id,
+                    );
                     results2.add({'tool_call_id': id, 'content': res});
                     resultsInfo2.add(
                       ToolResultInfo(

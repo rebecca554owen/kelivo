@@ -17,7 +17,11 @@ class ModelOverridePayloadParser {
   }
 
   static Map<String, String> customHeaders(Map<String, dynamic> ov) {
-    final list = (ov['headers'] as List?) ?? const <dynamic>[];
+    return customHeadersFromRows(ov['headers']);
+  }
+
+  static Map<String, String> customHeadersFromRows(Object? raw) {
+    final list = raw is List ? raw : const <dynamic>[];
     final out = <String, String>{};
     for (final e in list) {
       if (e is Map) {
@@ -49,7 +53,11 @@ class ModelOverridePayloadParser {
   }
 
   static Map<String, dynamic> customBody(Map<String, dynamic> ov) {
-    final list = (ov['body'] as List?) ?? const <dynamic>[];
+    return customBodyFromRows(ov['body']);
+  }
+
+  static Map<String, dynamic> customBodyFromRows(Object? raw) {
+    final list = raw is List ? raw : const <dynamic>[];
     final out = <String, dynamic>{};
     for (final e in list) {
       if (e is Map) {

@@ -6169,6 +6169,18 @@ abstract class AppLocalizations {
   /// **'Models'**
   String get providerDetailPageModelsTab;
 
+  /// No description provided for @providerDetailPageCustomRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Request'**
+  String get providerDetailPageCustomRequestTitle;
+
+  /// No description provided for @providerDetailPageCustomRequestDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to every model from this provider. Model settings override these values; these values override assistant settings.'**
+  String get providerDetailPageCustomRequestDescription;
+
   /// No description provided for @providerDetailPageNetworkTab.
   ///
   /// In en, this message translates to:
