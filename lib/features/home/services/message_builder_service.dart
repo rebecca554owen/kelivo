@@ -184,9 +184,10 @@ class MessageBuilderService {
     final out = <Map<String, dynamic>>[];
 
     for (final m in source) {
-      String? toolContinuationReasoningContent;
+      String? assistantReasoningContent;
       dynamic reasoningDetails;
       if (m.role == 'assistant') {
+        assistantReasoningContent = _reasoningContentForToolContinuation(m);
         reasoningDetails = _reasoningDetailsForApi(m);
       }
       if (includeToolMessages && m.role == 'assistant') {
@@ -195,8 +196,6 @@ class MessageBuilderService {
           // Tool-call history is only valid once every call has a result.
           final hasPendingToolEvent = events.any((e) => e['content'] == null);
           if (!hasPendingToolEvent) {
-            toolContinuationReasoningContent =
-                _reasoningContentForToolContinuation(m);
             final calls = <Map<String, dynamic>>[];
             final toolMessages = <Map<String, dynamic>>[];
 
@@ -244,9 +243,9 @@ class MessageBuilderService {
                 'content': '\n\n',
                 'tool_calls': calls,
               };
-              if (toolContinuationReasoningContent.isNotEmpty) {
+              if (assistantReasoningContent?.isNotEmpty == true) {
                 assistantToolMessage['reasoning_content'] =
-                    toolContinuationReasoningContent;
+                    assistantReasoningContent;
               }
               // The persisted reasoning_details belong to the final round of
               // this message; attaching them to this synthetic pre-tool
@@ -282,8 +281,8 @@ class MessageBuilderService {
       if (mediaRefs.isNotEmpty) {
         message[internalMediaPathsKey] = mediaRefs;
       }
-      if (toolContinuationReasoningContent?.isNotEmpty == true) {
-        message['reasoning_content'] = toolContinuationReasoningContent;
+      if (assistantReasoningContent?.isNotEmpty == true) {
+        message['reasoning_content'] = assistantReasoningContent;
       }
       if (reasoningDetails != null) {
         message['reasoning_details'] = reasoningDetails;

@@ -62,10 +62,7 @@ void main() {
       final done = chunks.last;
       expect(done.isDone, isTrue);
       expect(done.reasoningDetails, isA<List>());
-      expect(
-        (done.reasoningDetails as List).first['signature'],
-        'sig-proxy-1',
-      );
+      expect((done.reasoningDetails as List).first['signature'], 'sig-proxy-1');
     });
 
     test(
@@ -218,8 +215,7 @@ void main() {
       expect(details[1]['signature'], 'sig-b');
     });
 
-    test('identical consecutive reasoning_details deltas are both kept',
-        () async {
+    test('identical consecutive reasoning_details deltas are both kept', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() async {
         await server.close(force: true);
@@ -262,57 +258,57 @@ void main() {
     });
 
     test(
-        'OpenRouter deltas are always concatenated, even with repeated prefix',
-        () async {
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      addTearDown(() async {
-        await server.close(force: true);
-      });
+      'OpenRouter deltas are always concatenated, even with repeated prefix',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() async {
+          await server.close(force: true);
+        });
 
-      server.listen((request) async {
-        await utf8.decoder.bind(request).join();
-        request.response.statusCode = HttpStatus.ok;
-        request.response.headers.contentType = ContentType(
-          'text',
-          'event-stream',
-        );
-        // Two delta chunks where the second carries two new entries; per
-        // OpenRouter docs the full sequence is the ordered concatenation of
-        // all chunks, so the result must be [X, X, Y], not [X, Y].
-        request.response.write(
-          'data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.text","text":"entry","signature":"sig-x"}]},"finish_reason":null}]}\n\n',
-        );
-        request.response.write(
-          'data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.text","text":"entry","signature":"sig-x"},{"type":"reasoning.text","text":"other","signature":"sig-y"}],"content":"done"},"finish_reason":"stop"}]}\n\n',
-        );
-        request.response.write('data: [DONE]\n\n');
-        await request.response.close();
-      });
+        server.listen((request) async {
+          await utf8.decoder.bind(request).join();
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType(
+            'text',
+            'event-stream',
+          );
+          // Two delta chunks where the second carries two new entries; per
+          // OpenRouter docs the full sequence is the ordered concatenation of
+          // all chunks, so the result must be [X, X, Y], not [X, Y].
+          request.response.write(
+            'data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.text","text":"entry","signature":"sig-x"}]},"finish_reason":null}]}\n\n',
+          );
+          request.response.write(
+            'data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.text","text":"entry","signature":"sig-x"},{"type":"reasoning.text","text":"other","signature":"sig-y"}],"content":"done"},"finish_reason":"stop"}]}\n\n',
+          );
+          request.response.write('data: [DONE]\n\n');
+          await request.response.close();
+        });
 
-      final chunks = await ChatApiService.sendMessageStream(
-        config: ProviderConfig(
-          id: 'OpenRouter',
-          enabled: true,
-          name: 'OpenRouter',
-          apiKey: 'test-key',
-          baseUrl: 'http://${server.address.address}:${server.port}/v1',
-          providerType: ProviderKind.openai,
-        ),
-        modelId: 'claude-sonnet-4-6',
-        messages: const [
-          {'role': 'user', 'content': 'hello'},
-        ],
-      ).toList();
+        final chunks = await ChatApiService.sendMessageStream(
+          config: ProviderConfig(
+            id: 'OpenRouter',
+            enabled: true,
+            name: 'OpenRouter',
+            apiKey: 'test-key',
+            baseUrl: 'http://${server.address.address}:${server.port}/v1',
+            providerType: ProviderKind.openai,
+          ),
+          modelId: 'claude-sonnet-4-6',
+          messages: const [
+            {'role': 'user', 'content': 'hello'},
+          ],
+        ).toList();
 
-      final details = chunks.last.reasoningDetails as List;
-      expect(details, hasLength(3));
-      expect(details[0]['signature'], 'sig-x');
-      expect(details[1]['signature'], 'sig-x');
-      expect(details[2]['signature'], 'sig-y');
-    });
+        final details = chunks.last.reasoningDetails as List;
+        expect(details, hasLength(3));
+        expect(details[0]['signature'], 'sig-x');
+        expect(details[1]['signature'], 'sig-x');
+        expect(details[2]['signature'], 'sig-y');
+      },
+    );
 
-    test('cumulative reasoning_details snapshots replace, not duplicate',
-        () async {
+    test('cumulative reasoning_details snapshots replace, not duplicate', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() async {
         await server.close(force: true);
@@ -357,18 +353,19 @@ void main() {
     });
 
     test(
-      'non-Claude models keep unsigned reasoning_content in history',
+      'Kimi preserved-thinking route variants keep ordinary history',
       () async {
-        late Map<String, dynamic> requestBody;
+        final requestBodies = <Map<String, dynamic>>[];
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
         addTearDown(() async {
           await server.close(force: true);
         });
 
         server.listen((request) async {
-          requestBody =
-              (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
-                  .cast<String, dynamic>();
+          requestBodies.add(
+            (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                .cast<String, dynamic>(),
+          );
           request.response.statusCode = HttpStatus.ok;
           request.response.headers.contentType = ContentType(
             'text',
@@ -381,25 +378,34 @@ void main() {
           await request.response.close();
         });
 
-        final chunks = await ChatApiService.sendMessageStream(
-          config: _openAIConfig(
-            'http://${server.address.address}:${server.port}/v1',
-          ),
-          modelId: 'kimi-k2-thinking',
-          messages: const [
-            {'role': 'user', 'content': 'hello'},
-            {
-              'role': 'assistant',
-              'content': 'hi there',
-              'reasoning_content': 'kimi thinking text',
-            },
-            {'role': 'user', 'content': 'follow up'},
-          ],
-        ).toList();
+        for (final modelId in const [
+          'moonshotai/kimi-k3:nitro',
+          'moonshotai/kimi-k2.7-code:floor',
+        ]) {
+          final chunks = await ChatApiService.sendMessageStream(
+            config: _openAIConfig(
+              'http://${server.address.address}:${server.port}/v1',
+            ),
+            modelId: modelId,
+            messages: const [
+              {'role': 'user', 'content': 'hello'},
+              {
+                'role': 'assistant',
+                'content': 'hi there',
+                'reasoning_content': 'preserved thinking text',
+              },
+              {'role': 'user', 'content': 'follow up'},
+            ],
+          ).toList();
 
-        expect(chunks.last.isDone, isTrue);
-        final messages = (requestBody['messages'] as List).cast<Map>();
-        expect(messages[1]['reasoning_content'], 'kimi thinking text');
+          expect(chunks.last.isDone, isTrue);
+        }
+
+        expect(requestBodies, hasLength(2));
+        for (final requestBody in requestBodies) {
+          final messages = (requestBody['messages'] as List).cast<Map>();
+          expect(messages[1]['reasoning_content'], 'preserved thinking text');
+        }
       },
     );
   });
