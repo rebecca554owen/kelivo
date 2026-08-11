@@ -109,6 +109,16 @@ class SettingsProvider extends ChangeNotifier {
   static const String _thinkingBudgetKey = 'thinking_budget_v1';
   static const String _titleGenerationThinkingEnabledKey =
       'title_generation_thinking_enabled_v1';
+  static const String _summaryGenerationThinkingEnabledKey =
+      'summary_generation_thinking_enabled_v1';
+  static const String _suggestionGenerationThinkingEnabledKey =
+      'suggestion_generation_thinking_enabled_v1';
+  static const String _compressGenerationThinkingEnabledKey =
+      'compress_generation_thinking_enabled_v1';
+  static const String _translateGenerationThinkingEnabledKey =
+      'translate_generation_thinking_enabled_v1';
+  static const String _ocrGenerationThinkingEnabledKey =
+      'ocr_generation_thinking_enabled_v1';
   static const String _memoryModelKey = 'memory_model_v1';
   static const String _memoryModelThinkingEnabledKey =
       'memory_model_thinking_enabled_v1';
@@ -846,7 +856,17 @@ class SettingsProvider extends ChangeNotifier {
     // load thinking budget (reasoning strength)
     _thinkingBudget = prefs.getInt(_thinkingBudgetKey);
     _titleGenerationThinkingEnabled =
-        prefs.getBool(_titleGenerationThinkingEnabledKey) ?? true;
+        prefs.getBool(_titleGenerationThinkingEnabledKey) ?? false;
+    _summaryGenerationThinkingEnabled =
+        prefs.getBool(_summaryGenerationThinkingEnabledKey) ?? false;
+    _suggestionGenerationThinkingEnabled =
+        prefs.getBool(_suggestionGenerationThinkingEnabledKey) ?? false;
+    _compressGenerationThinkingEnabled =
+        prefs.getBool(_compressGenerationThinkingEnabledKey) ?? false;
+    _translateGenerationThinkingEnabled =
+        prefs.getBool(_translateGenerationThinkingEnabledKey) ?? false;
+    _ocrGenerationThinkingEnabled =
+        prefs.getBool(_ocrGenerationThinkingEnabledKey) ?? false;
 
     // memory system v1 (§4.2)
     final memorySel = prefs.getString(_memoryModelKey);
@@ -3501,8 +3521,9 @@ Requirements:
     }
   }
 
-  // Title generation thinking toggle. Defaults to true for backward compatibility.
-  bool _titleGenerationThinkingEnabled = true;
+  // Background model thinking toggles. All default to off to keep these
+  // latency-sensitive utility requests fast.
+  bool _titleGenerationThinkingEnabled = false;
   bool get titleGenerationThinkingEnabled => _titleGenerationThinkingEnabled;
   Future<void> setTitleGenerationThinkingEnabled(bool enabled) async {
     if (_titleGenerationThinkingEnabled == enabled) return;
@@ -3513,7 +3534,74 @@ Requirements:
   }
 
   Future<void> resetTitleGenerationThinkingEnabled() async =>
-      setTitleGenerationThinkingEnabled(true);
+      setTitleGenerationThinkingEnabled(false);
+
+  bool _summaryGenerationThinkingEnabled = false;
+  bool get summaryGenerationThinkingEnabled =>
+      _summaryGenerationThinkingEnabled;
+  Future<void> setSummaryGenerationThinkingEnabled(bool enabled) async {
+    if (_summaryGenerationThinkingEnabled == enabled) return;
+    _summaryGenerationThinkingEnabled = enabled;
+    notifyListeners();
+    await _preferences.setBool(_summaryGenerationThinkingEnabledKey, enabled);
+  }
+
+  Future<void> resetSummaryGenerationThinkingEnabled() async =>
+      setSummaryGenerationThinkingEnabled(false);
+
+  bool _suggestionGenerationThinkingEnabled = false;
+  bool get suggestionGenerationThinkingEnabled =>
+      _suggestionGenerationThinkingEnabled;
+  Future<void> setSuggestionGenerationThinkingEnabled(bool enabled) async {
+    if (_suggestionGenerationThinkingEnabled == enabled) return;
+    _suggestionGenerationThinkingEnabled = enabled;
+    notifyListeners();
+    await _preferences.setBool(
+      _suggestionGenerationThinkingEnabledKey,
+      enabled,
+    );
+  }
+
+  Future<void> resetSuggestionGenerationThinkingEnabled() async =>
+      setSuggestionGenerationThinkingEnabled(false);
+
+  bool _compressGenerationThinkingEnabled = false;
+  bool get compressGenerationThinkingEnabled =>
+      _compressGenerationThinkingEnabled;
+  Future<void> setCompressGenerationThinkingEnabled(bool enabled) async {
+    if (_compressGenerationThinkingEnabled == enabled) return;
+    _compressGenerationThinkingEnabled = enabled;
+    notifyListeners();
+    await _preferences.setBool(_compressGenerationThinkingEnabledKey, enabled);
+  }
+
+  Future<void> resetCompressGenerationThinkingEnabled() async =>
+      setCompressGenerationThinkingEnabled(false);
+
+  bool _translateGenerationThinkingEnabled = false;
+  bool get translateGenerationThinkingEnabled =>
+      _translateGenerationThinkingEnabled;
+  Future<void> setTranslateGenerationThinkingEnabled(bool enabled) async {
+    if (_translateGenerationThinkingEnabled == enabled) return;
+    _translateGenerationThinkingEnabled = enabled;
+    notifyListeners();
+    await _preferences.setBool(_translateGenerationThinkingEnabledKey, enabled);
+  }
+
+  Future<void> resetTranslateGenerationThinkingEnabled() async =>
+      setTranslateGenerationThinkingEnabled(false);
+
+  bool _ocrGenerationThinkingEnabled = false;
+  bool get ocrGenerationThinkingEnabled => _ocrGenerationThinkingEnabled;
+  Future<void> setOcrGenerationThinkingEnabled(bool enabled) async {
+    if (_ocrGenerationThinkingEnabled == enabled) return;
+    _ocrGenerationThinkingEnabled = enabled;
+    notifyListeners();
+    await _preferences.setBool(_ocrGenerationThinkingEnabledKey, enabled);
+  }
+
+  Future<void> resetOcrGenerationThinkingEnabled() async =>
+      setOcrGenerationThinkingEnabled(false);
 
   // Memory system v1 (§4.2)
   String? _memoryModelProvider;
@@ -3768,7 +3856,44 @@ Requirements:
       setMemoryProfileDistillPromptEn(MemoryPrompts.profileDistillEn);
 
   int? titleGenerationThinkingBudgetFor(int? assistantBudget) {
-    if (!_titleGenerationThinkingEnabled) return 0;
+    return _backgroundThinkingBudgetFor(
+      _titleGenerationThinkingEnabled,
+      assistantBudget,
+    );
+  }
+
+  int? summaryGenerationThinkingBudgetFor(int? assistantBudget) =>
+      _backgroundThinkingBudgetFor(
+        _summaryGenerationThinkingEnabled,
+        assistantBudget,
+      );
+
+  int? suggestionGenerationThinkingBudgetFor(int? assistantBudget) =>
+      _backgroundThinkingBudgetFor(
+        _suggestionGenerationThinkingEnabled,
+        assistantBudget,
+      );
+
+  int? compressGenerationThinkingBudgetFor(int? assistantBudget) =>
+      _backgroundThinkingBudgetFor(
+        _compressGenerationThinkingEnabled,
+        assistantBudget,
+      );
+
+  int? translateGenerationThinkingBudgetFor(int? assistantBudget) =>
+      _backgroundThinkingBudgetFor(
+        _translateGenerationThinkingEnabled,
+        assistantBudget,
+      );
+
+  int? ocrGenerationThinkingBudgetFor(int? assistantBudget) =>
+      _backgroundThinkingBudgetFor(
+        _ocrGenerationThinkingEnabled,
+        assistantBudget,
+      );
+
+  int? _backgroundThinkingBudgetFor(bool enabled, int? assistantBudget) {
+    if (!enabled) return 0;
     return assistantBudget ?? _thinkingBudget;
   }
 
@@ -4753,6 +4878,14 @@ Requirements:
     copy._ocrEnabled = _ocrEnabled;
     copy._thinkingBudget = _thinkingBudget;
     copy._titleGenerationThinkingEnabled = _titleGenerationThinkingEnabled;
+    copy._summaryGenerationThinkingEnabled = _summaryGenerationThinkingEnabled;
+    copy._suggestionGenerationThinkingEnabled =
+        _suggestionGenerationThinkingEnabled;
+    copy._compressGenerationThinkingEnabled =
+        _compressGenerationThinkingEnabled;
+    copy._translateGenerationThinkingEnabled =
+        _translateGenerationThinkingEnabled;
+    copy._ocrGenerationThinkingEnabled = _ocrGenerationThinkingEnabled;
     copy._memoryModelProvider = _memoryModelProvider;
     copy._memoryModelId = _memoryModelId;
     copy._memoryModelThinkingEnabled = _memoryModelThinkingEnabled;

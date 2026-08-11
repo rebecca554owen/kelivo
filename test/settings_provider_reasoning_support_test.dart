@@ -175,21 +175,18 @@ void main() {
     );
 
     group('title generation thinking', () {
-      test(
-        'defaults to enabled and preserves existing budget fallback',
-        () async {
-          final harness = await createBusinessTestHarness(
-            initial: {'thinking_budget_v1': 16000},
-          );
-          final settings = SettingsProvider(harness.preferences);
+      test('defaults to disabled', () async {
+        final harness = await createBusinessTestHarness(
+          initial: {'thinking_budget_v1': 16000},
+        );
+        final settings = SettingsProvider(harness.preferences);
 
-          await settings.loaded;
+        await settings.loaded;
 
-          expect(settings.titleGenerationThinkingEnabled, isTrue);
-          expect(settings.titleGenerationThinkingBudgetFor(null), 16000);
-          expect(settings.titleGenerationThinkingBudgetFor(1024), 1024);
-        },
-      );
+        expect(settings.titleGenerationThinkingEnabled, isFalse);
+        expect(settings.titleGenerationThinkingBudgetFor(null), 0);
+        expect(settings.titleGenerationThinkingBudgetFor(1024), 0);
+      });
 
       test(
         'disabled title generation thinking resolves to off budget',
@@ -199,6 +196,7 @@ void main() {
 
           await settings.loaded;
           await settings.setThinkingBudget(16000);
+          await settings.setTitleGenerationThinkingEnabled(true);
           await settings.setTitleGenerationThinkingEnabled(false);
 
           expect(settings.titleGenerationThinkingEnabled, isFalse);
@@ -225,10 +223,10 @@ void main() {
         expect(settings.titleGenerationThinkingBudgetFor(32000), 0);
       });
 
-      test('reset restores enabled fallback behavior', () async {
+      test('reset restores disabled default', () async {
         final harness = await createBusinessTestHarness(
           initial: {
-            'title_generation_thinking_enabled_v1': false,
+            'title_generation_thinking_enabled_v1': true,
             'thinking_budget_v1': 64000,
           },
         );
@@ -237,12 +235,70 @@ void main() {
         await settings.loaded;
         await settings.resetTitleGenerationThinkingEnabled();
 
-        expect(settings.titleGenerationThinkingEnabled, isTrue);
-        expect(settings.titleGenerationThinkingBudgetFor(null), 64000);
+        expect(settings.titleGenerationThinkingEnabled, isFalse);
+        expect(settings.titleGenerationThinkingBudgetFor(null), 0);
 
         final prefs = harness.preferences;
-        expect(prefs.getBool('title_generation_thinking_enabled_v1'), isTrue);
+        expect(prefs.getBool('title_generation_thinking_enabled_v1'), isFalse);
       });
+
+      test(
+        'all utility model thinking toggles default off and persist',
+        () async {
+          final harness = await createBusinessTestHarness(
+            initial: {'thinking_budget_v1': 16000},
+          );
+          final settings = SettingsProvider(harness.preferences);
+
+          await settings.loaded;
+
+          expect(settings.summaryGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.suggestionGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.compressGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.translateGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.ocrGenerationThinkingBudgetFor(1024), 0);
+
+          await settings.setSummaryGenerationThinkingEnabled(true);
+          await settings.setSuggestionGenerationThinkingEnabled(true);
+          await settings.setCompressGenerationThinkingEnabled(true);
+          await settings.setTranslateGenerationThinkingEnabled(true);
+          await settings.setOcrGenerationThinkingEnabled(true);
+
+          expect(settings.summaryGenerationThinkingBudgetFor(null), 16000);
+          expect(settings.suggestionGenerationThinkingBudgetFor(1024), 1024);
+          expect(settings.compressGenerationThinkingBudgetFor(1024), 1024);
+          expect(settings.translateGenerationThinkingBudgetFor(1024), 1024);
+          expect(settings.ocrGenerationThinkingBudgetFor(1024), 1024);
+          expect(
+            harness.preferences.getBool(
+              'summary_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool(
+              'suggestion_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool(
+              'compress_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool(
+              'translate_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool('ocr_generation_thinking_enabled_v1'),
+            isTrue,
+          );
+        },
+      );
     });
 
     test(

@@ -174,6 +174,9 @@ class _DesktopTranslatePageState extends State<DesktopTranslatePage> {
         messages: [
           {'role': 'user', 'content': prompt},
         ],
+        thinkingBudget: settings.translateGenerationThinkingBudgetFor(
+          context.read<AssistantProvider>().currentAssistant?.thinkingBudget,
+        ),
       );
 
       _subscription = stream.listen(

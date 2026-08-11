@@ -317,10 +317,8 @@ class DesktopDefaultModelPane extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _TitleThinkingSwitchRow(
-                        settings: sp,
-                        l10n: l10n,
-                        cs: cs,
+                      _ThinkingSwitchRow(
+                        task: _BackgroundModelTask.title,
                         trailing: _SmallIconBtn(
                           icon: lucide.Lucide.X,
                           onTap: () => Navigator.of(ctx).maybePop(),
@@ -410,6 +408,11 @@ class DesktopDefaultModelPane extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _ThinkingSwitchRow(
+                    task: _BackgroundModelTask.translate,
+                    trailing: SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -442,6 +445,7 @@ class DesktopDefaultModelPane extends StatelessWidget {
                         dense: true,
                         onTap: () async {
                           await sp.resetTranslatePrompt();
+                          await sp.resetTranslateGenerationThinkingEnabled();
                           ctrl.text = sp.translatePrompt;
                         },
                       ),
@@ -503,6 +507,11 @@ class DesktopDefaultModelPane extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _ThinkingSwitchRow(
+                    task: _BackgroundModelTask.ocr,
+                    trailing: SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -535,6 +544,7 @@ class DesktopDefaultModelPane extends StatelessWidget {
                         dense: true,
                         onTap: () async {
                           await sp.resetOcrPrompt();
+                          await sp.resetOcrGenerationThinkingEnabled();
                           ctrl.text = sp.ocrPrompt;
                         },
                       ),
@@ -585,6 +595,11 @@ class DesktopDefaultModelPane extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _ThinkingSwitchRow(
+                    task: _BackgroundModelTask.summary,
+                    trailing: SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -617,6 +632,7 @@ class DesktopDefaultModelPane extends StatelessWidget {
                         dense: true,
                         onTap: () async {
                           await sp.resetSummaryPrompt();
+                          await sp.resetSummaryGenerationThinkingEnabled();
                           ctrl.text = sp.summaryPrompt;
                         },
                       ),
@@ -678,6 +694,11 @@ class DesktopDefaultModelPane extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _ThinkingSwitchRow(
+                    task: _BackgroundModelTask.compress,
+                    trailing: SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -710,6 +731,7 @@ class DesktopDefaultModelPane extends StatelessWidget {
                         dense: true,
                         onTap: () async {
                           await sp.resetCompressPrompt();
+                          await sp.resetCompressGenerationThinkingEnabled();
                           ctrl.text = sp.compressPrompt;
                         },
                       ),
@@ -768,6 +790,11 @@ class DesktopDefaultModelPane extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _ThinkingSwitchRow(
+                    task: _BackgroundModelTask.suggestion,
+                    trailing: SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -800,6 +827,7 @@ class DesktopDefaultModelPane extends StatelessWidget {
                         dense: true,
                         onTap: () async {
                           await sp.resetSuggestionPrompt();
+                          await sp.resetSuggestionGenerationThinkingEnabled();
                           ctrl.text = sp.suggestionPrompt;
                         },
                       ),
@@ -1018,65 +1046,97 @@ class _ModelCardState extends State<_ModelCard> {
   }
 }
 
-class _TitleThinkingSwitchRow extends StatelessWidget {
-  const _TitleThinkingSwitchRow({
-    required this.settings,
-    required this.l10n,
-    required this.cs,
-    required this.trailing,
-  });
+enum _BackgroundModelTask {
+  title,
+  summary,
+  suggestion,
+  compress,
+  translate,
+  ocr,
+}
 
-  final SettingsProvider settings;
-  final AppLocalizations l10n;
-  final ColorScheme cs;
+class _ThinkingSwitchRow extends StatelessWidget {
+  const _ThinkingSwitchRow({required this.task, required this.trailing});
+
+  final _BackgroundModelTask task;
   final Widget trailing;
 
   @override
   Widget build(BuildContext context) {
-    final value = settings.titleGenerationThinkingEnabled;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => settings.setTitleGenerationThinkingEnabled(!value),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.titleModelThinkingTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: AppFontWeights.semibold,
-                          color: cs.onSurface.withValues(alpha: 0.92),
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        final (value, setValue) = switch (task) {
+          _BackgroundModelTask.title => (
+            settings.titleGenerationThinkingEnabled,
+            settings.setTitleGenerationThinkingEnabled,
+          ),
+          _BackgroundModelTask.summary => (
+            settings.summaryGenerationThinkingEnabled,
+            settings.setSummaryGenerationThinkingEnabled,
+          ),
+          _BackgroundModelTask.suggestion => (
+            settings.suggestionGenerationThinkingEnabled,
+            settings.setSuggestionGenerationThinkingEnabled,
+          ),
+          _BackgroundModelTask.compress => (
+            settings.compressGenerationThinkingEnabled,
+            settings.setCompressGenerationThinkingEnabled,
+          ),
+          _BackgroundModelTask.translate => (
+            settings.translateGenerationThinkingEnabled,
+            settings.setTranslateGenerationThinkingEnabled,
+          ),
+          _BackgroundModelTask.ocr => (
+            settings.ocrGenerationThinkingEnabled,
+            settings.setOcrGenerationThinkingEnabled,
+          ),
+        };
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setValue(!value),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.titleModelThinkingTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: AppFontWeights.semibold,
+                              color: cs.onSurface.withValues(alpha: 0.92),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 14),
+                        IosSwitch(
+                          value: value,
+                          hitTestSize: 36,
+                          semanticLabel: l10n.titleModelThinkingTitle,
+                          onChanged: setValue,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 14),
-                    IosSwitch(
-                      value: value,
-                      hitTestSize: 36,
-                      semanticLabel: l10n.titleModelThinkingTitle,
-                      onChanged: settings.setTitleGenerationThinkingEnabled,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        trailing,
-      ],
+            const SizedBox(width: 8),
+            trailing,
+          ],
+        );
+      },
     );
   }
 }

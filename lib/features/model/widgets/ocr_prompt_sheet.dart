@@ -4,6 +4,7 @@ import 'package:Kelivo/theme/app_font_weights.dart';
 
 import '../../../core/providers/settings_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ios_switch.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<void> showOcrPromptSheet(BuildContext context) async {
@@ -43,7 +44,40 @@ Future<void> showOcrPromptSheet(BuildContext context) async {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+              Consumer<SettingsProvider>(
+                builder: (context, settings, _) {
+                  final value = settings.ocrGenerationThinkingEnabled;
+                  return InkWell(
+                    onTap: () =>
+                        settings.setOcrGenerationThinkingEnabled(!value),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.titleModelThinkingTitle,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: AppFontWeights.medium,
+                                color: cs.onSurface.withValues(alpha: 0.92),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          IosSwitch(
+                            value: value,
+                            semanticLabel: l10n.titleModelThinkingTitle,
+                            onChanged: settings.setOcrGenerationThinkingEnabled,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
               Text(
                 l10n.defaultModelPagePromptLabel,
                 style: TextStyle(
@@ -85,6 +119,7 @@ Future<void> showOcrPromptSheet(BuildContext context) async {
                   TextButton(
                     onPressed: () async {
                       await settings.resetOcrPrompt();
+                      await settings.resetOcrGenerationThinkingEnabled();
                       controller.text = settings.ocrPrompt;
                     },
                     child: Text(l10n.defaultModelPageResetDefault),

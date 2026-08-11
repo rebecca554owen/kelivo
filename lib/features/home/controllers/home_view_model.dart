@@ -1065,6 +1065,9 @@ class HomeViewModel extends ChangeNotifier {
     if (provKey == null || mdlId == null) return 'no_model';
 
     final cfg = settings.getProviderConfig(provKey);
+    final budget = settings.compressGenerationThinkingBudgetFor(
+      assistant?.thinkingBudget,
+    );
 
     // Build compression prompt from settings template
     final prompt = settings.compressPrompt
@@ -1076,6 +1079,7 @@ class HomeViewModel extends ChangeNotifier {
         config: cfg,
         modelId: mdlId,
         prompt: prompt,
+        thinkingBudget: budget,
       )).trim();
 
       if (summary.isEmpty) return 'empty_summary';
@@ -1353,7 +1357,9 @@ class HomeViewModel extends ChangeNotifier {
         ? assistantProvider.getById(convo.assistantId!)
         : assistantProvider.currentAssistant;
 
-    final budget = assistant?.thinkingBudget ?? settings.thinkingBudget;
+    final budget = settings.summaryGenerationThinkingBudgetFor(
+      assistant?.thinkingBudget,
+    );
 
     // §12.10 / D-27: both switches must be on.
     if (!MemoryPipelineService.shouldGenerateConversationSummary(
@@ -1530,7 +1536,9 @@ class HomeViewModel extends ChangeNotifier {
         ? assistantProvider.getById(convo.assistantId!)
         : assistantProvider.currentAssistant;
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
-    final budget = assistant?.thinkingBudget ?? settings.thinkingBudget;
+    final budget = settings.suggestionGenerationThinkingBudgetFor(
+      assistant?.thinkingBudget,
+    );
 
     final loadedMessages = await _chatService.loadMessages(convo.id);
     // Raw revision count snapshot for the post-generation freshness check:

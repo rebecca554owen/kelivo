@@ -137,6 +137,9 @@ class _TranslatePageState extends State<TranslatePage> {
         messages: [
           {'role': 'user', 'content': p},
         ],
+        thinkingBudget: settings.translateGenerationThinkingBudgetFor(
+          context.read<AssistantProvider>().currentAssistant?.thinkingBudget,
+        ),
       );
       _sub = stream.listen(
         (chunk) {

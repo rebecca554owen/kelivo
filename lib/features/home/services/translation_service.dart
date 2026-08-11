@@ -118,6 +118,9 @@ class TranslationService {
         messages: [
           {'role': 'user', 'content': prompt},
         ],
+        thinkingBudget: settings.translateGenerationThinkingBudgetFor(
+          assistant?.thinkingBudget,
+        ),
       );
 
       final buffer = StringBuffer();
