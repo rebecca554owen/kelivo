@@ -36,8 +36,8 @@ class BrandAssets {
         MapEntry(RegExp(r'anthropic'), 'anthropic.svg'),
         MapEntry(RegExp(r'deepseek'), 'deepseek-color.svg'),
         MapEntry(RegExp(r'grok'), 'grok.svg'),
-        MapEntry(RegExp(r'firecrawl'), 'firecrawl.svg'),
-        MapEntry(RegExp(r'tinyfish'), 'tinyfish.svg'),
+        MapEntry(RegExp(r'firecrawl'), 'firecrawl-color.svg'),
+        MapEntry(RegExp(r'tinyfish'), 'tinyfish-color.svg'),
         MapEntry(RegExp(r'fish.?audio|fishaudio'), 'fish-audio.svg'),
         MapEntry(RegExp(r'qwen|qwq|qvq'), 'qwen-color.svg'),
         MapEntry(RegExp(r'doubao'), 'doubao-color.svg'),
@@ -62,7 +62,7 @@ class BrandAssets {
         MapEntry(RegExp(r'juhenext'), 'juhenext.png'),
         MapEntry(RegExp(r'kimi|moonshot|月之暗面'), 'kimi-color.svg'),
         MapEntry(RegExp(r'302'), '302ai-color.svg'),
-        MapEntry(RegExp(r'step|阶跃'), 'stepfun-color.svg'),
+        MapEntry(RegExp(r'step|阶跃'), 'stepfun.svg'),
         MapEntry(RegExp(r'internlm|书生'), 'internlm-color.svg'),
         MapEntry(RegExp(r'cohere|command-.+'), 'cohere-color.svg'),
         MapEntry(RegExp(r'kelivo'), 'kelivo.png'),
@@ -233,7 +233,17 @@ class BrandAssets {
     BrandIconOption(
       id: 'stepfun',
       label: 'StepFun',
-      asset: 'assets/icons/stepfun-color.svg',
+      asset: 'assets/icons/stepfun.svg',
+    ),
+    BrandIconOption(
+      id: 'firecrawl',
+      label: 'Firecrawl',
+      asset: 'assets/icons/firecrawl-color.svg',
+    ),
+    BrandIconOption(
+      id: 'tinyfish',
+      label: 'TinyFish',
+      asset: 'assets/icons/tinyfish-color.svg',
     ),
     BrandIconOption(
       id: 'internlm',
@@ -364,6 +374,8 @@ class BrandAssets {
     'linkup.svg',
     'mimo.svg',
     'codex.svg',
+    'firecrawl.svg',
+    'stepfun.svg',
   };
 
   // Build the LobeHub static SVG CDN URL from an icon name (e.g. 'openai').
