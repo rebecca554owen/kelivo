@@ -233,14 +233,25 @@ class ChatMessage extends HiveObject {
     final rawParts = json['parts'];
     List<MessagePart>? parts;
     if (rawParts is List) {
-      parts = <MessagePart>[
-        for (final entry in rawParts)
-          if (entry is Map)
-            MessagePart.fromRow(
-              (entry['kind'] ?? '').toString(),
-              (entry['payload'] ?? '').toString(),
-            ),
-      ];
+      parts = <MessagePart>[];
+      for (var ordinal = 0; ordinal < rawParts.length; ordinal++) {
+        final entry = rawParts[ordinal];
+        if (entry is! Map) continue;
+        final kind = (entry['kind'] ?? '').toString();
+        final payload = (entry['payload'] ?? '').toString();
+        try {
+          parts.add(MessagePart.fromRow(kind, payload));
+        } on FormatException catch (error) {
+          final parseError = error.message.toString();
+          final safeError = payload.isEmpty
+              ? parseError
+              : parseError.replaceAll(payload, '<redacted>');
+          throw FormatException(
+            'Invalid message part: messageId=${json['id']} '
+            'ordinal=$ordinal kind=$kind parseError=$safeError',
+          );
+        }
+      }
     }
     return ChatMessage(
       id: json['id'] as String,

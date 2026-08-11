@@ -1321,6 +1321,114 @@ void main() {
   );
 
   test(
+    'validation rejects an image part with invalid JSON before publication',
+    () async {
+      final imagePath = '${tempDir.path}/images/corrupt.png';
+      await Directory('${tempDir.path}/images').create(recursive: true);
+      await File(imagePath).writeAsBytes(const <int>[1, 2, 3]);
+      await _seedHiveChat(
+        tempDir: tempDir,
+        conversationId: 'conversation-invalid-image',
+        messageId: 'message-invalid-image',
+        content: 'caption\n[image:$imagePath]',
+      );
+      final backupRoot = Directory('${tempDir.path}/backup-target')
+        ..createSync();
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+      final backupFile = await service.backupTo(backupRoot);
+      service.debugBeforeValidateForTest = (repo) async {
+        await repo.corruptPartPayloadForTest(
+          'message-invalid-image',
+          'image',
+          'not-json',
+        );
+      };
+
+      await expectLater(
+        service.migrate(backupPath: backupFile.path),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'context without payload',
+            allOf(
+              contains('revisionId=message-invalid-image'),
+              contains('ordinal=1'),
+              contains('kind=image'),
+              isNot(contains('not-json')),
+            ),
+          ),
+        ),
+      );
+
+      expect(backupFile.existsSync(), isTrue);
+      expect(File('${tempDir.path}/messages.hive').existsSync(), isTrue);
+      expect(File('${tempDir.path}/kelivo.db').existsSync(), isFalse);
+      expect(File('${tempDir.path}/kelivo.db.migrating').existsSync(), isFalse);
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'validation rejects a file part missing name before publication',
+    () async {
+      final filePath = '${tempDir.path}/upload/corrupt.pdf';
+      await Directory('${tempDir.path}/upload').create(recursive: true);
+      await File(filePath).writeAsBytes(const <int>[4, 5, 6]);
+      await _seedHiveChat(
+        tempDir: tempDir,
+        conversationId: 'conversation-invalid-file',
+        messageId: 'message-invalid-file',
+        content: 'document\n[file:$filePath|corrupt.pdf|application/pdf]',
+      );
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+      service.debugBeforeValidateForTest = (repo) async {
+        await repo.corruptPartPayloadForTest(
+          'message-invalid-file',
+          'file',
+          jsonEncode({'uri': filePath}),
+        );
+      };
+
+      await expectLater(
+        service.migrate(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'context without payload',
+            allOf(
+              contains('revisionId=message-invalid-file'),
+              contains('ordinal=1'),
+              contains('kind=file'),
+              isNot(contains(filePath)),
+            ),
+          ),
+        ),
+      );
+
+      expect(File('${tempDir.path}/messages.hive').existsSync(), isTrue);
+      expect(File('${tempDir.path}/kelivo.db').existsSync(), isFalse);
+      expect(File('${tempDir.path}/kelivo.db.migrating').existsSync(), isFalse);
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
     'failed validation can be retried idempotently with Hive retained',
     () async {
       await _seedHiveChat(

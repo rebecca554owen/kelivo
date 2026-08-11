@@ -205,5 +205,38 @@ void main() {
       expect(restored.parts.single, isA<TextPart>());
       expect(restored.content, contains('[image:/tmp/a.png]'));
     });
+
+    test('fromJson reports message and part context for malformed backup data', () {
+      const payload = '{"uri":"/private/spec.pdf"}';
+      expect(
+        () => ChatMessage.fromJson({
+          'id': 'message-malformed-backup',
+          'role': 'user',
+          'parts': const [
+            {'kind': 'text', 'payload': 'before'},
+            {'kind': 'file', 'payload': payload},
+          ],
+          'timestamp': DateTime.utc(2026, 8, 10).toIso8601String(),
+          'conversationId': 'conversation-backup',
+        }),
+        throwsA(
+          isA<FormatException>()
+              .having(
+                (error) => error.message,
+                'message context',
+                allOf(
+                  contains('messageId=message-malformed-backup'),
+                  contains('ordinal=1'),
+                  contains('kind=file'),
+                ),
+              )
+              .having(
+                (error) => error.message,
+                'redacted payload',
+                isNot(contains('/private/spec.pdf')),
+              ),
+        ),
+      );
+    });
   });
 }

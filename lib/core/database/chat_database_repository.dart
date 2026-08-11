@@ -1630,6 +1630,60 @@ class ChatDatabaseRepository {
     );
   }
 
+  /// Strictly validates every persisted attachment payload in bounded pages.
+  ///
+  /// This is a migration publication guard, not a normal hydration path:
+  /// malformed rows fail the migration instead of becoming [MalformedPart]s.
+  Future<void> validateAttachmentPartPayloads({
+    void Function(int processed, int total)? onProgress,
+  }) async {
+    final totalRow = await _db
+        .customSelect(
+          "SELECT COUNT(*) AS total FROM message_part_rows "
+          "WHERE kind IN ('image', 'file');",
+          readsFrom: {_db.messagePartRows},
+        )
+        .getSingle();
+    final total = totalRow.read<int>('total');
+    onProgress?.call(0, total);
+
+    const pageSize = 256;
+    var cursor = 0;
+    var processed = 0;
+    while (true) {
+      final rows = await _db
+          .customSelect(
+            'SELECT part_id, revision_id, ordinal, kind, payload '
+            'FROM message_part_rows '
+            "WHERE kind IN ('image', 'file') AND part_id > ? "
+            'ORDER BY part_id LIMIT ?;',
+            variables: [Variable<int>(cursor), const Variable<int>(pageSize)],
+            readsFrom: {_db.messagePartRows},
+          )
+          .get();
+      if (rows.isEmpty) break;
+      for (final row in rows) {
+        final partId = row.read<int>('part_id');
+        final revisionId = row.read<String>('revision_id');
+        final ordinal = row.read<int>('ordinal');
+        final kind = row.read<String>('kind');
+        final payload = row.read<String>('payload');
+        try {
+          MessagePart.fromRow(kind, payload);
+        } on FormatException {
+          throw StateError(
+            'Migration validation failed (attachment part payload): '
+            'revisionId=$revisionId ordinal=$ordinal kind=$kind.',
+          );
+        }
+        cursor = partId;
+        processed += 1;
+      }
+      onProgress?.call(processed, total);
+      if (rows.length < pageSize) break;
+    }
+  }
+
   /// When true, the worker-isolate digest path throws before spawn so tests can
   /// assert the Drift fallback still completes validation.
   @visibleForTesting
@@ -1875,6 +1929,19 @@ class ChatDatabaseRepository {
       "UPDATE message_part_rows SET payload = ? "
       "WHERE revision_id = ? AND kind = 'text';",
       [payload, revisionId],
+    );
+  }
+
+  @visibleForTesting
+  Future<void> corruptPartPayloadForTest(
+    String revisionId,
+    String kind,
+    String payload,
+  ) async {
+    await _db.customStatement(
+      'UPDATE message_part_rows SET payload = ? '
+      'WHERE revision_id = ? AND kind = ?;',
+      [payload, revisionId, kind],
     );
   }
 

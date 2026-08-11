@@ -371,4 +371,48 @@ void main() {
       }
     },
   );
+
+  test('attachment payload validation paginates and reports progress', () async {
+    final now = DateTime.utc(2026, 8, 10, 11);
+    const conversationId = 'conversation-validation-progress';
+    const messageId = 'message-validation-progress';
+    await repository.putMigrationBatch(
+      conversations: [
+        Conversation(
+          id: conversationId,
+          title: 'Validation progress',
+          createdAt: now,
+          updatedAt: now,
+          messageIds: const [messageId],
+        ),
+      ],
+      messages: [
+        (
+          message: ChatMessage(
+            id: messageId,
+            role: 'user',
+            conversationId: conversationId,
+            timestamp: now,
+            parts: [
+              for (var i = 0; i < 257; i++) ImagePart(uri: '/tmp/$i.png'),
+            ],
+          ),
+          messageOrder: 0,
+        ),
+      ],
+      toolEventsByMessageId: const {},
+      geminiSignaturesByMessageId: const {},
+    );
+
+    final progress = <({int processed, int total})>[];
+    await repository.validateAttachmentPartPayloads(
+      onProgress: (processed, total) {
+        progress.add((processed: processed, total: total));
+      },
+    );
+
+    expect(progress.first, (processed: 0, total: 257));
+    expect(progress, contains((processed: 256, total: 257)));
+    expect(progress.last, (processed: 257, total: 257));
+  });
 }

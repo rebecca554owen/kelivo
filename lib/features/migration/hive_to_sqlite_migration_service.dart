@@ -1440,6 +1440,32 @@ class HiveToSqliteMigrationService {
         'expected $expectedFileParts, got $filePartCount.',
       );
     }
+    var lastAttachmentProgressEmit = DateTime.fromMillisecondsSinceEpoch(0);
+    await repo.validateAttachmentPartPayloads(
+      onProgress: (processed, total) {
+        final now = DateTime.now();
+        final isDone = total > 0 && processed >= total;
+        if (!isDone &&
+            now.difference(lastAttachmentProgressEmit) <
+                const Duration(milliseconds: 100)) {
+          return;
+        }
+        lastAttachmentProgressEmit = now;
+        final fraction = total <= 0
+            ? 1.0
+            : (processed / total).clamp(0.0, 1.0);
+        _emit(
+          HiveToSqliteMigrationStage.migrating,
+          0.98 + 0.005 * fraction,
+          'migrate',
+          'validate',
+          backupPath: backupPath,
+          backupItems: _lastBackupItems,
+          conversations: expectedConversations,
+          messages: migratedMessages,
+        );
+      },
+    );
     // Digest scans multi-GB payloads on a worker isolate; map byte progress
     // into the remaining validate window so the migration bar keeps moving.
     var lastDigestProgressEmit = DateTime.fromMillisecondsSinceEpoch(0);
@@ -1458,7 +1484,7 @@ class HiveToSqliteMigrationService {
             : (processedChars / totalChars).clamp(0.0, 1.0);
         _emit(
           HiveToSqliteMigrationStage.migrating,
-          0.98 + 0.015 * fraction,
+          0.985 + 0.01 * fraction,
           'migrate',
           'validate',
           backupPath: backupPath,
