@@ -877,7 +877,16 @@ class _DesktopBackupPaneState extends State<DesktopBackupPane> {
                             .read<BackupReminderProvider>()
                             .recordBackupCompleted();
                       }
-                    } catch (_) {}
+                    } catch (e) {
+                      // A full disk or unwritable target must not look like
+                      // a successful export.
+                      if (!context.mounted) return;
+                      showAppSnackBar(
+                        context,
+                        message: e.toString(),
+                        type: NotificationType.error,
+                      );
+                    }
                   }
                 },
               ),
