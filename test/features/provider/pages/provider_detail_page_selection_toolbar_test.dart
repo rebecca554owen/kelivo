@@ -163,12 +163,20 @@ void main() {
     await tester.pumpWidget(
       _buildHarness(
         settings: settings,
+        locale: const Locale('en'),
         child: const ProviderDetailPage(
           keyName: 'TestProvider',
           displayName: 'Test Provider',
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    // Custom request editor lives on a dedicated page after the UI refactor.
+    final customRequestEntry = find.text('Custom Request');
+    await tester.ensureVisible(customRequestEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(customRequestEntry);
     await tester.pumpAndSettle();
 
     final addHeader = find.byKey(const ValueKey('provider-custom-header-add'));
