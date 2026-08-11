@@ -1647,9 +1647,7 @@ class _ProviderTypeChipState extends State<_ProviderTypeChip> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOutCubic,
+          child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: Color.alphaBlend(overlay, base),
