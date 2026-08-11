@@ -1474,6 +1474,28 @@ void main() {
       },
     );
 
+    test('mutation refresh keeps a full tail window at the tail', () async {
+      messages = List<ChatMessage>.generate(1000, _message);
+      conversation = Conversation(
+        id: 'conversation-1',
+        title: 'Long chat',
+        messageIds: messages.map((message) => message.id).toList(),
+      );
+      chatService = _FakeLazyChatService(messages);
+      controller.dispose();
+      controller = ChatController(chatService: chatService);
+      await controller.setCurrentConversationAndLoad(conversation);
+      await controller.loadEndWindow();
+      messages.removeLast();
+
+      await controller.refreshTimelineAfterMutation(
+        removedRevisionIds: const {'message-999'},
+      );
+
+      expect(controller.messages.last.id, 'message-998');
+      expect(controller.hasMoreAfter, isFalse);
+    });
+
     test('temporary sends append directly to the linear window', () async {
       messages = <ChatMessage>[];
       conversation = Conversation(

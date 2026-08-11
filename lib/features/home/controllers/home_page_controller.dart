@@ -1152,8 +1152,10 @@ class HomePageController extends ChangeNotifier {
     required ChatMessage message,
     required Map<String, List<ChatMessage>> byGroup,
   }) async {
+    final keepAtBottom = _scrollCtrl.isNearBottom();
     _translations.remove(message.id);
     await _viewModel.deleteMessage(message: message, byGroup: byGroup);
+    if (keepAtBottom) _scrollCtrl.positionAtBottomOnNextLayout();
     notifyListeners();
   }
 
@@ -1161,6 +1163,7 @@ class HomePageController extends ChangeNotifier {
     required ChatMessage message,
     required Map<String, List<ChatMessage>> byGroup,
   }) async {
+    final keepAtBottom = _scrollCtrl.isNearBottom();
     final gid = (message.groupId ?? message.id);
     for (final version in byGroup[gid] ?? const <ChatMessage>[]) {
       _translations.remove(version.id);
@@ -1169,6 +1172,7 @@ class HomePageController extends ChangeNotifier {
       message: message,
       byGroup: byGroup,
     );
+    if (keepAtBottom) _scrollCtrl.positionAtBottomOnNextLayout();
     notifyListeners();
   }
 

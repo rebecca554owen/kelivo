@@ -530,10 +530,12 @@ class ChatController extends ChangeNotifier {
     final conversation = _currentConversation;
     if (conversation == null) return false;
     String? anchorId;
-    for (final message in _messages) {
-      if (removedRevisionIds.contains(message.id)) continue;
-      anchorId = message.id;
-      break;
+    if (hasMoreAfter) {
+      for (final message in _messages) {
+        if (removedRevisionIds.contains(message.id)) continue;
+        anchorId = message.id;
+        break;
+      }
     }
     final page = await _chatService.loadTimelinePage(
       conversation.id,
