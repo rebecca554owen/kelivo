@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
@@ -197,6 +198,119 @@ void main() {
         assetId: 'asset-k',
         expectedGeneration: next.generation,
         path: next.path,
+      ),
+      isTrue,
+    );
+  });
+
+  test('dirty malformed attachment payload blocks GC until repaired', () async {
+    final root = await Directory.systemTemp.createTemp('asset_gc_malformed_');
+    final dbFile = File('${root.path}/assets.sqlite');
+    final repository = ChatDatabaseRepository.open(file: dbFile);
+    addTearDown(() async {
+      await repository.close();
+      await root.delete(recursive: true);
+    });
+
+    final now = DateTime.utc(2026, 8, 10);
+    final assetPath = '${root.path}/images/corrupt.png';
+    const conversationId = 'conversation-malformed-gc';
+    const messageId = 'revision-malformed-gc';
+    const assetId = 'asset-malformed-gc';
+    final conversation = Conversation(
+      id: conversationId,
+      title: 'Malformed GC',
+      createdAt: now,
+      updatedAt: now,
+      messageIds: const [messageId],
+    );
+    final message = ChatMessage(
+      id: messageId,
+      role: 'user',
+      conversationId: conversationId,
+      timestamp: now,
+      parts: [ImagePart(uri: assetPath)],
+    );
+    await repository.putMigrationBatch(
+      conversations: [conversation],
+      messages: [(message: message, messageOrder: 0)],
+      toolEventsByMessageId: const {},
+      geminiSignaturesByMessageId: const {},
+    );
+    await repository.registerAsset(
+      id: assetId,
+      contentHash: List.filled(64, 'c').join(),
+      path: assetPath,
+      byteSize: 3,
+      createdAt: now,
+    );
+    await repository.linkMessageAsset(
+      conversationId: conversationId,
+      revisionId: messageId,
+      assetId: assetId,
+      kind: 'image',
+    );
+    await repository.unlinkMessageAsset(
+      revisionId: messageId,
+      assetId: assetId,
+    );
+
+    final raw = sqlite.sqlite3.open(dbFile.path);
+    try {
+      raw.execute(
+        'DELETE FROM asset_reference_dirty_rows WHERE revision_id = ?;',
+        [messageId],
+      );
+    } finally {
+      raw.close();
+    }
+    expect(await repository.scheduleUnreferencedAssetGc(notBefore: now), 1);
+    final candidate = (await repository.claimAssetGc(now: now)).single;
+
+    final malformedPayload = '{"uri":"$assetPath"';
+    final corrupt = sqlite.sqlite3.open(dbFile.path);
+    try {
+      corrupt.execute(
+        'UPDATE message_part_rows SET payload = ? '
+        'WHERE revision_id = ? AND kind = ?;',
+        [malformedPayload, messageId, 'image'],
+      );
+      corrupt.execute(
+        'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
+        'VALUES (?);',
+        [messageId],
+      );
+    } finally {
+      corrupt.close();
+    }
+
+    expect(await repository.isAssetGcClaimStillValid(candidate), isFalse);
+    expect(
+      await repository.completeAssetGc(
+        assetId: assetId,
+        expectedGeneration: candidate.generation,
+        path: candidate.path,
+      ),
+      isFalse,
+    );
+    expect(await repository.claimAssetGc(now: now), isEmpty);
+
+    await repository.updateMessage(
+      message.copyWith(parts: const [TextPart('attachment repaired')]),
+    );
+    await repository.replaceMessageAssetReferences(
+      conversationId: conversationId,
+      revisionId: messageId,
+      assets: const [],
+    );
+    final repairedCandidate = (await repository.claimAssetGc(
+      now: now.add(const Duration(hours: 6)),
+    )).single;
+    expect(
+      await repository.completeAssetGc(
+        assetId: assetId,
+        expectedGeneration: repairedCandidate.generation,
+        path: repairedCandidate.path,
       ),
       isTrue,
     );

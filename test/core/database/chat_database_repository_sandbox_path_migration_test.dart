@@ -74,6 +74,7 @@ void main() {
       expect(result.ran, isTrue);
       expect(result.scannedMessages, 1);
       expect(result.updatedMessages, 1);
+      expect(result.skippedParts, 0);
       final migrated = (await repository.getMessagesRange(
         'conversation',
         start: 0,
@@ -100,6 +101,7 @@ void main() {
 
       expect(result.ran, isFalse);
       expect(result.scannedMessages, 0);
+      expect(result.skippedParts, 0);
     });
 
     test('rewrite 失败回滚内容且不写 receipt，可重试', () async {
@@ -146,6 +148,60 @@ void main() {
 
       expect(result.ran, isTrue);
       expect(result.updatedMessages, 1);
+    });
+
+    test('损坏附件不阻塞迁移并保持原 payload 与 dirty 状态', () async {
+      const malformedPayload = '{"uri":"/old/sandboxoldtoken/a.png"';
+      final database = sqlite.sqlite3.open(dbFile.path);
+      try {
+        database.execute(
+          'UPDATE message_part_rows SET payload = ? '
+          "WHERE revision_id = 'path' AND kind = 'image';",
+          [malformedPayload],
+        );
+        database.execute(
+          "DELETE FROM asset_reference_dirty_rows WHERE revision_id = 'path';",
+        );
+      } finally {
+        database.close();
+      }
+
+      final result = await repository.migrateSandboxPaths(
+        targetVersion: 1,
+        targetRoot: '/new',
+        rewriteUri: (uri) =>
+            uri.replaceFirst('/old/sandboxoldtoken/', '/new/sandboxnewtoken/'),
+      );
+
+      expect(result.ran, isTrue);
+      expect(result.scannedMessages, 1);
+      expect(result.updatedMessages, 0);
+      expect(result.skippedParts, 1);
+
+      final verify = sqlite.sqlite3.open(dbFile.path);
+      try {
+        expect(
+          verify.select(
+            "SELECT payload FROM message_part_rows WHERE revision_id = 'path';",
+          ).single['payload'],
+          malformedPayload,
+        );
+        expect(
+          verify.select(
+            "SELECT 1 FROM asset_reference_dirty_rows WHERE revision_id = 'path';",
+          ),
+          hasLength(1),
+        );
+        expect(
+          verify.select(
+            "SELECT 1 FROM chat_storage_meta_rows "
+            "WHERE key = 'sandbox_path_migration_version';",
+          ),
+          hasLength(1),
+        );
+      } finally {
+        verify.close();
+      }
     });
 
     test('路径重写后 ImagePart URI 更新且 FTS 索引完整', () async {

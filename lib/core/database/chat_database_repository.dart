@@ -105,11 +105,13 @@ class SandboxPathMigrationResult {
     required this.ran,
     required this.scannedMessages,
     required this.updatedMessages,
+    required this.skippedParts,
   });
 
   final bool ran;
   final int scannedMessages;
   final int updatedMessages;
+  final int skippedParts;
 }
 
 class ChatDatabaseRepository {
@@ -1125,18 +1127,21 @@ class ChatDatabaseRepository {
           ran: false,
           scannedMessages: 0,
           updatedMessages: 0,
+          skippedParts: 0,
         );
       }
 
       var scanned = 0;
       var updated = 0;
+      var skipped = 0;
       // Cursor on part_id (AUTOINCREMENT PK): stable order, no missed rows,
       // and no re-scan loop after payload rewrites (part_id is unchanged).
       var cursor = 0;
       while (true) {
         final rows = await _db
             .customSelect(
-              'SELECT part_id, kind, payload FROM message_part_rows '
+              'SELECT part_id, revision_id, ordinal, kind, payload '
+              'FROM message_part_rows '
               "WHERE kind IN ('image', 'file') AND part_id > ? "
               'ORDER BY part_id LIMIT ?;',
               variables: [Variable<int>(cursor), Variable<int>(batchSize)],
@@ -1145,14 +1150,29 @@ class ChatDatabaseRepository {
         if (rows.isEmpty) break;
         for (final row in rows) {
           final partId = row.read<int>('part_id');
+          final revisionId = row.read<String>('revision_id');
+          final ordinal = row.read<int>('ordinal');
           final kind = row.read<String>('kind');
           final payload = row.read<String>('payload');
-          final rewritten = _rewriteAttachmentPartUri(
+          final rewrite = _rewriteAttachmentPartUri(
             kind: kind,
             payload: payload,
             rewriteUri: rewriteUri,
           );
           scanned += 1;
+          if (rewrite.parseError case final parseError?) {
+            skipped += 1;
+            await markMessageAssetReferencesDirty(revisionId);
+            final logError = payload.isEmpty
+                ? parseError
+                : parseError.replaceAll(payload, '<redacted>');
+            debugPrint(
+              'Sandbox path migration skipped malformed part: '
+              'revisionId=$revisionId ordinal=$ordinal kind=$kind '
+              'parseError=$logError',
+            );
+          }
+          final rewritten = rewrite.payload;
           if (rewritten != payload) {
             await _db.customStatement(
               'UPDATE message_part_rows SET payload = ? WHERE part_id = ?;',
@@ -1178,44 +1198,56 @@ class ChatDatabaseRepository {
         ran: true,
         scannedMessages: scanned,
         updatedMessages: updated,
+        skippedParts: skipped,
       );
     });
   }
 
-  String _rewriteAttachmentPartUri({
+  ({String payload, String? parseError}) _rewriteAttachmentPartUri({
     required String kind,
     required String payload,
     required String Function(String uri) rewriteUri,
   }) {
-    final part = MessagePart.fromRow(kind, payload);
+    final MessagePart part;
+    try {
+      part = MessagePart.fromRow(kind, payload);
+    } on FormatException catch (error) {
+      return (payload: payload, parseError: error.message.toString());
+    }
     if (part is ImagePart) {
       final nextUri = rewriteUri(part.uri);
       final nextUnavailable = _unavailableForRewrittenUri(nextUri);
       if (nextUri == part.uri && nextUnavailable == part.unavailable) {
-        return payload;
+        return (payload: payload, parseError: null);
       }
-      return ImagePart(
-        uri: nextUri,
-        mime: part.mime,
-        assetId: part.assetId,
-        unavailable: nextUnavailable,
-      ).encodePayload();
+      return (
+        payload: ImagePart(
+          uri: nextUri,
+          mime: part.mime,
+          assetId: part.assetId,
+          unavailable: nextUnavailable,
+        ).encodePayload(),
+        parseError: null,
+      );
     }
     if (part is FilePart) {
       final nextUri = rewriteUri(part.uri);
       final nextUnavailable = _unavailableForRewrittenUri(nextUri);
       if (nextUri == part.uri && nextUnavailable == part.unavailable) {
-        return payload;
+        return (payload: payload, parseError: null);
       }
-      return FilePart(
-        uri: nextUri,
-        name: part.name,
-        mime: part.mime,
-        assetId: part.assetId,
-        unavailable: nextUnavailable,
-      ).encodePayload();
+      return (
+        payload: FilePart(
+          uri: nextUri,
+          name: part.name,
+          mime: part.mime,
+          assetId: part.assetId,
+          unavailable: nextUnavailable,
+        ).encodePayload(),
+        parseError: null,
+      );
     }
-    return payload;
+    return (payload: payload, parseError: null);
   }
 
   /// Remote/data URIs stay available; local paths use [localFileExists]
@@ -3072,7 +3104,7 @@ class ChatDatabaseRepository {
         }
         if (page.isEmpty) break;
 
-        final protected = await _dirtyTextProtectedAssetIds(page);
+        final protected = await _dirtyPartProtectedAssetIds(page);
         for (final item in page) {
           if (ids.length >= limit) break;
           if (protected.contains(item.id)) {
@@ -3126,8 +3158,8 @@ class ChatDatabaseRepository {
     });
   }
 
-  /// Set-based dirty-text protection for a candidate page.
-  Future<Set<String>> _dirtyTextProtectedAssetIds(
+  /// Set-based dirty-part protection for a candidate page.
+  Future<Set<String>> _dirtyPartProtectedAssetIds(
     List<({String id, String path, int notBefore})> page,
   ) async {
     if (page.isEmpty) return const <String>{};
@@ -3151,7 +3183,7 @@ class ChatDatabaseRepository {
             SELECT 1
             FROM asset_reference_dirty_rows d
             JOIN message_part_rows p ON p.revision_id = d.revision_id
-            WHERE p.kind = 'text'
+            WHERE p.kind IN ('text', 'image', 'file')
               AND (
                 instr(p.payload, c.path_form) > 0
                 OR instr(p.payload, c.alt_form) > 0
@@ -3176,7 +3208,7 @@ class ChatDatabaseRepository {
             AND NOT EXISTS (
               SELECT 1 FROM asset_reference_dirty_rows d
               JOIN message_part_rows p ON p.revision_id = d.revision_id
-              WHERE p.kind = 'text'
+              WHERE p.kind IN ('text', 'image', 'file')
                 AND (instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0)
             )
           LIMIT 1;
@@ -3198,7 +3230,7 @@ class ChatDatabaseRepository {
     required String path,
     DateTime? completedAt,
   }) async {
-    // Text-part protection must match either stored form. Never pass '' —
+    // Dirty-part protection must match either stored form. Never pass '' —
     // instr(x, '') is always true and would stall GC forever.
     final pathForm = path.isEmpty ? ' ' : path;
     final altForm = _alternateAssetPathForm(pathForm);
@@ -3215,7 +3247,7 @@ class ChatDatabaseRepository {
               AND NOT EXISTS (
                 SELECT 1 FROM asset_reference_dirty_rows d
                 JOIN message_part_rows p ON p.revision_id = d.revision_id
-                WHERE p.kind = 'text'
+                WHERE p.kind IN ('text', 'image', 'file')
                   AND (instr(p.payload, ?) > 0 OR instr(p.payload, ?) > 0)
               )
             LIMIT 1;

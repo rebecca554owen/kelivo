@@ -1,4 +1,6 @@
 import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/conversation.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -244,6 +246,145 @@ void main() {
       );
 
       expect(await upload.exists(), isFalse);
+    },
+  );
+
+  test(
+    'asset backfill skips malformed attachment without clearing its references',
+    () async {
+      final first = createService();
+      await first.init();
+      final repository = first.chatRepositoryOrNull!;
+      final now = DateTime.utc(2026, 8, 10);
+      const conversationId = 'conversation-malformed-backfill';
+      const messageIds = ['a-healthy', 'b-malformed', 'c-healthy'];
+      final files = <String, File>{
+        for (final id in messageIds)
+          id: File('${tempDir.path}/upload/$id.txt'),
+      };
+      for (final file in files.values) {
+        await file.parent.create(recursive: true);
+        await file.writeAsString('payload:${file.path}');
+      }
+      final messages = [
+        for (final id in messageIds)
+          ChatMessage(
+            id: id,
+            role: 'user',
+            conversationId: conversationId,
+            timestamp: now,
+            parts: [
+              FilePart(
+                uri: files[id]!.path,
+                name: '$id.txt',
+                mime: 'text/plain',
+              ),
+            ],
+          ),
+      ];
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Malformed backfill',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: messageIds,
+          ),
+        ],
+        messages: [
+          for (var i = 0; i < messages.length; i++)
+            (message: messages[i], messageOrder: i),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+      for (var i = 0; i < messageIds.length; i++) {
+        await repository.registerAsset(
+          id: 'legacy-asset-$i',
+          contentHash: List.filled(64, '${i + 1}').join(),
+          path: files[messageIds[i]]!.path,
+          byteSize: await files[messageIds[i]]!.length(),
+          createdAt: now,
+        );
+        await repository.linkMessageAsset(
+          conversationId: conversationId,
+          revisionId: messageIds[i],
+          assetId: 'legacy-asset-$i',
+          kind: 'file',
+        );
+      }
+      await first.close();
+      services.remove(first);
+
+      final database = sqlite.sqlite3.open(
+        '${tempDir.path}/${AppDatabase.databaseFileName}',
+      );
+      try {
+        database.execute(
+          'DELETE FROM message_asset_rows '
+          "WHERE revision_id IN ('a-healthy', 'c-healthy');",
+        );
+        database.execute(
+          'UPDATE message_part_rows SET payload = ? '
+          "WHERE revision_id = 'b-malformed' AND kind = 'file';",
+          ['{"uri":"${files['b-malformed']!.path}"}'],
+        );
+        database.execute(
+          'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
+          "VALUES ('a-healthy'), ('b-malformed'), ('c-healthy');",
+        );
+        database.execute(
+          "DELETE FROM chat_storage_meta_rows "
+          "WHERE key = 'sandbox_path_migration_version';",
+        );
+      } finally {
+        database.close();
+      }
+
+      final restarted = createService();
+      await restarted.init().timeout(const Duration(seconds: 2));
+      await restarted.runAssetReferenceMaintenance();
+
+      final verify = sqlite.sqlite3.open(
+        '${tempDir.path}/${AppDatabase.databaseFileName}',
+      );
+      try {
+        expect(
+          verify.select(
+            "SELECT 1 FROM message_asset_rows WHERE revision_id = 'a-healthy';",
+          ),
+          isNotEmpty,
+        );
+        expect(
+          verify.select(
+            "SELECT 1 FROM message_asset_rows WHERE revision_id = 'c-healthy';",
+          ),
+          isNotEmpty,
+        );
+        final malformedRefs = verify.select(
+          "SELECT asset_id FROM message_asset_rows "
+          "WHERE revision_id = 'b-malformed';",
+        );
+        expect(malformedRefs, hasLength(1));
+        expect(malformedRefs.single['asset_id'], 'legacy-asset-1');
+        expect(
+          verify.select(
+            "SELECT revision_id FROM asset_reference_dirty_rows "
+            'ORDER BY revision_id;',
+          ).map((row) => row['revision_id']),
+          ['b-malformed'],
+        );
+        expect(
+          verify.select(
+            "SELECT 1 FROM chat_storage_meta_rows "
+            "WHERE key = 'sandbox_path_migration_version';",
+          ),
+          hasLength(1),
+        );
+      } finally {
+        verify.close();
+      }
     },
   );
 

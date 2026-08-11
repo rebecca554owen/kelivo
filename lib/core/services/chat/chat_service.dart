@@ -1946,6 +1946,7 @@ class ChatService extends ChangeNotifier {
       return;
     }
     var cursor = '';
+    var loggedMalformedAttachment = false;
     while (true) {
       final messages = await _repo.getMessagesForAssetReferenceBackfill(
         afterMessageId: cursor,
@@ -1953,12 +1954,30 @@ class ChatService extends ChangeNotifier {
       );
       if (messages.isEmpty) break;
       for (final message in messages) {
+        cursor = message.id;
+        final hasMalformedAttachment = message.parts.any(
+          (part) => part is MalformedPart && part.isAttachmentKind,
+        );
+        if (hasMalformedAttachment) {
+          // Keep the revision dirty and its existing message_asset_rows intact.
+          // Without an unresolvable-row schema marker this revision is scanned
+          // once per cold-start maintenance pass; log that known tradeoff once.
+          await _repo.markMessageAssetReferencesDirty(message.id);
+          if (!loggedMalformedAttachment) {
+            debugPrint(
+              'Asset reference backfill left malformed attachment revisions '
+              'dirty; they will be retried on the next maintenance pass.',
+            );
+            loggedMalformedAttachment = true;
+          }
+          await Future<void>.delayed(Duration.zero);
+          continue;
+        }
         try {
           await _synchronizeMessageAssets(message);
         } catch (error) {
           debugPrint('Asset reference backfill skipped ${message.id}: $error');
         }
-        cursor = message.id;
         await Future<void>.delayed(Duration.zero);
       }
     }
@@ -2057,11 +2076,17 @@ class ChatService extends ChangeNotifier {
     if (targetRoot == null || targetRoot.isEmpty) {
       throw StateError('sandbox_path_resolver_not_ready');
     }
-    await _repo.migrateSandboxPaths(
+    final result = await _repo.migrateSandboxPaths(
       targetVersion: 1,
       targetRoot: targetRoot,
       rewriteUri: SandboxPathResolver.canonicalize,
     );
+    if (result.skippedParts > 0) {
+      debugPrint(
+        'Sandbox path migration completed with '
+        '${result.skippedParts} malformed attachment parts unchanged.',
+      );
+    }
   }
 
   /// Reset stale isStreaming flags left over from a previous app crash or
