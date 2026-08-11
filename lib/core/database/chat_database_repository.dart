@@ -1694,7 +1694,12 @@ class ChatDatabaseRepository {
               readsFrom: {_db.messagePartRows},
             )
             .get();
-        if (rows.isEmpty) return;
+        if (rows.length != partIds.length) {
+          throw StateError(
+            'Migration validation failed (attachment payload page incomplete): '
+            'expected=${partIds.length} actual=${rows.length}.',
+          );
+        }
         for (final row in rows) {
           final partId = row.read<int>('part_id');
           final revisionId = row.read<String>('revision_id');
@@ -3259,6 +3264,12 @@ class ChatDatabaseRepository {
   }
 
   /// Set-based dirty-part protection for a candidate page.
+  ///
+  /// A never-registered malformed attachment whose raw payload no longer
+  /// contains its path (for example, a non-string `uri`) cannot be protected
+  /// here and may be collected. We accept that residual loss window because a
+  /// global malformed-part interlock would let one corrupt row disable all
+  /// asset GC indefinitely and cause unbounded disk growth.
   Future<Set<String>> _dirtyPartProtectedAssetIds(
     List<({String id, String path, int notBefore})> page,
   ) async {
