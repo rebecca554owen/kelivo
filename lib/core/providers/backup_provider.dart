@@ -30,6 +30,8 @@ class BackupProvider extends ChangeNotifier {
   WebDavConfig get config => _cfg;
   bool get busy => _busy;
   String? get message => _message;
+  int get skippedConversations =>
+      _dataSync.lastMergeReport?.skippedConversations ?? 0;
 
   void updateConfig(WebDavConfig cfg) {
     _cfg = cfg;

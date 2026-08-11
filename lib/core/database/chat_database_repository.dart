@@ -84,12 +84,14 @@ class BackupMergeReport {
   const BackupMergeReport({
     required this.importedConversations,
     required this.deduplicatedConversations,
+    required this.skippedConversations,
     required this.remappedConversationIds,
     this.importedConversationIds = const <String>[],
   });
 
   final int importedConversations;
   final int deduplicatedConversations;
+  final int skippedConversations;
   final Map<String, String> remappedConversationIds;
 
   /// Target conversation ids newly inserted by this merge (post-remap ids).
@@ -4240,12 +4242,19 @@ class ChatDatabaseRepository {
             .get();
         var imported = 0;
         var deduplicated = 0;
+        var skipped = 0;
         final remapped = <String, String>{};
         final importedIds = <String>[];
 
         for (final sourceRow in sourceRows) {
           final sourceId = sourceRow.read<String>('id');
-          await _requireContiguousMessageOrder('merge_source', sourceId);
+          try {
+            await _requireValidMessageOrder('merge_source', sourceId);
+          } on StateError catch (error) {
+            if (error.message != 'conversation_message_order') rethrow;
+            skipped += 1;
+            continue;
+          }
           final sourceFingerprint = await _conversationFingerprint(
             'merge_source',
             sourceId,
@@ -4321,6 +4330,7 @@ class ChatDatabaseRepository {
         return BackupMergeReport(
           importedConversations: imported,
           deduplicatedConversations: deduplicated,
+          skippedConversations: skipped,
           remappedConversationIds: Map.unmodifiable(remapped),
           importedConversationIds: List.unmodifiable(importedIds),
         );
@@ -4642,7 +4652,10 @@ class ChatDatabaseRepository {
     return rows.map((row) => row.read<String>('id')).toList(growable: false);
   }
 
-  Future<void> _requireContiguousMessageOrder(
+  /// Message deletion intentionally preserves `message_order` gaps, so sparse
+  /// orders are valid; only negative or duplicate values that bypassed the
+  /// database constraints are rejected here.
+  Future<void> _requireValidMessageOrder(
     String schema,
     String conversationId,
   ) async {
@@ -4653,10 +4666,13 @@ class ChatDatabaseRepository {
           variables: [Variable<String>(conversationId)],
         )
         .get();
-    for (var index = 0; index < rows.length; index++) {
-      if (rows[index].read<int>('message_order') != index) {
+    int? previous;
+    for (final row in rows) {
+      final order = row.read<int>('message_order');
+      if (order < 0 || (previous != null && order <= previous)) {
         throw StateError('conversation_message_order');
       }
+      previous = order;
     }
   }
 
@@ -4765,6 +4781,8 @@ class ChatDatabaseRepository {
         'reasoning_finished_at, translation, reasoning_segments_json, '
         '?, version, '
         'prompt_tokens, completion_tokens, cached_tokens, duration_ms, '
+        // message_order is part of the conversation fingerprint. Preserve it
+        // verbatim so sparse snapshots remain idempotent across repeated merges.
         'message_order FROM merge_source.message_rows WHERE id = ?;',
         [entry.value, targetId, targetGroupId, entry.key],
       );

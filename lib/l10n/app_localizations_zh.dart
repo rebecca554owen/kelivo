@@ -1577,6 +1577,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageRestartContent => '导入成功。重启 Kelivo 后将安全应用。';
 
   @override
+  String backupPageRestartContentWithSkipped(int count) {
+    return '导入已完成，但已跳过 $count 个消息顺序非法的会话。重启 Kelivo 后将安全应用已导入的数据。';
+  }
+
+  @override
   String get restartAppFailedMessage => 'Kelivo 无法自动重启，请完全关闭后重新打开。';
 
   @override
@@ -8510,6 +8515,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backupPageRestartContent => '导入成功。重启 Kelivo 后将安全应用。';
 
   @override
+  String backupPageRestartContentWithSkipped(int count) {
+    return '导入已完成，但已跳过 $count 个消息顺序非法的会话。重启 Kelivo 后将安全应用已导入的数据。';
+  }
+
+  @override
   String get restartAppFailedMessage => 'Kelivo 无法自动重启，请完全关闭后重新打开。';
 
   @override
@@ -15441,6 +15451,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupPageRestartContent => '匯入成功。重新啟動 Kelivo 後將安全套用。';
+
+  @override
+  String backupPageRestartContentWithSkipped(int count) {
+    return '匯入已完成，但已略過 $count 個訊息順序無效的會話。重新啟動 Kelivo 後將安全套用已匯入的資料。';
+  }
 
   @override
   String get restartAppFailedMessage => 'Kelivo 無法自動重新啟動，請完全關閉後再重新開啟。';

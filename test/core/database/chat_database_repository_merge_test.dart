@@ -169,6 +169,42 @@ void main() {
       );
     }
 
+    Future<void> putSparseConversation({
+      required String conversationId,
+      required String messagePrefix,
+    }) async {
+      final anchor = DateTime.utc(2026, 8, 7, 12);
+      final messages = [
+        for (var index = 0; index < 3; index++)
+          ChatMessage(
+            id: '$messagePrefix-${String.fromCharCode(97 + index)}',
+            role: index.isEven ? 'user' : 'assistant',
+            content: String.fromCharCode(97 + index),
+            conversationId: conversationId,
+            timestamp: anchor.add(Duration(minutes: index)),
+          ),
+      ];
+      await source.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Sparse',
+            createdAt: anchor,
+            updatedAt: anchor,
+            messageIds: messages.map((message) => message.id).toList(),
+            versionSelections: {for (final message in messages) message.id: 0},
+          ),
+        ],
+        messages: [
+          for (var index = 0; index < messages.length; index++)
+            (message: messages[index], messageOrder: index),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+      await source.deleteMessage(messages[1].id);
+    }
+
     Future<void> reopenLive() async {
       await live.close();
       live = ChatDatabaseRepository.open(
@@ -589,45 +625,99 @@ void main() {
       expect(await live.getAllConversations(), hasLength(2));
     });
 
-    test('非法 order 在事务写入前拒绝且 live 不变', () async {
+    test('删除中间消息后的稀疏 order 可导入、稳定去重并保留水位', () async {
+      await putSparseConversation(
+        conversationId: 'sparse',
+        messagePrefix: 'sparse',
+      );
+      await source.close();
+      sourceClosed = true;
+
+      final first = await live.mergeBackupSnapshot(sourceFile);
+
+      expect(first.importedConversations, 1);
+      expect(first.skippedConversations, 0);
+      expect((await live.getConversation('sparse'))?.messageIds, const [
+        'sparse-a',
+        'sparse-c',
+      ]);
+      expect(await live.getMessageIndex('sparse', 'sparse-a'), 0);
+      expect(await live.getMessageIndex('sparse', 'sparse-c'), 2);
+      expect(
+        (await live.getConversation('sparse'))?.lastMemoryExtractedOrder,
+        2,
+      );
+
+      final second = await live.mergeBackupSnapshot(sourceFile);
+      expect(second.importedConversations, 0);
+      expect(second.deduplicatedConversations, 1);
+      expect(second.skippedConversations, 0);
+    });
+
+    test('稀疏 order 在 conversation ID 冲突时可整会话 remap', () async {
       await putConversation(
         live,
-        conversationId: 'local',
+        conversationId: 'sparse-remap',
         title: 'Local',
         messageId: 'local-message',
         content: 'local',
       );
+      await putSparseConversation(
+        conversationId: 'sparse-remap',
+        messagePrefix: 'remap',
+      );
+      await source.close();
+      sourceClosed = true;
+
+      final report = await live.mergeBackupSnapshot(sourceFile);
+      final remappedId = report.remappedConversationIds['sparse-remap'];
+
+      expect(remappedId, isNotNull);
+      expect(report.skippedConversations, 0);
+      final imported = await live.getConversation(remappedId!);
+      expect(imported?.messageIds, hasLength(2));
+      expect(
+        await live.getMessageIndex(remappedId, imported!.messageIds[0]),
+        0,
+      );
+      expect(await live.getMessageIndex(remappedId, imported.messageIds[1]), 2);
+      expect(imported.lastMemoryExtractedOrder, 2);
+    });
+
+    test('非法 order 仅跳过所属会话并计数', () async {
       await putConversation(
         source,
+        conversationId: 'valid',
+        title: 'Valid',
+        messageId: 'valid-message',
+        content: 'valid',
+      );
+      await putTwoMessageConversation(
+        source,
         conversationId: 'invalid',
-        title: 'Invalid',
-        messageId: 'invalid-message',
-        content: 'invalid',
+        firstMessageId: 'invalid-a',
+        secondMessageId: 'invalid-b',
+        firstBody: 'a',
+        secondBody: 'b',
       );
       await source.close();
       sourceClosed = true;
       final raw = sqlite.sqlite3.open(sourceFile.path);
       try {
+        raw.execute('PRAGMA ignore_check_constraints = ON;');
         raw.execute(
-          'UPDATE message_rows SET message_order = 2 '
-          "WHERE id = 'invalid-message';",
+          'UPDATE message_rows SET message_order = -1 '
+          "WHERE id = 'invalid-b';",
         );
       } finally {
         raw.close();
       }
 
-      await expectLater(
-        live.mergeBackupSnapshot(sourceFile),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            'conversation_message_order',
-          ),
-        ),
-      );
+      final report = await live.mergeBackupSnapshot(sourceFile);
 
-      expect(await live.getConversation('local'), isNotNull);
+      expect(report.importedConversations, 1);
+      expect(report.skippedConversations, 1);
+      expect(await live.getConversation('valid'), isNotNull);
       expect(await live.getConversation('invalid'), isNull);
       expect(await live.getAllConversations(), hasLength(1));
     });

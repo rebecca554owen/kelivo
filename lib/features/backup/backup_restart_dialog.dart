@@ -4,7 +4,10 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/restart_app_action.dart';
 import '../../utils/platform_utils.dart';
 
-Future<void> showBackupRestartRequiredDialog(BuildContext context) {
+Future<void> showBackupRestartRequiredDialog(
+  BuildContext context, {
+  int skippedConversations = 0,
+}) {
   final l10n = AppLocalizations.of(context)!;
   return showDialog<void>(
     context: context,
@@ -15,7 +18,11 @@ Future<void> showBackupRestartRequiredDialog(BuildContext context) {
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(l10n.backupPageRestartRequired),
-        content: Text(l10n.backupPageRestartContent),
+        content: Text(
+          skippedConversations > 0
+              ? l10n.backupPageRestartContentWithSkipped(skippedConversations)
+              : l10n.backupPageRestartContent,
+        ),
         actions: [
           TextButton(
             onPressed: () async {

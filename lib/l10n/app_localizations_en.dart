@@ -1631,6 +1631,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Import successful. Restart Kelivo to apply it safely.';
 
   @override
+  String backupPageRestartContentWithSkipped(int count) {
+    return 'Import completed, but $count conversations with invalid message ordering were skipped. Restart Kelivo to apply the imported data safely.';
+  }
+
+  @override
   String get restartAppFailedMessage =>
       'Kelivo could not restart automatically. Fully close it, then open it again.';
 

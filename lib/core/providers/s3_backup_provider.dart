@@ -36,6 +36,8 @@ class S3BackupProvider extends ChangeNotifier {
   S3Config get config => _cfg;
   bool get busy => _busy;
   String? get message => _message;
+  int get skippedConversations =>
+      _dataSync.lastMergeReport?.skippedConversations ?? 0;
 
   void updateConfig(S3Config cfg) {
     _cfg = cfg;

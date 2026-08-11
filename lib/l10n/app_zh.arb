@@ -521,6 +521,14 @@
   "backupPageTestConnection": "测试连接",
   "backupPageRestartRequired": "需要重启应用",
   "backupPageRestartContent": "导入成功。重启 Kelivo 后将安全应用。",
+  "backupPageRestartContentWithSkipped": "导入已完成，但已跳过 {count} 个消息顺序非法的会话。重启 Kelivo 后将安全应用已导入的数据。",
+  "@backupPageRestartContentWithSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "restartAppFailedMessage": "Kelivo 无法自动重启，请完全关闭后重新打开。",
   "backupRestoreRolledBackTitle": "恢复已回滚",
   "backupRestoreRolledBackContent": "恢复未能完成。Kelivo 已验证并保留原有数据。",

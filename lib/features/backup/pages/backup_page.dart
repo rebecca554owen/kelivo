@@ -644,6 +644,8 @@ class _BackupPageState extends State<BackupPage> {
                                             }
                                             await showBackupRestartRequiredDialog(
                                               context,
+                                              skippedConversations:
+                                                  vm.skippedConversations,
                                             );
                                           },
                                         ),
@@ -709,6 +711,8 @@ class _BackupPageState extends State<BackupPage> {
                                     }
                                     await showBackupRestartRequiredDialog(
                                       context,
+                                      skippedConversations:
+                                          vm.skippedConversations,
                                     );
                                   },
                                 ),
@@ -1047,6 +1051,8 @@ class _BackupPageState extends State<BackupPage> {
                                             }
                                             await showBackupRestartRequiredDialog(
                                               context,
+                                              skippedConversations:
+                                                  s3Vm.skippedConversations,
                                             );
                                           },
                                         ),
@@ -1110,6 +1116,8 @@ class _BackupPageState extends State<BackupPage> {
                                     }
                                     await showBackupRestartRequiredDialog(
                                       context,
+                                      skippedConversations:
+                                          s3Vm.skippedConversations,
                                     );
                                   },
                                 ),
@@ -1251,9 +1259,10 @@ class _BackupPageState extends State<BackupPage> {
                   if (!context.mounted) return;
                   showAppSnackBar(
                     context,
-                    message: l10n.backupPageCherryStudioUnsupportedBackupVersion(
-                      '${e.version}',
-                    ),
+                    message: l10n
+                        .backupPageCherryStudioUnsupportedBackupVersion(
+                          '${e.version}',
+                        ),
                     type: NotificationType.error,
                   );
                 } catch (e) {
@@ -1429,7 +1438,10 @@ class _BackupPageState extends State<BackupPage> {
       return;
     }
     if (!context.mounted) return;
-    await showBackupRestartRequiredDialog(context);
+    await showBackupRestartRequiredDialog(
+      context,
+      skippedConversations: vm.skippedConversations,
+    );
   }
 
   Future<void> _showWebDavSettingsPage(
@@ -2203,8 +2215,7 @@ class _RemoteListSheet extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             child: Container(
                               decoration: BoxDecoration(
-                                color:
-                                    context.appColors.surfaceFill,
+                                color: context.appColors.surfaceFill,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: cs.outlineVariant.withValues(

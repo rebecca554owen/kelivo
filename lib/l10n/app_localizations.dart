@@ -3130,6 +3130,12 @@ abstract class AppLocalizations {
   /// **'Import successful. Restart Kelivo to apply it safely.'**
   String get backupPageRestartContent;
 
+  /// No description provided for @backupPageRestartContentWithSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Import completed, but {count} conversations with invalid message ordering were skipped. Restart Kelivo to apply the imported data safely.'**
+  String backupPageRestartContentWithSkipped(int count);
+
   /// No description provided for @restartAppFailedMessage.
   ///
   /// In en, this message translates to:
