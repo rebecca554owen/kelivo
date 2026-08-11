@@ -373,11 +373,27 @@ void main() {
         await fontFile.writeAsBytes(List<int>.filled(256, 9));
 
         final tmpDir = Directory('${root.path}/tmp');
-        final staleWorkDir = Directory('${tmpDir.path}/kelivo_backup_stale');
+        // Abandoned entries (older than the 6h reclaim threshold) carry their
+        // age in the name, matching prepareBackupFile's naming.
+        final staleWorkDir = Directory(
+          '${tmpDir.path}/kelivo_backup_2000-01-01T00-00-00.000000',
+        );
         await staleWorkDir.create(recursive: true);
         await File('${staleWorkDir.path}/orphan.zip').writeAsString('old');
-        await File('${tmpDir.path}/kelivo_backup_old.zip').writeAsString('old');
-        await File('${tmpDir.path}/_bk_chats.json').writeAsString('{}');
+        final staleZip = File(
+          '${tmpDir.path}/kelivo_backup_2000-01-01T00-00-01.000000.zip',
+        );
+        await staleZip.writeAsString('old');
+        final staleLegacy = File('${tmpDir.path}/_bk_chats.json');
+        await staleLegacy.writeAsString('{}');
+        await staleLegacy.setLastModified(DateTime(2000));
+        // A fresh leftover looks like a backup another provider is running
+        // right now and must survive the sweep.
+        final freshWorkDir = Directory(
+          '${tmpDir.path}/kelivo_backup_'
+          '${DateTime.now().toIso8601String().replaceAll(':', '-')}',
+        );
+        await freshWorkDir.create(recursive: true);
 
         final sync = DataSync(
           businessRepository: businessRepository,
@@ -388,11 +404,10 @@ void main() {
         );
 
         expect(await staleWorkDir.exists(), isFalse);
-        expect(
-          await File('${tmpDir.path}/kelivo_backup_old.zip').exists(),
-          isFalse,
-        );
-        expect(await File('${tmpDir.path}/_bk_chats.json').exists(), isFalse);
+        expect(await staleZip.exists(), isFalse);
+        expect(await staleLegacy.exists(), isFalse);
+        expect(await freshWorkDir.exists(), isTrue);
+        await freshWorkDir.delete(recursive: true);
 
         final input = InputFileStream(backupFile.path);
         Archive? archive;

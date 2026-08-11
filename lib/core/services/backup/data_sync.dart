@@ -480,20 +480,55 @@ class DataSync {
     } catch (_) {}
   }
 
+  /// Parses the creation time out of a `kelivo_backup_<iso-with-dashes>` name
+  /// (see [prepareBackupFile], which replaces ':' with '-'). Returns null for
+  /// names that do not carry a timestamp.
+  static DateTime? _backupTempTimestampFromName(String name) {
+    const prefix = 'kelivo_backup_';
+    if (!name.startsWith(prefix)) return null;
+    var core = name.substring(prefix.length);
+    if (core.endsWith('.zip')) {
+      core = core.substring(0, core.length - 4);
+    }
+    final match = RegExp(
+      r'^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})(.*)$',
+    ).firstMatch(core);
+    if (match == null) return null;
+    return DateTime.tryParse(
+      '${match[1]}T${match[2]}:${match[3]}:${match[4]}${match[5]}',
+    );
+  }
+
   static Future<void> _cleanupPreviousBackupTempFiles(Directory tmp) async {
     try {
       if (!await tmp.exists()) return;
+      // Only reclaim entries that are clearly abandoned. WebDAV, S3 and local
+      // export are independent providers with no shared busy flag, so an
+      // age-blind sweep here would delete the working directory of a backup
+      // that another provider is still packing or uploading.
+      final cutoff = DateTime.now().subtract(const Duration(hours: 6));
+      Future<bool> isStale(FileSystemEntity entity, String name) async {
+        final fromName = _backupTempTimestampFromName(name);
+        if (fromName != null) return fromName.isBefore(cutoff);
+        try {
+          return (await entity.stat()).modified.isBefore(cutoff);
+        } catch (_) {
+          // Unknown age: keep it rather than risk racing a live backup.
+          return false;
+        }
+      }
+
       await for (final ent in tmp.list(followLinks: false)) {
         final name = p.basename(ent.path);
         if (ent is Directory && name.startsWith('kelivo_backup_')) {
-          await _deleteDirectoryQuietly(ent);
+          if (await isStale(ent, name)) await _deleteDirectoryQuietly(ent);
         } else if (ent is File &&
             ((name.startsWith('kelivo_backup_') && name.endsWith('.zip')) ||
                 name == '_bk_settings.json' ||
                 name == '_bk_chats.json' ||
                 name == '_bk_manifest.json' ||
                 name == '_bk_kelivo.db')) {
-          await _deleteFileQuietly(ent);
+          if (await isStale(ent, name)) await _deleteFileQuietly(ent);
         }
       }
     } catch (_) {}
