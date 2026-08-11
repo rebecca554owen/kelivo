@@ -376,6 +376,7 @@ class BrandAssets {
     'codex.svg',
     'firecrawl.svg',
     'stepfun.svg',
+    'fish-audio.svg',
   };
 
   // Build the LobeHub static SVG CDN URL from an icon name (e.g. 'openai').

@@ -41,6 +41,10 @@ void main() {
         isTrue,
       );
       expect(
+        BrandAssets.assetNeedsDarkInvert('assets/icons/fish-audio.svg'),
+        isTrue,
+      );
+      expect(
         BrandAssets.assetNeedsDarkInvert('assets/icons/serper.svg'),
         isFalse,
       );
