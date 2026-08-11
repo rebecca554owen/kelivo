@@ -78,6 +78,7 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
   Future<void> _pickBackupAndStart() async {
     if (_busy) return;
     setState(() => _busy = true);
+    var backupPhaseComplete = false;
     try {
       File? backupFile;
       if (_usesMobileBackupFlow) {
@@ -90,8 +91,18 @@ class _HiveToSqliteMigrationPageState extends State<HiveToSqliteMigrationPage> {
       }
       if (!mounted) return;
       setState(() => _backupFile = backupFile);
+      // migrate() bumps the attempt counter itself; anything before this is a
+      // backup-phase failure that must still count toward unlocking skip.
+      backupPhaseComplete = true;
       await widget.service.migrate(backupPath: backupFile?.path);
     } catch (error, stackTrace) {
+      if (!backupPhaseComplete) {
+        try {
+          await widget.service.recordFailedAttempt();
+        } catch (_) {
+          // Counter persistence is best-effort; never mask the real failure.
+        }
+      }
       await _refreshSkipAvailability();
       if (mounted && _status.stage != HiveToSqliteMigrationStage.failed) {
         setState(() {
@@ -1035,7 +1046,6 @@ class _StatusDot extends StatelessWidget {
 
   final _TaskState state;
 
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1365,7 +1375,10 @@ class _StatsCard extends StatelessWidget {
               ),
               verticalDivider(),
               Expanded(
-                child: _Stat(label: l10n.migrationMessageCount, value: messages),
+                child: _Stat(
+                  label: l10n.migrationMessageCount,
+                  value: messages,
+                ),
               ),
             ],
           ),

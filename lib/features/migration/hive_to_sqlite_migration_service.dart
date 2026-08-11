@@ -1451,9 +1451,7 @@ class HiveToSqliteMigrationService {
           return;
         }
         lastAttachmentProgressEmit = now;
-        final fraction = total <= 0
-            ? 1.0
-            : (processed / total).clamp(0.0, 1.0);
+        final fraction = total <= 0 ? 1.0 : (processed / total).clamp(0.0, 1.0);
         _emit(
           HiveToSqliteMigrationStage.migrating,
           0.98 + 0.005 * fraction,
@@ -1610,6 +1608,26 @@ class HiveToSqliteMigrationService {
     _logLine(
       'migration-attempt: $_attemptCount '
       '(${HiveToSqliteMigrationStage.migrating.name}/start)',
+    );
+  }
+
+  /// Records an attempt that failed before [migrate] could run (i.e. during
+  /// backup creation). [migrate] increments the counter itself via
+  /// [_beginAttempt], so callers must only invoke this for backup-phase
+  /// failures; otherwise a disk-full or unwritable-target user could never
+  /// reach the skip escape hatch and would be trapped on the migration page.
+  Future<void> recordFailedAttempt() async {
+    final state = await _readAttemptState();
+    _attemptCount = state.attempts + 1;
+    _persistedStageBreadcrumb =
+        '${HiveToSqliteMigrationStage.backingUp.name}/failed';
+    await _writeAttemptState(
+      attempts: _attemptCount,
+      stage: _persistedStageBreadcrumb!,
+    );
+    _logLine(
+      'migration-attempt: $_attemptCount '
+      '(${HiveToSqliteMigrationStage.backingUp.name}/failed)',
     );
   }
 

@@ -982,6 +982,42 @@ void main() {
     },
   );
 
+  test(
+    'recordFailedAttempt counts backup-phase failures and unlocks skip',
+    () async {
+      _registerHiveAdapters();
+      Hive.init(tempDir.path);
+      final conversations = await Hive.openBox<Conversation>('conversations');
+      await conversations.close();
+      await Hive.close();
+
+      final decision = await HiveToSqliteMigrationService.check();
+
+      // A backup failure happens before migrate(), so the attempt counter must
+      // advance without ever entering the migrate path.
+      final first = HiveToSqliteMigrationService(decision);
+      addTearDown(first.dispose);
+      expect(first.canOfferSkip, isFalse);
+      await first.recordFailedAttempt();
+      expect(first.attemptCount, 1);
+      expect(first.canOfferSkip, isFalse);
+
+      // Fresh instance ≈ relaunch: the count is read back from disk and a
+      // second backup failure crosses the skip threshold.
+      final second = HiveToSqliteMigrationService(decision);
+      addTearDown(second.dispose);
+      expect(await second.loadAttemptState(), 1);
+      await second.recordFailedAttempt();
+      expect(second.attemptCount, 2);
+      expect(second.canOfferSkip, isTrue);
+
+      final relaunched = HiveToSqliteMigrationService(decision);
+      addTearDown(relaunched.dispose);
+      expect(await relaunched.loadAttemptState(), 2);
+      expect(relaunched.canOfferSkip, isTrue);
+    },
+  );
+
   test('attempt counter clears after successful migration', () async {
     final conversation = Conversation(
       id: 'conversation-clear-attempts',
