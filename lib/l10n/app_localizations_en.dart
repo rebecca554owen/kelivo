@@ -3053,6 +3053,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultModelPageOcrModelTitle => 'OCR Model';
 
   @override
+  String backgroundTaskFailed(String task, String error) {
+    return '$task failed: $error';
+  }
+
+  @override
   String get defaultModelPageOcrModelSubtitle =>
       'Used for extracting text and descriptions from images';
 

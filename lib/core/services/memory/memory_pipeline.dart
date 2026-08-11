@@ -57,12 +57,14 @@ class _PipelineJob {
     required this.assistantId,
     required this.force,
     this.completer,
+    this.onError,
   });
 
   final String conversationId;
   final String assistantId;
   final bool force;
   final Completer<MemoryOrganizeResult>? completer;
+  final void Function(String error)? onError;
 }
 
 /// Background memory pipeline: Gatekeeper → Extract → Smart Add → Distiller.
@@ -224,6 +226,7 @@ class MemoryPipelineService {
   void scheduleIfNeeded({
     required String conversationId,
     required String assistantId,
+    void Function(String error)? onError,
   }) {
     try {
       _enqueue(
@@ -231,10 +234,12 @@ class MemoryPipelineService {
           conversationId: conversationId,
           assistantId: assistantId,
           force: false,
+          onError: onError,
         ),
       );
     } catch (e, st) {
       debugPrint('MemoryPipeline.scheduleIfNeeded: $e\n$st');
+      onError?.call(e.toString());
     }
   }
 
@@ -280,6 +285,7 @@ class MemoryPipelineService {
     _queue.addLast(job);
     while (_queue.length > queueLimit) {
       final dropped = _queue.removeFirst();
+      dropped.onError?.call('queue_overflow');
       dropped.completer?.complete(
         const MemoryOrganizeResult(
           advanced: false,
@@ -312,12 +318,24 @@ class MemoryPipelineService {
           lastAt: DateTime.now(),
           lastResult: result,
         );
+        if (result.error != null && _isTaskFailure(result.error!)) {
+          job.onError?.call(result.error!);
+        }
         job.completer?.complete(result);
       }
     } finally {
       _running = false;
     }
   }
+
+  static bool _isTaskFailure(String error) => !const {
+    'temporary_conversation',
+    'memory_disabled',
+    'auto_organize_off',
+    'streaming',
+    'below_threshold',
+    'empty_window',
+  }.contains(error);
 
   /// Open a trace for [job]. Returns null when recording is off or fails.
   MemoryTraceHandle? _beginJobTrace(_PipelineJob job) {

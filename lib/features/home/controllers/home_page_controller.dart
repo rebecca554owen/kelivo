@@ -387,6 +387,8 @@ class HomePageController extends ChangeNotifier {
           _chatService.getImageOcrArtifacts(revisionIds),
       persistArtifact: (revisionId, items) =>
           _chatService.upsertImageOcrArtifactItems(revisionId, items),
+      onError: (error) =>
+          _showBackgroundTaskFailure(BackgroundTaskKind.ocr, error),
     );
     _translationService = TranslationService(
       chatService: _chatService,
@@ -447,7 +449,26 @@ class HomePageController extends ChangeNotifier {
       contextProvider: _context,
       getTitleForLocale: _titleForLocale,
     );
+    _viewModel.onBackgroundTaskError = _showBackgroundTaskFailure;
     _viewModel.addListener(notifyListeners);
+  }
+
+  void _showBackgroundTaskFailure(BackgroundTaskKind task, Object error) {
+    if (!_context.mounted) return;
+    final l10n = AppLocalizations.of(_context)!;
+    final taskName = switch (task) {
+      BackgroundTaskKind.ocr => l10n.defaultModelPageOcrModelTitle,
+      BackgroundTaskKind.title => l10n.defaultModelPageTitleModelTitle,
+      BackgroundTaskKind.summary => l10n.defaultModelPageSummaryModelTitle,
+      BackgroundTaskKind.suggestions =>
+        l10n.defaultModelPageSuggestionModelTitle,
+      BackgroundTaskKind.memory => l10n.memorySettingsPageTitle,
+    };
+    showAppSnackBar(
+      _context,
+      message: l10n.backgroundTaskFailed(taskName, error.toString()),
+      type: NotificationType.error,
+    );
   }
 
   void _wireViewModelCallbacks() {
@@ -2482,6 +2503,8 @@ class HomePageController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _viewModel.onBackgroundTaskError = null;
+    _ocrService.onError = null;
     _convoFadeController.dispose();
     _messageJumpTransitionController.dispose();
     _mcpProvider?.removeListener(_onMcpChanged);

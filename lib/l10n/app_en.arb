@@ -1302,6 +1302,13 @@
   "defaultModelPageTranslateModelTitle": "Translation Model",
   "defaultModelPageTranslateModelSubtitle": "Used for translating message content; prefer fast & accurate models",
   "defaultModelPageOcrModelTitle": "OCR Model",
+  "backgroundTaskFailed": "{task} failed: {error}",
+  "@backgroundTaskFailed": {
+    "placeholders": {
+      "task": {"type": "String"},
+      "error": {"type": "String"}
+    }
+  },
   "defaultModelPageOcrModelSubtitle": "Used for extracting text and descriptions from images",
   "defaultModelPageOcrModelRequiresImageInput": "Select a model tagged with image input for OCR",
   "defaultModelPagePromptLabel": "Prompt",

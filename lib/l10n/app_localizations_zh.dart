@@ -2947,6 +2947,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get defaultModelPageOcrModelTitle => 'OCR 模型';
 
   @override
+  String backgroundTaskFailed(String task, String error) {
+    return '$task失败：$error';
+  }
+
+  @override
   String get defaultModelPageOcrModelSubtitle => '用于对图片执行文字识别的模型';
 
   @override
@@ -10009,6 +10014,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get defaultModelPageOcrModelTitle => 'OCR 模型';
 
   @override
+  String backgroundTaskFailed(String task, String error) {
+    return '$task失败：$error';
+  }
+
+  @override
   String get defaultModelPageOcrModelSubtitle => '用于对图片执行文字识别的模型';
 
   @override
@@ -16994,6 +17004,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get defaultModelPageOcrModelTitle => 'OCR 模型';
+
+  @override
+  String backgroundTaskFailed(String task, String error) {
+    return '$task失敗：$error';
+  }
 
   @override
   String get defaultModelPageOcrModelSubtitle => '用於對圖片執行文字辨識的模型';

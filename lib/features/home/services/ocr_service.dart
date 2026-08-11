@@ -37,6 +37,7 @@ class OcrService {
     this.loadArtifacts,
     this.persistArtifact,
     this.ocrExecutor,
+    this.onError,
   });
 
   static const String artifactKind = 'image_ocr_v1';
@@ -62,6 +63,9 @@ class OcrService {
 
   /// Optional OCR backend override (tests). When null, uses ChatApiService.
   final Future<String?> Function(List<String> imagePaths)? ocrExecutor;
+
+  /// Reports OCR model request failures without interrupting the chat request.
+  void Function(Object error)? onError;
 
   /// OCR 缓存 (memoryKey -> cached OCR text)
   final Map<String, OcrCacheEntry> _cache = <String, OcrCacheEntry>{};
@@ -137,11 +141,16 @@ class OcrService {
           out += chunk.content;
         }
       }
-    } catch (_) {
+    } catch (e) {
+      onError?.call(e);
       return null;
     }
     out = out.trim();
-    return out.isEmpty ? null : out;
+    if (out.isEmpty) {
+      onError?.call('empty_response');
+      return null;
+    }
+    return out;
   }
 
   /// 缓存 OCR 文本结果（按内容哈希）

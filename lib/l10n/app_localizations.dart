@@ -5710,6 +5710,12 @@ abstract class AppLocalizations {
   /// **'OCR Model'**
   String get defaultModelPageOcrModelTitle;
 
+  /// No description provided for @backgroundTaskFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{task} failed: {error}'**
+  String backgroundTaskFailed(String task, String error);
+
   /// No description provided for @defaultModelPageOcrModelSubtitle.
   ///
   /// In en, this message translates to:

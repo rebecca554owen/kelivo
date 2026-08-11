@@ -24,6 +24,8 @@ import 'stream_controller.dart' as stream_ctrl;
 
 enum CompressContextLimitMode { start, recent, unlimited }
 
+enum BackgroundTaskKind { ocr, title, summary, suggestions, memory }
+
 class CompressContextOptions {
   const CompressContextOptions({required this.mode, this.maxChars});
 
@@ -186,6 +188,9 @@ class HomeViewModel extends ChangeNotifier {
   /// Called when an error occurs (UI should show snackbar).
   void Function(String error)? onError;
 
+  /// Called when a non-blocking background model task fails.
+  void Function(BackgroundTaskKind task, Object error)? onBackgroundTaskError;
+
   /// Called when a warning occurs (UI should show snackbar).
   void Function(String warning)? onWarning;
 
@@ -288,17 +293,37 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void _onMaybeGenerateTitle(String conversationId) {
-    // Trigger title generation asynchronously
-    _maybeGenerateTitleFor(conversationId);
+    _runBackgroundTask(
+      BackgroundTaskKind.title,
+      _maybeGenerateTitleFor(conversationId),
+    );
   }
 
   void _onMaybeGenerateSummary(String conversationId) {
-    // Trigger summary generation asynchronously
-    _maybeGenerateSummaryFor(conversationId);
+    _runBackgroundTask(
+      BackgroundTaskKind.summary,
+      _maybeGenerateSummaryFor(conversationId),
+    );
   }
 
   void _onMaybeGenerateSuggestions(String conversationId) {
-    _maybeGenerateSuggestionsFor(conversationId);
+    _runBackgroundTask(
+      BackgroundTaskKind.suggestions,
+      _maybeGenerateSuggestionsFor(conversationId),
+    );
+  }
+
+  void _runBackgroundTask(BackgroundTaskKind task, Future<void> future) {
+    unawaited(
+      future.onError((error, stackTrace) {
+        final reportedError = error ?? 'unknown error';
+        FlutterLogger.log(
+          '[BackgroundTask:$task] failed: $reportedError\n$stackTrace',
+          tag: 'HomeViewModel',
+        );
+        onBackgroundTaskError?.call(task, reportedError);
+      }),
+    );
   }
 
   void _onStreamFinished() {
@@ -326,6 +351,8 @@ class HomeViewModel extends ChangeNotifier {
       pipeline.scheduleIfNeeded(
         conversationId: conversationId,
         assistantId: assistant.id,
+        onError: (error) =>
+            onBackgroundTaskError?.call(BackgroundTaskKind.memory, error),
       );
     } catch (e, st) {
       FlutterLogger.log(
@@ -1317,13 +1344,18 @@ class HomeViewModel extends ChangeNotifier {
           );
           notifyListeners();
         }
+      } else {
+        onBackgroundTaskError?.call(
+          BackgroundTaskKind.title,
+          'empty_response',
+        );
       }
     } catch (e) {
       FlutterLogger.log(
         '[TitleGen] Generation failed: $e',
         tag: 'HomeViewModel',
       );
-      // Ignore title generation failure silently
+      onBackgroundTaskError?.call(BackgroundTaskKind.title, e);
     }
   }
 
@@ -1471,11 +1503,17 @@ class HomeViewModel extends ChangeNotifier {
           );
           notifyListeners();
         }
+      } else {
+        onBackgroundTaskError?.call(
+          BackgroundTaskKind.summary,
+          'empty_response',
+        );
       }
     } catch (e) {
-      // Keep old summary on failure, ignore silently
+      // Keep the old summary when background generation fails.
       traceStep?.finish(MemoryTraceStepStatus.failed, error: e.toString());
       traceHandle?.commit(error: e.toString());
+      onBackgroundTaskError?.call(BackgroundTaskKind.summary, e);
     }
   }
 
@@ -1566,7 +1604,13 @@ class HomeViewModel extends ChangeNotifier {
         locale: locale,
         thinkingBudget: budget,
       );
-      if (suggestions.isEmpty) return;
+      if (suggestions.isEmpty) {
+        onBackgroundTaskError?.call(
+          BackgroundTaskKind.suggestions,
+          'empty_response',
+        );
+        return;
+      }
 
       final latest = _chatService.getConversation(conversationId);
       // loadMessages above populates the count; unknown (-1) ≠ loaded length
@@ -1591,6 +1635,7 @@ class HomeViewModel extends ChangeNotifier {
         '[SuggestionGen] Generation failed: $e',
         tag: 'HomeViewModel',
       );
+      onBackgroundTaskError?.call(BackgroundTaskKind.suggestions, e);
     }
   }
 

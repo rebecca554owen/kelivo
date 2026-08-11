@@ -722,13 +722,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     );
     final locale = Localizations.localeOf(context).toLanguageTag();
 
-    // Content (shared source builder with HomeViewModel title generation;
-    // applies truncateIndex and collapses multi-version groups)
-    final content = await chatService.generateTitleSource(conversationId);
-    final prompt = settings.titlePrompt
-        .replaceAll('{locale}', locale)
-        .replaceAll('{content}', content);
     try {
+      // Content (shared source builder with HomeViewModel title generation;
+      // applies truncateIndex and collapses multi-version groups)
+      final content = await chatService.generateTitleSource(conversationId);
+      final prompt = settings.titlePrompt
+          .replaceAll('{locale}', locale)
+          .replaceAll('{content}', content);
       final title = (await ChatApiService.generateText(
         config: cfg,
         modelId: mdlId,
@@ -737,12 +737,33 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       )).trim();
       if (title.isNotEmpty) {
         await chatService.renameConversation(conversationId, title);
+      } else if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        showAppSnackBar(
+          context,
+          message: l10n.backgroundTaskFailed(
+            l10n.defaultModelPageTitleModelTitle,
+            'empty_response',
+          ),
+          type: NotificationType.error,
+        );
       }
     } catch (e) {
       FlutterLogger.log(
         '[SideDrawer] Regenerate title failed: $e',
         tag: 'SideDrawer',
       );
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        showAppSnackBar(
+          context,
+          message: l10n.backgroundTaskFailed(
+            l10n.defaultModelPageTitleModelTitle,
+            e.toString(),
+          ),
+          type: NotificationType.error,
+        );
+      }
     }
   }
 
