@@ -517,6 +517,49 @@ void main() {
   );
 
   test(
+    'attachment-only message (no text) migrates without validation failure',
+    () async {
+      // Reproduces the release-blocking case: a message whose entire legacy
+      // content is a single attachment marker. The decoder emits zero
+      // TextParts, so the digest expectation must also be empty; a stale
+      // [''] fallback made the text-content digest mismatch and rolled back
+      // the whole migration.
+      await _seedHiveChat(
+        tempDir: tempDir,
+        conversationId: 'conversation-attachment-only',
+        messageId: 'message-attachment-only',
+        content: '[image:/tmp/only-an-image.png]',
+      );
+
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+
+      await service.migrate();
+
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isTrue,
+      );
+      expect(
+        (await HiveToSqliteMigrationService.check()).needsMigration,
+        isFalse,
+      );
+
+      final repo = ChatDatabaseRepository.open(
+        file: File('${tempDir.path}/kelivo.db'),
+      );
+      addTearDown(repo.close);
+      expect(await repo.getTotalMessageCount(), 1);
+      expect(await repo.getTextPartCount(), 0);
+      expect(await repo.getImagePartCount(), 1);
+    },
+  );
+
+  test(
     'validation failure keeps hive backup and leaves migration incomplete',
     () async {
       await _seedHiveChat(

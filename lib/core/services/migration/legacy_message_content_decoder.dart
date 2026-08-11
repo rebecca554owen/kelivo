@@ -247,7 +247,12 @@ List<String> stripLegacyContentTextSegments(String content) {
   }
 
   flushText();
-  if (segments.isEmpty) return const [''];
+  // Reaching here with no segments means every line was a convertible marker
+  // (empty content already returned [''] above). The decoder emits no TextPart
+  // for such attachment-only content and the migration service only
+  // substitutes TextPart('') when the part list is entirely empty, so the
+  // digest expectation must also be empty.
+  if (segments.isEmpty) return const <String>[];
   return List<String>.unmodifiable(segments);
 }
 

@@ -364,6 +364,57 @@ void main() {
     expect(stripLegacyContentTextSegments(content).join(), content);
   });
 
+  test('attachment-only content strips to zero segments', () async {
+    // Joined strings hide the segment count ([''] and [] both join to ''),
+    // and the migration digest hashes per segment, so these cases must
+    // assert segment lists, not joined text.
+    const attachmentOnlyContents = <String>[
+      '[image:/tmp/a.png]',
+      '[file:/tmp/a.pdf|a.pdf|application/pdf]',
+      '[image:/tmp/a.png]\n[image:/tmp/b.png]',
+      '[image:data:image/png;base64,iVBORw0KGgo=]',
+    ];
+    for (final content in attachmentOnlyContents) {
+      final segments = stripLegacyContentTextSegments(content);
+      expect(segments, isEmpty, reason: content);
+
+      final result = await decodeLegacyContent(content);
+      expect(result.parts.whereType<TextPart>(), isEmpty, reason: content);
+    }
+  });
+
+  test('strip segments match decoded TextParts one-to-one', () async {
+    // The migration validator mixes one digest per stripped segment and the
+    // repository persists one digest per TextPart; any count or content
+    // divergence fails the whole migration.
+    const contents = <String>[
+      '',
+      '[image:/tmp/a.png]',
+      '[image:/tmp/a.png]\n',
+      'hi\n[image:/tmp/a.png]',
+      '[image:/tmp/a.png]\nhi',
+      'a\n[image:/tmp/a.png]\nb',
+    ];
+    for (final content in contents) {
+      final result = await decodeLegacyContent(content);
+      var parts = result.parts;
+      if (parts.isEmpty) {
+        // Mirror the migration service: an entirely empty body is persisted
+        // as one empty text part.
+        parts = const [TextPart('')];
+      }
+      final persistedTexts = parts
+          .whereType<TextPart>()
+          .map((part) => part.text)
+          .toList();
+      expect(
+        stripLegacyContentTextSegments(content),
+        persistedTexts,
+        reason: content,
+      );
+    }
+  });
+
   test('managed Documents absolute path becomes kelivo-file URI', () async {
     final docs = Directory('${tempDir.path}/Documents')..createSync();
     SandboxPathResolver.debugSetDirs(docsDir: docs.path);
