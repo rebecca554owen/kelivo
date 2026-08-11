@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
 import '../models/conversation.dart';
@@ -3614,6 +3615,123 @@ class ChatDatabaseRepository {
             .insert(_conversationCompanion(conversation));
       }
       await _replaceMcpServers(conversation.id, conversation.mcpServerIds);
+    });
+  }
+
+  Future<Conversation?> duplicateConversation(String sourceId) {
+    return _db.transaction(() async {
+      final sourceRow = await (_db.select(
+        _db.conversationRows,
+      )..where((row) => row.id.equals(sourceId))).getSingleOrNull();
+      if (sourceRow == null) return null;
+
+      final sourceMessages =
+          await (_db.select(_db.messageRows)
+                ..where((row) => row.conversationId.equals(sourceId))
+                ..orderBy([(row) => OrderingTerm.asc(row.messageOrder)]))
+              .get();
+      const uuid = Uuid();
+      final targetId = uuid.v4();
+      final messageIdMap = {
+        for (final message in sourceMessages) message.id: uuid.v4(),
+      };
+      final groupIdMap = <String, String>{};
+      for (final message in sourceMessages) {
+        final groupId = message.groupId ?? message.id;
+        groupIdMap.putIfAbsent(
+          groupId,
+          () => messageIdMap[groupId] ?? uuid.v4(),
+        );
+      }
+
+      final source = await _conversationFromRow(
+        sourceRow,
+        includeMessageIds: false,
+      );
+      final duplicatedAt = DateTime.now();
+      final duplicate = source.copyWith(
+        id: targetId,
+        createdAt: duplicatedAt,
+        updatedAt: duplicatedAt,
+        messageIds: [
+          for (final message in sourceMessages) messageIdMap[message.id]!,
+        ],
+        versionSelections: {
+          for (final entry in source.versionSelections.entries)
+            groupIdMap[entry.key] ?? entry.key: entry.value,
+        },
+        clearInjectedMemoryHash: true,
+        lastMemoryExtractedOrder: sourceMessages.isEmpty
+            ? -1
+            : sourceMessages.last.messageOrder,
+      );
+      await _db
+          .into(_db.conversationRows)
+          .insert(_conversationCompanion(duplicate));
+      await _replaceMcpServers(targetId, duplicate.mcpServerIds);
+
+      for (final message in sourceMessages) {
+        final targetMessageId = messageIdMap[message.id]!;
+        await _db
+            .into(_db.messageRows)
+            .insert(
+              MessageRowsCompanion.insert(
+                id: targetMessageId,
+                conversationId: targetId,
+                role: message.role,
+                timestamp: message.timestamp,
+                modelId: Value(message.modelId),
+                providerId: Value(message.providerId),
+                totalTokens: Value(message.totalTokens),
+                isStreaming: const Value(false),
+                reasoningStartAt: Value(message.reasoningStartAt),
+                reasoningFinishedAt: Value(message.reasoningFinishedAt),
+                translation: Value(message.translation),
+                reasoningSegmentsJson: Value(message.reasoningSegmentsJson),
+                groupId: Value(
+                  message.groupId == null ? null : groupIdMap[message.groupId],
+                ),
+                version: Value(message.version),
+                promptTokens: Value(message.promptTokens),
+                completionTokens: Value(message.completionTokens),
+                cachedTokens: Value(message.cachedTokens),
+                durationMs: Value(message.durationMs),
+                messageOrder: message.messageOrder,
+              ),
+            );
+        await _db.customStatement(
+          'INSERT INTO message_part_rows '
+          '(conversation_id, revision_id, ordinal, kind, payload, '
+          'created_at, updated_at) '
+          'SELECT ?, ?, ordinal, kind, payload, created_at, updated_at '
+          'FROM message_part_rows WHERE revision_id = ?;',
+          [targetId, targetMessageId, message.id],
+        );
+        await _db.customStatement(
+          'INSERT INTO provider_artifact_rows '
+          '(conversation_id, revision_id, kind, payload, created_at, '
+          'updated_at) '
+          'SELECT ?, ?, kind, payload, created_at, updated_at '
+          'FROM provider_artifact_rows WHERE revision_id = ?;',
+          [targetId, targetMessageId, message.id],
+        );
+        await _db.customStatement(
+          'INSERT INTO message_asset_rows '
+          '(conversation_id, revision_id, asset_id, kind) '
+          'SELECT ?, ?, asset_id, kind FROM message_asset_rows '
+          'WHERE revision_id = ?;',
+          [targetId, targetMessageId, message.id],
+        );
+      }
+      await _db.customStatement(
+        'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
+        'SELECT revision_id FROM message_asset_rows WHERE conversation_id = ? '
+        'UNION '
+        'SELECT revision_id FROM message_part_rows '
+        "WHERE conversation_id = ? AND kind IN ('image', 'file');",
+        [targetId, targetId],
+      );
+      return duplicate;
     });
   }
 

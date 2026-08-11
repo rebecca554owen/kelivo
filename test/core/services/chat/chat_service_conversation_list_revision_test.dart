@@ -89,6 +89,20 @@ void main() {
       expect(service.conversationListRevision, greaterThan(last));
     });
 
+    test('duplicate is cached and bumps the list revision', () async {
+      final service = createService();
+      await service.init();
+      final conversation = await service.createConversation(title: 'A');
+      final last = service.conversationListRevision;
+
+      final duplicate = await service.duplicateConversation(conversation.id);
+
+      expect(duplicate, isNotNull);
+      expect(duplicate!.id, isNot(conversation.id));
+      expect(service.getConversation(duplicate.id), same(duplicate));
+      expect(service.conversationListRevision, greaterThan(last));
+    });
+
     test('does not bump on selection, streaming, or summary updates', () async {
       final service = createService();
       await service.init();

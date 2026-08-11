@@ -2467,6 +2467,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerMenuRegenerateTitle => '重新生成标题';
 
   @override
+  String get sideDrawerMenuCopy => '复制';
+
+  @override
   String get sideDrawerMenuMoveTo => '移动到';
 
   @override
@@ -9534,6 +9537,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerMenuRegenerateTitle => '重新生成标题';
 
   @override
+  String get sideDrawerMenuCopy => '复制';
+
+  @override
   String get sideDrawerMenuMoveTo => '移动到';
 
   @override
@@ -16524,6 +16530,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerMenuRegenerateTitle => '重新生成標題';
+
+  @override
+  String get sideDrawerMenuCopy => '複製';
 
   @override
   String get sideDrawerMenuMoveTo => '移動到';

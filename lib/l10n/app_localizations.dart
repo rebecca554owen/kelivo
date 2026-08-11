@@ -4792,6 +4792,12 @@ abstract class AppLocalizations {
   /// **'Regenerate Title'**
   String get sideDrawerMenuRegenerateTitle;
 
+  /// No description provided for @sideDrawerMenuCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get sideDrawerMenuCopy;
+
   /// No description provided for @sideDrawerMenuMoveTo.
   ///
   /// In en, this message translates to:

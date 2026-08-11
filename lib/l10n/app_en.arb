@@ -1091,6 +1091,7 @@
   "sideDrawerMenuPin": "Pin",
   "sideDrawerMenuUnpin": "Unpin",
   "sideDrawerMenuRegenerateTitle": "Regenerate Title",
+  "sideDrawerMenuCopy": "Copy",
   "sideDrawerMenuMoveTo": "Move to",
   "sideDrawerMenuDelete": "Delete",
   "sideDrawerDeleteSnackbar": "Deleted \"{title}\"",

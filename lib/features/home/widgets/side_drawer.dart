@@ -278,6 +278,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             },
           ),
           DesktopContextMenuItem(
+            icon: Lucide.Copy,
+            label: l10n.sideDrawerMenuCopy,
+            onTap: () async {
+              await chatService.duplicateConversation(chat.id);
+            },
+          ),
+          DesktopContextMenuItem(
             icon: Lucide.Shuffle,
             label: l10n.sideDrawerMenuMoveTo,
             onTap: () async {
@@ -462,6 +469,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       label: l10n.sideDrawerMenuRegenerateTitle,
                       action: () async {
                         await _regenerateTitle(context, chat.id);
+                      },
+                    ),
+                    row(
+                      icon: Lucide.Copy,
+                      label: l10n.sideDrawerMenuCopy,
+                      action: () async {
+                        await chatService.duplicateConversation(chat.id);
                       },
                     ),
                     row(
