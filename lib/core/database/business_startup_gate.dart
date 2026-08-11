@@ -15,8 +15,8 @@ final class BusinessStartupGate {
 
   /// Non-null when the last [migrateAndLoad] degraded a recoverable business
   /// migration validation failure instead of migrating cleanly. The legacy
-  /// SharedPreferences source is retained (the failed migration transaction
-  /// rolled back and wrote no receipt), so a fixed future build can retry.
+  /// preferences source is retained (the failed migration transaction rolled
+  /// back and wrote no receipt), so a fixed future build can retry.
   static String? lastDegradedReason;
 
   // Validation-class failures that must degrade rather than lock the user out
@@ -43,8 +43,9 @@ final class BusinessStartupGate {
       if (!_isRecoverableMigrationFailure(error)) rethrow;
       // The migration transaction rolled back, so the database holds no
       // migrated business data and no receipt. Entering with defaults keeps
-      // the user in the app (and their legacy data intact for a later retry)
-      // instead of trapping them behind a fail-closed startup screen.
+      // the user in the app (and their legacy preference data intact for a
+      // later retry) instead of trapping them behind a fail-closed startup
+      // screen.
       lastDegradedReason = (error as StateError).message;
       developer.log(
         'Business migration degraded; entering with defaults and retaining '
