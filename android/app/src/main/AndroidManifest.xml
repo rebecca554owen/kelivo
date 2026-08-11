@@ -10,9 +10,15 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- OS auto-backup/device-transfer can restore a partial SQLite file
+         family (db without -wal, receipt without db), which the fail-closed
+         startup gate rejects. Kelivo ships its own backup (WebDAV/S3/local
+         export), so system backup is disabled. -->
     <application
         android:label="Kelivo"
         android:name="${applicationName}"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">
