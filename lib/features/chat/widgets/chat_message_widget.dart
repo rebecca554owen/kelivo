@@ -41,6 +41,7 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../desktop/menu_anchor.dart';
 import '../../../shared/widgets/emoji_text.dart';
+import '../../../utils/platform_utils.dart';
 import '../../home/services/ask_user_interaction_service.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../home/services/tool_approval_service.dart';
@@ -460,104 +461,281 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
     part.arguments,
     isResult: !part.loading,
   );
+  final closeSemanticLabel = l10n.mcpPageClose;
+
+  if (PlatformUtils.isDesktopTarget) {
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (dialogContext) => _ToolDetailDesktopDialog(
+          title: title,
+          closeSemanticLabel: closeSemanticLabel,
+          argsPretty: argsPretty,
+          resultText: resultText,
+          images: images,
+          argumentsLabel: l10n.chatMessageWidgetArguments,
+          resultLabel: l10n.chatMessageWidgetResult,
+          imagesLabel: l10n.chatMessageWidgetImages,
+        ),
+      ),
+    );
+    return;
+  }
 
   unawaited(
     showCustomBottomSheet<void>(
       context: context,
       title: title,
-      closeSemanticLabel: l10n.mcpPageClose,
+      closeSemanticLabel: closeSemanticLabel,
       builder: (sheetContext, scrollController) {
-        final theme = Theme.of(sheetContext);
-        final cs = theme.colorScheme;
-        return ListView(
-          controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Text(
-              l10n.chatMessageWidgetArguments,
-              style: TextStyle(
-                fontSize: 12,
-                color: cs.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: sheetContext.appColors.surfaceFill,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.2),
-                ),
-              ),
-              child: SelectableText(
-                argsPretty,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.chatMessageWidgetResult,
-              style: TextStyle(
-                fontSize: 12,
-                color: cs.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: sheetContext.appColors.surfaceFill,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.2),
-                ),
-              ),
-              child: SelectableText(
-                resultText,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-            if (images.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                l10n.chatMessageWidgetImages,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 220,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: images.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final path = images[index];
-                    return GestureDetector(
-                      onTap: () => _showToolFullImage(sheetContext, path),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: _buildToolImageFromPath(
-                          sheetContext,
-                          path,
-                          height: 220,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ],
+        return _ToolDetailBody(
+          scrollController: scrollController,
+          argsPretty: argsPretty,
+          resultText: resultText,
+          images: images,
+          argumentsLabel: l10n.chatMessageWidgetArguments,
+          resultLabel: l10n.chatMessageWidgetResult,
+          imagesLabel: l10n.chatMessageWidgetImages,
         );
       },
     ),
   );
+}
+
+class _ToolDetailDesktopDialog extends StatefulWidget {
+  const _ToolDetailDesktopDialog({
+    required this.title,
+    required this.closeSemanticLabel,
+    required this.argsPretty,
+    required this.resultText,
+    required this.images,
+    required this.argumentsLabel,
+    required this.resultLabel,
+    required this.imagesLabel,
+  });
+
+  static const dialogKey = ValueKey('tool_detail_desktop_dialog');
+  static const closeButtonKey = ValueKey('tool_detail_desktop_dialog_close');
+
+  final String title;
+  final String closeSemanticLabel;
+  final String argsPretty;
+  final String resultText;
+  final List<String> images;
+  final String argumentsLabel;
+  final String resultLabel;
+  final String imagesLabel;
+
+  @override
+  State<_ToolDetailDesktopDialog> createState() =>
+      _ToolDetailDesktopDialogState();
+}
+
+class _ToolDetailDesktopDialogState extends State<_ToolDetailDesktopDialog> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Dialog(
+      key: _ToolDetailDesktopDialog.dialogKey,
+      elevation: 12,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: 420,
+          maxWidth: 640,
+          maxHeight: 680,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Material(
+            color: cs.surface,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: cs.onSurface,
+                            fontSize: 16,
+                            fontWeight: AppFontWeights.emphasis,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        key: _ToolDetailDesktopDialog.closeButtonKey,
+                        width: 28,
+                        height: 28,
+                        child: IosIconButton(
+                          icon: Lucide.X,
+                          size: 20,
+                          padding: EdgeInsets.zero,
+                          color: cs.onSurface.withValues(alpha: 0.62),
+                          semanticLabel: widget.closeSemanticLabel,
+                          onTap: () => Navigator.of(context).maybePop(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    child: _ToolDetailBody(
+                      scrollController: _scrollController,
+                      argsPretty: widget.argsPretty,
+                      resultText: widget.resultText,
+                      images: widget.images,
+                      argumentsLabel: widget.argumentsLabel,
+                      resultLabel: widget.resultLabel,
+                      imagesLabel: widget.imagesLabel,
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolDetailBody extends StatelessWidget {
+  const _ToolDetailBody({
+    required this.scrollController,
+    required this.argsPretty,
+    required this.resultText,
+    required this.images,
+    required this.argumentsLabel,
+    required this.resultLabel,
+    required this.imagesLabel,
+    this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 24),
+  });
+
+  final ScrollController scrollController;
+  final String argsPretty;
+  final String resultText;
+  final List<String> images;
+  final String argumentsLabel;
+  final String resultLabel;
+  final String imagesLabel;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      controller: scrollController,
+      padding: padding,
+      children: [
+        Text(
+          argumentsLabel,
+          style: TextStyle(
+            fontSize: 12,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: context.appColors.surfaceFill,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.2),
+            ),
+          ),
+          child: SelectableText(
+            argsPretty,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          resultLabel,
+          style: TextStyle(
+            fontSize: 12,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: context.appColors.surfaceFill,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.2),
+            ),
+          ),
+          child: SelectableText(
+            resultText,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+        if (images.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            imagesLabel,
+            style: TextStyle(
+              fontSize: 12,
+              color: cs.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: images.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final path = images[index];
+                return GestureDetector(
+                  onTap: () => _showToolFullImage(context, path),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: _buildToolImageFromPath(
+                      context,
+                      path,
+                      height: 220,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class ChatMessageWidget extends StatefulWidget {
