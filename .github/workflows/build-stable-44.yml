@@ -632,6 +632,7 @@ jobs:
           License:        MIT
           Source0:        %{name}-%{version}.tar.gz
           BuildArch:      x86_64
+          Provides:       libonnxruntime.so(VERS_1.17.1)(64bit)
           Requires:       gtk3, libstdc++ >= 6, mesa-libGLU, gstreamer1, gstreamer1-plugins-base, glib2, glibc
           
           %description
