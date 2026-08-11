@@ -560,6 +560,75 @@ void main() {
   );
 
   test(
+    'a single undecodable message is skipped without failing migration',
+    () async {
+      final conversation = Conversation(
+        id: 'conversation-isolate',
+        title: 'Isolate',
+        createdAt: DateTime(2024, 7, 1),
+        updatedAt: DateTime(2024, 7, 2),
+      );
+      final good = ChatMessage(
+        id: 'message-good',
+        role: 'user',
+        content: 'survives migration',
+        conversationId: conversation.id,
+        timestamp: DateTime(2024, 7, 1, 10),
+      );
+      final bad = ChatMessage(
+        id: 'message-bad',
+        role: 'assistant',
+        content: 'this one blows up',
+        conversationId: conversation.id,
+        timestamp: DateTime(2024, 7, 1, 11),
+      );
+      conversation.messageIds.addAll([good.id, bad.id]);
+
+      _registerHiveAdapters();
+      Hive.init(tempDir.path);
+      final conversations = await Hive.openBox<Conversation>('conversations');
+      final messages = await Hive.openBox<ChatMessage>('messages');
+      await conversations.put(conversation.id, conversation);
+      await messages.put(good.id, good);
+      await messages.put(bad.id, bad);
+      await conversations.close();
+      await messages.close();
+      await Hive.close();
+
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+      service.debugFailMessageIdsForTest = {'message-bad'};
+
+      await service.migrate();
+
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isTrue,
+      );
+      expect(
+        (await HiveToSqliteMigrationService.check()).needsMigration,
+        isFalse,
+      );
+
+      final repo = ChatDatabaseRepository.open(
+        file: File('${tempDir.path}/kelivo.db'),
+      );
+      addTearDown(repo.close);
+      // The conversation and the decodable message survive; the corrupt
+      // message is dropped rather than rolling back the whole migration.
+      expect(await repo.getTotalMessageCount(), 1);
+      final ids = (await repo.getAllConversations())
+          .map((conversation) => conversation.id)
+          .toList();
+      expect(ids, contains('conversation-isolate'));
+    },
+  );
+
+  test(
     'validation failure keeps hive backup and leaves migration incomplete',
     () async {
       await _seedHiveChat(

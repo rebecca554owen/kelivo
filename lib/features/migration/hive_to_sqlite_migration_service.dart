@@ -180,6 +180,12 @@ class HiveToSqliteMigrationService {
   @visibleForTesting
   Future<void> Function(ChatDatabaseRepository repo)?
   debugBeforeValidateForTest;
+
+  /// Message ids whose per-message processing should throw, simulating a
+  /// corrupt/undecodable legacy record. Tests use this to assert that a single
+  /// bad message is isolated instead of failing the whole migration.
+  @visibleForTesting
+  Set<String> debugFailMessageIdsForTest = <String>{};
   final RestoreDurability _durability;
   final _controller = StreamController<HiveToSqliteMigrationStatus>.broadcast();
   final _log = <String>[];
@@ -518,76 +524,106 @@ class HiveToSqliteMigrationService {
           final toolEventsByMessageId = <String, List<Map<String, dynamic>>>{};
           final geminiSignaturesByMessageId = <String, String>{};
           for (var i = start; i < end; i++) {
-            var message = await messagesBox.get(conversation.messageIds[i]);
-            if (message == null) {
-              repairStats.danglingMessageRefs++;
-              continue;
-            }
-            if (!seenMessageIds.add(message.id)) {
-              repairStats.duplicateMessageIds++;
-              continue;
-            }
-            if (message.conversationId != conversation.id) {
-              repairStats.conversationIdMismatches++;
-              message = message.copyWith(conversationId: conversation.id);
-            }
-            final groupId = message.groupId;
-            // '' is stored verbatim and is a real value to the
-            // unique(conversationId, groupId, version) index (unlike NULL),
-            // so empty-string groups need version repair too.
-            if (groupId != null) {
-              var version = message.version;
-              if (!seenGroupVersions.add('$groupId\u0000$version')) {
-                version = (maxGroupVersions[groupId] ?? version) + 1;
-                repairStats.versionConflicts++;
-                message = message.copyWith(version: version);
-                seenGroupVersions.add('$groupId\u0000$version');
+            final messageId = conversation.messageIds[i];
+            try {
+              var message = await messagesBox.get(messageId);
+              if (message == null) {
+                repairStats.danglingMessageRefs++;
+                continue;
               }
-              final knownMax = maxGroupVersions[groupId];
-              if (knownMax == null || version > knownMax) {
-                maxGroupVersions[groupId] = version;
+              assert(() {
+                if (debugFailMessageIdsForTest.contains(message!.id)) {
+                  throw StateError('debug_forced_decode_failure');
+                }
+                return true;
+              }());
+              if (!seenMessageIds.add(message.id)) {
+                repairStats.duplicateMessageIds++;
+                continue;
               }
-            }
-            final legacyContent = message.content;
-            final decodeResult = await decodeLegacyContent(
-              legacyContent,
-              existingParts: message.parts,
-            );
-            _converted += decodeResult.converted;
-            _malformed += decodeResult.malformed;
-            _missingFiles += decodeResult.missingFiles;
-            var parts = List<MessagePart>.of(decodeResult.parts);
-            if (parts.isEmpty) {
-              // Match repository persistence: empty body becomes one empty text part.
-              parts = const <MessagePart>[TextPart('')];
-            }
-            parts = _normalizeAttachmentPartUris(parts);
-            message = message.copyWith(parts: parts);
-            expectedImageParts += parts.whereType<ImagePart>().length;
-            expectedFileParts += parts.whereType<FilePart>().length;
-            batch.add((message: message, messageOrder: order));
-            order++;
-            // Expected digest comes from independently stripped legacy text,
-            // not merely echoing decoder TextPart objects.
-            for (final segment in stripLegacyContentTextSegments(
-              legacyContent,
-            )) {
-              ChatDatabaseRepository.mixTextPartContentDigest(
-                expectedTextContentDigest,
-                message.id,
-                segment,
+              if (message.conversationId != conversation.id) {
+                repairStats.conversationIdMismatches++;
+                message = message.copyWith(conversationId: conversation.id);
+              }
+              final groupId = message.groupId;
+              // '' is stored verbatim and is a real value to the
+              // unique(conversationId, groupId, version) index (unlike NULL),
+              // so empty-string groups need version repair too.
+              if (groupId != null) {
+                var version = message.version;
+                if (!seenGroupVersions.add('$groupId\u0000$version')) {
+                  version = (maxGroupVersions[groupId] ?? version) + 1;
+                  repairStats.versionConflicts++;
+                  message = message.copyWith(version: version);
+                  seenGroupVersions.add('$groupId\u0000$version');
+                }
+                final knownMax = maxGroupVersions[groupId];
+                if (knownMax == null || version > knownMax) {
+                  maxGroupVersions[groupId] = version;
+                }
+              }
+              final legacyContent = message.content;
+              final decodeResult = await decodeLegacyContent(
+                legacyContent,
+                existingParts: message.parts,
               );
-            }
-            if (toolEventsBox != null) {
-              final events = await _toolEventsFor(toolEventsBox, message.id);
-              if (events.isNotEmpty) {
+              var parts = List<MessagePart>.of(decodeResult.parts);
+              if (parts.isEmpty) {
+                // Match repository persistence: empty body becomes one empty
+                // text part.
+                parts = const <MessagePart>[TextPart('')];
+              }
+              parts = _normalizeAttachmentPartUris(parts);
+              message = message.copyWith(parts: parts);
+              // Expected digest comes from independently stripped legacy text,
+              // not merely echoing decoder TextPart objects. Compute it before
+              // committing so a strip failure skips the message cleanly.
+              final textSegments = stripLegacyContentTextSegments(
+                legacyContent,
+              );
+              List<Map<String, dynamic>>? events;
+              String? signature;
+              if (toolEventsBox != null) {
+                final gathered = await _toolEventsFor(
+                  toolEventsBox,
+                  message.id,
+                );
+                if (gathered.isNotEmpty) events = gathered;
+                signature = await _signatureFor(toolEventsBox, message.id);
+              }
+
+              // Commit only after every fallible step succeeded, so a message
+              // that threw above is skipped entirely and never contributes to
+              // the batch, the expected counts, or the digest. The batch write
+              // itself stays outside this try: a DB failure must fail loudly.
+              _converted += decodeResult.converted;
+              _malformed += decodeResult.malformed;
+              _missingFiles += decodeResult.missingFiles;
+              expectedImageParts += parts.whereType<ImagePart>().length;
+              expectedFileParts += parts.whereType<FilePart>().length;
+              batch.add((message: message, messageOrder: order));
+              order++;
+              for (final segment in textSegments) {
+                ChatDatabaseRepository.mixTextPartContentDigest(
+                  expectedTextContentDigest,
+                  message.id,
+                  segment,
+                );
+              }
+              if (events != null) {
                 toolEventsByMessageId[message.id] = events;
                 expectedToolCallParts += events.length;
               }
-              final signature = await _signatureFor(toolEventsBox, message.id);
               if (signature != null) {
                 geminiSignaturesByMessageId[message.id] = signature;
               }
+            } catch (error, stackTrace) {
+              // A single corrupt/undecodable legacy record must not sink the
+              // whole migration. Skip it, count it, and keep going; the Hive
+              // source is retained so nothing is destroyed.
+              repairStats.decodeFailures++;
+              _logLine('legacy-message skipped ($messageId): $error');
+              _logLine(stackTrace.toString());
             }
           }
           await repo.putMigrationBatch(
@@ -1789,17 +1825,20 @@ class _MigrationRepairStats {
   int duplicateMessageIds = 0;
   int conversationIdMismatches = 0;
   int versionConflicts = 0;
+  int decodeFailures = 0;
 
   bool get hasIssues =>
       danglingMessageRefs > 0 ||
       duplicateMessageIds > 0 ||
       conversationIdMismatches > 0 ||
-      versionConflicts > 0;
+      versionConflicts > 0 ||
+      decodeFailures > 0;
 
   String describe() {
     return 'dangling=$danglingMessageRefs duplicates=$duplicateMessageIds '
         'conversationIdMismatches=$conversationIdMismatches '
-        'versionConflicts=$versionConflicts';
+        'versionConflicts=$versionConflicts '
+        'decodeFailures=$decodeFailures';
   }
 }
 
