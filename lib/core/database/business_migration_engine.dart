@@ -70,11 +70,22 @@ final class BusinessMigrationEngine {
     }
 
     final hasBusinessData = cleanupKeys.isNotEmpty;
-    final routed = BusinessSettingsRouter.normalizeAndRoute(
-      legacy,
-      preserveExplicitEmptyInstructionList: true,
-      assumePreV3EmbeddingMigrationWhenVersionMissing: true,
-    );
+    BusinessSnapshot route(Map<String, Object?> source) =>
+        BusinessSettingsRouter.normalizeAndRoute(
+          source,
+          preserveExplicitEmptyInstructionList: true,
+          assumePreV3EmbeddingMigrationWhenVersionMissing: true,
+        );
+
+    late final BusinessSnapshot routed;
+    try {
+      routed = route(legacy);
+    } on FormatException catch (error) {
+      if (error.message != BusinessEntityKind.searchService.sourceKey) {
+        rethrow;
+      }
+      routed = route(Map<String, Object?>.from(legacy)..remove(error.message));
+    }
     await repository.replaceSnapshotForMigration(
       routed,
       validatePersisted: (stored) {
