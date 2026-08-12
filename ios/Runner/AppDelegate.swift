@@ -802,7 +802,11 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
        ]
        if event.isAllDay {
          item["start"] = Self.formatDateOnly(event.startDate, calendar: calendar)
-         item["end"] = event.endDate.map { Self.formatDateOnly($0, calendar: calendar) } ?? ""
+         // Report the exclusive end date (tool convention, matches Android);
+         // EventKit stores all-day ends inside the last included day.
+         item["end"] = event.endDate.map {
+           Self.formatDateOnly(Self.exclusiveAllDayEnd($0, calendar: calendar), calendar: calendar)
+         } ?? ""
        } else {
          item["start"] = Self.formatDateTime(event.startDate)
          item["end"] = event.endDate.map(Self.formatDateTime) ?? ""
@@ -850,6 +854,15 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
        return Self.errorPayload("INVALID_RANGE", "end must be later than start.")
      }
  
+     // For all-day events, normalize both ends to day boundaries first (like
+     // Android's LocalDate comparison), so e.g. a 12:00-18:00 same-day range is
+     // rejected instead of silently producing a degenerate event.
+     let allDayStart = calendar.startOfDay(for: startDate)
+     let allDayEndExclusive = calendar.startOfDay(for: endDate)
+     if allDay, allDayStart >= allDayEndExclusive {
+       return Self.errorPayload("INVALID_RANGE", "all-day event end date must be later than start date.")
+     }
+ 
      guard let targetCalendar = eventStore.defaultCalendarForNewEvents else {
        return Self.errorPayload(
          "NO_CALENDAR",
@@ -868,12 +881,11 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
      }
      if allDay {
        event.isAllDay = true
-       let dayStart = calendar.startOfDay(for: startDate)
-       event.startDate = dayStart
+       event.startDate = allDayStart
        // The tool's 'end' is exclusive (next-day midnight); EventKit treats the
        // end date's day as included, so step back one second to avoid spilling
-       // into an extra day.
-       event.endDate = endDate.addingTimeInterval(-1)
+       // into an extra day. Payloads convert back to the exclusive date.
+       event.endDate = allDayEndExclusive.addingTimeInterval(-1)
      } else {
        event.startDate = startDate
        event.endDate = endDate
@@ -893,8 +905,8 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
        "location": event.location ?? "",
      ]
      if allDay {
-       payload["start"] = Self.formatDateOnly(event.startDate, calendar: calendar)
-       payload["end"] = Self.formatDateOnly(endDate.addingTimeInterval(-1), calendar: calendar)
+       payload["start"] = Self.formatDateOnly(allDayStart, calendar: calendar)
+       payload["end"] = Self.formatDateOnly(allDayEndExclusive, calendar: calendar)
      } else {
        payload["start"] = Self.formatDateTime(startDate)
        payload["end"] = Self.formatDateTime(endDate)
@@ -993,5 +1005,13 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
      formatter.timeZone = calendar.timeZone
      formatter.dateFormat = "yyyy-MM-dd"
      return formatter.string(from: date)
+   }
+ 
+   /// Converts a stored all-day end date to the tool's exclusive end date.
+   /// EventKit keeps the end inside the last included day (e.g. 23:59:59),
+   /// while the tool reports the next-day midnight boundary. Ends already at
+   /// an exact midnight are treated as exclusive and returned unchanged.
+   private static func exclusiveAllDayEnd(_ end: Date, calendar: Calendar) -> Date {
+     calendar.startOfDay(for: end.addingTimeInterval(1))
    }
  }

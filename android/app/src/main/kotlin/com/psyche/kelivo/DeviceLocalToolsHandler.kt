@@ -362,6 +362,10 @@ class DeviceLocalToolsHandler(private val activity: Activity) {
             }
             endTime = if (endRaw != null) {
                 parseTime(endRaw, zone)
+            } else if (beginRaw != null) {
+                // Custom interval: 'range' is ignored per the tool contract, and
+                // the end defaults to now (matches iOS).
+                now
             } else when (rangePreset) {
                 "week" -> startTime.plusDays(7)
                 "month" -> startTime.plusMonths(1)
@@ -387,8 +391,16 @@ class DeviceLocalToolsHandler(private val activity: Activity) {
             CalendarContract.Instances.ALL_DAY,
             CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
         )
-        val selection = if (query != null) "${CalendarContract.Instances.TITLE} LIKE ?" else null
-        val selectionArgs = if (query != null) arrayOf("%$query%") else null
+        // Escape LIKE wildcards so the keyword is matched literally as a
+        // substring (e.g. searching "100%" must not act as a wildcard).
+        val selection = if (query != null) "${CalendarContract.Instances.TITLE} LIKE ? ESCAPE '\\'" else null
+        val selectionArgs = if (query != null) {
+            val escaped = query
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            arrayOf("%$escaped%")
+        } else null
 
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
             .appendPath(startMs.toString())
