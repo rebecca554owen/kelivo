@@ -146,13 +146,21 @@ String _resolveAttachmentImageUri(String uri) {
 /// Decoded `data:` image bytes, keyed by the full data URI.
 ///
 /// Reusing the same [Uint8List] keeps [MemoryImage] cache keys stable across
-/// rebuilds, so the image is decoded once instead of on every frame.
+/// rebuilds, so the image is decoded once instead of on every frame. Entries
+/// are evicted least-recently-used first, bounded by both entry count and
+/// total decoded bytes so a few large images cannot pin unbounded memory.
 final Map<String, Uint8List?> _dataUriBytesCache = <String, Uint8List?>{};
 const int _dataUriBytesCacheLimit = 24;
+const int _dataUriBytesCacheMaxBytes = 16 << 20;
+int _dataUriBytesCacheBytes = 0;
 
 Uint8List? _decodeDataUriBytes(String path) {
-  final cached = _dataUriBytesCache[path];
-  if (cached != null || _dataUriBytesCache.containsKey(path)) return cached;
+  if (_dataUriBytesCache.containsKey(path)) {
+    // Re-insert to mark as most recently used (LinkedHashMap keeps order).
+    final cached = _dataUriBytesCache.remove(path);
+    _dataUriBytesCache[path] = cached;
+    return cached;
+  }
 
   Uint8List? bytes;
   try {
@@ -163,10 +171,16 @@ Uint8List? _decodeDataUriBytes(String path) {
     bytes = null;
   }
 
-  if (_dataUriBytesCache.length >= _dataUriBytesCacheLimit) {
-    _dataUriBytesCache.remove(_dataUriBytesCache.keys.first);
-  }
   _dataUriBytesCache[path] = bytes;
+  _dataUriBytesCacheBytes += bytes?.length ?? 0;
+  // Evict oldest entries first. The entry just added is always kept (even if
+  // it alone exceeds the byte budget) so its MemoryImage key stays stable.
+  while (_dataUriBytesCache.length > 1 &&
+      (_dataUriBytesCache.length > _dataUriBytesCacheLimit ||
+          _dataUriBytesCacheBytes > _dataUriBytesCacheMaxBytes)) {
+    final evicted = _dataUriBytesCache.remove(_dataUriBytesCache.keys.first);
+    _dataUriBytesCacheBytes -= evicted?.length ?? 0;
+  }
   return bytes;
 }
 
