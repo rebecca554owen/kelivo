@@ -4,11 +4,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http/retry.dart';
 import 'package:uuid/uuid.dart';
 
 enum NetworkTtsKind {
   openai,
   gemini,
+  azure,
   minimax,
   qwen,
   qwenAudio,
@@ -26,6 +28,8 @@ String networkTtsKindDisplayName(NetworkTtsKind k) {
       return 'OpenAI';
     case NetworkTtsKind.gemini:
       return 'Gemini';
+    case NetworkTtsKind.azure:
+      return 'Azure';
     case NetworkTtsKind.minimax:
       return 'MiniMax';
     case NetworkTtsKind.qwen:
@@ -98,6 +102,16 @@ abstract class TtsServiceOptions {
           // New configs default to 3.1; existing persisted model strings are kept.
           model: (json['model'] ?? 'gemini-3.1-flash-tts-preview').toString(),
           voiceName: (json['voiceName'] ?? 'Kore').toString(),
+        );
+      case 'azure':
+        return AzureTtsOptions(
+          id: id.isEmpty ? null : id,
+          enabled: enabled,
+          name: name.isEmpty ? 'Azure TTS' : name,
+          apiKey: (json['apiKey'] ?? '').toString(),
+          baseUrl: (json['baseUrl'] ?? '').toString(),
+          language: (json['language'] ?? 'zh-CN').toString(),
+          voice: (json['voice'] ?? 'zh-CN-XiaoxiaoNeural').toString(),
         );
       case 'minimax':
         return MiniMaxTtsOptions(
@@ -315,6 +329,35 @@ class GeminiTtsOptions extends TtsServiceOptions {
     'baseUrl': baseUrl,
     'model': model,
     'voiceName': voiceName,
+  };
+}
+
+class AzureTtsOptions extends TtsServiceOptions {
+  final String apiKey;
+  final String baseUrl;
+  final String language;
+  final String voice;
+
+  AzureTtsOptions({
+    super.id,
+    required super.enabled,
+    required super.name,
+    required this.apiKey,
+    required this.baseUrl,
+    required this.language,
+    required this.voice,
+  }) : super(kind: NetworkTtsKind.azure);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'enabled': enabled,
+    'name': name,
+    'kind': 'azure',
+    'apiKey': apiKey,
+    'baseUrl': baseUrl,
+    'language': language,
+    'voice': voice,
   };
 }
 
@@ -759,6 +802,13 @@ class NetworkTtsService {
             c,
             cancelled,
           );
+        case NetworkTtsKind.azure:
+          return await _azureSpeech(
+            options as AzureTtsOptions,
+            text,
+            c,
+            cancelled,
+          );
         case NetworkTtsKind.minimax:
           return await _miniMaxSpeech(
             options as MiniMaxTtsOptions,
@@ -929,6 +979,73 @@ class NetworkTtsService {
     // Convert PCM (24kHz 16-bit mono) to WAV
     final wav = _pcmToWav(Uint8List.fromList(pcm), sampleRate: 24000);
     return NetworkTtsResult(bytes: wav, mime: 'audio/wav', sampleRate: 24000);
+  }
+
+  static Future<NetworkTtsResult> _azureSpeech(
+    AzureTtsOptions opt,
+    String text,
+    http.Client c,
+    FutureOr<bool> Function()? cancelled,
+  ) async {
+    final configuredBase = opt.baseUrl.trim();
+    if (configuredBase.isEmpty) {
+      throw Exception('Azure TTS endpoint is required');
+    }
+    final base = configuredBase.endsWith('/')
+        ? configuredBase.substring(0, configuredBase.length - 1)
+        : configuredBase;
+    final uri = Uri.parse(
+      base.endsWith('/cognitiveservices/v1')
+          ? base
+          : '$base/cognitiveservices/v1',
+    );
+    final attributeEscape = const HtmlEscape(HtmlEscapeMode.attribute);
+    final textEscape = const HtmlEscape(HtmlEscapeMode.element);
+    final body =
+        '<speak version="1.0" xml:lang="${attributeEscape.convert(opt.language)}">'
+        '<voice name="${attributeEscape.convert(opt.voice)}">'
+        '${textEscape.convert(text)}</voice></speak>';
+    final req = http.Request('POST', uri)
+      ..headers['Ocp-Apim-Subscription-Key'] = opt.apiKey
+      ..headers['Content-Type'] = 'application/ssml+xml'
+      ..headers['X-Microsoft-OutputFormat'] = 'audio-24khz-96kbitrate-mono-mp3'
+      ..headers['User-Agent'] = 'Kelivo'
+      ..body = body;
+    final retryClient = RetryClient.withDelays(
+      c,
+      const <Duration>[
+        Duration(milliseconds: 200),
+        Duration(milliseconds: 600),
+      ],
+      when: (response) async {
+        if (!const <int>{429, 502, 503}.contains(response.statusCode)) {
+          return false;
+        }
+        return cancelled == null || !await cancelled();
+      },
+      whenError: (_, _) => false,
+      onRetry: (_, _, _) async {
+        if (cancelled != null && await cancelled()) {
+          throw _Cancelled();
+        }
+      },
+    );
+    final resp = await retryClient.send(req);
+    if (cancelled != null && await cancelled()) {
+      await resp.stream.listen((_) {}).cancel();
+      throw _Cancelled();
+    }
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      final responseBody = await resp.stream.bytesToString();
+      throw Exception(
+        'Azure TTS failed: ${resp.statusCode} ${resp.reasonPhrase} $responseBody',
+      );
+    }
+    final bytes = await resp.stream.toBytes();
+    return NetworkTtsResult(
+      bytes: Uint8List.fromList(bytes),
+      mime: 'audio/mpeg',
+    );
   }
 
   static Future<NetworkTtsResult> _miniMaxSpeech(
