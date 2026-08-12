@@ -661,6 +661,14 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
    func handle(call: FlutterMethodCall, result: @escaping FlutterResult) {
      let args = Self.parseArgs(call.arguments)
      switch call.method {
+     case "hasUsageStatsPermission":
+       result(false)
+     case "openUsageAccessSettings":
+       result(nil)
+     case "hasCalendarPermission":
+       result(hasCalendarPermission())
+     case "requestCalendarPermission":
+       requestCalendarPermission(result: result)
      case "queryCalendar":
        ensureCalendarAccess { [weak self] granted in
          guard let self else { return }
@@ -702,6 +710,49 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
      "Calendar permission is not granted. Please ask the user to allow full calendar access "
        + "for this app in the system Settings and try again."
    )
+
+   private func hasCalendarPermission() -> Bool {
+     let status = EKEventStore.authorizationStatus(for: .event)
+     if #available(iOS 17.0, *) {
+       return status == .fullAccess
+     }
+     return status == .authorized
+   }
+
+   /// Used by the assistant settings toggle. Prompts when undetermined; opens
+   /// Settings when previously denied/restricted/write-only.
+   private func requestCalendarPermission(result: @escaping FlutterResult) {
+     let finish: (Bool) -> Void = { granted in
+       DispatchQueue.main.async { result(granted) }
+     }
+     let status = EKEventStore.authorizationStatus(for: .event)
+     if #available(iOS 17.0, *) {
+       switch status {
+       case .fullAccess:
+         finish(true)
+       case .notDetermined:
+         eventStore.requestFullAccessToEvents { granted, _ in finish(granted) }
+       default:
+         openAppSettings()
+         finish(false)
+       }
+     } else {
+       switch status {
+       case .authorized:
+         finish(true)
+       case .notDetermined:
+         eventStore.requestAccess(to: .event) { granted, _ in finish(granted) }
+       default:
+         openAppSettings()
+         finish(false)
+       }
+     }
+   }
+
+   private func openAppSettings() {
+     guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+     UIApplication.shared.open(url)
+   }
  
    private func ensureCalendarAccess(completion: @escaping (Bool) -> Void) {
      let finish: (Bool) -> Void = { granted in

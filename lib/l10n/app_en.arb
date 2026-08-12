@@ -2284,6 +2284,8 @@
   "assistantEditLocalToolCalculateSubtitle": "Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.",
    "assistantEditLocalToolScreenTimeTitle": "Screen Time",
    "assistantEditLocalToolScreenTimeSubtitle": "Query app screen usage on this device, requires the Usage access permission.",
+   "chatMessageWidgetScreenTimeTotal": "Total screen time",
+   "chatMessageWidgetScreenTimePermissionRequired": "Usage access permission is not granted. Please enable it in system settings and try again.",
    "assistantEditLocalToolCalendarQueryTitle": "Query Calendar",
    "assistantEditLocalToolCalendarQuerySubtitle": "Read calendar events on this device, requires the calendar permission.",
    "assistantEditLocalToolCalendarCreateTitle": "Create Event",

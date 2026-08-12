@@ -49,6 +49,7 @@ import '../utils/thinking_tag_parser.dart';
 import 'citation_sources_sheet.dart';
 import 'chat_suggestion_bubbles.dart';
 import 'token_display_widget.dart';
+import 'screen_time_tool_ui.dart';
 import 'tool_detail_text_section.dart';
 import '../../../theme/app_font_weights.dart';
 
@@ -285,7 +286,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
     },
      LocalToolNames.textToSpeech => Lucide.Volume2,
      LocalToolNames.calculate => Lucide.Calculator,
-     LocalToolNames.screenTime => Lucide.Hourglass,
+     LocalToolNames.screenTime => Lucide.Smartphone,
      LocalToolNames.calendarQuery => Lucide.Calendar,
      LocalToolNames.calendarCreate => Lucide.CalendarPlus,
     _ => null,
@@ -505,6 +506,10 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
     isResult: !part.loading,
   );
   final closeSemanticLabel = l10n.mcpPageClose;
+  final screenTime = part.toolName == LocalToolNames.screenTime
+      ? ScreenTimeResult.tryParse(cleanText)
+      : null;
+  final useScreenTimeDetail = screenTime != null && screenTime.hasApps;
 
   if (PlatformUtils.isDesktopTarget) {
     unawaited(
@@ -520,6 +525,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
           argumentsLabel: l10n.chatMessageWidgetArguments,
           resultLabel: l10n.chatMessageWidgetResult,
           imagesLabel: l10n.chatMessageWidgetImages,
+          screenTimeResult: useScreenTimeDetail ? screenTime : null,
         ),
       ),
     );
@@ -532,6 +538,12 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
       title: title,
       closeSemanticLabel: closeSemanticLabel,
       builder: (sheetContext, scrollController) {
+        if (useScreenTimeDetail) {
+          return ScreenTimeToolDetailBody(
+            result: screenTime,
+            scrollController: scrollController,
+          );
+        }
         return _ToolDetailBody(
           scrollController: scrollController,
           argsPretty: argsPretty,
@@ -556,6 +568,7 @@ class _ToolDetailDesktopDialog extends StatefulWidget {
     required this.argumentsLabel,
     required this.resultLabel,
     required this.imagesLabel,
+    this.screenTimeResult,
   });
 
   static const dialogKey = ValueKey('tool_detail_desktop_dialog');
@@ -569,6 +582,7 @@ class _ToolDetailDesktopDialog extends StatefulWidget {
   final String argumentsLabel;
   final String resultLabel;
   final String imagesLabel;
+  final ScreenTimeResult? screenTimeResult;
 
   @override
   State<_ToolDetailDesktopDialog> createState() =>
@@ -647,16 +661,22 @@ class _ToolDetailDesktopDialogState extends State<_ToolDetailDesktopDialog> {
                 Expanded(
                   child: Scrollbar(
                     controller: _scrollController,
-                    child: _ToolDetailBody(
-                      scrollController: _scrollController,
-                      argsPretty: widget.argsPretty,
-                      resultText: widget.resultText,
-                      images: widget.images,
-                      argumentsLabel: widget.argumentsLabel,
-                      resultLabel: widget.resultLabel,
-                      imagesLabel: widget.imagesLabel,
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    ),
+                    child: widget.screenTimeResult != null
+                        ? ScreenTimeToolDetailBody(
+                            result: widget.screenTimeResult!,
+                            scrollController: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          )
+                        : _ToolDetailBody(
+                            scrollController: _scrollController,
+                            argsPretty: widget.argsPretty,
+                            resultText: widget.resultText,
+                            images: widget.images,
+                            argumentsLabel: widget.argumentsLabel,
+                            resultLabel: widget.resultLabel,
+                            imagesLabel: widget.imagesLabel,
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          ),
                   ),
                 ),
               ],
@@ -4328,6 +4348,9 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
 
     final cleanText = _cleanText;
     final imagePaths = _imagePaths;
+    final screenTimeResult = widget.part.toolName == LocalToolNames.screenTime
+        ? ScreenTimeResult.tryParse(cleanText)
+        : null;
     final String summaryText = approvalRequest != null
         ? _argsSummary(approvalRequest.arguments)
         : cleanText.isNotEmpty
@@ -4354,6 +4377,14 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
             text: ttsText,
             textColor: fg.body,
             buttonColor: fg.accent,
+          )
+        : screenTimeResult != null &&
+              (screenTimeResult.isNoPermission || screenTimeResult.hasApps)
+        ? ScreenTimeToolSummary(
+            result: screenTimeResult,
+            textColor: fg.body,
+            secondaryColor: fg.muted,
+            errorColor: cs.error,
           )
         : !shouldShowSummary || summaryText.trim().isEmpty
         ? null
@@ -4666,6 +4697,30 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                 text: ttsText,
                 textColor: fg.body,
                 buttonColor: fg.accent,
+              ),
+            ],
+            if (!widget.part.loading &&
+                !isPendingApproval &&
+                widget.part.toolName == LocalToolNames.screenTime) ...[
+              Builder(
+                builder: (context) {
+                  final screenTime = ScreenTimeResult.tryParse(
+                    widget.part.content,
+                  );
+                  if (screenTime == null ||
+                      (!screenTime.isNoPermission && !screenTime.hasApps)) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: ScreenTimeToolSummary(
+                      result: screenTime,
+                      textColor: fg.body,
+                      secondaryColor: fg.muted,
+                      errorColor: cs.error,
+                    ),
+                  );
+                },
               ),
             ],
             // Argument summary so users know what the tool is about to do

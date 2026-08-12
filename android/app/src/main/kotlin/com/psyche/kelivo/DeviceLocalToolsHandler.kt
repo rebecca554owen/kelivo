@@ -55,6 +55,13 @@ class DeviceLocalToolsHandler(private val activity: Activity) {
         channel.setMethodCallHandler { call, result ->
             val argsJson = call.arguments as? String ?: "{}"
             when (call.method) {
+                "hasUsageStatsPermission" -> result.success(hasUsageStatsPermission())
+                "openUsageAccessSettings" -> {
+                    openUsageAccessSettings()
+                    result.success(null)
+                }
+                "hasCalendarPermission" -> result.success(hasCalendarPermission())
+                "requestCalendarPermission" -> requestCalendarPermission(result)
                 "getScreenTime" -> handleScreenTime(argsJson, result)
                 "queryCalendar" -> withCalendarPermission(
                     arrayOf(Manifest.permission.READ_CALENDAR),
@@ -85,6 +92,38 @@ class DeviceLocalToolsHandler(private val activity: Activity) {
     // ---------------------------------------------------------------------
     // Permission helpers
     // ---------------------------------------------------------------------
+
+    private fun calendarPermissions(): Array<String> = arrayOf(
+        Manifest.permission.READ_CALENDAR,
+        Manifest.permission.WRITE_CALENDAR,
+    )
+
+    private fun hasCalendarPermission(): Boolean {
+        return calendarPermissions().all {
+            ContextCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /** Used by the assistant settings toggle — returns a boolean grant result. */
+    private fun requestCalendarPermission(result: MethodChannel.Result) {
+        val missing = calendarPermissions().filter {
+            ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isEmpty()) {
+            result.success(true)
+            return
+        }
+        if (pendingCalendarPermissionCallback != null) {
+            result.success(false)
+            return
+        }
+        pendingCalendarPermissionCallback = { granted -> result.success(granted) }
+        ActivityCompat.requestPermissions(
+            activity,
+            missing.toTypedArray(),
+            CALENDAR_PERMISSION_REQUEST_CODE,
+        )
+    }
 
     private fun withCalendarPermission(
         permissions: Array<String>,

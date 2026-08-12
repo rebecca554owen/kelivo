@@ -5325,6 +5325,13 @@ class AppLocalizationsZh extends AppLocalizations {
       '查询本设备的应用使用时长，需要授予使用情况访问权限。';
 
   @override
+  String get chatMessageWidgetScreenTimeTotal => '总屏幕时间';
+
+  @override
+  String get chatMessageWidgetScreenTimePermissionRequired =>
+      '未授予使用情况访问权限，请在系统设置中开启后重试。';
+
+  @override
   String get assistantEditLocalToolCalendarQueryTitle => '查询日历';
 
   @override
@@ -12346,6 +12353,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get assistantEditLocalToolScreenTimeSubtitle =>
       '查询本设备的应用使用时长，需要授予使用情况访问权限。';
+
+  @override
+  String get chatMessageWidgetScreenTimeTotal => '总屏幕时间';
+
+  @override
+  String get chatMessageWidgetScreenTimePermissionRequired =>
+      '未授予使用情况访问权限，请在系统设置中开启后重试。';
 
   @override
   String get assistantEditLocalToolCalendarQueryTitle => '查询日历';
@@ -19443,6 +19457,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get assistantEditLocalToolScreenTimeSubtitle =>
       '查詢本裝置的應用使用時長，需要授予使用情況存取權限。';
+
+  @override
+  String get chatMessageWidgetScreenTimeTotal => '總螢幕使用時間';
+
+  @override
+  String get chatMessageWidgetScreenTimePermissionRequired =>
+      '未授予使用記錄存取權限，請在系統設定中開啟後重試。';
 
   @override
   String get assistantEditLocalToolCalendarQueryTitle => '查詢日曆';

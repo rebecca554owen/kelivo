@@ -1883,6 +1883,8 @@
   "assistantEditLocalToolCalculateSubtitle": "计算数学表达式，支持加减乘除幂运算 sqrt sin cos 等。",
    "assistantEditLocalToolScreenTimeTitle": "屏幕使用时间",
    "assistantEditLocalToolScreenTimeSubtitle": "查询本设备的应用使用时长，需要授予使用情况访问权限。",
+   "chatMessageWidgetScreenTimeTotal": "总屏幕时间",
+   "chatMessageWidgetScreenTimePermissionRequired": "未授予使用情况访问权限，请在系统设置中开启后重试。",
    "assistantEditLocalToolCalendarQueryTitle": "查询日历",
    "assistantEditLocalToolCalendarQuerySubtitle": "读取本设备上的日历日程，需要授予日历权限。",
    "assistantEditLocalToolCalendarCreateTitle": "创建日程",

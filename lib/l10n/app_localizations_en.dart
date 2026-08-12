@@ -5544,6 +5544,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Query app screen usage on this device, requires the Usage access permission.';
 
   @override
+  String get chatMessageWidgetScreenTimeTotal => 'Total screen time';
+
+  @override
+  String get chatMessageWidgetScreenTimePermissionRequired =>
+      'Usage access permission is not granted. Please enable it in system settings and try again.';
+
+  @override
   String get assistantEditLocalToolCalendarQueryTitle => 'Query Calendar';
 
   @override

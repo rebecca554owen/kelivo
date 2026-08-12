@@ -1,8 +1,8 @@
- import 'dart:convert';
- 
- import 'package:flutter/foundation.dart';
- import 'package:flutter/services.dart';
- import 'package:math_expressions/math_expressions.dart';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/assistant.dart';
 
@@ -15,25 +15,86 @@ class LocalToolNames {
   static const String clipboard = 'clipboard_tool';
   static const String textToSpeech = 'text_to_speech';
   static const String askUser = 'ask_user_input_v0';
-   static const String calculate = 'calculate';
-   static const String screenTime = 'get_screen_time';
-   static const String calendarQuery = 'calendar_query';
-   static const String calendarCreate = 'calendar_create';
- }
- 
- /// Platform availability of the device-backed local tools (implemented over
- /// a MethodChannel in the Android/iOS host apps).
- class DeviceLocalTools {
-   const DeviceLocalTools._();
- 
-   static bool get screenTimeSupported =>
-       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
- 
-   static bool get calendarSupported =>
-       !kIsWeb &&
-       (defaultTargetPlatform == TargetPlatform.android ||
-           defaultTargetPlatform == TargetPlatform.iOS);
- }
+  static const String calculate = 'calculate';
+  static const String screenTime = 'get_screen_time';
+  static const String calendarQuery = 'calendar_query';
+  static const String calendarCreate = 'calendar_create';
+}
+
+/// Platform availability of the device-backed local tools (implemented over
+/// a MethodChannel in the Android/iOS host apps).
+class DeviceLocalTools {
+  const DeviceLocalTools._();
+
+  static const MethodChannel _channel = MethodChannel('app.device_tools');
+
+  static bool get screenTimeSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  static bool get calendarSupported =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  /// Whether Android Usage Access (PACKAGE_USAGE_STATS) is granted.
+  static Future<bool> hasUsageStatsPermission() async {
+    if (!screenTimeSupported) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'hasUsageStatsPermission',
+      );
+      return result == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Opens the system Usage Access settings page (Android).
+  static Future<void> openUsageAccessSettings() async {
+    if (!screenTimeSupported) return;
+    try {
+      await _channel.invokeMethod<void>('openUsageAccessSettings');
+    } on MissingPluginException {
+      // Unsupported host.
+    } on PlatformException {
+      // Settings unavailable.
+    }
+  }
+
+  /// Returns true when calendar full access is already granted.
+  /// Uses the native EventKit / Android calendar permission path (not
+  /// permission_handler), so it works without iOS PERMISSION_EVENTS macros.
+  static Future<bool> hasCalendarPermission() async {
+    if (!calendarSupported) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>('hasCalendarPermission');
+      return result == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Requests calendar full access via the native channel.
+  /// Returns true only when granted. On iOS, permanently denied / restricted
+  /// states open the app Settings page.
+  static Future<bool> requestCalendarPermission() async {
+    if (!calendarSupported) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'requestCalendarPermission',
+      );
+      return result == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+}
 
 class LocalToolsService {
   const LocalToolsService._();
@@ -352,9 +413,7 @@ class LocalToolsService {
     return null;
   }
  
-   static const MethodChannel _deviceToolsChannel = MethodChannel(
-     'app.device_tools',
-   );
+  static const MethodChannel _deviceToolsChannel = DeviceLocalTools._channel;
  
    static String _deviceTimezoneHint() {
      final now = DateTime.now();

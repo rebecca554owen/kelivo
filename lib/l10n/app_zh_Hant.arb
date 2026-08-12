@@ -1876,6 +1876,8 @@
   "assistantEditLocalToolCalculateSubtitle": "計算數學表達式，支援加減乘除冪運算 sqrt sin cos 等。",
    "assistantEditLocalToolScreenTimeTitle": "螢幕使用時間",
    "assistantEditLocalToolScreenTimeSubtitle": "查詢本裝置的應用使用時長，需要授予使用情況存取權限。",
+   "chatMessageWidgetScreenTimeTotal": "總螢幕使用時間",
+   "chatMessageWidgetScreenTimePermissionRequired": "未授予使用記錄存取權限，請在系統設定中開啟後重試。",
    "assistantEditLocalToolCalendarQueryTitle": "查詢日曆",
    "assistantEditLocalToolCalendarQuerySubtitle": "讀取本裝置上的日曆行程，需要授予日曆權限。",
    "assistantEditLocalToolCalendarCreateTitle": "建立行程",

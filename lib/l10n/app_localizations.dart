@@ -10231,6 +10231,18 @@ abstract class AppLocalizations {
   /// **'Query app screen usage on this device, requires the Usage access permission.'**
   String get assistantEditLocalToolScreenTimeSubtitle;
 
+  /// No description provided for @chatMessageWidgetScreenTimeTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total screen time'**
+  String get chatMessageWidgetScreenTimeTotal;
+
+  /// No description provided for @chatMessageWidgetScreenTimePermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage access permission is not granted. Please enable it in system settings and try again.'**
+  String get chatMessageWidgetScreenTimePermissionRequired;
+
   /// No description provided for @assistantEditLocalToolCalendarQueryTitle.
   ///
   /// In en, this message translates to:
