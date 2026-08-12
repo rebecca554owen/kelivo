@@ -132,6 +132,54 @@ void main() {
   });
 
   test(
+    'legacy chats.json with dirty numeric fields and empty role restores',
+    () async {
+      final dirtyConversation =
+          Conversation(id: 'c-dirty', title: 'Dirty', messageIds: const ['m1'])
+              .toJson()
+            ..['truncateIndex'] = -7
+            ..['lastSummarizedMessageCount'] = -3
+            ..['lastMemoryExtractedOrder'] = -9;
+      final zip = await writeLegacyZip(
+        chats: {
+          'conversations': [dirtyConversation],
+          'messages': [
+            {
+              'id': 'm1',
+              'role': '',
+              'content': 'kept despite dirty fields',
+              'timestamp': DateTime.utc(2026, 1, 1).toIso8601String(),
+              'conversationId': 'c-dirty',
+              'durationMs': -55696,
+              'totalTokens': -12,
+              'version': -1,
+            },
+          ],
+        },
+      );
+
+      final sync = DataSync(
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+      await sync.restoreFromLocalFile(
+        zip,
+        const WebDavConfig(includeChats: true, includeFiles: false),
+        mode: RestoreMode.overwrite,
+      );
+
+      final messages = await chatService.loadMessages('c-dirty');
+      expect(messages, hasLength(1));
+      final message = messages.single;
+      expect(message.role, 'user');
+      expect(message.content, 'kept despite dirty fields');
+      expect(message.durationMs, isNull);
+      expect(message.totalTokens, isNull);
+      expect(message.version, 0);
+    },
+  );
+
+  test(
     'new chats.json parts round-trip without reintroducing markers',
     () async {
       final original = ChatMessage(

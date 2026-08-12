@@ -23,6 +23,7 @@ import '../../models/message_part.dart';
 import '../../models/conversation.dart';
 import '../chat/chat_service.dart';
 import '../migration/legacy_message_content_decoder.dart';
+import '../migration/legacy_record_sanitizer.dart';
 import '../../utils/multimodal_input_utils.dart';
 import '../../../utils/app_directories.dart';
 import '../../../utils/sandbox_path_resolver.dart';
@@ -1591,6 +1592,7 @@ class DataSync {
     var rehomedMessages = 0;
     var duplicateMcpServerIds = 0;
     var versionConflicts = 0;
+    var dirtyFieldRepairs = 0;
     for (final conversation in conversations) {
       final mcpServerIds = <String>[];
       final seenMcpServerIds = <String>{};
@@ -1633,6 +1635,16 @@ class DataSync {
           rehomedMessages++;
           message = message.copyWith(conversationId: conversation.id);
         }
+        // Field-level repair (empty role, negative tokens/duration,
+        // out-of-range version, inverted reasoning timestamps) shares logic
+        // with the Hive migration; it must run before the version-conflict
+        // repair below because clamping version can introduce collisions
+        // that repair resolves.
+        final fieldSanitized = sanitizeLegacyMessageFields(message);
+        if (!identical(fieldSanitized, message)) {
+          dirtyFieldRepairs++;
+          message = fieldSanitized;
+        }
         final explicitGroupId = message.groupId;
         if (explicitGroupId != null) {
           var version = message.version;
@@ -1673,14 +1685,20 @@ class DataSync {
         versionSelections[entry.key] =
             repairedVersionsByMessageId[selected.id] ?? selected.version;
       }
-      sanitizedConversations.add(
-        conversation.copyWith(
-          messageIds: keptMessageIds,
-          mcpServerIds: mcpServerIds,
-          truncateIndex: truncateIndex,
-          versionSelections: versionSelections,
-        ),
+      // Counter clamping shares logic with the Hive migration so a legacy
+      // backup carrying out-of-range values (e.g. negative truncateIndex)
+      // cannot trip the conversation_rows CHECK constraints on restore.
+      final rebuilt = conversation.copyWith(
+        messageIds: keptMessageIds,
+        mcpServerIds: mcpServerIds,
+        truncateIndex: truncateIndex,
+        versionSelections: versionSelections,
       );
+      final sanitizedConversation = sanitizeLegacyConversationFields(rebuilt);
+      if (!identical(sanitizedConversation, rebuilt)) {
+        dirtyFieldRepairs++;
+      }
+      sanitizedConversations.add(sanitizedConversation);
     }
     final unreferencedMessages =
         messagesById.length - referencedMessageIds.length;
@@ -1702,7 +1720,6 @@ class DataSync {
         danglingArtifacts++;
       }
     }
-
     final pruned =
         duplicateConversations +
         duplicateMessages +
@@ -1711,6 +1728,7 @@ class DataSync {
         rehomedMessages +
         duplicateMcpServerIds +
         versionConflicts +
+        dirtyFieldRepairs +
         unreferencedMessages +
         danglingArtifacts;
     if (pruned > 0) {
@@ -1723,6 +1741,7 @@ class DataSync {
         'rehomedMessages=$rehomedMessages '
         'duplicateMcpServerIds=$duplicateMcpServerIds '
         'versionConflicts=$versionConflicts '
+        'dirtyFieldRepairs=$dirtyFieldRepairs '
         'unreferencedMessages=$unreferencedMessages '
         'danglingArtifacts=$danglingArtifacts',
       );

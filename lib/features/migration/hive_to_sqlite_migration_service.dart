@@ -17,6 +17,7 @@ import '../../core/models/message_part.dart';
 import '../../core/services/backup/backup_settings_validator.dart';
 import '../../core/services/backup/restore_durability.dart';
 import '../../core/services/migration/legacy_message_content_decoder.dart';
+import '../../core/services/migration/legacy_record_sanitizer.dart';
 import '../../utils/app_directories.dart';
 import '../../utils/sandbox_path_resolver.dart';
 
@@ -567,14 +568,14 @@ class HiveToSqliteMigrationService {
                 repairStats.conversationIdMismatches++;
                 message = message.copyWith(conversationId: conversation.id);
               }
-              if (message.role.isEmpty) {
-                // message_rows enforces CHECK (role != ''). An empty role can
-                // only come from a corrupted Hive record; default it to 'user'
-                // rather than losing the message or aborting the migration.
+              // Field-level repair (empty role, negative tokens/duration,
+              // out-of-range version, inverted reasoning timestamps) shares
+              // logic with the chats.json import boundary.
+              final sanitized = sanitizeLegacyMessageFields(message);
+              if (!identical(sanitized, message)) {
                 repairStats.dirtyNumericFields++;
-                message = message.copyWith(role: 'user');
+                message = sanitized;
               }
-              message = _sanitizeLegacyNumericFields(message, repairStats);
               final groupId = message.groupId;
               // '' is stored verbatim and is a real value to the
               // unique(conversationId, groupId, version) index (unlike NULL),
@@ -804,104 +805,18 @@ class HiveToSqliteMigrationService {
     }
   }
 
-  /// Repairs dirty numeric fields in legacy Hive messages so they satisfy the
-  /// message_rows CHECK constraints (all token/duration/version columns are
-  /// `>= 0`). Device clock rollback during streaming could persist a negative
-  /// durationMs (and a reasoningFinishedAt earlier than reasoningStartAt);
-  /// such rows would otherwise abort the whole migration with
-  /// SQLITE_CONSTRAINT_CHECK.
-  ChatMessage _sanitizeLegacyNumericFields(
-    ChatMessage message,
-    _MigrationRepairStats stats,
-  ) {
-    var changed = false;
-    int? nonNegativeOrNull(int? value) {
-      if (value != null && value < 0) {
-        changed = true;
-        return null;
-      }
-      return value;
-    }
-
-    final totalTokens = nonNegativeOrNull(message.totalTokens);
-    final promptTokens = nonNegativeOrNull(message.promptTokens);
-    final completionTokens = nonNegativeOrNull(message.completionTokens);
-    final cachedTokens = nonNegativeOrNull(message.cachedTokens);
-    final durationMs = nonNegativeOrNull(message.durationMs);
-    // Clamp instead of null: version is non-nullable and feeds the
-    // (conversationId, groupId, version) uniqueness repair that runs right
-    // after this, which resolves any collision introduced by clamping.
-    var version = message.version;
-    if (version < 0) {
-      changed = true;
-      version = 0;
-    }
-    var reasoningFinishedAt = message.reasoningFinishedAt;
-    final reasoningStartAt = message.reasoningStartAt;
-    if (reasoningFinishedAt != null &&
-        reasoningStartAt != null &&
-        reasoningFinishedAt.isBefore(reasoningStartAt)) {
-      changed = true;
-      reasoningFinishedAt = null;
-    }
-    if (!changed) return message;
-
-    stats.dirtyNumericFields++;
-    // copyWith cannot clear fields to null, so rebuild explicitly.
-    return ChatMessage(
-      id: message.id,
-      role: message.role,
-      parts: message.parts,
-      timestamp: message.timestamp,
-      modelId: message.modelId,
-      providerId: message.providerId,
-      totalTokens: totalTokens,
-      conversationId: message.conversationId,
-      isStreaming: message.isStreaming,
-      reasoningText: message.reasoningText,
-      reasoningStartAt: reasoningStartAt,
-      reasoningFinishedAt: reasoningFinishedAt,
-      translation: message.translation,
-      reasoningSegmentsJson: message.reasoningSegmentsJson,
-      groupId: message.groupId,
-      version: version,
-      promptTokens: promptTokens,
-      completionTokens: completionTokens,
-      cachedTokens: cachedTokens,
-      durationMs: durationMs,
-    );
-  }
-
-  /// Clamps legacy conversation counters so they satisfy the
-  /// conversation_rows CHECK constraints (truncateIndex >= -1,
-  /// lastSummarizedMessageCount >= 0, lastMemoryExtractedOrder >= -1).
-  /// Out-of-range values in dirty Hive data would otherwise abort the whole
-  /// migration, same as negative message durations.
+  /// Delegates to the shared legacy sanitizer and counts repairs in the
+  /// migration stats. Out-of-range counters in dirty Hive data would
+  /// otherwise abort the whole migration with SQLITE_CONSTRAINT_CHECK.
   Conversation _sanitizeLegacyConversationFields(
     Conversation conversation,
     _MigrationRepairStats stats,
   ) {
-    final truncateIndex = conversation.truncateIndex < -1
-        ? -1
-        : conversation.truncateIndex;
-    final lastSummarizedMessageCount =
-        conversation.lastSummarizedMessageCount < 0
-        ? 0
-        : conversation.lastSummarizedMessageCount;
-    final lastMemoryExtractedOrder = conversation.lastMemoryExtractedOrder < -1
-        ? -1
-        : conversation.lastMemoryExtractedOrder;
-    if (truncateIndex == conversation.truncateIndex &&
-        lastSummarizedMessageCount == conversation.lastSummarizedMessageCount &&
-        lastMemoryExtractedOrder == conversation.lastMemoryExtractedOrder) {
-      return conversation;
+    final sanitized = sanitizeLegacyConversationFields(conversation);
+    if (!identical(sanitized, conversation)) {
+      stats.dirtyNumericFields++;
     }
-    stats.dirtyNumericFields++;
-    return conversation.copyWith(
-      truncateIndex: truncateIndex,
-      lastSummarizedMessageCount: lastSummarizedMessageCount,
-      lastMemoryExtractedOrder: lastMemoryExtractedOrder,
-    );
+    return sanitized;
   }
 
   /// Prescan-safe message read: an undecodable record is treated like a
