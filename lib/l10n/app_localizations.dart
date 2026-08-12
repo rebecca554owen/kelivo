@@ -10219,6 +10219,42 @@ abstract class AppLocalizations {
   /// **'Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.'**
   String get assistantEditLocalToolCalculateSubtitle;
 
+  /// No description provided for @assistantEditLocalToolScreenTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen Time'**
+  String get assistantEditLocalToolScreenTimeTitle;
+
+  /// No description provided for @assistantEditLocalToolScreenTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Query app screen usage on this device, requires the Usage access permission.'**
+  String get assistantEditLocalToolScreenTimeSubtitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarQueryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Query Calendar'**
+  String get assistantEditLocalToolCalendarQueryTitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarQuerySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read calendar events on this device, requires the calendar permission.'**
+  String get assistantEditLocalToolCalendarQuerySubtitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Event'**
+  String get assistantEditLocalToolCalendarCreateTitle;
+
+  /// No description provided for @assistantEditLocalToolCalendarCreateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create calendar events on this device with your confirmation, requires the calendar permission.'**
+  String get assistantEditLocalToolCalendarCreateSubtitle;
+
   /// No description provided for @assistantEditMemorySwitchDescription.
   ///
   /// In en, this message translates to:

@@ -156,6 +156,9 @@ class Lucide {
   static const IconData bookDashed = lucide.LucideIcons.bookDashed;
   static const IconData toggleRight = lucide.LucideIcons.toggleRight;
   static const IconData Calendar = lucide.LucideIcons.calendar;
+   static const IconData CalendarPlus = lucide.LucideIcons.calendarPlus;
+   static const IconData Hourglass = lucide.LucideIcons.hourglass;
+   static const IconData Smartphone = lucide.LucideIcons.smartphone;
   static const IconData ImageOff = lucide.LucideIcons.imageOff;
   static const IconData RotateCcw = lucide.LucideIcons.rotateCcw;
   static const IconData FlipHorizontal2 = lucide.LucideIcons.flipHorizontal2;

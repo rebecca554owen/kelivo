@@ -1,18 +1,20 @@
-import Flutter
-import UIKit
-import AuthenticationServices
-import BackgroundTasks
-import UserNotifications
-import ActivityKit
+ import Flutter
+ import UIKit
+ import AuthenticationServices
+ import BackgroundTasks
+ import UserNotifications
+ import ActivityKit
+ import EventKit
 
 private let backgroundRefreshIdentifier = "psyche.kelivo.background-generation.refresh"
 private let backgroundProcessingIdentifier = "psyche.kelivo.background-generation.processing"
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  private let fileSaveHandler = NativeFileSaveHandler()
-  private let backgroundGenerationHandler = IosBackgroundGenerationHandler()
-  private let mcpOAuthHandler = IosMcpOAuthHandler()
+   private let fileSaveHandler = NativeFileSaveHandler()
+   private let backgroundGenerationHandler = IosBackgroundGenerationHandler()
+   private let mcpOAuthHandler = IosMcpOAuthHandler()
+   private let deviceLocalToolsHandler = DeviceLocalToolsHandler()
 
   override func application(
     _ application: UIApplication,
@@ -64,6 +66,11 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
       mcpOAuthChannel.setMethodCallHandler { [weak self] call, result in
         self?.mcpOAuthHandler.handle(call: call, result: result)
       }
+ 
+       let deviceToolsChannel = FlutterMethodChannel(name: "app.device_tools", binaryMessenger: controller.binaryMessenger)
+       deviceToolsChannel.setMethodCallHandler { [weak self] call, result in
+         self?.deviceLocalToolsHandler.handle(call: call, result: result)
+       }
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -637,3 +644,354 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
     return controller
   }
 }
+ 
+ /// Native backend for the AI assistant's device-local tools on iOS.
+ ///
+ /// Calendar query/create is implemented with EventKit. Screen time has no
+ /// generally available query API on iOS (the Screen Time frameworks require a
+ /// special Family Controls entitlement), so it is not exposed here; the Dart
+ /// side never offers that tool on iOS.
+ ///
+ /// Methods receive the tool arguments as a JSON string and return a JSON
+ /// string payload. Errors the LLM should see (missing permission, bad
+ /// arguments) are returned as JSON payloads with an "error" field.
+ private final class DeviceLocalToolsHandler {
+   private let eventStore = EKEventStore()
+ 
+   func handle(call: FlutterMethodCall, result: @escaping FlutterResult) {
+     let args = Self.parseArgs(call.arguments)
+     switch call.method {
+     case "queryCalendar":
+       ensureCalendarAccess { [weak self] granted in
+         guard let self else { return }
+         guard granted else {
+           result(Self.noPermissionPayload)
+           return
+         }
+         DispatchQueue.global(qos: .userInitiated).async {
+           let payload = self.queryCalendar(args: args)
+           DispatchQueue.main.async { result(payload) }
+         }
+       }
+     case "createCalendarEvent":
+       ensureCalendarAccess { [weak self] granted in
+         guard let self else { return }
+         guard granted else {
+           result(Self.noPermissionPayload)
+           return
+         }
+         DispatchQueue.global(qos: .userInitiated).async {
+           let payload = self.createCalendarEvent(args: args)
+           DispatchQueue.main.async { result(payload) }
+         }
+       }
+     case "getScreenTime":
+       result(Self.errorPayload(
+         "UNSUPPORTED_PLATFORM",
+         "Screen time queries are not available on iOS; Apple does not provide a general-purpose API for this."
+       ))
+     default:
+       result(FlutterMethodNotImplemented)
+     }
+   }
+ 
+   // MARK: - Permission
+ 
+   private static let noPermissionPayload = errorPayload(
+     "NO_PERMISSION",
+     "Calendar permission is not granted. Please ask the user to allow full calendar access "
+       + "for this app in the system Settings and try again."
+   )
+ 
+   private func ensureCalendarAccess(completion: @escaping (Bool) -> Void) {
+     let finish: (Bool) -> Void = { granted in
+       DispatchQueue.main.async { completion(granted) }
+     }
+     let status = EKEventStore.authorizationStatus(for: .event)
+     if #available(iOS 17.0, *) {
+       switch status {
+       case .fullAccess:
+         finish(true)
+       case .notDetermined:
+         eventStore.requestFullAccessToEvents { granted, _ in finish(granted) }
+       default:
+         finish(false)
+       }
+     } else {
+       switch status {
+       case .authorized:
+         finish(true)
+       case .notDetermined:
+         eventStore.requestAccess(to: .event) { granted, _ in finish(granted) }
+       default:
+         finish(false)
+       }
+     }
+   }
+ 
+   // MARK: - Calendar query
+ 
+   private func queryCalendar(args: [String: Any]) -> String {
+     let limit = min(max(Self.intArg(args["limit"]) ?? 20, 1), 100)
+     let keyword = (args["query"] as? String)?
+       .trimmingCharacters(in: .whitespacesAndNewlines)
+       .lowercased()
+     let rangePreset = (args["range"] as? String)?.lowercased() ?? "today"
+ 
+     // ISO 8601 calendar so week presets start on Monday, matching Android.
+     var calendar = Calendar(identifier: .iso8601)
+     calendar.timeZone = .current
+     let now = Date()
+     let startOfToday = calendar.startOfDay(for: now)
+ 
+     let startDate: Date
+     let endDate: Date
+     if let beginRaw = args["begin"] as? String, !beginRaw.isEmpty {
+       guard let parsedStart = Self.parseTime(beginRaw, calendar: calendar) else {
+         return Self.invalidTimePayload(beginRaw)
+       }
+       startDate = parsedStart
+       if let endRaw = args["end"] as? String, !endRaw.isEmpty {
+         guard let parsedEnd = Self.parseTime(endRaw, calendar: calendar) else {
+           return Self.invalidTimePayload(endRaw)
+         }
+         endDate = parsedEnd
+       } else {
+         endDate = now
+       }
+     } else {
+       switch rangePreset {
+       case "week":
+         let weekStart = calendar.date(
+           from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)
+         ) ?? startOfToday
+         startDate = weekStart
+         endDate = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? now
+       case "month":
+         let monthStart = calendar.date(
+           from: calendar.dateComponents([.year, .month], from: now)
+         ) ?? startOfToday
+         startDate = monthStart
+         endDate = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? now
+       default:
+         startDate = startOfToday
+         endDate = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
+       }
+     }
+ 
+     guard startDate < endDate else {
+       return Self.errorPayload("INVALID_RANGE", "begin must be earlier than end.")
+     }
+ 
+     let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+     var events = eventStore.events(matching: predicate)
+     if let keyword, !keyword.isEmpty {
+       events = events.filter { ($0.title ?? "").lowercased().contains(keyword) }
+     }
+     events.sort { $0.startDate < $1.startDate }
+ 
+     var items: [[String: Any]] = []
+     for event in events.prefix(limit) {
+       var item: [String: Any] = [
+         "id": event.eventIdentifier ?? "",
+         "title": event.title ?? "",
+         "description": event.notes ?? "",
+         "location": event.location ?? "",
+         "all_day": event.isAllDay,
+         "calendar": event.calendar?.title ?? "",
+       ]
+       if event.isAllDay {
+         item["start"] = Self.formatDateOnly(event.startDate, calendar: calendar)
+         item["end"] = event.endDate.map { Self.formatDateOnly($0, calendar: calendar) } ?? ""
+       } else {
+         item["start"] = Self.formatDateTime(event.startDate)
+         item["end"] = event.endDate.map(Self.formatDateTime) ?? ""
+       }
+       items.append(item)
+     }
+ 
+     return Self.jsonString([
+       "range_start": Self.formatDateTime(startDate),
+       "range_end": Self.formatDateTime(endDate),
+       "count": items.count,
+       "events": items,
+     ])
+   }
+ 
+   // MARK: - Calendar create
+ 
+   private func createCalendarEvent(args: [String: Any]) -> String {
+     let title = (args["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+     let startRaw = (args["start"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+     guard !title.isEmpty, !startRaw.isEmpty else {
+       return Self.errorPayload("MISSING_REQUIRED", "Both 'title' and 'start' are required.")
+     }
+     let allDay = Self.boolArg(args["all_day"]) ?? false
+ 
+     var calendar = Calendar(identifier: .iso8601)
+     calendar.timeZone = .current
+ 
+     guard let startDate = Self.parseTime(startRaw, calendar: calendar) else {
+       return Self.invalidTimePayload(startRaw)
+     }
+     let endDate: Date
+     if let endRaw = args["end"] as? String, !endRaw.isEmpty {
+       guard let parsedEnd = Self.parseTime(endRaw, calendar: calendar) else {
+         return Self.invalidTimePayload(endRaw)
+       }
+       endDate = parsedEnd
+     } else if allDay {
+       let dayStart = calendar.startOfDay(for: startDate)
+       endDate = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? startDate.addingTimeInterval(86400)
+     } else {
+       endDate = startDate.addingTimeInterval(3600)
+     }
+     guard startDate < endDate else {
+       return Self.errorPayload("INVALID_RANGE", "end must be later than start.")
+     }
+ 
+     guard let targetCalendar = eventStore.defaultCalendarForNewEvents else {
+       return Self.errorPayload(
+         "NO_CALENDAR",
+         "No calendar account found on this device. Please add a calendar account first."
+       )
+     }
+ 
+     let event = EKEvent(eventStore: eventStore)
+     event.calendar = targetCalendar
+     event.title = title
+     if let notes = args["description"] as? String, !notes.isEmpty {
+       event.notes = notes
+     }
+     if let location = args["location"] as? String, !location.isEmpty {
+       event.location = location
+     }
+     if allDay {
+       event.isAllDay = true
+       let dayStart = calendar.startOfDay(for: startDate)
+       event.startDate = dayStart
+       // The tool's 'end' is exclusive (next-day midnight); EventKit treats the
+       // end date's day as included, so step back one second to avoid spilling
+       // into an extra day.
+       event.endDate = endDate.addingTimeInterval(-1)
+     } else {
+       event.startDate = startDate
+       event.endDate = endDate
+     }
+ 
+     do {
+       try eventStore.save(event, span: .thisEvent, commit: true)
+     } catch {
+       return Self.errorPayload("INSERT_FAILED", "Failed to save calendar event: \(error.localizedDescription)")
+     }
+ 
+     var payload: [String: Any] = [
+       "success": true,
+       "event_id": event.eventIdentifier ?? "",
+       "title": title,
+       "all_day": allDay,
+       "location": event.location ?? "",
+     ]
+     if allDay {
+       payload["start"] = Self.formatDateOnly(event.startDate, calendar: calendar)
+       payload["end"] = Self.formatDateOnly(endDate.addingTimeInterval(-1), calendar: calendar)
+     } else {
+       payload["start"] = Self.formatDateTime(startDate)
+       payload["end"] = Self.formatDateTime(endDate)
+     }
+     return Self.jsonString(payload)
+   }
+ 
+   // MARK: - Argument/JSON helpers
+ 
+   private static func parseArgs(_ arguments: Any?) -> [String: Any] {
+     guard
+       let json = arguments as? String,
+       let data = json.data(using: .utf8),
+       let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+     else {
+       return [:]
+     }
+     return parsed
+   }
+ 
+   private static func intArg(_ value: Any?) -> Int? {
+     if let number = value as? Int { return number }
+     if let number = value as? Double { return Int(number) }
+     if let text = value as? String { return Int(text.trimmingCharacters(in: .whitespaces)) }
+     return nil
+   }
+ 
+   private static func boolArg(_ value: Any?) -> Bool? {
+     if let flag = value as? Bool { return flag }
+     if let text = (value as? String)?.lowercased() {
+       if text == "true" { return true }
+       if text == "false" { return false }
+     }
+     return nil
+   }
+ 
+   private static func jsonString(_ payload: [String: Any]) -> String {
+     guard
+       let data = try? JSONSerialization.data(withJSONObject: payload),
+       let text = String(data: data, encoding: .utf8)
+     else {
+       return "{\"error\":\"ENCODING_ERROR\",\"message\":\"Failed to encode tool result.\"}"
+     }
+     return text
+   }
+ 
+   private static func errorPayload(_ error: String, _ message: String) -> String {
+     jsonString(["error": error, "message": message])
+   }
+ 
+   private static func invalidTimePayload(_ raw: String) -> String {
+     errorPayload(
+       "INVALID_TIME",
+       "Invalid time format: '\(raw)'. Use ISO-8601 date/date-time or epoch milliseconds."
+     )
+   }
+ 
+   // MARK: - Time parsing/formatting
+ 
+   /// Parses epoch milliseconds, offset date-times, local date-times, and
+   /// plain dates (interpreted at local midnight), mirroring the Android tool.
+   private static func parseTime(_ raw: String, calendar: Calendar) -> Date? {
+     let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+     if !text.isEmpty, text.allSatisfy({ $0.isNumber }), let millis = Double(text) {
+       return Date(timeIntervalSince1970: millis / 1000.0)
+     }
+ 
+     let isoWithFraction = ISO8601DateFormatter()
+     isoWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+     if let date = isoWithFraction.date(from: text) { return date }
+ 
+     let iso = ISO8601DateFormatter()
+     iso.formatOptions = [.withInternetDateTime]
+     if let date = iso.date(from: text) { return date }
+ 
+     for format in ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd"] {
+       let formatter = DateFormatter()
+       formatter.locale = Locale(identifier: "en_US_POSIX")
+       formatter.timeZone = calendar.timeZone
+       formatter.dateFormat = format
+       if let date = formatter.date(from: text) { return date }
+     }
+     return nil
+   }
+ 
+   private static func formatDateTime(_ date: Date) -> String {
+     let formatter = ISO8601DateFormatter()
+     formatter.formatOptions = [.withInternetDateTime]
+     formatter.timeZone = .current
+     return formatter.string(from: date)
+   }
+ 
+   private static func formatDateOnly(_ date: Date, calendar: Calendar) -> String {
+     let formatter = DateFormatter()
+     formatter.locale = Locale(identifier: "en_US_POSIX")
+     formatter.timeZone = calendar.timeZone
+     formatter.dateFormat = "yyyy-MM-dd"
+     return formatter.string(from: date)
+   }
+ }

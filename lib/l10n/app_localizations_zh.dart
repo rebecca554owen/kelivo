@@ -5318,6 +5318,27 @@ class AppLocalizationsZh extends AppLocalizations {
       '计算数学表达式，支持加减乘除幂运算 sqrt sin cos 等。';
 
   @override
+  String get assistantEditLocalToolScreenTimeTitle => '屏幕使用时间';
+
+  @override
+  String get assistantEditLocalToolScreenTimeSubtitle =>
+      '查询本设备的应用使用时长，需要授予使用情况访问权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarQueryTitle => '查询日历';
+
+  @override
+  String get assistantEditLocalToolCalendarQuerySubtitle =>
+      '读取本设备上的日历日程，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateTitle => '创建日程';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateSubtitle =>
+      '在你确认后于本设备创建日历日程，需要授予日历权限。';
+
+  @override
   String get assistantEditMemorySwitchDescription => '允许助手主动存储并在对话间引用用户相关信息';
 
   @override
@@ -12318,6 +12339,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get assistantEditLocalToolCalculateSubtitle =>
       '计算数学表达式，支持加减乘除幂运算 sqrt sin cos 等。';
+
+  @override
+  String get assistantEditLocalToolScreenTimeTitle => '屏幕使用时间';
+
+  @override
+  String get assistantEditLocalToolScreenTimeSubtitle =>
+      '查询本设备的应用使用时长，需要授予使用情况访问权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarQueryTitle => '查询日历';
+
+  @override
+  String get assistantEditLocalToolCalendarQuerySubtitle =>
+      '读取本设备上的日历日程，需要授予日历权限。';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateTitle => '创建日程';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateSubtitle =>
+      '在你确认后于本设备创建日历日程，需要授予日历权限。';
 
   @override
   String get assistantEditMemorySwitchDescription => '允许助手主动存储并在对话间引用用户相关信息';
@@ -19394,6 +19436,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get assistantEditLocalToolCalculateSubtitle =>
       '計算數學表達式，支援加減乘除冪運算 sqrt sin cos 等。';
+
+  @override
+  String get assistantEditLocalToolScreenTimeTitle => '螢幕使用時間';
+
+  @override
+  String get assistantEditLocalToolScreenTimeSubtitle =>
+      '查詢本裝置的應用使用時長，需要授予使用情況存取權限。';
+
+  @override
+  String get assistantEditLocalToolCalendarQueryTitle => '查詢日曆';
+
+  @override
+  String get assistantEditLocalToolCalendarQuerySubtitle =>
+      '讀取本裝置上的日曆行程，需要授予日曆權限。';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateTitle => '建立行程';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateSubtitle =>
+      '在你確認後於本裝置建立日曆行程，需要授予日曆權限。';
 
   @override
   String get assistantEditMemorySwitchDescription => '允許助理主動儲存並在對話間引用使用者相關資訊';

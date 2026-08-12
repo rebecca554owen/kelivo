@@ -20,12 +20,16 @@ class MainActivity : FlutterActivity() {
     private var processTextChannel: MethodChannel? = null
     private var fileSaveChannel: MethodChannel? = null
     private var pendingProcessText: String? = null
-    private var pendingSaveResult: MethodChannel.Result? = null
-    private var pendingSaveSourcePath: String? = null
+     private var pendingSaveResult: MethodChannel.Result? = null
+     private var pendingSaveSourcePath: String? = null
+     private var deviceLocalToolsHandler: DeviceLocalToolsHandler? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-        McpOAuthHandler.configure(this, flutterEngine.dartExecutor.binaryMessenger)
+         super.configureFlutterEngine(flutterEngine)
+         McpOAuthHandler.configure(this, flutterEngine.dartExecutor.binaryMessenger)
+         deviceLocalToolsHandler = DeviceLocalToolsHandler(this).also {
+             it.configure(flutterEngine.dartExecutor.binaryMessenger)
+         }
         processTextChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, processTextChannelName)
         processTextChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -58,6 +62,17 @@ class MainActivity : FlutterActivity() {
             pendingProcessText = text
         }
     }
+ 
+     override fun onRequestPermissionsResult(
+         requestCode: Int,
+         permissions: Array<out String>,
+         grantResults: IntArray,
+     ) {
+         if (deviceLocalToolsHandler?.onRequestPermissionsResult(requestCode, grantResults) == true) {
+             return
+         }
+         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)

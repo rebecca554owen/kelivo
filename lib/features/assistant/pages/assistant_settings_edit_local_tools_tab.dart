@@ -24,6 +24,15 @@ class _LocalToolsTab extends StatelessWidget {
     final calculateEnabled = assistant.localToolIds.contains(
       LocalToolNames.calculate,
     );
+     final screenTimeEnabled = assistant.localToolIds.contains(
+       LocalToolNames.screenTime,
+     );
+     final calendarQueryEnabled = assistant.localToolIds.contains(
+       LocalToolNames.calendarQuery,
+     );
+     final calendarCreateEnabled = assistant.localToolIds.contains(
+       LocalToolNames.calendarCreate,
+     );
 
     Future<void> updateTool(String toolId, bool value) {
       final ids = assistant.localToolIds.toSet();
@@ -75,13 +84,44 @@ class _LocalToolsTab extends StatelessWidget {
               onChanged: (value) => updateTool(LocalToolNames.askUser, value),
             ),
             _iosDivider(context),
-            _LocalToolRow(
-              icon: Lucide.Calculator,
-              title: l10n.assistantEditLocalToolCalculateTitle,
-              subtitle: l10n.assistantEditLocalToolCalculateSubtitle,
-              enabled: calculateEnabled,
-              onChanged: (value) => updateTool(LocalToolNames.calculate, value),
-            ),
+             _LocalToolRow(
+               icon: Lucide.Calculator,
+               title: l10n.assistantEditLocalToolCalculateTitle,
+               subtitle: l10n.assistantEditLocalToolCalculateSubtitle,
+               enabled: calculateEnabled,
+               onChanged: (value) => updateTool(LocalToolNames.calculate, value),
+             ),
+             if (DeviceLocalTools.screenTimeSupported) ...[
+               _iosDivider(context),
+               _LocalToolRow(
+                 icon: Lucide.Hourglass,
+                 title: l10n.assistantEditLocalToolScreenTimeTitle,
+                 subtitle: l10n.assistantEditLocalToolScreenTimeSubtitle,
+                 enabled: screenTimeEnabled,
+                 onChanged: (value) =>
+                     updateTool(LocalToolNames.screenTime, value),
+               ),
+             ],
+             if (DeviceLocalTools.calendarSupported) ...[
+               _iosDivider(context),
+               _LocalToolRow(
+                 icon: Lucide.Calendar,
+                 title: l10n.assistantEditLocalToolCalendarQueryTitle,
+                 subtitle: l10n.assistantEditLocalToolCalendarQuerySubtitle,
+                 enabled: calendarQueryEnabled,
+                 onChanged: (value) =>
+                     updateTool(LocalToolNames.calendarQuery, value),
+               ),
+               _iosDivider(context),
+               _LocalToolRow(
+                 icon: Lucide.CalendarPlus,
+                 title: l10n.assistantEditLocalToolCalendarCreateTitle,
+                 subtitle: l10n.assistantEditLocalToolCalendarCreateSubtitle,
+                 enabled: calendarCreateEnabled,
+                 onChanged: (value) =>
+                     updateTool(LocalToolNames.calendarCreate, value),
+               ),
+             ],
           ],
         ),
       ],

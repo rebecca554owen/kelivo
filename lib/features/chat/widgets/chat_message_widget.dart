@@ -283,8 +283,11 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
       'write' => Lucide.ClipboardPen,
       _ => Lucide.Clipboard,
     },
-    LocalToolNames.textToSpeech => Lucide.Volume2,
-    LocalToolNames.calculate => Lucide.Calculator,
+     LocalToolNames.textToSpeech => Lucide.Volume2,
+     LocalToolNames.calculate => Lucide.Calculator,
+     LocalToolNames.screenTime => Lucide.Hourglass,
+     LocalToolNames.calendarQuery => Lucide.Calendar,
+     LocalToolNames.calendarCreate => Lucide.CalendarPlus,
     _ => null,
   };
 }
@@ -304,8 +307,13 @@ String? _localToolTitleFor(
       'write' => l10n.chatMessageWidgetWriteClipboard,
       _ => l10n.assistantEditLocalToolClipboardTitle,
     },
-    LocalToolNames.textToSpeech => l10n.chatMessageWidgetSpeakingTitle,
-    LocalToolNames.calculate => l10n.assistantEditLocalToolCalculateTitle,
+     LocalToolNames.textToSpeech => l10n.chatMessageWidgetSpeakingTitle,
+     LocalToolNames.calculate => l10n.assistantEditLocalToolCalculateTitle,
+     LocalToolNames.screenTime => l10n.assistantEditLocalToolScreenTimeTitle,
+     LocalToolNames.calendarQuery =>
+       l10n.assistantEditLocalToolCalendarQueryTitle,
+     LocalToolNames.calendarCreate =>
+       l10n.assistantEditLocalToolCalendarCreateTitle,
     _ => null,
   };
 }

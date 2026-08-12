@@ -5537,6 +5537,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.';
 
   @override
+  String get assistantEditLocalToolScreenTimeTitle => 'Screen Time';
+
+  @override
+  String get assistantEditLocalToolScreenTimeSubtitle =>
+      'Query app screen usage on this device, requires the Usage access permission.';
+
+  @override
+  String get assistantEditLocalToolCalendarQueryTitle => 'Query Calendar';
+
+  @override
+  String get assistantEditLocalToolCalendarQuerySubtitle =>
+      'Read calendar events on this device, requires the calendar permission.';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateTitle => 'Create Event';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateSubtitle =>
+      'Create calendar events on this device with your confirmation, requires the calendar permission.';
+
+  @override
   String get assistantEditMemorySwitchDescription =>
       'Allow the assistant to create and use memories across chats.';
 
