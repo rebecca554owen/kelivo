@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:http/retry.dart';
 import 'package:uuid/uuid.dart';
 
 enum NetworkTtsKind {
@@ -49,6 +48,14 @@ String networkTtsKindDisplayName(NetworkTtsKind k) {
     case NetworkTtsKind.fishAudio:
       return 'Fish Audio';
   }
+}
+
+bool isValidAzureTtsEndpoint(String value) {
+  final uri = Uri.tryParse(value.trim());
+  return uri != null &&
+      uri.hasAuthority &&
+      uri.host.isNotEmpty &&
+      (uri.scheme == 'http' || uri.scheme == 'https');
 }
 
 /// Migrates retired MiMo TTS model ids. `mimo-v2-tts` is no longer served.
@@ -988,16 +995,17 @@ class NetworkTtsService {
     FutureOr<bool> Function()? cancelled,
   ) async {
     final configuredBase = opt.baseUrl.trim();
-    if (configuredBase.isEmpty) {
-      throw Exception('Azure TTS endpoint is required');
+    if (!isValidAzureTtsEndpoint(configuredBase)) {
+      throw Exception('Azure TTS endpoint must be an absolute HTTP(S) URL');
     }
-    final base = configuredBase.endsWith('/')
-        ? configuredBase.substring(0, configuredBase.length - 1)
-        : configuredBase;
-    final uri = Uri.parse(
-      base.endsWith('/cognitiveservices/v1')
-          ? base
-          : '$base/cognitiveservices/v1',
+    final base = Uri.parse(configuredBase);
+    final basePath = base.path.endsWith('/')
+        ? base.path.substring(0, base.path.length - 1)
+        : base.path;
+    final uri = base.replace(
+      path: basePath.endsWith('/cognitiveservices/v1')
+          ? basePath
+          : '$basePath/cognitiveservices/v1',
     );
     final attributeEscape = const HtmlEscape(HtmlEscapeMode.attribute);
     final textEscape = const HtmlEscape(HtmlEscapeMode.element);
@@ -1005,47 +1013,70 @@ class NetworkTtsService {
         '<speak version="1.0" xml:lang="${attributeEscape.convert(opt.language)}">'
         '<voice name="${attributeEscape.convert(opt.voice)}">'
         '${textEscape.convert(text)}</voice></speak>';
-    final req = http.Request('POST', uri)
-      ..headers['Ocp-Apim-Subscription-Key'] = opt.apiKey
-      ..headers['Content-Type'] = 'application/ssml+xml'
-      ..headers['X-Microsoft-OutputFormat'] = 'audio-24khz-96kbitrate-mono-mp3'
-      ..headers['User-Agent'] = 'Kelivo'
-      ..body = body;
-    final retryClient = RetryClient.withDelays(
-      c,
-      const <Duration>[
-        Duration(milliseconds: 200),
-        Duration(milliseconds: 600),
-      ],
-      when: (response) async {
-        if (!const <int>{429, 502, 503}.contains(response.statusCode)) {
-          return false;
-        }
-        return cancelled == null || !await cancelled();
-      },
-      whenError: (_, _) => false,
-      onRetry: (_, _, _) async {
-        if (cancelled != null && await cancelled()) {
+    final abort = Completer<void>();
+    var finished = false;
+
+    Future<bool> cancellationRequested() async {
+      if (cancelled == null || !await cancelled()) return false;
+      if (!abort.isCompleted) abort.complete();
+      return true;
+    }
+
+    Future<void> monitorCancellation() async {
+      while (!finished) {
+        if (await cancellationRequested()) return;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
+
+    if (cancelled != null) unawaited(monitorCancellation());
+    const fallbackDelays = <Duration>[
+      Duration(milliseconds: 200),
+      Duration(milliseconds: 600),
+    ];
+    late http.StreamedResponse resp;
+    try {
+      for (var attempt = 0; ; attempt++) {
+        if (await cancellationRequested()) throw _Cancelled();
+        final req =
+            http.AbortableRequest('POST', uri, abortTrigger: abort.future)
+              ..headers['Ocp-Apim-Subscription-Key'] = opt.apiKey
+              ..headers['Content-Type'] = 'application/ssml+xml'
+              ..headers['X-Microsoft-OutputFormat'] =
+                  'audio-24khz-96kbitrate-mono-mp3'
+              ..headers['User-Agent'] = 'Kelivo'
+              ..body = body;
+        resp = await c.send(req);
+        if (await cancellationRequested()) {
+          await _cancelAzureResponseStream(resp.stream);
           throw _Cancelled();
         }
-      },
-    );
-    final resp = await retryClient.send(req);
-    if (cancelled != null && await cancelled()) {
-      await resp.stream.listen((_) {}).cancel();
-      throw _Cancelled();
-    }
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      final responseBody = await resp.stream.bytesToString();
-      throw Exception(
-        'Azure TTS failed: ${resp.statusCode} ${resp.reasonPhrase} $responseBody',
+        if (!const <int>{429, 502, 503}.contains(resp.statusCode) ||
+            attempt == fallbackDelays.length) {
+          break;
+        }
+        final delay =
+            _azureRetryAfterDelay(resp.headers['retry-after']) ??
+            fallbackDelays[attempt];
+        await _cancelAzureResponseStream(resp.stream);
+        await _waitForAzureRetry(delay, cancellationRequested);
+      }
+      final responseBytes = await _readAzureResponseBytes(
+        resp.stream,
+        abort.future,
       );
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw Exception(
+          'Azure TTS failed: ${resp.statusCode} ${resp.reasonPhrase} '
+          '${utf8.decode(responseBytes, allowMalformed: true)}',
+        );
+      }
+      return NetworkTtsResult(bytes: responseBytes, mime: 'audio/mpeg');
+    } on http.RequestAbortedException {
+      throw _Cancelled();
+    } finally {
+      finished = true;
     }
-    final bytes = await resp.stream.toBytes();
-    return NetworkTtsResult(
-      bytes: Uint8List.fromList(bytes),
-      mime: 'audio/mpeg',
-    );
   }
 
   static Future<NetworkTtsResult> _miniMaxSpeech(
@@ -1924,6 +1955,72 @@ Future<void> _waitWithCancellation(
     if (completed) return;
     if (await cancelled()) throw _Cancelled();
   }
+}
+
+Duration? _azureRetryAfterDelay(String? value) {
+  final raw = value?.trim();
+  if (raw == null || raw.isEmpty) return null;
+  final seconds = int.tryParse(raw);
+  if (seconds != null && seconds >= 0) return Duration(seconds: seconds);
+  try {
+    final delay = HttpDate.parse(
+      raw,
+    ).toUtc().difference(DateTime.now().toUtc());
+    return delay.isNegative ? Duration.zero : delay;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> _cancelAzureResponseStream(Stream<List<int>> stream) async {
+  try {
+    await stream.listen((_) {}).cancel();
+  } catch (_) {}
+}
+
+Future<void> _waitForAzureRetry(
+  Duration delay,
+  FutureOr<bool> Function() cancelled,
+) async {
+  final elapsed = Stopwatch()..start();
+  while (elapsed.elapsed < delay) {
+    if (await cancelled()) throw _Cancelled();
+    final remaining = delay - elapsed.elapsed;
+    await Future<void>.delayed(
+      remaining < const Duration(milliseconds: 50)
+          ? remaining
+          : const Duration(milliseconds: 50),
+    );
+  }
+  if (await cancelled()) throw _Cancelled();
+}
+
+Future<Uint8List> _readAzureResponseBytes(
+  Stream<List<int>> stream,
+  Future<void> abortTrigger,
+) async {
+  final chunks = BytesBuilder(copy: false);
+  final iterator = StreamIterator<List<int>>(stream);
+  var aborted = false;
+  unawaited(
+    abortTrigger.then((_) async {
+      aborted = true;
+      try {
+        await iterator.cancel();
+      } catch (_) {}
+    }),
+  );
+  try {
+    while (await iterator.moveNext()) {
+      chunks.add(iterator.current);
+    }
+    if (aborted) throw _Cancelled();
+  } finally {
+    try {
+      await iterator.cancel();
+    } catch (_) {}
+  }
+  return chunks.takeBytes();
 }
 
 class _Cancelled implements Exception {}

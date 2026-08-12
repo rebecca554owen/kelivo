@@ -1359,7 +1359,8 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
       );
       return;
     }
-    if (_kind == NetworkTtsKind.azure && _baseCtl.text.trim().isEmpty) {
+    if (_kind == NetworkTtsKind.azure &&
+        !isValidAzureTtsEndpoint(_baseCtl.text)) {
       showAppSnackBar(
         context,
         message: l10n.searchServicesAddDialogUrlRequired,

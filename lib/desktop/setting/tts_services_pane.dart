@@ -1634,7 +1634,7 @@ Future<TtsServiceOptions?> _showNetworkDialog(
                                   : rawVoice;
                               if (apiKey.isEmpty ||
                                   (kind == NetworkTtsKind.azure &&
-                                      base.isEmpty)) {
+                                      !isValidAzureTtsEndpoint(base))) {
                                 return;
                               }
                               if ((kind == NetworkTtsKind.fishAudio ||

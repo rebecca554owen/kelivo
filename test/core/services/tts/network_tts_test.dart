@@ -66,6 +66,15 @@ void main() {
       expect((azure as AzureTtsOptions).baseUrl, isEmpty);
       expect(azure.language, 'zh-CN');
       expect(azure.voice, 'zh-CN-XiaoxiaoNeural');
+      expect(
+        isValidAzureTtsEndpoint('https://eastus.tts.speech.microsoft.com'),
+        isTrue,
+      );
+      expect(
+        isValidAzureTtsEndpoint('eastus.tts.speech.microsoft.com'),
+        isFalse,
+      );
+      expect(isValidAzureTtsEndpoint('ftp://example.com'), isFalse);
 
       final mimo = TtsServiceOptions.fromJson({
         'kind': 'mimo',
@@ -240,7 +249,7 @@ void main() {
           enabled: true,
           name: 'Azure',
           apiKey: 'azure-key',
-          baseUrl: _hostOnlyBaseUrl(server),
+          baseUrl: '${_hostOnlyBaseUrl(server)}/cognitiveservices/v1/',
           language: 'zh-CN',
           voice: 'zh-CN-XiaoxiaoNeural',
         ),
@@ -265,6 +274,7 @@ void main() {
 
     test('Azure retries transient responses with bounded backoff', () async {
       var requestCount = 0;
+      final stopwatch = Stopwatch()..start();
       final server = await _bindServer((request) async {
         await request.drain<void>();
         requestCount++;
@@ -273,6 +283,9 @@ void main() {
           2 => HttpStatus.serviceUnavailable,
           _ => HttpStatus.ok,
         };
+        if (requestCount == 1) {
+          request.response.headers.set(HttpHeaders.retryAfterHeader, '1');
+        }
         if (requestCount == 3) {
           request.response.add(const <int>[4, 5, 6]);
         }
@@ -294,6 +307,10 @@ void main() {
       );
 
       expect(requestCount, 3);
+      expect(
+        stopwatch.elapsed,
+        greaterThanOrEqualTo(const Duration(seconds: 1)),
+      );
       expect(result.bytes, <int>[4, 5, 6]);
     });
 
@@ -304,6 +321,7 @@ void main() {
         await request.drain<void>();
         requestCount++;
         request.response.statusCode = HttpStatus.serviceUnavailable;
+        request.response.headers.set(HttpHeaders.retryAfterHeader, '60');
         await request.response.close();
       });
 
@@ -330,6 +348,57 @@ void main() {
       await expectLater(synthesis, throwsA(isA<Exception>()));
       expect(requestCount, 1);
     });
+
+    test(
+      'Azure cancellation aborts pending headers and audio streams',
+      () async {
+        for (final waitForHeaders in <bool>[true, false]) {
+          final requestReceived = Completer<void>();
+          final bodyStarted = Completer<void>();
+          final releaseServer = Completer<void>();
+          var isCancelled = false;
+          final server = await _bindServer((request) async {
+            requestReceived.complete();
+            await request.drain<void>();
+            try {
+              if (waitForHeaders) await releaseServer.future;
+              request.response.statusCode = HttpStatus.ok;
+              request.response.add(const <int>[1]);
+              await request.response.flush();
+              if (!bodyStarted.isCompleted) bodyStarted.complete();
+              if (!waitForHeaders) await releaseServer.future;
+              await request.response.close();
+            } catch (_) {}
+          });
+
+          final synthesis = NetworkTtsService.synthesize(
+            options: AzureTtsOptions(
+              enabled: true,
+              name: 'Azure',
+              apiKey: 'azure-key',
+              baseUrl: _hostOnlyBaseUrl(server),
+              language: 'zh-CN',
+              voice: 'zh-CN-XiaoxiaoNeural',
+            ),
+            text: '你好',
+            cancelled: () => isCancelled,
+          );
+
+          await requestReceived.future.timeout(const Duration(seconds: 1));
+          if (!waitForHeaders) {
+            await bodyStarted.future.timeout(const Duration(seconds: 1));
+          }
+          isCancelled = true;
+          await expectLater(
+            synthesis.timeout(const Duration(seconds: 1)),
+            throwsA(isA<Exception>()),
+          );
+
+          if (!releaseServer.isCompleted) releaseServer.complete();
+          await server.close(force: true);
+        }
+      },
+    );
 
     test('synthesizes Qwen SSE PCM response as wav', () async {
       late HttpRequest captured;
