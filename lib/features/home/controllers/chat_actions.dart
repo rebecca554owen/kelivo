@@ -426,6 +426,15 @@ class ChatActions {
     );
   }
 
+  /// Elapsed milliseconds since [start], or null when unknown or when a
+  /// device clock rollback made the difference negative (the message_rows
+  /// CHECK constraint rejects negative durations).
+  int? _elapsedMsFrom(DateTime? start) {
+    if (start == null) return null;
+    final elapsed = DateTime.now().difference(start).inMilliseconds;
+    return elapsed < 0 ? null : elapsed;
+  }
+
   ChatMessage _streamingMessageSnapshot(stream_ctrl.StreamingState state) {
     final messageId = state.messageId;
     final index = _messages.indexWhere((message) => message.id == messageId);
@@ -438,9 +447,8 @@ class ChatActions {
       promptTokens: state.usage?.promptTokens,
       completionTokens: state.usage?.completionTokens,
       cachedTokens: state.usage?.cachedTokens,
-      durationMs: state.streamStartedAt == null
-          ? base.durationMs
-          : DateTime.now().difference(state.streamStartedAt!).inMilliseconds,
+      // copyWith keeps base.durationMs when this resolves to null.
+      durationMs: _elapsedMsFrom(state.streamStartedAt),
     );
   }
 
@@ -1983,9 +1991,7 @@ class ChatActions {
         promptTokens: state.usage?.promptTokens,
         completionTokens: state.usage?.completionTokens,
         cachedTokens: state.usage?.cachedTokens,
-        durationMs: state.streamStartedAt != null
-            ? DateTime.now().difference(state.streamStartedAt!).inMilliseconds
-            : null,
+        durationMs: _elapsedMsFrom(state.streamStartedAt),
         updateMessageInList: (id, content, tokens) {
           onContentUpdated?.call(id, content, tokens);
         },
@@ -2124,9 +2130,7 @@ class ChatActions {
     final processedContent = _transformAssistantContent(state);
 
     // Compute final duration
-    final finalDurationMs = state.streamStartedAt != null
-        ? DateTime.now().difference(state.streamStartedAt!).inMilliseconds
-        : null;
+    final finalDurationMs = _elapsedMsFrom(state.streamStartedAt);
     final finalPromptTokens = state.usage?.promptTokens;
     final finalCompletionTokens = state.usage?.completionTokens;
     final finalCachedTokens = state.usage?.cachedTokens;

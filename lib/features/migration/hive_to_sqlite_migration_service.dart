@@ -499,14 +499,17 @@ class HiveToSqliteMigrationService {
         'messages',
       );
       for (final legacyConversation in conversations) {
-        final conversation = await _convertLegacyVersionSelections(
-          await _convertLegacyTruncateIndex(
-            legacyConversation,
+        final conversation = _sanitizeLegacyConversationFields(
+          await _convertLegacyVersionSelections(
+            await _convertLegacyTruncateIndex(
+              legacyConversation,
+              messagesBox,
+              seenMessageIds,
+            ),
             messagesBox,
             seenMessageIds,
           ),
-          messagesBox,
-          seenMessageIds,
+          repairStats,
         );
         var needsConversationInsert = true;
         var order = 0;
@@ -545,6 +548,7 @@ class HiveToSqliteMigrationService {
                 repairStats.conversationIdMismatches++;
                 message = message.copyWith(conversationId: conversation.id);
               }
+              message = _sanitizeLegacyNumericFields(message, repairStats);
               final groupId = message.groupId;
               // '' is stored verbatim and is a real value to the
               // unique(conversationId, groupId, version) index (unlike NULL),
@@ -772,6 +776,106 @@ class HiveToSqliteMigrationService {
         );
       }
     }
+  }
+
+  /// Repairs dirty numeric fields in legacy Hive messages so they satisfy the
+  /// message_rows CHECK constraints (all token/duration/version columns are
+  /// `>= 0`). Device clock rollback during streaming could persist a negative
+  /// durationMs (and a reasoningFinishedAt earlier than reasoningStartAt);
+  /// such rows would otherwise abort the whole migration with
+  /// SQLITE_CONSTRAINT_CHECK.
+  ChatMessage _sanitizeLegacyNumericFields(
+    ChatMessage message,
+    _MigrationRepairStats stats,
+  ) {
+    var changed = false;
+    int? nonNegativeOrNull(int? value) {
+      if (value != null && value < 0) {
+        changed = true;
+        return null;
+      }
+      return value;
+    }
+
+    final totalTokens = nonNegativeOrNull(message.totalTokens);
+    final promptTokens = nonNegativeOrNull(message.promptTokens);
+    final completionTokens = nonNegativeOrNull(message.completionTokens);
+    final cachedTokens = nonNegativeOrNull(message.cachedTokens);
+    final durationMs = nonNegativeOrNull(message.durationMs);
+    // Clamp instead of null: version is non-nullable and feeds the
+    // (conversationId, groupId, version) uniqueness repair that runs right
+    // after this, which resolves any collision introduced by clamping.
+    var version = message.version;
+    if (version < 0) {
+      changed = true;
+      version = 0;
+    }
+    var reasoningFinishedAt = message.reasoningFinishedAt;
+    final reasoningStartAt = message.reasoningStartAt;
+    if (reasoningFinishedAt != null &&
+        reasoningStartAt != null &&
+        reasoningFinishedAt.isBefore(reasoningStartAt)) {
+      changed = true;
+      reasoningFinishedAt = null;
+    }
+    if (!changed) return message;
+
+    stats.dirtyNumericFields++;
+    // copyWith cannot clear fields to null, so rebuild explicitly.
+    return ChatMessage(
+      id: message.id,
+      role: message.role,
+      parts: message.parts,
+      timestamp: message.timestamp,
+      modelId: message.modelId,
+      providerId: message.providerId,
+      totalTokens: totalTokens,
+      conversationId: message.conversationId,
+      isStreaming: message.isStreaming,
+      reasoningText: message.reasoningText,
+      reasoningStartAt: reasoningStartAt,
+      reasoningFinishedAt: reasoningFinishedAt,
+      translation: message.translation,
+      reasoningSegmentsJson: message.reasoningSegmentsJson,
+      groupId: message.groupId,
+      version: version,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      cachedTokens: cachedTokens,
+      durationMs: durationMs,
+    );
+  }
+
+  /// Clamps legacy conversation counters so they satisfy the
+  /// conversation_rows CHECK constraints (truncateIndex >= -1,
+  /// lastSummarizedMessageCount >= 0, lastMemoryExtractedOrder >= -1).
+  /// Out-of-range values in dirty Hive data would otherwise abort the whole
+  /// migration, same as negative message durations.
+  Conversation _sanitizeLegacyConversationFields(
+    Conversation conversation,
+    _MigrationRepairStats stats,
+  ) {
+    final truncateIndex = conversation.truncateIndex < -1
+        ? -1
+        : conversation.truncateIndex;
+    final lastSummarizedMessageCount =
+        conversation.lastSummarizedMessageCount < 0
+        ? 0
+        : conversation.lastSummarizedMessageCount;
+    final lastMemoryExtractedOrder = conversation.lastMemoryExtractedOrder < -1
+        ? -1
+        : conversation.lastMemoryExtractedOrder;
+    if (truncateIndex == conversation.truncateIndex &&
+        lastSummarizedMessageCount == conversation.lastSummarizedMessageCount &&
+        lastMemoryExtractedOrder == conversation.lastMemoryExtractedOrder) {
+      return conversation;
+    }
+    stats.dirtyNumericFields++;
+    return conversation.copyWith(
+      truncateIndex: truncateIndex,
+      lastSummarizedMessageCount: lastSummarizedMessageCount,
+      lastMemoryExtractedOrder: lastMemoryExtractedOrder,
+    );
   }
 
   Future<Conversation> _convertLegacyTruncateIndex(
@@ -1842,19 +1946,22 @@ class _MigrationRepairStats {
   int conversationIdMismatches = 0;
   int versionConflicts = 0;
   int decodeFailures = 0;
+  int dirtyNumericFields = 0;
 
   bool get hasIssues =>
       danglingMessageRefs > 0 ||
       duplicateMessageIds > 0 ||
       conversationIdMismatches > 0 ||
       versionConflicts > 0 ||
-      decodeFailures > 0;
+      decodeFailures > 0 ||
+      dirtyNumericFields > 0;
 
   String describe() {
     return 'dangling=$danglingMessageRefs duplicates=$duplicateMessageIds '
         'conversationIdMismatches=$conversationIdMismatches '
         'versionConflicts=$versionConflicts '
-        'decodeFailures=$decodeFailures';
+        'decodeFailures=$decodeFailures '
+        'dirtyNumericFields=$dirtyNumericFields';
   }
 }
 
