@@ -31,6 +31,10 @@ class BrandAssets {
       <MapEntry<RegExp, String>>[
         MapEntry(RegExp(r'openai|gpt|o\d'), 'openai.svg'),
         MapEntry(RegExp(r'gemini'), 'gemini-color.svg'),
+        MapEntry(
+          RegExp(r'^azure(?: (?:tts|speech(?: services?)?))?$'),
+          'azure-speech.svg',
+        ),
         MapEntry(RegExp(r'google'), 'google-color.svg'),
         MapEntry(RegExp(r'claude'), 'claude-color.svg'),
         MapEntry(RegExp(r'anthropic'), 'anthropic.svg'),

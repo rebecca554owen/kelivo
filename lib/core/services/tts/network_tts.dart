@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 enum NetworkTtsKind {
   openai,
   gemini,
+  azure,
   minimax,
   qwen,
   qwenAudio,
@@ -26,6 +27,8 @@ String networkTtsKindDisplayName(NetworkTtsKind k) {
       return 'OpenAI';
     case NetworkTtsKind.gemini:
       return 'Gemini';
+    case NetworkTtsKind.azure:
+      return 'Azure';
     case NetworkTtsKind.minimax:
       return 'MiniMax';
     case NetworkTtsKind.qwen:
@@ -45,6 +48,14 @@ String networkTtsKindDisplayName(NetworkTtsKind k) {
     case NetworkTtsKind.fishAudio:
       return 'Fish Audio';
   }
+}
+
+bool isValidAzureTtsEndpoint(String value) {
+  final uri = Uri.tryParse(value.trim());
+  return uri != null &&
+      uri.hasAuthority &&
+      uri.host.isNotEmpty &&
+      (uri.scheme == 'http' || uri.scheme == 'https');
 }
 
 /// Migrates retired MiMo TTS model ids. `mimo-v2-tts` is no longer served.
@@ -98,6 +109,16 @@ abstract class TtsServiceOptions {
           // New configs default to 3.1; existing persisted model strings are kept.
           model: (json['model'] ?? 'gemini-3.1-flash-tts-preview').toString(),
           voiceName: (json['voiceName'] ?? 'Kore').toString(),
+        );
+      case 'azure':
+        return AzureTtsOptions(
+          id: id.isEmpty ? null : id,
+          enabled: enabled,
+          name: name.isEmpty ? 'Azure TTS' : name,
+          apiKey: (json['apiKey'] ?? '').toString(),
+          baseUrl: (json['baseUrl'] ?? '').toString(),
+          language: (json['language'] ?? 'zh-CN').toString(),
+          voice: (json['voice'] ?? 'zh-CN-XiaoxiaoNeural').toString(),
         );
       case 'minimax':
         return MiniMaxTtsOptions(
@@ -315,6 +336,35 @@ class GeminiTtsOptions extends TtsServiceOptions {
     'baseUrl': baseUrl,
     'model': model,
     'voiceName': voiceName,
+  };
+}
+
+class AzureTtsOptions extends TtsServiceOptions {
+  final String apiKey;
+  final String baseUrl;
+  final String language;
+  final String voice;
+
+  AzureTtsOptions({
+    super.id,
+    required super.enabled,
+    required super.name,
+    required this.apiKey,
+    required this.baseUrl,
+    required this.language,
+    required this.voice,
+  }) : super(kind: NetworkTtsKind.azure);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'enabled': enabled,
+    'name': name,
+    'kind': 'azure',
+    'apiKey': apiKey,
+    'baseUrl': baseUrl,
+    'language': language,
+    'voice': voice,
   };
 }
 
@@ -759,6 +809,13 @@ class NetworkTtsService {
             c,
             cancelled,
           );
+        case NetworkTtsKind.azure:
+          return await _azureSpeech(
+            options as AzureTtsOptions,
+            text,
+            c,
+            cancelled,
+          );
         case NetworkTtsKind.minimax:
           return await _miniMaxSpeech(
             options as MiniMaxTtsOptions,
@@ -929,6 +986,97 @@ class NetworkTtsService {
     // Convert PCM (24kHz 16-bit mono) to WAV
     final wav = _pcmToWav(Uint8List.fromList(pcm), sampleRate: 24000);
     return NetworkTtsResult(bytes: wav, mime: 'audio/wav', sampleRate: 24000);
+  }
+
+  static Future<NetworkTtsResult> _azureSpeech(
+    AzureTtsOptions opt,
+    String text,
+    http.Client c,
+    FutureOr<bool> Function()? cancelled,
+  ) async {
+    final configuredBase = opt.baseUrl.trim();
+    if (!isValidAzureTtsEndpoint(configuredBase)) {
+      throw Exception('Azure TTS endpoint must be an absolute HTTP(S) URL');
+    }
+    final base = Uri.parse(configuredBase);
+    final basePath = base.path.endsWith('/')
+        ? base.path.substring(0, base.path.length - 1)
+        : base.path;
+    final uri = base.replace(
+      path: basePath.endsWith('/cognitiveservices/v1')
+          ? basePath
+          : '$basePath/cognitiveservices/v1',
+    );
+    final attributeEscape = const HtmlEscape(HtmlEscapeMode.attribute);
+    final textEscape = const HtmlEscape(HtmlEscapeMode.element);
+    final body =
+        '<speak version="1.0" xml:lang="${attributeEscape.convert(opt.language)}">'
+        '<voice name="${attributeEscape.convert(opt.voice)}">'
+        '${textEscape.convert(text)}</voice></speak>';
+    final abort = Completer<void>();
+    var finished = false;
+
+    Future<bool> cancellationRequested() async {
+      if (cancelled == null || !await cancelled()) return false;
+      if (!abort.isCompleted) abort.complete();
+      return true;
+    }
+
+    Future<void> monitorCancellation() async {
+      while (!finished) {
+        if (await cancellationRequested()) return;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
+
+    if (cancelled != null) unawaited(monitorCancellation());
+    const fallbackDelays = <Duration>[
+      Duration(milliseconds: 200),
+      Duration(milliseconds: 600),
+    ];
+    late http.StreamedResponse resp;
+    try {
+      for (var attempt = 0; ; attempt++) {
+        if (await cancellationRequested()) throw _Cancelled();
+        final req =
+            http.AbortableRequest('POST', uri, abortTrigger: abort.future)
+              ..headers['Ocp-Apim-Subscription-Key'] = opt.apiKey
+              ..headers['Content-Type'] = 'application/ssml+xml'
+              ..headers['X-Microsoft-OutputFormat'] =
+                  'audio-24khz-96kbitrate-mono-mp3'
+              ..headers['User-Agent'] = 'Kelivo'
+              ..body = body;
+        resp = await c.send(req);
+        if (await cancellationRequested()) {
+          await _cancelAzureResponseStream(resp.stream);
+          throw _Cancelled();
+        }
+        if (!const <int>{429, 502, 503}.contains(resp.statusCode) ||
+            attempt == fallbackDelays.length) {
+          break;
+        }
+        final delay =
+            _azureRetryAfterDelay(resp.headers['retry-after']) ??
+            fallbackDelays[attempt];
+        await _cancelAzureResponseStream(resp.stream);
+        await _waitForAzureRetry(delay, cancellationRequested);
+      }
+      final responseBytes = await _readAzureResponseBytes(
+        resp.stream,
+        abort.future,
+      );
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw Exception(
+          'Azure TTS failed: ${resp.statusCode} ${resp.reasonPhrase} '
+          '${utf8.decode(responseBytes, allowMalformed: true)}',
+        );
+      }
+      return NetworkTtsResult(bytes: responseBytes, mime: 'audio/mpeg');
+    } on http.RequestAbortedException {
+      throw _Cancelled();
+    } finally {
+      finished = true;
+    }
   }
 
   static Future<NetworkTtsResult> _miniMaxSpeech(
@@ -1807,6 +1955,72 @@ Future<void> _waitWithCancellation(
     if (completed) return;
     if (await cancelled()) throw _Cancelled();
   }
+}
+
+Duration? _azureRetryAfterDelay(String? value) {
+  final raw = value?.trim();
+  if (raw == null || raw.isEmpty) return null;
+  final seconds = int.tryParse(raw);
+  if (seconds != null && seconds >= 0) return Duration(seconds: seconds);
+  try {
+    final delay = HttpDate.parse(
+      raw,
+    ).toUtc().difference(DateTime.now().toUtc());
+    return delay.isNegative ? Duration.zero : delay;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> _cancelAzureResponseStream(Stream<List<int>> stream) async {
+  try {
+    await stream.listen((_) {}).cancel();
+  } catch (_) {}
+}
+
+Future<void> _waitForAzureRetry(
+  Duration delay,
+  FutureOr<bool> Function() cancelled,
+) async {
+  final elapsed = Stopwatch()..start();
+  while (elapsed.elapsed < delay) {
+    if (await cancelled()) throw _Cancelled();
+    final remaining = delay - elapsed.elapsed;
+    await Future<void>.delayed(
+      remaining < const Duration(milliseconds: 50)
+          ? remaining
+          : const Duration(milliseconds: 50),
+    );
+  }
+  if (await cancelled()) throw _Cancelled();
+}
+
+Future<Uint8List> _readAzureResponseBytes(
+  Stream<List<int>> stream,
+  Future<void> abortTrigger,
+) async {
+  final chunks = BytesBuilder(copy: false);
+  final iterator = StreamIterator<List<int>>(stream);
+  var aborted = false;
+  unawaited(
+    abortTrigger.then((_) async {
+      aborted = true;
+      try {
+        await iterator.cancel();
+      } catch (_) {}
+    }),
+  );
+  try {
+    while (await iterator.moveNext()) {
+      chunks.add(iterator.current);
+    }
+    if (aborted) throw _Cancelled();
+  } finally {
+    try {
+      await iterator.cancel();
+    } catch (_) {}
+  }
+  return chunks.takeBytes();
 }
 
 class _Cancelled implements Exception {}

@@ -96,6 +96,12 @@ void main() {
 
     expect(find.text('Model'), findsNothing);
     expect(find.text('Language'), findsOneWidget);
+
+    await tester.tap(find.text('Azure'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Model'), findsNothing);
+    expect(find.text('Language'), findsOneWidget);
   });
 
   testWidgets('mobile TTS settings button opens playback settings', (
@@ -332,5 +338,9 @@ void main() {
 
     await selectProvider('MiMo', 'ElevenLabs');
     expect(find.text('Output format'), findsOneWidget);
+
+    await selectProvider('ElevenLabs', 'Azure');
+    expect(find.text('Model'), findsNothing);
+    expect(find.text('Language'), findsOneWidget);
   });
 }

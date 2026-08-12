@@ -857,7 +857,11 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
       text: (initial is QwenTtsOptions) ? initial.languageType : 'Auto',
     );
     _languageCtl = TextEditingController(
-      text: (initial is XaiTtsOptions) ? initial.language : 'auto',
+      text: initial is XaiTtsOptions
+          ? initial.language
+          : initial is AzureTtsOptions
+          ? initial.language
+          : 'auto',
     );
     _volumeCtl = TextEditingController(
       text: initial is MiniMaxTtsOptions
@@ -1052,9 +1056,12 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
                           controller: _baseCtl,
                           hint: _kind == NetworkTtsKind.qwenAudio
                               ? null
+                              : _kind == NetworkTtsKind.azure
+                              ? 'https://<region>.tts.speech.microsoft.com'
                               : _defaultBaseUrl(_kind),
                         ),
-                        if (_kind != NetworkTtsKind.xai)
+                        if (_kind != NetworkTtsKind.xai &&
+                            _kind != NetworkTtsKind.azure)
                           _TtsEditorTextField(
                             label: l10n.ttsServicesFieldModelLabel,
                             controller: _modelCtl,
@@ -1168,11 +1175,14 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
                             hint: 'Auto',
                           ),
                         ],
-                        if (_kind == NetworkTtsKind.xai) ...[
+                        if (_kind == NetworkTtsKind.xai ||
+                            _kind == NetworkTtsKind.azure) ...[
                           _TtsEditorTextField(
                             label: l10n.ttsServicesFieldLanguageLabel,
                             controller: _languageCtl,
-                            hint: 'auto',
+                            hint: _kind == NetworkTtsKind.azure
+                                ? 'zh-CN'
+                                : 'auto',
                           ),
                         ],
                         if (_kind == NetworkTtsKind.elevenlabs) ...[
@@ -1349,6 +1359,15 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
       );
       return;
     }
+    if (_kind == NetworkTtsKind.azure &&
+        !isValidAzureTtsEndpoint(_baseCtl.text)) {
+      showAppSnackBar(
+        context,
+        message: l10n.searchServicesAddDialogUrlRequired,
+        type: NotificationType.error,
+      );
+      return;
+    }
     if ((_kind == NetworkTtsKind.fishAudio || _isMimoVoiceClone) &&
         _voiceCtl.text.trim().isEmpty) {
       showAppSnackBar(
@@ -1408,6 +1427,7 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
         : _defaultBaseUrl(kind);
     _modelCtl.text = _defaultModel(kind);
     _voiceCtl.text = _defaultVoice(kind);
+    _languageCtl.text = kind == NetworkTtsKind.azure ? 'zh-CN' : 'auto';
     _emotionCtl.text = '';
     _speedCtl.text = '1.0';
     _volumeCtl.text = '1.0';
@@ -1471,6 +1491,18 @@ class _NetworkTtsEditorPageState extends State<_NetworkTtsEditorPage> {
           baseUrl: base,
           model: model,
           voiceName: voice,
+        );
+      case NetworkTtsKind.azure:
+        return AzureTtsOptions(
+          id: initial?.id,
+          enabled: true,
+          name: name,
+          apiKey: apiKey,
+          baseUrl: base,
+          language: _languageCtl.text.trim().isEmpty
+              ? 'zh-CN'
+              : _languageCtl.text.trim(),
+          voice: voice,
         );
       case NetworkTtsKind.minimax:
         return MiniMaxTtsOptions(
@@ -2140,6 +2172,7 @@ Widget _sheetDivider(BuildContext context) {
 const List<NetworkTtsKind> _networkTtsKinds = [
   NetworkTtsKind.openai,
   NetworkTtsKind.gemini,
+  NetworkTtsKind.azure,
   NetworkTtsKind.minimax,
   NetworkTtsKind.qwen,
   NetworkTtsKind.qwenAudio,
@@ -2154,6 +2187,7 @@ const List<NetworkTtsKind> _networkTtsKinds = [
 String _apiKeyOf(TtsServiceOptions? option) {
   if (option is OpenAiTtsOptions) return option.apiKey;
   if (option is GeminiTtsOptions) return option.apiKey;
+  if (option is AzureTtsOptions) return option.apiKey;
   if (option is MiniMaxTtsOptions) return option.apiKey;
   if (option is QwenTtsOptions) return option.apiKey;
   if (option is QwenAudioTtsOptions) return option.apiKey;
@@ -2169,6 +2203,7 @@ String _apiKeyOf(TtsServiceOptions? option) {
 String _baseUrlOf(TtsServiceOptions? option) {
   if (option is OpenAiTtsOptions) return option.baseUrl;
   if (option is GeminiTtsOptions) return option.baseUrl;
+  if (option is AzureTtsOptions) return option.baseUrl;
   if (option is MiniMaxTtsOptions) return option.baseUrl;
   if (option is QwenTtsOptions) return option.baseUrl;
   if (option is QwenAudioTtsOptions) return option.workspaceId;
@@ -2198,6 +2233,7 @@ String _modelOf(TtsServiceOptions? option) {
 String _voiceOf(TtsServiceOptions? option) {
   if (option is OpenAiTtsOptions) return option.voice;
   if (option is GeminiTtsOptions) return option.voiceName;
+  if (option is AzureTtsOptions) return option.voice;
   if (option is MiniMaxTtsOptions) return option.voiceId;
   if (option is QwenTtsOptions) return option.voice;
   if (option is QwenAudioTtsOptions) return option.voice;
@@ -2216,6 +2252,8 @@ String _defaultBaseUrl(NetworkTtsKind k) {
       return 'https://api.openai.com/v1';
     case NetworkTtsKind.gemini:
       return 'https://generativelanguage.googleapis.com/v1beta';
+    case NetworkTtsKind.azure:
+      return '';
     case NetworkTtsKind.minimax:
       return 'https://api.minimaxi.com/v1';
     case NetworkTtsKind.qwen:
@@ -2243,6 +2281,8 @@ String _defaultModel(NetworkTtsKind k) {
       return 'gpt-4o-mini-tts';
     case NetworkTtsKind.gemini:
       return 'gemini-3.1-flash-tts-preview';
+    case NetworkTtsKind.azure:
+      return '';
     case NetworkTtsKind.minimax:
       return 'speech-2.8-turbo';
     case NetworkTtsKind.qwen:
@@ -2270,6 +2310,8 @@ String _defaultVoice(NetworkTtsKind k) {
       return 'alloy';
     case NetworkTtsKind.gemini:
       return 'Kore';
+    case NetworkTtsKind.azure:
+      return 'zh-CN-XiaoxiaoNeural';
     case NetworkTtsKind.minimax:
       return 'female-shaonv';
     case NetworkTtsKind.qwen:
@@ -2297,6 +2339,8 @@ String _voiceLabelFor(NetworkTtsKind k, AppLocalizations l10n) {
       return l10n.ttsServicesFieldVoiceLabel;
     case NetworkTtsKind.gemini:
       return l10n.ttsServicesFieldVoiceLabel; // same label
+    case NetworkTtsKind.azure:
+      return l10n.ttsServicesFieldVoiceLabel;
     case NetworkTtsKind.minimax:
       return l10n.ttsServicesFieldVoiceIdLabel;
     case NetworkTtsKind.qwen:

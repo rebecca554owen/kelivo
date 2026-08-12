@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -56,6 +57,24 @@ void main() {
         (gemini as GeminiTtsOptions).model,
         'gemini-3.1-flash-tts-preview',
       );
+
+      final azure = TtsServiceOptions.fromJson({
+        'kind': 'azure',
+        'enabled': true,
+      });
+      expect(azure, isA<AzureTtsOptions>());
+      expect((azure as AzureTtsOptions).baseUrl, isEmpty);
+      expect(azure.language, 'zh-CN');
+      expect(azure.voice, 'zh-CN-XiaoxiaoNeural');
+      expect(
+        isValidAzureTtsEndpoint('https://eastus.tts.speech.microsoft.com'),
+        isTrue,
+      );
+      expect(
+        isValidAzureTtsEndpoint('eastus.tts.speech.microsoft.com'),
+        isFalse,
+      );
+      expect(isValidAzureTtsEndpoint('ftp://example.com'), isFalse);
 
       final mimo = TtsServiceOptions.fromJson({
         'kind': 'mimo',
@@ -212,6 +231,175 @@ void main() {
   });
 
   group('NetworkTtsService', () {
+    test('Azure sends escaped SSML and returns MP3 audio', () async {
+      late HttpRequest captured;
+      late String requestBody;
+      final server = await _bindServer((request) async {
+        captured = request;
+        requestBody = await utf8.decoder.bind(request).join();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.add(const <int>[1, 2, 3]);
+        await request.response.close();
+      });
+
+      addTearDown(() async => server.close(force: true));
+
+      final result = await NetworkTtsService.synthesize(
+        options: AzureTtsOptions(
+          enabled: true,
+          name: 'Azure',
+          apiKey: 'azure-key',
+          baseUrl: '${_hostOnlyBaseUrl(server)}/cognitiveservices/v1/',
+          language: 'zh-CN',
+          voice: 'zh-CN-XiaoxiaoNeural',
+        ),
+        text: '你好 & <Kelivo>',
+      );
+
+      expect(captured.uri.path, '/cognitiveservices/v1');
+      expect(captured.headers.value('Ocp-Apim-Subscription-Key'), 'azure-key');
+      expect(
+        captured.headers.value('X-Microsoft-OutputFormat'),
+        'audio-24khz-96kbitrate-mono-mp3',
+      );
+      expect(
+        requestBody,
+        '<speak version="1.0" xml:lang="zh-CN">'
+        '<voice name="zh-CN-XiaoxiaoNeural">'
+        '你好 &amp; &lt;Kelivo&gt;</voice></speak>',
+      );
+      expect(result.mime, 'audio/mpeg');
+      expect(result.bytes, <int>[1, 2, 3]);
+    });
+
+    test('Azure retries transient responses with bounded backoff', () async {
+      var requestCount = 0;
+      final stopwatch = Stopwatch()..start();
+      final server = await _bindServer((request) async {
+        await request.drain<void>();
+        requestCount++;
+        request.response.statusCode = switch (requestCount) {
+          1 => HttpStatus.tooManyRequests,
+          2 => HttpStatus.serviceUnavailable,
+          _ => HttpStatus.ok,
+        };
+        if (requestCount == 1) {
+          request.response.headers.set(HttpHeaders.retryAfterHeader, '1');
+        }
+        if (requestCount == 3) {
+          request.response.add(const <int>[4, 5, 6]);
+        }
+        await request.response.close();
+      });
+
+      addTearDown(() async => server.close(force: true));
+
+      final result = await NetworkTtsService.synthesize(
+        options: AzureTtsOptions(
+          enabled: true,
+          name: 'Azure',
+          apiKey: 'azure-key',
+          baseUrl: _hostOnlyBaseUrl(server),
+          language: 'zh-CN',
+          voice: 'zh-CN-XiaoxiaoNeural',
+        ),
+        text: '你好',
+      );
+
+      expect(requestCount, 3);
+      expect(
+        stopwatch.elapsed,
+        greaterThanOrEqualTo(const Duration(seconds: 1)),
+      );
+      expect(result.bytes, <int>[4, 5, 6]);
+    });
+
+    test('Azure does not retry after cancellation during backoff', () async {
+      var requestCount = 0;
+      var isCancelled = false;
+      final server = await _bindServer((request) async {
+        await request.drain<void>();
+        requestCount++;
+        request.response.statusCode = HttpStatus.serviceUnavailable;
+        request.response.headers.set(HttpHeaders.retryAfterHeader, '60');
+        await request.response.close();
+      });
+
+      addTearDown(() async => server.close(force: true));
+
+      final synthesis = NetworkTtsService.synthesize(
+        options: AzureTtsOptions(
+          enabled: true,
+          name: 'Azure',
+          apiKey: 'azure-key',
+          baseUrl: _hostOnlyBaseUrl(server),
+          language: 'zh-CN',
+          voice: 'zh-CN-XiaoxiaoNeural',
+        ),
+        text: '你好',
+        cancelled: () {
+          if (!isCancelled) {
+            Timer(const Duration(milliseconds: 50), () => isCancelled = true);
+          }
+          return isCancelled;
+        },
+      );
+
+      await expectLater(synthesis, throwsA(isA<Exception>()));
+      expect(requestCount, 1);
+    });
+
+    test(
+      'Azure cancellation aborts pending headers and audio streams',
+      () async {
+        for (final waitForHeaders in <bool>[true, false]) {
+          final requestReceived = Completer<void>();
+          final bodyStarted = Completer<void>();
+          final releaseServer = Completer<void>();
+          var isCancelled = false;
+          final server = await _bindServer((request) async {
+            requestReceived.complete();
+            await request.drain<void>();
+            try {
+              if (waitForHeaders) await releaseServer.future;
+              request.response.statusCode = HttpStatus.ok;
+              request.response.add(const <int>[1]);
+              await request.response.flush();
+              if (!bodyStarted.isCompleted) bodyStarted.complete();
+              if (!waitForHeaders) await releaseServer.future;
+              await request.response.close();
+            } catch (_) {}
+          });
+
+          final synthesis = NetworkTtsService.synthesize(
+            options: AzureTtsOptions(
+              enabled: true,
+              name: 'Azure',
+              apiKey: 'azure-key',
+              baseUrl: _hostOnlyBaseUrl(server),
+              language: 'zh-CN',
+              voice: 'zh-CN-XiaoxiaoNeural',
+            ),
+            text: '你好',
+            cancelled: () => isCancelled,
+          );
+
+          await requestReceived.future.timeout(const Duration(seconds: 1));
+          if (!waitForHeaders) {
+            await bodyStarted.future.timeout(const Duration(seconds: 1));
+          }
+          isCancelled = true;
+          await expectLater(
+            synthesis.timeout(const Duration(seconds: 1)),
+            throwsA(isA<Exception>()),
+          );
+
+          if (!releaseServer.isCompleted) releaseServer.complete();
+          await server.close(force: true);
+        }
+      },
+    );
+
     test('synthesizes Qwen SSE PCM response as wav', () async {
       late HttpRequest captured;
       late Map<String, dynamic> requestBody;
