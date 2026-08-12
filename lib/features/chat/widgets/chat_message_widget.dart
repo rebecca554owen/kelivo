@@ -49,8 +49,8 @@ import '../utils/thinking_tag_parser.dart';
 import 'citation_sources_sheet.dart';
 import 'chat_suggestion_bubbles.dart';
 import 'token_display_widget.dart';
+import 'tool_detail_text_section.dart';
 import '../../../theme/app_font_weights.dart';
-import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 final RegExp _urlSchemeRe = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:');
 
@@ -143,6 +143,33 @@ String _resolveAttachmentImageUri(String uri) {
   return SandboxPathResolver.fix(path);
 }
 
+/// Decoded `data:` image bytes, keyed by the full data URI.
+///
+/// Reusing the same [Uint8List] keeps [MemoryImage] cache keys stable across
+/// rebuilds, so the image is decoded once instead of on every frame.
+final Map<String, Uint8List?> _dataUriBytesCache = <String, Uint8List?>{};
+const int _dataUriBytesCacheLimit = 24;
+
+Uint8List? _decodeDataUriBytes(String path) {
+  final cached = _dataUriBytesCache[path];
+  if (cached != null || _dataUriBytesCache.containsKey(path)) return cached;
+
+  Uint8List? bytes;
+  try {
+    const marker = 'base64,';
+    final idx = path.indexOf(marker);
+    if (idx != -1) bytes = base64Decode(path.substring(idx + marker.length));
+  } catch (_) {
+    bytes = null;
+  }
+
+  if (_dataUriBytesCache.length >= _dataUriBytesCacheLimit) {
+    _dataUriBytesCache.remove(_dataUriBytesCache.keys.first);
+  }
+  _dataUriBytesCache[path] = bytes;
+  return bytes;
+}
+
 /// Shared image widget for tool thumbnails and message attachment previews.
 ///
 /// `http(s)` → [Image.network], `data:` → [Image.memory], otherwise local
@@ -184,21 +211,15 @@ Widget _buildResolvedImage(
   }
 
   if (path.startsWith('data:')) {
-    try {
-      const marker = 'base64,';
-      final idx = path.indexOf(marker);
-      if (idx != -1) {
-        final bytes = base64Decode(path.substring(idx + marker.length));
-        return Image.memory(
-          bytes,
-          width: width,
-          height: height,
-          fit: fit,
-          errorBuilder: (_, __, ___) => errorWidget(),
-        );
-      }
-    } catch (_) {}
-    return errorWidget();
+    final bytes = _decodeDataUriBytes(path);
+    if (bytes == null) return errorWidget();
+    return Image.memory(
+      bytes,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (_, __, ___) => errorWidget(),
+    );
   }
 
   final fixed = SandboxPathResolver.fix(path);
@@ -649,91 +670,59 @@ class _ToolDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return ListView(
-      controller: scrollController,
-      padding: padding,
-      children: [
-        Text(
-          argumentsLabel,
-          style: TextStyle(
-            fontSize: 12,
-            color: cs.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: context.appColors.surfaceFill,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.2),
-            ),
-          ),
-          child: SelectableText(
-            argsPretty,
-            style: const TextStyle(fontSize: 12),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          resultLabel,
-          style: TextStyle(
-            fontSize: 12,
-            color: cs.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: context.appColors.surfaceFill,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.2),
-            ),
-          ),
-          child: SelectableText(
-            resultText,
-            style: const TextStyle(fontSize: 12),
-          ),
-        ),
-        if (images.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            imagesLabel,
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: images.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final path = images[index];
-                return GestureDetector(
-                  onTap: () => _showToolFullImage(context, path),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: _buildToolImageFromPath(
-                      context,
-                      path,
-                      height: 220,
+    return SelectionArea(
+      child: CustomScrollView(
+        controller: scrollController,
+        slivers: [
+          SliverPadding(
+            padding: padding,
+            sliver: SliverMainAxisGroup(
+              slivers: [
+                ToolDetailTextSection(label: argumentsLabel, text: argsPretty),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                ToolDetailTextSection(label: resultLabel, text: resultText),
+                if (images.isNotEmpty) ...[
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  SliverToBoxAdapter(
+                    child: Text(
+                      imagesLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
-                );
-              },
+                  const SliverToBoxAdapter(child: SizedBox(height: 6)),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 220,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: images.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final path = images[index];
+                          return GestureDetector(
+                            onTap: () => _showToolFullImage(context, path),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: _buildToolImageFromPath(
+                                context,
+                                path,
+                                height: 220,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }
@@ -4158,8 +4147,18 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
   bool get _isAskUser => widget.part.toolName == LocalToolNames.askUser;
   bool? _askUserExpanded;
 
+  String? _cachedContent;
+  String _cleanText = '';
+  List<String> _imagePaths = const [];
+
   bool get _askUserAnswered =>
       widget.part.content?.trim().isNotEmpty == true && !widget.part.loading;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateContentCache();
+  }
 
   @override
   void didUpdateWidget(covariant _ChainOfThoughtToolStep oldWidget) {
@@ -4170,6 +4169,18 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     if (_isAskUser && !wasAnswered && _askUserAnswered) {
       _askUserExpanded = true;
     }
+    if (oldWidget.part.content != widget.part.content) {
+      _updateContentCache();
+    }
+  }
+
+  void _updateContentCache() {
+    final content = widget.part.content;
+    if (content == _cachedContent) return;
+    _cachedContent = content;
+    final (cleanText, paths) = _parseMcpImagePaths(content);
+    _cleanText = cleanText;
+    _imagePaths = paths;
   }
 
   IconData _iconFor(String name, Map<String, dynamic> args) {
@@ -4293,7 +4304,8 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
       ),
     );
 
-    final (cleanText, imagePaths) = _parseMcpImagePaths(widget.part.content);
+    final cleanText = _cleanText;
+    final imagePaths = _imagePaths;
     final String summaryText = approvalRequest != null
         ? _argsSummary(approvalRequest.arguments)
         : cleanText.isNotEmpty
