@@ -629,6 +629,173 @@ void main() {
   );
 
   test(
+    'an undecodable conversation record is skipped without failing migration',
+    () async {
+      final good = Conversation(
+        id: 'conversation-good',
+        title: 'Good',
+        createdAt: DateTime(2024, 7, 1),
+        updatedAt: DateTime(2024, 7, 2),
+      );
+      final bad = Conversation(
+        id: 'conversation-bad',
+        title: 'Bad',
+        createdAt: DateTime(2024, 7, 1),
+        updatedAt: DateTime(2024, 7, 3),
+      );
+      final goodMessage = ChatMessage(
+        id: 'message-good-conversation',
+        role: 'user',
+        content: 'survives migration',
+        conversationId: good.id,
+        timestamp: DateTime(2024, 7, 1, 10),
+      );
+      good.messageIds.add(goodMessage.id);
+
+      _registerHiveAdapters();
+      Hive.init(tempDir.path);
+      final conversations = await Hive.openBox<Conversation>('conversations');
+      final messages = await Hive.openBox<ChatMessage>('messages');
+      await conversations.put(good.id, good);
+      await conversations.put(bad.id, bad);
+      await messages.put(goodMessage.id, goodMessage);
+      await conversations.close();
+      await messages.close();
+      await Hive.close();
+
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+      service.debugFailConversationKeysForTest = {'conversation-bad'};
+
+      await service.migrate();
+
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isTrue,
+      );
+      final repo = ChatDatabaseRepository.open(
+        file: File('${tempDir.path}/kelivo.db'),
+      );
+      addTearDown(repo.close);
+      final ids = (await repo.getAllConversations())
+          .map((conversation) => conversation.id)
+          .toList();
+      expect(ids, contains('conversation-good'));
+      expect(ids, isNot(contains('conversation-bad')));
+      expect(await repo.getTotalMessageCount(), 1);
+    },
+  );
+
+  test(
+    'a message that fails to decode during prescan does not abort migration',
+    () async {
+      // truncateIndex > 0 forces _convertLegacyTruncateIndex to pre-read
+      // messages before the tolerant main loop reaches them.
+      final conversation = Conversation(
+        id: 'conversation-prescan',
+        title: 'Prescan',
+        createdAt: DateTime(2024, 7, 1),
+        updatedAt: DateTime(2024, 7, 2),
+        truncateIndex: 1,
+      );
+      final first = ChatMessage(
+        id: 'message-prescan-first',
+        role: 'user',
+        content: 'read during prescan',
+        conversationId: conversation.id,
+        timestamp: DateTime(2024, 7, 1, 10),
+      );
+      final second = ChatMessage(
+        id: 'message-prescan-second',
+        role: 'assistant',
+        content: 'after truncate point',
+        conversationId: conversation.id,
+        timestamp: DateTime(2024, 7, 1, 11),
+      );
+      conversation.messageIds.addAll([first.id, second.id]);
+
+      _registerHiveAdapters();
+      Hive.init(tempDir.path);
+      final conversations = await Hive.openBox<Conversation>('conversations');
+      final messages = await Hive.openBox<ChatMessage>('messages');
+      await conversations.put(conversation.id, conversation);
+      await messages.put(first.id, first);
+      await messages.put(second.id, second);
+      await conversations.close();
+      await messages.close();
+      await Hive.close();
+
+      final service = HiveToSqliteMigrationService(
+        await HiveToSqliteMigrationService.check(),
+      );
+      addTearDown(service.dispose);
+      service.debugFailPrescanMessageIdsForTest = {first.id};
+
+      await service.migrate();
+
+      expect(
+        HiveMigrationMarker.isMigrationComplete(
+          File('${tempDir.path}/kelivo.db'),
+        ),
+        isTrue,
+      );
+      final repo = ChatDatabaseRepository.open(
+        file: File('${tempDir.path}/kelivo.db'),
+      );
+      addTearDown(repo.close);
+      // The prescan failure only degrades the truncate-index repair; the
+      // main loop still migrates both messages.
+      expect(await repo.getTotalMessageCount(), 2);
+    },
+  );
+
+  test('an empty legacy role is repaired instead of aborting', () async {
+    final conversation = Conversation(
+      id: 'conversation-empty-role',
+      title: 'Empty Role',
+      createdAt: DateTime(2024, 7, 1),
+      updatedAt: DateTime(2024, 7, 2),
+    );
+    final message = ChatMessage(
+      id: 'message-empty-role',
+      role: '',
+      content: 'kept with repaired role',
+      conversationId: conversation.id,
+      timestamp: DateTime(2024, 7, 1, 10),
+    );
+    conversation.messageIds.add(message.id);
+
+    _registerHiveAdapters();
+    Hive.init(tempDir.path);
+    final conversations = await Hive.openBox<Conversation>('conversations');
+    final messages = await Hive.openBox<ChatMessage>('messages');
+    await conversations.put(conversation.id, conversation);
+    await messages.put(message.id, message);
+    await conversations.close();
+    await messages.close();
+    await Hive.close();
+
+    final service = HiveToSqliteMigrationService(
+      await HiveToSqliteMigrationService.check(),
+    );
+    addTearDown(service.dispose);
+
+    await service.migrate();
+
+    final chatService = ChatService();
+    await chatService.init();
+    addTearDown(chatService.close);
+    final migrated = await chatService.loadMessages(conversation.id);
+    expect(migrated, hasLength(1));
+    expect(migrated.single.role, 'user');
+    expect(migrated.single.content, 'kept with repaired role');
+  });
+
+  test(
     'validation failure keeps hive backup and leaves migration incomplete',
     () async {
       await _seedHiveChat(
