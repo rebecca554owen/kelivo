@@ -23,6 +23,7 @@ import 'providers/querit_search_service.dart';
 import 'providers/stepfun_search_service.dart';
 import 'providers/firecrawl_search_service.dart';
 import 'providers/tinyfish_search_service.dart';
+import 'providers/doubao_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -95,6 +96,8 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return FirecrawlSearchService() as SearchService;
       case TinyFishOptions _:
         return TinyFishSearchService() as SearchService;
+      case DoubaoOptions _:
+        return DoubaoSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -243,6 +246,8 @@ abstract class SearchServiceOptions {
         return FirecrawlOptions.fromJson(json);
       case 'tinyfish':
         return TinyFishOptions.fromJson(json);
+      case 'doubao':
+        return DoubaoOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -887,14 +892,35 @@ class TinyFishOptions extends SearchServiceOptions {
     if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
-  factory TinyFishOptions.fromJson(Map<String, dynamic> json) => TinyFishOptions(
+  factory TinyFishOptions.fromJson(Map<String, dynamic> json) =>
+      TinyFishOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        url: json['url'] ?? '',
+        location: json['location'] ?? '',
+        language: json['language'] ?? '',
+        includeDomains: json['includeDomains'] ?? '',
+        excludeDomains: json['excludeDomains'] ?? '',
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
+}
+
+class DoubaoOptions extends SearchServiceOptions {
+  final String apiKey;
+
+  DoubaoOptions({required super.id, required this.apiKey, super.extraApiKeys});
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'doubao',
+    'id': id,
+    'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory DoubaoOptions.fromJson(Map<String, dynamic> json) => DoubaoOptions(
     id: json['id'],
     apiKey: json['apiKey'] ?? '',
-    url: json['url'] ?? '',
-    location: json['location'] ?? '',
-    language: json['language'] ?? '',
-    includeDomains: json['includeDomains'] ?? '',
-    excludeDomains: json['excludeDomains'] ?? '',
     extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }

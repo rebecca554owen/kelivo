@@ -1767,6 +1767,8 @@
   "searchProviderPerplexityDescription": "Perplexity 搜尋 API。提供排序的網頁結果，支援地區與網域過濾。",
   "searchServiceNameBocha": "博查",
   "searchProviderBochaDescription": "博查 AI 全網網頁搜尋，支援時間範圍與摘要，更適合 AI 使用。",
+  "searchServiceNameDoubao": "豆包",
+  "searchProviderDoubaoDescription": "火山引擎豆包網頁搜尋 API。",
   "searchServiceNameSerper": "Serper",
   "searchProviderSerperDescription": "Serper Google 搜尋 API。回應快速，支援國家/地區、語言、時間和頁碼過濾。",
   "searchServiceNameQuerit": "Querit",

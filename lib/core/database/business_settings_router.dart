@@ -918,6 +918,7 @@ final class BusinessSettingsRouter {
       case 'metaso':
       case 'ollama':
       case 'jina':
+      case 'doubao':
         _validateKnownFields(
           kind,
           payload,

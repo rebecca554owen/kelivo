@@ -2191,6 +2191,8 @@
   "searchProviderPerplexityDescription": "Perplexity Search API. Ranked web results with region and domain filters.",
   "searchServiceNameBocha": "Bocha",
   "searchProviderBochaDescription": "Bocha web search API. Accurate web results with optional summaries.",
+  "searchServiceNameDoubao": "Doubao",
+  "searchProviderDoubaoDescription": "Doubao web search API by Volcano Engine.",
   "searchServiceNameSerper": "Serper",
   "searchProviderSerperDescription": "Serper Google Search API. Fast web results with optional country, language, time, and page filters.",
   "searchServiceNameQuerit": "Querit",

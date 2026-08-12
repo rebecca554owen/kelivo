@@ -501,6 +501,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is JinaOptions) return 'jina';
     if (s is PerplexityOptions) return 'perplexity';
     if (s is BochaOptions) return 'bocha';
+    if (s is DoubaoOptions) return 'doubao';
     if (s is SerperOptions) return 'serper';
     if (s is GrokOptions) return 'grok';
     if (s is StepFunOptions) return 'stepfun';

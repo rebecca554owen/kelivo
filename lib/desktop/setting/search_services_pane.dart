@@ -599,6 +599,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is JinaOptions) return 'jina';
     if (s is PerplexityOptions) return 'perplexity';
     if (s is BochaOptions) return 'bocha';
+    if (s is DoubaoOptions) return 'doubao';
     if (s is SerperOptions) return 'serper';
     if (s is QueritOptions) return 'querit';
     if (s is GrokOptions) return 'grok';
@@ -925,6 +926,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
       case 'ollama':
       case 'perplexity':
       case 'bocha':
+      case 'doubao':
         return [
           TextField(
             controller: _controllers['apiKey'],
@@ -1189,6 +1191,8 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return PerplexityOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'bocha':
         return BochaOptions(id: id, apiKey: _controllers['apiKey']!.text);
+      case 'doubao':
+        return DoubaoOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'serper':
         final page = int.tryParse(_controllers['page']!.text.trim());
         return SerperOptions(
@@ -1304,6 +1308,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     } else if (s is PerplexityOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is BochaOptions) {
+      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+    } else if (s is DoubaoOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is SerperOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
@@ -1472,7 +1478,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         s is JinaOptions ||
         s is OllamaOptions ||
         s is PerplexityOptions ||
-        s is BochaOptions) {
+        s is BochaOptions ||
+        s is DoubaoOptions) {
       return [
         TextField(
           controller: _controllers['apiKey'],
@@ -1659,10 +1666,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _controllers['country'],
-          decoration: deco('US'),
-        ),
+        TextField(controller: _controllers['country'], decoration: deco('US')),
         const SizedBox(height: 12),
         TextField(
           controller: _controllers['location'],
@@ -1686,15 +1690,9 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _controllers['location'],
-          decoration: deco('US'),
-        ),
+        TextField(controller: _controllers['location'], decoration: deco('US')),
         const SizedBox(height: 12),
-        TextField(
-          controller: _controllers['language'],
-          decoration: deco('en'),
-        ),
+        TextField(controller: _controllers['language'], decoration: deco('en')),
         const SizedBox(height: 12),
         TextField(
           controller: _controllers['includeDomains'],
@@ -1948,6 +1946,13 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         language: (_controllers['language']?.text ?? '').trim(),
         includeDomains: (_controllers['includeDomains']?.text ?? '').trim(),
         excludeDomains: (_controllers['excludeDomains']?.text ?? '').trim(),
+        extraApiKeys: _extraApiKeys,
+      );
+    }
+    if (s is DoubaoOptions) {
+      return DoubaoOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
         extraApiKeys: _extraApiKeys,
       );
     }
@@ -2216,6 +2221,7 @@ class _ServiceTypeChipsState extends State<_ServiceTypeChips> {
     (type: 'ollama', brand: 'ollama'),
     (type: 'perplexity', brand: 'perplexity'),
     (type: 'bocha', brand: 'bocha'),
+    (type: 'doubao', brand: 'doubao'),
     (type: 'serper', brand: 'serper'),
     (type: 'querit', brand: 'querit'),
     (type: 'grok', brand: 'grok'),
@@ -2300,6 +2306,8 @@ String _serviceTypeName(BuildContext context, String type) {
       return l10n.searchServiceNamePerplexity;
     case 'bocha':
       return l10n.searchServiceNameBocha;
+    case 'doubao':
+      return l10n.searchServiceNameDoubao;
     case 'serper':
       return l10n.searchServiceNameSerper;
     case 'querit':

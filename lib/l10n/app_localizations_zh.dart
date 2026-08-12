@@ -5054,6 +5054,12 @@ class AppLocalizationsZh extends AppLocalizations {
       '博查 AI 全网网页搜索，支持时间范围与摘要，更适合 AI 使用。';
 
   @override
+  String get searchServiceNameDoubao => '豆包';
+
+  @override
+  String get searchProviderDoubaoDescription => '火山引擎豆包网页搜索 API。';
+
+  @override
   String get searchServiceNameSerper => 'Serper';
 
   @override
@@ -12048,6 +12054,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get searchProviderBochaDescription =>
       '博查 AI 全网网页搜索，支持时间范围与摘要，更适合 AI 使用。';
+
+  @override
+  String get searchServiceNameDoubao => '豆包';
+
+  @override
+  String get searchProviderDoubaoDescription => '火山引擎豆包网页搜索 API。';
 
   @override
   String get searchServiceNameSerper => 'Serper';
@@ -19117,6 +19129,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get searchProviderBochaDescription =>
       '博查 AI 全網網頁搜尋，支援時間範圍與摘要，更適合 AI 使用。';
+
+  @override
+  String get searchServiceNameDoubao => '豆包';
+
+  @override
+  String get searchProviderDoubaoDescription => '火山引擎豆包網頁搜尋 API。';
 
   @override
   String get searchServiceNameSerper => 'Serper';

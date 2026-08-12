@@ -9715,6 +9715,18 @@ abstract class AppLocalizations {
   /// **'Bocha web search API. Accurate web results with optional summaries.'**
   String get searchProviderBochaDescription;
 
+  /// No description provided for @searchServiceNameDoubao.
+  ///
+  /// In en, this message translates to:
+  /// **'Doubao'**
+  String get searchServiceNameDoubao;
+
+  /// No description provided for @searchProviderDoubaoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Doubao web search API by Volcano Engine.'**
+  String get searchProviderDoubaoDescription;
+
   /// No description provided for @searchServiceNameSerper.
   ///
   /// In en, this message translates to:
