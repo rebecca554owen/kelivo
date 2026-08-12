@@ -1,5 +1,6 @@
 import "../../../support/business_test_harness.dart";
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:Kelivo/core/models/chat_input_data.dart';
@@ -26,6 +27,7 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 
   final String path;
   Completer<void>? appDataGate;
+  Completer<void>? cacheGate;
   int startedAppDataRequests = 0;
   int completedAppDataRequests = 0;
 
@@ -43,7 +45,10 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getApplicationSupportPath() => _getAppDataPath();
 
   @override
-  Future<String?> getApplicationCachePath() async => '$path/cache';
+  Future<String?> getApplicationCachePath() async {
+    await cacheGate?.future;
+    return '$path/cache';
+  }
 
   @override
   Future<String?> getTemporaryPath() async => '$path/tmp';
@@ -277,6 +282,257 @@ void main() {
       () => uploadDir.list().map((entry) => entry.path).toSet(),
     );
     expect(remainingPaths, existingPaths);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('输入法图片落盘期间阻止发送并在取消时清理缓存', (tester) async {
+    final controller = TextEditingController(text: 'send with image');
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    ChatInputData? submitted;
+    Completer<ChatInputSubmissionResult>? submissionGate;
+    final bytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    );
+
+    final cacheGate = Completer<void>();
+    fakePathProvider.cacheGate = cacheGate;
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        onSend: (input) async {
+          submitted = input;
+          final gate = submissionGate;
+          if (gate != null) return await gate.future;
+          return ChatInputSubmissionResult.rejected;
+        },
+      ),
+    );
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .insertContent(
+            KeyboardInsertedContent(
+              mimeType: 'image/png',
+              uri: 'content://com.google.android.inputmethod.latin/image.png',
+              data: bytes,
+            ),
+          );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+
+    expect(mediaController.hasUnreadyImages, isTrue);
+    await tester.tap(find.byIcon(Lucide.ArrowUp));
+    await tester.pump();
+    expect(submitted, isNull);
+
+    cacheGate.complete();
+    fakePathProvider.cacheGate = null;
+    expect(
+      await pumpUntil(
+        tester,
+        () =>
+            !mediaController.hasUnreadyImages &&
+            mediaController.snapshotInput('').imagePaths.length == 1,
+      ),
+      isTrue,
+    );
+    final imagePath = mediaController.snapshotInput('').imagePaths.single;
+    expect(imagePath, endsWith('.png'));
+    expect(
+      await tester.runAsync(() => File(imagePath).readAsBytes()),
+      orderedEquals(bytes),
+    );
+    submissionGate = Completer<ChatInputSubmissionResult>();
+    await tester.pump();
+    await tester.tap(find.byIcon(Lucide.ArrowUp));
+    await tester.pump();
+    expect(submitted?.text, 'send with image');
+    expect(submitted?.imagePaths, [imagePath]);
+    expect(controller.text, isEmpty);
+
+    controller.text = 'send with image';
+    const lateDocument = DocumentAttachment(
+      path: '/tmp/late.pdf',
+      fileName: 'late.pdf',
+      mime: 'application/pdf',
+    );
+    mediaController.addFiles(const [lateDocument]);
+    await tester.runAsync(() async {
+      tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .insertContent(
+            KeyboardInsertedContent(
+              mimeType: 'image/png',
+              uri: 'content://com.google.android.inputmethod.latin/late.png',
+              data: bytes,
+            ),
+          );
+    });
+    expect(
+      await pumpUntil(
+        tester,
+        () =>
+            !mediaController.hasUnreadyImages &&
+            mediaController.snapshotInput('').imagePaths.length == 2,
+      ),
+      isTrue,
+    );
+    final lateImagePath = mediaController
+        .snapshotInput('')
+        .imagePaths
+        .singleWhere((path) => path != imagePath);
+    submissionGate.complete(ChatInputSubmissionResult.sent);
+    submissionGate = null;
+    await tester.pumpAndSettle();
+    expect(controller.text, 'send with image');
+    expect(mediaController.snapshotInput('').imagePaths, [lateImagePath]);
+    expect(mediaController.snapshotInput('').documents, [lateDocument]);
+
+    submissionGate = Completer<ChatInputSubmissionResult>();
+    await tester.tap(find.byIcon(Lucide.ArrowUp));
+    await tester.pump();
+    controller.value = const TextEditingValue(
+      text: '下一条',
+      selection: TextSelection.collapsed(offset: 3),
+      composing: TextRange(start: 0, end: 2),
+    );
+    submissionGate.complete(ChatInputSubmissionResult.rejected);
+    submissionGate = null;
+    await tester.pumpAndSettle();
+    expect(controller.text, 'send with image下一条');
+    expect(controller.selection, const TextSelection.collapsed(offset: 18));
+    expect(controller.value.composing, const TextRange(start: 15, end: 17));
+
+    controller.text = 'discarded';
+    submissionGate = Completer<ChatInputSubmissionResult>();
+    await tester.tap(find.byIcon(Lucide.ArrowUp));
+    await tester.pump();
+    mediaController.clearDraft();
+    controller.value = const TextEditingValue(
+      text: 'replacement',
+      selection: TextSelection.collapsed(offset: 4),
+    );
+    submissionGate.complete(ChatInputSubmissionResult.rejected);
+    submissionGate = null;
+    await tester.pumpAndSettle();
+    expect(controller.text, 'replacement');
+    expect(controller.selection, const TextSelection.collapsed(offset: 4));
+
+    final cacheDir = Directory('${appSupportDir.path}/cache');
+    await tester.runAsync(() => cacheDir.create(recursive: true));
+    final cancelledCompressionGate = Completer<void>();
+    fakePathProvider.appDataGate = cancelledCompressionGate;
+    await tester.runAsync(() async {
+      tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .insertContent(
+            KeyboardInsertedContent(
+              mimeType: 'image/png',
+              uri:
+                  'content://com.google.android.inputmethod.latin/cancelled.png',
+              data: Uint8List.fromList(const [0x89, 0x50, 0x4e, 0x47]),
+            ),
+          );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+    final cancelledSource = await tester.runAsync(() async {
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while (DateTime.now().isBefore(deadline)) {
+        final files = await cacheDir.list().toList();
+        for (final file in files.whereType<File>()) {
+          if (file.path
+              .split(Platform.pathSeparator)
+              .last
+              .startsWith('paste_')) {
+            return file;
+          }
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+      return null;
+    });
+    expect(cancelledSource, isNotNull);
+    expect(mediaController.hasUnreadyImages, isTrue);
+
+    mediaController.clearDraft();
+    cancelledCompressionGate.complete();
+    fakePathProvider.appDataGate = null;
+    expect(
+      await pumpUntil(tester, () => !cancelledSource!.existsSync()),
+      isTrue,
+    );
+
+    final cachedFiles = await tester.runAsync(
+      () async => await cacheDir.exists() ? await cacheDir.list().toList() : [],
+    );
+    expect(mediaController.hasUnreadyImages, isFalse);
+    expect(mediaController.snapshotInput('').imagePaths, isEmpty);
+    expect(cachedFiles, isEmpty);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('退出页面会清理排队中的应用临时图片', (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    final gate = Completer<void>();
+    fakePathProvider.appDataGate = gate;
+    late List<File> sources;
+    await tester.runAsync(() async {
+      sources = [
+        await writeUserImage('queued_temp_1.png'),
+        await writeUserImage('queued_temp_2.png'),
+        await writeUserImage('queued_temp_3.png'),
+      ];
+    });
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+    final startedRequestsBeforeEnqueue =
+        fakePathProvider.startedAppDataRequests;
+    await tester.runAsync(() async {
+      mediaController.enqueueImages(
+        sources.map((file) => file.path).toList(),
+        _config,
+        deleteSourcesAfterProcessing: true,
+      );
+    });
+    expect(
+      fakePathProvider.startedAppDataRequests - startedRequestsBeforeEnqueue,
+      2,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(await pumpUntil(tester, () => !sources[2].existsSync()), isTrue);
+
+    final uploadDir = Directory('${appSupportDir.path}/upload');
+    gate.complete();
+    fakePathProvider.appDataGate = null;
+    expect(
+      await pumpUntil(
+        tester,
+        () =>
+            sources.every((file) => !file.existsSync()) &&
+            (!uploadDir.existsSync() || uploadDir.listSync().isEmpty),
+      ),
+      isTrue,
+    );
 
     controller.dispose();
     focusNode.dispose();
