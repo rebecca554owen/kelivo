@@ -21,19 +21,31 @@ Uri _openAICompatibleUrl(ProviderConfig config) {
 }
 
 Future<String> _saveResponsesImageGenerationMarkdown(
-  String imageBase64, {
+  String imageData, {
   String? outputFormat,
 }) async {
   final normalizedFormat = (outputFormat ?? '').trim().toLowerCase();
-  final mime = switch (normalizedFormat) {
+  var mime = switch (normalizedFormat) {
     'jpeg' || 'jpg' => 'image/jpeg',
     'webp' => 'image/webp',
     _ => 'image/png',
   };
+  var imageBase64 = imageData.trim();
+  if (imageBase64.startsWith('data:')) {
+    final commaIndex = imageBase64.indexOf(',');
+    if (commaIndex < 0) return '';
+    mime = _mimeFromDataUrl(imageBase64);
+    imageBase64 = imageBase64.substring(commaIndex + 1);
+  }
   final savedPath = await AppDirectories.saveBase64Image(mime, imageBase64);
   if (savedPath == null || savedPath.isEmpty) return '';
   final uri = SandboxPathResolver.canonicalize(savedPath);
   return '\n![image]($uri)\n';
+}
+
+bool _isResponsesImageGenerationType(dynamic type) {
+  return type == 'image_generation_call' ||
+      type == 'openrouter:image_generation';
 }
 
 void _applyCompatibleBuiltInSearch(
@@ -1917,43 +1929,46 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             outText = (obj['response']?['output_text'] ?? '').toString();
           } catch (_) {}
         }
-        if (outText.isEmpty) {
-          try {
-            final out = rawOutput as List?;
-            if (out != null) {
-              final buf = StringBuffer();
-              for (final it in out) {
-                if (it is Map && it['type'] == 'output_text') {
-                  final c = (it['content'] ?? '').toString();
-                  if (c.isNotEmpty) buf.write(c);
-                } else if (it is Map && it['type'] == 'message') {
-                  final content = it['content'] as List?;
-                  if (content != null) {
-                    for (final part in content) {
-                      if (part is Map &&
-                          (part['type'] == 'output_text' ||
-                              part['type'] == 'text')) {
-                        final t = (part['text'] ?? part['content'] ?? '')
-                            .toString();
-                        if (t.isNotEmpty) buf.write(t);
-                      }
+        final shouldReadOutputText = outText.isEmpty;
+        try {
+          final out = rawOutput as List?;
+          if (out != null) {
+            final buf = StringBuffer(outText);
+            for (final it in out) {
+              if (it is! Map) continue;
+              if (_isResponsesImageGenerationType(it['type'])) {
+                final b64 = (it['result'] ?? '').toString();
+                if (b64.isNotEmpty) {
+                  final mdImg = await _saveResponsesImageGenerationMarkdown(
+                    b64,
+                    outputFormat: (it['output_format'] ?? '').toString(),
+                  );
+                  if (mdImg.isNotEmpty) buf.write(mdImg);
+                }
+                continue;
+              }
+              if (!shouldReadOutputText) continue;
+              if (it['type'] == 'output_text') {
+                final c = (it['content'] ?? '').toString();
+                if (c.isNotEmpty) buf.write(c);
+              } else if (it['type'] == 'message') {
+                final content = it['content'] as List?;
+                if (content != null) {
+                  for (final part in content) {
+                    if (part is Map &&
+                        (part['type'] == 'output_text' ||
+                            part['type'] == 'text')) {
+                      final t = (part['text'] ?? part['content'] ?? '')
+                          .toString();
+                      if (t.isNotEmpty) buf.write(t);
                     }
-                  }
-                } else if (it is Map && it['type'] == 'image_generation_call') {
-                  final b64 = (it['result'] ?? '').toString();
-                  if (b64.isNotEmpty) {
-                    final mdImg = await _saveResponsesImageGenerationMarkdown(
-                      b64,
-                      outputFormat: (it['output_format'] ?? '').toString(),
-                    );
-                    if (mdImg.isNotEmpty) buf.write(mdImg);
                   }
                 }
               }
-              outText = buf.toString();
             }
-          } catch (_) {}
-        }
+            outText = buf.toString();
+          }
+        } catch (_) {}
         final usage = _mergeOpenAICompatibleUsage(
           null,
           obj['usage'] ?? obj['response']?['usage'],
@@ -2747,7 +2762,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   'args': '',
                 };
               } else if (item is Map &&
-                  (item['type'] ?? '') == 'image_generation_call') {
+                  _isResponsesImageGenerationType(item['type'])) {
                 responsesImagesByIndex.putIfAbsent(
                   idx,
                   () => const _ResponsesImageGenerationResult(),
@@ -2793,7 +2808,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 );
                 if (args.isNotEmpty) entry['args'] = args;
               } else if (item is Map &&
-                  (item['type'] ?? '') == 'image_generation_call') {
+                  _isResponsesImageGenerationType(item['type'])) {
                 final b64 = (item['result'] ?? '').toString();
                 if (b64.isNotEmpty) {
                   responsesImagesByIndex[idx] = _ResponsesImageGenerationResult(
@@ -2876,9 +2891,9 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         }
                       }
                     }
-                  } else if (it['type'] == 'image_generation_call') {
+                  } else if (_isResponsesImageGenerationType(it['type'])) {
                     // Handle image generation output from OpenAI Responses API
-                    // it['result'] is directly the base64 image data
+                    // it['result'] contains base64 image data or a data URL.
                     final b64 = (it['result'] ?? '').toString();
                     if (b64.isNotEmpty) {
                       completedImageIndexes.add(outputIndex);

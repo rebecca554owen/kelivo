@@ -945,6 +945,69 @@ void main() {
   });
 
   group('OpenAI Responses image generation', () {
+    test('renders OpenRouter image generation data URL', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_openrouter_responses_image_',
+      );
+      final previousPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+      SandboxPathResolver.debugSetDirs(docsDir: tempDir.path);
+      addTearDown(() async {
+        PathProviderPlatform.instance = previousPathProvider;
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        await request.drain<void>();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'output_text': 'Done',
+            'output': [
+              {
+                'type': 'openrouter:image_generation',
+                'result':
+                    'data:image/png;base64,${base64Encode(const [1, 2, 3, 4])}',
+              },
+            ],
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+          }),
+        );
+        await request.response.close();
+      });
+
+      final chunks = await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server), useResponseApi: true),
+        modelId: 'gpt-5.6-luna',
+        messages: const [
+          {'role': 'user', 'content': 'draw a cat'},
+        ],
+        stream: false,
+      ).toList();
+
+      final content = chunks.map((chunk) => chunk.content).join();
+      expect(content, contains('Done'));
+      final imageUri = RegExp(
+        r'!\[image\]\(([^)]+)\)',
+      ).firstMatch(content)!.group(1)!;
+      expect(imageUri, startsWith('kelivo-file:///'));
+      expect(imageUri.endsWith('.png'), isTrue);
+      expect(
+        await File(SandboxPathResolver.fix(imageUri)).readAsBytes(),
+        const [1, 2, 3, 4],
+      );
+      expect(chunks.last.isDone, isTrue);
+    });
+
     test('renders partial image when completed output is empty', () async {
       final tempDir = await Directory.systemTemp.createTemp(
         'kelivo_openai_responses_partial_image_',
