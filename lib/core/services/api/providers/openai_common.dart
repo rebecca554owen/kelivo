@@ -146,6 +146,19 @@ void _applyCompatibleResponsesReasoning(
 }) {
   if (config.useResponseApi != true) return;
 
+  if (BuiltInToolsHelper.isMimoProvider(config)) {
+    body.remove('reasoning');
+    if (!isReasoning) return;
+
+    final effort = _isOff(thinkingBudget)
+        ? 'none'
+        : _openAIEffortForBudget(thinkingBudget, upstreamModelId);
+    if (effort != 'auto') {
+      body['reasoning'] = {'effort': effort};
+    }
+    return;
+  }
+
   final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase() ?? '';
   final isDeepSeek =
       host.contains('deepseek') ||

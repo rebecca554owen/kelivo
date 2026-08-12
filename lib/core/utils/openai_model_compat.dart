@@ -83,6 +83,9 @@ const OpenAIReasoningSupport _museSpark11Support = OpenAIReasoningSupport(
 const OpenAIReasoningSupport _deepSeekSupport = OpenAIReasoningSupport(
   supportedEfforts: <String>['low', 'medium', 'high', 'xhigh'],
 );
+const OpenAIReasoningSupport _mimoSupport = OpenAIReasoningSupport(
+  supportedEfforts: <String>['none', 'low', 'medium', 'high'],
+);
 
 String resolveApiModelIdOverride(
   Map<String, dynamic>? override,
@@ -208,6 +211,9 @@ bool openAIAllowsSamplingParams(String modelId, {required String effort}) {
 OpenAIReasoningSupport? openAIReasoningSupport(String modelId) {
   final normalized = modelId.trim().toLowerCase();
   if (normalized.contains('deepseek')) return _deepSeekSupport;
+  if (_matchesModel(normalized, r'(^|[/_:@])mimo-v2(?:$|[-.])')) {
+    return _mimoSupport;
+  }
   if (_matchesModel(normalized, r'(^|[/_:@])kimi-k3(?:$|[-.])')) {
     return _kimiK3Support;
   }
