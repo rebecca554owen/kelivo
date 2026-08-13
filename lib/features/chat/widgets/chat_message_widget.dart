@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import '../../../core/services/haptics.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:open_filex/open_filex.dart';
@@ -879,11 +878,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   final GlobalKey _translateBtnKey2 = GlobalKey();
   // ValueNotifier for reasoning animation tick - avoids full widget rebuild
   final ValueNotifier<int> _reasoningTick = ValueNotifier<int>(0);
-  late final Ticker _ticker = Ticker((_) {
-    if (mounted && _tickActive) {
-      _reasoningTick.value++; // Only notify reasoning section, not full rebuild
-    }
-  });
+  Timer? _reasoningTimer;
   // Memoized think-tag parse, keyed by source string equality. The parser is
   // a pure function of message content, so a single slot is enough.
   String? _inlineThinkMemoSource;
@@ -981,9 +976,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         widget.reasoningFinishedAt == null;
     _tickActive = loading;
     if (loading) {
-      if (!_ticker.isActive) _ticker.start();
+      _reasoningTimer ??= Timer.periodic(const Duration(milliseconds: 100), (
+        _,
+      ) {
+        if (mounted && _tickActive) _reasoningTick.value++;
+      });
     } else {
-      if (_ticker.isActive) _ticker.stop();
+      _reasoningTimer?.cancel();
+      _reasoningTimer = null;
     }
   }
 
@@ -1166,7 +1166,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       _userMenuOverlay?.remove();
     } catch (_) {}
     _userMenuOverlay = null;
-    _ticker.dispose();
+    _reasoningTimer?.cancel();
+    _reasoningTimer = null;
     _reasoningTick.dispose();
     _reasoningScroll.dispose();
     super.dispose();
@@ -4001,9 +4002,7 @@ class _ChainOfThoughtReasoningStep extends StatefulWidget {
 class _ChainOfThoughtReasoningStepState
     extends State<_ChainOfThoughtReasoningStep> {
   final ValueNotifier<int> _elapsedTick = ValueNotifier<int>(0);
-  late final Ticker _ticker = Ticker((_) {
-    if (mounted) _elapsedTick.value++;
-  });
+  Timer? _elapsedTimer;
   final ScrollController _scroll = ScrollController();
   bool _hasOverflow = false;
 
@@ -4032,10 +4031,21 @@ class _ChainOfThoughtReasoningStepState
     return '(${(ms / 1000).toStringAsFixed(1)}s)';
   }
 
+  void _syncElapsedTimer() {
+    if (widget.step.loading) {
+      _elapsedTimer ??= Timer.periodic(const Duration(milliseconds: 100), (_) {
+        if (mounted) _elapsedTick.value++;
+      });
+    } else {
+      _elapsedTimer?.cancel();
+      _elapsedTimer = null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    if (widget.step.loading) _ticker.start();
+    _syncElapsedTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkOverflow();
       if (widget.step.loading && _scroll.hasClients) {
@@ -4047,22 +4057,20 @@ class _ChainOfThoughtReasoningStepState
   @override
   void didUpdateWidget(covariant _ChainOfThoughtReasoningStep oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _syncElapsedTimer();
     if (widget.step.loading) {
-      if (!_ticker.isActive) _ticker.start();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) {
           _scroll.jumpTo(_scroll.position.maxScrollExtent);
         }
       });
-    } else if (_ticker.isActive) {
-      _ticker.stop();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkOverflow());
   }
 
   @override
   void dispose() {
-    _ticker.dispose();
+    _elapsedTimer?.cancel();
     _elapsedTick.dispose();
     _scroll.dispose();
     super.dispose();
@@ -5896,13 +5904,10 @@ class _ReasoningSection extends StatefulWidget {
   State<_ReasoningSection> createState() => _ReasoningSectionState();
 }
 
-class _ReasoningSectionState extends State<_ReasoningSection>
-    with SingleTickerProviderStateMixin {
+class _ReasoningSectionState extends State<_ReasoningSection> {
   // Use ValueNotifier to only update elapsed time display, not rebuild entire widget
   final ValueNotifier<int> _elapsedTick = ValueNotifier<int>(0);
-  late final Ticker _ticker = Ticker((_) {
-    if (mounted) _elapsedTick.value++;
-  });
+  Timer? _elapsedTimer;
   final ScrollController _scroll = ScrollController();
   bool _hasOverflow = false;
 
@@ -5918,10 +5923,21 @@ class _ReasoningSectionState extends State<_ReasoningSection>
     return '(${(ms / 1000).toStringAsFixed(1)}s)';
   }
 
+  void _syncElapsedTimer() {
+    if (widget.loading && widget.finishedAt == null) {
+      _elapsedTimer ??= Timer.periodic(const Duration(milliseconds: 100), (_) {
+        if (mounted) _elapsedTick.value++;
+      });
+    } else {
+      _elapsedTimer?.cancel();
+      _elapsedTimer = null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    if (widget.loading) _ticker.start();
+    if (widget.loading) _syncElapsedTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkOverflow();
       if (widget.loading && _scroll.hasClients) {
@@ -5933,11 +5949,7 @@ class _ReasoningSectionState extends State<_ReasoningSection>
   @override
   void didUpdateWidget(covariant _ReasoningSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.loading && widget.finishedAt == null) {
-      if (!_ticker.isActive) _ticker.start();
-    } else {
-      if (_ticker.isActive) _ticker.stop();
-    }
+    _syncElapsedTimer();
     if (widget.loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) {
@@ -5950,7 +5962,7 @@ class _ReasoningSectionState extends State<_ReasoningSection>
 
   @override
   void dispose() {
-    _ticker.dispose();
+    _elapsedTimer?.cancel();
     _elapsedTick.dispose();
     _scroll.dispose();
     super.dispose();
