@@ -3605,4 +3605,33 @@ void main() {
       expect(darkColors, isNot(lightColors));
     },
   );
+
+  testWidgets(
+    'streaming text between 512 and 4096 uses incremental markdown blocks',
+    (tester) async {
+      final paragraph = 'Streaming markdown paragraph for block split. ' * 6;
+      final text = List<String>.generate(
+        4,
+        (index) => '$paragraph$index',
+      ).join('\n\n');
+      expect(text.length, greaterThanOrEqualTo(512));
+      expect(text.length, lessThan(4096));
+
+      await tester.pumpWidget(_markdownHarness(text, streaming: true));
+      await tester.pump();
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_MarkdownBlockColumn',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_CachedMarkdownBlock',
+        ),
+        findsAtLeastNWidgets(2),
+      );
+    },
+  );
 }

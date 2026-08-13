@@ -175,7 +175,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     }
 
     final useIncrementalBlocks =
-        widget.streaming && sanitizedText.length >= 4096;
+        widget.streaming && sanitizedText.length >= 512;
     final sourceBlocks = useIncrementalBlocks
         ? _incrementalDocument.update(sanitizedText)
         : const <IncrementalMarkdownBlock>[];
