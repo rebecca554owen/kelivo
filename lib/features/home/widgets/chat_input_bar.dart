@@ -203,6 +203,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   // The ASR provider owns microphone capture. This widget only owns the
   // composer presentation and an exact snapshot used by Cancel.
   final List<double> _voiceLevels = <double>[];
+  final ValueNotifier<int> _voiceLevelsVersion = ValueNotifier<int>(0);
   static const int _maxVoiceLevels = 400;
   Timer? _voiceLevelTimer;
   TextEditingValue? _voiceBaseValue;
@@ -572,6 +573,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     if (widget.controller == null) {
       _controller.dispose();
     }
+    _voiceLevelsVersion.dispose();
     super.dispose();
   }
 
@@ -695,7 +697,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       final previous = _voiceLevels.isEmpty ? 0.03 : _voiceLevels.last;
       _voiceLevels.add(previous + (level - previous) * 0.55);
       if (_voiceLevels.length > _maxVoiceLevels) _voiceLevels.removeAt(0);
-      setState(() {});
+      _voiceLevelsVersion.value++;
     });
   }
 
@@ -862,11 +864,14 @@ class _ChatInputBarState extends State<ChatInputBar>
                           alpha: 0.72,
                         ),
                       )
-                    : _VoiceWaveform(
-                        key: const ValueKey('voice-waveform'),
-                        levels: _voiceLevels,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.85,
+                    : ValueListenableBuilder<int>(
+                        valueListenable: _voiceLevelsVersion,
+                        builder: (context, _, _) => _VoiceWaveform(
+                          key: const ValueKey('voice-waveform'),
+                          levels: _voiceLevels,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.85,
+                          ),
                         ),
                       ),
               ),
