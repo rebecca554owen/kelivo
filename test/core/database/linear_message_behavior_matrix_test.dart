@@ -246,4 +246,41 @@ void main() {
       expect(await repository.getMessageIndex(conversation.id, 'user-1'), 2);
     },
   );
+
+  test(
+    'deleting the old version after a save-only edit keeps the group in place',
+    () async {
+      await seed();
+
+      // Save-only edit: appends a new revision whose message_order lands at
+      // the end of the conversation.
+      final result = await repository.appendMessageVersion(
+        messageId: 'assistant-v0',
+        content: 'edited answer',
+      );
+      final editedId = result!.message.id;
+
+      // Deleting the original (anchor) revision must not let the surviving
+      // revision drift to the appended end-of-conversation position.
+      await repository.deleteMessages(
+        conversationId: conversation.id,
+        messageIds: const {'assistant-v0'},
+        versionSelectionChanges: const {},
+      );
+
+      expect(await visibleIds(), [
+        'user-0',
+        editedId,
+        'user-1',
+        'assistant-1',
+      ]);
+      expect(await repository.getMessageIndex(conversation.id, editedId), 1);
+      expect(await repository.getMessageIds(conversation.id), [
+        'user-0',
+        editedId,
+        'user-1',
+        'assistant-1',
+      ]);
+    },
+  );
 }

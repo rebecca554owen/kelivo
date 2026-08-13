@@ -5395,10 +5395,46 @@ class ChatDatabaseRepository {
         throw StateError('delete_messages_not_found');
       }
 
-      final orderedIds = rows
+      // Version groups are anchored at MIN(message_order) in the timeline
+      // queries, while appended revisions get end-of-conversation orders.
+      // Deleting the anchor row would therefore make the surviving revisions
+      // drift to the appended position (e.g. edit mid-conversation, then
+      // delete the old version -> group jumps to the bottom). Keep the group
+      // in place by moving the earliest surviving revision back onto the
+      // freed anchor order. The anchor slot is guaranteed free: it belonged
+      // to a row of this same group that is deleted in this transaction, and
+      // distinct groups never share an anchor row.
+      final anchorRewrites = <String, int>{};
+      final rowsByGroup = <String, List<MessageRow>>{};
+      for (final row in rows) {
+        rowsByGroup
+            .putIfAbsent(row.groupId ?? row.id, () => <MessageRow>[])
+            .add(row);
+      }
+      for (final group in rowsByGroup.values) {
+        // `rows` is ordered by message_order, so group.first is the anchor.
+        final anchor = group.first;
+        if (!messageIds.contains(anchor.id)) continue;
+        MessageRow? survivor;
+        for (final row in group) {
+          if (!messageIds.contains(row.id)) {
+            survivor = row;
+            break;
+          }
+        }
+        if (survivor == null) continue;
+        anchorRewrites[survivor.id] = anchor.messageOrder;
+      }
+
+      final remainingRows = rows
           .where((row) => !messageIds.contains(row.id))
-          .map((row) => row.id)
           .toList(growable: false);
+      final effectiveOrders = <String, int>{
+        for (final row in remainingRows)
+          row.id: anchorRewrites[row.id] ?? row.messageOrder,
+      };
+      final orderedIds = remainingRows.map((row) => row.id).toList()
+        ..sort((a, b) => effectiveOrders[a]!.compareTo(effectiveOrders[b]!));
 
       final deletedIds = deletedRows
           .map((row) => row.id)
@@ -5409,6 +5445,13 @@ class ChatDatabaseRepository {
       await (_db.delete(
         _db.messageRows,
       )..where((row) => row.id.isIn(deletedIds))).go();
+      for (final rewrite in anchorRewrites.entries) {
+        await (_db.update(
+          _db.messageRows,
+        )..where((row) => row.id.equals(rewrite.key))).write(
+          MessageRowsCompanion(messageOrder: Value(rewrite.value)),
+        );
+      }
       final currentConversation = await _conversationFromRow(
         conversationRow,
         includeMessageIds: false,
