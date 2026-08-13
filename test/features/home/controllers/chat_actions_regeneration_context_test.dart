@@ -142,6 +142,60 @@ void main() {
     expect(source.contains('maxMessages: _contextReadLimit('), isFalse);
   });
 
+  group('ChatActions.shouldBeginNewAssistantReply', () {
+    test('删掉底部全部回复后从用户消息重试会新建回复而不是报 invalid_versioning', () {
+      expect(
+        ChatActions.shouldBeginNewAssistantReply(
+          role: 'user',
+          targetGroupId: null,
+          assistantAsNewReply: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('assistant 当作新回复时走新建回复路径', () {
+      expect(
+        ChatActions.shouldBeginNewAssistantReply(
+          role: 'assistant',
+          targetGroupId: null,
+          assistantAsNewReply: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('已有回复组时走版本追加而不是新建回复', () {
+      expect(
+        ChatActions.shouldBeginNewAssistantReply(
+          role: 'user',
+          targetGroupId: 'a1',
+          assistantAsNewReply: false,
+        ),
+        isFalse,
+      );
+      expect(
+        ChatActions.shouldBeginNewAssistantReply(
+          role: 'assistant',
+          targetGroupId: 'a1',
+          assistantAsNewReply: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('assistant 却算不出回复组仍视为非法 versioning', () {
+      expect(
+        ChatActions.shouldBeginNewAssistantReply(
+          role: 'assistant',
+          targetGroupId: null,
+          assistantAsNewReply: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   test('only temporary regeneration physically removes trailing messages', () {
     expect(
       ChatActions.shouldPhysicallyRemoveRegenerationTail(
@@ -258,6 +312,27 @@ void main() {
         'a2-v0',
         'a2-v1',
       ]);
+    });
+
+    test('删掉底部回复后 targetGroupId 为空仍能把占位接到用户消息后面', () {
+      final messages = <ChatMessage>[
+        _message(id: 'u1', role: 'user', groupId: 'u1', version: 0),
+      ];
+      final placeholder = _message(
+        id: 'a1',
+        role: 'assistant',
+        groupId: 'a1',
+        version: 0,
+      ).copyWith(content: '', isStreaming: true);
+
+      final result = ChatActions.buildRegenerationMessages(
+        messages: messages,
+        lastKeep: 0,
+        targetGroupId: null,
+        assistantPlaceholder: placeholder,
+      );
+
+      expect(result.map((message) => message.id).toList(), ['u1', 'a1']);
     });
   });
 

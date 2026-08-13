@@ -130,6 +130,22 @@ class ChatActions {
     required bool isTemporaryConversation,
   }) => deleteTrailingEnabled && isTemporaryConversation;
 
+  /// Whether regenerate should append a new assistant reply instead of adding
+  /// a version to an existing reply group.
+  ///
+  /// [targetGroupId] is null when the assistant is treated as a new reply, or
+  /// when the anchor is a user message with no following assistant group
+  /// (e.g. every generated version was deleted).
+  @visibleForTesting
+  static bool shouldBeginNewAssistantReply({
+    required String role,
+    required String? targetGroupId,
+    required bool assistantAsNewReply,
+  }) {
+    if (assistantAsNewReply && role == 'assistant') return true;
+    return targetGroupId == null && role == 'user';
+  }
+
   ChatActions({
     required this.chatService,
     required this.chatController,
@@ -1258,7 +1274,12 @@ class ChatActions {
     }
 
     late final ({ChatMessage assistantMessage, String? runId}) begin;
-    if (assistantAsNewReply && message.role == 'assistant') {
+    final targetGroupId = versioning.targetGroupId;
+    if (shouldBeginNewAssistantReply(
+      role: message.role,
+      targetGroupId: targetGroupId,
+      assistantAsNewReply: assistantAsNewReply,
+    )) {
       begin = await messageGenerationService.beginAssistantGeneration(
         conversationId: conversation.id,
         modelId: modelId,
@@ -1267,7 +1288,6 @@ class ChatActions {
         truncateFuture: truncateFuture,
       );
     } else {
-      final targetGroupId = versioning.targetGroupId;
       if (targetGroupId == null) {
         return ChatActionResult.error('invalid_versioning');
       }
