@@ -3278,7 +3278,9 @@ Widget _buildSharedChatSurface(
 }) {
   final theme = Theme.of(context);
   final cs = theme.colorScheme;
-  final style = context.watch<SettingsProvider>().chatMessageBackgroundStyle;
+  final style = context.select<SettingsProvider, ChatMessageBackgroundStyle>(
+    (s) => s.chatMessageBackgroundStyle,
+  );
   final paddedChild = Padding(padding: padding, child: child);
 
   switch (style) {
@@ -3540,47 +3542,61 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     super.dispose();
   }
 
-  double _dotValue(int index) {
-    final phase = (_controller.value - index * 0.22) * 2 * math.pi;
-    return (math.sin(phase) + 1) / 2; // 0 -> 1 wave
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final base = widget.color ?? cs.primary;
 
-    return SizedBox(
-      height: widget.height,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(3, (i) {
-              final wave = _dotValue(i);
-              final double scale = 0.85 + 0.15 * wave; // subtle breathing
-              final double opacity = 0.45 + 0.45 * wave;
-              return Padding(
-                padding: EdgeInsets.only(right: i == 2 ? 0 : widget.spacing),
-                child: Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: widget.dotSize,
-                    height: widget.dotSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: base.withValues(alpha: opacity),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          );
-        },
+    return RepaintBoundary(
+      child: CustomPaint(
+        size: Size(widget.dotSize * 3 + widget.spacing * 2, widget.height),
+        painter: _LoadingDotsPainter(
+          animation: _controller,
+          color: base,
+          dotSize: widget.dotSize,
+          spacing: widget.spacing,
+        ),
       ),
     );
   }
+}
+
+class _LoadingDotsPainter extends CustomPainter {
+  _LoadingDotsPainter({
+    required this.animation,
+    required this.color,
+    required this.dotSize,
+    required this.spacing,
+  }) : super(repaint: animation);
+
+  final Animation<double> animation;
+  final Color color;
+  final double dotSize;
+  final double spacing;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < 3; i++) {
+      final phase = (animation.value - i * 0.22) * 2 * math.pi;
+      final wave = (math.sin(phase) + 1) / 2;
+      final scale = 0.85 + 0.15 * wave;
+      final opacity = 0.45 + 0.45 * wave;
+      final cx = i * (dotSize + spacing) + dotSize / 2;
+      final cy = size.height / 2;
+      canvas.save();
+      canvas.translate(cx, cy);
+      canvas.scale(scale);
+      canvas.drawCircle(
+        Offset.zero,
+        dotSize / 2,
+        Paint()..color = color.withValues(alpha: opacity),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 /// Streaming visual wrapper for assistant message content.
@@ -6203,43 +6219,45 @@ class _ShimmerState extends State<_Shimmer> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     if (!widget.enabled) return widget.child;
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (context, child) {
-        final t = _c.value; // 0..1
-        return ShaderMask(
-          shaderCallback: (rect) {
-            final width = rect.width;
-            final gradientWidth = width * 0.4;
-            final dx = (width + gradientWidth) * t - gradientWidth;
-            final shaderRect = Rect.fromLTWH(
-              -dx,
-              0,
-              width + gradientWidth * 2,
-              rect.height,
-            );
-            return LinearGradient(
-              colors: [
-                Colors.white.withValues(
-                  alpha: 0.0,
-                ), // color-gate: ignore (shimmer effect)
-                Colors.white.withValues(
-                  alpha: 0.35,
-                ), // color-gate: ignore (shimmer effect)
-                Colors.white.withValues(
-                  alpha: 0.0,
-                ), // color-gate: ignore (shimmer effect)
-              ],
-              stops: const [0.0, 0.5, 1.0],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ).createShader(shaderRect);
-          },
-          blendMode: BlendMode.srcATop,
-          child: child,
-        );
-      },
-      child: widget.child,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) {
+          final t = _c.value; // 0..1
+          return ShaderMask(
+            shaderCallback: (rect) {
+              final width = rect.width;
+              final gradientWidth = width * 0.4;
+              final dx = (width + gradientWidth) * t - gradientWidth;
+              final shaderRect = Rect.fromLTWH(
+                -dx,
+                0,
+                width + gradientWidth * 2,
+                rect.height,
+              );
+              return LinearGradient(
+                colors: [
+                  Colors.white.withValues(
+                    alpha: 0.0,
+                  ), // color-gate: ignore (shimmer effect)
+                  Colors.white.withValues(
+                    alpha: 0.35,
+                  ), // color-gate: ignore (shimmer effect)
+                  Colors.white.withValues(
+                    alpha: 0.0,
+                  ), // color-gate: ignore (shimmer effect)
+                ],
+                stops: const [0.0, 0.5, 1.0],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ).createShader(shaderRect);
+            },
+            blendMode: BlendMode.srcATop,
+            child: child,
+          );
+        },
+        child: widget.child,
+      ),
     );
   }
 }
