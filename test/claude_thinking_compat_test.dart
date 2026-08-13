@@ -602,6 +602,7 @@ void main() {
 
       expect(body['thinking'], {'type': 'adaptive', 'display': 'summarized'});
       expect(body['output_config'], {'effort': 'medium'});
+      expect(body['stream'], isFalse);
       expect(body.containsKey('temperature'), isFalse);
       expect(
         (body['thinking'] as Map<String, dynamic>).containsKey('budget_tokens'),

@@ -158,9 +158,58 @@ void main() {
         );
 
         expect(title, '问候交流');
+        expect(requestBody['stream'], isFalse);
         expect(requestBody.containsKey('temperature'), isFalse);
       },
     );
+
+    test('requests non-streaming JSON from the Responses API', () async {
+      late Map<String, dynamic> requestBody;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestBody =
+            (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                .cast<String, dynamic>();
+        request.response.statusCode = HttpStatus.ok;
+        if (requestBody['stream'] == false) {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode({
+              'id': 'resp-title',
+              'object': 'response',
+              'status': 'completed',
+              'output_text': '标题',
+              'output': const [],
+            }),
+          );
+        } else {
+          request.response.headers.contentType = ContentType(
+            'text',
+            'event-stream',
+            charset: 'utf-8',
+          );
+          request.response.write(
+            'event:response.created\n'
+            'data: {"type":"response.created"}\n\n',
+          );
+        }
+        await request.response.close();
+      });
+
+      final baseUrl = 'http://${server.address.address}:${server.port}/v1';
+      final title = await ChatApiService.generateText(
+        config: _openAIConfig(baseUrl).copyWith(useResponseApi: true),
+        modelId: 'deepseek-v4-flash',
+        prompt: 'summarize',
+      );
+
+      expect(title, '标题');
+      expect(requestBody['stream'], isFalse);
+    });
 
     test('omits temperature from Google utility requests', () async {
       late Map<String, dynamic> requestBody;

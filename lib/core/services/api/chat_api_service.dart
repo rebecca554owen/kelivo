@@ -825,6 +825,7 @@ class ChatApiService {
           }
           body = {
             'model': upstreamModelId,
+            'stream': false,
             'input': [
               {'role': 'user', 'content': safePrompt},
             ],
@@ -840,6 +841,7 @@ class ChatApiService {
         } else {
           body = {
             'model': upstreamModelId,
+            'stream': false,
             'messages': [
               {'role': 'user', 'content': safePrompt},
             ],
@@ -978,6 +980,7 @@ class ChatApiService {
             : null;
         final body = <String, dynamic>{
           'model': upstreamModelId,
+          'stream': false,
           'max_tokens': 512,
           'messages': [
             {'role': 'user', 'content': safePrompt},
