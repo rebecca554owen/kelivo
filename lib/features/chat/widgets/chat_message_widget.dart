@@ -1341,25 +1341,27 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     });
   }
 
-  Widget _buildUserAvatar(UserProvider userProvider, ColorScheme cs) {
+  Widget _buildUserAvatar(
+    String? avatarType,
+    String? avatarValue,
+    ColorScheme cs,
+  ) {
     Widget avatarContent;
 
-    if (userProvider.avatarType == 'emoji' &&
-        userProvider.avatarValue != null) {
+    if (avatarType == 'emoji' && avatarValue != null) {
       final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
       final double fs = 18;
       final Offset? nudge = isIOS ? Offset(fs * 0.065, fs * -0.05) : null;
       avatarContent = Center(
         child: EmojiText(
-          userProvider.avatarValue!,
+          avatarValue,
           fontSize: fs,
           optimizeEmojiAlign: true,
           nudge: nudge,
         ),
       );
-    } else if (userProvider.avatarType == 'url' &&
-        userProvider.avatarValue != null) {
-      final url = userProvider.avatarValue!;
+    } else if (avatarType == 'url' && avatarValue != null) {
+      final url = avatarValue;
       avatarContent = FutureBuilder<String?>(
         future: AvatarCache.getPath(url),
         builder: (ctx, snap) {
@@ -1386,9 +1388,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           );
         },
       );
-    } else if (userProvider.avatarType == 'file' &&
-        userProvider.avatarValue != null) {
-      final fixed = SandboxPathResolver.fix(userProvider.avatarValue!);
+    } else if (avatarType == 'file' && avatarValue != null) {
+      final fixed = SandboxPathResolver.fix(avatarValue);
       final f = File(fixed);
       if (f.existsSync()) {
         avatarContent = ClipOval(
@@ -1444,9 +1445,31 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   Widget _buildUserMessage() {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final userProvider = context.watch<UserProvider>();
+    final userName = context.select<UserProvider, String>((u) => u.name);
+    final userAvatarType = context.select<UserProvider, String?>(
+      (u) => u.avatarType,
+    );
+    final userAvatarValue = context.select<UserProvider, String?>(
+      (u) => u.avatarValue,
+    );
     final l10n = AppLocalizations.of(context)!;
-    final settings = context.watch<SettingsProvider>();
+    final userMessageSettings = context
+        .select<
+          SettingsProvider,
+          ({
+            bool showActions,
+            bool showName,
+            bool showTimestamp,
+            bool enableMarkdown,
+          })
+        >(
+          (s) => (
+            showActions: s.showUserMessageActions,
+            showName: s.showUserName,
+            showTimestamp: s.showUserTimestamp,
+            enableMarkdown: s.enableUserMarkdown,
+          ),
+        );
     // Attachments come from structured parts only. Literal marker-like text
     // inside TextPart stays plain text and is never re-parsed.
     final assistant = _assistantForMessage();
@@ -1455,7 +1478,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       assistant: assistant,
       scope: AssistantRegexScope.user,
     );
-    final showUserActions = settings.showUserMessageActions;
+    final showUserActions = userMessageSettings.showActions;
     final showVersionSwitcher = (widget.versionCount ?? 1) > 1;
     final mediaPreview = _buildAttachmentPreview(
       context,
@@ -1469,7 +1492,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             child: _buildBubbleContainer(
               context: context,
               isUser: true,
-              child: _buildUserTextContent(context, visualText, settings, cs),
+              child: _buildUserTextContent(
+                context,
+                visualText,
+                userMessageSettings.enableMarkdown,
+                cs,
+              ),
             ),
           )
         : null;
@@ -1483,22 +1511,24 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (settings.showUserName || settings.showUserTimestamp)
+              if (userMessageSettings.showName ||
+                  userMessageSettings.showTimestamp)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (settings.showUserName)
+                    if (userMessageSettings.showName)
                       Text(
-                        userProvider.name,
+                        userName,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: AppFontWeights.medium,
                           color: cs.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
-                    if (settings.showUserName && settings.showUserTimestamp)
+                    if (userMessageSettings.showName &&
+                        userMessageSettings.showTimestamp)
                       const SizedBox(height: 2),
-                    if (settings.showUserTimestamp)
+                    if (userMessageSettings.showTimestamp)
                       Text(
                         _dateFormat.format(widget.message.timestamp),
                         style: TextStyle(
@@ -1511,7 +1541,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               if (widget.showUserAvatar) ...[
                 const SizedBox(width: 8),
                 // User avatar
-                _buildUserAvatar(userProvider, cs),
+                _buildUserAvatar(userAvatarType, userAvatarValue, cs),
               ],
             ],
           ),
@@ -1745,7 +1775,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   Widget _buildUserTextContent(
     BuildContext context,
     String visualText,
-    SettingsProvider settings,
+    bool enableUserMarkdown,
     ColorScheme cs,
   ) {
     final bool isDesktop =
@@ -1755,7 +1785,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final double baseUser = isDesktop ? 14.0 : 15.5;
 
     Widget content;
-    if (settings.enableUserMarkdown) {
+    if (enableUserMarkdown) {
       content = DefaultTextStyle.merge(
         style: TextStyle(fontSize: baseUser, height: 1.45),
         child: MarkdownWithCodeHighlight(
@@ -3354,7 +3384,9 @@ _ChatSurfaceForegroundPalette _chatSurfaceForegroundPalette(
 ) {
   final theme = Theme.of(context);
   final cs = theme.colorScheme;
-  final style = context.watch<SettingsProvider>().chatMessageBackgroundStyle;
+  final style = context.select<SettingsProvider, ChatMessageBackgroundStyle>(
+    (s) => s.chatMessageBackgroundStyle,
+  );
   if (style == ChatMessageBackgroundStyle.defaultStyle) {
     return _ChatSurfaceForegroundPalette(
       strong: cs.secondary,
@@ -3733,14 +3765,15 @@ class _ChainOfThoughtCardState extends State<_ChainOfThoughtCard> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final fg = _chatSurfaceForegroundPalette(context);
-    final settings = context.watch<SettingsProvider>();
+    final collapseThinkingSteps = context.select<SettingsProvider, bool>(
+      (s) => s.collapseThinkingSteps,
+    );
     final l10n = AppLocalizations.of(context)!;
     final enableAdaptiveWidth =
         widget.steps.isNotEmpty &&
         widget.steps.every((step) => step.isReasoning) &&
         !widget.steps.any((step) => step.isReasoning && step.loading);
-    final canCollapse =
-        settings.collapseThinkingSteps && widget.steps.length > 2;
+    final canCollapse = collapseThinkingSteps && widget.steps.length > 2;
     final visibleSteps = canCollapse && !_showAllSteps
         ? widget.steps.sublist(widget.steps.length - 2)
         : widget.steps;
@@ -4104,7 +4137,9 @@ class _ChainOfThoughtReasoningStepState
   Widget build(BuildContext context) {
     final fg = _chatSurfaceForegroundPalette(context);
     final l10n = AppLocalizations.of(context)!;
-    final settings = context.watch<SettingsProvider>();
+    final enableReasoningMarkdown = context.select<SettingsProvider, bool>(
+      (s) => s.enableReasoningMarkdown,
+    );
     final state = _stepState;
     final display = _sanitize(widget.step.text);
     final label = Row(
@@ -4148,7 +4183,7 @@ class _ChainOfThoughtReasoningStepState
     );
 
     Widget reasoningContent(String text) {
-      if (settings.enableReasoningMarkdown) {
+      if (enableReasoningMarkdown) {
         return RepaintBoundary(
           child: MarkdownWithCodeHighlight(
             text: text.isNotEmpty ? text : '…',
@@ -4362,7 +4397,9 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final fg = _chatSurfaceForegroundPalette(context);
-    final settings = context.watch<SettingsProvider>();
+    final showToolResultSummary = context.select<SettingsProvider, bool>(
+      (s) => s.showToolResultSummary,
+    );
     final approvalService = context.watch<ToolApprovalService>();
     ToolApprovalRequest? pendingRequest;
     if (widget.part.id.isNotEmpty &&
@@ -4427,7 +4464,7 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
                       widget.part.arguments['text']) ??
                   '')
               .toString();
-    final bool shouldShowSummary = settings.showToolResultSummary;
+    final bool shouldShowSummary = showToolResultSummary;
     final askUserExpanded = _askUserExpanded ?? true;
     final ttsText = widget.part.toolName == LocalToolNames.textToSpeech
         ? _textToSpeechToolText(widget.part.arguments)
@@ -5996,7 +6033,9 @@ class _ReasoningSectionState extends State<_ReasoningSection> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fg = _chatSurfaceForegroundPalette(context);
     final l10n = AppLocalizations.of(context)!;
-    final settings = context.watch<SettingsProvider>();
+    final enableReasoningMarkdown = context.select<SettingsProvider, bool>(
+      (s) => s.enableReasoningMarkdown,
+    );
     final loading = widget.loading;
 
     // Android-like surface style
@@ -6075,7 +6114,7 @@ class _ReasoningSectionState extends State<_ReasoningSection> {
 
     // 未加载：不要再指定 color: fg，让它继承和"加载中"相同的颜色
     Widget reasoningContent(String text) {
-      if (settings.enableReasoningMarkdown) {
+      if (enableReasoningMarkdown) {
         return RepaintBoundary(
           child: MarkdownWithCodeHighlight(
             text: text.isNotEmpty ? text : '…',
