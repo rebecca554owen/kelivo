@@ -595,7 +595,7 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
   required bool canImageInput,
   required bool allowRemoteImages,
   required _ReasoningContentReplayPolicy reasoningContentReplayPolicy,
-  bool stripUnsignedReasoningContent = false,
+  bool stripReasoningContent = false,
 }) async {
   final out = <Map<String, dynamic>>[];
   // Assistant turns cannot carry image_url/video_url; stash for the last user
@@ -643,17 +643,12 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
     outMsg['role'] = role;
 
     if (isAssistant) {
-      final details = outMsg['reasoning_details'];
-      final hasSignedClaudeReasoning =
-          stripUnsignedReasoningContent &&
-          details is List &&
-          details.isNotEmpty;
       final keepReasoningContent =
-          hasSignedClaudeReasoning ||
-          reasoningContentReplayPolicy == _ReasoningContentReplayPolicy.all ||
-          (reasoningContentReplayPolicy ==
-                  _ReasoningContentReplayPolicy.toolTurns &&
-              toolTurnIds.contains(messageTurnIds[i]));
+          !stripReasoningContent &&
+          (reasoningContentReplayPolicy == _ReasoningContentReplayPolicy.all ||
+              (reasoningContentReplayPolicy ==
+                      _ReasoningContentReplayPolicy.toolTurns &&
+                  toolTurnIds.contains(messageTurnIds[i])));
       if (!keepReasoningContent) {
         outMsg.remove('reasoning_content');
         outMsg.remove('reasoning');
@@ -1829,7 +1824,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       canImageInput: canImageInput,
       allowRemoteImages: allowRemoteImages,
       reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
-      stripUnsignedReasoningContent: isClaudeUpstream,
+      stripReasoningContent: isClaudeUpstream,
     );
     body = {
       'model': upstreamModelId,
@@ -2152,7 +2147,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             canImageInput: canImageInput,
             allowRemoteImages: allowRemoteImages,
             reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
-            stripUnsignedReasoningContent: isClaudeUpstream,
+            stripReasoningContent: isClaudeUpstream,
           );
           reqBody.remove('stream');
           req.body = jsonEncode(reqBody);
@@ -2358,7 +2353,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 canImageInput: canImageInput,
                 allowRemoteImages: allowRemoteImages,
                 reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
-                stripUnsignedReasoningContent: isClaudeUpstream,
+                stripReasoningContent: isClaudeUpstream,
               ),
               'stream': true,
               if (temperature != null) 'temperature': temperature,
@@ -3749,7 +3744,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 canImageInput: canImageInput,
                 allowRemoteImages: allowRemoteImages,
                 reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
-                stripUnsignedReasoningContent: isClaudeUpstream,
+                stripReasoningContent: isClaudeUpstream,
               ),
               'stream': true,
               if (temperature != null) 'temperature': temperature,
@@ -4260,7 +4255,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     allowRemoteImages: allowRemoteImages,
                     reasoningContentReplayPolicy:
                         info.reasoningContentReplayPolicy,
-                    stripUnsignedReasoningContent: isClaudeUpstream,
+                    stripReasoningContent: isClaudeUpstream,
                   ),
                   'stream': true,
                   if (temperature != null) 'temperature': temperature,

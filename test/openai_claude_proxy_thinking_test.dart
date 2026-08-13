@@ -116,7 +116,7 @@ void main() {
     );
 
     test(
-      'signed reasoning_details are echoed back on Claude history replay',
+      'Claude history replays signed details without reasoning_content',
       () async {
         late Map<String, dynamic> requestBody;
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -167,7 +167,7 @@ void main() {
         expect(chunks.last.isDone, isTrue);
         final messages = (requestBody['messages'] as List).cast<Map>();
         final assistant = messages[1];
-        expect(assistant['reasoning_content'], 'signed thinking text');
+        expect(assistant.containsKey('reasoning_content'), isFalse);
         expect(
           (assistant['reasoning_details'] as List).first['signature'],
           'sig-proxy-1',
