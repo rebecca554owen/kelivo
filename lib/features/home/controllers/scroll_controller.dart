@@ -499,7 +499,9 @@ class ChatScrollController {
   /// when the terminal message widget is swapped in and typically grows.
   void stickToBottomAfterGeneration() {
     if (!_autoStickToBottom || _isUserScrolling) return;
-    scrollToBottomSoon(animate: false);
+    // Animate: the user is watching this spot, so an instant jump reads as a
+    // flash while a short eased scroll reads as the reply settling in.
+    scrollToBottomSoon(animate: true);
   }
 
   /// Ensure scroll reaches bottom even after widget tree transitions.
@@ -511,7 +513,11 @@ class ChatScrollController {
       }
     });
     Future.delayed(const Duration(milliseconds: 120), () {
-      if (request == _deferredBottomRequest) {
+      // The retry exists for widget-tree transitions that invalidate the
+      // post-frame attempt; restarting a live animation here would cause a
+      // visible velocity discontinuity instead.
+      if (request == _deferredBottomRequest &&
+          !_explicitBottomAnimationInProgress) {
         scrollToBottom(animate: animate);
       }
     });
