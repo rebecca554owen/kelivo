@@ -498,6 +498,7 @@ class ChatScrollController {
   /// Layout-phase auto-follow requires [isGenerating], which is already false
   /// when the terminal message widget is swapped in and typically grows.
   void stickToBottomAfterGeneration() {
+    if (!_getAutoScrollEnabled()) return;
     if (!_autoStickToBottom || _isUserScrolling) return;
     // Animate: the user is watching this spot, so an instant jump reads as a
     // flash while a short eased scroll reads as the reply settling in.
