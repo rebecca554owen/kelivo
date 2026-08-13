@@ -514,9 +514,12 @@ class HomePageController extends ChangeNotifier {
       _restoreMessageUiState();
       _scrollCtrl.positionAtBottomOnNextLayout();
     };
-    _viewModel.onStreamFinished = () {
+    _viewModel.onStreamFinished = (conversationId) {
       // Trigger UI update when streaming finishes
       notifyListeners();
+      if (currentConversation?.id == conversationId) {
+        _scrollCtrl.stickToBottomAfterGeneration();
+      }
     };
     _viewModel.onAssistantMessageFinished = _handleAssistantMessageFinished;
   }

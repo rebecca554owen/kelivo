@@ -245,8 +245,8 @@ class ChatActions {
   void Function(String messageId, String content, {bool immediate})?
   onScheduleImageSanitize;
 
-  /// Called when streaming finishes.
-  VoidCallback? onStreamFinished;
+  /// Called when streaming finishes for [conversationId].
+  void Function(String conversationId)? onStreamFinished;
 
   /// Called when a successful assistant reply is finalized.
   void Function(ChatMessage message)? onAssistantMessageFinished;
@@ -2107,7 +2107,7 @@ class ChatActions {
 
     // Notify for background notification if needed
     if (!state.finishHandled) {
-      onStreamFinished?.call();
+      onStreamFinished?.call(conversationId);
     }
 
     // This finish handler runs inside the sequential drain, so awaiting the
@@ -2210,6 +2210,10 @@ class ChatActions {
       }
       streamController.removeStreamingNotifier(messageId);
       _setConversationLoading(conversationId, false);
+      // Terminal widgets are usually taller than the streaming ones; pin
+      // once more after isGenerating becomes false so layout-phase follow
+      // does not miss that height change.
+      onStreamFinished?.call(conversationId);
     }
   }
 
@@ -2260,7 +2264,7 @@ class ChatActions {
       // handler itself and prevent the UI error callback below from firing.
       _conversationStreams.remove(conversationId);
       onStreamError?.call(errorText);
-      onStreamFinished?.call();
+      onStreamFinished?.call(conversationId);
       await _finishIosBackgroundGeneration(success: false, detail: errorText);
     }
   }
@@ -2293,7 +2297,7 @@ class ChatActions {
     }
     // Idempotent: ensure notifier is removed even if _finishStreaming was skipped
     streamController.removeStreamingNotifier(messageId);
-    onStreamFinished?.call();
+    onStreamFinished?.call(conversationId);
     // The source stream is already done and this handler runs inside the
     // sequential drain; awaiting the barrier cancel here would wait on this
     // very drain and never complete, so only drop the map entry.

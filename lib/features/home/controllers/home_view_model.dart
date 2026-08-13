@@ -195,7 +195,7 @@ class HomeViewModel extends ChangeNotifier {
   void Function(String warning)? onWarning;
 
   /// Called when streaming finishes (UI may show notification).
-  VoidCallback? onStreamFinished;
+  void Function(String conversationId)? onStreamFinished;
 
   /// Called when a successful assistant reply is finalized.
   void Function(ChatMessage message)? onAssistantMessageFinished;
@@ -326,8 +326,8 @@ class HomeViewModel extends ChangeNotifier {
     );
   }
 
-  void _onStreamFinished() {
-    onStreamFinished?.call();
+  void _onStreamFinished(String conversationId) {
+    onStreamFinished?.call(conversationId);
   }
 
   void _onAssistantMessageFinished(ChatMessage message) {

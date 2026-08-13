@@ -493,6 +493,15 @@ class ChatScrollController {
     });
   }
 
+  /// After generation ends, pin to bottom if the user was still following.
+  ///
+  /// Layout-phase auto-follow requires [isGenerating], which is already false
+  /// when the terminal message widget is swapped in and typically grows.
+  void stickToBottomAfterGeneration() {
+    if (!_autoStickToBottom || _isUserScrolling) return;
+    scrollToBottomSoon(animate: false);
+  }
+
   /// Ensure scroll reaches bottom even after widget tree transitions.
   void scrollToBottomSoon({bool animate = true}) {
     final request = ++_deferredBottomRequest;
