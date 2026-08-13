@@ -186,6 +186,7 @@ void main() {
     await settings.loaded;
     final controller = buildController(settings: settings);
     final state = buildStreamingState(settings);
+    addTearDown(() => controller.cleanupTimers(state.messageId));
 
     await controller.handleReasoningChunk(
       ChatStreamChunk(
@@ -195,13 +196,6 @@ void main() {
         totalTokens: 0,
       ),
       state,
-      updateReasoningInDb:
-          (
-            messageId, {
-            String? reasoningText,
-            DateTime? reasoningStartAt,
-            String? reasoningSegmentsJson,
-          }) async {},
     );
 
     expect(

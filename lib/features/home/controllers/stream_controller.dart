@@ -564,10 +564,33 @@ class StreamController {
     // Ensure notifier exists for this message
     streamingContentNotifier.getNotifier(messageId);
 
+    _ensureStreamTimer(messageId);
+  }
+
+  void _ensureStreamTimer(String messageId) {
     _streamThrottleTimers[messageId] ??= Timer.periodic(
       _streamThrottleInterval,
       (_) => _flushSmoothStreamTick(messageId),
     );
+  }
+
+  void _publishDirtyReasoning(
+    String messageId,
+    _StreamSmoothState state, {
+    required bool sameConversation,
+  }) {
+    if (!state.reasoningDirty) return;
+    if (sameConversation) {
+      streamingContentNotifier.updateReasoning(
+        messageId,
+        reasoningText: state.pendingReasoningText,
+        reasoningStartAt: state.pendingReasoningStartAt,
+        contentSplitOffsets: state.pendingReasoningSplitOffsets,
+        reasoningCountAtSplit: state.pendingReasoningCounts,
+        toolCountAtSplit: state.pendingToolCounts,
+      );
+    }
+    state.reasoningDirty = false;
   }
 
   void _flushSmoothStreamTick(String messageId) {
@@ -582,9 +605,13 @@ class StreamController {
       pickRate: _streamSmoothPickRate,
       moveAverageLength: _streamSmoothMoveAverageLength,
     );
-    if (nextContent == null) return;
-
-    _publishSmoothStreamContent(messageId, state, nextContent);
+    final hadDirtyReasoning = state.reasoningDirty;
+    _publishDirtyReasoning(messageId, state, sameConversation: true);
+    if (nextContent != null) {
+      _publishSmoothStreamContent(messageId, state, nextContent);
+      return;
+    }
+    if (hadDirtyReasoning) onStreamTick?.call();
   }
 
   void _publishSmoothStreamContent(
@@ -611,9 +638,19 @@ class StreamController {
   String? _flushPendingStreamUpdate(String messageId) {
     final state = _streamSmoothStates[messageId];
     if (state == null) return null;
+    final sameConversation = getCurrentConversationId() == state.conversationId;
+    final hadDirtyReasoning = state.reasoningDirty;
+    _publishDirtyReasoning(
+      messageId,
+      state,
+      sameConversation: sameConversation,
+    );
     final content = state.flushTargetContent();
-    if (content == null) return state.visibleContent;
-    if (getCurrentConversationId() == state.conversationId) {
+    if (content == null) {
+      if (hadDirtyReasoning && sameConversation) onStreamTick?.call();
+      return state.visibleContent;
+    }
+    if (sameConversation) {
       _publishSmoothStreamContent(messageId, state, content);
     } else {
       state.updateMessageInList?.call(messageId, content, state.totalTokens);
@@ -733,15 +770,8 @@ class StreamController {
   /// Process a reasoning chunk from stream.
   Future<void> handleReasoningChunk(
     ChatStreamChunk chunk,
-    StreamingState state, {
-    required Future<void> Function(
-      String messageId, {
-      String? reasoningText,
-      DateTime? reasoningStartAt,
-      String? reasoningSegmentsJson,
-    })
-    updateReasoningInDb,
-  }) async {
+    StreamingState state,
+  ) async {
     if ((chunk.reasoning ?? '').isEmpty || !state.ctx.supportsReasoning) return;
 
     final messageId = state.messageId;
@@ -795,43 +825,23 @@ class StreamController {
       }
       _reasoningSegments[messageId] = segments;
 
-      await updateReasoningInDb(
+      final smooth = _streamSmoothStates.putIfAbsent(
         messageId,
-        reasoningSegmentsJson: serializeReasoningSegmentsWithSplits(
-          segments,
-          contentSplitOffsets: state.contentSplitOffsets,
-          reasoningCountAtSplit: state.reasoningCountAtSplit,
-          toolCountAtSplit: state.toolCountAtSplit,
-        ),
+        _StreamSmoothState.new,
       );
-
-      // Update reasoning via StreamingContentNotifier for real-time UI updates
-      // without triggering full page rebuild (only when viewing this conversation)
-      if (getCurrentConversationId() == conversationId) {
-        streamingContentNotifier.updateReasoning(
-          messageId,
-          reasoningText: r.text,
-          reasoningStartAt: r.startAt,
-          contentSplitOffsets: state.contentSplitOffsets,
-          reasoningCountAtSplit: state.reasoningCountAtSplit,
-          toolCountAtSplit: state.toolCountAtSplit,
-        );
-        onStreamTick?.call();
-      }
-
-      await updateReasoningInDb(
-        messageId,
-        reasoningText: r.text,
-        reasoningStartAt: r.startAt,
-      );
+      smooth
+        ..conversationId = conversationId
+        ..pendingReasoningText = r.text
+        ..pendingReasoningStartAt = r.startAt
+        ..pendingReasoningSplitOffsets = state.contentSplitOffsets
+        ..pendingReasoningCounts = state.reasoningCountAtSplit
+        ..pendingToolCounts = state.toolCountAtSplit
+        ..reasoningDirty = true;
+      streamingContentNotifier.getNotifier(messageId);
+      _ensureStreamTimer(messageId);
     } else {
       state.reasoningStartAt ??= DateTime.now();
       state.bufferedReasoning += chunk.reasoning!;
-      await updateReasoningInDb(
-        messageId,
-        reasoningText: state.bufferedReasoning,
-        reasoningStartAt: state.reasoningStartAt,
-      );
     }
   }
 
@@ -1525,6 +1535,12 @@ class _StreamSmoothState {
   int? completionTokens;
   int? cachedTokens;
   int? durationMs;
+  String? pendingReasoningText;
+  DateTime? pendingReasoningStartAt;
+  bool reasoningDirty = false;
+  List<int>? pendingReasoningSplitOffsets;
+  List<int>? pendingReasoningCounts;
+  List<int>? pendingToolCounts;
   void Function(String messageId, String content, int totalTokens)?
   updateMessageInList;
   final List<int> _recentPickCounts = <int>[];

@@ -1842,19 +1842,7 @@ class ChatActions {
     ChatStreamChunk chunk,
     stream_ctrl.StreamingState state,
   ) async {
-    await streamController.handleReasoningChunk(
-      chunk,
-      state,
-      updateReasoningInDb:
-          (
-            String messageId, {
-            String? reasoningText,
-            DateTime? reasoningStartAt,
-            String? reasoningSegmentsJson,
-          }) async {
-            // The complete reasoning snapshot is coalesced after this chunk.
-          },
-    );
+    await streamController.handleReasoningChunk(chunk, state);
   }
 
   /// Handle tool calls chunk from stream.
