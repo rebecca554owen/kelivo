@@ -532,7 +532,7 @@ class StreamController {
   void scheduleThrottledUpdate(
     String messageId,
     String conversationId,
-    String content, {
+    String Function() contentBuilder, {
     required void Function(String messageId, String content, int totalTokens)
     updateMessageInList,
     required int totalTokens,
@@ -550,7 +550,7 @@ class StreamController {
     );
     state
       ..conversationId = conversationId
-      ..targetContent = content
+      ..contentBuilder = contentBuilder
       ..totalTokens = totalTokens
       ..contentSplitOffsets = contentSplitOffsets
       ..reasoningCountAtSplit = reasoningCountAtSplit
@@ -593,11 +593,18 @@ class StreamController {
     state.reasoningDirty = false;
   }
 
+  void _applyContentBuilder(_StreamSmoothState state) {
+    final builder = state.contentBuilder;
+    if (builder == null) return;
+    state.targetContent = builder();
+  }
+
   void _flushSmoothStreamTick(String messageId) {
     final state = _streamSmoothStates[messageId];
     if (state == null) return;
     if (getCurrentConversationId() != state.conversationId) return;
 
+    _applyContentBuilder(state);
     final nextContent = state.takeNextContentSlice(
       minCount: _streamSmoothMinCount,
       baseCount: _streamSmoothBaseCount,
@@ -631,13 +638,18 @@ class StreamController {
       cachedTokens: state.cachedTokens,
       durationMs: state.durationMs,
     );
-    state.updateMessageInList?.call(messageId, content, state.totalTokens);
+    state.updateMessageInList?.call(
+      messageId,
+      state.targetContent,
+      state.totalTokens,
+    );
     onStreamTick?.call();
   }
 
   String? _flushPendingStreamUpdate(String messageId) {
     final state = _streamSmoothStates[messageId];
     if (state == null) return null;
+    _applyContentBuilder(state);
     final sameConversation = getCurrentConversationId() == state.conversationId;
     final hadDirtyReasoning = state.reasoningDirty;
     _publishDirtyReasoning(
@@ -653,14 +665,22 @@ class StreamController {
     if (sameConversation) {
       _publishSmoothStreamContent(messageId, state, content);
     } else {
-      state.updateMessageInList?.call(messageId, content, state.totalTokens);
+      state.updateMessageInList?.call(
+        messageId,
+        state.targetContent,
+        state.totalTokens,
+      );
     }
     return content;
   }
 
   /// Get pending stream content for a message.
-  String? getPendingStreamContent(String messageId) =>
-      _streamSmoothStates[messageId]?.targetContent;
+  String? getPendingStreamContent(String messageId) {
+    final state = _streamSmoothStates[messageId];
+    if (state == null) return null;
+    _applyContentBuilder(state);
+    return state.targetContent;
+  }
 
   /// Set pending stream content (used by inline image sanitizer).
   void setPendingStreamContent(String messageId, String content) {
@@ -668,7 +688,9 @@ class StreamController {
       messageId,
       _StreamSmoothState.new,
     );
-    state.targetContent = content;
+    state
+      ..targetContent = content
+      ..contentBuilder = () => content;
   }
 
   /// Clean up stream throttle timers for a message.
@@ -1400,6 +1422,8 @@ class StreamingState {
   int? generationStateRevision;
   bool generationStreamingStarted = false;
   bool hadThinkingBlock = false;
+  bool hasInlineBase64 = false;
+  String inlineBase64TailProbe = '';
   List<int> contentSplitOffsets = <int>[];
   List<int> reasoningCountAtSplit = <int>[];
   List<int> toolCountAtSplit = <int>[];
@@ -1527,6 +1551,7 @@ class _StreamSmoothState {
   String conversationId = '';
   String targetContent = '';
   String visibleContent = '';
+  String Function()? contentBuilder;
   int totalTokens = 0;
   List<int>? contentSplitOffsets;
   List<int>? reasoningCountAtSplit;

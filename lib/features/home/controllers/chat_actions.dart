@@ -1943,43 +1943,56 @@ class ChatActions {
       state.totalTokens = state.usage!.totalTokens;
     }
 
-    String streamingProcessed = _transformAssistantContent(state);
-    if (streamingProcessed.contains('data:image') &&
-        streamingProcessed.contains('base64,')) {
-      try {
-        final sanitized =
-            await MarkdownMediaSanitizer.replaceInlineBase64Images(
-              streamingProcessed,
-            );
-        if (sanitized != streamingProcessed) {
-          streamingProcessed = sanitized;
-          state.fullContentRaw = sanitized;
-        }
-      } catch (e) {
-        // ignore
-      }
+    final probe = state.inlineBase64TailProbe + chunkContent;
+    if (!state.hasInlineBase64 && probe.contains('data:image')) {
+      state.hasInlineBase64 = true;
+    }
+    if (chunkContent.isNotEmpty) {
+      state.inlineBase64TailProbe = chunkContent.length > 16
+          ? chunkContent.substring(chunkContent.length - 16)
+          : chunkContent;
     }
 
-    // After any await point, _finishStreaming may have already run and
-    // updated _messages[index] with the FULL final content. If we continue
-    // with this stale streamingProcessed we would overwrite the final content
-    // with a partial snapshot. Bail out early to prevent that.
-    if (state.finishHandled) return;
+    if (state.hasInlineBase64) {
+      String streamingProcessed = _transformAssistantContent(state);
+      if (streamingProcessed.contains('data:image') &&
+          streamingProcessed.contains('base64,')) {
+        try {
+          final sanitized =
+              await MarkdownMediaSanitizer.replaceInlineBase64Images(
+                streamingProcessed,
+              );
+          if (sanitized != streamingProcessed) {
+            streamingProcessed = sanitized;
+            state.fullContentRaw = sanitized;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
 
-    onScheduleImageSanitize?.call(
-      messageId,
-      streamingProcessed,
-      immediate: true,
-    );
-    if (state.ctx.streamOutput && _currentConversation?.id == conversationId) {
-      final index = _messages.indexWhere((m) => m.id == messageId);
-      if (index != -1) {
-        chatController.replaceMessageSnapshot(
-          _messages[index].copyWith(
-            content: streamingProcessed,
-            totalTokens: state.totalTokens,
-          ),
-        );
+      // After any await point, _finishStreaming may have already run and
+      // updated _messages[index] with the FULL final content. If we continue
+      // with this stale streamingProcessed we would overwrite the final content
+      // with a partial snapshot. Bail out early to prevent that.
+      if (state.finishHandled) return;
+
+      onScheduleImageSanitize?.call(
+        messageId,
+        streamingProcessed,
+        immediate: true,
+      );
+      if (state.ctx.streamOutput &&
+          _currentConversation?.id == conversationId) {
+        final index = _messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          chatController.replaceMessageSnapshot(
+            _messages[index].copyWith(
+              content: streamingProcessed,
+              totalTokens: state.totalTokens,
+            ),
+          );
+        }
       }
     }
 
@@ -2000,7 +2013,7 @@ class ChatActions {
       streamController.scheduleThrottledUpdate(
         messageId,
         conversationId,
-        streamingProcessed,
+        () => _transformAssistantContent(state),
         totalTokens: state.totalTokens,
         contentSplitOffsets: state.contentSplitOffsets,
         reasoningCountAtSplit: state.reasoningCountAtSplit,
@@ -2321,8 +2334,11 @@ class ChatActions {
     }
     if (streaming == null) return;
 
-    // Use the UI-side content snapshot (may be ahead of last persisted chunk)
-    final latestContent = streaming.content;
+    // Prefer the full accumulated stream text over the typewriter prefix that
+    // may still be sitting on the in-memory message widget.
+    final latestContent =
+        streamController.getPendingStreamContent(streaming.id) ??
+        streaming.content;
     // Also capture reasoning progress if tracked in-memory
     final r = streamController.reasoning[streaming.id];
     final segs = streamController.reasoningSegments[streaming.id];
