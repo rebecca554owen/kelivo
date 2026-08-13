@@ -1788,7 +1788,7 @@
   "searchServiceNameStepFun": "StepFun",
   "searchProviderStepFunDescription": "通过 StepFun POST /v1/search 进行网页搜索。",
   "searchServiceNameFirecrawl": "Firecrawl",
-  "searchProviderFirecrawlDescription": "Firecrawl Search API v2。需要 Bearer API Key。此处不支持 Scrape。",
+  "searchProviderFirecrawlDescription": "Firecrawl Search API v2。API Key 可选。此处不支持 Scrape。",
   "searchServiceNameTinyFish": "TinyFish",
   "searchProviderTinyFishDescription": "TinyFish Search API，支持地区与语言参数。需要 API Key。此处不支持 Fetch/Scrape。",
   "searchServicesDialogCountryOptional": "国家/地区（可选）",

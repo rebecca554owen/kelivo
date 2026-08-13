@@ -2202,7 +2202,7 @@
   "searchServiceNameStepFun": "StepFun",
   "searchProviderStepFunDescription": "StepFun web search via POST /v1/search.",
   "searchServiceNameFirecrawl": "Firecrawl",
-  "searchProviderFirecrawlDescription": "Firecrawl Search API v2. Requires a Bearer API key. Scrape is not supported here.",
+  "searchProviderFirecrawlDescription": "Firecrawl Search API v2. API key is optional. Scrape is not supported here.",
   "searchServiceNameTinyFish": "TinyFish",
   "searchProviderTinyFishDescription": "TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.",
   "searchServicesDialogCountryOptional": "Country/region (optional)",

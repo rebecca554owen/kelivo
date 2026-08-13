@@ -9784,7 +9784,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchProviderFirecrawlDescription.
   ///
   /// In en, this message translates to:
-  /// **'Firecrawl Search API v2. Requires a Bearer API key. Scrape is not supported here.'**
+  /// **'Firecrawl Search API v2. API key is optional. Scrape is not supported here.'**
   String get searchProviderFirecrawlDescription;
 
   /// No description provided for @searchServiceNameTinyFish.

@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
-/// Firecrawl Search (v2). Hosted API requires a Bearer API key.
+/// Firecrawl Search (v2). Hosted `/v2/search` accepts keyless requests;
+/// a Bearer API key is optional and only used for higher rate limits.
 /// Scrape is intentionally not implemented.
 class FirecrawlSearchService extends SearchService<FirecrawlOptions> {
   FirecrawlSearchService({super.client});
@@ -32,9 +33,6 @@ class FirecrawlSearchService extends SearchService<FirecrawlOptions> {
       final apiKey = serviceOptions
           .effectiveApiKey(serviceOptions.apiKey)
           .trim();
-      if (apiKey.isEmpty) {
-        throw Exception('Firecrawl API key is required');
-      }
 
       final body = <String, dynamic>{
         'query': query,
@@ -58,8 +56,8 @@ class FirecrawlSearchService extends SearchService<FirecrawlOptions> {
             .post(
               Uri.parse(serviceOptions.resolvedUrl),
               headers: {
-                'Authorization': 'Bearer $apiKey',
                 'Content-Type': 'application/json',
+                if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
               },
               body: jsonEncode(body),
             )

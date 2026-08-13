@@ -1778,7 +1778,7 @@
   "searchServiceNameStepFun": "StepFun",
   "searchProviderStepFunDescription": "透過 StepFun POST /v1/search 進行網頁搜尋。",
   "searchServiceNameFirecrawl": "Firecrawl",
-  "searchProviderFirecrawlDescription": "Firecrawl Search API v2。需要 Bearer API Key。此處不支援 Scrape。",
+  "searchProviderFirecrawlDescription": "Firecrawl Search API v2。API Key 可選。此處不支援 Scrape。",
   "searchServiceNameTinyFish": "TinyFish",
   "searchProviderTinyFishDescription": "TinyFish Search API，支援地區與語言參數。需要 API Key。此處不支援 Fetch/Scrape。",
   "searchServicesDialogCountryOptional": "國家/地區（可選）",

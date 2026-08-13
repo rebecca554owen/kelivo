@@ -538,7 +538,6 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           key: 'apiKey',
           label: l10n.searchServicesDialogApiKey,
           obscure: true,
-          validator: requiredApiKey,
         ),
         _buildMultiKeyEntry(context),
         field(

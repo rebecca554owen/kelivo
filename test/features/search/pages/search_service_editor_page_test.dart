@@ -392,6 +392,22 @@ void main() {
     expect(saved.country, 'US');
   });
 
+  testWidgets('saves Firecrawl without an API key', (tester) async {
+    SearchServiceEditorResult? result;
+    await _pumpEditor(
+      tester,
+      initialService: FirecrawlOptions(id: 'firecrawl', apiKey: ''),
+      onResult: (value) => result = value,
+    );
+
+    await tester.tap(find.byIcon(Lucide.Check));
+    await tester.pumpAndSettle();
+
+    expect(result?.deleted, isFalse);
+    expect(result?.service, isA<FirecrawlOptions>());
+    expect((result!.service! as FirecrawlOptions).apiKey, isEmpty);
+  });
+
   testWidgets('returns a delete action after confirmation', (tester) async {
     SearchServiceEditorResult? result;
     await _pumpEditor(

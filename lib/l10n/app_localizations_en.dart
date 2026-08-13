@@ -5303,7 +5303,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchProviderFirecrawlDescription =>
-      'Firecrawl Search API v2. Requires a Bearer API key. Scrape is not supported here.';
+      'Firecrawl Search API v2. API key is optional. Scrape is not supported here.';
 
   @override
   String get searchServiceNameTinyFish => 'TinyFish';

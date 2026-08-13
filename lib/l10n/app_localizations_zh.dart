@@ -5092,7 +5092,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchProviderFirecrawlDescription =>
-      'Firecrawl Search API v2。需要 Bearer API Key。此处不支持 Scrape。';
+      'Firecrawl Search API v2。API Key 可选。此处不支持 Scrape。';
 
   @override
   String get searchServiceNameTinyFish => 'TinyFish';
@@ -12122,7 +12122,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get searchProviderFirecrawlDescription =>
-      'Firecrawl Search API v2。需要 Bearer API Key。此处不支持 Scrape。';
+      'Firecrawl Search API v2。API Key 可选。此处不支持 Scrape。';
 
   @override
   String get searchServiceNameTinyFish => 'TinyFish';
@@ -19225,7 +19225,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchProviderFirecrawlDescription =>
-      'Firecrawl Search API v2。需要 Bearer API Key。此處不支援 Scrape。';
+      'Firecrawl Search API v2。API Key 可選。此處不支援 Scrape。';
 
   @override
   String get searchServiceNameTinyFish => 'TinyFish';

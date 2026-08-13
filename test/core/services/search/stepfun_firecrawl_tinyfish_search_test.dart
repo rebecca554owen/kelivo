@@ -44,7 +44,8 @@ void main() {
           isA<StepFunSearchService>());
     });
 
-    test('Firecrawl requires bearer key and parses v2 web results', () async {
+    test('Firecrawl sends bearer key when present and parses v2 web results',
+        () async {
       http.Request? captured;
       final service = FirecrawlSearchService(
         client: MockClient((request) async {
@@ -74,6 +75,40 @@ void main() {
 
       expect(captured?.url.toString(), FirecrawlOptions.defaultUrl);
       expect(captured?.headers['Authorization'], 'Bearer fc-key');
+      expect(result.items.single.url, 'https://example.com/a');
+    });
+
+    test('Firecrawl omits Authorization when no API key is configured',
+        () async {
+      http.Request? captured;
+      final service = FirecrawlSearchService(
+        client: MockClient((request) async {
+          captured = request;
+          return http.Response(
+            jsonEncode({
+              'data': {
+                'web': [
+                  {
+                    'title': 'Fire',
+                    'url': 'https://example.com/a',
+                    'description': 'desc',
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        }),
+      );
+
+      final result = await service.search(
+        query: 'docs',
+        commonOptions: const SearchCommonOptions(resultSize: 3, timeout: 1000),
+        serviceOptions: FirecrawlOptions(id: 'f1', apiKey: ''),
+      );
+
+      expect(captured?.url.toString(), FirecrawlOptions.defaultUrl);
+      expect(captured?.headers.containsKey('Authorization'), isFalse);
       expect(result.items.single.url, 'https://example.com/a');
     });
 
