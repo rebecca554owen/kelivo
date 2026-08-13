@@ -271,6 +271,7 @@ Widget _markdownHarness(
   bool streaming = false,
   BusinessPreferences? businessPreferences,
   void Function(String id)? onCitationTap,
+  String? Function(String id)? citationIndexResolver,
   ThemeData? theme,
   ThemeData? darkTheme,
   ThemeMode? themeMode,
@@ -291,6 +292,7 @@ Widget _markdownHarness(
                 text: text,
                 streaming: streaming,
                 onCitationTap: onCitationTap,
+                citationIndexResolver: citationIndexResolver,
               )
             : Align(
                 alignment: Alignment.topLeft,
@@ -300,6 +302,7 @@ Widget _markdownHarness(
                     text: text,
                     streaming: streaming,
                     onCitationTap: onCitationTap,
+                    citationIndexResolver: citationIndexResolver,
                   ),
                 ),
               ),
@@ -524,6 +527,62 @@ Inline ***strong emphasis*** text.
       expect(find.text('https'), findsNothing);
     },
   );
+
+  testWidgets(
+    'MarkdownWithCodeHighlight renders cite markers as numbered capsules',
+    (tester) async {
+      final tapped = <String>[];
+
+      await tester.pumpWidget(
+        _markdownHarness(
+          '巴黎是法国的首都。[cite:96d0ed] 人口约 210 万。[cite:5675a3][cite:96d0ed]',
+          width: 360,
+          onCitationTap: tapped.add,
+          citationIndexResolver: (id) => {'96d0ed': '1', '5675a3': '4'}[id],
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('1'), findsNWidgets(2));
+      expect(find.text('4'), findsOneWidget);
+      expect(find.textContaining('cite:96d0ed'), findsNothing);
+
+      // Capsules must hug their content, not stretch to the full line width.
+      final capsuleSize = tester.getSize(
+        find
+            .ancestor(of: find.text('4'), matching: find.byType(Container))
+            .first,
+      );
+      expect(capsuleSize.width, lessThan(40));
+      expect(capsuleSize.height, 20);
+
+      await tester.tap(find.text('4'));
+      expect(tapped, ['5675a3']);
+    },
+  );
+
+  testWidgets(
+    'MarkdownWithCodeHighlight renders unresolved cite markers as placeholder',
+    (tester) async {
+      await tester.pumpWidget(
+        _markdownHarness('结论如下。[cite:deadbe]', width: 360),
+      );
+      await tester.pump();
+
+      expect(find.text('?'), findsOneWidget);
+      expect(find.textContaining('cite:deadbe'), findsNothing);
+    },
+  );
+
+  testWidgets('MarkdownWithCodeHighlight keeps cite markers inside code', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_markdownHarness('`[cite:96d0ed]`', width: 360));
+    await tester.pump();
+
+    expect(find.textContaining('cite:96d0ed'), findsOneWidget);
+    expect(find.text('?'), findsNothing);
+  });
 
   testWidgets('MarkdownWithCodeHighlight applies markdown image dimensions', (
     tester,

@@ -284,11 +284,11 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
       'write' => Lucide.ClipboardPen,
       _ => Lucide.Clipboard,
     },
-     LocalToolNames.textToSpeech => Lucide.Volume2,
-     LocalToolNames.calculate => Lucide.Calculator,
-     LocalToolNames.screenTime => Lucide.Smartphone,
-     LocalToolNames.calendarQuery => Lucide.Calendar,
-     LocalToolNames.calendarCreate => Lucide.CalendarPlus,
+    LocalToolNames.textToSpeech => Lucide.Volume2,
+    LocalToolNames.calculate => Lucide.Calculator,
+    LocalToolNames.screenTime => Lucide.Smartphone,
+    LocalToolNames.calendarQuery => Lucide.Calendar,
+    LocalToolNames.calendarCreate => Lucide.CalendarPlus,
     _ => null,
   };
 }
@@ -308,13 +308,13 @@ String? _localToolTitleFor(
       'write' => l10n.chatMessageWidgetWriteClipboard,
       _ => l10n.assistantEditLocalToolClipboardTitle,
     },
-     LocalToolNames.textToSpeech => l10n.chatMessageWidgetSpeakingTitle,
-     LocalToolNames.calculate => l10n.assistantEditLocalToolCalculateTitle,
-     LocalToolNames.screenTime => l10n.assistantEditLocalToolScreenTimeTitle,
-     LocalToolNames.calendarQuery =>
-       l10n.assistantEditLocalToolCalendarQueryTitle,
-     LocalToolNames.calendarCreate =>
-       l10n.assistantEditLocalToolCalendarCreateTitle,
+    LocalToolNames.textToSpeech => l10n.chatMessageWidgetSpeakingTitle,
+    LocalToolNames.calculate => l10n.assistantEditLocalToolCalculateTitle,
+    LocalToolNames.screenTime => l10n.assistantEditLocalToolScreenTimeTitle,
+    LocalToolNames.calendarQuery =>
+      l10n.assistantEditLocalToolCalendarQueryTitle,
+    LocalToolNames.calendarCreate =>
+      l10n.assistantEditLocalToolCalendarCreateTitle,
     _ => null,
   };
 }
@@ -456,12 +456,7 @@ Widget _buildToolImageFromPath(
   double? height,
   BoxFit fit = BoxFit.contain,
 }) {
-  return _buildResolvedImage(
-    context,
-    path,
-    height: height,
-    fit: fit,
-  );
+  return _buildResolvedImage(context, path, height: height, fit: fit);
 }
 
 void _showToolFullImage(BuildContext context, String path) {
@@ -1810,10 +1805,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       height: 112,
       color: cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.06),
       alignment: Alignment.center,
-      child: Icon(
-        Lucide.ImageOff,
-        color: cs.onSurface.withValues(alpha: 0.45),
-      ),
+      child: Icon(Lucide.ImageOff, color: cs.onSurface.withValues(alpha: 0.45)),
     );
 
     final viewablePaths = <String>[
@@ -1934,7 +1926,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Hero(
-                tag: 'img:${fixed.isNotEmpty ? fixed : 'unavailable-$partIndex'}',
+                tag:
+                    'img:${fixed.isNotEmpty ? fixed : 'unavailable-$partIndex'}',
                 child: part.unavailable || fixed.isEmpty
                     ? unavailableImagePlaceholder()
                     : _buildResolvedImage(
@@ -2124,6 +2117,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     BuildContext context,
     String visualContent,
     SettingsProvider settings,
+    Map<String, String> citationIndexLookup,
   ) {
     final cs = Theme.of(context).colorScheme;
     final bool isDesktop =
@@ -2137,6 +2131,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       assistantContent = MarkdownWithCodeHighlight(
         text: visualContent,
         onCitationTap: (id) => _handleCitationTap(id),
+        citationIndexResolver: (id) =>
+            _resolveCitationIndex(id, citationIndexLookup),
         baseStyle: TextStyle(fontSize: baseAssistant, height: 1.5),
         streaming: widget.message.isStreaming,
       );
@@ -2179,12 +2175,18 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     BuildContext context,
     String visualContent,
     SettingsProvider settings,
+    Map<String, String> citationIndexLookup,
   ) {
     return SizedBox(
       width: double.infinity,
       child: _buildAssistantBubbleContainer(
         context: context,
-        child: _buildAssistantTextContent(context, visualContent, settings),
+        child: _buildAssistantTextContent(
+          context,
+          visualContent,
+          settings,
+          citationIndexLookup,
+        ),
       ),
     );
   }
@@ -2368,6 +2370,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final bool isTranslating =
         translationText == l10n.chatMessageWidgetTranslating;
     final searchItems = _allSearchItems();
+    final citationIndexLookup = _buildCitationIndexLookup(searchItems);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final mediaPreview = _buildAttachmentPreview(
       context,
@@ -2532,7 +2535,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               final block = renderBlocks[i];
               if (block.type == _RenderBlockType.text && block.text != null) {
                 widgets.add(
-                  _buildAssistantTextBlock(context, block.text!, settings),
+                  _buildAssistantTextBlock(
+                    context,
+                    block.text!,
+                    settings,
+                    citationIndexLookup,
+                  ),
                 );
               } else if (block.steps.isNotEmpty) {
                 widgets.add(
@@ -2672,6 +2680,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                             text: translationText,
                                             onCitationTap: (id) =>
                                                 _handleCitationTap(id),
+                                            citationIndexResolver: (id) =>
+                                                _resolveCitationIndex(
+                                                  id,
+                                                  citationIndexLookup,
+                                                ),
                                             baseStyle: TextStyle(
                                               fontSize: baseTranslation,
                                               height: 1.4,
@@ -2945,6 +2958,36 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         ],
       ),
     );
+  }
+
+  // Build once per message so each citation marker only performs a map lookup.
+  // Insert IDs first so an exact ID match wins over a legacy numeric index.
+  Map<String, String> _buildCitationIndexLookup(
+    List<Map<String, dynamic>> items,
+  ) {
+    final lookup = <String, String>{};
+    for (final item in items) {
+      final id = item['id']?.toString() ?? '';
+      final index = item['index']?.toString() ?? '';
+      if (id.isNotEmpty && index.isNotEmpty) lookup[id] ??= index;
+    }
+    for (final item in items) {
+      final index = item['index']?.toString() ?? '';
+      if (index.isNotEmpty) lookup[index] ??= index;
+    }
+    return lookup;
+  }
+
+  String? _resolveCitationIndex(
+    String id,
+    Map<String, String> citationIndexLookup,
+  ) {
+    final key = id.trim();
+    if (key.isEmpty) return null;
+    final direct = citationIndexLookup[key];
+    if (direct != null) return direct;
+    final asIndex = int.tryParse(key);
+    return asIndex == null ? null : citationIndexLookup[asIndex.toString()];
   }
 
   // Try resolve citation id -> url from the latest search_web tool results of this assistant message
@@ -4413,11 +4456,7 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
                   onTap: () => _showToolFullImage(context, path),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: _buildToolImageFromPath(
-                      context,
-                      path,
-                      height: 120,
-                    ),
+                    child: _buildToolImageFromPath(context, path, height: 120),
                   ),
                 );
               },
@@ -4520,12 +4559,7 @@ class _ToolCallItemState extends State<_ToolCallItem> {
     double? height,
     BoxFit fit = BoxFit.contain,
   }) {
-    return _buildResolvedImage(
-      context,
-      path,
-      height: height,
-      fit: fit,
-    );
+    return _buildResolvedImage(context, path, height: height, fit: fit);
   }
 
   @override

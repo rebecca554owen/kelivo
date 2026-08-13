@@ -5,7 +5,27 @@ import '../../providers/settings_provider.dart';
 
 class SearchToolService {
   static const String toolName = 'search_web';
-  static const String toolDescription = 'Search the web for information';
+  static const String toolDescription = '''
+Search the web for current information, news, and real-time data.
+
+Use this when:
+- The user asks about recent events, current prices, or live data
+- You need to verify facts you are uncertain about or that may have changed
+- The user references something you don't have context on (products, people, docs, APIs)
+
+Don't use for:
+- Math, code reasoning, or things you can answer from your training
+- Well-known facts unlikely to have changed
+
+Write focused keyword queries, not full sentences. You may call this multiple times to broaden coverage:
+- If the topic likely has more authoritative sources in another language (English for tech/scientific topics, the local language for regional news), repeat the search with the query translated into that language.
+- If the first results miss an angle, refine with synonyms or sub-aspects.
+
+Response format:
+- items[]: search results, each with index (result number), id (short unique id), title, url, text
+- answer: an optional pre-synthesized answer (may be absent)
+
+Cite: append [cite:id] immediately after each statement a result supports, using that result's exact `id` field.''';
 
   static final RegExp _schemeRe = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:');
 
@@ -96,35 +116,14 @@ class SearchToolService {
 
   static String getSystemPrompt() {
     return '''
-## search_web 工具使用说明
-
-当用户询问需要实时信息或最新数据的问题时，使用 search_web 工具进行搜索。
-
-### 引用格式
-- 搜索结果中会包含index(搜索结果序号)和id(搜索结果唯一标识符)，引用格式为：
-  `具体的引用内容 [citation](index:id)`
-- **引用必须紧跟在相关内容之后**，在标点符号后面，不得延后到回复结尾
-- 正确格式：`... [citation](index:id)` `... [citation](index:id) [citation](index:id)`
-
-### 使用规范
-1. **使用时机**
-   - 用户询问最新新闻、事件、数据
-   - 需要查证事实信息
-   - 需要获取技术文档、API信息等
-   
-2. **引用要求**
-   - 使用搜索结果时必须标注引用来源
-   - 每个引用的事实都要紧跟 [citation](index:id) 标记
-   - 不要将所有引用集中在回答末尾
-
-3. **回答格式示例**
-   ✅ 正确：
-   - 据最新报道，该事件发生在昨天下午。[citation](1:a1b2c3)
-   - 技术文档显示该功能需要版本3.0以上。[citation](2:d4e5f6) 具体配置步骤如下...[citation](3:g7h8i9)
-   
-   ❌ 错误：
-   - 据最新报道，该事件发生在昨天下午。技术文档显示该功能需要版本3.0以上。
-     [citation](1:a1b2c3) [citation](2:d4e5f6)
+<citations>
+When a statement in your answer is based on a search_web result, append a citation marker immediately after that statement: [cite:id], where id is the exact `id` field of the supporting result item.
+- Example: "The event took place yesterday afternoon. [cite:a1b2c3]"
+- Chain markers when several results support one statement: [cite:a1b2c3][cite:d4e5f6]
+- Copy ids exactly as returned by the tool. Never invent, renumber, or reuse ids from other results.
+- Place markers inline right after the supported statement (after its punctuation). Do not collect them at the end of the response, and do not add a "References" or "Sources" section — the app renders citations from the inline markers.
+- Statements from your own knowledge take no marker.
+</citations>
 ''';
   }
 }

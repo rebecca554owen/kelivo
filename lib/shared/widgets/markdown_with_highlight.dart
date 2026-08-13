@@ -69,12 +69,18 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
     super.key,
     required this.text,
     this.onCitationTap,
+    this.citationIndexResolver,
     this.baseStyle,
     this.streaming = false,
   });
 
   final String text;
   final void Function(String id)? onCitationTap;
+
+  /// Resolves a citation id (from `[cite:id]` markers) to its display index
+  /// using the search tool results of the enclosing message. Returns null
+  /// when the id has no matching result.
+  final String? Function(String id)? citationIndexResolver;
   final TextStyle? baseStyle; // optional override for base markdown text style
   final bool streaming;
 
@@ -387,30 +393,58 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       },
       linkBuilder: (ctx, span, url, style) {
         final label = span.toPlainText().trim();
-        // Special handling: [citation](index:id)
+        // Special handling: [citation](id) and legacy [citation](index:id)
         if (label.toLowerCase() == 'citation') {
           final citation = _parseCitationRef(url);
           if (citation != null) {
             final cs = Theme.of(ctx).colorScheme;
-            return GestureDetector(
-              onTap: () {
-                if (widget.onCitationTap != null && citation.id.isNotEmpty) {
-                  widget.onCitationTap!(citation.id);
-                } else {
-                  // Fallback: do nothing
-                }
-              },
-              child: Container(
-                width: 20,
-                height: 20,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.20),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  citation.indexText,
-                  style: TextStyle(fontSize: 12, height: 1.0),
+            // Prefer the index resolved from this message's search results;
+            // fall back to the inline index for legacy `index:id` markers.
+            final resolved = widget.citationIndexResolver?.call(citation.id);
+            final String display;
+            if (resolved != null && resolved.isNotEmpty) {
+              display = resolved;
+            } else if (citation.indexText != citation.id) {
+              display = citation.indexText; // legacy index:id marker
+            } else if (int.tryParse(citation.indexText) != null) {
+              display = citation.indexText; // legacy pure-index shorthand
+            } else {
+              display = '?'; // id-only marker with no matching result
+            }
+            // gpt_markdown embeds this widget baseline-aligned. The capsule is
+            // taller than the text ascent, so without correction it hangs
+            // below the line. Translate it up (layout-neutral) so it looks
+            // vertically centered, and pad horizontally so adjacent capsules
+            // don't touch.
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+              child: Transform.translate(
+                offset: const Offset(0, -2),
+                child: GestureDetector(
+                  onTap: () {
+                    if (widget.onCitationTap != null &&
+                        citation.id.isNotEmpty) {
+                      widget.onCitationTap!(citation.id);
+                    } else {
+                      // Fallback: do nothing
+                    }
+                  },
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 20),
+                    height: 20,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      widthFactor: 1.0,
+                      child: Text(
+                        display,
+                        style: TextStyle(fontSize: 12, height: 1.0),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             );
@@ -845,6 +879,7 @@ String _preprocessFences(
     return '[$text]($url)';
   });
   out = _normalizeRawCitationMetadata(out);
+  out = _normalizeCiteMarkers(out);
 
   // Normalize inline $...$ math into \( ... \) so it always matches the LaTeX
   // renderer (even when vendors emit single-dollar math mixed with prose).
@@ -969,6 +1004,23 @@ String _normalizeRawCitationMetadata(String input) {
     final refs = _parseCitationRefList(match.group(1) ?? '');
     if (refs.isEmpty) return match.group(0)!;
     return refs.map((ref) => '[citation](${ref.markdownTarget})').join(' ');
+  });
+}
+
+/// Normalize Cherry-style `[cite:id]` markers (optionally comma-separated,
+/// e.g. `[cite:a1b2c3, d4e5f6]`) into `[citation](id)` markdown links so the
+/// linkBuilder renders them as numbered capsules.
+String _normalizeCiteMarkers(String input) {
+  final citeMarker = RegExp(
+    r'\[cite:\s*([A-Za-z0-9_-]+(?:\s*,\s*[A-Za-z0-9_-]+)*)\s*\]',
+    caseSensitive: false,
+  );
+  return input.replaceAllMapped(citeMarker, (match) {
+    final ids = (match.group(1) ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty);
+    return ids.map((id) => '[citation]($id)').join(' ');
   });
 }
 
