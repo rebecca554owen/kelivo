@@ -21,11 +21,11 @@ void main() {
         },
       );
 
-      writer.add(1);
+      writer.add(() => 1);
       await firstStarted.future;
       writer
-        ..add(2)
-        ..add(3);
+        ..add(() => 2)
+        ..add(() => 3);
 
       releaseFirst.complete();
       await writer.barrier();
@@ -54,9 +54,9 @@ void main() {
         },
       );
 
-      writer.add(1);
+      writer.add(() => 1);
       await firstStarted.future;
-      writer.add(2);
+      writer.add(() => 2);
       releaseFirst.complete();
       await writer.barrier();
 
@@ -79,9 +79,9 @@ void main() {
         },
       );
 
-      writer.add(1);
+      writer.add(() => 1);
       await firstStarted.future;
-      writer.add(2);
+      writer.add(() => 2);
       final finalized = writer.finalize(() async {
         events.add('final');
         return 7;
@@ -93,7 +93,7 @@ void main() {
 
       expect(await finalized, 7);
       expect(events, const ['checkpoint:1', 'final']);
-      expect(() => writer.add(3), throwsStateError);
+      expect(() => writer.add(() => 3), throwsStateError);
     });
 
     test('checkpoint 失败可观察且成功 final 可恢复', () async {
@@ -105,7 +105,7 @@ void main() {
       );
       var finalCalled = false;
 
-      writer.add(1);
+      writer.add(() => 1);
 
       await writer.finalize(() async {
         finalCalled = true;
@@ -132,12 +132,12 @@ void main() {
         onError: (error, _) => errors.add(error),
       );
 
-      writer.add(1);
+      writer.add(() => 1);
       await writer.barrier();
       expect(errors, hasLength(1));
 
       // A subsequent add must not throw and must be written.
-      writer.add(2);
+      writer.add(() => 2);
       await writer.barrier();
 
       expect(writes, const [2]);
@@ -184,7 +184,7 @@ void main() {
           stream: controller.stream,
           onData: (chunk) async {
             consumed += chunk.length;
-            writer.add(consumed);
+            writer.add(() => consumed);
             if (consumed == chunkBytes * chunkCount) {
               allChunksConsumed.complete();
             }
@@ -217,5 +217,46 @@ void main() {
         expect(writes.last, 1 << 20);
       },
     );
+
+    test('被覆盖的 pending builder 从未执行', () async {
+      final firstStarted = Completer<void>();
+      final releaseFirst = Completer<void>();
+      final writes = <int>[];
+      var first = 0;
+      var second = 0;
+      var third = 0;
+      final writer = LatestWinsCheckpointWriter<int>(
+        minimumInterval: Duration.zero,
+        write: (value) async {
+          writes.add(value);
+          if (writes.length == 1) {
+            firstStarted.complete();
+            await releaseFirst.future;
+          }
+        },
+      );
+
+      writer.add(() {
+        first++;
+        return 1;
+      });
+      await firstStarted.future;
+      writer
+        ..add(() {
+          second++;
+          return 2;
+        })
+        ..add(() {
+          third++;
+          return 3;
+        });
+      releaseFirst.complete();
+      await writer.barrier();
+
+      expect(writes, const [1, 3]);
+      expect(first, 1);
+      expect(second, 0);
+      expect(third, 1);
+    });
   });
 }

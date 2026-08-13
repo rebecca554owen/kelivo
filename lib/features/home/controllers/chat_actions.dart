@@ -471,9 +471,11 @@ class ChatActions {
   void _scheduleStreamingCheckpoint(stream_ctrl.StreamingState state) {
     final writer = _checkpointWriters[state.messageId];
     if (writer == null || state.finishHandled) return;
-    final message = _streamingMessageSnapshot(state);
-    _activeAssistantMessages.put(message);
-    writer.add(_createStreamingCheckpoint(message));
+    writer.add(() {
+      final message = _streamingMessageSnapshot(state);
+      _activeAssistantMessages.put(message);
+      return _createStreamingCheckpoint(message);
+    });
   }
 
   _StreamingCheckpoint _createStreamingCheckpoint(ChatMessage message) {
@@ -1624,7 +1626,14 @@ class ChatActions {
       streamController.cleanupTimers(streaming.id);
 
       final idx = _messages.indexWhere((m) => m.id == streaming.id);
-      final latestStreaming = idx == -1 ? streaming : _messages[idx];
+      var latestStreaming = idx == -1 ? streaming : _messages[idx];
+      if (idx == -1) {
+        final writer = _checkpointWriters[streaming.id];
+        if (writer != null) {
+          await writer.barrier();
+          latestStreaming = _activeAssistantMessages[cid] ?? latestStreaming;
+        }
+      }
 
       streamController.finishReasoningIfNeeded(streaming.id);
       final finalizedMessage = _messageWithCurrentReasoning(
@@ -2344,7 +2353,7 @@ class ChatActions {
         _copyToolEvents(streaming.id),
       );
     } else {
-      writer.add(_createStreamingCheckpoint(snapshot));
+      writer.add(() => _createStreamingCheckpoint(snapshot));
       await writer.barrier();
     }
     // Ensure any inline data URLs get converted even if the user navigates away mid-stream

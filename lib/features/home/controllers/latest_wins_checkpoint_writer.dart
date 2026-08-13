@@ -22,16 +22,16 @@ class LatestWinsCheckpointWriter<T> {
   final void Function(Object error, StackTrace stackTrace)? onError;
   final Duration minimumInterval;
 
-  T? _pending;
+  T Function()? _pending;
   Future<void>? _drainFuture;
   DateTime? _lastWriteStartedAt;
   bool _accepting = true;
 
-  void add(T value) {
+  void add(T Function() build) {
     if (!_accepting) {
       throw StateError('Checkpoint writer is closed.');
     }
-    _pending = value;
+    _pending = build;
     _drainFuture ??= _drain();
   }
 
@@ -59,12 +59,12 @@ class LatestWinsCheckpointWriter<T> {
           }
         }
 
-        final value = _pending;
-        if (value == null) break;
+        final build = _pending;
+        if (build == null) break;
         _pending = null;
         _lastWriteStartedAt = _now();
         try {
-          await write(value);
+          await write(build());
         } catch (error, stackTrace) {
           // Intermediate checkpoints are best-effort. A failed snapshot
           // (e.g. a transient DB busy/locked) is dropped and reported, but
