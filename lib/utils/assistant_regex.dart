@@ -1,6 +1,9 @@
 import '../core/models/assistant.dart';
 import '../core/models/assistant_regex.dart';
 
+final Map<String, RegExp?> _compiledPatternCache = <String, RegExp?>{};
+const int _maxCompiledPatternCacheSize = 256;
+
 enum AssistantRegexTransformTarget {
   /// Persist-time transform. Changes stored content.
   persist,
@@ -35,14 +38,21 @@ String applyAssistantRegexes(
     }
     final pattern = rule.pattern.trim();
     if (pattern.isEmpty) continue;
-    try {
-      final regex = RegExp(pattern);
-      out = out.replaceAllMapped(regex, (match) {
-        return _expandReplacement(rule.replacement, match);
-      });
-    } catch (_) {
-      // Ignore invalid regex patterns
+    if (!_compiledPatternCache.containsKey(pattern) &&
+        _compiledPatternCache.length >= _maxCompiledPatternCacheSize) {
+      _compiledPatternCache.clear();
     }
+    final regex = _compiledPatternCache.putIfAbsent(pattern, () {
+      try {
+        return RegExp(pattern);
+      } catch (_) {
+        return null;
+      }
+    });
+    if (regex == null) continue;
+    out = out.replaceAllMapped(regex, (match) {
+      return _expandReplacement(rule.replacement, match);
+    });
   }
   return out;
 }
