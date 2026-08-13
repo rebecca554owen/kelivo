@@ -238,7 +238,7 @@ void main() {
       final analysis = analyzeProviderGroupingReorder(
         rows: rows,
         oldIndex: 2, // p2
-        newIndex: 4, // drop right under header B (before p3)
+        newIndex: 3, // drop right under header B (before p3)
         isGroupCollapsed: (_) => false,
       );
 
@@ -246,6 +246,26 @@ void main() {
       expect(analysis.intent!.providerKey, 'p2');
       expect(analysis.intent!.targetGroupKey, 'B');
       expect(analysis.intent!.targetPos, 0);
+    });
+
+    test('analyzeProviderGroupingReorder moves down within a group', () {
+      final rows = <ProviderGroupingRowVM>[
+        const ProviderGroupingHeaderVM(groupKey: 'A'),
+        const ProviderGroupingProviderVM(providerKey: 'p1', groupKey: 'A'),
+        const ProviderGroupingProviderVM(providerKey: 'p2', groupKey: 'A'),
+        const ProviderGroupingProviderVM(providerKey: 'p3', groupKey: 'A'),
+      ];
+
+      final analysis = analyzeProviderGroupingReorder(
+        rows: rows,
+        oldIndex: 1,
+        newIndex: 2,
+        isGroupCollapsed: (_) => false,
+      );
+
+      expect(analysis.intent?.providerKey, 'p1');
+      expect(analysis.intent?.targetGroupKey, 'A');
+      expect(analysis.intent?.targetPos, 1);
     });
 
     test(
@@ -273,6 +293,23 @@ void main() {
         expect(intent.targetDisplayIndex, 0);
       },
     );
+
+    test('analyzeProviderGroupingHeaderReorder moves a header down', () {
+      final rows = <ProviderGroupingRowVM>[
+        const ProviderGroupingHeaderVM(groupKey: 'A'),
+        const ProviderGroupingHeaderVM(groupKey: 'B'),
+        const ProviderGroupingHeaderVM(groupKey: 'C'),
+      ];
+
+      final intent = analyzeProviderGroupingHeaderReorder(
+        rows: rows,
+        oldIndex: 0,
+        newIndex: 1,
+      );
+
+      expect(intent?.groupKey, 'A');
+      expect(intent?.targetDisplayIndex, 1);
+    });
 
     test(
       'analyzeProviderGroupingHeaderReorder returns null for non-header row',

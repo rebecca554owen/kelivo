@@ -213,8 +213,7 @@ ProviderGroupingReorderAnalysis analyzeProviderGroupingReorder({
     return const ProviderGroupingReorderAnalysis.invalid();
   }
 
-  // Normalize newIndex because Flutter passes the index after removal.
-  if (newIndex > oldIndex) newIndex -= 1;
+  // onReorderItem already reports the index after removing the old item.
   newIndex = newIndex.clamp(0, rows.length);
   if (disallowInsertBeforeFirstHeader && newIndex == 0) newIndex = 1;
   if (newIndex == oldIndex) {
@@ -292,10 +291,7 @@ ProviderGroupingHeaderReorderIntent? analyzeProviderGroupingHeaderReorder({
   final normalizedNewIndex = newIndex.clamp(0, rows.length);
   final sim = List<ProviderGroupingRowVM>.from(rows);
   final removed = sim.removeAt(oldIndex);
-  final insertIndex = normalizedNewIndex > oldIndex
-      ? normalizedNewIndex - 1
-      : normalizedNewIndex;
-  sim.insert(insertIndex.clamp(0, sim.length), removed);
+  sim.insert(normalizedNewIndex.clamp(0, sim.length), removed);
 
   final headerOrder = [
     for (final row in sim)
