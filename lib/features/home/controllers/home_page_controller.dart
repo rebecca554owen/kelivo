@@ -41,6 +41,7 @@ import '../services/ask_user_interaction_service.dart';
 import '../services/ocr_service.dart';
 import '../services/translation_service.dart';
 import '../services/file_upload_service.dart';
+import '../utils/chat_layout_constants.dart';
 import '../widgets/chat_input_bar.dart';
 import '../../model/widgets/model_select_sheet.dart';
 
@@ -179,6 +180,11 @@ class HomePageController extends ChangeNotifier {
   final Map<String, TranslationData> _translations =
       <String, TranslationData>{};
 
+  /// Timeline slots currently playing their deletion animation. The slot's
+  /// data is deleted only after the animation completes, so the widget can
+  /// fade out and collapse while the surrounding messages splice together.
+  final Set<String> _removingSlotIds = <String>{};
+
   // Note: GlobalKey-based message navigation was replaced by indexed scrolling.
 
   // Selection mode
@@ -244,6 +250,7 @@ class HomePageController extends ChangeNotifier {
   Animation<double> get messageJumpOpacity => _messageJumpOpacity;
 
   Map<String, TranslationData> get translations => _translations;
+  Set<String> get removingSlotIds => _removingSlotIds;
   ChatController get chatController => _chatController;
   bool get selecting => _selecting;
   ChatSelectionMode get selectionMode => _selectionMode;
@@ -1156,10 +1163,29 @@ class HomePageController extends ChangeNotifier {
     required Map<String, List<ChatMessage>> byGroup,
   }) async {
     final keepAtBottom = _scrollCtrl.isNearBottom();
+    final gid = (message.groupId ?? message.id);
+    // Deleting the only version removes the whole slot; deleting one version
+    // of several swaps content in place, which reads better without a
+    // removal animation.
+    final slotDisappears = (byGroup[gid] ?? const <ChatMessage>[]).length <= 1;
+    int? preserveRequest;
+    if (slotDisappears && _shouldAnimateSlotRemoval(message)) {
+      preserveRequest = await _playSlotRemovalAnimation(
+        gid,
+        keepAtBottom: keepAtBottom,
+      );
+    }
     _translations.remove(message.id);
-    await _viewModel.deleteMessage(message: message, byGroup: byGroup);
-    if (keepAtBottom) _scrollCtrl.positionAtBottomOnNextLayout();
-    notifyListeners();
+    try {
+      await _viewModel.deleteMessage(message: message, byGroup: byGroup);
+    } finally {
+      _settleAfterSlotRemoval(
+        gid,
+        conversationId: message.conversationId,
+        keepAtBottom: keepAtBottom,
+        preserveRequest: preserveRequest,
+      );
+    }
   }
 
   Future<void> deleteAllMessageVersions({
@@ -1168,21 +1194,128 @@ class HomePageController extends ChangeNotifier {
   }) async {
     final keepAtBottom = _scrollCtrl.isNearBottom();
     final gid = (message.groupId ?? message.id);
+    int? preserveRequest;
+    if (_shouldAnimateSlotRemoval(message)) {
+      preserveRequest = await _playSlotRemovalAnimation(
+        gid,
+        keepAtBottom: keepAtBottom,
+      );
+    }
     for (final version in byGroup[gid] ?? const <ChatMessage>[]) {
       _translations.remove(version.id);
     }
-    await _viewModel.deleteAllMessageVersions(
-      message: message,
-      byGroup: byGroup,
-    );
-    if (keepAtBottom) _scrollCtrl.positionAtBottomOnNextLayout();
+    try {
+      await _viewModel.deleteAllMessageVersions(
+        message: message,
+        byGroup: byGroup,
+      );
+    } finally {
+      _settleAfterSlotRemoval(
+        gid,
+        conversationId: message.conversationId,
+        keepAtBottom: keepAtBottom,
+        preserveRequest: preserveRequest,
+      );
+    }
+  }
+
+  /// Clears the removal-animation state for [gid] and settles the scroll
+  /// position.
+  ///
+  /// Runs from a `finally`: when the deletion itself fails the slot must not
+  /// stay collapsed in [_removingSlotIds] and an armed distance-preserving
+  /// request must still be released, otherwise the list keeps snapping back
+  /// to the preserved offset. The scroll adjustments are skipped when the
+  /// user switched away from [conversationId] mid-deletion — they would
+  /// target the newly opened conversation's list instead.
+  void _settleAfterSlotRemoval(
+    String gid, {
+    required String conversationId,
+    required bool keepAtBottom,
+    required int? preserveRequest,
+  }) {
+    _removingSlotIds.remove(gid);
+    if (currentConversation?.id == conversationId) {
+      if (keepAtBottom && preserveRequest == null) {
+        _scrollCtrl.positionAtBottomOnNextLayout();
+      }
+      _finishPreserveDistanceAfterFrame(preserveRequest);
+    }
     notifyListeners();
+  }
+
+  /// Whether removing [message]'s slot should play the fade-and-collapse
+  /// animation.
+  ///
+  /// Skipped when the platform asks for reduced motion, and for slots taller
+  /// than the viewport: collapsing a screen-filling message reads as violent
+  /// scrolling rather than a splice, so such slots are removed instantly and
+  /// the anchor restore keeps the surrounding content still.
+  bool _shouldAnimateSlotRemoval(ChatMessage message) {
+    if (_removalAnimationsDisabled) return false;
+    final index = _chatController.indexOfCollapsedMessageId(message.id);
+    if (index < 0) return false;
+    final listController = _scrollCtrl.messageListController;
+    if (!listController.isAttached ||
+        index >= listController.numberOfItems ||
+        !_scrollController.hasClients) {
+      return false;
+    }
+    final extent = listController.extentForIndex(index).$1;
+    return extent <= _scrollController.position.viewportDimension;
+  }
+
+  /// Flags [slotId] as animating out and waits for the animation to finish.
+  ///
+  /// When the timeline sits near its bottom, the collapse would otherwise
+  /// drag the content away from the tail frame by frame, so the scroll
+  /// position keeps its distance from the end for the whole animation; the
+  /// returned request must be released with
+  /// [_finishPreserveDistanceAfterFrame] once the deletion has been applied.
+  Future<int?> _playSlotRemovalAnimation(
+    String slotId, {
+    required bool keepAtBottom,
+  }) async {
+    int? preserveRequest;
+    final scrollController = _scrollController;
+    if (keepAtBottom &&
+        scrollController is scroll_ctrl.ChatAutoFollowScrollController) {
+      preserveRequest = scrollController
+          .requestPreserveDistanceFromEndDuringLayout();
+    }
+    _removingSlotIds.add(slotId);
+    notifyListeners();
+    // One extra frame of margin so the collapse has fully painted before the
+    // slot's data is removed.
+    await Future.delayed(
+      ChatLayoutConstants.slotRemovalAnimationDuration +
+          const Duration(milliseconds: 16),
+    );
+    return preserveRequest;
+  }
+
+  void _finishPreserveDistanceAfterFrame(int? request) {
+    if (request == null) return;
+    final scrollController = _scrollController;
+    if (scrollController is! scroll_ctrl.ChatAutoFollowScrollController) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollController.finishPreserveDistanceFromEndDuringLayout(request);
+    });
+  }
+
+  bool get _removalAnimationsDisabled {
+    final context = _context;
+    if (!context.mounted) return true;
+    return MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   }
 
   Future<void> deleteSelectedMessages({required bool deleteAllVersions}) async {
     final selectedMessageIds = Set<String>.of(_selectedItems);
     if (selectedMessageIds.isEmpty) return;
 
+    final keepAtBottom = _scrollCtrl.isNearBottom();
     // Invalidate in-flight select-all before awaiting delete work.
     _selectionEpoch++;
     final deletedMessageIds = await _selectedMessageIdsForDeletion(
@@ -1199,6 +1332,7 @@ class HomePageController extends ChangeNotifier {
     _selecting = false;
     _selectedItems.clear();
     _selectableProjectionIds = null;
+    if (keepAtBottom) _scrollCtrl.positionAtBottomOnNextLayout();
     notifyListeners();
   }
 

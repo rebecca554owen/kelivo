@@ -112,6 +112,7 @@ class MessageListView extends StatefulWidget {
     this.streamingContentNotifier,
     this.spotlightMessageId,
     this.spotlightToken = 0,
+    this.removingSlotIds = const <String>{},
     this.onVersionChange,
     this.onRegenerateMessage,
     this.onResendMessage,
@@ -190,6 +191,10 @@ class MessageListView extends StatefulWidget {
   /// Incremented each time a new spotlight is triggered. Used as an animation key
   /// so re-selecting the same message re-triggers the pulse.
   final int spotlightToken;
+
+  /// Slots currently fading out ahead of their deletion. The slot data stays
+  /// in [messages] until the removal animation completes.
+  final Set<String> removingSlotIds;
 
   // Callbacks
   final OnVersionChange? onVersionChange;
@@ -368,7 +373,16 @@ class _MessageListViewState extends State<MessageListView> {
 
     final message = models[index].message;
     final text = message.content;
-    if (text.isEmpty) return _estimateChrome;
+    final reasoning = message.role == 'assistant'
+        ? widget.reasoning[message.id]
+        : null;
+    final reasoningSegments = message.role == 'assistant'
+        ? widget.reasoningSegments[message.id]
+        : null;
+    final hasReasoning =
+        (reasoning?.text.isNotEmpty ?? false) ||
+        (reasoningSegments?.isNotEmpty ?? false);
+    if (text.isEmpty && !hasReasoning) return _estimateChrome;
 
     // Layout asks for the same item repeatedly (every resize, every window
     // change), and the scan below is linear in the message length, so a memo
@@ -377,12 +391,17 @@ class _MessageListViewState extends State<MessageListView> {
     // carries a new string, and equal-length rewrites must not hit the memo.
     final fontScale = widget.chatFontScale * _systemTextScale;
     final settings = _estimateSettings;
+    final reasoningSignature = _reasoningEstimateSignature(
+      reasoning,
+      reasoningSegments,
+    );
     final cached = _extentEstimateCache[message.id];
     if (cached != null &&
         identical(cached.content, text) &&
         cached.crossAxisExtent == crossAxisExtent &&
         cached.fontScale == fontScale &&
-        cached.settings == settings) {
+        cached.settings == settings &&
+        cached.reasoningSignature == reasoningSignature) {
       return cached.extent;
     }
 
@@ -427,7 +446,13 @@ class _MessageListViewState extends State<MessageListView> {
             ) *
             lineHeight +
         _estimateChrome +
-        collapsedCards * _estimateCollapsedCard;
+        collapsedCards * _estimateCollapsedCard +
+        _estimateReasoningExtent(
+          reasoning,
+          reasoningSegments,
+          textWidth: textWidth,
+          fontScale: fontScale,
+        );
 
     if (_extentEstimateCache.length > _extentEstimateCacheLimit) {
       _extentEstimateCache.clear();
@@ -437,9 +462,76 @@ class _MessageListViewState extends State<MessageListView> {
       crossAxisExtent: crossAxisExtent,
       fontScale: fontScale,
       settings: settings,
+      reasoningSignature: reasoningSignature,
       extent: extent,
     );
     return extent;
+  }
+
+  /// Estimated height of the reasoning card(s) rendered above the answer.
+  ///
+  /// Reasoning lives outside [ChatMessage.content], so the content-only
+  /// estimate misses it entirely: a reasoning-heavy message gets estimated an
+  /// order of magnitude too short, and every scroll or anchor computation
+  /// across the unmeasured region is off by the same amount. Mirrors the
+  /// renderer's choice of showing the segments when present and otherwise the
+  /// single reasoning block.
+  double _estimateReasoningExtent(
+    stream_ctrl.ReasoningData? reasoning,
+    List<stream_ctrl.ReasoningSegmentData>? segments, {
+    required double textWidth,
+    required double fontScale,
+  }) {
+    var extent = 0.0;
+    void addCard(String reasoningText, bool expanded) {
+      if (reasoningText.isEmpty) return;
+      extent += _estimateCollapsedCard;
+      if (!expanded) return;
+      final fontSize = 13.0 * fontScale;
+      final charWidth = fontSize * (0.5 + 0.55 * _wideCharRatio(reasoningText));
+      final charsPerLine = math.max(1.0, textWidth / charWidth);
+      extent +=
+          _wrappedLineCount(
+            reasoningText,
+            charsPerLine: charsPerLine,
+            codeCharsPerLine: null,
+            codeLineRatio: 1.0,
+            collapsedCodeLines: null,
+          ) *
+          (fontSize * 1.5);
+    }
+
+    if (segments != null && segments.isNotEmpty) {
+      for (final segment in segments) {
+        addCard(segment.text, segment.expanded);
+      }
+    } else if (reasoning != null) {
+      addCard(reasoning.text, reasoning.expanded);
+    }
+    return extent;
+  }
+
+  /// Identity of the reasoning inputs an estimate was computed from.
+  ///
+  /// Reasoning state objects mutate in place, but their text is replaced with
+  /// a new string on every change, so text identity plus the expanded flags
+  /// distinguishes every state the estimate depends on.
+  int _reasoningEstimateSignature(
+    stream_ctrl.ReasoningData? reasoning,
+    List<stream_ctrl.ReasoningSegmentData>? segments,
+  ) {
+    if (reasoning == null && (segments == null || segments.isEmpty)) return 0;
+    return Object.hashAll([
+      if (reasoning != null) ...[
+        identityHashCode(reasoning.text),
+        reasoning.expanded,
+      ],
+      if (segments != null)
+        for (final segment in segments) ...[
+          identityHashCode(segment.text),
+          segment.expanded,
+        ],
+    ]);
   }
 
   /// Rendered height in body lines, wrapping each hard line separately.
@@ -616,21 +708,29 @@ class _MessageListViewState extends State<MessageListView> {
         _isPrefix(newModels, oldModels)) {
       return;
     }
-    if (newModels.length < oldModels.length &&
-        _isSuffix(newModels, oldModels)) {
-      final anchor = _captureVisibleAnchor(controller);
-      final removed = oldModels.length - newModels.length;
-      for (var index = 0; index < removed; index++) {
-        controller.removeItem(0);
-      }
-      if (anchor != null && anchor.index >= removed) {
-        _restoreVisibleAnchorAfterLayout(
+    if (newModels.length < oldModels.length) {
+      final removedOldIndices = _removedOldIndices(oldModels, newModels);
+      if (removedOldIndices != null) {
+        // Removing the extents at the deleted indices keeps every surviving
+        // slot's measured height attached to its new index; the fallback
+        // below would instead drop all measurements and let the list drift
+        // while it re-measures the whole window over several frames.
+        final anchor = _captureVisibleAnchorForRemoval(
           controller,
-          index: anchor.index - removed,
-          alignment: anchor.alignment,
+          removedOldIndices,
         );
+        for (var index = removedOldIndices.length - 1; index >= 0; index--) {
+          controller.removeItem(removedOldIndices[index]);
+        }
+        if (anchor != null) {
+          _restoreVisibleAnchorAfterLayout(
+            controller,
+            index: anchor.index,
+            alignment: anchor.alignment,
+          );
+        }
+        return;
       }
-      return;
     }
 
     if (oldModels.length == newModels.length) {
@@ -694,24 +794,145 @@ class _MessageListViewState extends State<MessageListView> {
     controller.invalidateAllExtents();
   }
 
+  /// Whether a layout-phase positioning request (bottom pin, preserved
+  /// distance, streaming auto-follow) owns the scroll position this frame.
+  /// Anchor restoration must stand down instead of fighting it.
+  bool get _layoutPositionOwnedElsewhere {
+    final scrollController = widget.scrollController;
+    return scrollController is scroll_ctrl.ChatAutoFollowScrollController &&
+        (scrollController.hasActiveLayoutPositioningRequest ||
+            scrollController.shouldAutoFollow());
+  }
+
   ({int index, double alignment})? _captureVisibleAnchor(
     ListController controller,
   ) {
     if (!widget.scrollController.hasClients) return null;
+    if (_layoutPositionOwnedElsewhere) return null;
     final visible = controller.visibleRange;
     if (visible == null) return null;
-    final index = visible.$1;
+    return _anchorAtIndex(controller, visible.$1);
+  }
+
+  /// Captures the topmost visible slot that survives a removal, as an anchor
+  /// expressed in post-removal index space.
+  ///
+  /// When every visible slot is being removed, the anchor falls to the
+  /// nearest surviving slot below, whose content slides up into the vacated
+  /// viewport; failing that, the nearest surviving slot above.
+  ({int index, double alignment})? _captureVisibleAnchorForRemoval(
+    ListController controller,
+    List<int> removedOldIndices,
+  ) {
+    if (!widget.scrollController.hasClients) return null;
+    if (_layoutPositionOwnedElsewhere) return null;
+    final visible = controller.visibleRange;
+    if (visible == null) return null;
+    final removed = removedOldIndices.toSet();
+    final itemCount = controller.numberOfItems;
+    int? anchorOldIndex;
+    for (var index = visible.$1; index < itemCount; index++) {
+      if (!removed.contains(index)) {
+        anchorOldIndex = index;
+        break;
+      }
+    }
+    if (anchorOldIndex == null) {
+      for (var index = visible.$1 - 1; index >= 0; index--) {
+        if (!removed.contains(index)) {
+          anchorOldIndex = index;
+          break;
+        }
+      }
+    }
+    if (anchorOldIndex == null) return null;
+    final anchor = _anchorAtIndex(controller, anchorOldIndex);
+    var anchorNewIndex = anchorOldIndex;
+    for (final removedIndex in removedOldIndices) {
+      if (removedIndex < anchorOldIndex) anchorNewIndex--;
+    }
+    return (index: anchorNewIndex, alignment: anchor.alignment);
+  }
+
+  ({int index, double alignment}) _anchorAtIndex(
+    ListController controller,
+    int index,
+  ) {
     final position = widget.scrollController.position;
     final itemExtent = controller.extentForIndex(index).$1;
-    // This is the same offset query used by jumpToItem. It is safe here,
-    // before the new child list enters layout.
-    // ignore: invalid_use_of_visible_for_testing_member
-    final itemLeading = controller.getOffsetToReveal(index, 0);
+    // The scroll position is defined by where children were actually painted,
+    // while the extent list's offsets partly derive from estimated heights of
+    // rows that never entered layout. Mixing the two frames would bake their
+    // accumulated difference into the alignment, and the restore jump would
+    // land the anchor shifted by exactly that error — with estimate-heavy
+    // histories (long reasoning payloads, huge messages) that reads as the
+    // viewport jumping to a random place. Anchor on the painted offset and
+    // only fall back to the estimated one when the child is not built.
+    final itemLeading =
+        _paintedLeadingOffset(index) ??
+        // This is the same offset query used by jumpToItem. It is safe here,
+        // before the new child list enters layout.
+        // ignore: invalid_use_of_visible_for_testing_member
+        controller.getOffsetToReveal(index, 0);
     final availableAlignmentExtent = position.viewportDimension - itemExtent;
     final alignment = availableAlignmentExtent.abs() < 0.5
         ? 0.0
         : (itemLeading - position.pixels) / availableAlignmentExtent;
     return (index: index, alignment: alignment);
+  }
+
+  /// The scroll offset at which the child for [index] was actually laid out,
+  /// or null when that child is not currently built.
+  double? _paintedLeadingOffset(int index) {
+    final root = context.findRenderObject();
+    if (root == null) return null;
+    RenderSliverMultiBoxAdaptor? sliver;
+    void visit(RenderObject node) {
+      if (sliver != null) return;
+      if (node is RenderSliverMultiBoxAdaptor) {
+        sliver = node;
+        return;
+      }
+      node.visitChildren(visit);
+    }
+
+    visit(root);
+    final list = sliver;
+    if (list == null || list.geometry == null) return null;
+    for (
+      var child = list.firstChild;
+      child != null;
+      child = list.childAfter(child)
+    ) {
+      final parentData = child.parentData;
+      if (parentData is! SliverMultiBoxAdaptorParentData) continue;
+      if (parentData.index != index) continue;
+      if (parentData.keptAlive) return null;
+      final layoutOffset = parentData.layoutOffset;
+      if (layoutOffset == null) return null;
+      return layoutOffset + list.constraints.precedingScrollExtent;
+    }
+    return null;
+  }
+
+  /// Old-list indices whose slots are absent from the new list, or null when
+  /// the new list is not simply the old list with some slots removed.
+  List<int>? _removedOldIndices(
+    List<MessageRenderModel> oldModels,
+    List<MessageRenderModel> newModels,
+  ) {
+    final removed = <int>[];
+    var newIndex = 0;
+    for (var oldIndex = 0; oldIndex < oldModels.length; oldIndex++) {
+      if (newIndex < newModels.length &&
+          oldModels[oldIndex].slotId == newModels[newIndex].slotId) {
+        newIndex++;
+      } else {
+        removed.add(oldIndex);
+      }
+    }
+    if (newIndex != newModels.length || removed.isEmpty) return null;
+    return removed;
   }
 
   void _restoreVisibleAnchorAfterLayout(
@@ -1259,42 +1480,45 @@ class _MessageListViewState extends State<MessageListView> {
     final isSpotlight =
         widget.spotlightMessageId != null &&
         message.id == widget.spotlightMessageId;
-    if (!isSpotlight) {
-      return RepaintBoundary(
-        key: ValueKey<String>(model.slotId),
-        child: messageColumn,
-      );
-    }
-
-    return RepaintBoundary(
-      key: ValueKey<String>(model.slotId),
-      child: TweenAnimationBuilder<double>(
-        key: ValueKey('spotlight-${widget.spotlightToken}'),
-        tween: Tween<double>(begin: 1.0, end: 0.0),
-        duration: const Duration(milliseconds: 1200),
-        curve: Curves.easeOut,
-        builder: (context, opacity, child) {
-          return Stack(
-            children: [
-              child!,
-              if (opacity > 0.0)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(
-                          0xFFFFA726,
-                        ).withValues(alpha: opacity * 0.30),
-                        borderRadius: BorderRadius.circular(4),
+    final Widget item = isSpotlight
+        ? RepaintBoundary(
+            child: TweenAnimationBuilder<double>(
+              key: ValueKey('spotlight-${widget.spotlightToken}'),
+              tween: Tween<double>(begin: 1.0, end: 0.0),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOut,
+              builder: (context, opacity, child) {
+                return Stack(
+                  children: [
+                    child!,
+                    if (opacity > 0.0)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFFFA726,
+                              ).withValues(alpha: opacity * 0.30),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-        child: messageColumn,
-      ),
+                  ],
+                );
+              },
+              child: messageColumn,
+            ),
+          )
+        : RepaintBoundary(child: messageColumn);
+
+    // The animator wraps the item's RepaintBoundary so the fade only
+    // re-composites the boundary's cached layer instead of repainting the
+    // message subtree every animation frame.
+    return _SlotRemovalAnimator(
+      key: ValueKey<String>(model.slotId),
+      removing: widget.removingSlotIds.contains(model.slotId),
+      child: item,
     );
   }
 
@@ -1586,6 +1810,7 @@ final class _ExtentEstimate {
     required this.crossAxisExtent,
     required this.fontScale,
     required this.settings,
+    required this.reasoningSignature,
     required this.extent,
   });
 
@@ -1593,6 +1818,7 @@ final class _ExtentEstimate {
   final double crossAxisExtent;
   final double fontScale;
   final _EstimateSettings settings;
+  final int reasoningSignature;
   final double extent;
 }
 
@@ -1610,6 +1836,98 @@ final class _MessagePresentation {
   final bool showUserAvatar;
   final bool showTokenStats;
   final Assistant? assistant;
+}
+
+/// Fades out and collapses a timeline slot ahead of its deletion.
+///
+/// The fade runs first so the message visually disappears, then the height
+/// collapses so the neighbouring messages splice together. The slot's data is
+/// removed only after [ChatLayoutConstants.slotRemovalAnimationDuration], at
+/// which point the slot is already zero-height and its removal is invisible.
+class _SlotRemovalAnimator extends StatefulWidget {
+  const _SlotRemovalAnimator({
+    super.key,
+    required this.removing,
+    required this.child,
+  });
+
+  final bool removing;
+  final Widget child;
+
+  @override
+  State<_SlotRemovalAnimator> createState() => _SlotRemovalAnimatorState();
+}
+
+class _SlotRemovalAnimatorState extends State<_SlotRemovalAnimator>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.removing) _startRemoval();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SlotRemovalAnimator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.removing && !oldWidget.removing) {
+      _startRemoval();
+    } else if (!widget.removing && oldWidget.removing) {
+      // The deletion was aborted (the slot usually unmounts instead of ever
+      // reaching this), so restore the message. A rebuild of this element is
+      // already in progress, so no setState is needed.
+      _controller?.dispose();
+      _controller = null;
+    }
+  }
+
+  void _startRemoval() {
+    final controller = AnimationController(
+      vsync: this,
+      duration: ChatLayoutConstants.slotRemovalAnimationDuration,
+    );
+    controller.addListener(() => setState(() {}));
+    _controller = controller;
+    controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    final removing = controller != null;
+    final progress = controller?.value ?? 0.0;
+    final opacity = removing
+        ? 1.0 - Curves.easeOut.transform(math.min(1.0, progress / 0.6))
+        : 1.0;
+    final heightFactor = removing
+        ? 1.0 -
+              Curves.easeInOutCubic.transform(
+                math.max(0.0, (progress - 0.2) / 0.8),
+              )
+        : 1.0;
+    // The wrapper chain is present even when idle: swapping widget types when
+    // the animation starts would reparent — and therefore rebuild — the whole
+    // message subtree, which for a huge message is a visible hitch. All
+    // wrappers are pass-throughs at their idle values.
+    return ClipRect(
+      clipBehavior: removing ? Clip.hardEdge : Clip.none,
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: heightFactor.clamp(0.0, 1.0),
+        child: Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: IgnorePointer(ignoring: removing, child: widget.child),
+        ),
+      ),
+    );
+  }
 }
 
 class _StreamingMessageDataGate extends StatefulWidget {

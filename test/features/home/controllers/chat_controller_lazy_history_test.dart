@@ -1562,6 +1562,121 @@ void main() {
       );
     });
 
+    test(
+      'mutation refresh with survivor data edits the window in place',
+      () async {
+        await controller.setCurrentConversationAndLoad(conversation);
+        final callsBefore = chatService.timelinePageCalls;
+        messages.removeWhere((message) => message.id == 'message-80');
+
+        expect(
+          await controller.refreshTimelineAfterMutation(
+            removedRevisionIds: const {'message-80'},
+            survivingVersionsByGroup: const {'message-80': <ChatMessage>[]},
+          ),
+          isTrue,
+        );
+
+        // The surviving slots keep their identity and order: the list widget
+        // then sees a pure removal instead of a reshaped window that would
+        // drop every measured row height and make the viewport drift.
+        expect(controller.messages.map((message) => message.id), [
+          for (var index = 60; index < 100; index++)
+            if (index != 80) 'message-$index',
+        ]);
+        expect(controller.totalMessageCount, 99);
+        expect(controller.hasMoreBefore, isTrue);
+        expect(controller.hasMoreAfter, isFalse);
+        expect(chatService.timelinePageCalls, callsBefore);
+      },
+    );
+
+    test(
+      'mutation refresh swaps the surviving version into its slot in place',
+      () async {
+        final survivor = _versionedMessage(
+          id: 'answer-v0',
+          role: 'assistant',
+          groupId: 'answer',
+          version: 0,
+        );
+        messages = [
+          ...List<ChatMessage>.generate(10, _message),
+          survivor,
+          _versionedMessage(
+            id: 'answer-v1',
+            role: 'assistant',
+            groupId: 'answer',
+            version: 1,
+          ),
+        ];
+        conversation = Conversation(
+          id: 'conversation-1',
+          title: 'Versioned chat',
+          messageIds: messages.map((message) => message.id).toList(),
+        );
+        chatService = _FakeLazyChatService(messages)
+          ..versionSelections = const {'answer': 1};
+        controller.dispose();
+        controller = ChatController(chatService: chatService);
+        await controller.setCurrentConversationAndLoad(conversation);
+        expect(controller.messages.last.id, 'answer-v1');
+        final callsBefore = chatService.timelinePageCalls;
+
+        // The service applies the deletion and the new selection before the
+        // timeline refresh runs, mirroring the view-model delete flow.
+        messages.removeWhere((message) => message.id == 'answer-v1');
+        chatService.versionSelections = const {'answer': 0};
+        controller.loadVersionSelections();
+
+        expect(
+          await controller.refreshTimelineAfterMutation(
+            removedRevisionIds: const {'answer-v1'},
+            survivingVersionsByGroup: {
+              'answer': [survivor],
+            },
+          ),
+          isTrue,
+        );
+
+        expect(controller.messages.last.id, 'answer-v0');
+        expect(controller.messages.length, 11);
+        expect(controller.totalMessageCount, 11);
+        expect(chatService.timelinePageCalls, callsBefore);
+      },
+    );
+
+    test(
+      'mutation refresh reloads when a deleted slot is outside the window',
+      () async {
+        messages = List<ChatMessage>.generate(1000, _message);
+        conversation = Conversation(
+          id: 'conversation-1',
+          title: 'Long chat',
+          messageIds: messages.map((message) => message.id).toList(),
+        );
+        chatService = _FakeLazyChatService(messages);
+        controller.dispose();
+        controller = ChatController(chatService: chatService);
+        await controller.setCurrentConversationAndLoad(conversation);
+        final callsBefore = chatService.timelinePageCalls;
+        messages.removeWhere((message) => message.id == 'message-100');
+
+        expect(
+          await controller.refreshTimelineAfterMutation(
+            removedRevisionIds: const {'message-100'},
+            survivingVersionsByGroup: const {'message-100': <ChatMessage>[]},
+          ),
+          isTrue,
+        );
+
+        // An in-place edit cannot track slot counts outside the window, so
+        // this must fall back to the full reload.
+        expect(chatService.timelinePageCalls, greaterThan(callsBefore));
+        expect(controller.totalMessageCount, 999);
+      },
+    );
+
     test('temporary sends append directly to the linear window', () async {
       messages = <ChatMessage>[];
       conversation = Conversation(

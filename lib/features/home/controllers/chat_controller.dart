@@ -527,9 +527,20 @@ class ChatController extends ChangeNotifier {
 
   Future<bool> refreshTimelineAfterMutation({
     Set<String> removedRevisionIds = const <String>{},
+    Map<String, List<ChatMessage>>? survivingVersionsByGroup,
   }) async {
     final conversation = _currentConversation;
     if (conversation == null) return false;
+    if (survivingVersionsByGroup != null &&
+        _removeRevisionsFromWindow(
+          removedRevisionIds,
+          survivingVersionsByGroup,
+        )) {
+      await _preloadVisibleGroupData();
+      if (_currentConversation?.id != conversation.id) return false;
+      notifyListeners();
+      return true;
+    }
     String? anchorId;
     if (hasMoreAfter) {
       for (final message in _messages) {
@@ -551,6 +562,80 @@ class ChatController extends ChangeNotifier {
     await _preloadVisibleGroupData();
     notifyListeners();
     return page != null;
+  }
+
+  /// Applies a deletion to the loaded window in place instead of reloading it.
+  ///
+  /// A full reload rebuilds the window around a database anchor, which can
+  /// reshape it (backfilled head, shifted indices); the list widget then loses
+  /// track of which rows survived and has to drop every measured row height,
+  /// making the viewport drift while everything is re-measured. Removing the
+  /// deleted revisions from the loaded window directly keeps every surviving
+  /// slot identity stable, so the list only sees "these slots disappeared".
+  ///
+  /// [survivingVersionsByGroup] must contain an entry for every group that
+  /// lost at least one revision, holding the versions that remain (empty when
+  /// the whole slot is gone). Returns false when the mutation cannot be
+  /// expressed as an in-window edit — deleted revisions belonging to slots
+  /// outside the loaded window, missing survivor data, or a window that would
+  /// empty out — in which case the caller falls back to the full reload.
+  bool _removeRevisionsFromWindow(
+    Set<String> removedRevisionIds,
+    Map<String, List<ChatMessage>> survivingVersionsByGroup,
+  ) {
+    if (removedRevisionIds.isEmpty || _messages.isEmpty) return false;
+    final windowSlotIds = <String>{
+      for (final message in _messages) message.groupId ?? message.id,
+    };
+    // A group outside the window changes slot counts in a region this method
+    // does not track, so only a reload can resolve it.
+    for (final groupId in survivingVersionsByGroup.keys) {
+      if (!windowSlotIds.contains(groupId)) return false;
+    }
+
+    final next = <ChatMessage>[];
+    final nextVersionCounts = Map<String, int>.of(_windowVersionCounts);
+    var removedSlotCount = 0;
+    for (final message in _messages) {
+      final groupId = message.groupId ?? message.id;
+      final survivors = survivingVersionsByGroup[groupId];
+      if (survivors != null && survivors.isNotEmpty) {
+        nextVersionCounts[groupId] = survivors.length;
+      }
+      if (!removedRevisionIds.contains(message.id)) {
+        next.add(message);
+        continue;
+      }
+      if (survivors == null) return false;
+      if (survivors.isEmpty) {
+        removedSlotCount++;
+        nextVersionCounts.remove(groupId);
+        continue;
+      }
+      final sorted = List<ChatMessage>.of(survivors)
+        ..sort((left, right) => left.version.compareTo(right.version));
+      final selection = _versionSelections[groupId];
+      ChatMessage? selected;
+      if (selection != null) {
+        for (final candidate in sorted) {
+          if (candidate.version == selection) {
+            selected = candidate;
+            break;
+          }
+        }
+      }
+      next.add(selected ?? sorted.last);
+    }
+    if (next.isEmpty) return false;
+
+    _messages = next;
+    _totalMessageCount = math.max(
+      _loadedStartIndex + next.length,
+      _totalMessageCount - removedSlotCount,
+    );
+    _windowVersionCounts = nextVersionCounts;
+    invalidateCache();
+    return true;
   }
 
   /// Drops slots a tail-anchored reload backfilled ahead of the old window.

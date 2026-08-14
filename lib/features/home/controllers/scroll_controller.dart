@@ -29,6 +29,13 @@ class ChatAutoFollowScrollController extends ScrollController {
   double _preservedDistanceFromEnd = 0;
   int _layoutDistanceRequest = 0;
 
+  /// Whether a one-frame layout positioning request is currently armed.
+  ///
+  /// While one is active it owns the scroll position for the upcoming layout,
+  /// so anchor-restoring jumps scheduled by the list must stand down.
+  bool get hasActiveLayoutPositioningRequest =>
+      _positionAtBottomDuringLayout || _preserveDistanceFromEndDuringLayout;
+
   int requestPositionAtBottomDuringLayout() {
     _positionAtBottomDuringLayout = true;
     return ++_layoutBottomRequest;

@@ -13,6 +13,7 @@ import 'package:Kelivo/features/home/controllers/stream_controller.dart'
 import 'package:Kelivo/features/home/controllers/streaming_content_notifier.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
+import 'package:Kelivo/features/home/utils/chat_layout_constants.dart';
 import 'package:Kelivo/features/home/widgets/message_list_view.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -935,6 +936,54 @@ void main() {
     listController.dispose();
   });
 
+  testWidgets('展开的独立思考内容计入估算高度', (tester) async {
+    final listController = ListController();
+    final reasoningText = List.filled(200, '这是一段很长的思考内容。').join('\n');
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('简短的正文回答。'),
+      listController,
+      reasoning: {
+        for (var i = 0; i < 40; i++)
+          'estimator-message-$i': stream_ctrl.ReasoningData()
+            ..text = reasoningText
+            ..expanded = true,
+      },
+    );
+    final tail = listController.extentForIndex(39);
+
+    // Reasoning lives outside message.content; ignoring it estimates a
+    // reasoning-heavy message an order of magnitude too short.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, greaterThan(3000));
+
+    listController.dispose();
+  });
+
+  testWidgets('折叠的独立思考内容只按固定卡片高度估算', (tester) async {
+    final listController = ListController();
+    final reasoningText = List.filled(200, '这是一段很长的思考内容。').join('\n');
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('简短的正文回答。'),
+      listController,
+      reasoning: {
+        for (var i = 0; i < 40; i++)
+          'estimator-message-$i': stream_ctrl.ReasoningData()
+            ..text = reasoningText
+            ..expanded = false,
+      },
+    );
+    final tail = listController.extentForIndex(39);
+
+    expect(tail.$2, isTrue);
+    expect(tail.$1, lessThan(400));
+
+    listController.dispose();
+  });
+
   testWidgets('顶部增量载入变高消息时保持当前可见消息位置', (tester) async {
     final key = GlobalKey<_PrependingMessageListHarnessState>();
     await tester.pumpWidget(_PrependingMessageListHarness(key: key));
@@ -998,10 +1047,145 @@ void main() {
       moreOrLessEquals(topBeforeEdit, epsilon: 1),
     );
   });
+
+  testWidgets('删除视口上方的消息后保持当前可见消息位置', (tester) async {
+    final key = GlobalKey<_PrependingMessageListHarnessState>();
+    await tester.pumpWidget(_PrependingMessageListHarness(key: key));
+
+    final state = key.currentState!;
+    state.listController.jumpToItem(
+      index: 15,
+      scrollController: state.scrollController,
+      alignment: 0.2,
+    );
+    await tester.pumpAndSettle();
+
+    final target = find.byKey(const ValueKey<String>('window-message-15'));
+    expect(target, findsOneWidget);
+    final topBeforeDelete = tester.getTopLeft(target).dy;
+
+    // A deletion in the middle of the window is neither a prefix nor a
+    // suffix of the old slot list; without an explicit removal diff the list
+    // would drop every measured height and drift while re-measuring.
+    state.deleteMessage('window-message-5');
+    await tester.pumpAndSettle();
+
+    expect(target, findsOneWidget);
+    expect(
+      tester.getTopLeft(target).dy,
+      moreOrLessEquals(topBeforeDelete, epsilon: 1),
+    );
+  });
+
+  testWidgets('删除视口下方的消息不移动当前可见内容', (tester) async {
+    final key = GlobalKey<_PrependingMessageListHarnessState>();
+    await tester.pumpWidget(_PrependingMessageListHarness(key: key));
+
+    final state = key.currentState!;
+    state.listController.jumpToItem(
+      index: 15,
+      scrollController: state.scrollController,
+      alignment: 0.2,
+    );
+    await tester.pumpAndSettle();
+
+    final target = find.byKey(const ValueKey<String>('window-message-15'));
+    expect(target, findsOneWidget);
+    final topBeforeDelete = tester.getTopLeft(target).dy;
+
+    state.deleteMessage('window-message-25');
+    await tester.pumpAndSettle();
+
+    expect(target, findsOneWidget);
+    expect(
+      tester.getTopLeft(target).dy,
+      moreOrLessEquals(topBeforeDelete, epsilon: 1),
+    );
+  });
+
+  testWidgets('展开的长思考卡在场时删除消息仍保持可见位置', (tester) async {
+    final key = GlobalKey<_PrependingMessageListHarnessState>();
+    await tester.pumpWidget(
+      _PrependingMessageListHarness(
+        key: key,
+        initialReasoning: {
+          // A tall expanded reasoning card whose height the extent estimator
+          // can only approximate; the anchor restore must not inherit that
+          // estimation error.
+          'window-message-13': stream_ctrl.ReasoningData()
+            ..text = List.filled(120, '思考内容行，足够长以撑出很高的思考卡片。').join('\n')
+            ..expanded = true
+            ..startAt = DateTime(2026, 1, 1)
+            ..finishedAt = DateTime(2026, 1, 1, 0, 0, 5),
+        },
+      ),
+    );
+
+    final state = key.currentState!;
+    state.listController.jumpToItem(
+      index: 15,
+      scrollController: state.scrollController,
+      alignment: 0.2,
+    );
+    await tester.pumpAndSettle();
+
+    final target = find.byKey(const ValueKey<String>('window-message-15'));
+    expect(target, findsOneWidget);
+    final topBeforeDelete = tester.getTopLeft(target).dy;
+
+    state.deleteMessage('window-message-5');
+    await tester.pumpAndSettle();
+
+    expect(target, findsOneWidget);
+    expect(
+      tester.getTopLeft(target).dy,
+      moreOrLessEquals(topBeforeDelete, epsilon: 1),
+    );
+  });
+
+  testWidgets('删除动画将消息淡出收起并拼接相邻消息', (tester) async {
+    final key = GlobalKey<_PrependingMessageListHarnessState>();
+    await tester.pumpWidget(_PrependingMessageListHarness(key: key));
+
+    final state = key.currentState!;
+    state.listController.jumpToItem(
+      index: 10,
+      scrollController: state.scrollController,
+      alignment: 0.2,
+    );
+    await tester.pumpAndSettle();
+
+    final removing = find.byKey(const ValueKey<String>('window-message-10'));
+    final below = find.byKey(const ValueKey<String>('window-message-11'));
+    final removingHeight = tester.getSize(removing).height;
+    final belowTopBefore = tester.getTopLeft(below).dy;
+
+    state.markRemoving('window-message-10');
+    await tester.pump();
+    await tester.pump(ChatLayoutConstants.slotRemovalAnimationDuration);
+
+    // The animated slot has collapsed to zero height and the message below
+    // has spliced up into its place; the actual data removal afterwards is
+    // then invisible.
+    expect(tester.getSize(removing).height, lessThan(1));
+    expect(
+      tester.getTopLeft(below).dy,
+      moreOrLessEquals(belowTopBefore - removingHeight, epsilon: 1.5),
+    );
+
+    state.deleteMessage('window-message-10');
+    await tester.pumpAndSettle();
+    expect(removing, findsNothing);
+  });
 }
 
 class _PrependingMessageListHarness extends StatefulWidget {
-  const _PrependingMessageListHarness({super.key});
+  const _PrependingMessageListHarness({
+    super.key,
+    this.initialReasoning = const <String, stream_ctrl.ReasoningData>{},
+  });
+
+  final Map<String, stream_ctrl.ReasoningData> initialReasoning;
 
   @override
   State<_PrependingMessageListHarness> createState() =>
@@ -1013,6 +1197,7 @@ class _PrependingMessageListHarnessState
   final scrollController = scroll_ctrl.ChatAutoFollowScrollController();
   final listController = ListController();
   final isProcessingFiles = ValueNotifier<bool>(false);
+  final removingSlotIds = <String>{};
   late List<ChatMessage> messages = <ChatMessage>[
     for (var index = 0; index < 30; index++)
       ChatMessage(
@@ -1081,6 +1266,19 @@ class _PrependingMessageListHarnessState
     });
   }
 
+  void deleteMessage(String id) {
+    setState(() {
+      messages = [
+        for (final message in messages)
+          if (message.id != id) message,
+      ];
+    });
+  }
+
+  void markRemoving(String slotId) {
+    setState(() => removingSlotIds.add(slotId));
+  }
+
   @override
   void dispose() {
     scrollController.dispose();
@@ -1122,7 +1320,7 @@ class _PrependingMessageListHarnessState
             messages: messages,
             byGroup: const {},
             versionSelections: const {},
-            reasoning: const {},
+            reasoning: widget.initialReasoning,
             reasoningSegments: const {},
             contentSplits: const {},
             toolParts: const {},
@@ -1131,6 +1329,7 @@ class _PrependingMessageListHarnessState
             selectedItems: const {},
             dividerPadding: EdgeInsets.zero,
             isProcessingFiles: isProcessingFiles,
+            removingSlotIds: removingSlotIds,
           ),
         ),
       ),
@@ -1145,6 +1344,8 @@ Future<void> _pumpEstimatorHarness(
   double textScale = 1.0,
   bool collapseThinking = true,
   bool wrapCodeBlocks = false,
+  Map<String, stream_ctrl.ReasoningData> reasoning =
+      const <String, stream_ctrl.ReasoningData>{},
 }) async {
   final scrollController = ScrollController();
   final isProcessingFiles = ValueNotifier<bool>(false);
@@ -1186,7 +1387,7 @@ Future<void> _pumpEstimatorHarness(
                 messages: messages,
                 byGroup: const {},
                 versionSelections: const {},
-                reasoning: const {},
+                reasoning: reasoning,
                 reasoningSegments: const {},
                 contentSplits: const {},
                 toolParts: const {},
