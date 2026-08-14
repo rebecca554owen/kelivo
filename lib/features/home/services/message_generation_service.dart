@@ -166,6 +166,7 @@ class MessageGenerationService {
       apiMessages,
       assistant,
       settings: settings,
+      currentConversationId: currentConversation?.id,
     );
 
     final hasBuiltInSearch = messageBuilderService.hasBuiltInSearch(

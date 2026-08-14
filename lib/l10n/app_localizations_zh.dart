@@ -6341,6 +6341,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get legacyMemoryMigrationClose => '完成';
 
   @override
+  String get legacyMemoryModeTitle => '使用旧版记忆';
+
+  @override
+  String get legacyMemoryModeSubtitle =>
+      '全局设置，影响所有助手。两套数据各自保留，可随时切回。旧版记忆仅按助手隔离，没有全局记忆、用户画像、后台整理、记忆追踪和历史对话搜索。';
+
+  @override
+  String get legacyMemoryModeCacheWarning =>
+      '旧版会把全部记忆内容与当前时间写进系统提示词，每轮都在变，无法命中 prompt cache，长对话成本更高。';
+
+  @override
   String get memoryUiContentLabel => '内容';
 
   @override
@@ -13462,6 +13473,17 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get legacyMemoryMigrationClose => '完成';
+
+  @override
+  String get legacyMemoryModeTitle => '使用旧版记忆';
+
+  @override
+  String get legacyMemoryModeSubtitle =>
+      '全局设置，影响所有助手。两套数据各自保留，可随时切回。旧版记忆仅按助手隔离，没有全局记忆、用户画像、后台整理、记忆追踪和历史对话搜索。';
+
+  @override
+  String get legacyMemoryModeCacheWarning =>
+      '旧版会把全部记忆内容与当前时间写进系统提示词，每轮都在变，无法命中 prompt cache，长对话成本更高。';
 
   @override
   String get memoryUiContentLabel => '内容';
@@ -20659,6 +20681,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get legacyMemoryMigrationClose => '完成';
+
+  @override
+  String get legacyMemoryModeTitle => '使用舊版記憶';
+
+  @override
+  String get legacyMemoryModeSubtitle =>
+      '全域設定，影響所有助手。兩套資料各自保留，可隨時切回。舊版記憶僅按助手隔離，沒有全域記憶、使用者畫像、背景整理、記憶追蹤和歷史對話搜尋。';
+
+  @override
+  String get legacyMemoryModeCacheWarning =>
+      '舊版會把全部記憶內容與目前時間寫進系統提示詞，每輪都在變，無法命中 prompt cache，長對話成本更高。';
 
   @override
   String get memoryUiContentLabel => '內容';

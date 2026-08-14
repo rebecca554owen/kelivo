@@ -11,6 +11,7 @@ import '../../../core/models/conversation.dart';
 import '../../../core/models/instruction_injection.dart';
 import '../../../core/models/memory_entry.dart';
 import '../../../core/models/world_book.dart';
+import '../../../core/providers/memory_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
@@ -825,12 +826,19 @@ class MessageBuilderService {
       // Prefer frozen promptContent — never recompute (§8.3).
       final existing = frozenPrompts?[revisionId];
       if (existing != null) {
-        apiMessages[i]['content'] = existing.payload;
+        final sendPayload = _legacyAwareFrozenPayload(
+          payload: existing.payload,
+          carriesMemorySnapshot: existing.carriesMemorySnapshot,
+          settings: settings,
+        );
+        apiMessages[i]['content'] = sendPayload;
         if (ContextLogger.enabled) {
           _tagFrozenUserPrompt(
             apiMessages[i],
-            payload: existing.payload,
-            carriesMemorySnapshot: existing.carriesMemorySnapshot,
+            payload: sendPayload,
+            carriesMemorySnapshot:
+                existing.carriesMemorySnapshot &&
+                sendPayload == existing.payload,
           );
         }
         continue;
@@ -991,7 +999,13 @@ class MessageBuilderService {
         !chatService.isTemporaryConversation(message.conversationId);
     if (persist && readFrozenPrompt) {
       final existing = await repo.getMessagePrompt(message.id);
-      if (existing != null) return existing.payload;
+      if (existing != null) {
+        return _legacyAwareFrozenPayload(
+          payload: existing.payload,
+          carriesMemorySnapshot: existing.carriesMemorySnapshot,
+          settings: settings,
+        );
+      }
     }
 
     final memory = assistant == null
@@ -1003,6 +1017,7 @@ class MessageBuilderService {
             currentMessageId: message.id,
             lang: settings.resolvedMemoryPromptLang,
             pass: pass,
+            settings: settings,
           );
     if (memory.prefix.isNotEmpty) {
       pass?.snapshotCarriers.add(message.id);
@@ -1067,6 +1082,27 @@ class MessageBuilderService {
     return finalContent;
   }
 
+  bool _legacyMemoryMode(SettingsProvider? settings) {
+    try {
+      final resolved = settings ?? contextProvider.read<SettingsProvider>();
+      return resolved.legacyMemoryMode;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Drop a v2 snapshot that was frozen into history while the new memory
+  /// system was on. The stored freeze row is left intact so switching back
+  /// still hits prompt cache / hash gating.
+  String _legacyAwareFrozenPayload({
+    required String payload,
+    required bool carriesMemorySnapshot,
+    required SettingsProvider settings,
+  }) {
+    if (!settings.legacyMemoryMode || !carriesMemorySnapshot) return payload;
+    return MemoryBlockBuilder.splitInjectedPrefix(payload)?.rest ?? payload;
+  }
+
   /// §7.6 hash gating + self-healing. Compare hash **before** writing it.
   Future<MemoryPrefixResolution> resolveMemoryPrefix({
     required Conversation conversation,
@@ -1075,8 +1111,9 @@ class MessageBuilderService {
     required String currentMessageId,
     required MemoryPromptLang lang,
     MemoryInjectionPass? pass,
+    SettingsProvider? settings,
   }) async {
-    if (!assistant.enableMemory) {
+    if (_legacyMemoryMode(settings) || !assistant.enableMemory) {
       return (prefix: '', hash: null, snapshotKind: null);
     }
 
@@ -1230,9 +1267,18 @@ class MessageBuilderService {
     List<Map<String, dynamic>> apiMessages,
     Assistant? assistant, {
     SettingsProvider? settings,
+    String? currentConversationId,
   }) async {
     try {
       if (assistant == null) return;
+      if (_legacyMemoryMode(settings)) {
+        await _injectLegacyMemoryAndRecentChats(
+          apiMessages,
+          assistant,
+          currentConversationId: currentConversationId,
+        );
+        return;
+      }
       // The two gates are independent: chat_search is registered on
       // allowPastConversationRecall alone, so its rules cannot ride along with
       // the long-term memory rules or the tool ships without instructions.
@@ -1259,6 +1305,98 @@ class MessageBuilderService {
         source: ContextSource.memoryRules,
       );
     } catch (_) {}
+  }
+
+  Future<void> _injectLegacyMemoryAndRecentChats(
+    List<Map<String, dynamic>> apiMessages,
+    Assistant assistant, {
+    String? currentConversationId,
+  }) async {
+    if (assistant.enableMemory) {
+      final mp = contextProvider.read<MemoryProvider>();
+      await mp.initialize();
+      final mems = mp.getForAssistant(assistant.id);
+      final currentHour = _formatCurrentHour(DateTime.now());
+      final buf = StringBuffer();
+      buf.writeln('## Memories');
+      buf.writeln(
+        'These are memories that you can reference in the future conversations.',
+      );
+      buf.writeln('<memories>');
+      for (final m in mems) {
+        buf.writeln('<record>');
+        buf.writeln('<id>${m.id}</id>');
+        buf.writeln('<content>${m.content}</content>');
+        buf.writeln('</record>');
+      }
+      buf.writeln('</memories>');
+      buf.writeln('''
+## Memory Tool
+你是一个无状态的大模型，你无法存储记忆，因此为了记住信息，你需要使用**记忆工具**。
+你可以使用 `create_memory`, `edit_memory`, `delete_memory` 工具创建、更新或删除记忆。
+- 如果记忆中没有相关信息，请使用 create_memory 创建一条新的记录。
+- 如果已有相关记录，请使用 edit_memory 更新内容。
+- 若记忆过时或无用，请使用 delete_memory 删除。
+这些记忆会自动包含在未来的对话上下文中，在<memories>标签内。
+请勿在记忆中存储敏感信息，敏感信息包括：用户的民族、宗教信仰、性取向、政治观点及党派归属、性生活、犯罪记录等。
+在与用户聊天过程中，你可以像一个私人秘书一样**主动的**记录用户相关的信息到记忆里，包括但不限于：
+- 用户昵称/姓名
+- 年龄/性别/兴趣爱好
+- 计划事项等
+- 聊天风格偏好
+- 工作相关
+- 首次聊天时间
+- ...
+请主动调用工具记录，而不是需要用户要求。
+记忆如果包含日期信息，请包含在内，请使用绝对时间格式，并且当前时间是$currentHour。
+无需告知用户你已更改记忆记录，也不要在对话中直接显示记忆内容，除非用户主动要求。
+相似或相关的记忆应合并为一条记录，而不要重复记录，过时记录应删除。
+你可以在和用户闲聊的时候暗示用户你能记住东西。
+''');
+      _appendToSystemMessage(
+        apiMessages,
+        buf.toString(),
+        source: ContextSource.memoryRules,
+      );
+    }
+    if (assistant.allowPastConversationRecall) {
+      final chats = chatService.getAllConversations();
+      final excludeId =
+          currentConversationId ?? chatService.currentConversationId;
+      final relevantChats = chats
+          .where((c) => c.assistantId == assistant.id && c.id != excludeId)
+          .where((c) => c.title.trim().isNotEmpty)
+          .take(10)
+          .toList();
+      if (relevantChats.isNotEmpty) {
+        final sb = StringBuffer();
+        sb.writeln('<recent_chats>');
+        sb.writeln('这是用户最近的一些对话标题和摘要，你可以参考这些内容了解用户偏好和关注点');
+        for (final c in relevantChats) {
+          sb.writeln('<conversation>');
+          // Format: timestamp: title || summary
+          final timestamp = c.updatedAt.toIso8601String().substring(0, 10);
+          final title = c.title.trim();
+          final summary = (c.summary ?? '').trim();
+          if (summary.isNotEmpty) {
+            sb.writeln('  $timestamp: $title || $summary');
+          } else {
+            sb.writeln('  $timestamp: $title');
+          }
+          sb.writeln('</conversation>');
+        }
+        sb.writeln('</recent_chats>');
+        _appendToSystemMessage(
+          apiMessages,
+          sb.toString(),
+          source: ContextSource.memoryRules,
+        );
+      }
+    }
+  }
+
+  String _formatCurrentHour(DateTime now) {
+    return '${now.year}年${now.month}月${now.day}日的${now.hour}点';
   }
 
   /// Inject search tool usage prompt into apiMessages.

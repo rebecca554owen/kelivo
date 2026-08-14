@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
+import '../../../core/providers/memory_provider.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/tts_provider.dart';
@@ -220,7 +221,11 @@ class ToolHandlerService {
     }
 
     // Memory tools (§10.1)
-    if (supportsTools && assistant != null) {
+    if (settings.legacyMemoryMode) {
+      if (assistant?.enableMemory == true && supportsTools) {
+        toolDefs.addAll(_buildLegacyMemoryToolDefinitions());
+      }
+    } else if (supportsTools && assistant != null) {
       toolDefs.addAll(
         MemoryTools.buildDefinitions(
           lang: settings.resolvedMemoryPromptLang,
@@ -251,6 +256,67 @@ class ToolHandlerService {
     toolDefs.addAll(mcpTools);
 
     return toolDefs;
+  }
+
+  /// Legacy create/edit/delete_memory tool schemas (pre-v2 memory system).
+  List<Map<String, dynamic>> _buildLegacyMemoryToolDefinitions() {
+    return [
+      {
+        'type': 'function',
+        'function': {
+          'name': 'create_memory',
+          'description': 'create a memory record',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'content': {
+                'type': 'string',
+                'description': 'The content of the memory record',
+              },
+            },
+            'required': ['content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'edit_memory',
+          'description': 'update a memory record',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'id': {
+                'type': 'integer',
+                'description': 'The id of the memory record',
+              },
+              'content': {
+                'type': 'string',
+                'description': 'The content of the memory record',
+              },
+            },
+            'required': ['id', 'content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'delete_memory',
+          'description': 'delete a memory record',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'id': {
+                'type': 'integer',
+                'description': 'The id of the memory record',
+              },
+            },
+            'required': ['id'],
+          },
+        },
+      },
+    ];
   }
 
   /// Build MCP tool definitions from connected servers.
@@ -364,30 +430,30 @@ class ToolHandlerService {
           return memoryResult;
         }
 
-         // Creating calendar events modifies user data, so it always requires
-         // explicit user approval before the local tool runs.
-         if (name == LocalToolNames.calendarCreate &&
-             assistant != null &&
-             assistant.localToolIds.contains(LocalToolNames.calendarCreate) &&
-             approvalService != null) {
-           final approvalId = (toolCallId?.trim().isNotEmpty == true)
-               ? toolCallId!.trim()
-               : '${name}_${DateTime.now().microsecondsSinceEpoch}';
-           final approval = await approvalService.requestApproval(
-             toolCallId: approvalId,
-             toolName: name,
-             arguments: args,
-             conversationId: conversationId,
-           );
-           if (!approval.approved) {
-             return _toolError(
-               error: 'approval_denied',
-               message: approval.denyReason ?? 'User denied the tool call',
-               tool: name,
-             );
-           }
-         }
- 
+        // Creating calendar events modifies user data, so it always requires
+        // explicit user approval before the local tool runs.
+        if (name == LocalToolNames.calendarCreate &&
+            assistant != null &&
+            assistant.localToolIds.contains(LocalToolNames.calendarCreate) &&
+            approvalService != null) {
+          final approvalId = (toolCallId?.trim().isNotEmpty == true)
+              ? toolCallId!.trim()
+              : '${name}_${DateTime.now().microsecondsSinceEpoch}';
+          final approval = await approvalService.requestApproval(
+            toolCallId: approvalId,
+            toolName: name,
+            arguments: args,
+            conversationId: conversationId,
+          );
+          if (!approval.approved) {
+            return _toolError(
+              error: 'approval_denied',
+              message: approval.denyReason ?? 'User denied the tool call',
+              tool: name,
+            );
+          }
+        }
+
         // Local tools
         final localResult = await LocalToolsService.tryHandleToolCall(
           name,
@@ -503,11 +569,16 @@ class ToolHandlerService {
     Assistant? assistant, {
     String? conversationId,
   }) async {
+    final settings = contextProvider.read<SettingsProvider>();
+    if (settings.legacyMemoryMode) {
+      if (MemoryTools.allToolNames.contains(name)) return null;
+      return _handleLegacyMemoryToolCall(name, args, assistant);
+    }
+
     if (assistant == null) return null;
     if (!MemoryTools.allToolNames.contains(name)) return null;
 
     final memoryV2 = contextProvider.read<MemoryProviderV2>();
-    final settings = contextProvider.read<SettingsProvider>();
     ChatService? chatService;
     try {
       chatService = contextProvider.read<ChatService>();
@@ -561,5 +632,96 @@ class ToolHandlerService {
           ? null
           : chatService?.getConversation(conversationId)?.title,
     );
+  }
+
+  /// Handle legacy create/edit/delete_memory calls via [MemoryProvider].
+  ///
+  /// Returns null if memory is disabled or [name] is not a legacy memory tool.
+  Future<String?> _handleLegacyMemoryToolCall(
+    String name,
+    Map<String, dynamic> args,
+    Assistant? assistant,
+  ) async {
+    if (assistant?.enableMemory != true) return null;
+    if (name != 'create_memory' &&
+        name != 'edit_memory' &&
+        name != 'delete_memory') {
+      return null;
+    }
+
+    try {
+      final mp = contextProvider.read<MemoryProvider>();
+
+      if (name == 'create_memory') {
+        final content = (args['content'] ?? '').toString();
+        if (content.isEmpty) {
+          return _toolError(
+            error: 'invalid_memory_content',
+            message: 'Memory content must not be empty.',
+            tool: name,
+          );
+        }
+        final m = await mp.add(assistantId: assistant!.id, content: content);
+        return m.content;
+      } else if (name == 'edit_memory') {
+        final id = (args['id'] as num?)?.toInt() ?? -1;
+        final content = (args['content'] ?? '').toString();
+        if (id <= 0) {
+          return _toolError(
+            error: 'invalid_memory_id',
+            message: 'Memory id must be a positive integer.',
+            tool: name,
+          );
+        }
+        if (content.isEmpty) {
+          return _toolError(
+            error: 'invalid_memory_content',
+            message: 'Memory content must not be empty.',
+            tool: name,
+          );
+        }
+        final m = await mp.update(id: id, content: content);
+        if (m == null) {
+          return _toolError(
+            error: 'memory_not_found',
+            message: 'No memory record was found for id $id.',
+            tool: name,
+            instruction:
+                'Use the available memory records shown in context, or create a new memory instead of editing a missing one.',
+          );
+        }
+        return m.content;
+      } else if (name == 'delete_memory') {
+        final id = (args['id'] as num?)?.toInt() ?? -1;
+        if (id <= 0) {
+          return _toolError(
+            error: 'invalid_memory_id',
+            message: 'Memory id must be a positive integer.',
+            tool: name,
+          );
+        }
+        final ok = await mp.delete(id: id);
+        if (!ok) {
+          return _toolError(
+            error: 'memory_not_found',
+            message: 'No memory record was found for id $id.',
+            tool: name,
+            instruction:
+                'Use the available memory records shown in context, or skip deleting a missing memory.',
+          );
+        }
+        return 'deleted';
+      }
+    } catch (e) {
+      return _toolError(
+        error: 'memory_execution_error',
+        message: e.toString(),
+        tool: name,
+        instruction:
+            'The memory tool failed. Retry only after correcting the parameters, or inform the user about the issue.',
+      );
+    }
+
+    return null;
   }
 }

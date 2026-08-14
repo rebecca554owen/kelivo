@@ -126,6 +126,7 @@ class SettingsProvider extends ChangeNotifier {
       'memory_model_thinking_enabled_v1';
   static const String _memoryPromptLangKey = 'memory_prompt_lang_v1';
   static const String _memoryTraceEnabledKey = 'memory_trace_enabled_v1';
+  static const String _legacyMemoryModeKey = 'memory_legacy_mode_v1';
   static const String _memoryRulesPromptZhKey = 'memory_rules_prompt_zh_v1';
   static const String _memoryRulesPromptEnKey = 'memory_rules_prompt_en_v1';
   static const String _memoryGatePromptZhKey = 'memory_gate_prompt_zh_v1';
@@ -901,6 +902,7 @@ class SettingsProvider extends ChangeNotifier {
         : 'auto';
     _memoryTraceEnabled = prefs.getBool(_memoryTraceEnabledKey) ?? true;
     MemoryTraceRecorder.instance.setEnabled(_memoryTraceEnabled);
+    _legacyMemoryMode = prefs.getBool(_legacyMemoryModeKey) ?? false;
     _memoryRulesPromptZh = _nonEmptyOr(
       prefs.getString(_memoryRulesPromptZhKey),
       MemoryPrompts.rulesZh,
@@ -3692,6 +3694,9 @@ Requirements:
   bool _memoryTraceEnabled = true;
   bool get memoryTraceEnabled => _memoryTraceEnabled;
 
+  bool _legacyMemoryMode = false;
+  bool get legacyMemoryMode => _legacyMemoryMode;
+
   /// The locale the interface is actually rendered in.
   ///
   /// [appLocale] parses the stored tag, and the `system` tag has no locale to
@@ -3771,6 +3776,13 @@ Requirements:
     MemoryTraceRecorder.instance.setEnabled(enabled);
     notifyListeners();
     await _preferences.setBool(_memoryTraceEnabledKey, enabled);
+  }
+
+  Future<void> setLegacyMemoryMode(bool enabled) async {
+    if (_legacyMemoryMode == enabled) return;
+    _legacyMemoryMode = enabled;
+    notifyListeners();
+    await _preferences.setBool(_legacyMemoryModeKey, enabled);
   }
 
   Future<void> setMemoryPromptLang(String lang) async {
@@ -4982,6 +4994,7 @@ Requirements:
     copy._memoryModelThinkingEnabled = _memoryModelThinkingEnabled;
     copy._memoryPromptLang = _memoryPromptLang;
     copy._memoryTraceEnabled = _memoryTraceEnabled;
+    copy._legacyMemoryMode = _legacyMemoryMode;
     copy._memoryRulesPromptZh = _memoryRulesPromptZh;
     copy._memoryRulesPromptEn = _memoryRulesPromptEn;
     copy._memoryGatePromptZh = _memoryGatePromptZh;

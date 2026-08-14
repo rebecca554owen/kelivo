@@ -146,6 +146,7 @@ final class BusinessKeyRegistry {
     'memory_model_thinking_enabled_v1',
     'memory_prompt_lang_v1',
     'memory_trace_enabled_v1',
+    'memory_legacy_mode_v1',
     'memory_rules_prompt_zh_v1',
     'memory_rules_prompt_en_v1',
     'memory_gate_prompt_zh_v1',

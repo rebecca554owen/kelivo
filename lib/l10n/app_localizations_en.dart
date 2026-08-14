@@ -6601,6 +6601,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legacyMemoryMigrationClose => 'Done';
 
   @override
+  String get legacyMemoryModeTitle => 'Use legacy memory';
+
+  @override
+  String get legacyMemoryModeSubtitle =>
+      'Global setting for all assistants. Both datasets are kept; you can switch back anytime. Legacy memory is per-assistant only — no global memory, user profile, background organize, traces, or past-conversation search.';
+
+  @override
+  String get legacyMemoryModeCacheWarning =>
+      'Legacy mode writes all memories and the current time into the system prompt every turn, so prompt cache cannot hit and long chats cost more.';
+
+  @override
   String get memoryUiContentLabel => 'Content';
 
   @override
