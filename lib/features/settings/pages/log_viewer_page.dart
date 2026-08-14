@@ -16,6 +16,7 @@ import '../../../utils/app_directories.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/models/world_book.dart';
 import '../../../core/services/logging/context_log_models.dart';
+import '../../../core/services/logging/context_log_tail_reader.dart';
 import '../logs/request_log_parser.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -686,6 +687,10 @@ class _ContextLogFilePage extends StatefulWidget {
 
 class _ContextLogFilePageState extends State<_ContextLogFilePage> {
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _loadGen = 0;
+  ContextLogTailCursor _cursor = const ContextLogTailCursor();
   List<ContextLogSnapshot> _snapshots = const <ContextLogSnapshot>[];
 
   @override
@@ -695,39 +700,49 @@ class _ContextLogFilePageState extends State<_ContextLogFilePage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    final gen = ++_loadGen;
+    setState(() {
+      _loading = true;
+      _loadingMore = false;
+      _hasMore = false;
+      _cursor = const ContextLogTailCursor();
+      _snapshots = const <ContextLogSnapshot>[];
+    });
+    await _fetchPage(gen: gen, reset: true);
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _loadingMore || !_hasMore) return;
+    final gen = _loadGen;
+    setState(() => _loadingMore = true);
+    await _fetchPage(gen: gen, reset: false);
+  }
+
+  Future<void> _fetchPage({required int gen, required bool reset}) async {
     try {
-      final content = await widget.file.readAsString();
-      final snapshots = <ContextLogSnapshot>[];
-      for (final line in content.split('\n')) {
-        final trimmed = line.trim();
-        if (trimmed.isEmpty) {
-          continue;
-        }
-        try {
-          final decoded = jsonDecode(trimmed);
-          if (decoded is! Map) {
-            continue;
-          }
-          snapshots.add(
-            ContextLogSnapshot.fromJson(Map<String, dynamic>.from(decoded)),
-          );
-        } catch (_) {}
-      }
-      if (!mounted) {
-        return;
-      }
+      final page = await ContextLogTailReader.readPage(
+        file: widget.file,
+        cursor: reset ? const ContextLogTailCursor() : _cursor,
+      );
+      if (!mounted || gen != _loadGen) return;
       setState(() {
-        _snapshots = snapshots.reversed.toList();
+        _snapshots = reset
+            ? page.snapshots
+            : [..._snapshots, ...page.snapshots];
+        _cursor = page.cursor;
+        _hasMore = page.hasMore;
         _loading = false;
+        _loadingMore = false;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted || gen != _loadGen) return;
       setState(() {
-        _snapshots = const <ContextLogSnapshot>[];
+        if (reset) {
+          _snapshots = const <ContextLogSnapshot>[];
+          _hasMore = false;
+        }
         _loading = false;
+        _loadingMore = false;
       });
     }
   }
@@ -800,33 +815,112 @@ class _ContextLogFilePageState extends State<_ContextLogFilePage> {
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-              itemCount: _snapshots.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
+          : NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification &&
+                    notification.metrics.extentAfter < 240) {
+                  _loadMore();
+                }
+                return false;
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                itemCount: _snapshots.length + 2,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _ContextSummaryBar(snapshots: _snapshots),
+                    );
+                  }
+                  if (index == _snapshots.length + 1) {
+                    return _ContextLoadOlderFooter(
+                      loading: _loadingMore,
+                      hasMore: _hasMore,
+                      onTap: _loadMore,
+                    );
+                  }
+                  final snapshot = _snapshots[index - 1];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: _ContextSummaryBar(snapshots: _snapshots),
+                    child: _ContextLogSnapshotCard(
+                      snapshot: snapshot,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                _ContextSnapshotDetailPage(snapshot: snapshot),
+                          ),
+                        );
+                      },
+                    ),
                   );
-                }
-                final snapshot = _snapshots[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ContextLogSnapshotCard(
-                    snapshot: snapshot,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              _ContextSnapshotDetailPage(snapshot: snapshot),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
+    );
+  }
+}
+
+class _ContextLoadOlderFooter extends StatelessWidget {
+  const _ContextLoadOlderFooter({
+    required this.loading,
+    required this.hasMore,
+    required this.onTap,
+  });
+
+  final bool loading;
+  final bool hasMore;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final labelStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: AppFontWeights.medium,
+      color: cs.onSurface.withValues(alpha: 0.62),
+    );
+
+    if (loading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 10),
+            Text(l10n.contextLogLoading, style: labelStyle),
+          ],
+        ),
+      );
+    }
+
+    if (!hasMore) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 12),
+        child: Center(
+          child: Text(l10n.contextLogAllLoaded, style: labelStyle),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: IosCardPress(
+        baseColor: context.appColors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: Text(l10n.contextLogLoadOlder, style: labelStyle),
+        ),
+      ),
     );
   }
 }

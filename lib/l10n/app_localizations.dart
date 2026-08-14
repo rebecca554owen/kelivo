@@ -10909,6 +10909,24 @@ abstract class AppLocalizations {
   /// **'Composition'**
   String get contextLogSectionComposition;
 
+  /// No description provided for @contextLogLoadOlder.
+  ///
+  /// In en, this message translates to:
+  /// **'Load earlier logs'**
+  String get contextLogLoadOlder;
+
+  /// No description provided for @contextLogLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get contextLogLoading;
+
+  /// No description provided for @contextLogAllLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'All logs loaded'**
+  String get contextLogAllLoaded;
+
   /// No description provided for @logViewerTitle.
   ///
   /// In en, this message translates to:

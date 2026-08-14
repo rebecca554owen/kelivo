@@ -5920,6 +5920,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextLogSectionComposition => 'Composition';
 
   @override
+  String get contextLogLoadOlder => 'Load earlier logs';
+
+  @override
+  String get contextLogLoading => 'Loading...';
+
+  @override
+  String get contextLogAllLoaded => 'All logs loaded';
+
+  @override
   String get logViewerTitle => 'Request Logs';
 
   @override

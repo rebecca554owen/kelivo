@@ -5690,6 +5690,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextLogSectionComposition => '构成';
 
   @override
+  String get contextLogLoadOlder => '加载更早的日志';
+
+  @override
+  String get contextLogLoading => '加载中…';
+
+  @override
+  String get contextLogAllLoaded => '已加载全部日志';
+
+  @override
   String get logViewerTitle => '请求日志';
 
   @override
@@ -12782,6 +12791,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get contextLogSectionComposition => '构成';
+
+  @override
+  String get contextLogLoadOlder => '加载更早的日志';
+
+  @override
+  String get contextLogLoading => '加载中…';
+
+  @override
+  String get contextLogAllLoaded => '已加载全部日志';
 
   @override
   String get logViewerTitle => '请求日志';
@@ -19950,6 +19968,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get contextLogSectionComposition => '構成';
+
+  @override
+  String get contextLogLoadOlder => '載入更早的日誌';
+
+  @override
+  String get contextLogLoading => '載入中…';
+
+  @override
+  String get contextLogAllLoaded => '已載入全部日誌';
 
   @override
   String get logViewerTitle => '請求日誌';
