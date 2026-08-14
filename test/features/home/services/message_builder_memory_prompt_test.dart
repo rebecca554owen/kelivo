@@ -694,7 +694,7 @@ void main() {
           timestamp: ts,
         );
         final service = buildService(messages: [message]);
-        final apiMessages = [
+        final apiMessages = <Map<String, dynamic>>[
           {
             'role': 'user',
             'content': 'hello world',
@@ -759,7 +759,7 @@ void main() {
 
         // Empty cache, exactly as for a conversation created this turn.
         final service = buildService();
-        final apiMessages = [
+        final apiMessages = <Map<String, dynamic>>[
           {
             'role': 'user',
             'content': 'what is my name',

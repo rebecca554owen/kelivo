@@ -30,9 +30,7 @@ void main() {
     });
 
     test('keeps the result decodable as JSON', () {
-      final body = jsonEncode({
-        'url': 'data:image/jpeg;base64,${_b64(9000)}',
-      });
+      final body = jsonEncode({'url': 'data:image/jpeg;base64,${_b64(9000)}'});
 
       expect(() => jsonDecode(LogPayloadElider.elide(body)), returnsNormally);
     });

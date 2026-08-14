@@ -924,9 +924,7 @@ class _ContextLoadOlderFooter extends StatelessWidget {
     if (!hasMore) {
       return Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 12),
-        child: Center(
-          child: Text(l10n.contextLogAllLoaded, style: labelStyle),
-        ),
+        child: Center(child: Text(l10n.contextLogAllLoaded, style: labelStyle)),
       );
     }
 
@@ -937,9 +935,7 @@ class _ContextLoadOlderFooter extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Center(
-          child: Text(l10n.contextLogLoadOlder, style: labelStyle),
-        ),
+        child: Center(child: Text(l10n.contextLogLoadOlder, style: labelStyle)),
       ),
     );
   }

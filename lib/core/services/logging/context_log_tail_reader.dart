@@ -13,8 +13,7 @@ class ContextLogTailCursor {
   final int? position;
   final List<int> pending;
 
-  bool get isExhausted =>
-      position != null && position! <= 0 && pending.isEmpty;
+  bool get isExhausted => position != null && position! <= 0 && pending.isEmpty;
 }
 
 class ContextLogTailPage {

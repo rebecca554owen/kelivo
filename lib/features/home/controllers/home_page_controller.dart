@@ -191,9 +191,11 @@ class HomePageController extends ChangeNotifier {
   bool _selecting = false;
   ChatSelectionMode _selectionMode = ChatSelectionMode.share;
   final Set<String> _selectedItems = <String>{};
+
   /// Selectable projection ids from the last full-history selection load.
   /// Null until select-all / toggle-all / invert loads projections.
   Set<String>? _selectableProjectionIds;
+
   /// Bumped when selection starts, cancels, completes, or the conversation
   /// switches so in-flight select-all / toggle / invert results are ignored.
   int _selectionEpoch = 0;
@@ -1739,8 +1741,7 @@ class HomePageController extends ChangeNotifier {
   bool get allSelectableMessagesSelected {
     final cached = _selectableProjectionIds;
     if (cached != null) {
-      return cached.isNotEmpty &&
-          cached.every(_selectedItems.contains);
+      return cached.isNotEmpty && cached.every(_selectedItems.contains);
     }
     final selectable = _chatController
         .allCollapsedMessagesForCurrentConversation()
@@ -1788,8 +1789,8 @@ class HomePageController extends ChangeNotifier {
 
   Set<String> _selectedSelectionGroupIds() {
     if (_selectedItems.isEmpty) return const <String>{};
-    final windowMessages =
-        _chatController.allCollapsedMessagesForCurrentConversation();
+    final windowMessages = _chatController
+        .allCollapsedMessagesForCurrentConversation();
     final windowIds = {for (final message in windowMessages) message.id};
     // Out-of-window selections are unknown for versioning — surface a
     // synthetic group key so callers treat them as potentially multi-version.

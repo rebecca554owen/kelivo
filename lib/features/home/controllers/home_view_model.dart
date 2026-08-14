@@ -1408,10 +1408,7 @@ class HomeViewModel extends ChangeNotifier {
           notifyListeners();
         }
       } else {
-        onBackgroundTaskError?.call(
-          BackgroundTaskKind.title,
-          'empty_response',
-        );
+        onBackgroundTaskError?.call(BackgroundTaskKind.title, 'empty_response');
       }
     } catch (e) {
       FlutterLogger.log(

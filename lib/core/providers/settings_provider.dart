@@ -266,8 +266,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _flutterLogEnabledKey = 'flutter_log_enabled_v1';
   // Log settings: save response output, auto-delete, max size
   static const String _logSaveOutputKey = 'log_save_output_v1';
-  static const String _logElideLargePayloadsKey =
-      'log_elide_large_payloads_v1';
+  static const String _logElideLargePayloadsKey = 'log_elide_large_payloads_v1';
   static const String _logAutoDeleteDaysKey = 'log_auto_delete_days_v1';
   static const String _logMaxSizeMBKey = 'log_max_size_mb_v1';
   static const String _appLaunchCountKey = 'app_launch_count_v1';
@@ -1023,8 +1022,7 @@ class SettingsProvider extends ChangeNotifier {
     await FlutterLogger.setEnabled(_flutterLogEnabled);
     _logSaveOutput = prefs.getBool(_logSaveOutputKey) ?? false;
     RequestLogger.saveOutput = _logSaveOutput;
-    _logElideLargePayloads =
-        prefs.getBool(_logElideLargePayloadsKey) ?? true;
+    _logElideLargePayloads = prefs.getBool(_logElideLargePayloadsKey) ?? true;
     RequestLogger.elideLargePayloads = _logElideLargePayloads;
     _logAutoDeleteDays = prefs.getInt(_logAutoDeleteDaysKey) ?? 0;
     _logMaxSizeMB = prefs.getInt(_logMaxSizeMBKey) ?? 50;

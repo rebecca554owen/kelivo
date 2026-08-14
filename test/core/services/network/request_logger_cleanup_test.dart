@@ -53,10 +53,7 @@ void main() {
       await file.setLastModified(cutoffAgo);
       active.add(file);
     }
-    final oldRotated = await writeLog(
-      'logs_2020-01-01.txt',
-      bytes: [4, 5, 6],
-    );
+    final oldRotated = await writeLog('logs_2020-01-01.txt', bytes: [4, 5, 6]);
     await oldRotated.setLastModified(cutoffAgo);
     final recentRotated = await writeLog(
       'context_logs_2026-08-12.txt',

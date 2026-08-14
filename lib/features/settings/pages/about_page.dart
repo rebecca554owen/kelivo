@@ -149,9 +149,8 @@ class _AboutPageState extends State<AboutPage> {
                                               MaterialPageRoute(
                                                 builder: (_) =>
                                                     const LogViewerPage(
-                                                      initialTab:
-                                                          LogViewerPage
-                                                              .contextTab,
+                                                      initialTab: LogViewerPage
+                                                          .contextTab,
                                                     ),
                                               ),
                                             );
@@ -221,9 +220,8 @@ class _AboutPageState extends State<AboutPage> {
                                               MaterialPageRoute(
                                                 builder: (_) =>
                                                     const LogViewerPage(
-                                                      initialTab:
-                                                          LogViewerPage
-                                                              .requestTab,
+                                                      initialTab: LogViewerPage
+                                                          .requestTab,
                                                     ),
                                               ),
                                             );

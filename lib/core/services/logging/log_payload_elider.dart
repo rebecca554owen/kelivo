@@ -71,7 +71,8 @@ class LogPayloadElider {
 
   /// Both passes. Placeholders never contain `"` or `\`, so a JSON body stays
   /// decodable afterwards.
-  static String elide(String text) => _bareBase64Pass(elideDataUris(text), null);
+  static String elide(String text) =>
+      _bareBase64Pass(elideDataUris(text), null);
 
   /// Replaces inlined `data:...;base64,...` payloads with a short placeholder.
   static String elideDataUris(String text) => _dataUriPass(text, null);
@@ -322,5 +323,10 @@ class LogPayloadElider {
       c == 0x2F; // /
 
   static bool _isSpace(int c) =>
-      c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0x0B || c == 0x0C;
+      c == 0x20 ||
+      c == 0x09 ||
+      c == 0x0A ||
+      c == 0x0D ||
+      c == 0x0B ||
+      c == 0x0C;
 }
