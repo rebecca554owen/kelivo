@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 
 import '../../../utils/app_directories.dart';
+import 'log_redactor.dart';
 
 class FlutterLogger {
   FlutterLogger._();
@@ -129,6 +130,7 @@ class FlutterLogger {
 
   static void log(String message, {String? tag}) {
     if (!_enabled) return;
+    message = LogRedactor.redactText(message);
     final now = DateTime.now();
     final prefix = '[${_formatTs(now)}]${tag == null ? '' : ' [$tag]'} ';
     final normalized = message.replaceAll('\r\n', '\n').replaceAll('\r', '\n');

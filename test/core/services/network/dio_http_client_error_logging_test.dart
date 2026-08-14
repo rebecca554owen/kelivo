@@ -116,4 +116,45 @@ void main() {
     expect(log, isNot(contains('unique-success-chunk-xyz')));
     expect(log, isNot(contains('chunk=')));
   });
+
+  test('Authorization and query keys are redacted before write', () async {
+    const rawKey = 'sk-test-redact-unique-key-zzzz';
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    server.listen((request) async {
+      await utf8.decoder.bind(request).drain<void>();
+      request.response.statusCode = 401;
+      request.response.headers.set('set-cookie', 'sid=$rawKey; Path=/');
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode({
+          'error': {'message': 'invalid api key'},
+        }),
+      );
+      await request.response.close();
+    });
+
+    await HttpOverrides.runZoned(
+      () async {
+        final client = DioHttpClient();
+        addTearDown(client.close);
+        final uri = Uri.parse(
+          'http://127.0.0.1:${server.port}/chat?key=$rawKey',
+        );
+        final request = http.Request('POST', uri);
+        request.headers['Authorization'] = 'Bearer $rawKey';
+        request.headers['x-goog-api-key'] = rawKey;
+        request.body = jsonEncode({'api_key': rawKey, 'prompt': 'hi'});
+        final response = await client.send(request);
+        await response.stream.bytesToString();
+      },
+      createHttpClient: (context) =>
+          _RealHttpOverrides().createHttpClient(context),
+    );
+
+    final log = await waitForLog(const ['status=401', 'headers=']);
+    expect(log, contains('status=401'));
+    expect(log, isNot(contains(rawKey)));
+    expect(log, contains('***'));
+  });
 }
