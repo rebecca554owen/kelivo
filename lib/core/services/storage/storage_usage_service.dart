@@ -169,8 +169,9 @@ abstract final class StorageUsageService {
     };
 
     final logsSubs = <String, _MutableStats>{
-      'flutter_logs': _MutableStats(),
+      'context_logs': _MutableStats(),
       'request_logs': _MutableStats(),
+      'flutter_logs': _MutableStats(),
       'other_logs': _MutableStats(),
     };
 
@@ -268,7 +269,9 @@ abstract final class StorageUsageService {
           case 'logs':
             byCat[StorageUsageCategoryKey.logs]!.add(bytes);
             final name = parts.last.toLowerCase();
-            if (name.startsWith('flutter_logs')) {
+            if (name.startsWith('context_logs')) {
+              logsSubs['context_logs']!.add(bytes);
+            } else if (name.startsWith('flutter_logs')) {
               logsSubs['flutter_logs']!.add(bytes);
             } else if (name.startsWith('logs')) {
               logsSubs['request_logs']!.add(bytes);
@@ -413,13 +416,18 @@ abstract final class StorageUsageService {
         stats: byCat[StorageUsageCategoryKey.logs]!.toStats(),
         subcategories: [
           StorageUsageSubcategory(
-            id: 'flutter_logs',
-            stats: logsSubs['flutter_logs']!.toStats(),
+            id: 'context_logs',
+            stats: logsSubs['context_logs']!.toStats(),
             path: logsDir.path,
           ),
           StorageUsageSubcategory(
             id: 'request_logs',
             stats: logsSubs['request_logs']!.toStats(),
+            path: logsDir.path,
+          ),
+          StorageUsageSubcategory(
+            id: 'flutter_logs',
+            stats: logsSubs['flutter_logs']!.toStats(),
             path: logsDir.path,
           ),
           if (logsSubs['other_logs']!.bytes > 0 ||

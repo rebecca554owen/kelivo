@@ -205,6 +205,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storageSpaceSubCacheSystem => '系统缓存';
 
   @override
+  String get storageSpaceSubLogsContext => '上下文日志';
+
+  @override
   String get storageSpaceSubLogsFlutter => '运行日志';
 
   @override
@@ -7383,6 +7386,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get storageSpaceSubCacheSystem => '系统缓存';
 
   @override
+  String get storageSpaceSubLogsContext => '上下文日志';
+
+  @override
   String get storageSpaceSubLogsFlutter => '运行日志';
 
   @override
@@ -14485,6 +14491,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get storageSpaceSubCacheSystem => '系統快取';
+
+  @override
+  String get storageSpaceSubLogsContext => '上下文日誌';
 
   @override
   String get storageSpaceSubLogsFlutter => '執行日誌';

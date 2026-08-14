@@ -164,6 +164,8 @@ class _StorageSpacePageState extends State<StorageSpacePage> {
         return l10n.storageSpaceSubCacheOther;
       case 'system_cache':
         return l10n.storageSpaceSubCacheSystem;
+      case 'context_logs':
+        return l10n.storageSpaceSubLogsContext;
       case 'flutter_logs':
         return l10n.storageSpaceSubLogsFlutter;
       case 'request_logs':

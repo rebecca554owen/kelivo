@@ -211,6 +211,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceSubCacheSystem => 'System cache';
 
   @override
+  String get storageSpaceSubLogsContext => 'Context logs';
+
+  @override
   String get storageSpaceSubLogsFlutter => 'Flutter logs';
 
   @override
