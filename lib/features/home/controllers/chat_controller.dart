@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import '../../../core/models/chat_message.dart';
@@ -61,6 +62,7 @@ class ChatController extends ChangeNotifier {
   /// Total persisted message count for the current conversation.
   int _totalMessageCount = 0;
   int get totalMessageCount => _totalMessageCount;
+
   /// versionCount from the latest loaded timeline window, keyed by groupId.
   Map<String, int> _windowVersionCounts = <String, int>{};
   bool get hasMoreBefore => _loadedStartIndex > 0;
@@ -369,7 +371,6 @@ class ChatController extends ChangeNotifier {
     invalidateCache();
   }
 
-
   void _mergeWindowVersionCounts(LoadedTimelinePage page) {
     final next = Map<String, int>.of(_windowVersionCounts);
     for (final slot in page.slots) {
@@ -537,16 +538,67 @@ class ChatController extends ChangeNotifier {
         break;
       }
     }
+    final previousSlotIds = <String>{
+      for (final message in _messages) message.groupId ?? message.id,
+    };
     final page = await _chatService.loadTimelinePage(
       conversation.id,
       aroundRevisionId: anchorId,
       limit: ChatService.defaultLoadedWindowMax,
     );
     if (_currentConversation?.id != conversation.id) return false;
-    _replaceWindow(page);
+    _replaceWindow(_withoutBackfilledHead(page, previousSlotIds));
     await _preloadVisibleGroupData();
     notifyListeners();
     return page != null;
+  }
+
+  /// Drops slots a tail-anchored reload backfilled ahead of the old window.
+  ///
+  /// A reload without an anchor always fills a full-size window, so deleting
+  /// the last message pulls one extra older message in at the head. The
+  /// refreshed list then has the same length as before with every slot shifted
+  /// by one; SuperSliverList reuses its children under the new indices and
+  /// keeps their stale layout offsets, which parks the viewport above the real
+  /// bottom with no way to scroll back down. Cutting the backfilled head makes
+  /// the new window a prefix of the old one, so the list just loses its
+  /// trailing child. The dropped history is paged back in by [loadMoreBefore].
+  LoadedTimelinePage? _withoutBackfilledHead(
+    LoadedTimelinePage? page,
+    Set<String> previousSlotIds,
+  ) {
+    if (page == null || page.hasMoreAfter || previousSlotIds.isEmpty) {
+      return page;
+    }
+    var cut = 0;
+    while (cut < page.slots.length &&
+        !previousSlotIds.contains(page.slots[cut].identity.slotId)) {
+      cut++;
+    }
+    // cut == 0: nothing backfilled. cut == length: the window moved entirely
+    // off the old one, so there is no shared head to preserve.
+    if (cut == 0 || cut >= page.slots.length) return page;
+    // A batch deletion leaves only a handful of the old slots in the reloaded
+    // window, and trimming down to those would show a near-empty list that only
+    // refills once the user scrolls. Reusing children is not worth that, so
+    // below a screenful of survivors keep the full window instead.
+    final remaining = page.slots.length - cut;
+    if (remaining <
+        math.min(
+          ChatService.defaultTimelineInitialSlots,
+          previousSlotIds.length,
+        )) {
+      return page;
+    }
+    return LoadedTimelinePage(
+      conversationId: page.conversationId,
+      stateRevision: page.stateRevision,
+      contextStartRevisionId: page.contextStartRevisionId,
+      slots: page.slots.sublist(cut),
+      hasMoreBefore: true,
+      hasMoreAfter: page.hasMoreAfter,
+      totalSlotCount: page.totalSlotCount,
+    );
   }
 
   int loadedWindowTruncateIndex() {

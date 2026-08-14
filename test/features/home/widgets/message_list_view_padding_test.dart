@@ -708,6 +708,233 @@ void main() {
     streamingNotifier.dispose();
   });
 
+  testWidgets('未布局的长消息按内容长度估算高度而非默认 100px', (tester) async {
+    final scrollController = ScrollController();
+    final listController = ListController();
+    final isProcessingFiles = ValueNotifier<bool>(false);
+    final longBody = List<String>.filled(
+      120,
+      '这是一段用于撑高消息气泡的长文本，重复出现以便估算高度。',
+    ).join('\n');
+    final messages = <ChatMessage>[
+      for (var i = 0; i < 40; i++)
+        ChatMessage(
+          id: 'long-message-$i',
+          role: i.isEven ? 'user' : 'assistant',
+          content: longBody,
+          conversationId: 'conversation-1',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(
+            value: SettingsProvider(createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider.value(
+            value: AssistantProvider(
+              preferences: createBusinessTestPreferences(),
+            ),
+          ),
+          ChangeNotifierProvider.value(
+            value: TtsProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider.value(
+            value: UserProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider.value(value: AskUserInteractionService()),
+          ChangeNotifierProvider.value(value: ToolApprovalService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: MessageListView(
+              scrollController: scrollController,
+              listController: listController,
+              messages: messages,
+              byGroup: const {},
+              versionSelections: const {},
+              reasoning: const {},
+              reasoningSegments: const {},
+              contentSplits: const {},
+              toolParts: const {},
+              translations: const {},
+              selecting: false,
+              selectedItems: const {},
+              dividerPadding: EdgeInsets.zero,
+              isProcessingFiles: isProcessingFiles,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // The tail of the list never entered layout, so its extents are still
+    // estimates. A flat default (100px) makes the total extent — and with it a
+    // bottom-pinned scroll offset — lurch every time one of them is measured.
+    final tail = listController.extentForIndex(messages.length - 1);
+    expect(tail.$2, isTrue, reason: 'tail item should still be estimated');
+    expect(tail.$1, greaterThan(2000));
+
+    scrollController.dispose();
+    listController.dispose();
+    isProcessingFiles.dispose();
+  });
+
+  testWidgets('估算高度跟随系统无障碍字体缩放', (tester) async {
+    final listController = ListController();
+    final body = List<String>.filled(
+      120,
+      '这是一段用于撑高消息气泡的长文本，重复出现以便估算高度。',
+    ).join('\n');
+    final messages = <ChatMessage>[
+      for (var i = 0; i < 40; i++)
+        ChatMessage(
+          id: 'scaled-message-$i',
+          role: 'assistant',
+          content: body,
+          conversationId: 'conversation-1',
+        ),
+    ];
+
+    await _pumpEstimatorHarness(
+      tester,
+      messages,
+      listController,
+      textScale: 2.0,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // Items render at the system scale times the chat scale. Ignoring the
+    // system half leaves the estimate at the unscaled ~2900px for this body,
+    // while the real bubble is about four times that.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, greaterThan(6000));
+
+    listController.dispose();
+  });
+
+  testWidgets('折叠的内联思考块不计入估算高度', (tester) async {
+    final listController = ListController();
+    final thinking = List<String>.filled(200, '这是一段很长的思考内容。').join('\n');
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('<think>\n$thinking\n</think>\n简短的正文回答。'),
+      listController,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // Only the one visible line plus a collapsed card renders; counting the
+    // 200 hidden lines would inflate the scroll range by orders of magnitude.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, lessThan(400));
+
+    listController.dispose();
+  });
+
+  testWidgets('展开思考时估算高度计入思考正文', (tester) async {
+    final listController = ListController();
+    final thinking = List<String>.filled(200, '这是一段很长的思考内容。').join('\n');
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('<think>\n$thinking\n</think>\n简短的正文回答。'),
+      listController,
+      collapseThinking: false,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // With auto-collapse off the whole block is on screen, so skipping it
+    // would under-estimate by thousands of pixels.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, greaterThan(4000));
+
+    listController.dispose();
+  });
+
+  testWidgets('用户消息里的字面量 think 标签仍计入估算高度', (tester) async {
+    final listController = ListController();
+    final thinking = List<String>.filled(200, '这是一段很长的思考内容。').join('\n');
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages(
+        '<think>\n$thinking\n</think>\n简短的正文回答。',
+        role: 'user',
+      ),
+      listController,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // A user message renders its text verbatim — there is no thinking card.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, greaterThan(4000));
+
+    listController.dispose();
+  });
+
+  testWidgets('估算高度忽略 Markdown 链接里的目标地址', (tester) async {
+    final listController = ListController();
+    final target = 'https://example.com/${'a' * 4000}';
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('[x]($target)'),
+      listController,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // The link renders as the single character `x`; counting the hidden target
+    // would invent hundreds of lines of scroll range.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, lessThan(200));
+
+    listController.dispose();
+  });
+
+  testWidgets('估算高度不把超长代码行按换行折算', (tester) async {
+    final listController = ListController();
+    final codeLine = 'x' * 4000;
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('```json\n$codeLine\n```'),
+      listController,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // Code blocks scroll horizontally instead of wrapping, so one long line
+    // stays one line.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, lessThan(300));
+
+    listController.dispose();
+  });
+
+  testWidgets('代码块换行时估算高度按换行折算', (tester) async {
+    final listController = ListController();
+    final codeLine = 'x' * 4000;
+
+    await _pumpEstimatorHarness(
+      tester,
+      _estimatorMessages('```json\n$codeLine\n```'),
+      listController,
+      wrapCodeBlocks: true,
+    );
+    final tail = listController.extentForIndex(39);
+
+    // Desktop (and mobile with the wrap setting on) renders the same line as
+    // dozens of rows; the horizontal-scroll case above estimates it at under
+    // 300px, so treating every renderer as scrolling under-estimates badly.
+    expect(tail.$2, isTrue);
+    expect(tail.$1, greaterThan(900));
+
+    listController.dispose();
+  });
+
   testWidgets('顶部增量载入变高消息时保持当前可见消息位置', (tester) async {
     final key = GlobalKey<_PrependingMessageListHarnessState>();
     await tester.pumpWidget(_PrependingMessageListHarness(key: key));
@@ -909,4 +1136,87 @@ class _PrependingMessageListHarnessState
       ),
     );
   }
+}
+
+Future<void> _pumpEstimatorHarness(
+  WidgetTester tester,
+  List<ChatMessage> messages,
+  ListController listController, {
+  double textScale = 1.0,
+  bool collapseThinking = true,
+  bool wrapCodeBlocks = false,
+}) async {
+  final scrollController = ScrollController();
+  final isProcessingFiles = ValueNotifier<bool>(false);
+  addTearDown(scrollController.dispose);
+  addTearDown(isProcessingFiles.dispose);
+
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(
+          value: SettingsProvider(createBusinessTestPreferences()),
+        ),
+        ChangeNotifierProvider.value(
+          value: AssistantProvider(
+            preferences: createBusinessTestPreferences(),
+          ),
+        ),
+        ChangeNotifierProvider.value(
+          value: TtsProvider(preferences: createBusinessTestPreferences()),
+        ),
+        ChangeNotifierProvider.value(
+          value: UserProvider(preferences: createBusinessTestPreferences()),
+        ),
+        ChangeNotifierProvider.value(value: AskUserInteractionService()),
+        ChangeNotifierProvider.value(value: ToolApprovalService()),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
+              body: MessageListView(
+                scrollController: scrollController,
+                listController: listController,
+                messages: messages,
+                byGroup: const {},
+                versionSelections: const {},
+                reasoning: const {},
+                reasoningSegments: const {},
+                contentSplits: const {},
+                toolParts: const {},
+                translations: const {},
+                selecting: false,
+                selectedItems: const {},
+                dividerPadding: EdgeInsets.zero,
+                isProcessingFiles: isProcessingFiles,
+                collapseThinking: collapseThinking,
+                wrapCodeBlocks: wrapCodeBlocks,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+List<ChatMessage> _estimatorMessages(
+  String content, {
+  String role = 'assistant',
+}) {
+  return <ChatMessage>[
+    for (var i = 0; i < 40; i++)
+      ChatMessage(
+        id: 'estimator-message-$i',
+        role: role,
+        content: content,
+        conversationId: 'conversation-1',
+      ),
+  ];
 }

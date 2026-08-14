@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,7 @@ import '../../../core/models/assistant.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../chat/widgets/chat_message_widget.dart';
+import '../../chat/utils/thinking_tag_parser.dart';
 import '../../chat/widgets/message_more_sheet.dart';
 import '../controllers/stream_controller.dart' as stream_ctrl;
 import '../controllers/streaming_content_notifier.dart';
@@ -136,6 +138,9 @@ class MessageListView extends StatefulWidget {
     this.onLoadMoreAfter,
     this.onUserScrollIntent,
     this.chatFontScale = 1,
+    this.collapseThinking = true,
+    this.collapsedCodeLines,
+    this.wrapCodeBlocks = false,
     this.showModelIcon = true,
     this.showUserAvatar = true,
     this.showTokenStats = false,
@@ -217,6 +222,17 @@ class MessageListView extends StatefulWidget {
   final Future<bool> Function()? onLoadMoreAfter;
   final VoidCallback? onUserScrollIntent;
   final double chatFontScale;
+
+  /// Whether finished thinking blocks render collapsed (display setting).
+  final bool collapseThinking;
+
+  /// Lines a long code block collapses to, or null when it stays expanded.
+  final int? collapsedCodeLines;
+
+  /// Whether code blocks wrap (desktop, or the mobile wrap setting) instead of
+  /// scrolling horizontally.
+  final bool wrapCodeBlocks;
+
   final bool showModelIcon;
   final bool showUserAvatar;
   final bool showTokenStats;
@@ -281,6 +297,262 @@ class _MessageListViewState extends State<MessageListView> {
     };
   }
 
+  /// Header row + action bar + vertical margins around a bubble.
+  static const double _estimateChrome = 96.0;
+
+  /// Height of a collapsed inline thinking card.
+  static const double _estimateCollapsedCard = 44.0;
+
+  /// Characters scanned before a message's line density is extrapolated.
+  static const int _estimateScanLimit = 8000;
+
+  /// Font size fenced code renders at, before scaling.
+  static const double _estimateCodeFontSize = 13.0;
+
+  /// Longest message the thinking parser is run over.
+  static const int _estimateParseLimit = 64000;
+
+  /// Cached estimates kept before the memo is dropped wholesale.
+  static const int _extentEstimateCacheLimit = 512;
+
+  final Map<String, _ExtentEstimate> _extentEstimateCache = {};
+
+  /// System accessibility text scale, which multiplies the chat font scale.
+  double _systemTextScale = 1.0;
+
+  /// Display settings the estimate depends on, refreshed in [build].
+  _EstimateSettings _estimateSettings = const _EstimateSettings(
+    collapseThinking: true,
+    collapsedCodeLines: null,
+    wrapCodeBlocks: false,
+  );
+
+  /// Font scale the currently stored extents were estimated at.
+  double? _estimatedFontScale;
+
+  /// Drops stored extents after the system text scale changed.
+  ///
+  /// Only the widget-driven inputs go through [_synchronizeExtentCache]; a
+  /// system accessibility change arrives through MediaQuery without touching
+  /// the item count, so SuperSliverList would otherwise keep off-screen
+  /// estimates made at the old scale until each of them is scrolled into view.
+  void _invalidateEstimatesIfScaleChanged() {
+    final scale = widget.chatFontScale * _systemTextScale;
+    if (_estimatedFontScale == scale) return;
+    final hadEstimates = _estimatedFontScale != null;
+    _estimatedFontScale = scale;
+    if (!hadEstimates) return;
+    final controller = widget.listController;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !controller.isAttached || controller.isLocked) return;
+      controller.invalidateAllExtents();
+    });
+  }
+
+  /// Rough height of a message bubble, used for items that never got laid out.
+  ///
+  /// SuperSliverList's default estimate is a flat 100px. In a long chat a real
+  /// bubble is one to two orders of magnitude taller than that, so every time
+  /// layout replaces an estimate with a measurement the total extent — and with
+  /// it the bottom-pinned scroll offset — moves by tens of thousands of pixels.
+  /// When that lands across two frames the timeline visibly flicks away from
+  /// the bottom and back. A content-derived estimate keeps those corrections
+  /// small; it does not need to be exact, only the right order of magnitude.
+  double _estimateItemExtent(int? index, double crossAxisExtent) {
+    // A null index asks whether one extent fits every item. Answering with a
+    // positive number makes SuperSliverList apply it to the whole list without
+    // ever consulting the per-item branch below, so this has to be 0.
+    if (index == null) return 0;
+    final models = _effectiveRenderModels;
+    if (index < 0 || index >= models.length) return _estimateChrome;
+
+    final message = models[index].message;
+    final text = message.content;
+    if (text.isEmpty) return _estimateChrome;
+
+    // Layout asks for the same item repeatedly (every resize, every window
+    // change), and the scan below is linear in the message length, so a memo
+    // keyed by everything the result depends on keeps the layout phase cheap.
+    // The content is compared by identity: an edited or streamed message always
+    // carries a new string, and equal-length rewrites must not hit the memo.
+    final fontScale = widget.chatFontScale * _systemTextScale;
+    final settings = _estimateSettings;
+    final cached = _extentEstimateCache[message.id];
+    if (cached != null &&
+        identical(cached.content, text) &&
+        cached.crossAxisExtent == crossAxisExtent &&
+        cached.fontScale == fontScale &&
+        cached.settings == settings) {
+      return cached.extent;
+    }
+
+    // Inline thinking renders as its own card. When it is collapsed only the
+    // visible remainder takes space, so parse it out with the same parser the
+    // renderer uses instead of guessing at the tag syntax.
+    var body = text;
+    var collapsedCards = 0;
+    if (settings.collapseThinking &&
+        message.role != 'user' &&
+        text.length <= _estimateParseLimit &&
+        text.contains('<')) {
+      final parsed = ThinkingTagParser.parseLegacyInlineBlocks(text);
+      if (parsed.hasThinking) {
+        body = parsed.visibleContent;
+        collapsedCards = parsed.thinkingTexts.length;
+      }
+    }
+
+    final fontSize = 15.6 * fontScale;
+    final lineHeight = fontSize * 1.5;
+    // User bubbles are inset and never span the full width.
+    final bubbleWidth = crossAxisExtent * (message.role == 'user' ? 0.85 : 1.0);
+    final textWidth = math.max(80.0, bubbleWidth - 28);
+    // Wide (CJK) glyphs are about twice as wide as Latin ones, so the mix
+    // decides how many characters fit on a line.
+    final charWidth = fontSize * (0.5 + 0.55 * _wideCharRatio(body));
+    final charsPerLine = math.max(1.0, textWidth / charWidth);
+    // Code renders in a fixed 13px monospace face, so it wraps at a different
+    // column and stacks at a different row height than the body text.
+    final codeFontSize = _estimateCodeFontSize * fontScale;
+    final codeCharsPerLine = math.max(1.0, textWidth / (codeFontSize * 0.6));
+    final extent =
+        _wrappedLineCount(
+              body,
+              charsPerLine: charsPerLine,
+              codeCharsPerLine: settings.wrapCodeBlocks
+                  ? codeCharsPerLine
+                  : null,
+              codeLineRatio: codeFontSize / fontSize,
+              collapsedCodeLines: settings.collapsedCodeLines,
+            ) *
+            lineHeight +
+        _estimateChrome +
+        collapsedCards * _estimateCollapsedCard;
+
+    if (_extentEstimateCache.length > _extentEstimateCacheLimit) {
+      _extentEstimateCache.clear();
+    }
+    _extentEstimateCache[message.id] = _ExtentEstimate(
+      content: text,
+      crossAxisExtent: crossAxisExtent,
+      fontScale: fontScale,
+      settings: settings,
+      extent: extent,
+    );
+    return extent;
+  }
+
+  /// Rendered height in body lines, wrapping each hard line separately.
+  ///
+  /// Dividing the whole length by [charsPerLine] would collapse blank lines and
+  /// short lines, which is exactly the shape chat messages tend to have. Two
+  /// constructs would otherwise be counted wrong: a Markdown link hides its
+  /// target, and a fenced code block renders in its own font — wrapping at
+  /// [codeCharsPerLine] when the renderer wraps, or staying one row per source
+  /// line when it scrolls horizontally instead ([codeCharsPerLine] null), each
+  /// row [codeLineRatio] of a body line tall. A block may also be collapsed to
+  /// [collapsedCodeLines] source lines.
+  double _wrappedLineCount(
+    String text, {
+    required double charsPerLine,
+    required double? codeCharsPerLine,
+    required double codeLineRatio,
+    required int? collapsedCodeLines,
+  }) {
+    var lines = 0.0;
+    var visible = 0; // rendered characters on the current line
+    var fenceRows = 0.0; // rendered rows inside the open code fence
+    var fenceSourceLines = 0; // hard lines inside the open code fence
+    var inFence = false;
+    var index = 0;
+
+    void endLine() {
+      if (inFence) {
+        fenceSourceLines++;
+        fenceRows += visible == 0 || codeCharsPerLine == null
+            ? 1.0 // one row per source line: code scrolls sideways
+            : (visible / codeCharsPerLine).ceilToDouble();
+      } else {
+        lines += visible == 0 ? 1.0 : (visible / charsPerLine).ceilToDouble();
+      }
+      visible = 0;
+    }
+
+    void endFence() {
+      // Collapsing hides source lines, so the wrapped rows shrink with them.
+      final shown = collapsedCodeLines == null || fenceSourceLines == 0
+          ? fenceRows
+          : fenceRows * math.min(1.0, collapsedCodeLines / fenceSourceLines);
+      lines += shown * codeLineRatio;
+      fenceRows = 0;
+      fenceSourceLines = 0;
+    }
+
+    // Very long messages only need the right order of magnitude, so the scan is
+    // budgeted per character — a single-line megabyte of JSON must not walk the
+    // whole string — and the tail is extrapolated at the observed density.
+    while (index < text.length && index < _estimateScanLimit) {
+      final unit = text.codeUnitAt(index);
+      if (unit == 0x0A) {
+        endLine();
+        index++;
+        continue;
+      }
+      if (unit == 0x60 && _isFenceMarker(text, index)) {
+        if (inFence) {
+          endLine();
+          endFence();
+          inFence = false;
+        } else {
+          endLine();
+          inFence = true;
+        }
+        index += 3;
+        continue;
+      }
+      if (unit == 0x5D && index + 1 < text.length) {
+        // A Markdown link renders its label, never its target.
+        if (text.codeUnitAt(index + 1) == 0x28) {
+          final close = text.indexOf(')', index + 2);
+          if (close > 0) {
+            visible++;
+            index = close + 1;
+            continue;
+          }
+        }
+      }
+      visible++;
+      index++;
+    }
+    endLine();
+    if (inFence) endFence();
+    if (index >= text.length) return lines;
+    return lines * (text.length / math.max(1, index));
+  }
+
+  /// Whether a ``` fence marker starts at [index].
+  bool _isFenceMarker(String text, int index) {
+    if (index + 2 >= text.length) return false;
+    if (text.codeUnitAt(index + 1) != 0x60 ||
+        text.codeUnitAt(index + 2) != 0x60) {
+      return false;
+    }
+    return index == 0 || text.codeUnitAt(index - 1) == 0x0A;
+  }
+
+  /// Fraction of wide glyphs, sampled so the cost stays flat for huge messages.
+  double _wideCharRatio(String text) {
+    const samples = 256;
+    final step = math.max(1, text.length ~/ samples);
+    var wide = 0;
+    var seen = 0;
+    for (var index = 0; index < text.length; index += step) {
+      if (text.codeUnitAt(index) >= 0x2E80) wide++;
+      seen++;
+    }
+    return seen == 0 ? 0 : wide / seen;
+  }
+
   int? _findMessageIndexByKey(Key key) {
     if (key is! ValueKey<String>) return null;
     return _slotIndexById[key.value];
@@ -311,6 +583,9 @@ class _MessageListViewState extends State<MessageListView> {
         oldWidget.showModelIcon != widget.showModelIcon ||
         oldWidget.showUserAvatar != widget.showUserAvatar ||
         oldWidget.showTokenStats != widget.showTokenStats ||
+        oldWidget.collapseThinking != widget.collapseThinking ||
+        oldWidget.collapsedCodeLines != widget.collapsedCodeLines ||
+        oldWidget.wrapCodeBlocks != widget.wrapCodeBlocks ||
         !identical(oldWidget.assistant, widget.assistant);
     if (metricInputsChanged) {
       controller.invalidateAllExtents();
@@ -575,6 +850,15 @@ class _MessageListViewState extends State<MessageListView> {
 
   @override
   Widget build(BuildContext context) {
+    // Items render at the system scale times the chat scale (see the MediaQuery
+    // override in _buildMessageItem), so the estimate has to use both.
+    _systemTextScale = MediaQuery.textScalerOf(context).scale(1);
+    _estimateSettings = _EstimateSettings(
+      collapseThinking: widget.collapseThinking,
+      collapsedCodeLines: widget.collapsedCodeLines,
+      wrapCodeBlocks: widget.wrapCodeBlocks,
+    );
+    _invalidateEstimatesIfScaleChanged();
     final presentation = _MessagePresentation(
       chatFontScale: widget.chatFontScale,
       showModelIcon: widget.showModelIcon,
@@ -598,6 +882,7 @@ class _MessageListViewState extends State<MessageListView> {
               delayPopulatingCacheArea: false,
               addRepaintBoundaries: false,
               findChildIndexCallback: _findMessageIndexByKey,
+              extentEstimation: _estimateItemExtent,
               padding: EdgeInsets.fromLTRB(
                 horizontalPad,
                 widget.topContentPadding,
@@ -1263,6 +1548,52 @@ class _MessageListViewState extends State<MessageListView> {
                 widget.onRecoveredAskUserAnswer!(message, part, result),
     );
   }
+}
+
+/// Display settings that change how tall a message renders.
+final class _EstimateSettings {
+  const _EstimateSettings({
+    required this.collapseThinking,
+    required this.collapsedCodeLines,
+    required this.wrapCodeBlocks,
+  });
+
+  /// Whether finished thinking blocks render as a collapsed card.
+  final bool collapseThinking;
+
+  /// Lines a long code block collapses to, or null when it stays expanded.
+  final int? collapsedCodeLines;
+
+  /// Whether code blocks wrap instead of scrolling horizontally.
+  final bool wrapCodeBlocks;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _EstimateSettings &&
+      other.collapseThinking == collapseThinking &&
+      other.collapsedCodeLines == collapsedCodeLines &&
+      other.wrapCodeBlocks == wrapCodeBlocks;
+
+  @override
+  int get hashCode =>
+      Object.hash(collapseThinking, collapsedCodeLines, wrapCodeBlocks);
+}
+
+/// A memoized extent estimate together with everything it was derived from.
+final class _ExtentEstimate {
+  const _ExtentEstimate({
+    required this.content,
+    required this.crossAxisExtent,
+    required this.fontScale,
+    required this.settings,
+    required this.extent,
+  });
+
+  final String content;
+  final double crossAxisExtent;
+  final double fontScale;
+  final _EstimateSettings settings;
+  final double extent;
 }
 
 final class _MessagePresentation {
