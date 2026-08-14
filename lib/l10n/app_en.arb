@@ -2500,7 +2500,7 @@
   },
   "logSettingsTitle": "Log Settings",
   "logSettingsSaveOutput": "Save Response Output",
-  "logSettingsSaveOutputSubtitle": "Log response body content (may use significant storage)",
+  "logSettingsSaveOutputSubtitle": "Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.",
   "logSettingsAutoDelete": "Auto-delete",
   "logSettingsAutoDeleteSubtitle": "Delete logs older than specified days",
   "logSettingsAutoDeleteDisabled": "Disabled",

@@ -5772,7 +5772,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logSettingsSaveOutput => '保存响应输出';
 
   @override
-  String get logSettingsSaveOutputSubtitle => '记录响应体内容（可能占用较多存储空间）';
+  String get logSettingsSaveOutputSubtitle =>
+      '记录流式输出的每个分片（可能影响生成性能）。HTTP 报错响应仍会写入。';
 
   @override
   String get logSettingsAutoDelete => '自动删除';
@@ -12875,7 +12876,8 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get logSettingsSaveOutput => '保存响应输出';
 
   @override
-  String get logSettingsSaveOutputSubtitle => '记录响应体内容（可能占用较多存储空间）';
+  String get logSettingsSaveOutputSubtitle =>
+      '记录流式输出的每个分片（可能影响生成性能）。HTTP 报错响应仍会写入。';
 
   @override
   String get logSettingsAutoDelete => '自动删除';
@@ -20052,7 +20054,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get logSettingsSaveOutput => '保存回應輸出';
 
   @override
-  String get logSettingsSaveOutputSubtitle => '記錄回應本文內容（可能佔用較多儲存空間）';
+  String get logSettingsSaveOutputSubtitle =>
+      '記錄串流輸出的每個分片（可能影響生成效能）。HTTP 報錯回應仍會寫入。';
 
   @override
   String get logSettingsAutoDelete => '自動刪除';

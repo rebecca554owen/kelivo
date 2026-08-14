@@ -23,7 +23,11 @@ import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// Mobile log viewer - shows list of log files and allows viewing/exporting
 class LogViewerPage extends StatefulWidget {
-  const LogViewerPage({super.key, this.initialTab = 0});
+  const LogViewerPage({super.key, this.initialTab = contextTab});
+
+  static const int contextTab = 0;
+  static const int requestTab = 1;
+  static const int appTab = 2;
 
   final int initialTab;
 
@@ -195,9 +199,9 @@ class _LogViewerPageState extends State<LogViewerPage>
                   child: _SegTabBar(
                     controller: _tab,
                     tabs: [
+                      l10n.contextLogViewerTitle,
                       l10n.logViewerTitle,
                       appTabLabel(),
-                      l10n.contextLogViewerTitle,
                     ],
                   ),
                 ),
@@ -206,6 +210,22 @@ class _LogViewerPageState extends State<LogViewerPage>
                     controller: _tab,
                     physics: const BouncingScrollPhysics(),
                     children: [
+                      _LogFilesList(
+                        files: _contextLogFiles,
+                        activeFileName: _activeContextLog,
+                        emptyIcon: Lucide.MessagesSquare,
+                        emptyText: l10n.logViewerEmpty,
+                        formatFileSize: _formatFileSize,
+                        formatDate: _formatDate,
+                        onOpenFile: (file, title) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  _ContextLogFilePage(file: file, title: title),
+                            ),
+                          );
+                        },
+                      ),
                       _LogFilesList(
                         files: _requestLogFiles,
                         activeFileName: _activeRequestLog,
@@ -236,22 +256,6 @@ class _LogViewerPageState extends State<LogViewerPage>
                                 file: file,
                                 title: title,
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                      _LogFilesList(
-                        files: _contextLogFiles,
-                        activeFileName: _activeContextLog,
-                        emptyIcon: Lucide.MessagesSquare,
-                        emptyText: l10n.logViewerEmpty,
-                        formatFileSize: _formatFileSize,
-                        formatDate: _formatDate,
-                        onOpenFile: (file, title) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  _ContextLogFilePage(file: file, title: title),
                             ),
                           );
                         },

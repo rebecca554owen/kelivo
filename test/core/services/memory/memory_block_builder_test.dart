@@ -400,7 +400,7 @@ void main() {
         ),
         MemoryPromptLang.zh,
       );
-      final split = MemoryBlockBuilder.splitInjectedPrefix('${prefix}你好');
+      final split = MemoryBlockBuilder.splitInjectedPrefix('$prefix你好');
       expect(split, isNotNull);
       expect(split!.kind, 'full');
       expect(split.prefix, prefix);

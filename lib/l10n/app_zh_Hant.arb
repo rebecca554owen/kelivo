@@ -2081,7 +2081,7 @@
   "logViewerMoreCount": "+{count} 條更多",
   "logSettingsTitle": "日誌設定",
   "logSettingsSaveOutput": "保存回應輸出",
-  "logSettingsSaveOutputSubtitle": "記錄回應本文內容（可能佔用較多儲存空間）",
+  "logSettingsSaveOutputSubtitle": "記錄串流輸出的每個分片（可能影響生成效能）。HTTP 報錯回應仍會寫入。",
   "logSettingsAutoDelete": "自動刪除",
   "logSettingsAutoDeleteSubtitle": "刪除超過指定天數的日誌",
   "logSettingsAutoDeleteDisabled": "不啟用",

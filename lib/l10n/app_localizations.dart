@@ -11068,7 +11068,7 @@ abstract class AppLocalizations {
   /// No description provided for @logSettingsSaveOutputSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Log response body content (may use significant storage)'**
+  /// **'Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.'**
   String get logSettingsSaveOutputSubtitle;
 
   /// No description provided for @logSettingsAutoDelete.

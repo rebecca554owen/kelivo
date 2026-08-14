@@ -80,6 +80,10 @@ class RequestLogParser {
     r'^\[RES (\d+)\]\s+headers=(.*)$',
     dotAll: true,
   );
+  static final RegExp _resBodyRe = RegExp(
+    r'^\[RES (\d+)\]\s+body=(.*)$',
+    dotAll: true,
+  );
   static final RegExp _resChunkRe = RegExp(
     r'^\[RES (\d+)\]\s+chunk=(.*)$',
     dotAll: true,
@@ -184,6 +188,22 @@ class RequestLogParser {
         e.responseHeaders = _decodeJsonMap(jsonText);
         if (e.responseHeaders == null && jsonText.isNotEmpty) {
           e.warnings.add('Failed to parse response headers JSON');
+        }
+        continue;
+      }
+
+      final mBody = _resBodyRe.firstMatch(msg);
+      if (mBody != null) {
+        final id = int.tryParse(mBody.group(1) ?? '');
+        if (id == null) continue;
+        final e = ensureEntry(id);
+        touch(e, ts);
+        final body = unescape((mBody.group(2) ?? '').trim());
+        e.responseBody = body;
+        if (body.isNotEmpty &&
+            (e.statusCode == null || e.statusCode! >= 400) &&
+            (e.errors.isEmpty || e.errors.last != body)) {
+          e.errors.add(body);
         }
         continue;
       }

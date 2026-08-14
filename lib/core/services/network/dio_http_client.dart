@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -18,6 +19,20 @@ Future<InternetAddress?> _resolveProxyAddress(String host) async {
   } catch (_) {
     return null;
   }
+}
+
+Future<Uint8List> _readLimited(Stream<List<int>> stream, int maxBytes) async {
+  final out = BytesBuilder(copy: false);
+  await for (final chunk in stream) {
+    if (out.length >= maxBytes) continue;
+    final remaining = maxBytes - out.length;
+    if (chunk.length <= remaining) {
+      out.add(chunk);
+    } else if (remaining > 0) {
+      out.add(chunk.sublist(0, remaining));
+    }
+  }
+  return out.takeBytes();
 }
 
 ConnectionTask<Socket> _directConnection(Uri uri, SecurityContext? context) {
@@ -219,12 +234,37 @@ class DioHttpClient extends http.BaseClient {
       final int? contentLength = (body.contentLength >= 0)
           ? body.contentLength
           : null;
+      const maxErrorBodyBytes = 256 * 1024;
+
+      // Error payloads are small; read them now so the log does not depend
+      // on the caller consuming the stream (and the viewer can parse body=).
+      if (RequestLogger.enabled && statusCode >= 400) {
+        final bytes = await _readLimited(body.stream, maxErrorBodyBytes);
+        final text = RequestLogger.safeDecodeUtf8(bytes);
+        if (text.isNotEmpty) {
+          RequestLogger.logLine(
+            '[RES $reqId] body=${RequestLogger.escape(text)}',
+          );
+        }
+        RequestLogger.logLine('[RES $reqId] done');
+        return http.StreamedResponse(
+          Stream<List<int>>.fromIterable([if (bytes.isNotEmpty) bytes]),
+          statusCode,
+          contentLength: contentLength ?? (bytes.isEmpty ? 0 : bytes.length),
+          request: request,
+          headers: headers,
+          isRedirect: resp.isRedirect,
+          reasonPhrase: resp.statusMessage,
+        );
+      }
+
+      final logChunks = RequestLogger.enabled && RequestLogger.saveOutput;
       final controller = StreamController<List<int>>(sync: true);
       controller.onListen = () {
         body.stream.listen(
           (chunk) {
             controller.add(chunk);
-            if (RequestLogger.enabled && RequestLogger.saveOutput) {
+            if (logChunks) {
               final s = RequestLogger.safeDecodeUtf8(chunk);
               if (s.isNotEmpty) {
                 RequestLogger.logLine(
@@ -278,6 +318,16 @@ class DioHttpClient extends http.BaseClient {
         RequestLogger.logLine(
           '[RES $reqId] dio_error=${RequestLogger.escape(e.toString())}',
         );
+        final status = e.response?.statusCode;
+        if (status != null) {
+          RequestLogger.logLine('[RES $reqId] status=$status');
+        }
+        final data = e.response?.data;
+        if (data != null && data is! ResponseBody) {
+          RequestLogger.logLine(
+            '[RES $reqId] body=${RequestLogger.escape(data.toString())}',
+          );
+        }
       }
       throw http.ClientException(e.toString(), uri);
     } catch (e) {

@@ -132,76 +132,6 @@ class _AboutPageState extends State<AboutPage> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            l10n.requestLogSettingTitle,
-                                            style: TextStyle(
-                                              color: cs.onSurface.withValues(
-                                                alpha: 0.9,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        InkWell(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          onTap: () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    const LogViewerPage(
-                                                      initialTab: 0,
-                                                    ),
-                                              ),
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(6),
-                                            child: Icon(
-                                              Lucide.FolderOpen,
-                                              size: 20,
-                                              color: cs.primary,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        IosSwitch(
-                                          value: dialogContext
-                                              .watch<SettingsProvider>()
-                                              .requestLogEnabled,
-                                          onChanged: (v) => dialogContext
-                                              .read<SettingsProvider>()
-                                              .setRequestLogEnabled(v),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    l10n.requestLogSettingSubtitle,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: cs.onSurface.withValues(
-                                        alpha: 0.65,
-                                      ),
-                                      height: 1.25,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Material(
-                                  color: Colors.transparent,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 6,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
                                             l10n.contextLogSettingTitle,
                                             style: TextStyle(
                                               color: cs.onSurface.withValues(
@@ -219,7 +149,9 @@ class _AboutPageState extends State<AboutPage> {
                                               MaterialPageRoute(
                                                 builder: (_) =>
                                                     const LogViewerPage(
-                                                      initialTab: 2,
+                                                      initialTab:
+                                                          LogViewerPage
+                                                              .contextTab,
                                                     ),
                                               ),
                                             );
@@ -272,6 +204,78 @@ class _AboutPageState extends State<AboutPage> {
                                       children: [
                                         Expanded(
                                           child: Text(
+                                            l10n.requestLogSettingTitle,
+                                            style: TextStyle(
+                                              color: cs.onSurface.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          onTap: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const LogViewerPage(
+                                                      initialTab:
+                                                          LogViewerPage
+                                                              .requestTab,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(6),
+                                            child: Icon(
+                                              Lucide.FolderOpen,
+                                              size: 20,
+                                              color: cs.primary,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        IosSwitch(
+                                          value: dialogContext
+                                              .watch<SettingsProvider>()
+                                              .requestLogEnabled,
+                                          onChanged: (v) => dialogContext
+                                              .read<SettingsProvider>()
+                                              .setRequestLogEnabled(v),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    l10n.requestLogSettingSubtitle,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: cs.onSurface.withValues(
+                                        alpha: 0.65,
+                                      ),
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Material(
+                                  color: Colors.transparent,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 6,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
                                             l10n.flutterLogSettingTitle,
                                             style: TextStyle(
                                               color: cs.onSurface.withValues(
@@ -289,7 +293,8 @@ class _AboutPageState extends State<AboutPage> {
                                               MaterialPageRoute(
                                                 builder: (_) =>
                                                     const LogViewerPage(
-                                                      initialTab: 1,
+                                                      initialTab:
+                                                          LogViewerPage.appTab,
                                                     ),
                                               ),
                                             );

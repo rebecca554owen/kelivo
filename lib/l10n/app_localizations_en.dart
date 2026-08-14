@@ -6003,7 +6003,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logSettingsSaveOutputSubtitle =>
-      'Log response body content (may use significant storage)';
+      'Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.';
 
   @override
   String get logSettingsAutoDelete => 'Auto-delete';

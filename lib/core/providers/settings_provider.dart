@@ -1012,17 +1012,17 @@ class SettingsProvider extends ChangeNotifier {
     _keepAssistantListExpandedOnSidebarClose =
         prefs.getBool(_displayKeepAssistantListExpandedOnSidebarCloseKey) ??
         false;
-    _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? false;
+    _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? true;
     await RequestLogger.setEnabled(_requestLogEnabled);
-    _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? false;
+    _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? true;
     await ContextLogger.setEnabled(_contextLogEnabled);
     _flutterLogEnabled =
         localPreferences.getBool(_flutterLogEnabledKey) ?? false;
     await FlutterLogger.setEnabled(_flutterLogEnabled);
-    _logSaveOutput = prefs.getBool(_logSaveOutputKey) ?? true;
+    _logSaveOutput = prefs.getBool(_logSaveOutputKey) ?? false;
     RequestLogger.saveOutput = _logSaveOutput;
     _logAutoDeleteDays = prefs.getInt(_logAutoDeleteDaysKey) ?? 0;
-    _logMaxSizeMB = prefs.getInt(_logMaxSizeMBKey) ?? 0;
+    _logMaxSizeMB = prefs.getInt(_logMaxSizeMBKey) ?? 50;
     _appLaunchCount = prefs.getInt(_appLaunchCountKey) ?? 0;
     // Run log cleanup based on current settings
     RequestLogger.cleanupLogs(
@@ -4754,7 +4754,7 @@ Requirements:
   }
 
   // Network: request logging (debug)
-  bool _requestLogEnabled = false;
+  bool _requestLogEnabled = true;
   bool get requestLogEnabled => _requestLogEnabled;
   Future<void> setRequestLogEnabled(bool v) async {
     if (_requestLogEnabled == v) return;
@@ -4765,7 +4765,7 @@ Requirements:
     await RequestLogger.setEnabled(v);
   }
 
-  bool _contextLogEnabled = false;
+  bool _contextLogEnabled = true;
   bool get contextLogEnabled => _contextLogEnabled;
   Future<void> setContextLogEnabled(bool v) async {
     if (_contextLogEnabled == v) return;
@@ -4797,7 +4797,7 @@ Requirements:
   }
 
   // Log settings: save output
-  bool _logSaveOutput = true;
+  bool _logSaveOutput = false;
   bool get logSaveOutput => _logSaveOutput;
   Future<void> setLogSaveOutput(bool v) async {
     if (_logSaveOutput == v) return;
@@ -4821,7 +4821,7 @@ Requirements:
   }
 
   // Log settings: max log size (MB)
-  int _logMaxSizeMB = 0;
+  int _logMaxSizeMB = 50;
   int get logMaxSizeMB => _logMaxSizeMB;
   Future<void> setLogMaxSizeMB(int v) async {
     if (_logMaxSizeMB == v) return;

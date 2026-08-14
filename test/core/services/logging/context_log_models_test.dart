@@ -83,7 +83,7 @@ void main() {
     );
     final message = <String, dynamic>{
       'role': 'user',
-      'content': '${prefix}用户本轮输入',
+      'content': '$prefix用户本轮输入',
       kelivoContextSegmentsKey: [
         ContextSegmentTags.item(
           source: ContextSource.memorySnapshot,

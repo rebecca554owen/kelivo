@@ -11,7 +11,7 @@ class RequestLogger {
   static bool get enabled => _enabled;
   static bool _writeErrorReported = false;
 
-  static bool saveOutput = true;
+  static bool saveOutput = false;
 
   static int _nextRequestId = 0;
   static int nextRequestId() => ++_nextRequestId;
