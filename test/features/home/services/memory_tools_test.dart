@@ -10,6 +10,7 @@ import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/memory_entry.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/mcp_provider.dart';
+import 'package:Kelivo/core/providers/memory_provider.dart';
 import 'package:Kelivo/core/providers/memory_provider_v2.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
@@ -311,6 +312,110 @@ void main() {
         expect(memoryV2.entries.length, greaterThanOrEqualTo(2));
       },
     );
+  });
+
+  group('legacy memory mode (tool handler)', () {
+    bool isMemoryRelated(String name) {
+      return MemoryTools.legacyToolNames.contains(name) ||
+          MemoryTools.allToolNames.contains(name) ||
+          name.startsWith('memory_') ||
+          name == 'chat_search';
+    }
+
+    Future<(ToolHandlerService, SettingsProvider, MemoryProvider)>
+    pumpLegacyHandler(WidgetTester tester) async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      await settings.loaded;
+      final memory = MemoryProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => AssistantProvider(
+                preferences: createBusinessTestPreferences(),
+              ),
+            ),
+            ChangeNotifierProvider(
+              create: (_) =>
+                  McpProvider(preferences: createBusinessTestPreferences()),
+            ),
+            ChangeNotifierProvider(create: (_) => McpToolService()),
+            ChangeNotifierProvider(
+              create: (_) => MemoryProviderV2(
+                repository: memoryRepository,
+                chatRepository: chatRepository,
+              ),
+            ),
+            ChangeNotifierProvider.value(value: memory),
+            ChangeNotifierProvider.value(value: settings),
+          ],
+          child: const SizedBox.shrink(),
+        ),
+      );
+      final context = tester.element(find.byType(SizedBox));
+      return (ToolHandlerService(contextProvider: context), settings, memory);
+    }
+
+    testWidgets(
+      'legacy ON + enableMemory + supportsTools registers only the trio',
+      (tester) async {
+        final (service, settings, _) = await pumpLegacyHandler(tester);
+        await settings.setLegacyMemoryMode(true);
+
+        final defs = service.buildToolDefinitions(
+          settings,
+          assistant(enableMemory: true, allowPastConversationRecall: true),
+          'openai',
+          'gpt',
+          false,
+          isToolModel: (_, __) => true,
+        );
+        final names = defs.map(toolName).toList();
+        expect(names, MemoryTools.legacyToolNames);
+        expect(names.toSet().intersection(MemoryTools.allToolNames), isEmpty);
+        expect(names.any((n) => n.startsWith('memory_')), isFalse);
+        expect(names, isNot(contains('chat_search')));
+      },
+    );
+
+    testWidgets('legacy ON + enableMemory false registers no memory tools', (
+      tester,
+    ) async {
+      final (service, settings, _) = await pumpLegacyHandler(tester);
+      await settings.setLegacyMemoryMode(true);
+
+      final defs = service.buildToolDefinitions(
+        settings,
+        assistant(enableMemory: false, allowPastConversationRecall: true),
+        'openai',
+        'gpt',
+        false,
+        isToolModel: (_, __) => true,
+      );
+      expect(defs.map(toolName).where(isMemoryRelated), isEmpty);
+    });
+
+    testWidgets('create_memory writes to MemoryProvider', (tester) async {
+      final (service, settings, memory) = await pumpLegacyHandler(tester);
+      await settings.setLegacyMemoryMode(true);
+
+      final handler = service.buildToolCallHandler(
+        settings,
+        assistant(enableMemory: true),
+      );
+      expect(handler, isNotNull);
+      final result = await handler!('create_memory', {
+        'content': 'User likes tea',
+      });
+      expect(result, 'User likes tea');
+      expect(memory.getForAssistant('assistant-a'), hasLength(1));
+      expect(
+        memory.getForAssistant('assistant-a').single.content,
+        'User likes tea',
+      );
+    });
   });
 
   group('write-scope matrix (§10.2 / §4.3)', () {

@@ -339,6 +339,8 @@ class HomeViewModel extends ChangeNotifier {
   /// Never awaited; failures must not surface as chat errors.
   void _onMaybeOrganizeMemory(String conversationId) {
     try {
+      final settings = _contextProvider.read<SettingsProvider>();
+      if (settings.legacyMemoryMode) return;
       final convo = _chatService.getConversation(conversationId);
       if (convo == null) return;
       final assistantProvider = _contextProvider.read<AssistantProvider>();
@@ -1393,8 +1395,10 @@ class HomeViewModel extends ChangeNotifier {
       assistant?.thinkingBudget,
     );
 
-    // §12.10 / D-27: both switches must be on.
-    if (!MemoryPipelineService.shouldGenerateConversationSummary(
+    final legacy = settings.legacyMemoryMode;
+    if (legacy) {
+      if (assistant?.allowPastConversationRecall != true) return;
+    } else if (!MemoryPipelineService.shouldGenerateConversationSummary(
       allowPastConversationRecall:
           assistant?.allowPastConversationRecall == true,
       generateConversationSummary:
@@ -1464,7 +1468,7 @@ class HomeViewModel extends ChangeNotifier {
         .replaceAll('{previous_summary}', previousSummary)
         .replaceAll('{user_messages}', content);
 
-    final traceHandle = _beginSummaryTrace(convo, assistant);
+    final traceHandle = legacy ? null : _beginSummaryTrace(convo, assistant);
     final traceStep = traceHandle?.beginStep(
       MemoryTraceStepKind.conversationSummary,
     );

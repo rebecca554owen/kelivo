@@ -381,4 +381,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(MemorySettingsPage), findsOneWidget);
   });
+
+  testWidgets('legacy memory mode hides new-only rows', (tester) async {
+    final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+    _setLargeSurface(tester);
+
+    await tester.pumpWidget(
+      _buildHarness(
+        assistantProvider: ap,
+        chatService: chat,
+        memoryV2: memoryV2,
+        pipeline: pipeline,
+        child: const AssistantSettingsEditPage(assistantId: _assistantId),
+      ),
+    );
+    await _openMemoryTab(tester);
+
+    expect(find.text('Use legacy memory'), findsOneWidget);
+    expect(find.text('Recent Chats Reference'), findsNothing);
+    expect(find.text('Legacy memories (read-only)'), findsOneWidget);
+
+    await _tapSwitchNearLabel(tester, 'Use legacy memory');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Recent Chats Reference'), findsOneWidget);
+    expect(find.text('Auto-organize memory'), findsNothing);
+    expect(find.text('Memory write scope'), findsNothing);
+    expect(find.text('Legacy memories (read-only)'), findsNothing);
+    expect(find.text('Use long-term memory'), findsOneWidget);
+  });
 }

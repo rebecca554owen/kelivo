@@ -12127,6 +12127,24 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get legacyMemoryMigrationClose;
 
+  /// No description provided for @legacyMemoryModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use legacy memory'**
+  String get legacyMemoryModeTitle;
+
+  /// No description provided for @legacyMemoryModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Global setting for all assistants. Both datasets are kept; you can switch back anytime. Legacy memory is per-assistant only — no global memory, user profile, background organize, traces, or past-conversation search.'**
+  String get legacyMemoryModeSubtitle;
+
+  /// No description provided for @legacyMemoryModeCacheWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy mode writes all memories and the current time into the system prompt every turn, so prompt cache cannot hit and long chats cost more.'**
+  String get legacyMemoryModeCacheWarning;
+
   /// No description provided for @memoryUiContentLabel.
   ///
   /// In en, this message translates to:

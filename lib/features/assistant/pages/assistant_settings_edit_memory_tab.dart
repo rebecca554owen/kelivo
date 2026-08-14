@@ -1,5 +1,81 @@
 part of 'assistant_settings_edit_page.dart';
 
+class _LegacyMemoryModeToggleCard extends StatelessWidget {
+  const _LegacyMemoryModeToggleCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final settings = context.watch<SettingsProvider>();
+    final warning = context.appColors.warning;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.appColors.surfaceCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
+            width: 0.6,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _iosSwitchRow(
+                context,
+                icon: Lucide.Globe,
+                label: l10n.legacyMemoryModeTitle,
+                value: settings.legacyMemoryMode,
+                onChanged: (v) {
+                  context.read<SettingsProvider>().setLegacyMemoryMode(v);
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(60, 0, 12, 8),
+                child: Text(
+                  l10n.legacyMemoryModeSubtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: cs.onSurface.withValues(alpha: 0.62),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 12, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Lucide.TriangleAlert, size: 14, color: warning),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.legacyMemoryModeCacheWarning,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: warning,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MemoryTab extends StatefulWidget {
   const _MemoryTab({required this.assistantId});
   final String assistantId;
@@ -135,12 +211,20 @@ class _MemoryTabState extends State<_MemoryTab> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    const toggleCard = _LegacyMemoryModeToggleCard();
+    if (settings.legacyMemoryMode) {
+      return _LegacyMemoryTabBody(
+        assistantId: widget.assistantId,
+        header: toggleCard,
+      );
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(widget.assistantId)!;
-    final settings = context.watch<SettingsProvider>();
     final mp = context.watch<MemoryProviderV2>();
     final pipeline = context.read<MemoryPipelineService>();
     final modelMissing =
@@ -179,6 +263,7 @@ class _MemoryTabState extends State<_MemoryTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       children: [
+        toggleCard,
         sectionCard(
           child: Column(
             children: [
@@ -910,9 +995,7 @@ Future<T?> _showMemoryChoiceSheet<T>(
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom,
-          ),
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: SingleChildScrollView(
@@ -947,8 +1030,7 @@ Future<T?> _showMemoryChoiceSheet<T>(
                         label: trailingAction.$2,
                         isSelected: false,
                         trailingIcon: Lucide.Pencil,
-                        onTap: () =>
-                            Navigator.of(ctx).pop(trailingAction.$1),
+                        onTap: () => Navigator.of(ctx).pop(trailingAction.$1),
                       ),
                   ],
                 ),

@@ -234,6 +234,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'legacy mode generates summary when only allowPastConversationRecall is on',
+    (tester) async {
+      final controller = await pumpHarness(tester);
+      await tester.runAsync(() async {
+        await settings.setLegacyMemoryMode(true);
+        await assistantProvider.updateAssistant(
+          assistantProvider.currentAssistant!.copyWith(
+            allowPastConversationRecall: true,
+            generateConversationSummary: false,
+            recentChatsSummaryMessageCount: 1,
+          ),
+        );
+        final convo = await chatService.createConversation(
+          title: 'Ordinary Chat',
+          assistantId: assistantProvider.currentAssistantId,
+        );
+        await seedTwoTurnConversation(convo.id);
+
+        await controller.debugViewModel.debugMaybeGenerateSummaryFor(convo.id);
+
+        expect(generateTextRequestCount, 1);
+        final after = chatService.getConversation(convo.id)!;
+        expect(after.summary, 'User prefers dark mode.');
+        expect(after.lastSummarizedMessageCount, greaterThan(0));
+      });
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('clear-context label counts logical messages, not revisions', (
     tester,
   ) async {
