@@ -385,4 +385,53 @@ void main() {
       );
     });
   });
+
+  group('splitInjectedPrefix', () {
+    test('splits a full snapshot from the user turn', () {
+      final prefix = MemoryBlockBuilder.buildFullSnapshotPrefix(
+        MemoryBlockBuilder.buildProfileBlock(
+          fields: const [],
+          lang: MemoryPromptLang.zh,
+        ),
+        MemoryBlockBuilder.buildMemoryBlock(
+          visible: const [],
+          totalByType: const {},
+          lang: MemoryPromptLang.zh,
+        ),
+        MemoryPromptLang.zh,
+      );
+      final split = MemoryBlockBuilder.splitInjectedPrefix('${prefix}你好');
+      expect(split, isNotNull);
+      expect(split!.kind, 'full');
+      expect(split.prefix, prefix);
+      expect(split.rest, '你好');
+    });
+
+    test('splits an update snapshot from the user turn', () {
+      final prefix = MemoryBlockBuilder.buildUpdatePrefix(
+        MemoryBlockBuilder.buildProfileBlock(
+          fields: const [],
+          lang: MemoryPromptLang.en,
+        ),
+        MemoryBlockBuilder.buildMemoryBlock(
+          visible: const [],
+          totalByType: const {},
+          lang: MemoryPromptLang.en,
+        ),
+        MemoryPromptLang.en,
+      );
+      final split = MemoryBlockBuilder.splitInjectedPrefix('${prefix}hello');
+      expect(split, isNotNull);
+      expect(split!.kind, 'update');
+      expect(split.prefix, prefix);
+      expect(split.rest, 'hello');
+    });
+
+    test('returns null when payload is not a snapshot', () {
+      expect(
+        MemoryBlockBuilder.splitInjectedPrefix('just a user message'),
+        isNull,
+      );
+    });
+  });
 }

@@ -8,6 +8,7 @@ import '../../../core/models/conversation.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/logging/context_logger.dart';
 import '../../../core/utils/multimodal_input_utils.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/assistant_regex.dart';
@@ -204,6 +205,16 @@ class MessageGenerationService {
     onFileProcessingFinished?.call();
 
     await messageBuilderService.inlineLocalImages(apiMessages);
+    if (ContextLogger.enabled) {
+      final providerName = cfg.name.trim();
+      ContextLogger.logPrepared(
+        apiMessages: apiMessages,
+        conversationId: currentConversation?.id ?? '',
+        assistantName: assistant?.name ?? '',
+        provider: providerName.isNotEmpty ? providerName : providerKey,
+        model: modelId,
+      );
+    }
     messageBuilderService.stripInternalRevisionIds(apiMessages);
 
     // Prepare tools

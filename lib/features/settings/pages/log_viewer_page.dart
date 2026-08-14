@@ -14,6 +14,8 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/app_directories.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/models/world_book.dart';
+import '../../../core/services/logging/context_log_models.dart';
 import '../logs/request_log_parser.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -32,20 +34,22 @@ class _LogViewerPageState extends State<LogViewerPage>
     with SingleTickerProviderStateMixin {
   static const String _activeRequestLog = 'logs.txt';
   static const String _activeAppLog = 'flutter_logs.txt';
+  static const String _activeContextLog = 'context_logs.txt';
 
   late final TabController _tab;
 
   List<File> _requestLogFiles = <File>[];
   List<File> _appLogFiles = <File>[];
+  List<File> _contextLogFiles = <File>[];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(
-      length: 2,
+      length: 3,
       vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 1),
+      initialIndex: widget.initialTab.clamp(0, 2),
     );
     _loadLogFiles();
   }
@@ -70,9 +74,12 @@ class _LogViewerPageState extends State<LogViewerPage>
 
         final request = <File>[];
         final app = <File>[];
+        final contextFiles = <File>[];
         for (final f in all) {
           final name = f.path.split('/').last.toLowerCase();
-          if (name.startsWith('flutter_logs')) {
+          if (name.startsWith('context_logs')) {
+            contextFiles.add(f);
+          } else if (name.startsWith('flutter_logs')) {
             app.add(f);
           } else if (name.startsWith('logs')) {
             request.add(f);
@@ -92,16 +99,19 @@ class _LogViewerPageState extends State<LogViewerPage>
 
         sortByMtimeDesc(request);
         sortByMtimeDesc(app);
+        sortByMtimeDesc(contextFiles);
 
         setState(() {
           _requestLogFiles = request;
           _appLogFiles = app;
+          _contextLogFiles = contextFiles;
           _loading = false;
         });
       } else {
         setState(() {
           _requestLogFiles = <File>[];
           _appLogFiles = <File>[];
+          _contextLogFiles = <File>[];
           _loading = false;
         });
       }
@@ -109,6 +119,7 @@ class _LogViewerPageState extends State<LogViewerPage>
       setState(() {
         _requestLogFiles = <File>[];
         _appLogFiles = <File>[];
+        _contextLogFiles = <File>[];
         _loading = false;
       });
     }
@@ -182,7 +193,11 @@ class _LogViewerPageState extends State<LogViewerPage>
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
                   child: _SegTabBar(
                     controller: _tab,
-                    tabs: [l10n.logViewerTitle, appTabLabel()],
+                    tabs: [
+                      l10n.logViewerTitle,
+                      appTabLabel(),
+                      l10n.contextLogViewerTitle,
+                    ],
                   ),
                 ),
                 Expanded(
@@ -220,6 +235,22 @@ class _LogViewerPageState extends State<LogViewerPage>
                                 file: file,
                                 title: title,
                               ),
+                            ),
+                          );
+                        },
+                      ),
+                      _LogFilesList(
+                        files: _contextLogFiles,
+                        activeFileName: _activeContextLog,
+                        emptyIcon: Lucide.MessagesSquare,
+                        emptyText: l10n.logViewerEmpty,
+                        formatFileSize: _formatFileSize,
+                        formatDate: _formatDate,
+                        onOpenFile: (file, title) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  _ContextLogFilePage(file: file, title: title),
                             ),
                           );
                         },
@@ -639,6 +670,782 @@ class _RequestLogFilePageState extends State<_RequestLogFilePage> {
                 );
               },
             ),
+    );
+  }
+}
+
+class _ContextLogFilePage extends StatefulWidget {
+  const _ContextLogFilePage({required this.file, required this.title});
+
+  final File file;
+  final String title;
+
+  @override
+  State<_ContextLogFilePage> createState() => _ContextLogFilePageState();
+}
+
+class _ContextLogFilePageState extends State<_ContextLogFilePage> {
+  bool _loading = true;
+  List<ContextLogSnapshot> _snapshots = const <ContextLogSnapshot>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final content = await widget.file.readAsString();
+      final snapshots = <ContextLogSnapshot>[];
+      for (final line in content.split('\n')) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) {
+          continue;
+        }
+        try {
+          final decoded = jsonDecode(trimmed);
+          if (decoded is! Map) {
+            continue;
+          }
+          snapshots.add(
+            ContextLogSnapshot.fromJson(Map<String, dynamic>.from(decoded)),
+          );
+        } catch (_) {}
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _snapshots = snapshots.reversed.toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _snapshots = const <ContextLogSnapshot>[];
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _exportFile() async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(widget.file.path)],
+          subject: widget.file.path.split('/').last,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(
+        context,
+        message: 'Export failed: $e',
+        type: NotificationType.error,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Lucide.ArrowLeft, color: cs.onSurface, size: 22),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: Icon(Lucide.RefreshCw, color: cs.onSurface, size: 20),
+            onPressed: _load,
+          ),
+          IconButton(
+            icon: Icon(Lucide.Share2, color: cs.onSurface, size: 20),
+            tooltip: l10n.logViewerExport,
+            onPressed: _exportFile,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _snapshots.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Lucide.FileQuestion,
+                    size: 46,
+                    color: cs.onSurface.withValues(alpha: 0.28),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    l10n.logViewerEmpty,
+                    style: TextStyle(
+                      color: cs.onSurface.withValues(alpha: 0.62),
+                      fontWeight: AppFontWeights.medium,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              itemCount: _snapshots.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _ContextSummaryBar(snapshots: _snapshots),
+                  );
+                }
+                final snapshot = _snapshots[index - 1];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _ContextLogSnapshotCard(
+                    snapshot: snapshot,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              _ContextSnapshotDetailPage(snapshot: snapshot),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _ContextSummaryBar extends StatelessWidget {
+  const _ContextSummaryBar({required this.snapshots});
+
+  final List<ContextLogSnapshot> snapshots;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    final totalTokens = snapshots.fold<int>(0, (sum, s) => sum + s.totalTokens);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appColors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
+          width: 0.6,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.contextLogSnapshotsCount(snapshots.length),
+              style: TextStyle(
+                fontWeight: AppFontWeights.emphasis,
+                color: cs.onSurface.withValues(alpha: 0.90),
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+          Text(
+            l10n.contextLogSnapshotTokens(totalTokens),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: AppFontWeights.medium,
+              color: cs.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContextLogSnapshotCard extends StatelessWidget {
+  const _ContextLogSnapshotCard({required this.snapshot, required this.onTap});
+
+  final ContextLogSnapshot snapshot;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    final Color tileBg = context.appColors.surfaceCard;
+    final Color border = cs.outlineVariant.withValues(
+      alpha: isDark ? 0.08 : 0.06,
+    );
+
+    final assistant = snapshot.assistantName.trim();
+    final model = snapshot.model.trim();
+    final title = assistant.isNotEmpty
+        ? assistant
+        : (model.isNotEmpty ? model : l10n.contextLogSnapshotFallbackTitle);
+
+    final providerName = _displayProviderName(snapshot.provider);
+    final providerModel = [
+      if (providerName.isNotEmpty) providerName,
+      if (model.isNotEmpty) model,
+    ].join(' · ');
+
+    final metaLine = [
+      _fmtDateTimeSeconds(snapshot.timestamp),
+      l10n.contextLogSnapshotMessages(snapshot.messages.length),
+    ].join(' · ');
+
+    return IosCardPress(
+      baseColor: tileBg,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: border, width: 0.6),
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: AppFontWeights.emphasis,
+                            color: cs.onSurface.withValues(alpha: 0.92),
+                            letterSpacing: -0.2,
+                            height: 1.18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        l10n.contextLogSnapshotTokens(snapshot.totalTokens),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: AppFontWeights.semibold,
+                          color: cs.primary.withValues(alpha: 0.90),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (providerModel.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      providerModel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurface.withValues(alpha: 0.60),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  Text(
+                    metaLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.48),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _ContextCompositionBar(snapshot: snapshot),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Per-source token totals in snapshot order (stable across builds).
+List<MapEntry<ContextSource, int>> _compositionOf(ContextLogSnapshot snapshot) {
+  final totals = <ContextSource, int>{};
+  for (final message in snapshot.messages) {
+    for (final segment in message.segments) {
+      if (segment.tokens <= 0) continue;
+      totals.update(
+        segment.source,
+        (v) => v + segment.tokens,
+        ifAbsent: () => segment.tokens,
+      );
+    }
+  }
+  final entries = totals.entries.toList()
+    ..sort((a, b) => a.key.index.compareTo(b.key.index));
+  return entries;
+}
+
+/// Thin proportional bar showing how much of the context each source uses.
+class _ContextCompositionBar extends StatelessWidget {
+  const _ContextCompositionBar({required this.snapshot});
+
+  final ContextLogSnapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final entries = _compositionOf(snapshot);
+    if (entries.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          height: 6,
+          color: cs.onSurface.withValues(alpha: isDark ? 0.10 : 0.06),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: 6,
+        child: Row(
+          children: [
+            for (var i = 0; i < entries.length; i++) ...[
+              if (i > 0) const SizedBox(width: 2),
+              Expanded(
+                flex: math.max(entries[i].value, 1),
+                child: ColoredBox(
+                  color: _contextSourceColor(entries[i].key, isDark: isDark),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContextCompositionLegend extends StatelessWidget {
+  const _ContextCompositionLegend({required this.snapshot});
+
+  final ContextLogSnapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    final entries = _compositionOf(snapshot);
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        for (final entry in entries)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _contextSourceColor(entry.key, isDark: isDark),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _contextSourceLabel(l10n, entry.key),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.72),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                l10n.contextLogSnapshotTokens(entry.value),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSurface.withValues(alpha: 0.45),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _ContextSnapshotDetailPage extends StatelessWidget {
+  const _ContextSnapshotDetailPage({required this.snapshot});
+
+  final ContextLogSnapshot snapshot;
+
+  Future<void> _copyAll(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final sb = StringBuffer();
+    for (final message in snapshot.messages) {
+      sb.writeln('[${message.role}]');
+      for (final segment in message.segments) {
+        final text = _trimSurroundingBlankLines(segment.text);
+        if (text.isNotEmpty) sb.writeln(text);
+      }
+      sb.writeln();
+    }
+    try {
+      await Clipboard.setData(ClipboardData(text: sb.toString()));
+      if (!context.mounted) return;
+      showAppSnackBar(
+        context,
+        message: l10n.chatMessageWidgetCopiedToClipboard,
+        type: NotificationType.success,
+      );
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final model = snapshot.model.trim();
+    final assistant = snapshot.assistantName.trim();
+    final title = assistant.isNotEmpty
+        ? assistant
+        : (model.isNotEmpty ? model : l10n.contextLogSnapshotFallbackTitle);
+
+    final providerName = _displayProviderName(snapshot.provider);
+    final kv = <_Kv>[
+      _Kv(l10n.logViewerFieldStarted, _fmtDateTimeSeconds(snapshot.timestamp)),
+      if (assistant.isNotEmpty) _Kv(l10n.statsPageAssistantColumn, assistant),
+      if (providerName.isNotEmpty)
+        _Kv(l10n.ttsServicesDialogProviderType, providerName),
+      if (model.isNotEmpty) _Kv(l10n.statsPageModelColumn, model),
+      _Kv(
+        l10n.contextLogViewerTitle,
+        '${l10n.contextLogSnapshotMessages(snapshot.messages.length)} · '
+        '${l10n.contextLogSnapshotTokens(snapshot.totalTokens)}',
+      ),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Lucide.ArrowLeft, color: cs.onSurface, size: 22),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(title),
+        actions: [
+          IconButton(
+            icon: Icon(Lucide.Copy, color: cs.onSurface, size: 20),
+            tooltip: l10n.sideDrawerMenuCopy,
+            onPressed: () => _copyAll(context),
+          ),
+        ],
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        itemCount: snapshot.messages.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _ContextInfoCard(snapshot: snapshot, kv: kv),
+            );
+          }
+          final message = snapshot.messages[index - 1];
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: index == snapshot.messages.length ? 0 : 14,
+            ),
+            child: _ContextMessageGroup(message: message),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// App-style info card: thin border, no section icon header.
+class _ContextInfoCard extends StatelessWidget {
+  const _ContextInfoCard({required this.snapshot, required this.kv});
+
+  final ContextLogSnapshot snapshot;
+  final List<_Kv> kv;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appColors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
+          width: 0.6,
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _KvGrid(items: kv),
+          const SizedBox(height: 12),
+          _ContextCompositionBar(snapshot: snapshot),
+          const SizedBox(height: 10),
+          _ContextCompositionLegend(snapshot: snapshot),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContextMessageGroup extends StatelessWidget {
+  const _ContextMessageGroup({required this.message});
+
+  final ContextLogMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final role = message.role.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (role.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+            child: Text(
+              role,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: AppFontWeights.emphasis,
+                color: cs.onSurface.withValues(alpha: 0.45),
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        for (var i = 0; i < message.segments.length; i++) ...[
+          _ContextSegmentBlock(segment: message.segments[i]),
+          if (i != message.segments.length - 1) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+/// Turn raw segment meta (world book position, snapshot kind) into readable text.
+String _contextSegmentMetaLabel(AppLocalizations l10n, ContextSegment segment) {
+  final meta = segment.meta;
+  if (meta == null) return '';
+  final bits = <String>[];
+  final position = (meta['position'] ?? '').toString().trim();
+  if (position.isNotEmpty) {
+    final parsed = WorldBookInjectionPositionJson.fromJson(position);
+    bits.add(switch (parsed) {
+      WorldBookInjectionPosition.beforeSystemPrompt =>
+        l10n.worldBookInjectionPositionBeforeSystemPrompt,
+      WorldBookInjectionPosition.afterSystemPrompt =>
+        l10n.worldBookInjectionPositionAfterSystemPrompt,
+      WorldBookInjectionPosition.topOfChat =>
+        l10n.worldBookInjectionPositionTopOfChat,
+      WorldBookInjectionPosition.bottomOfChat =>
+        l10n.worldBookInjectionPositionBottomOfChat,
+      WorldBookInjectionPosition.atDepth =>
+        l10n.worldBookInjectionPositionAtDepth,
+    });
+  }
+  final kind = (meta['kind'] ?? '').toString().trim();
+  if (kind == 'full') {
+    bits.add(l10n.contextLogKindFull);
+  } else if (kind == 'update') {
+    bits.add(l10n.contextLogKindUpdate);
+  } else if (kind.isNotEmpty) {
+    bits.add(kind);
+  }
+  return bits.join(' · ');
+}
+
+class _ContextSegmentBlock extends StatefulWidget {
+  const _ContextSegmentBlock({required this.segment});
+
+  final ContextSegment segment;
+
+  @override
+  State<_ContextSegmentBlock> createState() => _ContextSegmentBlockState();
+}
+
+class _ContextSegmentBlockState extends State<_ContextSegmentBlock> {
+  bool _expanded = false;
+
+  Future<void> _copy() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await Clipboard.setData(
+        ClipboardData(text: _trimSurroundingBlankLines(widget.segment.text)),
+      );
+      if (!mounted) {
+        return;
+      }
+      showAppSnackBar(
+        context,
+        message: l10n.chatMessageWidgetCopiedToClipboard,
+        type: NotificationType.success,
+      );
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final color = _contextSourceColor(widget.segment.source, isDark: isDark);
+
+    final Color tileBg = context.appColors.surfaceCard;
+    final Color border = cs.outlineVariant.withValues(
+      alpha: isDark ? 0.08 : 0.06,
+    );
+
+    final metaLabel = _contextSegmentMetaLabel(l10n, widget.segment);
+    final displayText = _trimSurroundingBlankLines(widget.segment.text);
+    final hasText = displayText.isNotEmpty;
+
+    return IosCardPress(
+      baseColor: tileBg,
+      borderRadius: BorderRadius.circular(14),
+      onTap: hasText ? () => setState(() => _expanded = !_expanded) : null,
+      onLongPress: hasText ? _copy : null,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border, width: 0.6),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _contextSourceLabel(l10n, widget.segment.source),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: AppFontWeights.emphasis,
+                    color: cs.onSurface.withValues(alpha: 0.82),
+                    letterSpacing: -0.1,
+                  ),
+                ),
+                if (metaLabel.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      metaLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+                ] else
+                  const Spacer(),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.contextLogSnapshotTokens(widget.segment.tokens),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurface.withValues(alpha: 0.45),
+                  ),
+                ),
+                if (hasText) ...[
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      Lucide.ChevronDown,
+                      size: 14,
+                      color: cs.onSurface.withValues(alpha: 0.35),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            if (hasText) ...[
+              const SizedBox(height: 8),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: Text(
+                  displayText,
+                  maxLines: _expanded ? null : 3,
+                  overflow: _expanded
+                      ? TextOverflow.visible
+                      : TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    height: 1.4,
+                    color: cs.onSurface.withValues(alpha: 0.86),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1066,6 +1873,80 @@ String _fmtDuration(Duration d) {
   final m = d.inMinutes;
   final s = d.inSeconds - m * 60;
   return '${m}m ${s}s';
+}
+
+String _fmtDateTimeSeconds(DateTime dt) {
+  String two(int v) => v.toString().padLeft(2, '0');
+  final local = dt.toLocal();
+  return '${local.year}-${two(local.month)}-${two(local.day)} '
+      '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
+}
+
+/// Custom provider keys are stored as `"OpenAI - DeepSeek"`; show the name only.
+String _displayProviderName(String raw) {
+  final name = raw.trim();
+  if (name.isEmpty) return '';
+  final stripped = name.replaceFirst(
+    RegExp(r'^(OpenAI|Google|Claude)\s*-\s*', caseSensitive: false),
+    '',
+  );
+  return stripped.trim();
+}
+
+String _trimSurroundingBlankLines(String text) {
+  return text
+      .replaceFirst(RegExp(r'^(\s*\n)+'), '')
+      .replaceFirst(RegExp(r'(\n\s*)+$'), '');
+}
+
+Color _contextSourceColor(ContextSource source, {required bool isDark}) {
+  // Muted palette tuned to sit quietly on surfaceCard in both themes.
+  final Color base;
+  switch (source) {
+    case ContextSource.systemPrompt:
+      base = const Color(0xFF5B8DEF);
+    case ContextSource.memoryRules:
+    case ContextSource.memorySnapshot:
+      base = const Color(0xFF9B7EDE);
+    case ContextSource.worldBook:
+      base = const Color(0xFF55B685);
+    case ContextSource.instructionInjection:
+      base = const Color(0xFFE0975C);
+    case ContextSource.searchPrompt:
+      base = const Color(0xFF56AEBF);
+    case ContextSource.chatHistory:
+      base = const Color(0xFFA3A9B3);
+    case ContextSource.toolCall:
+    case ContextSource.toolResult:
+      base = const Color(0xFFC08A62);
+  }
+  if (!isDark) {
+    return base;
+  }
+  return Color.lerp(base, Colors.white, 0.18) ?? base;
+}
+
+String _contextSourceLabel(AppLocalizations l10n, ContextSource source) {
+  switch (source) {
+    case ContextSource.systemPrompt:
+      return l10n.contextLogSourceSystemPrompt;
+    case ContextSource.memoryRules:
+      return l10n.contextLogSourceMemoryRules;
+    case ContextSource.searchPrompt:
+      return l10n.contextLogSourceSearchPrompt;
+    case ContextSource.instructionInjection:
+      return l10n.contextLogSourceInstructionInjection;
+    case ContextSource.worldBook:
+      return l10n.contextLogSourceWorldBook;
+    case ContextSource.memorySnapshot:
+      return l10n.contextLogSourceMemorySnapshot;
+    case ContextSource.chatHistory:
+      return l10n.contextLogSourceChatHistory;
+    case ContextSource.toolCall:
+      return l10n.contextLogSourceToolCall;
+    case ContextSource.toolResult:
+      return l10n.contextLogSourceToolResult;
+  }
 }
 
 class _RequestLogDetailPage extends StatelessWidget {

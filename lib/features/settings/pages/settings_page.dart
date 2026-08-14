@@ -378,7 +378,9 @@ class SettingsPage extends StatelessWidget {
                   }
                 },
               ),
-              if (settings.requestLogEnabled || settings.flutterLogEnabled) ...[
+              if (settings.requestLogEnabled ||
+                  settings.flutterLogEnabled ||
+                  settings.contextLogEnabled) ...[
                 _iosDivider(context),
                 _iosNavRow(
                   context,

@@ -14,6 +14,7 @@ import '../services/tts/network_tts.dart';
 import '../services/tts/tts_text_selection.dart';
 import '../services/asr/asr_service_options.dart';
 import '../services/network/request_logger.dart';
+import '../services/logging/context_logger.dart';
 import '../services/logging/flutter_logger.dart';
 import '../services/learning_mode_store.dart';
 import '../models/api_keys.dart';
@@ -260,6 +261,7 @@ class SettingsProvider extends ChangeNotifier {
       'mobile_assistant_detail_outline_enabled_v1';
   // Network request logging (debug)
   static const String _requestLogEnabledKey = 'request_log_enabled_v1';
+  static const String _contextLogEnabledKey = 'context_log_enabled_v1';
   // Flutter runtime logging (debug)
   static const String _flutterLogEnabledKey = 'flutter_log_enabled_v1';
   // Log settings: save response output, auto-delete, max size
@@ -1012,6 +1014,8 @@ class SettingsProvider extends ChangeNotifier {
         false;
     _requestLogEnabled = prefs.getBool(_requestLogEnabledKey) ?? false;
     await RequestLogger.setEnabled(_requestLogEnabled);
+    _contextLogEnabled = prefs.getBool(_contextLogEnabledKey) ?? false;
+    await ContextLogger.setEnabled(_contextLogEnabled);
     _flutterLogEnabled =
         localPreferences.getBool(_flutterLogEnabledKey) ?? false;
     await FlutterLogger.setEnabled(_flutterLogEnabled);
@@ -4761,6 +4765,17 @@ Requirements:
     await RequestLogger.setEnabled(v);
   }
 
+  bool _contextLogEnabled = false;
+  bool get contextLogEnabled => _contextLogEnabled;
+  Future<void> setContextLogEnabled(bool v) async {
+    if (_contextLogEnabled == v) return;
+    _contextLogEnabled = v;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setBool(_contextLogEnabledKey, v);
+    await ContextLogger.setEnabled(v);
+  }
+
   // Flutter: runtime logging (debug)
   bool _flutterLogEnabled = false;
   bool get flutterLogEnabled => _flutterLogEnabled;
@@ -4996,6 +5011,7 @@ Requirements:
     copy._keepAssistantListExpandedOnSidebarClose =
         _keepAssistantListExpandedOnSidebarClose;
     copy._requestLogEnabled = _requestLogEnabled;
+    copy._contextLogEnabled = _contextLogEnabled;
     copy._flutterLogEnabled = _flutterLogEnabled;
     copy._logSaveOutput = _logSaveOutput;
     copy._logAutoDeleteDays = _logAutoDeleteDays;

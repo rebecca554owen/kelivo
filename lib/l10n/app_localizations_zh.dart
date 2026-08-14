@@ -5626,6 +5626,70 @@ class AppLocalizationsZh extends AppLocalizations {
       '开启后会将 Flutter 错误与 print 输出写入 logs/flutter_logs.txt';
 
   @override
+  String get contextLogSettingTitle => '上下文日志';
+
+  @override
+  String get contextLogSettingSubtitle =>
+      '开启后会将每次实际发送给模型的完整上下文写入 logs/context_logs.txt';
+
+  @override
+  String get contextLogViewerTitle => '上下文';
+
+  @override
+  String contextLogSnapshotMessages(int count) {
+    return '$count 条消息';
+  }
+
+  @override
+  String contextLogSnapshotTokens(int count) {
+    return '$count tokens';
+  }
+
+  @override
+  String get contextLogSourceSystemPrompt => '系统提示词';
+
+  @override
+  String get contextLogSourceMemoryRules => '记忆规则';
+
+  @override
+  String get contextLogSourceSearchPrompt => '搜索提示';
+
+  @override
+  String get contextLogSourceInstructionInjection => '指令注入';
+
+  @override
+  String get contextLogSourceWorldBook => '世界书';
+
+  @override
+  String get contextLogSourceMemorySnapshot => '记忆快照';
+
+  @override
+  String get contextLogSourceChatHistory => '聊天历史';
+
+  @override
+  String get contextLogSourceToolCall => '工具调用';
+
+  @override
+  String get contextLogSourceToolResult => '工具结果';
+
+  @override
+  String contextLogSnapshotsCount(int count) {
+    return '$count 条快照';
+  }
+
+  @override
+  String get contextLogSnapshotFallbackTitle => '快照';
+
+  @override
+  String get contextLogKindFull => '全量快照';
+
+  @override
+  String get contextLogKindUpdate => '增量更新';
+
+  @override
+  String get contextLogSectionComposition => '构成';
+
+  @override
   String get logViewerTitle => '请求日志';
 
   @override
@@ -12654,6 +12718,70 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get flutterLogSettingSubtitle =>
       '开启后会将 Flutter 错误与 print 输出写入 logs/flutter_logs.txt';
+
+  @override
+  String get contextLogSettingTitle => '上下文日志';
+
+  @override
+  String get contextLogSettingSubtitle =>
+      '开启后会将每次实际发送给模型的完整上下文写入 logs/context_logs.txt';
+
+  @override
+  String get contextLogViewerTitle => '上下文';
+
+  @override
+  String contextLogSnapshotMessages(int count) {
+    return '$count 条消息';
+  }
+
+  @override
+  String contextLogSnapshotTokens(int count) {
+    return '$count tokens';
+  }
+
+  @override
+  String get contextLogSourceSystemPrompt => '系统提示词';
+
+  @override
+  String get contextLogSourceMemoryRules => '记忆规则';
+
+  @override
+  String get contextLogSourceSearchPrompt => '搜索提示';
+
+  @override
+  String get contextLogSourceInstructionInjection => '指令注入';
+
+  @override
+  String get contextLogSourceWorldBook => '世界书';
+
+  @override
+  String get contextLogSourceMemorySnapshot => '记忆快照';
+
+  @override
+  String get contextLogSourceChatHistory => '聊天历史';
+
+  @override
+  String get contextLogSourceToolCall => '工具调用';
+
+  @override
+  String get contextLogSourceToolResult => '工具结果';
+
+  @override
+  String contextLogSnapshotsCount(int count) {
+    return '$count 条快照';
+  }
+
+  @override
+  String get contextLogSnapshotFallbackTitle => '快照';
+
+  @override
+  String get contextLogKindFull => '全量快照';
+
+  @override
+  String get contextLogKindUpdate => '增量更新';
+
+  @override
+  String get contextLogSectionComposition => '构成';
 
   @override
   String get logViewerTitle => '请求日志';
@@ -19758,6 +19886,70 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get flutterLogSettingSubtitle =>
       '開啟後會將 Flutter 錯誤與 print 輸出寫入 logs/flutter_logs.txt';
+
+  @override
+  String get contextLogSettingTitle => '上下文日誌';
+
+  @override
+  String get contextLogSettingSubtitle =>
+      '開啟後會將每次實際傳送給模型的完整上下文寫入 logs/context_logs.txt';
+
+  @override
+  String get contextLogViewerTitle => '上下文';
+
+  @override
+  String contextLogSnapshotMessages(int count) {
+    return '$count 則訊息';
+  }
+
+  @override
+  String contextLogSnapshotTokens(int count) {
+    return '$count tokens';
+  }
+
+  @override
+  String get contextLogSourceSystemPrompt => '系統提示詞';
+
+  @override
+  String get contextLogSourceMemoryRules => '記憶規則';
+
+  @override
+  String get contextLogSourceSearchPrompt => '搜尋提示';
+
+  @override
+  String get contextLogSourceInstructionInjection => '指令注入';
+
+  @override
+  String get contextLogSourceWorldBook => '世界書';
+
+  @override
+  String get contextLogSourceMemorySnapshot => '記憶快照';
+
+  @override
+  String get contextLogSourceChatHistory => '聊天歷史';
+
+  @override
+  String get contextLogSourceToolCall => '工具呼叫';
+
+  @override
+  String get contextLogSourceToolResult => '工具結果';
+
+  @override
+  String contextLogSnapshotsCount(int count) {
+    return '$count 則快照';
+  }
+
+  @override
+  String get contextLogSnapshotFallbackTitle => '快照';
+
+  @override
+  String get contextLogKindFull => '全量快照';
+
+  @override
+  String get contextLogKindUpdate => '增量更新';
+
+  @override
+  String get contextLogSectionComposition => '構成';
 
   @override
   String get logViewerTitle => '請求日誌';

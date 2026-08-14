@@ -2420,6 +2420,46 @@
   "requestLogSettingSubtitle": "When enabled, request/response details are written to logs/logs.txt (rotated daily).",
   "flutterLogSettingTitle": "Flutter Logging",
   "flutterLogSettingSubtitle": "When enabled, Flutter errors and print output are written to logs/flutter_logs.txt (rotated daily).",
+  "contextLogSettingTitle": "Context Logging",
+  "contextLogSettingSubtitle": "When enabled, the exact messages sent to the model are written to logs/context_logs.txt (rotated daily).",
+  "contextLogViewerTitle": "Context",
+  "contextLogSnapshotMessages": "{count} messages",
+  "@contextLogSnapshotMessages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextLogSnapshotTokens": "{count} tokens",
+  "@contextLogSnapshotTokens": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextLogSourceSystemPrompt": "System prompt",
+  "contextLogSourceMemoryRules": "Memory rules",
+  "contextLogSourceSearchPrompt": "Search prompt",
+  "contextLogSourceInstructionInjection": "Instruction",
+  "contextLogSourceWorldBook": "World book",
+  "contextLogSourceMemorySnapshot": "Memory snapshot",
+  "contextLogSourceChatHistory": "Chat history",
+  "contextLogSourceToolCall": "Tool call",
+  "contextLogSourceToolResult": "Tool result",
+  "contextLogSnapshotsCount": "{count} snapshots",
+  "@contextLogSnapshotsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextLogSnapshotFallbackTitle": "Snapshot",
+  "contextLogKindFull": "Full snapshot",
+  "contextLogKindUpdate": "Incremental update",
+  "contextLogSectionComposition": "Composition",
   "logViewerTitle": "Request Logs",
   "logViewerEmpty": "No logs yet",
   "logViewerCurrentLog": "Current Log",

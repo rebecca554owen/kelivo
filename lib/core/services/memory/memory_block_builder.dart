@@ -137,6 +137,112 @@ abstract final class MemoryBlockBuilder {
         '\n';
   }
 
+  /// Exclusive end index of a §7.6 prefix at the start of [payload], or null.
+  static int? endOfInjectedPrefix(String payload) {
+    if (payload.isEmpty) return null;
+    return _endOfUpdatePrefix(payload) ?? _endOfFullPrefix(payload);
+  }
+
+  /// Split a frozen user payload into snapshot prefix + remaining user text.
+  static ({String prefix, String rest, String kind})? splitInjectedPrefix(
+    String payload,
+  ) {
+    final updateEnd = _endOfUpdatePrefix(payload);
+    if (updateEnd != null) {
+      return (
+        prefix: payload.substring(0, updateEnd),
+        rest: payload.substring(updateEnd),
+        kind: 'update',
+      );
+    }
+    final fullEnd = _endOfFullPrefix(payload);
+    if (fullEnd != null) {
+      return (
+        prefix: payload.substring(0, fullEnd),
+        rest: payload.substring(fullEnd),
+        kind: 'full',
+      );
+    }
+    return null;
+  }
+
+  static int? _endOfUpdatePrefix(String payload) {
+    final intro = _leadingIntro(payload, update: true);
+    if (intro == null) return null;
+    const close = '</user_memory_update>';
+    final closeAt = payload.indexOf(close, intro.length);
+    if (closeAt < 0) return null;
+    var end = closeAt + close.length;
+    if (payload.startsWith('\n\n', end)) return end + 2;
+    if (payload.startsWith('\n', end)) return end + 1;
+    return end;
+  }
+
+  static int? _endOfFullPrefix(String payload) {
+    final intro = _leadingIntro(payload, update: false);
+    if (intro == null) return null;
+    var cursor = intro.length;
+    if (payload.startsWith('\n', cursor)) cursor++;
+
+    final profile = _consumeProfileBlock(payload, cursor);
+    if (profile == null) return null;
+    cursor = profile;
+
+    for (final type in _typeOrder) {
+      final next = _consumeMemoryBlock(payload, cursor, type);
+      if (next == null) return null;
+      cursor = next;
+    }
+    if (payload.startsWith('\n', cursor)) cursor++;
+    return cursor;
+  }
+
+  static String? _leadingIntro(String payload, {required bool update}) {
+    final candidates = update
+        ? [MemoryPrompts.introUpdateZh, MemoryPrompts.introUpdateEn]
+        : [MemoryPrompts.introFullZh, MemoryPrompts.introFullEn];
+    for (final intro in candidates) {
+      if (payload.startsWith(intro)) return intro;
+    }
+    return null;
+  }
+
+  static int? _consumeProfileBlock(String payload, int start) {
+    const empty = '<user_profile/>';
+    if (payload.startsWith(empty, start)) {
+      var end = start + empty.length;
+      if (payload.startsWith('\n', end)) end++;
+      return end;
+    }
+    const open = '<user_profile>';
+    const close = '</user_profile>';
+    if (!payload.startsWith(open, start)) return null;
+    final closeAt = payload.indexOf(close, start + open.length);
+    if (closeAt < 0) return null;
+    var end = closeAt + close.length;
+    if (payload.startsWith('\n', end)) end++;
+    return end;
+  }
+
+  static int? _consumeMemoryBlock(String payload, int start, MemoryType type) {
+    final head = '<user_memory type="${MemoryEntry.typeToString(type)}"';
+    if (!payload.startsWith(head, start)) return null;
+    final gt = payload.indexOf('>', start);
+    if (gt < 0) return null;
+    final tag = payload.substring(start, gt + 1);
+    if (tag.endsWith('/>')) {
+      var end = gt + 1;
+      if (payload.startsWith('\n', end)) end++;
+      return end;
+    }
+    const close = '</user_memory>';
+    final closeAt = payload.indexOf(close, gt + 1);
+    if (closeAt < 0) return null;
+    var end = closeAt + close.length;
+    if (payload.startsWith('\n', end)) end++;
+    return end;
+  }
+
   static int _scopeRank(MemoryScope scope) {
     switch (scope) {
       case MemoryScope.global:

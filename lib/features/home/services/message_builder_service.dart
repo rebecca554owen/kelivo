@@ -17,6 +17,8 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/chat/document_text_extractor.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
+import '../../../core/services/logging/context_log_models.dart';
+import '../../../core/services/logging/context_logger.dart';
 import '../../../core/services/memory/memory_block_builder.dart';
 import '../../../core/services/memory/memory_prompts.dart';
 import '../../../core/services/search/search_tool_service.dart';
@@ -30,7 +32,11 @@ import '../../../utils/markdown_media_sanitizer.dart';
 import 'ocr_service.dart';
 
 /// Result of §7.6 memory-prefix resolution.
-typedef MemoryPrefixResolution = ({String prefix, String? hash});
+typedef MemoryPrefixResolution = ({
+  String prefix,
+  String? hash,
+  String? snapshotKind,
+});
 
 /// Memory injection state shared by the messages assembled in one request.
 ///
@@ -252,6 +258,22 @@ class MessageBuilderService {
               // assistant message as well would replay the same reasoning
               // twice, which OpenRouter/Anthropic reject. Only the final
               // assistant message below carries them.
+              if (ContextLogger.enabled) {
+                ContextSegmentTags.replaceWithSingle(
+                  assistantToolMessage,
+                  source: ContextSource.toolCall,
+                  length: (assistantToolMessage['content'] ?? '')
+                      .toString()
+                      .length,
+                );
+                for (final toolMessage in toolMessages) {
+                  ContextSegmentTags.replaceWithSingle(
+                    toolMessage,
+                    source: ContextSource.toolResult,
+                    length: (toolMessage['content'] ?? '').toString().length,
+                  );
+                }
+              }
               out.add(assistantToolMessage);
               out.addAll(toolMessages);
             }
@@ -286,6 +308,13 @@ class MessageBuilderService {
       }
       if (reasoningDetails != null) {
         message['reasoning_details'] = reasoningDetails;
+      }
+      if (ContextLogger.enabled) {
+        ContextSegmentTags.replaceWithSingle(
+          message,
+          source: ContextSource.chatHistory,
+          length: content.length,
+        );
       }
       out.add(message);
     }
@@ -345,11 +374,47 @@ class MessageBuilderService {
     return false;
   }
 
-  /// Remove internal user revision IDs before provider requests.
+  /// Remove internal keys before provider requests.
   void stripInternalRevisionIds(List<Map<String, dynamic>> apiMessages) {
     for (final message in apiMessages) {
       message.remove(internalRevisionIdKey);
+      message.remove(kelivoContextSegmentsKey);
     }
+  }
+
+  void _tagFrozenUserPrompt(
+    Map<String, dynamic> message, {
+    required String payload,
+    required bool carriesMemorySnapshot,
+  }) {
+    if (!carriesMemorySnapshot) {
+      ContextSegmentTags.replaceWithSingle(
+        message,
+        source: ContextSource.chatHistory,
+        length: payload.length,
+      );
+      return;
+    }
+    final split = MemoryBlockBuilder.splitInjectedPrefix(payload);
+    if (split != null && split.rest.isNotEmpty) {
+      ContextSegmentTags.write(message, [
+        ContextSegmentTags.item(
+          source: ContextSource.memorySnapshot,
+          length: split.prefix.length,
+          meta: {'kind': split.kind},
+        ),
+        ContextSegmentTags.item(
+          source: ContextSource.chatHistory,
+          length: split.rest.length,
+        ),
+      ]);
+      return;
+    }
+    ContextSegmentTags.replaceWithSingle(
+      message,
+      source: ContextSource.memorySnapshot,
+      length: payload.length,
+    );
   }
 
   ChatMessage? _latestPersistedMessage(ChatMessage message) {
@@ -761,6 +826,13 @@ class MessageBuilderService {
       final existing = frozenPrompts?[revisionId];
       if (existing != null) {
         apiMessages[i]['content'] = existing.payload;
+        if (ContextLogger.enabled) {
+          _tagFrozenUserPrompt(
+            apiMessages[i],
+            payload: existing.payload,
+            carriesMemorySnapshot: existing.carriesMemorySnapshot,
+          );
+        }
         continue;
       }
 
@@ -923,7 +995,7 @@ class MessageBuilderService {
     }
 
     final memory = assistant == null
-        ? (prefix: '', hash: null)
+        ? (prefix: '', hash: null, snapshotKind: null)
         : await resolveMemoryPrefix(
             conversation: conversation,
             assistant: assistant,
@@ -950,6 +1022,36 @@ class MessageBuilderService {
         : '';
     final finalContent = '${memory.prefix}$templated$timeSuffix';
 
+    if (ContextLogger.enabled) {
+      for (final apiMessage in apiMessages) {
+        if ((apiMessage[internalRevisionIdKey] ?? '').toString() !=
+            message.id) {
+          continue;
+        }
+        if (memory.prefix.isNotEmpty) {
+          final kind = memory.snapshotKind;
+          ContextSegmentTags.write(apiMessage, [
+            ContextSegmentTags.item(
+              source: ContextSource.memorySnapshot,
+              length: memory.prefix.length,
+              meta: kind == null ? null : {'kind': kind},
+            ),
+            ContextSegmentTags.item(
+              source: ContextSource.chatHistory,
+              length: finalContent.length - memory.prefix.length,
+            ),
+          ]);
+        } else {
+          ContextSegmentTags.replaceWithSingle(
+            apiMessage,
+            source: ContextSource.chatHistory,
+            length: finalContent.length,
+          );
+        }
+        break;
+      }
+    }
+
     // Temporary drafts never land in message_rows; freezing would violate the
     // message_prompt_rows FK. Assemble in-memory only for those.
     if (persist && freezePrompt) {
@@ -975,12 +1077,12 @@ class MessageBuilderService {
     MemoryInjectionPass? pass,
   }) async {
     if (!assistant.enableMemory) {
-      return (prefix: '', hash: null);
+      return (prefix: '', hash: null, snapshotKind: null);
     }
 
     final repo = _repo;
     if (repo == null) {
-      return (prefix: '', hash: null);
+      return (prefix: '', hash: null, snapshotKind: null);
     }
 
     final fields = await repo.readProfileFields();
@@ -1029,7 +1131,7 @@ class MessageBuilderService {
     // With no prior snapshot there is nothing to clear. Once a snapshot has
     // been sent, however, the all-empty state is itself the latest snapshot.
     if (!hasProfile && !hasAnyMemory && !hasSnapshot) {
-      return (prefix: '', hash: null);
+      return (prefix: '', hash: null, snapshotKind: null);
     }
 
     // CRITICAL: compare against the prior hash BEFORE any write (appendix §6).
@@ -1049,26 +1151,29 @@ class MessageBuilderService {
         : await repo.getConversationInjectedMemoryHash(conversation.id);
 
     final String prefix;
+    final String snapshotKind;
     if (!hasSnapshot) {
       prefix = MemoryBlockBuilder.buildFullSnapshotPrefix(
         profileBlock,
         memoryBlock,
         lang,
       );
+      snapshotKind = 'full';
     } else if (currentHash != previousHash) {
       prefix = MemoryBlockBuilder.buildUpdatePrefix(
         profileBlock,
         memoryBlock,
         lang,
       );
+      snapshotKind = 'update';
     } else {
-      return (prefix: '', hash: null);
+      return (prefix: '', hash: null, snapshotKind: null);
     }
 
     // The hash lands in the database through freezeMessagePrompt, in the same
     // transaction as the prompt row.
     pass?.recordInjectedHash(currentHash);
-    return (prefix: prefix, hash: currentHash);
+    return (prefix: prefix, hash: currentHash, snapshotKind: snapshotKind);
   }
 
   /// Default OCR text wrapper
@@ -1102,7 +1207,15 @@ class MessageBuilderService {
         assistant.systemPrompt,
         vars,
       );
-      apiMessages.insert(0, {'role': 'system', 'content': sys});
+      final sysMessage = <String, dynamic>{'role': 'system', 'content': sys};
+      if (ContextLogger.enabled) {
+        ContextSegmentTags.replaceWithSingle(
+          sysMessage,
+          source: ContextSource.systemPrompt,
+          length: sys.length,
+        );
+      }
+      apiMessages.insert(0, sysMessage);
     }
   }
 
@@ -1140,7 +1253,11 @@ class MessageBuilderService {
         if (buf.isNotEmpty) buf.write('\n\n');
         buf.write(MemoryPrompts.rulesPastConversationRecallFor(lang));
       }
-      _appendToSystemMessage(apiMessages, buf.toString());
+      _appendToSystemMessage(
+        apiMessages,
+        buf.toString(),
+        source: ContextSource.memoryRules,
+      );
     } catch (_) {}
   }
 
@@ -1153,7 +1270,11 @@ class MessageBuilderService {
   ) {
     if (assistant?.searchEnabled == true && !hasBuiltInSearch) {
       final prompt = SearchToolService.getSystemPrompt();
-      _appendToSystemMessage(apiMessages, prompt);
+      _appendToSystemMessage(
+        apiMessages,
+        prompt,
+        source: ContextSource.searchPrompt,
+      );
     }
   }
 
@@ -1175,7 +1296,11 @@ class MessageBuilderService {
           .toList(growable: false);
       if (prompts.isNotEmpty) {
         final lp = prompts.join('\n\n');
-        _appendToSystemMessage(apiMessages, lp);
+        _appendToSystemMessage(
+          apiMessages,
+          lp,
+          source: ContextSource.instructionInjection,
+        );
       }
     } catch (_) {}
   }
@@ -1287,8 +1412,9 @@ class MessageBuilderService {
       }
 
       List<Map<String, dynamic>> createMergedInjectionMessages(
-        List<WorldBookEntry> injections,
-      ) {
+        List<WorldBookEntry> injections, {
+        required WorldBookInjectionPosition position,
+      }) {
         final byRole = <WorldBookInjectionRole, List<WorldBookEntry>>{};
         for (final e in injections) {
           if (e.content.trim().isEmpty) continue;
@@ -1300,11 +1426,21 @@ class MessageBuilderService {
           final group = byRole[role]!;
           final merged = joinContents(group);
           if (merged.isEmpty) continue;
-          if (role == WorldBookInjectionRole.assistant) {
-            result.add({'role': 'assistant', 'content': merged});
-          } else {
-            result.add({'role': 'user', 'content': wrapSystemTag(merged)});
+          final message = role == WorldBookInjectionRole.assistant
+              ? <String, dynamic>{'role': 'assistant', 'content': merged}
+              : <String, dynamic>{
+                  'role': 'user',
+                  'content': wrapSystemTag(merged),
+                };
+          if (ContextLogger.enabled) {
+            ContextSegmentTags.replaceWithSingle(
+              message,
+              source: ContextSource.worldBook,
+              length: (message['content'] ?? '').toString().length,
+              meta: {'position': position.toJson()},
+            );
           }
+          result.add(message);
         }
         return result;
       }
@@ -1354,6 +1490,31 @@ class MessageBuilderService {
             sb.write(afterContent);
           }
           apiMessages[systemIndex]['content'] = sb.toString();
+          if (ContextLogger.enabled) {
+            final sysMsg = apiMessages[systemIndex];
+            if (beforeContent.isNotEmpty) {
+              ContextSegmentTags.prepend(
+                sysMsg,
+                source: ContextSource.worldBook,
+                length: beforeContent.length + 1,
+                meta: {
+                  'position': WorldBookInjectionPosition.beforeSystemPrompt
+                      .toJson(),
+                },
+              );
+            }
+            if (afterContent.isNotEmpty) {
+              ContextSegmentTags.append(
+                sysMsg,
+                source: ContextSource.worldBook,
+                length: 1 + afterContent.length,
+                meta: {
+                  'position': WorldBookInjectionPosition.afterSystemPrompt
+                      .toJson(),
+                },
+              );
+            }
+          }
         } else {
           final sb = StringBuffer();
           if (beforeContent.isNotEmpty) sb.write(beforeContent);
@@ -1362,7 +1523,53 @@ class MessageBuilderService {
             sb.write(afterContent);
           }
           if (sb.isNotEmpty) {
-            apiMessages.insert(0, {'role': 'system', 'content': sb.toString()});
+            final created = <String, dynamic>{
+              'role': 'system',
+              'content': sb.toString(),
+            };
+            if (ContextLogger.enabled) {
+              if (beforeContent.isNotEmpty && afterContent.isNotEmpty) {
+                ContextSegmentTags.write(created, [
+                  ContextSegmentTags.item(
+                    source: ContextSource.worldBook,
+                    length: beforeContent.length + 1,
+                    meta: {
+                      'position': WorldBookInjectionPosition.beforeSystemPrompt
+                          .toJson(),
+                    },
+                  ),
+                  ContextSegmentTags.item(
+                    source: ContextSource.worldBook,
+                    length: afterContent.length,
+                    meta: {
+                      'position': WorldBookInjectionPosition.afterSystemPrompt
+                          .toJson(),
+                    },
+                  ),
+                ]);
+              } else if (beforeContent.isNotEmpty) {
+                ContextSegmentTags.replaceWithSingle(
+                  created,
+                  source: ContextSource.worldBook,
+                  length: beforeContent.length,
+                  meta: {
+                    'position': WorldBookInjectionPosition.beforeSystemPrompt
+                        .toJson(),
+                  },
+                );
+              } else {
+                ContextSegmentTags.replaceWithSingle(
+                  created,
+                  source: ContextSource.worldBook,
+                  length: afterContent.length,
+                  meta: {
+                    'position': WorldBookInjectionPosition.afterSystemPrompt
+                        .toJson(),
+                  },
+                );
+              }
+            }
+            apiMessages.insert(0, created);
           }
         }
       }
@@ -1377,7 +1584,10 @@ class MessageBuilderService {
         insertIndex = findSafeInsertIndex(apiMessages, insertIndex);
         apiMessages.insertAll(
           insertIndex,
-          createMergedInjectionMessages(topInjections),
+          createMergedInjectionMessages(
+            topInjections,
+            position: WorldBookInjectionPosition.topOfChat,
+          ),
         );
       }
 
@@ -1389,7 +1599,10 @@ class MessageBuilderService {
         insertIndex = findSafeInsertIndex(apiMessages, insertIndex);
         apiMessages.insertAll(
           insertIndex,
-          createMergedInjectionMessages(bottomInjections),
+          createMergedInjectionMessages(
+            bottomInjections,
+            position: WorldBookInjectionPosition.bottomOfChat,
+          ),
         );
       }
 
@@ -1416,7 +1629,10 @@ class MessageBuilderService {
           insertIndex = findSafeInsertIndex(apiMessages, insertIndex);
           apiMessages.insertAll(
             insertIndex,
-            createMergedInjectionMessages(injections),
+            createMergedInjectionMessages(
+              injections,
+              position: WorldBookInjectionPosition.atDepth,
+            ),
           );
         }
       }
@@ -1426,13 +1642,29 @@ class MessageBuilderService {
   /// Helper to append content to the system message (or create one if missing).
   void _appendToSystemMessage(
     List<Map<String, dynamic>> apiMessages,
-    String content,
-  ) {
+    String content, {
+    ContextSource? source,
+  }) {
     if (apiMessages.isNotEmpty && apiMessages.first['role'] == 'system') {
       apiMessages[0]['content'] =
           '${(apiMessages[0]['content'] ?? '') as String}\n\n$content';
+      if (ContextLogger.enabled && source != null) {
+        ContextSegmentTags.append(
+          apiMessages[0],
+          source: source,
+          length: 2 + content.length,
+        );
+      }
     } else {
-      apiMessages.insert(0, {'role': 'system', 'content': content});
+      final message = <String, dynamic>{'role': 'system', 'content': content};
+      if (ContextLogger.enabled && source != null) {
+        ContextSegmentTags.append(
+          message,
+          source: source,
+          length: content.length,
+        );
+      }
+      apiMessages.insert(0, message);
     }
   }
 

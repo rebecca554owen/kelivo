@@ -10795,6 +10795,120 @@ abstract class AppLocalizations {
   /// **'When enabled, Flutter errors and print output are written to logs/flutter_logs.txt (rotated daily).'**
   String get flutterLogSettingSubtitle;
 
+  /// No description provided for @contextLogSettingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Context Logging'**
+  String get contextLogSettingTitle;
+
+  /// No description provided for @contextLogSettingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, the exact messages sent to the model are written to logs/context_logs.txt (rotated daily).'**
+  String get contextLogSettingSubtitle;
+
+  /// No description provided for @contextLogViewerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get contextLogViewerTitle;
+
+  /// No description provided for @contextLogSnapshotMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} messages'**
+  String contextLogSnapshotMessages(int count);
+
+  /// No description provided for @contextLogSnapshotTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tokens'**
+  String contextLogSnapshotTokens(int count);
+
+  /// No description provided for @contextLogSourceSystemPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'System prompt'**
+  String get contextLogSourceSystemPrompt;
+
+  /// No description provided for @contextLogSourceMemoryRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory rules'**
+  String get contextLogSourceMemoryRules;
+
+  /// No description provided for @contextLogSourceSearchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Search prompt'**
+  String get contextLogSourceSearchPrompt;
+
+  /// No description provided for @contextLogSourceInstructionInjection.
+  ///
+  /// In en, this message translates to:
+  /// **'Instruction'**
+  String get contextLogSourceInstructionInjection;
+
+  /// No description provided for @contextLogSourceWorldBook.
+  ///
+  /// In en, this message translates to:
+  /// **'World book'**
+  String get contextLogSourceWorldBook;
+
+  /// No description provided for @contextLogSourceMemorySnapshot.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory snapshot'**
+  String get contextLogSourceMemorySnapshot;
+
+  /// No description provided for @contextLogSourceChatHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat history'**
+  String get contextLogSourceChatHistory;
+
+  /// No description provided for @contextLogSourceToolCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool call'**
+  String get contextLogSourceToolCall;
+
+  /// No description provided for @contextLogSourceToolResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool result'**
+  String get contextLogSourceToolResult;
+
+  /// No description provided for @contextLogSnapshotsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} snapshots'**
+  String contextLogSnapshotsCount(int count);
+
+  /// No description provided for @contextLogSnapshotFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot'**
+  String get contextLogSnapshotFallbackTitle;
+
+  /// No description provided for @contextLogKindFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full snapshot'**
+  String get contextLogKindFull;
+
+  /// No description provided for @contextLogKindUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Incremental update'**
+  String get contextLogKindUpdate;
+
+  /// No description provided for @contextLogSectionComposition.
+  ///
+  /// In en, this message translates to:
+  /// **'Composition'**
+  String get contextLogSectionComposition;
+
   /// No description provided for @logViewerTitle.
   ///
   /// In en, this message translates to:

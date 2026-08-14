@@ -12,6 +12,8 @@ import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/models/memory_entry.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/core/services/logging/context_log_models.dart';
+import 'package:Kelivo/core/services/logging/context_logger.dart';
 import 'package:Kelivo/core/services/memory/memory_block_builder.dart';
 import 'package:Kelivo/core/services/memory/memory_prompts.dart';
 import 'package:Kelivo/features/home/services/message_builder_service.dart';
@@ -87,7 +89,10 @@ void main() {
     await settings.setMemoryPromptLang('zh');
   });
 
-  tearDown(() => database.close());
+  tearDown(() async {
+    await ContextLogger.setEnabled(false);
+    await database.close();
+  });
 
   Future<void> seedAssistant(String id) async {
     final raw = preferences.getString(BusinessEntityKind.assistant.sourceKey);
@@ -934,6 +939,66 @@ void main() {
       expect(countingRepository.singlePromptReads, 0);
       expect(ocrPrefetchCalls, 0);
     });
+
+    test(
+      'frozen carriesMemorySnapshot splits prefix from the user turn',
+      () async {
+        await seedAssistant('assistant-1');
+        final conversation = await seedConversation('conv-frozen-tag');
+        final message = await seedUserMessage(
+          id: 'u1',
+          conversationId: 'conv-frozen-tag',
+          content: 'hello',
+        );
+        final prefix = MemoryBlockBuilder.buildFullSnapshotPrefix(
+          MemoryBlockBuilder.buildProfileBlock(
+            fields: const [],
+            lang: MemoryPromptLang.zh,
+          ),
+          MemoryBlockBuilder.buildMemoryBlock(
+            visible: const [],
+            totalByType: const {},
+            lang: MemoryPromptLang.zh,
+          ),
+          MemoryPromptLang.zh,
+        );
+        final payload = '${prefix}hello';
+        await chatRepository.putMessagePrompt(
+          revisionId: 'u1',
+          conversationId: 'conv-frozen-tag',
+          payload: payload,
+          carriesMemorySnapshot: true,
+        );
+
+        await ContextLogger.setEnabled(true);
+        addTearDown(() => ContextLogger.setEnabled(false));
+
+        final service = buildService(messages: [message]);
+        final apiMessages = <Map<String, dynamic>>[
+          {
+            'role': 'user',
+            'content': 'hello',
+            MessageBuilderService.internalRevisionIdKey: 'u1',
+          },
+        ];
+        await service.processUserMessagesForApi(
+          apiMessages,
+          settings,
+          assistant,
+          conversation: conversation,
+          sourceMessages: [message],
+        );
+
+        expect(apiMessages.single['content'], payload);
+        final tags = ContextSegmentTags.read(apiMessages.single);
+        expect(tags, hasLength(2));
+        expect(tags[0]['source'], ContextSource.memorySnapshot.wireName);
+        expect(tags[0]['length'], prefix.length);
+        expect(tags[0]['meta']?['kind'], 'full');
+        expect(tags[1]['source'], ContextSource.chatHistory.wireName);
+        expect(tags[1]['length'], 'hello'.length);
+      },
+    );
   });
 
   group('§18.4 item 30 — self-heal after truncateIndex advances', () {
