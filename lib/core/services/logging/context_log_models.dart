@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../utils/token_estimator.dart';
 import '../memory/memory_block_builder.dart';
+import 'log_payload_elider.dart';
 
 /// Internal per-message key. Stripped before the request is sent.
 const String kelivoContextSegmentsKey = '_kelivo_ctx_segments';
@@ -224,21 +225,9 @@ String extractApiMessageText(dynamic content) {
   return content.toString();
 }
 
-final _dataUriBase64 = RegExp(
-  r'data:[^;,\s]+;base64,[A-Za-z0-9+/=\s]+',
-  caseSensitive: false,
-);
-
 /// Replace inlined `data:...;base64,...` payloads with a short placeholder.
-String truncateBase64DataUris(String text) {
-  return text.replaceAllMapped(_dataUriBase64, (match) {
-    final value = match[0]!;
-    final comma = value.indexOf(',');
-    final payloadLen = comma >= 0 ? value.length - comma - 1 : value.length;
-    final header = comma >= 0 ? value.substring(0, comma + 1) : 'data:;base64,';
-    return '$header<omitted $payloadLen chars>';
-  });
-}
+String truncateBase64DataUris(String text) =>
+    LogPayloadElider.elideDataUris(text);
 
 ContextSource inferContextSource(Map<String, dynamic> message) {
   final role = (message['role'] ?? '').toString();

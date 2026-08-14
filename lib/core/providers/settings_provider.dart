@@ -266,6 +266,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _flutterLogEnabledKey = 'flutter_log_enabled_v1';
   // Log settings: save response output, auto-delete, max size
   static const String _logSaveOutputKey = 'log_save_output_v1';
+  static const String _logElideLargePayloadsKey =
+      'log_elide_large_payloads_v1';
   static const String _logAutoDeleteDaysKey = 'log_auto_delete_days_v1';
   static const String _logMaxSizeMBKey = 'log_max_size_mb_v1';
   static const String _appLaunchCountKey = 'app_launch_count_v1';
@@ -1021,6 +1023,9 @@ class SettingsProvider extends ChangeNotifier {
     await FlutterLogger.setEnabled(_flutterLogEnabled);
     _logSaveOutput = prefs.getBool(_logSaveOutputKey) ?? false;
     RequestLogger.saveOutput = _logSaveOutput;
+    _logElideLargePayloads =
+        prefs.getBool(_logElideLargePayloadsKey) ?? true;
+    RequestLogger.elideLargePayloads = _logElideLargePayloads;
     _logAutoDeleteDays = prefs.getInt(_logAutoDeleteDaysKey) ?? 0;
     _logMaxSizeMB = prefs.getInt(_logMaxSizeMBKey) ?? 50;
     _appLaunchCount = prefs.getInt(_appLaunchCountKey) ?? 0;
@@ -4808,6 +4813,18 @@ Requirements:
     await prefs.setBool(_logSaveOutputKey, v);
   }
 
+  // Log settings: omit inline base64 images/files
+  bool _logElideLargePayloads = true;
+  bool get logElideLargePayloads => _logElideLargePayloads;
+  Future<void> setLogElideLargePayloads(bool v) async {
+    if (_logElideLargePayloads == v) return;
+    _logElideLargePayloads = v;
+    RequestLogger.elideLargePayloads = v;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setBool(_logElideLargePayloadsKey, v);
+  }
+
   // Log settings: auto-delete (days)
   int _logAutoDeleteDays = 0;
   int get logAutoDeleteDays => _logAutoDeleteDays;
@@ -5014,6 +5031,7 @@ Requirements:
     copy._contextLogEnabled = _contextLogEnabled;
     copy._flutterLogEnabled = _flutterLogEnabled;
     copy._logSaveOutput = _logSaveOutput;
+    copy._logElideLargePayloads = _logElideLargePayloads;
     copy._logAutoDeleteDays = _logAutoDeleteDays;
     copy._logMaxSizeMB = _logMaxSizeMB;
     copy._appLaunchCount = _appLaunchCount;

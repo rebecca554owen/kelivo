@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/models/world_book.dart';
 import '../../../core/services/logging/context_log_models.dart';
 import '../../../core/services/logging/context_log_tail_reader.dart';
+import '../../../core/services/logging/log_payload_elider.dart';
 import '../logs/request_log_parser.dart';
 import '../../../theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
@@ -531,6 +533,15 @@ class _PlainLogContentPageState extends State<_PlainLogContentPage> {
   }
 }
 
+typedef _ParseRequest = ({String path, bool elide});
+
+/// Runs on a background isolate: reading and parsing a multi-MB log on the UI
+/// isolate stutters the page transition.
+Future<List<RequestLogEntry>> _readAndParseRequestLog(_ParseRequest req) async {
+  final content = await File(req.path).readAsString();
+  return RequestLogParser.parse(content, elide: req.elide);
+}
+
 class _RequestLogFilePage extends StatefulWidget {
   const _RequestLogFilePage({required this.file, required this.title});
 
@@ -553,9 +564,14 @@ class _RequestLogFilePageState extends State<_RequestLogFilePage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
+    final elide = context.read<SettingsProvider>().logElideLargePayloads;
     try {
-      final content = await widget.file.readAsString();
-      final entries = RequestLogParser.parse(content);
+      // compute() rather than Isolate.run(): web is a build target, and there
+      // it degrades to an inline call instead of throwing.
+      final entries = await compute(_readAndParseRequestLog, (
+        path: widget.file.path,
+        elide: elide,
+      ));
       if (!mounted) {
         return;
       }
@@ -2047,33 +2063,77 @@ String _contextSourceLabel(AppLocalizations l10n, ContextSource source) {
   }
 }
 
-class _RequestLogDetailPage extends StatelessWidget {
+/// Bodies larger than this are pretty-printed on a background isolate.
+const int _prettyJsonInlineLimit = 64 * 1024;
+
+String _prettyJson(String text) {
+  final v = text.trim();
+  if (v.isEmpty) {
+    return '';
+  }
+  try {
+    final obj = jsonDecode(v);
+    return const JsonEncoder.withIndent('  ').convert(obj);
+  } catch (_) {
+    return text;
+  }
+}
+
+String _prettyJsonObj(Object? obj) {
+  if (obj == null) {
+    return '';
+  }
+  try {
+    return const JsonEncoder.withIndent('  ').convert(obj);
+  } catch (_) {
+    return obj.toString();
+  }
+}
+
+class _RequestLogDetailPage extends StatefulWidget {
   const _RequestLogDetailPage({required this.entry});
 
   final RequestLogEntry entry;
 
-  String _prettyJson(String text) {
-    final v = text.trim();
-    if (v.isEmpty) {
-      return '';
-    }
-    try {
-      final obj = jsonDecode(v);
-      return const JsonEncoder.withIndent('  ').convert(obj);
-    } catch (_) {
-      return text;
-    }
+  @override
+  State<_RequestLogDetailPage> createState() => _RequestLogDetailPageState();
+}
+
+class _RequestLogDetailPageState extends State<_RequestLogDetailPage> {
+  // Formatted once here rather than on every build(): jsonDecode plus an
+  // indenting re-encode of a large body is far too slow for a frame.
+  late String _reqBodyText;
+  late String _resBodyText;
+
+  @override
+  void initState() {
+    super.initState();
+    _reqBodyText = _prettyInline(widget.entry.requestBody ?? '');
+    _resBodyText = _prettyInline(widget.entry.responseBody ?? '');
+    _formatLargeBodies();
   }
 
-  String _prettyJsonObj(Object? obj) {
-    if (obj == null) {
-      return '';
+  static String _prettyInline(String text) {
+    if (text.isEmpty || text.length > _prettyJsonInlineLimit) return text;
+    return _prettyJson(text);
+  }
+
+  Future<void> _formatLargeBodies() async {
+    final rawReq = widget.entry.requestBody ?? '';
+    final rawRes = widget.entry.responseBody ?? '';
+    String? req;
+    String? res;
+    if (rawReq.length > _prettyJsonInlineLimit) {
+      req = await compute(_prettyJson, rawReq);
     }
-    try {
-      return const JsonEncoder.withIndent('  ').convert(obj);
-    } catch (_) {
-      return obj.toString();
+    if (rawRes.length > _prettyJsonInlineLimit) {
+      res = await compute(_prettyJson, rawRes);
     }
+    if (!mounted || (req == null && res == null)) return;
+    setState(() {
+      if (req != null) _reqBodyText = req;
+      if (res != null) _resBodyText = res;
+    });
   }
 
   Future<void> _copy(BuildContext context, String text) async {
@@ -2097,6 +2157,7 @@ class _RequestLogDetailPage extends StatelessWidget {
     final cs = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
+    final entry = widget.entry;
     final uri = entry.uri;
     final url = uri?.toString() ?? (entry.rawUrl ?? '');
 
@@ -2126,12 +2187,8 @@ class _RequestLogDetailPage extends StatelessWidget {
     final resHeaders = entry.responseHeaders;
     final reqHeadersText = _prettyJsonObj(reqHeaders);
     final resHeadersText = _prettyJsonObj(resHeaders);
-    final reqBodyText = entry.requestBody == null
-        ? ''
-        : _prettyJson(entry.requestBody!);
-    final resBodyText = entry.responseBody == null
-        ? ''
-        : _prettyJson(entry.responseBody!);
+    final reqBodyText = _reqBodyText;
+    final resBodyText = _resBodyText;
 
     final errorLines = entry.errors.isNotEmpty
         ? entry.errors
@@ -2214,6 +2271,14 @@ class _RequestLogDetailPage extends StatelessWidget {
               child: _CodeBlock(text: reqHeadersText, tone: _CodeTone.neutral),
             ),
           ],
+          if (entry.attachments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _SectionCard(
+              icon: Lucide.Paperclip,
+              title: l10n.logViewerSectionAttachments,
+              child: _AttachmentChips(attachments: entry.attachments),
+            ),
+          ],
           if (reqBodyText.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
             _SectionCard(
@@ -2225,7 +2290,10 @@ class _RequestLogDetailPage extends StatelessWidget {
                 padding: const EdgeInsets.all(6),
                 onTap: () => _copy(context, reqBodyText),
               ),
-              child: _CodeBlock(text: reqBodyText, tone: _CodeTone.neutral),
+              child: _CollapsibleCodeBlock(
+                text: reqBodyText,
+                tone: _CodeTone.neutral,
+              ),
             ),
           ],
           if (resHeaders != null && resHeaders.isNotEmpty) ...[
@@ -2253,7 +2321,7 @@ class _RequestLogDetailPage extends StatelessWidget {
                 padding: const EdgeInsets.all(6),
                 onTap: () => _copy(context, resBodyText),
               ),
-              child: _CodeBlock(
+              child: _CollapsibleCodeBlock(
                 text: resBodyText,
                 tone: entry.hasError ? _CodeTone.error : _CodeTone.neutral,
               ),
@@ -2473,6 +2541,229 @@ class _CodeBlock extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Code block that stays collapsed until tapped, and only ever hands
+/// [SelectableText] a bounded slice — a multi-MB paragraph cannot be laid out
+/// inside a frame budget.
+class _CollapsibleCodeBlock extends StatefulWidget {
+  const _CollapsibleCodeBlock({required this.text, required this.tone});
+
+  final String text;
+  final _CodeTone tone;
+
+  /// Slice rendered while collapsed; `maxLines` trims it visually.
+  static const int collapsedChars = 2048;
+  static const int collapsedLines = 8;
+
+  /// Extra text revealed per "show more" tap.
+  static const int windowChars = 32 * 1024;
+
+  @override
+  State<_CollapsibleCodeBlock> createState() => _CollapsibleCodeBlockState();
+}
+
+class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
+  bool _expanded = false;
+  int _shown = _CollapsibleCodeBlock.windowChars;
+
+  @override
+  void didUpdateWidget(covariant _CollapsibleCodeBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The body arrives unformatted and is replaced once the isolate is done.
+    if (oldWidget.text != widget.text) {
+      _shown = _CollapsibleCodeBlock.windowChars;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    final Color neutralBg = context.appColors.surfaceFill;
+    final bool isError = widget.tone == _CodeTone.error;
+    final Color bg = isError
+        ? Color.alphaBlend(
+            cs.error.withValues(alpha: isDark ? 0.10 : 0.06),
+            neutralBg,
+          )
+        : neutralBg;
+    final Color border = isError
+        ? cs.error.withValues(alpha: isDark ? 0.32 : 0.22)
+        : cs.outlineVariant.withValues(alpha: isDark ? 0.22 : 0.34);
+    final Color fg = cs.onSurface.withValues(alpha: 0.86);
+    final Color hint = cs.onSurface.withValues(alpha: 0.45);
+
+    final full = widget.text;
+    final int visibleLen = _expanded
+        ? math.min(_shown, full.length)
+        : math.min(_CollapsibleCodeBlock.collapsedChars, full.length);
+    final String visible = visibleLen >= full.length
+        ? full
+        : full.substring(0, visibleLen);
+    final bool hasMore = _expanded && visibleLen < full.length;
+
+    final textStyle = TextStyle(
+      fontFamily: 'monospace',
+      fontSize: 11.5,
+      height: 1.4,
+      color: fg,
+    );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_expanded)
+            SelectableText(visible, style: textStyle)
+          else
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _expanded = true),
+              child: Text(
+                visible,
+                maxLines: _CollapsibleCodeBlock.collapsedLines,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              InkWell(
+                onTap: () => setState(() {
+                  _expanded = !_expanded;
+                  if (!_expanded) _shown = _CollapsibleCodeBlock.windowChars;
+                }),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedRotation(
+                        turns: _expanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 180),
+                        child: Icon(Lucide.ChevronDown, size: 14, color: hint),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        // Action, not state: "Collapse" while expanded.
+                        _expanded
+                            ? MaterialLocalizations.of(
+                                context,
+                              ).expandedIconTapHint
+                            : MaterialLocalizations.of(
+                                context,
+                              ).collapsedIconTapHint,
+                        style: TextStyle(fontSize: 11.5, color: hint),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (hasMore)
+                InkWell(
+                  onTap: () => setState(
+                    () => _shown += _CollapsibleCodeBlock.windowChars,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      l10n.logViewerShowMore,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: cs.primary.withValues(alpha: 0.9),
+                        fontWeight: AppFontWeights.semibold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One chip per inline base64 payload the logger replaced with a placeholder.
+class _AttachmentChips extends StatelessWidget {
+  const _AttachmentChips({required this.attachments});
+
+  final List<LogPayloadRef> attachments;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    final Color bg = context.appColors.surfaceFill;
+    final Color border = cs.outlineVariant.withValues(
+      alpha: isDark ? 0.22 : 0.34,
+    );
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final a in attachments)
+          Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: border),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  a.mime.startsWith('image/') ? Lucide.Image : Lucide.FileText,
+                  size: 14,
+                  color: cs.onSurface.withValues(alpha: 0.55),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${a.mime} · ${_fmtBytes(a.byteLength)} · '
+                  '${l10n.logViewerPayloadOmitted}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: cs.onSurface.withValues(alpha: 0.72),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _fmtBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
 
 class _Kv {
@@ -2763,6 +3054,49 @@ class _LogSettingsSheet extends StatelessWidget {
                   IosSwitch(
                     value: settings.logSaveOutput,
                     onChanged: (v) => settings.setLogSaveOutput(v),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Omit large base64 payloads
+            Container(
+              decoration: BoxDecoration(
+                color: tileBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: border),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.logSettingsElidePayloads,
+                          style: TextStyle(
+                            fontWeight: AppFontWeights.semibold,
+                            color: cs.onSurface.withValues(alpha: 0.92),
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.logSettingsElidePayloadsSubtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IosSwitch(
+                    value: settings.logElideLargePayloads,
+                    onChanged: (v) => settings.setLogElideLargePayloads(v),
                   ),
                 ],
               ),

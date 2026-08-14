@@ -193,8 +193,10 @@ class DioHttpClient extends http.BaseClient {
       }
       if (bodyBytes.isNotEmpty) {
         final decoded = RequestLogger.safeDecodeUtf8(bodyBytes);
+        // Elide first: a multi-MB image request drops to a few KB, which
+        // brings it back under redactBody's JSON-parsing size limit.
         final bodyText = decoded.isNotEmpty
-            ? LogRedactor.redactBody(decoded)
+            ? LogRedactor.redactBody(RequestLogger.elidePayloads(decoded))
             : 'base64:${base64Encode(bodyBytes)}';
         RequestLogger.logLine(
           '[REQ $reqId] body=${RequestLogger.escape(bodyText)}',
@@ -246,7 +248,7 @@ class DioHttpClient extends http.BaseClient {
         final text = RequestLogger.safeDecodeUtf8(bytes);
         if (text.isNotEmpty) {
           RequestLogger.logLine(
-            '[RES $reqId] body=${RequestLogger.escape(LogRedactor.redactBody(text))}',
+            '[RES $reqId] body=${RequestLogger.escape(LogRedactor.redactBody(RequestLogger.elidePayloads(text)))}',
           );
         }
         RequestLogger.logLine('[RES $reqId] done');
@@ -270,8 +272,10 @@ class DioHttpClient extends http.BaseClient {
             if (logChunks) {
               final s = RequestLogger.safeDecodeUtf8(chunk);
               if (s.isNotEmpty) {
+                // Elided per chunk: a payload split across chunk boundaries
+                // is only partly caught, and capLine() bounds the rest.
                 RequestLogger.logLine(
-                  '[RES $reqId] chunk=${RequestLogger.escape(LogRedactor.redactBody(s))}',
+                  '[RES $reqId] chunk=${RequestLogger.escape(LogRedactor.redactBody(RequestLogger.elidePayloads(s)))}',
                 );
               }
             }
@@ -319,7 +323,7 @@ class DioHttpClient extends http.BaseClient {
     } on DioException catch (e) {
       if (RequestLogger.enabled) {
         RequestLogger.logLine(
-          '[RES $reqId] dio_error=${RequestLogger.escape(LogRedactor.redactText(e.toString()))}',
+          '[RES $reqId] dio_error=${RequestLogger.escape(LogRedactor.redactText(RequestLogger.elidePayloads(e.toString())))}',
         );
         final status = e.response?.statusCode;
         if (status != null) {
@@ -328,7 +332,7 @@ class DioHttpClient extends http.BaseClient {
         final data = e.response?.data;
         if (data != null && data is! ResponseBody) {
           RequestLogger.logLine(
-            '[RES $reqId] body=${RequestLogger.escape(LogRedactor.redactBody(data.toString()))}',
+            '[RES $reqId] body=${RequestLogger.escape(LogRedactor.redactBody(RequestLogger.elidePayloads(data.toString())))}',
           );
         }
       }

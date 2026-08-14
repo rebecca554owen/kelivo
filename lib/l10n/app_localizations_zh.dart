@@ -5769,6 +5769,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get logViewerSectionAttachments => '附件';
+
+  @override
+  String get logViewerPayloadOmitted => '已省略';
+
+  @override
+  String get logViewerShowMore => '显示更多';
+
+  @override
   String get logSettingsTitle => '日志设置';
 
   @override
@@ -5777,6 +5786,13 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get logSettingsSaveOutputSubtitle =>
       '记录流式输出的每个分片（可能影响生成性能）。HTTP 报错响应仍会写入。';
+
+  @override
+  String get logSettingsElidePayloads => '省略大载荷';
+
+  @override
+  String get logSettingsElidePayloadsSubtitle =>
+      '把内联的 base64 图片和文件替换成占位符，日志更小、查看器更快。';
 
   @override
   String get logSettingsAutoDelete => '自动删除';
@@ -12876,6 +12892,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get logViewerSectionAttachments => '附件';
+
+  @override
+  String get logViewerPayloadOmitted => '已省略';
+
+  @override
+  String get logViewerShowMore => '显示更多';
+
+  @override
   String get logSettingsTitle => '日志设置';
 
   @override
@@ -12884,6 +12909,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get logSettingsSaveOutputSubtitle =>
       '记录流式输出的每个分片（可能影响生成性能）。HTTP 报错响应仍会写入。';
+
+  @override
+  String get logSettingsElidePayloads => '省略大载荷';
+
+  @override
+  String get logSettingsElidePayloadsSubtitle =>
+      '把内联的 base64 图片和文件替换成占位符，日志更小、查看器更快。';
 
   @override
   String get logSettingsAutoDelete => '自动删除';
@@ -20057,6 +20089,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get logViewerSectionAttachments => '附件';
+
+  @override
+  String get logViewerPayloadOmitted => '已省略';
+
+  @override
+  String get logViewerShowMore => '顯示更多';
+
+  @override
   String get logSettingsTitle => '日誌設定';
 
   @override
@@ -20065,6 +20106,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get logSettingsSaveOutputSubtitle =>
       '記錄串流輸出的每個分片（可能影響生成效能）。HTTP 報錯回應仍會寫入。';
+
+  @override
+  String get logSettingsElidePayloads => '省略大載荷';
+
+  @override
+  String get logSettingsElidePayloadsSubtitle =>
+      '把內聯的 base64 圖片和檔案替換成佔位符，日誌更小、檢視器更快。';
 
   @override
   String get logSettingsAutoDelete => '自動刪除';

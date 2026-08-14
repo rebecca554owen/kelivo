@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../../../utils/app_directories.dart';
+import '../logging/log_payload_elider.dart';
 
 class RequestLogger {
   RequestLogger._();
@@ -12,6 +13,13 @@ class RequestLogger {
   static bool _writeErrorReported = false;
 
   static bool saveOutput = false;
+
+  /// Replace inline base64 images/files with a placeholder before writing.
+  static bool elideLargePayloads = true;
+
+  /// Backstop for anything the elider misses; a single log line never grows
+  /// past this, so the viewer can always open the file.
+  static const int maxLineChars = 1024 * 1024;
 
   static int _nextRequestId = 0;
   static int nextRequestId() => ++_nextRequestId;
@@ -91,10 +99,22 @@ class RequestLogger {
     return _sink!;
   }
 
+  /// Strips inline base64 payloads when [elideLargePayloads] is on.
+  static String elidePayloads(String text) {
+    if (!elideLargePayloads) return text;
+    return LogPayloadElider.elide(text);
+  }
+
+  static String capLine(String line) {
+    if (line.length <= maxLineChars) return line;
+    final dropped = line.length - maxLineChars;
+    return '${line.substring(0, maxLineChars)}…<truncated $dropped chars>';
+  }
+
   static void logLine(String line) {
     if (!_enabled) return;
     final now = DateTime.now();
-    final text = '[${_formatTs(now)}] $line\n';
+    final text = '[${_formatTs(now)}] ${capLine(line)}\n';
     _writeQueue = _writeQueue.then((_) async {
       if (!_enabled) return;
       try {

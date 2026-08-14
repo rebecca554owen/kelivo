@@ -11059,6 +11059,24 @@ abstract class AppLocalizations {
   /// **'+{count} more'**
   String logViewerMoreCount(int count);
 
+  /// No description provided for @logViewerSectionAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get logViewerSectionAttachments;
+
+  /// No description provided for @logViewerPayloadOmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'omitted'**
+  String get logViewerPayloadOmitted;
+
+  /// No description provided for @logViewerShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get logViewerShowMore;
+
   /// No description provided for @logSettingsTitle.
   ///
   /// In en, this message translates to:
@@ -11076,6 +11094,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.'**
   String get logSettingsSaveOutputSubtitle;
+
+  /// No description provided for @logSettingsElidePayloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Omit Large Payloads'**
+  String get logSettingsElidePayloads;
+
+  /// No description provided for @logSettingsElidePayloadsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace inline base64 images and files with a placeholder. Keeps logs small and the viewer fast.'**
+  String get logSettingsElidePayloadsSubtitle;
 
   /// No description provided for @logSettingsAutoDelete.
   ///

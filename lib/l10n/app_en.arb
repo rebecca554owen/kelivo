@@ -2499,9 +2499,14 @@
       }
     }
   },
+  "logViewerSectionAttachments": "Attachments",
+  "logViewerPayloadOmitted": "omitted",
+  "logViewerShowMore": "Show more",
   "logSettingsTitle": "Log Settings",
   "logSettingsSaveOutput": "Save Response Output",
   "logSettingsSaveOutputSubtitle": "Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.",
+  "logSettingsElidePayloads": "Omit Large Payloads",
+  "logSettingsElidePayloadsSubtitle": "Replace inline base64 images and files with a placeholder. Keeps logs small and the viewer fast.",
   "logSettingsAutoDelete": "Auto-delete",
   "logSettingsAutoDeleteSubtitle": "Delete logs older than specified days",
   "logSettingsAutoDeleteDisabled": "Disabled",

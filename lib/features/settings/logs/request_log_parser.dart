@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../core/services/logging/log_payload_elider.dart';
+
 class RequestLogEntry {
   RequestLogEntry({
     required this.id,
@@ -8,15 +10,18 @@ class RequestLogEntry {
     this.lastEventAt,
     this.method,
     this.rawUrl,
-    this.uri,
     this.requestHeaders,
     this.requestBody,
     this.statusCode,
     this.responseHeaders,
     this.responseBody,
+    this.requestBodyTruncated = 0,
+    this.responseBodyTruncated = 0,
+    List<LogPayloadRef>? attachments,
     List<String>? errors,
     List<String>? warnings,
-  }) : errors = errors ?? <String>[],
+  }) : attachments = attachments ?? <LogPayloadRef>[],
+       errors = errors ?? <String>[],
        warnings = warnings ?? <String>[];
 
   final int id;
@@ -28,7 +33,6 @@ class RequestLogEntry {
 
   String? method;
   String? rawUrl;
-  Uri? uri;
 
   Map<String, dynamic>? requestHeaders;
   String? requestBody;
@@ -37,8 +41,28 @@ class RequestLogEntry {
   Map<String, dynamic>? responseHeaders;
   String? responseBody;
 
+  /// Characters dropped from each body by the parser's size cap.
+  int requestBodyTruncated;
+  int responseBodyTruncated;
+
+  /// Inline base64 images/files that were replaced by placeholders.
+  final List<LogPayloadRef> attachments;
+
   final List<String> errors;
   final List<String> warnings;
+
+  // Parsed lazily rather than stored: keeps the entry cheap to send across
+  // an isolate boundary, and most entries never need the parsed form.
+  Uri? _uri;
+  bool _uriParsed = false;
+
+  Uri? get uri {
+    if (_uriParsed) return _uri;
+    _uriParsed = true;
+    final url = rawUrl;
+    _uri = (url == null || url.isEmpty) ? null : Uri.tryParse(url);
+    return _uri;
+  }
 
   bool get hasError =>
       errors.isNotEmpty || (statusCode != null && statusCode! >= 400);
@@ -101,12 +125,44 @@ class RequestLogParser {
     dotAll: true,
   );
 
-  static List<RequestLogEntry> parse(String content) {
+  /// Keeps a single body from blowing up the viewer. Matches
+  /// `LogRedactor._maxJsonBodyChars`.
+  static const int defaultMaxBodyChars = 256 * 1024;
+
+  /// [elide] replaces inline base64 payloads with placeholders — needed for
+  /// files written before write-side elision existed. [maxBodyChars] caps
+  /// whatever survives; the full text stays on disk and is reachable by
+  /// exporting the file.
+  static List<RequestLogEntry> parse(
+    String content, {
+    bool elide = true,
+    int maxBodyChars = defaultMaxBodyChars,
+  }) {
     final records = _toRecords(content);
 
     final List<RequestLogEntry> entries = <RequestLogEntry>[];
     final Map<int, int> currentIndexById = <int, int>{};
+    final Map<int, StringBuffer> chunkBuffers = <int, StringBuffer>{};
     int seq = 0;
+
+    /// Elides, caps, and records what the elision found. Attachments are
+    /// reported either way — [elide] only decides whether the body text
+    /// itself is rewritten.
+    ({String text, int truncated}) prepareBody(
+      String body,
+      RequestLogEntry entry,
+    ) {
+      final result = LogPayloadElider.process(body, rewrite: elide);
+      entry.attachments.addAll(result.refs);
+      var text = result.text;
+      if (maxBodyChars > 0 && text.length > maxBodyChars) {
+        return (
+          text: text.substring(0, maxBodyChars),
+          truncated: text.length - maxBodyChars,
+        );
+      }
+      return (text: text, truncated: 0);
+    }
 
     RequestLogEntry ensureEntry(int id) {
       final idx = currentIndexById[id];
@@ -135,9 +191,7 @@ class RequestLogParser {
         e.startedAt = ts;
         e.lastEventAt = ts;
         e.method = (mStart.group(2) ?? '').trim();
-        final url = (mStart.group(3) ?? '').trim();
-        e.rawUrl = url;
-        e.uri = Uri.tryParse(url);
+        e.rawUrl = (mStart.group(3) ?? '').trim();
         entries.add(e);
         currentIndexById[id] = entries.length - 1;
         continue;
@@ -163,7 +217,12 @@ class RequestLogParser {
         if (id == null) continue;
         final e = ensureEntry(id);
         touch(e, ts);
-        e.requestBody = unescape((mReqBody.group(2) ?? '').trim());
+        final prepared = prepareBody(
+          unescape((mReqBody.group(2) ?? '').trim()),
+          e,
+        );
+        e.requestBody = prepared.text;
+        e.requestBodyTruncated = prepared.truncated;
         continue;
       }
 
@@ -198,8 +257,13 @@ class RequestLogParser {
         if (id == null) continue;
         final e = ensureEntry(id);
         touch(e, ts);
-        final body = unescape((mBody.group(2) ?? '').trim());
+        final prepared = prepareBody(
+          unescape((mBody.group(2) ?? '').trim()),
+          e,
+        );
+        final body = prepared.text;
         e.responseBody = body;
+        e.responseBodyTruncated = prepared.truncated;
         if (body.isNotEmpty &&
             (e.statusCode == null || e.statusCode! >= 400) &&
             (e.errors.isEmpty || e.errors.last != body)) {
@@ -214,9 +278,13 @@ class RequestLogParser {
         if (id == null) continue;
         final e = ensureEntry(id);
         touch(e, ts);
-        final chunk = unescape(mChunk.group(2) ?? '');
-        final prev = e.responseBody ?? '';
-        e.responseBody = prev + chunk;
+        // Buffered rather than `prev + chunk`: string concatenation per chunk
+        // is O(n^2) over a long streamed response.
+        final buf = chunkBuffers.putIfAbsent(
+          e.sequence,
+          () => StringBuffer(e.responseBody ?? ''),
+        );
+        buf.write(unescape(mChunk.group(2) ?? ''));
         continue;
       }
 
@@ -249,6 +317,18 @@ class RequestLogParser {
         final err = unescape((mDioErr.group(2) ?? '').trim());
         if (err.isNotEmpty) e.errors.add(err);
         continue;
+      }
+    }
+
+    // Elide the reassembled stream once, so payloads split across chunk
+    // boundaries are caught too.
+    if (chunkBuffers.isNotEmpty) {
+      for (final e in entries) {
+        final buf = chunkBuffers[e.sequence];
+        if (buf == null) continue;
+        final prepared = prepareBody(buf.toString(), e);
+        e.responseBody = prepared.text;
+        e.responseBodyTruncated = prepared.truncated;
       }
     }
 
@@ -306,40 +386,28 @@ class RequestLogParser {
     }
   }
 
+  static final RegExp _escapeRe = RegExp(r'\\[nrt\\]');
+
   /// Reverses `RequestLogger.escape()` (handles `\\`, `\\r`, `\\n`, `\\t`).
+  ///
+  /// Single native pass. A char-by-char loop allocates a new one-character
+  /// String per index, which is seconds of work on a multi-MB body.
+  /// Unknown escapes (`\x`) fall outside the pattern and pass through as-is,
+  /// matching the previous behaviour.
   static String unescape(String input) {
     if (input.isEmpty) return input;
-    final sb = StringBuffer();
-    for (int i = 0; i < input.length; i++) {
-      final ch = input[i];
-      if (ch == '\\' && i + 1 < input.length) {
-        final next = input[i + 1];
-        switch (next) {
-          case 'n':
-            sb.write('\n');
-            i++;
-            continue;
-          case 'r':
-            sb.write('\r');
-            i++;
-            continue;
-          case 't':
-            sb.write('\t');
-            i++;
-            continue;
-          case '\\':
-            sb.write('\\');
-            i++;
-            continue;
-          default:
-            // Preserve unknown escape as-is.
-            sb.write('\\');
-            continue;
-        }
+    return input.replaceAllMapped(_escapeRe, (m) {
+      switch (m[0]![1]) {
+        case 'n':
+          return '\n';
+        case 'r':
+          return '\r';
+        case 't':
+          return '\t';
+        default:
+          return '\\';
       }
-      sb.write(ch);
-    }
-    return sb.toString();
+    });
   }
 }
 

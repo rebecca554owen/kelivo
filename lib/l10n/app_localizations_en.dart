@@ -5999,6 +5999,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logViewerSectionAttachments => 'Attachments';
+
+  @override
+  String get logViewerPayloadOmitted => 'omitted';
+
+  @override
+  String get logViewerShowMore => 'Show more';
+
+  @override
   String get logSettingsTitle => 'Log Settings';
 
   @override
@@ -6007,6 +6016,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get logSettingsSaveOutputSubtitle =>
       'Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.';
+
+  @override
+  String get logSettingsElidePayloads => 'Omit Large Payloads';
+
+  @override
+  String get logSettingsElidePayloadsSubtitle =>
+      'Replace inline base64 images and files with a placeholder. Keeps logs small and the viewer fast.';
 
   @override
   String get logSettingsAutoDelete => 'Auto-delete';
