@@ -323,56 +323,52 @@ void main() {
       scrollController.dispose();
     });
 
-    testWidgets('generation finish pins again after the terminal widget grows', (
-      tester,
-    ) async {
-      var generating = true;
-      var itemCount = 30;
-      final scrollController = ChatAutoFollowScrollController();
-      final chatScrollController = ChatScrollController(
-        scrollController: scrollController,
-        onStateChanged: () {},
-        getAutoScrollEnabled: () => true,
-        getAutoScrollIdleSeconds: () => 8,
-        isGenerating: () => generating,
-      );
-      await tester.pumpWidget(
-        _ScrollHarness(
+    testWidgets(
+      'generation finish pins again after the terminal widget grows',
+      (tester) async {
+        var generating = true;
+        var itemCount = 30;
+        final scrollController = ChatAutoFollowScrollController();
+        final chatScrollController = ChatScrollController(
           scrollController: scrollController,
-          itemCount: itemCount,
-        ),
-      );
-      scrollController.jumpTo(scrollController.position.maxScrollExtent);
-      expect(chatScrollController.autoStickToBottom, isTrue);
+          onStateChanged: () {},
+          getAutoScrollEnabled: () => true,
+          getAutoScrollIdleSeconds: () => 8,
+          isGenerating: () => generating,
+        );
+        await tester.pumpWidget(
+          _ScrollHarness(
+            scrollController: scrollController,
+            itemCount: itemCount,
+          ),
+        );
+        scrollController.jumpTo(scrollController.position.maxScrollExtent);
+        expect(chatScrollController.autoStickToBottom, isTrue);
 
-      generating = false;
-      chatScrollController.stickToBottomAfterGeneration();
-      itemCount = 34;
-      await tester.pumpWidget(
-        _ScrollHarness(
-          scrollController: scrollController,
-          itemCount: itemCount,
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 120));
-      // The pin animates instead of jumping; partway through it should be
-      // strictly between the old offset and the bottom.
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(
-        scrollController.offset,
-        lessThan(scrollController.position.maxScrollExtent),
-      );
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pump();
-      expect(
-        scrollController.offset,
-        scrollController.position.maxScrollExtent,
-      );
+        generating = false;
+        chatScrollController.stickToBottomAfterGeneration();
+        itemCount = 34;
+        await tester.pumpWidget(
+          _ScrollHarness(
+            scrollController: scrollController,
+            itemCount: itemCount,
+          ),
+        );
+        // The pin is held during layout, so the extra height is absorbed before
+        // it is ever painted: no frame sits off the bottom, and there is no
+        // catch-up scroll afterwards for the user to see.
+        for (final step in const [16, 16, 50, 120, 300]) {
+          await tester.pump(Duration(milliseconds: step));
+          expect(
+            scrollController.offset,
+            scrollController.position.maxScrollExtent,
+          );
+        }
 
-      chatScrollController.dispose();
-      scrollController.dispose();
-    });
+        chatScrollController.dispose();
+        scrollController.dispose();
+      },
+    );
 
     testWidgets('generation finish does not pin after the user scrolls up', (
       tester,

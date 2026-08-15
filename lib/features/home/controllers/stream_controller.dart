@@ -646,6 +646,36 @@ class StreamController {
     onStreamTick?.call();
   }
 
+  /// Let the smooth-stream buffer catch up before the reply is finalized.
+  ///
+  /// Finishing a stream flushes whatever the smoothing buffer has not shown
+  /// yet in a single frame. While the timeline is pinned to the bottom that
+  /// lands as one large jump right at the end of the reply — a fast or bursty
+  /// provider can leave hundreds of characters (several hundred pixels) in the
+  /// buffer. Waiting for the regular throttle tick to drain it keeps the tail
+  /// moving at streaming speed. The budget bounds how long finalization can be
+  /// delayed; anything still buffered afterwards is flushed as before.
+  Future<void> drainSmoothStream(
+    String messageId, {
+    Duration budget = const Duration(milliseconds: 400),
+  }) async {
+    final state = _streamSmoothStates[messageId];
+    if (state == null) return;
+    _applyContentBuilder(state);
+    if (getCurrentConversationId() != state.conversationId) return;
+    final maxTicks =
+        budget.inMicroseconds ~/ _streamThrottleInterval.inMicroseconds;
+    for (var tick = 0; tick < maxTicks; tick++) {
+      if (state.targetContent == state.visibleContent) return;
+      await Future<void>.delayed(_streamThrottleInterval);
+      // The periodic tick owns publishing. Bail out if it was cancelled, the
+      // message was cleaned up, or the user switched away meanwhile.
+      if (!identical(_streamSmoothStates[messageId], state)) return;
+      if (_streamThrottleTimers[messageId] == null) return;
+      if (getCurrentConversationId() != state.conversationId) return;
+    }
+  }
+
   String? _flushPendingStreamUpdate(String messageId) {
     final state = _streamSmoothStates[messageId];
     if (state == null) return null;
@@ -1570,6 +1600,9 @@ class _StreamSmoothState {
   updateMessageInList;
   final List<int> _recentPickCounts = <int>[];
 
+  /// Characters published by the previous tick, for the acceleration limit.
+  int _lastPickCount = 0;
+
   String? takeNextContentSlice({
     required int minCount,
     required int baseCount,
@@ -1581,6 +1614,7 @@ class _StreamSmoothState {
     if (!targetContent.startsWith(visibleContent)) {
       visibleContent = targetContent;
       _recentPickCounts.clear();
+      _lastPickCount = 0;
       return visibleContent;
     }
 
@@ -1606,6 +1640,7 @@ class _StreamSmoothState {
     if (targetContent == visibleContent) return null;
     visibleContent = targetContent;
     _recentPickCounts.clear();
+    _lastPickCount = 0;
     return visibleContent;
   }
 
@@ -1633,7 +1668,25 @@ class _StreamSmoothState {
 
     final average =
         _recentPickCounts.reduce((a, b) => a + b) / _recentPickCounts.length;
-    return average.round().clamp(minCount, backlog).toInt();
+
+    // When the buffer falls far behind — a provider that flushes a large tail
+    // chunk is the usual cause — the raw rate approaches "publish everything",
+    // and the moving average alone still lets a single tick emit hundreds of
+    // characters. On a bottom-pinned timeline that is a screenful of text
+    // appearing in one frame. Let the display speed up towards the backlog
+    // instead of stepping to it: each tick may publish half again as much as
+    // the previous one, and never more than [maxCount].
+    final previous = _lastPickCount;
+    final accelerationLimit = previous <= minCount
+        ? maxCount
+        : math.max(minCount, (previous * 1.5).round());
+    final limit = math.min(maxCount, accelerationLimit);
+    final next = math
+        .min(average.round(), limit)
+        .clamp(minCount, backlog)
+        .toInt();
+    _lastPickCount = next;
+    return next;
   }
 
   int _rawPickCount({

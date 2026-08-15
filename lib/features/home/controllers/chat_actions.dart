@@ -2138,6 +2138,11 @@ class ChatActions {
     // Mark streaming as ended to allow UI rebuilds again
     streamController.markStreamingEnded(messageId);
 
+    // Let the smoothing buffer catch up first: cleanupTimers publishes the
+    // whole remaining backlog at once, which a bottom-pinned timeline shows as
+    // a single large jump just before the reply ends.
+    await streamController.drainSmoothStream(messageId);
+
     // Clean up stream throttle timer and flush final content
     streamController.cleanupTimers(messageId);
 
@@ -2289,6 +2294,10 @@ class ChatActions {
 
     // Ensure streaming is marked as ended
     streamController.markStreamingEnded(messageId);
+
+    // Same reason as in _finishStreaming: drain the smoothing buffer through
+    // its own tick instead of dumping it into one frame.
+    await streamController.drainSmoothStream(messageId);
 
     streamController.cleanupTimers(messageId);
 
