@@ -150,51 +150,56 @@ void main() {
       );
     });
 
-    test('message part kinds accept image/file and unknown future kinds', () async {
-      await insertConversation();
-      await insertMessage();
-      final now = DateTime.utc(2026, 7, 11);
+    test(
+      'message part kinds accept image/file and unknown future kinds',
+      () async {
+        await insertConversation();
+        await insertMessage();
+        final now = DateTime.utc(2026, 7, 11);
 
-      Future<void> insertPart({
-        required int ordinal,
-        required String kind,
-        String payload = '{}',
-      }) {
-        return database.into(database.messagePartRows).insert(
-              MessagePartRowsCompanion.insert(
-                conversationId: 'conversation-1',
-                revisionId: 'message-1',
-                ordinal: ordinal,
-                kind: kind,
-                payload: payload,
-                createdAt: now,
-                updatedAt: now,
-              ),
-            );
-      }
+        Future<void> insertPart({
+          required int ordinal,
+          required String kind,
+          String payload = '{}',
+        }) {
+          return database
+              .into(database.messagePartRows)
+              .insert(
+                MessagePartRowsCompanion.insert(
+                  conversationId: 'conversation-1',
+                  revisionId: 'message-1',
+                  ordinal: ordinal,
+                  kind: kind,
+                  payload: payload,
+                  createdAt: now,
+                  updatedAt: now,
+                ),
+              );
+        }
 
-      await insertPart(ordinal: 0, kind: 'image', payload: '{"uri":"/tmp/a.png"}');
-      await insertPart(
-        ordinal: 1,
-        kind: 'file',
-        payload: '{"uri":"/tmp/a.pdf","name":"a.pdf"}',
-      );
-      await insertPart(
-        ordinal: 2,
-        kind: 'future_widget',
-        payload: '{"v":1}',
-      );
+        await insertPart(
+          ordinal: 0,
+          kind: 'image',
+          payload: '{"uri":"/tmp/a.png"}',
+        );
+        await insertPart(
+          ordinal: 1,
+          kind: 'file',
+          payload: '{"uri":"/tmp/a.pdf","name":"a.pdf"}',
+        );
+        await insertPart(ordinal: 2, kind: 'future_widget', payload: '{"v":1}');
 
-      final kinds = (await database.select(database.messagePartRows).get())
-          .map((row) => row.kind)
-          .toList();
-      expect(kinds, ['image', 'file', 'future_widget']);
+        final kinds = (await database.select(database.messagePartRows).get())
+            .map((row) => row.kind)
+            .toList();
+        expect(kinds, ['image', 'file', 'future_widget']);
 
-      await expectLater(
-        insertPart(ordinal: 3, kind: ''),
-        throwsA(isA<SqliteException>()),
-      );
-    });
+        await expectLater(
+          insertPart(ordinal: 3, kind: ''),
+          throwsA(isA<SqliteException>()),
+        );
+      },
+    );
   });
 
   test('DateTime values round-trip with microsecond precision', () async {

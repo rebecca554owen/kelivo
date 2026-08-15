@@ -94,9 +94,13 @@ class _IosIconButtonState extends State<IosIconButton> {
 
     // Subtle hover background for desktop/web
     final Color bgTarget = _pressed
-        ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.12 : 0.08))
+        ? (Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: isDark ? 0.12 : 0.08))
         : (_hovered
-              ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06))
+              ? (Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06))
               : Colors.transparent);
 
     final content = Semantics(
@@ -203,8 +207,7 @@ class _IosCardPressState extends State<IosCardPress> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final Color base =
-        widget.baseColor ?? (context.appColors.surfaceCard);
+    final Color base = widget.baseColor ?? (context.appColors.surfaceCard);
     final double k = widget.pressedBlendStrength ?? (isDark ? 0.14 : 0.12);
     final Color pressTarget =
         Color.lerp(base, theme.colorScheme.onSurface, k) ?? base;

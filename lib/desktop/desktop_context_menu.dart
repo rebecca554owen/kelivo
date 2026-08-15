@@ -255,7 +255,9 @@ class _GlassMenuItemState extends State<_GlassMenuItem> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fg = widget.danger ? Theme.of(context).colorScheme.error : cs.onSurface;
+    final fg = widget.danger
+        ? Theme.of(context).colorScheme.error
+        : cs.onSurface;
     final ic = widget.danger
         ? Theme.of(context).colorScheme.error
         : cs.onSurface.withValues(alpha: 0.9);

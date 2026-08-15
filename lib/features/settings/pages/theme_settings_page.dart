@@ -33,27 +33,25 @@ class ThemeSettingsPage extends StatelessWidget {
     );
 
     // Section header with trailing action icons (e.g. new/import theme).
-    Widget headerWithActions(
-      String text, {
-      required List<Widget> actions,
-    }) => Padding(
-      padding: const EdgeInsets.fromLTRB(12, 18, 8, 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: AppFontWeights.semibold,
-                color: cs.onSurface.withValues(alpha: 0.8),
+    Widget headerWithActions(String text, {required List<Widget> actions}) =>
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 18, 8, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: AppFontWeights.semibold,
+                    color: cs.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
               ),
-            ),
+              ...actions,
+            ],
           ),
-          ...actions,
-        ],
-      ),
-    );
+        );
 
     return Scaffold(
       appBar: AppBar(
@@ -177,8 +175,8 @@ Widget _customThemesSection(BuildContext context) {
         _customThemeRow(
           context,
           theme: themes[i],
-          selected: isCustomActive &&
-              settings.selectedCustomThemeId == themes[i].id,
+          selected:
+              isCustomActive && settings.selectedCustomThemeId == themes[i].id,
           onTap: () =>
               context.read<SettingsProvider>().selectCustomTheme(themes[i].id),
           onCopy: () => exportCustomThemeToClipboard(context, themes[i]),

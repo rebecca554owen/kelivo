@@ -164,7 +164,9 @@ class _UserProfileDialogBodyState extends State<_UserProfileDialogBody> {
                             color: cs.primary,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHigh,
                               width: 2,
                             ),
                           ),

@@ -1117,105 +1117,100 @@ void main() {
     );
   });
 
-  test(
-    'sanitizes negative durations and tokens from clock rollback',
-    () async {
-      final baseTime = DateTime(2024, 4, 1, 8);
-      // Conversation counters below the schema CHECK floors (-1 / 0 / -1).
-      final conversation = Conversation(
-        id: 'conversation-dirty-numbers',
-        title: 'Dirty Numbers Source',
-        createdAt: baseTime,
-        updatedAt: baseTime.add(const Duration(hours: 1)),
-        truncateIndex: -7,
-        lastSummarizedMessageCount: -3,
-        lastMemoryExtractedOrder: -9,
-      );
-      final messages = [
-        // Device clock rolled back mid-generation: negative duration and a
-        // reasoning finish timestamp earlier than its start.
-        ChatMessage(
-          id: 'dirty-message',
-          role: 'assistant',
-          content: 'generated during clock rollback',
-          conversationId: conversation.id,
-          timestamp: baseTime,
-          durationMs: -55696,
-          totalTokens: -1,
-          promptTokens: -2,
-          completionTokens: -3,
-          cachedTokens: -4,
-          reasoningStartAt: baseTime.add(const Duration(minutes: 2)),
-          reasoningFinishedAt: baseTime,
+  test('sanitizes negative durations and tokens from clock rollback', () async {
+    final baseTime = DateTime(2024, 4, 1, 8);
+    // Conversation counters below the schema CHECK floors (-1 / 0 / -1).
+    final conversation = Conversation(
+      id: 'conversation-dirty-numbers',
+      title: 'Dirty Numbers Source',
+      createdAt: baseTime,
+      updatedAt: baseTime.add(const Duration(hours: 1)),
+      truncateIndex: -7,
+      lastSummarizedMessageCount: -3,
+      lastMemoryExtractedOrder: -9,
+    );
+    final messages = [
+      // Device clock rolled back mid-generation: negative duration and a
+      // reasoning finish timestamp earlier than its start.
+      ChatMessage(
+        id: 'dirty-message',
+        role: 'assistant',
+        content: 'generated during clock rollback',
+        conversationId: conversation.id,
+        timestamp: baseTime,
+        durationMs: -55696,
+        totalTokens: -1,
+        promptTokens: -2,
+        completionTokens: -3,
+        cachedTokens: -4,
+        reasoningStartAt: baseTime.add(const Duration(minutes: 2)),
+        reasoningFinishedAt: baseTime,
+      ),
+      ChatMessage(
+        id: 'clean-message',
+        role: 'assistant',
+        content: 'normal message',
+        conversationId: conversation.id,
+        timestamp: baseTime.add(const Duration(minutes: 1)),
+        durationMs: 1234,
+        totalTokens: 10,
+        promptTokens: 4,
+        completionTokens: 6,
+        reasoningStartAt: baseTime.add(const Duration(minutes: 1)),
+        reasoningFinishedAt: baseTime.add(
+          const Duration(minutes: 1, seconds: 5),
         ),
-        ChatMessage(
-          id: 'clean-message',
-          role: 'assistant',
-          content: 'normal message',
-          conversationId: conversation.id,
-          timestamp: baseTime.add(const Duration(minutes: 1)),
-          durationMs: 1234,
-          totalTokens: 10,
-          promptTokens: 4,
-          completionTokens: 6,
-          reasoningStartAt: baseTime.add(const Duration(minutes: 1)),
-          reasoningFinishedAt: baseTime.add(
-            const Duration(minutes: 1, seconds: 5),
-          ),
-        ),
-      ];
-      conversation.messageIds.addAll(messages.map((message) => message.id));
+      ),
+    ];
+    conversation.messageIds.addAll(messages.map((message) => message.id));
 
-      _registerHiveAdapters();
-      Hive.init(tempDir.path);
-      final conversations = await Hive.openBox<Conversation>('conversations');
-      final messagesBox = await Hive.openBox<ChatMessage>('messages');
-      await conversations.put(conversation.id, conversation);
-      for (final message in messages) {
-        await messagesBox.put(message.id, message);
-      }
-      await conversations.close();
-      await messagesBox.close();
-      await Hive.close();
+    _registerHiveAdapters();
+    Hive.init(tempDir.path);
+    final conversations = await Hive.openBox<Conversation>('conversations');
+    final messagesBox = await Hive.openBox<ChatMessage>('messages');
+    await conversations.put(conversation.id, conversation);
+    for (final message in messages) {
+      await messagesBox.put(message.id, message);
+    }
+    await conversations.close();
+    await messagesBox.close();
+    await Hive.close();
 
-      final decision = await HiveToSqliteMigrationService.check();
-      expect(decision.needsMigration, isTrue);
+    final decision = await HiveToSqliteMigrationService.check();
+    expect(decision.needsMigration, isTrue);
 
-      final service = HiveToSqliteMigrationService(decision);
-      await service.migrate();
-      await service.dispose();
+    final service = HiveToSqliteMigrationService(decision);
+    await service.migrate();
+    await service.dispose();
 
-      final chatService = ChatService();
-      await chatService.init();
-      addTearDown(chatService.close);
+    final chatService = ChatService();
+    await chatService.init();
+    addTearDown(chatService.close);
 
-      final migrated = await chatService.loadMessages(conversation.id);
-      expect(migrated.map((m) => m.id).toList(), [
-        'dirty-message',
-        'clean-message',
-      ]);
-      final dirty = migrated.singleWhere((m) => m.id == 'dirty-message');
-      expect(dirty.durationMs, isNull);
-      expect(dirty.totalTokens, isNull);
-      expect(dirty.promptTokens, isNull);
-      expect(dirty.completionTokens, isNull);
-      expect(dirty.cachedTokens, isNull);
-      expect(dirty.reasoningStartAt, isNotNull);
-      expect(dirty.reasoningFinishedAt, isNull);
-      expect(dirty.content, 'generated during clock rollback');
-      final clean = migrated.singleWhere((m) => m.id == 'clean-message');
-      expect(clean.durationMs, 1234);
-      expect(clean.totalTokens, 10);
-      expect(clean.reasoningFinishedAt, isNotNull);
-      final migratedConversation = chatService.getConversation(
-        conversation.id,
-      );
-      expect(migratedConversation, isNotNull);
-      expect(migratedConversation!.truncateIndex, -1);
-      expect(migratedConversation.lastSummarizedMessageCount, 0);
-      expect(migratedConversation.lastMemoryExtractedOrder, -1);
-    },
-  );
+    final migrated = await chatService.loadMessages(conversation.id);
+    expect(migrated.map((m) => m.id).toList(), [
+      'dirty-message',
+      'clean-message',
+    ]);
+    final dirty = migrated.singleWhere((m) => m.id == 'dirty-message');
+    expect(dirty.durationMs, isNull);
+    expect(dirty.totalTokens, isNull);
+    expect(dirty.promptTokens, isNull);
+    expect(dirty.completionTokens, isNull);
+    expect(dirty.cachedTokens, isNull);
+    expect(dirty.reasoningStartAt, isNotNull);
+    expect(dirty.reasoningFinishedAt, isNull);
+    expect(dirty.content, 'generated during clock rollback');
+    final clean = migrated.singleWhere((m) => m.id == 'clean-message');
+    expect(clean.durationMs, 1234);
+    expect(clean.totalTokens, 10);
+    expect(clean.reasoningFinishedAt, isNotNull);
+    final migratedConversation = chatService.getConversation(conversation.id);
+    expect(migratedConversation, isNotNull);
+    expect(migratedConversation!.truncateIndex, -1);
+    expect(migratedConversation.lastSummarizedMessageCount, 0);
+    expect(migratedConversation.lastMemoryExtractedOrder, -1);
+  });
 
   test(
     'failed migration removes the leftover .migrating database family',

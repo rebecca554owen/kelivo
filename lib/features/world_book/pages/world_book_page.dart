@@ -1863,7 +1863,8 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
                                       message:
                                           l10n.worldBookEntryKeywordAddTooltip,
                                       child: IosCardPress(
-                                        baseColor: context.appColors.surfaceFill,
+                                        baseColor:
+                                            context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(12),
                                         pressedScale: 0.98,
                                         haptics: false,

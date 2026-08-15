@@ -208,8 +208,7 @@ class _ConversationMcpSheet extends StatelessWidget {
                                         width: 42,
                                         height: 42,
                                         decoration: BoxDecoration(
-                                          color:
-                                              context.appColors.surfaceFill,
+                                          color: context.appColors.surfaceFill,
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),

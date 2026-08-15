@@ -55,14 +55,12 @@ Map<String, dynamic> _copyChatCompletionMessage(Map<String, dynamic> m) {
     if (mediaPaths is List) {
       out[multimodalInternalMediaPathsKey] = [
         for (final item in mediaPaths)
-          if (item is Map)
-            Map<String, dynamic>.from(item)
-          else
-            item,
+          if (item is Map) Map<String, dynamic>.from(item) else item,
       ];
     } else if (mediaPaths is Map) {
-      out[multimodalInternalMediaPathsKey] =
-          Map<String, dynamic>.from(mediaPaths);
+      out[multimodalInternalMediaPathsKey] = Map<String, dynamic>.from(
+        mediaPaths,
+      );
     } else {
       out[multimodalInternalMediaPathsKey] = mediaPaths;
     }

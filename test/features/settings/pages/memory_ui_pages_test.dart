@@ -212,10 +212,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Profile fields use the standard modal bottom sheet + form (not CustomBottomSheet).
-    Finder inSheet(Finder matching) => find.descendant(
-      of: find.byType(BottomSheet),
-      matching: matching,
-    );
+    Finder inSheet(Finder matching) =>
+        find.descendant(of: find.byType(BottomSheet), matching: matching);
 
     await tester.tap(find.text('Preferred name'));
     await tester.pumpAndSettle();

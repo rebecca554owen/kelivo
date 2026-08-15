@@ -140,7 +140,9 @@ class _DesktopMcpTimeoutDialogState extends State<_DesktopMcpTimeoutDialog> {
                   onTap: () => Navigator.of(context).maybePop(),
                   background: Colors.transparent,
                   foreground: cs.onSurface,
-                  hoverBackground: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05),
+                  hoverBackground: cs.onSurface.withValues(
+                    alpha: isDark ? 0.06 : 0.05,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 _ActionBtn(

@@ -108,9 +108,7 @@ void main() {
     final repo = await openSpyRepository();
     final now = DateTime.utc(2026, 8, 10);
     const conversationId = 'long-conversation';
-    final ids = <String>[
-      for (var i = 0; i < messageCount; i++) 'msg-$i',
-    ];
+    final ids = <String>[for (var i = 0; i < messageCount; i++) 'msg-$i'];
     final batch = <({ChatMessage message, int messageOrder})>[
       for (var i = 0; i < messageCount; i++)
         (
@@ -163,7 +161,8 @@ void main() {
           name: 'Unlimited',
           limitContextMessages: false,
         ),
-        resolvePersistedCount: () => service.resolveMessageCount(conversationId),
+        resolvePersistedCount: () =>
+            service.resolveMessageCount(conversationId),
       );
 
       expect(limit, total);
@@ -202,7 +201,8 @@ void main() {
           contextMessageSize: 64,
           limitContextMessages: true,
         ),
-        resolvePersistedCount: () => service.resolveMessageCount(conversationId),
+        resolvePersistedCount: () =>
+            service.resolveMessageCount(conversationId),
       );
 
       expect(limit, 64);

@@ -173,11 +173,7 @@ void main() {
       );
       final video = MessagePart.fromRow(
         'file',
-        jsonEncode({
-          'uri': '/tmp/v.mp4',
-          'name': 'v.mp4',
-          'mime': 'video/mp4',
-        }),
+        jsonEncode({'uri': '/tmp/v.mp4', 'name': 'v.mp4', 'mime': 'video/mp4'}),
       );
 
       expect(audio, isA<FilePart>());

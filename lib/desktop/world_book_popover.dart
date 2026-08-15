@@ -179,9 +179,7 @@ class _GlassPanel extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: cs.surface.withValues(
-              alpha: isDark ? 0.28 : 0.56,
-            ),
+            color: cs.surface.withValues(alpha: isDark ? 0.28 : 0.56),
             border: Border(
               top: BorderSide(
                 color: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.18),
@@ -308,9 +306,7 @@ class _CancelRowState extends State<_CancelRow> {
     final cs = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final hoverBg = cs.onSurface.withValues(
-      alpha: isDark ? 0.10 : 0.06,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -384,9 +380,7 @@ class _RowItemState extends State<_RowItem> {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final baseBg = Colors.transparent;
-    final hoverBg = cs.onSurface.withValues(
-      alpha: isDark ? 0.12 : 0.10,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.10);
 
     final opacity = widget.disabled ? 0.55 : 1.0;
     final canTap = !widget.disabled || widget.active;

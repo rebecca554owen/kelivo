@@ -203,9 +203,7 @@ class _GlassPanel extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             // Match the preferred grey smudge style
-            color: cs.surface.withValues(
-              alpha: isDark ? 0.28 : 0.56,
-            ),
+            color: cs.surface.withValues(alpha: isDark ? 0.28 : 0.56),
             border: Border(
               top: BorderSide(
                 color: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.18),
@@ -481,9 +479,7 @@ class _HoverRowState extends State<_HoverRow> {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final baseBg = Colors.transparent;
-    final hoverBg = cs.onSurface.withValues(
-      alpha: isDark ? 0.12 : 0.10,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.10);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

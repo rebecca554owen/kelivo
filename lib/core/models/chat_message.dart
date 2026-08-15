@@ -204,10 +204,7 @@ class ChatMessage extends HiveObject {
       'content': content,
       'parts': [
         for (final part in parts)
-          {
-            'kind': part.kind,
-            'payload': part.encodePayload(),
-          },
+          {'kind': part.kind, 'payload': part.encodePayload()},
       ],
       'timestamp': timestamp.toIso8601String(),
       'modelId': modelId,

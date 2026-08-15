@@ -191,7 +191,10 @@ class _McpJsonEditSheetState extends State<_McpJsonEditSheet> {
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: Text(
                   _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],

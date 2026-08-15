@@ -508,7 +508,9 @@ class _ThemeModeSegmentedState extends State<_ThemeModeSegmented> {
                         );
                       }
                       if (_hover == i) {
-                        return cs.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
+                        return cs.onSurface.withValues(
+                          alpha: isDark ? 0.10 : 0.06,
+                        );
                       }
                       return Colors.transparent;
                     }(),
@@ -2054,8 +2056,7 @@ Future<String?> _showDesktopFontChooserDialog(
                         isDense: true,
                         filled: true,
                         hintText: l10n.desktopFontFilterHint,
-                        fillColor:
-                            context.appColors.surfaceFill,
+                        fillColor: context.appColors.surfaceFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(

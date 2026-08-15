@@ -145,13 +145,27 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       surfaceFill: Color.lerp(surfaceFill, other.surfaceFill, t)!,
       surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
       success: Color.lerp(success, other.success, t)!,
-      successContainer: Color.lerp(successContainer, other.successContainer, t)!,
-      onSuccessContainer:
-          Color.lerp(onSuccessContainer, other.onSuccessContainer, t)!,
+      successContainer: Color.lerp(
+        successContainer,
+        other.successContainer,
+        t,
+      )!,
+      onSuccessContainer: Color.lerp(
+        onSuccessContainer,
+        other.onSuccessContainer,
+        t,
+      )!,
       warning: Color.lerp(warning, other.warning, t)!,
-      warningContainer: Color.lerp(warningContainer, other.warningContainer, t)!,
-      onWarningContainer:
-          Color.lerp(onWarningContainer, other.onWarningContainer, t)!,
+      warningContainer: Color.lerp(
+        warningContainer,
+        other.warningContainer,
+        t,
+      )!,
+      onWarningContainer: Color.lerp(
+        onWarningContainer,
+        other.onWarningContainer,
+        t,
+      )!,
       searchHighlight: Color.lerp(searchHighlight, other.searchHighlight, t)!,
       chartSeries: List.generate(
         len,

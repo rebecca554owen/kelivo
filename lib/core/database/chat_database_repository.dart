@@ -5446,11 +5446,9 @@ class ChatDatabaseRepository {
         _db.messageRows,
       )..where((row) => row.id.isIn(deletedIds))).go();
       for (final rewrite in anchorRewrites.entries) {
-        await (_db.update(
-          _db.messageRows,
-        )..where((row) => row.id.equals(rewrite.key))).write(
-          MessageRowsCompanion(messageOrder: Value(rewrite.value)),
-        );
+        await (_db.update(_db.messageRows)
+              ..where((row) => row.id.equals(rewrite.key)))
+            .write(MessageRowsCompanion(messageOrder: Value(rewrite.value)));
       }
       final currentConversation = await _conversationFromRow(
         conversationRow,

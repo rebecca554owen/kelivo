@@ -1222,7 +1222,9 @@ class _ProviderRow extends StatelessWidget {
     final statusBg = enabled
         ? context.appColors.success.withValues(alpha: 0.12)
         : context.appColors.warning.withValues(alpha: 0.15);
-    final statusFg = enabled ? context.appColors.success : context.appColors.warning;
+    final statusFg = enabled
+        ? context.appColors.success
+        : context.appColors.warning;
 
     final row = _TactileRow(
       onTap: () {
@@ -1601,7 +1603,8 @@ Future<void> _showMultiExportSheet(
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white, // color-gate: ignore (QR scannability)
+                      color:
+                          Colors.white, // color-gate: ignore (QR scannability)
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: cs.outlineVariant.withValues(alpha: 0.2),

@@ -270,8 +270,9 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
               IgnorePointer(
                 ignoring: !widget.barrierDismissible,
                 child: Container(
-                  color: (widget.scrimColor ?? Theme.of(context).colorScheme.scrim)
-                      .withValues(alpha: scrimOpacity),
+                  color:
+                      (widget.scrimColor ?? Theme.of(context).colorScheme.scrim)
+                          .withValues(alpha: scrimOpacity),
                 ),
               ),
           ],

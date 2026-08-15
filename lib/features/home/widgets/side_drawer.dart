@@ -1865,10 +1865,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                   ? ''
                                                   : _mobileSearchHint(),
                                               filled: true,
-                                              fillColor: context.appColors.surfaceFill
-                                                        .withValues(
-                                                          alpha: 0.80,
-                                                        ),
+                                              fillColor: context
+                                                  .appColors
+                                                  .surfaceFill
+                                                  .withValues(alpha: 0.80),
                                               isDense: true,
                                               isCollapsed: true,
                                               prefixIcon: Padding(
@@ -3597,10 +3597,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       reverse: false,
       transitionBuilder: (child, primary, secondary) => FadeThroughTransition(
         fillColor: Colors.transparent,
-        animation: CurvedAnimation(
-          parent: primary,
-          curve: Curves.easeOutCubic,
-        ),
+        animation: CurvedAnimation(parent: primary, curve: Curves.easeOutCubic),
         secondaryAnimation: CurvedAnimation(
           parent: secondary,
           curve: Curves.easeInCubic,
@@ -3619,8 +3616,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
           final row = visibleRows[rowIndex];
           if (row is _SidebarHeaderRow) {
             final headerLabel = switch (row.kind) {
-              _SidebarHeaderKind.pinned =>
-                AppLocalizations.of(context)!.sideDrawerPinnedLabel,
+              _SidebarHeaderKind.pinned => AppLocalizations.of(
+                context,
+              )!.sideDrawerPinnedLabel,
               _SidebarHeaderKind.date => _dateLabel(context, row.dateBucket!),
             };
             return Padding(
@@ -3682,10 +3680,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           : 'grp-${_sidebarDateBucketKey(tile.dateBucket)}-${tile.chat.id}',
                     ),
                   )
-                  .fadeIn(
-                    duration: 220.ms,
-                    delay: staggerDelay,
-                  )
+                  .fadeIn(duration: 220.ms, delay: staggerDelay)
                   .moveY(
                     begin: isPinnedSection ? 8 : 6,
                     end: 0,
@@ -3708,7 +3703,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       ),
     );
   }
-
 }
 
 /// Max absolute index that still contributes to tile enter stagger.
@@ -3764,7 +3758,6 @@ class _SidebarTileRow extends _SidebarRow {
   /// Stable local-day bucket for date-section animation keys; null when pinned.
   final DateTime? dateBucket;
 }
-
 
 class _ChatTile extends StatefulWidget {
   const _ChatTile({
@@ -4209,6 +4202,7 @@ class _DesktopTabViews extends StatelessWidget {
   });
   final TabController controller;
   final Widget Function() buildAssistants;
+
   /// Conversations pane owns its own virtualized scroll view (and controller).
   final Widget Function() buildConversations;
 
@@ -4241,6 +4235,7 @@ class _LegacyListArea extends StatelessWidget {
   final bool isDesktop;
   final bool assistantsExpanded;
   final Widget Function() buildAssistants;
+
   /// Builds the virtualized conversations list that owns scrolling, with the
   /// inline assistants [leading] widget and shared [padding].
   final Widget Function(Widget leading, EdgeInsets padding) buildConversations;

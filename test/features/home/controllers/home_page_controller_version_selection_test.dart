@@ -64,11 +64,7 @@ class _SpyChatDatabaseRepository extends ChatDatabaseRepository {
     required int limit,
   }) async {
     rangeQueries.add((start: start, limit: limit));
-    return super.getMessagesRange(
-      conversationId,
-      start: start,
-      limit: limit,
-    );
+    return super.getMessagesRange(conversationId, start: start, limit: limit);
   }
 }
 
@@ -100,10 +96,9 @@ class _SelectionFakeChatService extends ChatService {
       final selected = versionSelections[entry.key];
       active.add(
         entry.value.firstWhere(
-          (message) =>
-              selected == null
-                  ? identical(message, entry.value.last)
-                  : message.version == selected,
+          (message) => selected == null
+              ? identical(message, entry.value.last)
+              : message.version == selected,
           orElse: () => entry.value.last,
         ),
       );
@@ -306,14 +301,17 @@ void main() {
           MultiProvider(
             providers: [
               ChangeNotifierProvider(
-                create: (_) => SettingsProvider(createBusinessTestPreferences()),
+                create: (_) =>
+                    SettingsProvider(createBusinessTestPreferences()),
               ),
               ChangeNotifierProvider<ChatService>.value(value: service),
             ],
             child: MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: _ControllerHarness(onCreated: (value) => controller = value),
+              home: _ControllerHarness(
+                onCreated: (value) => controller = value,
+              ),
             ),
           ),
         );
@@ -322,8 +320,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final collapsed =
-            controller!.chatController.allCollapsedMessagesForCurrentConversation();
+        final collapsed = controller!.chatController
+            .allCollapsedMessagesForCurrentConversation();
         expect(collapsed.map((m) => m.id), ['user-1', 'a-v1']);
 
         // Idle cache warm-up may call loadMessages after first paint; that is
@@ -338,17 +336,15 @@ void main() {
         await tester.pump();
 
         expect(controller!.selectedMessagesIncludeMultipleVersions, isTrue);
-        expect(
-          service.rangeQueries.where((q) => q.limit < 0),
-          isEmpty,
-        );
+        expect(service.rangeQueries.where((q) => q.limit < 0), isEmpty);
         expect(service.fullLoadCalls, loadsBeforeSelection);
 
         await tester.pumpWidget(
           MultiProvider(
             providers: [
               ChangeNotifierProvider(
-                create: (_) => SettingsProvider(createBusinessTestPreferences()),
+                create: (_) =>
+                    SettingsProvider(createBusinessTestPreferences()),
               ),
               ChangeNotifierProvider<ChatService>.value(value: service),
             ],
@@ -409,8 +405,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final collapsed =
-          controller!.chatController.allCollapsedMessagesForCurrentConversation();
+      final collapsed = controller!.chatController
+          .allCollapsedMessagesForCurrentConversation();
       controller!.startMessageSelection(
         messageIndex: 1,
         messageList: collapsed,
@@ -461,14 +457,17 @@ void main() {
           MultiProvider(
             providers: [
               ChangeNotifierProvider(
-                create: (_) => SettingsProvider(createBusinessTestPreferences()),
+                create: (_) =>
+                    SettingsProvider(createBusinessTestPreferences()),
               ),
               ChangeNotifierProvider<ChatService>.value(value: service),
             ],
             child: MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: _ControllerHarness(onCreated: (value) => controller = value),
+              home: _ControllerHarness(
+                onCreated: (value) => controller = value,
+              ),
             ),
           ),
         );
@@ -477,8 +476,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final collapsed =
-            controller!.chatController.allCollapsedMessagesForCurrentConversation();
+        final collapsed = controller!.chatController
+            .allCollapsedMessagesForCurrentConversation();
         controller!.startMessageSelection(
           messageIndex: 1,
           messageList: collapsed,
@@ -499,10 +498,7 @@ void main() {
         controller!.toggleSelection('user-1', false);
         await controller!.deleteSelectedMessages(deleteAllVersions: true);
         expect(service.lastDeletedIds, {'a-v0', 'a-v1'});
-        expect(
-          service.rangeQueries.where((q) => q.limit < 0),
-          isEmpty,
-        );
+        expect(service.rangeQueries.where((q) => q.limit < 0), isEmpty);
 
         await tester.pumpWidget(const SizedBox.shrink());
       },
@@ -555,7 +551,9 @@ void main() {
             child: MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: _ControllerHarness(onCreated: (value) => controller = value),
+              home: _ControllerHarness(
+                onCreated: (value) => controller = value,
+              ),
             ),
           ),
         );
@@ -586,10 +584,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(controller!.selectedItems.contains('a-v1'), isTrue);
-        expect(
-          controller!.selectedMessagesIncludeMultipleVersions,
-          isTrue,
-        );
+        expect(controller!.selectedMessagesIncludeMultipleVersions, isTrue);
         expect(controller!.allSelectableMessagesSelected, isTrue);
 
         // Mini-map style deselect of the out-of-window multi-version item.
@@ -599,12 +594,12 @@ void main() {
         expect(controller!.selectedItems.contains('a-v1'), isFalse);
 
         expect(service.getMessageIdsCalls, idsBeforeSelect);
-        expect(
-          service.rangeQueries.where((q) => q.limit < 0),
-          isEmpty,
-        );
+        expect(service.rangeQueries.where((q) => q.limit < 0), isEmpty);
         expect(service.rangeQueries.length, rangesBeforeSelect);
-        expect(service.debugHasMessageOrderSkeleton(service.conversation.id), isFalse);
+        expect(
+          service.debugHasMessageOrderSkeleton(service.conversation.id),
+          isFalse,
+        );
 
         await tester.pumpWidget(const SizedBox.shrink());
       },
@@ -619,7 +614,12 @@ void main() {
           conversation: Conversation(
             id: 'conversation-1',
             title: 'Chat',
-            messageIds: const ['user-1', 'assistant-1', 'user-2', 'assistant-2'],
+            messageIds: const [
+              'user-1',
+              'assistant-1',
+              'user-2',
+              'assistant-2',
+            ],
           ),
           seededMessages: [
             _msg(id: 'user-1', role: 'user'),
@@ -643,7 +643,9 @@ void main() {
             child: MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: _ControllerHarness(onCreated: (value) => controller = value),
+              home: _ControllerHarness(
+                onCreated: (value) => controller = value,
+              ),
             ),
           ),
         );
@@ -792,13 +794,10 @@ void main() {
 
         expect(spy.getMessageIdsCalls, 0);
         expect(service.debugHasMessageOrderSkeleton(conversation.id), isFalse);
-        expect(
-          chatController.collapsedMessages.map((m) => m.id).last,
-          v1.id,
-        );
+        expect(chatController.collapsedMessages.map((m) => m.id).last, v1.id);
 
-        final collapsed =
-            chatController.allCollapsedMessagesForCurrentConversation();
+        final collapsed = chatController
+            .allCollapsedMessagesForCurrentConversation();
         expect(collapsed.map((m) => m.id).last, v1.id);
 
         // Directed group cache (visible-group preload) exposes both versions
@@ -809,10 +808,7 @@ void main() {
         ]);
         expect(groupMessages.length, 2);
         expect(groupMessages.any((m) => m.id == v1.id), isTrue);
-        expect(
-          spy.rangeQueries.where((q) => q.limit < 0),
-          isEmpty,
-        );
+        expect(spy.rangeQueries.where((q) => q.limit < 0), isEmpty);
         expect(spy.getMessageIdsCalls, 0);
         expect(service.debugHasMessageOrderSkeleton(conversation.id), isFalse);
 

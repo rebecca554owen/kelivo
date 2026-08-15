@@ -195,10 +195,7 @@ class _MemoryEntriesContentState extends State<MemoryEntriesContent> {
             options: [
               DesktopSelectOption(value: null, label: l10n.memoryFilterTypeAll),
               for (final t in MemoryType.values)
-                DesktopSelectOption(
-                  value: t,
-                  label: memoryTypeLabel(l10n, t),
-                ),
+                DesktopSelectOption(value: t, label: memoryTypeLabel(l10n, t)),
             ],
             onSelected: (v) async {
               setState(() => _type = v);

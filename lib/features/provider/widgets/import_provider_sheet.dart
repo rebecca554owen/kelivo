@@ -518,8 +518,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                           decoration: InputDecoration(
                             hintText: l10n.importProviderSheetDescription,
                             filled: true,
-                            fillColor:
-                                ctx.appColors.surfaceCard,
+                            fillColor: ctx.appColors.surfaceCard,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(

@@ -206,9 +206,7 @@ Future<void> showDesktopUserProfileMemoryDialog(BuildContext context) {
   return showDesktopMemoryDialog<void>(
     context,
     title: l10n.userProfilePageTitle,
-    body: const UserProfileContent(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
-    ),
+    body: const UserProfileContent(padding: EdgeInsets.fromLTRB(20, 8, 20, 24)),
   );
 }
 
@@ -264,9 +262,7 @@ Future<void> showDesktopMemoryTraceDialog(BuildContext context) {
   return showDesktopMemoryDialog<void>(
     context,
     title: l10n.memoryTracePageTitle,
-    body: const MemoryTraceContent(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
-    ),
+    body: const MemoryTraceContent(padding: EdgeInsets.fromLTRB(20, 8, 20, 24)),
   );
 }
 

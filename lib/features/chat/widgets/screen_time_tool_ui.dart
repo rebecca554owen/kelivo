@@ -37,8 +37,9 @@ class ScreenTimeResult {
         for (final item in appsRaw) {
           if (item is! Map) continue;
           final appMap = Map<String, dynamic>.from(item);
-          final name =
-              (appMap['app_name'] ?? appMap['package'] ?? '').toString().trim();
+          final name = (appMap['app_name'] ?? appMap['package'] ?? '')
+              .toString()
+              .trim();
           if (name.isEmpty) continue;
           final totalMs = _asInt(appMap['total_ms']);
           final totalMinutes =
@@ -100,8 +101,7 @@ class ScreenTimeToolSummary extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final primary = textColor ?? cs.onPrimaryContainer;
-    final secondary =
-        secondaryColor ?? primary.withValues(alpha: 0.8);
+    final secondary = secondaryColor ?? primary.withValues(alpha: 0.8);
     final err = errorColor ?? cs.error;
 
     if (result.isNoPermission) {
@@ -241,10 +241,7 @@ class ScreenTimeToolDetailBody extends StatelessWidget {
                         app.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: cs.onSurface,
-                        ),
+                        style: TextStyle(fontSize: 14, color: cs.onSurface),
                       ),
                     ),
                     const SizedBox(width: 8),

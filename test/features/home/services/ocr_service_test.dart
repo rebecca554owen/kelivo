@@ -54,9 +54,7 @@ void main() {
         },
         loadArtifacts: (revisionIds) async => {
           for (final id in revisionIds)
-            id: {
-              for (var i = 0; i < 5; i++) 'hash-/$id-$i.png': '$id-$i',
-            },
+            id: {for (var i = 0; i < 5; i++) 'hash-/$id-$i.png': '$id-$i'},
         },
       );
 
@@ -73,53 +71,56 @@ void main() {
       expect(sessionB.artifactSize, 5);
       expect(sessionA.artifactTextsByHash['hash-/rev-a-0.png'], 'rev-a-0');
       expect(sessionB.artifactTextsByHash['hash-/rev-b-0.png'], 'rev-b-0');
-      expect(sessionA.artifactTextsByHash.containsKey('hash-/rev-b-0.png'), isFalse);
-      expect(sessionB.artifactTextsByHash.containsKey('hash-/rev-a-0.png'), isFalse);
+      expect(
+        sessionA.artifactTextsByHash.containsKey('hash-/rev-b-0.png'),
+        isFalse,
+      );
+      expect(
+        sessionB.artifactTextsByHash.containsKey('hash-/rev-a-0.png'),
+        isFalse,
+      );
     });
 
-    testWidgets(
-      'request snapshot prevents full re-OCR after LRU eviction',
-      (tester) async {
-        var ocrCalls = 0;
-        final service = OcrService(
-          maxCacheEntries: 2,
-          resolveContentHashes: (paths) async => {
-            for (final path in paths) path: 'hash-$path',
-          },
-          loadArtifacts: (revisionIds) async => {
-            'rev-1': {
-              for (var i = 0; i < 5; i++) 'hash-/img-$i.png': 'text-$i',
-            },
-          },
-          persistArtifact: (revisionId, items) async {},
-          ocrExecutor: (paths) async {
-            ocrCalls += 1;
-            return 'should-not-run';
-          },
-        );
+    testWidgets('request snapshot prevents full re-OCR after LRU eviction', (
+      tester,
+    ) async {
+      var ocrCalls = 0;
+      final service = OcrService(
+        maxCacheEntries: 2,
+        resolveContentHashes: (paths) async => {
+          for (final path in paths) path: 'hash-$path',
+        },
+        loadArtifacts: (revisionIds) async => {
+          'rev-1': {for (var i = 0; i < 5; i++) 'hash-/img-$i.png': 'text-$i'},
+        },
+        persistArtifact: (revisionId, items) async {},
+        ocrExecutor: (paths) async {
+          ocrCalls += 1;
+          return 'should-not-run';
+        },
+      );
 
-        final paths = [for (var i = 0; i < 5; i++) '/img-$i.png'];
-        final session = await service.prefetchPersistedOcr(
-          revisionIds: const ['rev-1'],
-          imagePaths: paths,
-        );
-        expect(service.cacheSize, 2);
-        expect(session.artifactSize, 5);
+      final paths = [for (var i = 0; i < 5; i++) '/img-$i.png'];
+      final session = await service.prefetchPersistedOcr(
+        revisionIds: const ['rev-1'],
+        imagePaths: paths,
+      );
+      expect(service.cacheSize, 2);
+      expect(session.artifactSize, 5);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        final context = tester.element(find.byType(SizedBox));
+      await tester.pumpWidget(const SizedBox.shrink());
+      final context = tester.element(find.byType(SizedBox));
 
-        final text = await service.getOcrTextForImages(
-          paths,
-          context,
-          revisionId: 'rev-1',
-          session: session,
-        );
+      final text = await service.getOcrTextForImages(
+        paths,
+        context,
+        revisionId: 'rev-1',
+        session: session,
+      );
 
-        expect(ocrCalls, 0);
-        expect(text?.split('\n'), [for (var i = 0; i < 5; i++) 'text-$i']);
-      },
-    );
+      expect(ocrCalls, 0);
+      expect(text?.split('\n'), [for (var i = 0; i < 5; i++) 'text-$i']);
+    });
 
     testWidgets(
       'prefetch is one batch; per-message calls reuse hashes and revisions',

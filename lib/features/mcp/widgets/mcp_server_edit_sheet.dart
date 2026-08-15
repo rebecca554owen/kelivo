@@ -541,8 +541,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
                                       margin: const EdgeInsets.only(bottom: 10),
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color:
-                                            context.appColors.surfaceFill,
+                                        color: context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: cs.outlineVariant.withValues(

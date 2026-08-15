@@ -173,7 +173,10 @@ class _DesktopMcpJsonEditDialogState extends State<_DesktopMcpJsonEditDialog> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     _error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),

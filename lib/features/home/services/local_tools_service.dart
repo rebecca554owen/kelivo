@@ -234,146 +234,140 @@ class LocalToolsService {
         },
       });
     }
-     if (DeviceLocalTools.screenTimeSupported &&
-         assistant.localToolIds.contains(LocalToolNames.screenTime)) {
-       tools.add({
-         'type': 'function',
-         'function': {
-           'name': LocalToolNames.screenTime,
-           'description':
-               "Get the user's app screen usage (screen time) over a time range. "
-               "Specify a custom interval with 'begin'/'end', or use the 'range' preset (today/week). "
-               'Returns the total foreground time and a per-app breakdown sorted by usage time (descending). '
-               '${_deviceTimezoneHint()} '
-               "Requires the 'Usage access' special permission; if it is not granted, the device's usage "
-               'access settings page is opened automatically and an error is returned.',
-           'parameters': {
-             'type': 'object',
-             'properties': {
-               'begin': {
-                 'type': 'string',
-                 'description':
-                     "Start time (inclusive). Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
-                     "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds. "
-                     "When provided, 'range' is ignored.",
-               },
-               'end': {
-                 'type': 'string',
-                 'description':
-                     "End time (exclusive), same formats as 'begin'. Defaults to now.",
-               },
-               'range': {
-                 'type': 'string',
-                 'enum': ['today', 'week'],
-                 'description':
-                     "Convenience preset, used only when 'begin' is omitted: today or week. Default today.",
-               },
-               'top': {
-                 'type': 'integer',
-                 'description':
-                     'Maximum number of top apps to return, sorted by usage time. Default 10.',
-               },
-             },
-           },
-         },
-       });
-     }
-     if (DeviceLocalTools.calendarSupported &&
-         assistant.localToolIds.contains(LocalToolNames.calendarQuery)) {
-       tools.add({
-         'type': 'function',
-         'function': {
-           'name': LocalToolNames.calendarQuery,
-           'description':
-               "Query calendar events on the user's device within a time range. "
-               "Specify a custom interval with 'begin'/'end', or use the 'range' preset (today/week/month). "
-               'Returns a list of events with title, description, location, start/end times, and calendar info. '
-               '${_deviceTimezoneHint()} '
-               "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
-           'parameters': {
-             'type': 'object',
-             'properties': {
-               'begin': {
-                 'type': 'string',
-                 'description':
-                     "Start time (inclusive). Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
-                     "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds. "
-                     "When provided, 'range' is ignored.",
-               },
-               'end': {
-                 'type': 'string',
-                 'description':
-                     "End time (exclusive), same formats as 'begin'.",
-               },
-               'range': {
-                 'type': 'string',
-                 'enum': ['today', 'week', 'month'],
-                 'description':
-                     "Convenience preset, used only when 'begin' is omitted: today, week, or month. Default today.",
-               },
-               'query': {
-                 'type': 'string',
-                 'description':
-                     'Optional keyword to filter events by title (case-insensitive substring match).',
-               },
-               'limit': {
-                 'type': 'integer',
-                 'description':
-                     'Maximum number of events to return. Default 20.',
-               },
-             },
-           },
-         },
-       });
-     }
-     if (DeviceLocalTools.calendarSupported &&
-         assistant.localToolIds.contains(LocalToolNames.calendarCreate)) {
-       tools.add({
-         'type': 'function',
-         'function': {
-           'name': LocalToolNames.calendarCreate,
-           'description':
-               "Create a new calendar event on the user's device. "
-               'Requires title and start time at minimum. End time defaults to 1 hour after start. '
-               'The user will be asked to confirm before the event is created. '
-               '${_deviceTimezoneHint()} '
-               "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
-           'parameters': {
-             'type': 'object',
-             'properties': {
-               'title': {
-                 'type': 'string',
-                 'description': 'Event title.',
-               },
-               'description': {
-                 'type': 'string',
-                 'description': 'Event description or notes.',
-               },
-               'location': {
-                 'type': 'string',
-                 'description': 'Event location.',
-               },
-               'start': {
-                 'type': 'string',
-                 'description':
-                     "Start time. Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
-                     "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds.",
-               },
-               'end': {
-                 'type': 'string',
-                 'description':
-                     "End time, same formats as 'start'. Defaults to 1 hour after start.",
-               },
-               'all_day': {
-                 'type': 'boolean',
-                 'description': 'Whether this is an all-day event. Default false.',
-               },
-             },
-             'required': ['title', 'start'],
-           },
-         },
-       });
-     }
+    if (DeviceLocalTools.screenTimeSupported &&
+        assistant.localToolIds.contains(LocalToolNames.screenTime)) {
+      tools.add({
+        'type': 'function',
+        'function': {
+          'name': LocalToolNames.screenTime,
+          'description':
+              "Get the user's app screen usage (screen time) over a time range. "
+              "Specify a custom interval with 'begin'/'end', or use the 'range' preset (today/week). "
+              'Returns the total foreground time and a per-app breakdown sorted by usage time (descending). '
+              '${_deviceTimezoneHint()} '
+              "Requires the 'Usage access' special permission; if it is not granted, the device's usage "
+              'access settings page is opened automatically and an error is returned.',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'begin': {
+                'type': 'string',
+                'description':
+                    "Start time (inclusive). Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
+                    "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds. "
+                    "When provided, 'range' is ignored.",
+              },
+              'end': {
+                'type': 'string',
+                'description':
+                    "End time (exclusive), same formats as 'begin'. Defaults to now.",
+              },
+              'range': {
+                'type': 'string',
+                'enum': ['today', 'week'],
+                'description':
+                    "Convenience preset, used only when 'begin' is omitted: today or week. Default today.",
+              },
+              'top': {
+                'type': 'integer',
+                'description':
+                    'Maximum number of top apps to return, sorted by usage time. Default 10.',
+              },
+            },
+          },
+        },
+      });
+    }
+    if (DeviceLocalTools.calendarSupported &&
+        assistant.localToolIds.contains(LocalToolNames.calendarQuery)) {
+      tools.add({
+        'type': 'function',
+        'function': {
+          'name': LocalToolNames.calendarQuery,
+          'description':
+              "Query calendar events on the user's device within a time range. "
+              "Specify a custom interval with 'begin'/'end', or use the 'range' preset (today/week/month). "
+              'Returns a list of events with title, description, location, start/end times, and calendar info. '
+              '${_deviceTimezoneHint()} '
+              "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'begin': {
+                'type': 'string',
+                'description':
+                    "Start time (inclusive). Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
+                    "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds. "
+                    "When provided, 'range' is ignored.",
+              },
+              'end': {
+                'type': 'string',
+                'description': "End time (exclusive), same formats as 'begin'.",
+              },
+              'range': {
+                'type': 'string',
+                'enum': ['today', 'week', 'month'],
+                'description':
+                    "Convenience preset, used only when 'begin' is omitted: today, week, or month. Default today.",
+              },
+              'query': {
+                'type': 'string',
+                'description':
+                    'Optional keyword to filter events by title (case-insensitive substring match).',
+              },
+              'limit': {
+                'type': 'integer',
+                'description':
+                    'Maximum number of events to return. Default 20.',
+              },
+            },
+          },
+        },
+      });
+    }
+    if (DeviceLocalTools.calendarSupported &&
+        assistant.localToolIds.contains(LocalToolNames.calendarCreate)) {
+      tools.add({
+        'type': 'function',
+        'function': {
+          'name': LocalToolNames.calendarCreate,
+          'description':
+              "Create a new calendar event on the user's device. "
+              'Requires title and start time at minimum. End time defaults to 1 hour after start. '
+              'The user will be asked to confirm before the event is created. '
+              '${_deviceTimezoneHint()} '
+              "Requires the 'Calendar' permission; if it is not granted, an error is returned.",
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'title': {'type': 'string', 'description': 'Event title.'},
+              'description': {
+                'type': 'string',
+                'description': 'Event description or notes.',
+              },
+              'location': {'type': 'string', 'description': 'Event location.'},
+              'start': {
+                'type': 'string',
+                'description':
+                    "Start time. Accepts an ISO-8601 date 'yyyy-MM-dd', a local "
+                    "date-time 'yyyy-MM-ddTHH:mm:ss', an offset date-time, or epoch milliseconds.",
+              },
+              'end': {
+                'type': 'string',
+                'description':
+                    "End time, same formats as 'start'. Defaults to 1 hour after start.",
+              },
+              'all_day': {
+                'type': 'boolean',
+                'description':
+                    'Whether this is an all-day event. Default false.',
+              },
+            },
+            'required': ['title', 'start'],
+          },
+        },
+      });
+    }
     return tools;
   }
 
@@ -395,68 +389,68 @@ class LocalToolsService {
     if (name == LocalToolNames.textToSpeech) {
       return _handleTextToSpeechTool(args, onSpeakText);
     }
-     if (name == LocalToolNames.calculate) {
-       return _handleCalculateTool(args);
-     }
-     if (name == LocalToolNames.screenTime &&
-         DeviceLocalTools.screenTimeSupported) {
-       return _invokeDeviceTool('getScreenTime', args);
-     }
-     if (name == LocalToolNames.calendarQuery &&
-         DeviceLocalTools.calendarSupported) {
-       return _invokeDeviceTool('queryCalendar', args);
-     }
-     if (name == LocalToolNames.calendarCreate &&
-         DeviceLocalTools.calendarSupported) {
-       return _invokeDeviceTool('createCalendarEvent', args);
-     }
+    if (name == LocalToolNames.calculate) {
+      return _handleCalculateTool(args);
+    }
+    if (name == LocalToolNames.screenTime &&
+        DeviceLocalTools.screenTimeSupported) {
+      return _invokeDeviceTool('getScreenTime', args);
+    }
+    if (name == LocalToolNames.calendarQuery &&
+        DeviceLocalTools.calendarSupported) {
+      return _invokeDeviceTool('queryCalendar', args);
+    }
+    if (name == LocalToolNames.calendarCreate &&
+        DeviceLocalTools.calendarSupported) {
+      return _invokeDeviceTool('createCalendarEvent', args);
+    }
     return null;
   }
- 
+
   static const MethodChannel _deviceToolsChannel = DeviceLocalTools._channel;
- 
-   static String _deviceTimezoneHint() {
-     final now = DateTime.now();
-     final offset = now.timeZoneOffset;
-     final sign = offset.isNegative ? '-' : '+';
-     final abs = offset.abs();
-     final hh = abs.inHours.toString().padLeft(2, '0');
-     final mm = (abs.inMinutes % 60).toString().padLeft(2, '0');
-     return "The device timezone is '${now.timeZoneName}' (UTC offset $sign$hh:$mm); "
-         'times without an explicit offset are interpreted in this timezone.';
-   }
- 
-   /// Invokes a native device tool over the MethodChannel. The native side
-   /// returns a JSON string payload (including structured error payloads that
-   /// the model can act on, e.g. missing permissions).
-   static Future<String> _invokeDeviceTool(
-     String method,
-     Map<String, dynamic> args,
-   ) async {
-     try {
-       final result = await _deviceToolsChannel.invokeMethod<String>(
-         method,
-         jsonEncode(args),
-       );
-       if (result == null || result.isEmpty) {
-         return jsonEncode({
-           'error': 'no_result',
-           'message': 'The device tool returned no result.',
-         });
-       }
-       return result;
-     } on MissingPluginException {
-       return jsonEncode({
-         'error': 'unsupported_platform',
-         'message': 'This tool is not available on the current platform.',
-       });
-     } on PlatformException catch (e) {
-       return jsonEncode({
-         'error': e.code,
-         'message': e.message ?? 'The device tool failed.',
-       });
-     }
-   }
+
+  static String _deviceTimezoneHint() {
+    final now = DateTime.now();
+    final offset = now.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final abs = offset.abs();
+    final hh = abs.inHours.toString().padLeft(2, '0');
+    final mm = (abs.inMinutes % 60).toString().padLeft(2, '0');
+    return "The device timezone is '${now.timeZoneName}' (UTC offset $sign$hh:$mm); "
+        'times without an explicit offset are interpreted in this timezone.';
+  }
+
+  /// Invokes a native device tool over the MethodChannel. The native side
+  /// returns a JSON string payload (including structured error payloads that
+  /// the model can act on, e.g. missing permissions).
+  static Future<String> _invokeDeviceTool(
+    String method,
+    Map<String, dynamic> args,
+  ) async {
+    try {
+      final result = await _deviceToolsChannel.invokeMethod<String>(
+        method,
+        jsonEncode(args),
+      );
+      if (result == null || result.isEmpty) {
+        return jsonEncode({
+          'error': 'no_result',
+          'message': 'The device tool returned no result.',
+        });
+      }
+      return result;
+    } on MissingPluginException {
+      return jsonEncode({
+        'error': 'unsupported_platform',
+        'message': 'This tool is not available on the current platform.',
+      });
+    } on PlatformException catch (e) {
+      return jsonEncode({
+        'error': e.code,
+        'message': e.message ?? 'The device tool failed.',
+      });
+    }
+  }
 
   static Future<String> _handleClipboardTool(Map<String, dynamic> args) async {
     final action = (args['action'] ?? '').toString();
@@ -540,7 +534,8 @@ class LocalToolsService {
     if (expression.isEmpty) {
       return jsonEncode({
         'error': 'empty_expression',
-        'message': 'Expression is empty. Please provide a mathematical expression in standard notation, e.g. "(15 + 3) * 2".',
+        'message':
+            'Expression is empty. Please provide a mathematical expression in standard notation, e.g. "(15 + 3) * 2".',
       });
     }
 
@@ -550,7 +545,8 @@ class LocalToolsService {
       if (!result.isFinite) {
         return jsonEncode({
           'error': 'math_error',
-          'message': 'The result is not a finite number. Please check your expression (e.g. division by zero).',
+          'message':
+              'The result is not a finite number. Please check your expression (e.g. division by zero).',
         });
       }
       return jsonEncode({
@@ -560,7 +556,8 @@ class LocalToolsService {
     } catch (e) {
       return jsonEncode({
         'error': 'parse_error',
-        'message': 'Could not parse the expression. Use standard notation, e.g. "(15 + 3) * 2".',
+        'message':
+            'Could not parse the expression. Use standard notation, e.g. "(15 + 3) * 2".',
         'detail': e.toString(),
       });
     }

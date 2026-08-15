@@ -56,81 +56,75 @@ void main() {
   }
 
   group('message-count unknown-vs-0 sentinel', () {
-    test(
-      'empty cache with unknown count is not fully cached',
-      () async {
-        final service = createService();
-        await service.init();
-        const id = 'unknown-conversation';
+    test('empty cache with unknown count is not fully cached', () async {
+      final service = createService();
+      await service.init();
+      const id = 'unknown-conversation';
 
-        service.debugPrimeMessageCountState(
-          id,
-          cachedMessages: const [],
-          clearCounts: true,
+      service.debugPrimeMessageCountState(
+        id,
+        cachedMessages: const [],
+        clearCounts: true,
+      );
+
+      expect(service.isMessageCountKnown(id), isFalse);
+      expect(service.getMessageCount(id), -1);
+      expect(service.isConversationFullyCached(id), isFalse);
+    });
+
+    test('known count 0 with empty cache is fully cached', () async {
+      final service = createService();
+      await service.init();
+      final conversation = await service.createConversation(title: 'New');
+
+      service.debugPrimeMessageCountState(
+        conversation.id,
+        cachedMessages: const [],
+        messageCount: 0,
+        orderIds: const [],
+      );
+
+      expect(service.isMessageCountKnown(conversation.id), isTrue);
+      expect(service.getMessageCount(conversation.id), 0);
+      expect(service.isConversationFullyCached(conversation.id), isTrue);
+    });
+
+    test(
+      'isMessageCountKnown covers order-only and unknown; cold start leaves counts unknown',
+      () async {
+        final writer = createService();
+        await writer.init();
+        final conversation = await writer.createConversation(title: 'Chat');
+        await writer.addMessage(
+          conversationId: conversation.id,
+          role: 'user',
+          content: 'hello',
         );
+        await writer.close();
+        services.remove(writer);
 
-        expect(service.isMessageCountKnown(id), isFalse);
-        expect(service.getMessageCount(id), -1);
-        expect(service.isConversationFullyCached(id), isFalse);
-      },
-    );
-
-    test(
-      'known count 0 with empty cache is fully cached',
-      () async {
         final service = createService();
         await service.init();
-        final conversation = await service.createConversation(title: 'New');
+
+        expect(service.getConversation(conversation.id), isNotNull);
+        expect(service.isMessageCountKnown(conversation.id), isFalse);
+        expect(service.getMessageCount(conversation.id), -1);
 
         service.debugPrimeMessageCountState(
           conversation.id,
-          cachedMessages: const [],
-          messageCount: 0,
-          orderIds: const [],
+          clearCounts: true,
+          orderIds: const ['order-only-id'],
         );
-
         expect(service.isMessageCountKnown(conversation.id), isTrue);
-        expect(service.getMessageCount(conversation.id), 0);
-        expect(service.isConversationFullyCached(conversation.id), isTrue);
+        expect(service.getMessageCount(conversation.id), 1);
+
+        service.debugPrimeMessageCountState(conversation.id, clearCounts: true);
+        expect(service.isMessageCountKnown(conversation.id), isFalse);
+        expect(service.getMessageCount(conversation.id), -1);
+
+        expect(service.isMessageCountKnown('never-seen'), isFalse);
+        expect(service.getMessageCount('never-seen'), -1);
       },
     );
-
-    test('isMessageCountKnown covers order-only and unknown; cold start leaves counts unknown', () async {
-      final writer = createService();
-      await writer.init();
-      final conversation = await writer.createConversation(title: 'Chat');
-      await writer.addMessage(
-        conversationId: conversation.id,
-        role: 'user',
-        content: 'hello',
-      );
-      await writer.close();
-      services.remove(writer);
-
-      final service = createService();
-      await service.init();
-
-      expect(service.getConversation(conversation.id), isNotNull);
-      expect(service.isMessageCountKnown(conversation.id), isFalse);
-      expect(service.getMessageCount(conversation.id), -1);
-
-      service.debugPrimeMessageCountState(
-        conversation.id,
-        clearCounts: true,
-        orderIds: const ['order-only-id'],
-      );
-      expect(service.isMessageCountKnown(conversation.id), isTrue);
-      expect(service.getMessageCount(conversation.id), 1);
-
-      service.debugPrimeMessageCountState(
-        conversation.id,
-        clearCounts: true,
-      );
-      expect(service.isMessageCountKnown(conversation.id), isFalse);
-      expect(service.getMessageCount(conversation.id), -1);
-
-      expect(service.isMessageCountKnown('never-seen'), isFalse);
-      expect(service.getMessageCount('never-seen'), -1);
-    });
   });
 }

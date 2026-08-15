@@ -55,11 +55,7 @@ class _SpyChatDatabaseRepository extends ChatDatabaseRepository {
     required int limit,
   }) async {
     messagesRangeLimits.add(limit);
-    return super.getMessagesRange(
-      conversationId,
-      start: start,
-      limit: limit,
-    );
+    return super.getMessagesRange(conversationId, start: start, limit: limit);
   }
 }
 
@@ -114,7 +110,9 @@ void main() {
     return spy;
   }
 
-  Future<(String, List<String>)> seedConversation({int messageCount = 3}) async {
+  Future<(String, List<String>)> seedConversation({
+    int messageCount = 3,
+  }) async {
     final writer = createService();
     await writer.init();
     final conversation = await writer.createConversation(title: 'Chat');

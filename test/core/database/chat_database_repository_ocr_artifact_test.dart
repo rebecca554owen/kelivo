@@ -127,9 +127,7 @@ void main() {
       retainedContentHashes: {'hash-a'},
     );
 
-    final loaded = await repository.getImageOcrArtifacts([
-      appended.message.id,
-    ]);
+    final loaded = await repository.getImageOcrArtifacts([appended.message.id]);
     expect(loaded[appended.message.id], {'hash-a': 'text-a'});
   });
 
@@ -259,9 +257,7 @@ void main() {
       retainedContentHashes: {'data-hash'},
     );
 
-    final loaded = await repository.getImageOcrArtifacts([
-      appended.message.id,
-    ]);
+    final loaded = await repository.getImageOcrArtifacts([appended.message.id]);
     expect(loaded[appended.message.id], {'data-hash': 'ocr-from-data-url'});
   });
 }

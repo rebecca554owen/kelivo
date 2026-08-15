@@ -68,10 +68,10 @@ class _IosSwitchState extends State<IosSwitch> {
     // Track color when OFF; dark mode uses a deeper fill.
     // Matches the original Cupertino look (light: black @ ~0.08,
     // dark: systemGrey6 #1C1C1E) derived from the active scheme.
-    final Color offTrack = widget.inactiveColor ??
+    final Color offTrack =
+        widget.inactiveColor ??
         (isDark
-            ? Color.alphaBlend(
-                cs.onSurface.withValues(alpha: 0.02), cs.surface)
+            ? Color.alphaBlend(cs.onSurface.withValues(alpha: 0.02), cs.surface)
             : cs.onSurface.withValues(alpha: 0.08));
 
     final bool enabled = widget.onChanged != null;
@@ -104,13 +104,18 @@ class _IosSwitchState extends State<IosSwitch> {
     // - Dark + OFF: medium grey (#636366)
     // - Dark + ON: deep grey (#1C1C1E)
     // - Light: white thumb
-    final Color thumb = widget.thumbColor ??
+    final Color thumb =
+        widget.thumbColor ??
         (isDark
             ? (isOn
-                ? Color.alphaBlend(
-                    cs.onSurface.withValues(alpha: 0.02), cs.surface)
-                : Color.alphaBlend(
-                    cs.onSurface.withValues(alpha: 0.36), cs.surface))
+                  ? Color.alphaBlend(
+                      cs.onSurface.withValues(alpha: 0.02),
+                      cs.surface,
+                    )
+                  : Color.alphaBlend(
+                      cs.onSurface.withValues(alpha: 0.36),
+                      cs.surface,
+                    ))
             : cs.surfaceContainerLowest);
 
     return Semantics(

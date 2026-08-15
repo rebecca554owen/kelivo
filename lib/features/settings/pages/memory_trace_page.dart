@@ -235,7 +235,11 @@ class MemoryTraceDetailPage extends StatelessWidget {
 
 /// Body of [MemoryTraceDetailPage], reused by the desktop dialog.
 class MemoryTraceDetailContent extends StatelessWidget {
-  const MemoryTraceDetailContent({super.key, required this.trace, this.padding});
+  const MemoryTraceDetailContent({
+    super.key,
+    required this.trace,
+    this.padding,
+  });
 
   final MemoryTrace trace;
   final EdgeInsetsGeometry? padding;

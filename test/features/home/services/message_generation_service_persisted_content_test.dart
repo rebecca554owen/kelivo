@@ -6,20 +6,21 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('persisted user message parts', () {
     test('builds text then image/file parts without markers', () async {
-      final parts = await MessageGenerationService.buildPersistedUserMessageParts(
-        const ChatInputData(
-          text: '  edited prompt  ',
-          imagePaths: ['C:/tmp/image.png'],
-          documents: [
-            DocumentAttachment(
-              path: 'C:/tmp/spec.pdf',
-              fileName: 'spec.pdf',
-              mime: 'application/pdf',
+      final parts =
+          await MessageGenerationService.buildPersistedUserMessageParts(
+            const ChatInputData(
+              text: '  edited prompt  ',
+              imagePaths: ['C:/tmp/image.png'],
+              documents: [
+                DocumentAttachment(
+                  path: 'C:/tmp/spec.pdf',
+                  fileName: 'spec.pdf',
+                  mime: 'application/pdf',
+                ),
+              ],
             ),
-          ],
-        ),
-        assistant: null,
-      );
+            assistant: null,
+          );
 
       expect(parts, hasLength(3));
       expect(parts[0], isA<TextPart>());
@@ -41,10 +42,11 @@ void main() {
     });
 
     test('allows attachment-only messages with empty text part', () async {
-      final parts = await MessageGenerationService.buildPersistedUserMessageParts(
-        const ChatInputData(text: '', imagePaths: ['C:/tmp/image.png']),
-        assistant: null,
-      );
+      final parts =
+          await MessageGenerationService.buildPersistedUserMessageParts(
+            const ChatInputData(text: '', imagePaths: ['C:/tmp/image.png']),
+            assistant: null,
+          );
 
       expect(parts, hasLength(2));
       expect((parts[0] as TextPart).text, '');
@@ -52,19 +54,20 @@ void main() {
     });
 
     test('filename with ] or | survives as FilePart name', () async {
-      final parts = await MessageGenerationService.buildPersistedUserMessageParts(
-        const ChatInputData(
-          text: 'x',
-          documents: [
-            DocumentAttachment(
-              path: 'C:/tmp/a.pdf',
-              fileName: 'na|me].pdf',
-              mime: 'application/pdf',
+      final parts =
+          await MessageGenerationService.buildPersistedUserMessageParts(
+            const ChatInputData(
+              text: 'x',
+              documents: [
+                DocumentAttachment(
+                  path: 'C:/tmp/a.pdf',
+                  fileName: 'na|me].pdf',
+                  mime: 'application/pdf',
+                ),
+              ],
             ),
-          ],
-        ),
-        assistant: null,
-      );
+            assistant: null,
+          );
       expect((parts[1] as FilePart).name, 'na|me].pdf');
     });
   });

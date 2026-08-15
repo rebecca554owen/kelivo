@@ -56,10 +56,7 @@ void main() {
   testWidgets('chunked content can still be scrolled to the end', (
     tester,
   ) async {
-    final text = List<String>.generate(
-      400,
-      (index) => 'row-$index',
-    ).join('\n');
+    final text = List<String>.generate(400, (index) => 'row-$index').join('\n');
 
     await tester.pumpWidget(harness('Result', text));
     expect(find.byKey(ToolDetailTextSection.lazyListKey), findsOneWidget);

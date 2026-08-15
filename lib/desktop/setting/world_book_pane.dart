@@ -696,9 +696,7 @@ class _EntryRowState extends State<_EntryRow> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = cs.onSurface.withValues(
-      alpha: isDark ? 0.08 : 0.04,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.04);
 
     final title = widget.entry.name.trim().isEmpty
         ? l10n.worldBookUnnamedEntry

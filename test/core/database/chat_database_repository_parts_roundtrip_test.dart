@@ -43,11 +43,7 @@ void main() {
       timestamp: now,
       parts: const [
         TextPart('帮我看看'),
-        ImagePart(
-          uri: '/tmp/a.png',
-          mime: 'image/png',
-          assetId: 'asset-image',
-        ),
+        ImagePart(uri: '/tmp/a.png', mime: 'image/png', assetId: 'asset-image'),
         FilePart(
           uri: '/tmp/spec.pdf',
           name: 'spec.pdf',
@@ -101,41 +97,44 @@ void main() {
     }
   });
 
-  test('attachment parts mark asset references dirty without marker strings', () async {
-    final now = DateTime.utc(2026, 8, 9, 13);
-    const conversationId = 'conversation-dirty';
-    const messageId = 'message-dirty';
-    await repository.putMigrationBatch(
-      conversations: [
-        Conversation(
-          id: conversationId,
-          title: 'Dirty',
-          createdAt: now,
-          updatedAt: now,
-          messageIds: const [messageId],
-        ),
-      ],
-      messages: [
-        (
-          message: ChatMessage(
-            id: messageId,
-            role: 'user',
-            conversationId: conversationId,
-            timestamp: now,
-            parts: const [
-              TextPart('plain text only — no markers'),
-              ImagePart(uri: '/tmp/b.png', mime: 'image/png'),
-            ],
+  test(
+    'attachment parts mark asset references dirty without marker strings',
+    () async {
+      final now = DateTime.utc(2026, 8, 9, 13);
+      const conversationId = 'conversation-dirty';
+      const messageId = 'message-dirty';
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Dirty',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [messageId],
           ),
-          messageOrder: 0,
-        ),
-      ],
-      toolEventsByMessageId: const {},
-      geminiSignaturesByMessageId: const {},
-    );
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'user',
+              conversationId: conversationId,
+              timestamp: now,
+              parts: const [
+                TextPart('plain text only — no markers'),
+                ImagePart(uri: '/tmp/b.png', mime: 'image/png'),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
 
-    expect(await repository.hasPendingAssetReferenceSync(), isTrue);
-  });
+      expect(await repository.hasPendingAssetReferenceSync(), isTrue);
+    },
+  );
   test('appendMessageVersion content-only keeps prior ImagePart', () async {
     final now = DateTime.utc(2026, 8, 9, 14);
     const conversationId = 'conversation-append-parts';
@@ -187,81 +186,87 @@ void main() {
     expect((persisted.parts[1] as TextPart).text, 'edited caption');
   });
 
-  test('unknown future_widget part persists and writes back unchanged', () async {
-    final now = DateTime.utc(2026, 8, 9, 14);
-    const conversationId = 'conversation-unknown';
-    const messageId = 'message-unknown';
-    const unknownPayload = '{"widget":"chart","v":2}';
-    final message = ChatMessage(
-      id: messageId,
-      role: 'assistant',
-      conversationId: conversationId,
-      timestamp: now,
-      parts: const [
-        TextPart('hello'),
-        UnknownPart(rawKind: 'future_widget', payload: unknownPayload),
-      ],
-    );
-
-    await repository.putMigrationBatch(
-      conversations: [
-        Conversation(
-          id: conversationId,
-          title: 'Unknown',
-          createdAt: now,
-          updatedAt: now,
-          messageIds: const [messageId],
-        ),
-      ],
-      messages: [(message: message, messageOrder: 0)],
-      toolEventsByMessageId: const {},
-      geminiSignaturesByMessageId: const {},
-    );
-
-    final reloaded = await repository.getMessage(messageId);
-    expect(reloaded, isNotNull);
-    expect(reloaded!.parts, hasLength(2));
-    expect(reloaded.parts[1], isA<UnknownPart>());
-    final unknown = reloaded.parts[1] as UnknownPart;
-    expect(unknown.kind, 'future_widget');
-    expect(unknown.rawKind, 'future_widget');
-    expect(unknown.payload, unknownPayload);
-    expect(unknown.encodePayload(), unknownPayload);
-
-    // Write back unchanged.
-    await repository.putMigrationBatch(
-      conversations: [
-        Conversation(
-          id: conversationId,
-          title: 'Unknown',
-          createdAt: now,
-          updatedAt: now,
-          messageIds: const [messageId],
-        ),
-      ],
-      messages: [(message: reloaded, messageOrder: 0)],
-      toolEventsByMessageId: const {},
-      geminiSignaturesByMessageId: const {},
-    );
-
-    final again = await repository.getMessage(messageId);
-    expect(again, isNotNull);
-    expect(again!.parts[1], isA<UnknownPart>());
-    expect(again.parts[1].kind, 'future_widget');
-    expect(again.parts[1].encodePayload(), unknownPayload);
-
-    final raw = sqlite.sqlite3.open('${root.path}/parts.sqlite');
-    try {
-      final rows = raw.select(
-        "SELECT kind, payload FROM message_part_rows "
-        "WHERE revision_id = '$messageId' ORDER BY ordinal;",
+  test(
+    'unknown future_widget part persists and writes back unchanged',
+    () async {
+      final now = DateTime.utc(2026, 8, 9, 14);
+      const conversationId = 'conversation-unknown';
+      const messageId = 'message-unknown';
+      const unknownPayload = '{"widget":"chart","v":2}';
+      final message = ChatMessage(
+        id: messageId,
+        role: 'assistant',
+        conversationId: conversationId,
+        timestamp: now,
+        parts: const [
+          TextPart('hello'),
+          UnknownPart(rawKind: 'future_widget', payload: unknownPayload),
+        ],
       );
-      expect(rows.map((row) => row['kind']).toList(), ['text', 'future_widget']);
-      expect(rows[1]['payload'], unknownPayload);
-    } finally {
-      raw.close();
-    }
-  });
+
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Unknown',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [messageId],
+          ),
+        ],
+        messages: [(message: message, messageOrder: 0)],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final reloaded = await repository.getMessage(messageId);
+      expect(reloaded, isNotNull);
+      expect(reloaded!.parts, hasLength(2));
+      expect(reloaded.parts[1], isA<UnknownPart>());
+      final unknown = reloaded.parts[1] as UnknownPart;
+      expect(unknown.kind, 'future_widget');
+      expect(unknown.rawKind, 'future_widget');
+      expect(unknown.payload, unknownPayload);
+      expect(unknown.encodePayload(), unknownPayload);
+
+      // Write back unchanged.
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Unknown',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [messageId],
+          ),
+        ],
+        messages: [(message: reloaded, messageOrder: 0)],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final again = await repository.getMessage(messageId);
+      expect(again, isNotNull);
+      expect(again!.parts[1], isA<UnknownPart>());
+      expect(again.parts[1].kind, 'future_widget');
+      expect(again.parts[1].encodePayload(), unknownPayload);
+
+      final raw = sqlite.sqlite3.open('${root.path}/parts.sqlite');
+      try {
+        final rows = raw.select(
+          "SELECT kind, payload FROM message_part_rows "
+          "WHERE revision_id = '$messageId' ORDER BY ordinal;",
+        );
+        expect(rows.map((row) => row['kind']).toList(), [
+          'text',
+          'future_widget',
+        ]);
+        expect(rows[1]['payload'], unknownPayload);
+      } finally {
+        raw.close();
+      }
+    },
+  );
 
   test(
     'malformed attachment is isolated and survives an edited message write-back',
@@ -372,96 +377,105 @@ void main() {
     },
   );
 
-  test('attachment payload validation paginates and reports progress', () async {
-    final now = DateTime.utc(2026, 8, 10, 11);
-    const conversationId = 'conversation-validation-progress';
-    const messageId = 'message-validation-progress';
-    await repository.putMigrationBatch(
-      conversations: [
-        Conversation(
-          id: conversationId,
-          title: 'Validation progress',
-          createdAt: now,
-          updatedAt: now,
-          messageIds: const [messageId],
-        ),
-      ],
-      messages: [
-        (
-          message: ChatMessage(
-            id: messageId,
-            role: 'user',
-            conversationId: conversationId,
-            timestamp: now,
-            parts: [
-              for (var i = 0; i < 257; i++) ImagePart(uri: '/tmp/$i.png'),
-            ],
+  test(
+    'attachment payload validation paginates and reports progress',
+    () async {
+      final now = DateTime.utc(2026, 8, 10, 11);
+      const conversationId = 'conversation-validation-progress';
+      const messageId = 'message-validation-progress';
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Validation progress',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [messageId],
           ),
-          messageOrder: 0,
-        ),
-      ],
-      toolEventsByMessageId: const {},
-      geminiSignaturesByMessageId: const {},
-    );
-
-    final progress = <({int processed, int total})>[];
-    await repository.validateAttachmentPartPayloads(
-      onProgress: (processed, total) {
-        progress.add((processed: processed, total: total));
-      },
-    );
-
-    expect(progress.first, (processed: 0, total: 257));
-    expect(progress, contains((processed: 256, total: 257)));
-    expect(progress.last, (processed: 257, total: 257));
-  });
-
-  test('attachment payload validation enforces a byte budget per page', () async {
-    final now = DateTime.utc(2026, 8, 10, 12);
-    const conversationId = 'conversation-validation-byte-budget';
-    const messageId = 'message-validation-byte-budget';
-    final inlineBody = List.filled(1100000, 'A').join();
-    final inlineUri = 'data:image/png;base64,$inlineBody';
-    await repository.putMigrationBatch(
-      conversations: [
-        Conversation(
-          id: conversationId,
-          title: 'Validation byte budget',
-          createdAt: now,
-          updatedAt: now,
-          messageIds: const [messageId],
-        ),
-      ],
-      messages: [
-        (
-          message: ChatMessage(
-            id: messageId,
-            role: 'user',
-            conversationId: conversationId,
-            timestamp: now,
-            parts: [ImagePart(uri: inlineUri), ImagePart(uri: inlineUri)],
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'user',
+              conversationId: conversationId,
+              timestamp: now,
+              parts: [
+                for (var i = 0; i < 257; i++) ImagePart(uri: '/tmp/$i.png'),
+              ],
+            ),
+            messageOrder: 0,
           ),
-          messageOrder: 0,
-        ),
-      ],
-      toolEventsByMessageId: const {},
-      geminiSignaturesByMessageId: const {},
-    );
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
 
-    final progress = <({int processed, int total})>[];
-    final metadataWindows = <int>[];
-    await repository.validateAttachmentPartPayloads(
-      onProgress: (processed, total) {
-        progress.add((processed: processed, total: total));
-      },
-      onMetadataWindow: metadataWindows.add,
-    );
+      final progress = <({int processed, int total})>[];
+      await repository.validateAttachmentPartPayloads(
+        onProgress: (processed, total) {
+          progress.add((processed: processed, total: total));
+        },
+      );
 
-    expect(metadataWindows, [2]);
-    expect(progress, [
-      (processed: 0, total: 2),
-      (processed: 1, total: 2),
-      (processed: 2, total: 2),
-    ]);
-  });
+      expect(progress.first, (processed: 0, total: 257));
+      expect(progress, contains((processed: 256, total: 257)));
+      expect(progress.last, (processed: 257, total: 257));
+    },
+  );
+
+  test(
+    'attachment payload validation enforces a byte budget per page',
+    () async {
+      final now = DateTime.utc(2026, 8, 10, 12);
+      const conversationId = 'conversation-validation-byte-budget';
+      const messageId = 'message-validation-byte-budget';
+      final inlineBody = List.filled(1100000, 'A').join();
+      final inlineUri = 'data:image/png;base64,$inlineBody';
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Validation byte budget',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [messageId],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'user',
+              conversationId: conversationId,
+              timestamp: now,
+              parts: [
+                ImagePart(uri: inlineUri),
+                ImagePart(uri: inlineUri),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final progress = <({int processed, int total})>[];
+      final metadataWindows = <int>[];
+      await repository.validateAttachmentPartPayloads(
+        onProgress: (processed, total) {
+          progress.add((processed: processed, total: total));
+        },
+        onMetadataWindow: metadataWindows.add,
+      );
+
+      expect(metadataWindows, [2]);
+      expect(progress, [
+        (processed: 0, total: 2),
+        (processed: 1, total: 2),
+        (processed: 2, total: 2),
+      ]);
+    },
+  );
 }

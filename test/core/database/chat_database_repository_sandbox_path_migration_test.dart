@@ -182,9 +182,11 @@ void main() {
       final verify = sqlite.sqlite3.open(dbFile.path);
       try {
         expect(
-          verify.select(
-            "SELECT payload FROM message_part_rows WHERE revision_id = 'path';",
-          ).single['payload'],
+          verify
+              .select(
+                "SELECT payload FROM message_part_rows WHERE revision_id = 'path';",
+              )
+              .single['payload'],
           malformedPayload,
         );
         expect(

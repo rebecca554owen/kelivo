@@ -706,7 +706,11 @@ void main() {
             ),
             showModelIcon: false,
             reasoningSegments: const [
-              ReasoningSegment(text: 'Updating memory', expanded: true, loading: false),
+              ReasoningSegment(
+                text: 'Updating memory',
+                expanded: true,
+                loading: false,
+              ),
             ],
             toolParts: const [
               ToolUIPart(
@@ -718,7 +722,10 @@ void main() {
               ToolUIPart(
                 id: 'memory-update',
                 toolName: 'memory_update',
-                arguments: {'type': 'identity', 'content': 'User prefers Chinese'},
+                arguments: {
+                  'type': 'identity',
+                  'content': 'User prefers Chinese',
+                },
                 content: '{"ok":true}',
               ),
               ToolUIPart(

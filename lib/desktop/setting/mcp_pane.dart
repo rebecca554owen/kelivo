@@ -389,7 +389,10 @@ class _ServerCardState extends State<_ServerCard> {
                           Expanded(
                             child: Text(
                               l10n.mcpPageConnectionFailed,
-                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.error),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                             ),
                           ),
                           TextButton(
@@ -642,7 +645,9 @@ Future<bool?> _confirmDelete(BuildContext context) async {
                               states,
                             ) {
                               if (states.contains(WidgetState.hovered)) {
-                                return cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
+                                return cs.onSurface.withValues(
+                                  alpha: isDark ? 0.06 : 0.05,
+                                );
                               }
                               return Colors.transparent;
                             }),

@@ -705,9 +705,7 @@ class _GroupHeaderState extends State<_GroupHeader> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = cs.onSurface.withValues(
-      alpha: isDark ? 0.08 : 0.05,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.05);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

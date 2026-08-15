@@ -135,8 +135,11 @@ void main() {
     'legacy chats.json with dirty numeric fields and empty role restores',
     () async {
       final dirtyConversation =
-          Conversation(id: 'c-dirty', title: 'Dirty', messageIds: const ['m1'])
-              .toJson()
+          Conversation(
+              id: 'c-dirty',
+              title: 'Dirty',
+              messageIds: const ['m1'],
+            ).toJson()
             ..['truncateIndex'] = -7
             ..['lastSummarizedMessageCount'] = -3
             ..['lastMemoryExtractedOrder'] = -9;

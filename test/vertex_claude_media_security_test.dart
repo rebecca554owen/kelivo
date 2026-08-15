@@ -114,44 +114,47 @@ Future<HttpHeaders?> _captureVertexClaudeMediaDownloadHeaders({
 
 void main() {
   group('Vertex media auth allowlist helper', () {
-    test('allows googleapis / googleusercontent / storage.cloud.google.com', () {
-      expect(
-        ChatApiService.shouldAttachVertexMediaAuthForTest(
-          Uri.parse('https://storage.googleapis.com/bucket/obj'),
-        ),
-        isTrue,
-      );
-      expect(
-        ChatApiService.shouldAttachVertexMediaAuthForTest(
-          Uri.parse('https://aiplatform.googleapis.com/v1/foo'),
-        ),
-        isTrue,
-      );
-      expect(
-        ChatApiService.shouldAttachVertexMediaAuthForTest(
-          Uri.parse('https://googleapis.com/foo'),
-        ),
-        isTrue,
-      );
-      expect(
-        ChatApiService.shouldAttachVertexMediaAuthForTest(
-          Uri.parse('https://lh3.googleusercontent.com/a/image'),
-        ),
-        isTrue,
-      );
-      expect(
-        ChatApiService.shouldAttachVertexMediaAuthForTest(
-          Uri.parse('https://googleusercontent.com/a'),
-        ),
-        isTrue,
-      );
-      expect(
-        ChatApiService.shouldAttachVertexMediaAuthForTest(
-          Uri.parse('https://storage.cloud.google.com/bucket/obj'),
-        ),
-        isTrue,
-      );
-    });
+    test(
+      'allows googleapis / googleusercontent / storage.cloud.google.com',
+      () {
+        expect(
+          ChatApiService.shouldAttachVertexMediaAuthForTest(
+            Uri.parse('https://storage.googleapis.com/bucket/obj'),
+          ),
+          isTrue,
+        );
+        expect(
+          ChatApiService.shouldAttachVertexMediaAuthForTest(
+            Uri.parse('https://aiplatform.googleapis.com/v1/foo'),
+          ),
+          isTrue,
+        );
+        expect(
+          ChatApiService.shouldAttachVertexMediaAuthForTest(
+            Uri.parse('https://googleapis.com/foo'),
+          ),
+          isTrue,
+        );
+        expect(
+          ChatApiService.shouldAttachVertexMediaAuthForTest(
+            Uri.parse('https://lh3.googleusercontent.com/a/image'),
+          ),
+          isTrue,
+        );
+        expect(
+          ChatApiService.shouldAttachVertexMediaAuthForTest(
+            Uri.parse('https://googleusercontent.com/a'),
+          ),
+          isTrue,
+        );
+        expect(
+          ChatApiService.shouldAttachVertexMediaAuthForTest(
+            Uri.parse('https://storage.cloud.google.com/bucket/obj'),
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('rejects http even on allowlisted Google hosts', () {
       expect(
@@ -307,9 +310,9 @@ void main() {
           await server.close(force: true);
         });
         server.listen((request) async {
-          requestBody = (jsonDecode(await utf8.decoder.bind(request).join())
-                  as Map)
-              .cast<String, dynamic>();
+          requestBody =
+              (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                  .cast<String, dynamic>();
           request.response.statusCode = HttpStatus.ok;
           request.response.headers.contentType = ContentType.json;
           request.response.write(

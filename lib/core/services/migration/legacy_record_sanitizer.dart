@@ -84,8 +84,7 @@ Conversation sanitizeLegacyConversationFields(Conversation conversation) {
   final truncateIndex = conversation.truncateIndex < -1
       ? -1
       : conversation.truncateIndex;
-  final lastSummarizedMessageCount =
-      conversation.lastSummarizedMessageCount < 0
+  final lastSummarizedMessageCount = conversation.lastSummarizedMessageCount < 0
       ? 0
       : conversation.lastSummarizedMessageCount;
   final lastMemoryExtractedOrder = conversation.lastMemoryExtractedOrder < -1

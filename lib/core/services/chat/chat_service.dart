@@ -300,8 +300,9 @@ class ChatService extends ChangeNotifier {
       if (!abort.isCompleted) abort.complete();
     }
     _messageOrderBackfillAbort.clear();
-    final orderBackfills =
-        List<Future<void>>.of(_messageOrderBackfillFutures.values);
+    final orderBackfills = List<Future<void>>.of(
+      _messageOrderBackfillFutures.values,
+    );
     _messageOrderBackfillFutures.clear();
     for (final backfill in orderBackfills) {
       try {

@@ -35,6 +35,7 @@ class _SpyChatDatabaseRepository extends ChatDatabaseRepository {
   _SpyChatDatabaseRepository(super.db, {super.databaseFile});
 
   Completer<void>? gateMessageIds;
+
   /// When true, only the first [getMessageIds] call awaits [gateMessageIds].
   bool gateOnlyFirstCall = false;
   Object? messageIdsError;
@@ -204,7 +205,9 @@ void main() {
         expect(service.debugHasMessageOrderSkeleton(conversationId), isFalse);
         expect(service.isMessageCountKnown(conversationId), isFalse);
         expect(service.getMessageIndex(conversationId, ids.first), -1);
-        final backfill = service.debugMessageOrderBackfillFuture(conversationId);
+        final backfill = service.debugMessageOrderBackfillFuture(
+          conversationId,
+        );
         expect(backfill, isNotNull);
         expect(spy.getMessageIdsCalls, 0);
 
@@ -256,7 +259,9 @@ void main() {
         expect(service.debugHasMessageOrderSkeleton(conversationId), isFalse);
         expect(spy.getMessageIdsCalls, 0);
 
-        final backfill = service.debugMessageOrderBackfillFuture(conversationId);
+        final backfill = service.debugMessageOrderBackfillFuture(
+          conversationId,
+        );
         expect(backfill, isNotNull);
         spy.gateMessageIds!.complete();
         await _flushIdleTasks();
@@ -340,7 +345,9 @@ void main() {
         expect(service.debugHasMessageOrderSkeleton(conversationId), isFalse);
         expect(spy.getMessageIdsCalls, 0);
 
-        final backfill = service.debugMessageOrderBackfillFuture(conversationId);
+        final backfill = service.debugMessageOrderBackfillFuture(
+          conversationId,
+        );
         expect(backfill, isNotNull);
         spy.gateMessageIds!.complete();
         await _flushIdleTasks();
@@ -394,7 +401,10 @@ void main() {
       await service.init();
 
       await service.loadTimelinePage(conversationId, limit: 40);
-      expect(service.debugMessageOrderBackfillFuture(conversationId), isNotNull);
+      expect(
+        service.debugMessageOrderBackfillFuture(conversationId),
+        isNotNull,
+      );
       expect(spy.getMessageIdsCalls, 0);
 
       await service.close().timeout(const Duration(seconds: 2));
@@ -416,10 +426,9 @@ void main() {
         expect(page, isNotNull);
         expect(spy.getMessageIdsCalls, 0);
 
-        final versions = await service.loadMessagesForGroups(
-          conversationId,
-          [groupId],
-        );
+        final versions = await service.loadMessagesForGroups(conversationId, [
+          groupId,
+        ]);
         expect(versions, hasLength(2));
         expect(service.debugHasMessageOrderSkeleton(conversationId), isFalse);
         expect(service.isMessageCountKnown(conversationId), isFalse);
@@ -487,8 +496,9 @@ void main() {
     test(
       'failed backfill does not wipe foreground-installed complete order',
       () async {
-        final (conversationId, seededIds) =
-            await seedConversation(messageCount: 6);
+        final (conversationId, seededIds) = await seedConversation(
+          messageCount: 6,
+        );
         final spy = await openSpyRepository();
         spy.gateMessageIds = Completer<void>();
         spy.gateOnlyFirstCall = true;
@@ -496,8 +506,9 @@ void main() {
         await service.init();
 
         await service.loadTimelinePage(conversationId, limit: 40);
-        final backfill =
-            service.debugMessageOrderBackfillFuture(conversationId);
+        final backfill = service.debugMessageOrderBackfillFuture(
+          conversationId,
+        );
         expect(backfill, isNotNull);
         await _flushIdleTasks();
         // Background call 1 is blocked; order still absent.
@@ -517,7 +528,9 @@ void main() {
           service.debugMessageOrderSkeletonLength(conversationId),
           seededIds.length + 1,
         );
-        final orderAfterForeground = await service.getMessageIds(conversationId);
+        final orderAfterForeground = await service.getMessageIds(
+          conversationId,
+        );
         expect(orderAfterForeground, [...seededIds, sent.id]);
         expect(service.getMessageCount(conversationId), seededIds.length + 1);
 
@@ -528,10 +541,10 @@ void main() {
 
         expect(service.debugHasMessageOrderSkeleton(conversationId), isTrue);
         expect(service.isMessageCountKnown(conversationId), isTrue);
-        expect(
-          await service.getMessageIds(conversationId),
-          [...seededIds, sent.id],
-        );
+        expect(await service.getMessageIds(conversationId), [
+          ...seededIds,
+          sent.id,
+        ]);
         expect(service.getMessageCount(conversationId), seededIds.length + 1);
         for (final id in seededIds) {
           expect(service.getMessageIndex(conversationId, id), greaterThan(-1));
@@ -548,6 +561,5 @@ void main() {
         expect(service.getMessageCount(conversationId), seededIds.length + 2);
       },
     );
-
   });
 }

@@ -709,10 +709,14 @@ class _TactileRowState extends State<_TactileRow> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final overlay = () {
       if (_pressed) {
-        return Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06);
+        return Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.06);
       }
       if (_hovered) {
-        return Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.04 : 0.03);
+        return Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: isDark ? 0.04 : 0.03);
       }
       return Colors.transparent;
     }();

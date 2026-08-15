@@ -461,7 +461,9 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
                           states,
                         ) {
                           if (states.contains(WidgetState.hovered)) {
-                            return cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
+                            return cs.onSurface.withValues(
+                              alpha: isDark ? 0.06 : 0.05,
+                            );
                           }
                           return Colors.transparent;
                         }),
@@ -541,7 +543,9 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
                           states,
                         ) {
                           if (states.contains(WidgetState.hovered)) {
-                            return cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
+                            return cs.onSurface.withValues(
+                              alpha: isDark ? 0.06 : 0.05,
+                            );
                           }
                           return Colors.transparent;
                         }),

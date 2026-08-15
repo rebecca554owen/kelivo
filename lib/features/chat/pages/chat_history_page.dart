@@ -95,7 +95,9 @@ class _ChatHistoryPageState extends State<ChatHistoryPage>
                       onPressed: () => Navigator.of(ctx).pop(true),
                       child: Text(
                         l10n.chatHistoryPageDelete,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                   ],

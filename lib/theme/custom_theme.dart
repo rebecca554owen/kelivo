@@ -42,19 +42,20 @@ class CustomTheme {
       id: id ?? this.id,
       name: name ?? this.name,
       primaryArgb: primaryArgb ?? this.primaryArgb,
-      secondaryArgb:
-          secondaryArgb != null ? secondaryArgb() : this.secondaryArgb,
+      secondaryArgb: secondaryArgb != null
+          ? secondaryArgb()
+          : this.secondaryArgb,
       tertiaryArgb: tertiaryArgb != null ? tertiaryArgb() : this.tertiaryArgb,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'primaryColorArgb': primaryArgb,
-        if (secondaryArgb != null) 'secondaryColorArgb': secondaryArgb,
-        if (tertiaryArgb != null) 'tertiaryColorArgb': tertiaryArgb,
-      };
+    'id': id,
+    'name': name,
+    'primaryColorArgb': primaryArgb,
+    if (secondaryArgb != null) 'secondaryColorArgb': secondaryArgb,
+    if (tertiaryArgb != null) 'tertiaryColorArgb': tertiaryArgb,
+  };
 
   /// Accepts both this app's export format and RikkaHub's
   /// (`primaryColorArgb` etc.; extra keys ignored, id optional).
@@ -111,7 +112,9 @@ ColorScheme customThemeColorScheme(CustomTheme theme, {required bool dark}) {
     tertiaryPalette: theme.tertiaryArgb != null
         ? TonalPalette.fromHct(Hct.fromInt(theme.tertiaryArgb!))
         : TonalPalette.of(
-            MathUtils.sanitizeDegreesDouble(sourceHct.hue + 60.0), 24.0),
+            MathUtils.sanitizeDegreesDouble(sourceHct.hue + 60.0),
+            24.0,
+          ),
     neutralPalette: TonalPalette.of(sourceHct.hue, 6.0),
     neutralVariantPalette: TonalPalette.of(sourceHct.hue, 8.0),
   );
@@ -135,8 +138,9 @@ ColorScheme customThemeColorScheme(CustomTheme theme, {required bool dark}) {
     secondaryFixed: pick(MaterialDynamicColors.secondaryFixed),
     secondaryFixedDim: pick(MaterialDynamicColors.secondaryFixedDim),
     onSecondaryFixed: pick(MaterialDynamicColors.onSecondaryFixed),
-    onSecondaryFixedVariant:
-        pick(MaterialDynamicColors.onSecondaryFixedVariant),
+    onSecondaryFixedVariant: pick(
+      MaterialDynamicColors.onSecondaryFixedVariant,
+    ),
     tertiary: pick(MaterialDynamicColors.tertiary),
     onTertiary: pick(MaterialDynamicColors.onTertiary),
     tertiaryContainer: pick(MaterialDynamicColors.tertiaryContainer),
@@ -158,8 +162,9 @@ ColorScheme customThemeColorScheme(CustomTheme theme, {required bool dark}) {
     surfaceContainerLow: pick(MaterialDynamicColors.surfaceContainerLow),
     surfaceContainer: pick(MaterialDynamicColors.surfaceContainer),
     surfaceContainerHigh: pick(MaterialDynamicColors.surfaceContainerHigh),
-    surfaceContainerHighest:
-        pick(MaterialDynamicColors.surfaceContainerHighest),
+    surfaceContainerHighest: pick(
+      MaterialDynamicColors.surfaceContainerHighest,
+    ),
     outline: pick(MaterialDynamicColors.outline),
     outlineVariant: pick(MaterialDynamicColors.outlineVariant),
     shadow: pick(MaterialDynamicColors.shadow),

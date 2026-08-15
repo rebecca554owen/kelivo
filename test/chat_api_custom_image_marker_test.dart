@@ -65,7 +65,6 @@ Future<Map<String, dynamic>> _sendAndCaptureRequestBody(
   return captured;
 }
 
-
 ProviderConfig _claudeConfig(String baseUrl) {
   return ProviderConfig(
     id: 'ClaudeStructuredMediaTest',
@@ -106,9 +105,8 @@ Future<Map<String, dynamic>> _captureProviderBody(
 
   try {
     server.listen((request) async {
-      requestBody =
-          (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
-              .cast<String, dynamic>();
+      requestBody = (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+          .cast<String, dynamic>();
       request.response.statusCode = HttpStatus.ok;
       request.response.headers.contentType = ContentType.json;
       request.response.write(jsonEncode(responseBody));
@@ -135,7 +133,6 @@ List<Map<String, dynamic>> _extractSingleMessageParts(
   return (content as List).cast<Map<String, dynamic>>();
 }
 
-
 Future<Map<String, dynamic>> _sendAndCaptureResponsesBody(
   Future<List<dynamic>> Function(String baseUrl) sendRequest,
 ) async {
@@ -147,7 +144,8 @@ Future<Map<String, dynamic>> _sendAndCaptureResponsesBody(
     final future = sendRequest(baseUrl);
     final request = await server.first;
     requestBody =
-        jsonDecode(await utf8.decoder.bind(request).join()) as Map<String, dynamic>;
+        jsonDecode(await utf8.decoder.bind(request).join())
+            as Map<String, dynamic>;
     request.response.statusCode = HttpStatus.ok;
     request.response.headers.contentType = ContentType.json;
     request.response.write(
@@ -230,9 +228,7 @@ void main() {
 
       final messages = (body['messages'] as List).cast<Map>();
       final content = messages.single['content'];
-      final text = content is List
-          ? (content.single as Map)['text']
-          : content;
+      final text = content is List ? (content.single as Map)['text'] : content;
       expect(text, 'inline [image:data:image/png;base64,QUJD]');
       if (content is List) {
         expect(
@@ -261,69 +257,76 @@ void main() {
       expect(parts.any((part) => part['type'] == 'image_url'), isTrue);
     });
 
+    test(
+      'assistant ImagePart has no image_url; media moves to following user',
+      () async {
+        final body = await _sendAndCaptureRequestBody((baseUrl) async {
+          final dir = await Directory.systemTemp.createTemp(
+            'kelivo_chat_asst_img_',
+          );
+          addTearDown(() async {
+            if (await dir.exists()) {
+              await dir.delete(recursive: true);
+            }
+          });
+          final file = File('${dir.path}/assistant.png');
+          await file.writeAsBytes(const [1, 2, 3, 4]);
 
-    test('assistant ImagePart has no image_url; media moves to following user', () async {
-      final body = await _sendAndCaptureRequestBody((baseUrl) async {
-        final dir = await Directory.systemTemp.createTemp('kelivo_chat_asst_img_');
-        addTearDown(() async {
-          if (await dir.exists()) {
-            await dir.delete(recursive: true);
-          }
+          return ChatApiService.sendMessageStream(
+            config: _openAiConfig(baseUrl),
+            modelId: 'gpt-4.1',
+            messages: [
+              {
+                'role': 'assistant',
+                'content': 'here is an image',
+                multimodalInternalMediaPathsKey: [file.path],
+              },
+              {'role': 'user', 'content': 'what do you see?'},
+            ],
+            stream: false,
+          ).toList();
         });
-        final file = File('${dir.path}/assistant.png');
-        await file.writeAsBytes(const [1, 2, 3, 4]);
 
-        return ChatApiService.sendMessageStream(
-          config: _openAiConfig(baseUrl),
-          modelId: 'gpt-4.1',
-          messages: [
-            {
-              'role': 'assistant',
-              'content': 'here is an image',
-              multimodalInternalMediaPathsKey: [file.path],
-            },
-            {
-              'role': 'user',
-              'content': 'what do you see?',
-            },
-          ],
-          stream: false,
-        ).toList();
-      });
+        final messages = (body['messages'] as List).cast<Map>();
+        expect(messages, hasLength(2));
 
-      final messages = (body['messages'] as List).cast<Map>();
-      expect(messages, hasLength(2));
+        final assistant = messages.first;
+        expect(assistant['role'], 'assistant');
+        final assistantContent = assistant['content'];
+        if (assistantContent is List) {
+          expect(
+            assistantContent.any(
+              (part) => (part as Map)['type'] == 'image_url',
+            ),
+            isFalse,
+          );
+          expect(
+            assistantContent.any(
+              (part) => (part as Map)['type'] == 'video_url',
+            ),
+            isFalse,
+          );
+        } else {
+          expect(assistantContent, 'here is an image');
+        }
 
-      final assistant = messages.first;
-      expect(assistant['role'], 'assistant');
-      final assistantContent = assistant['content'];
-      if (assistantContent is List) {
+        final user = messages.last;
+        expect(user['role'], 'user');
+        final userParts = (user['content'] as List)
+            .cast<Map<String, dynamic>>();
+        expect(userParts.any((part) => part['type'] == 'image_url'), isTrue);
         expect(
-          assistantContent.any((part) => (part as Map)['type'] == 'image_url'),
-          isFalse,
+          userParts.any(
+            (part) =>
+                part['type'] == 'image_url' &&
+                ((part['image_url'] as Map)['url'] as String).startsWith(
+                  'data:image/png;base64,',
+                ),
+          ),
+          isTrue,
         );
-        expect(
-          assistantContent.any((part) => (part as Map)['type'] == 'video_url'),
-          isFalse,
-        );
-      } else {
-        expect(assistantContent, 'here is an image');
-      }
-
-      final user = messages.last;
-      expect(user['role'], 'user');
-      final userParts = (user['content'] as List).cast<Map<String, dynamic>>();
-      expect(userParts.any((part) => part['type'] == 'image_url'), isTrue);
-      expect(
-        userParts.any(
-          (part) =>
-              part['type'] == 'image_url' &&
-              ((part['image_url'] as Map)['url'] as String)
-                  .startsWith('data:image/png;base64,'),
-        ),
-        isTrue,
-      );
-    });
+      },
+    );
 
     test(
       'assistant List image_url without sidecar moves to following user',
@@ -346,10 +349,7 @@ void main() {
                   },
                 ],
               },
-              {
-                'role': 'user',
-                'content': 'what do you see?',
-              },
+              {'role': 'user', 'content': 'what do you see?'},
             ],
             stream: false,
           ).toList();
@@ -382,8 +382,8 @@ void main() {
 
         final user = messages.last;
         expect(user['role'], 'user');
-        final userParts =
-            (user['content'] as List).cast<Map<String, dynamic>>();
+        final userParts = (user['content'] as List)
+            .cast<Map<String, dynamic>>();
         expect(
           userParts.any(
             (part) =>
@@ -397,37 +397,39 @@ void main() {
       },
     );
 
-    test('userImagePaths attach images without marker strings in content', () async {
-      final dir = await Directory.systemTemp.createTemp('kelivo_user_paths_');
-      addTearDown(() async {
-        if (await dir.exists()) await dir.delete(recursive: true);
-      });
-      final file = File('${dir.path}/tool.png');
-      await file.writeAsBytes(const [1, 2, 3, 4]);
+    test(
+      'userImagePaths attach images without marker strings in content',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('kelivo_user_paths_');
+        addTearDown(() async {
+          if (await dir.exists()) await dir.delete(recursive: true);
+        });
+        final file = File('${dir.path}/tool.png');
+        await file.writeAsBytes(const [1, 2, 3, 4]);
 
-      final body = await _sendAndCaptureRequestBody((baseUrl) async {
-        return ChatApiService.sendMessageStream(
-          config: _openAiConfig(baseUrl),
-          modelId: 'gpt-4.1',
-          messages: [
-            {'role': 'user', 'content': 'inspect'},
-          ],
-          userImagePaths: [file.path],
-          stream: false,
-        ).toList();
-      });
+        final body = await _sendAndCaptureRequestBody((baseUrl) async {
+          return ChatApiService.sendMessageStream(
+            config: _openAiConfig(baseUrl),
+            modelId: 'gpt-4.1',
+            messages: [
+              {'role': 'user', 'content': 'inspect'},
+            ],
+            userImagePaths: [file.path],
+            stream: false,
+          ).toList();
+        });
 
-      final parts = _extractSingleMessageParts(body);
-      expect(parts.first['text'], 'inspect');
-      expect(parts.last['type'], 'image_url');
-      expect(jsonEncode(body), isNot(contains('[image:')));
-    });
+        final parts = _extractSingleMessageParts(body);
+        expect(parts.first['text'], 'inspect');
+        expect(parts.last['type'], 'image_url');
+        expect(jsonEncode(body), isNot(contains('[image:')));
+      },
+    );
 
     test(
       'tool follow-up preserves structured media paths on rebuilt user message',
       () async {
-        final dir =
-            await Directory.systemTemp.createTemp('kelivo_tool_media_');
+        final dir = await Directory.systemTemp.createTemp('kelivo_tool_media_');
         addTearDown(() async {
           if (await dir.exists()) await dir.delete(recursive: true);
         });
@@ -469,10 +471,7 @@ void main() {
                           'index': 0,
                           'id': 'call_media_1',
                           'type': 'function',
-                          'function': {
-                            'name': 'lookup',
-                            'arguments': '{}',
-                          },
+                          'function': {'name': 'lookup', 'arguments': '{}'},
                         },
                       ],
                     },
@@ -489,10 +488,7 @@ void main() {
                 'choices': [
                   {
                     'index': 0,
-                    'delta': {
-                      'role': 'assistant',
-                      'content': 'done',
-                    },
+                    'delta': {'role': 'assistant', 'content': 'done'},
                     'finish_reason': 'stop',
                   },
                 ],
@@ -503,8 +499,7 @@ void main() {
           await request.response.close();
         });
 
-        final baseUrl =
-            'http://${server.address.address}:${server.port}/v1';
+        final baseUrl = 'http://${server.address.address}:${server.port}/v1';
         await ChatApiService.sendMessageStream(
           config: _openAiConfig(baseUrl),
           modelId: 'gpt-4.1',
@@ -513,10 +508,7 @@ void main() {
               'role': 'user',
               'content': 'describe this',
               multimodalInternalMediaPathsKey: [
-                {
-                  'uri': file.path,
-                  'mime': 'image/png',
-                },
+                {'uri': file.path, 'mime': 'image/png'},
               ],
             },
           ],
@@ -538,16 +530,13 @@ void main() {
 
         expect(requestBodies, hasLength(2));
 
-        final secondMessages =
-            (requestBodies[1]['messages'] as List).cast<Map>();
-        final userMsg = secondMessages.firstWhere(
-          (m) => m['role'] == 'user',
-        );
+        final secondMessages = (requestBodies[1]['messages'] as List)
+            .cast<Map>();
+        final userMsg = secondMessages.firstWhere((m) => m['role'] == 'user');
         // User is not last after tool follow-up, so userImagePaths alone
         // would not re-attach. Structured refs must survive copy+rebuild.
         expect(userMsg['content'], isA<List>());
-        final parts =
-            (userMsg['content'] as List).cast<Map<String, dynamic>>();
+        final parts = (userMsg['content'] as List).cast<Map<String, dynamic>>();
         expect(
           parts.any((part) => part['type'] == 'image_url'),
           isTrue,
@@ -559,8 +548,9 @@ void main() {
           parts.any(
             (part) =>
                 part['type'] == 'image_url' &&
-                ((part['image_url'] as Map)['url'] as String)
-                    .startsWith('data:image/png;base64,'),
+                ((part['image_url'] as Map)['url'] as String).startsWith(
+                  'data:image/png;base64,',
+                ),
           ),
           isTrue,
         );
@@ -570,8 +560,9 @@ void main() {
     test(
       'tool follow-up keeps historical assistant media on last user',
       () async {
-        final dir =
-            await Directory.systemTemp.createTemp('kelivo_tool_asst_media_');
+        final dir = await Directory.systemTemp.createTemp(
+          'kelivo_tool_asst_media_',
+        );
         addTearDown(() async {
           if (await dir.exists()) await dir.delete(recursive: true);
         });
@@ -613,10 +604,7 @@ void main() {
                           'index': 0,
                           'id': 'call_asst_media_1',
                           'type': 'function',
-                          'function': {
-                            'name': 'lookup',
-                            'arguments': '{}',
-                          },
+                          'function': {'name': 'lookup', 'arguments': '{}'},
                         },
                       ],
                     },
@@ -633,10 +621,7 @@ void main() {
                 'choices': [
                   {
                     'index': 0,
-                    'delta': {
-                      'role': 'assistant',
-                      'content': 'done',
-                    },
+                    'delta': {'role': 'assistant', 'content': 'done'},
                     'finish_reason': 'stop',
                   },
                 ],
@@ -647,8 +632,7 @@ void main() {
           await request.response.close();
         });
 
-        final baseUrl =
-            'http://${server.address.address}:${server.port}/v1';
+        final baseUrl = 'http://${server.address.address}:${server.port}/v1';
         await ChatApiService.sendMessageStream(
           config: _openAiConfig(baseUrl),
           modelId: 'gpt-4.1',
@@ -657,16 +641,10 @@ void main() {
               'role': 'assistant',
               'content': 'prior image',
               multimodalInternalMediaPathsKey: [
-                {
-                  'uri': file.path,
-                  'mime': 'image/png',
-                },
+                {'uri': file.path, 'mime': 'image/png'},
               ],
             },
-            {
-              'role': 'user',
-              'content': 'use a tool about that image',
-            },
+            {'role': 'user', 'content': 'use a tool about that image'},
           ],
           tools: const [
             {
@@ -685,14 +663,11 @@ void main() {
         ).toList();
 
         expect(requestBodies, hasLength(2));
-        final secondMessages =
-            (requestBodies[1]['messages'] as List).cast<Map>();
-        final userMsg = secondMessages.firstWhere(
-          (m) => m['role'] == 'user',
-        );
+        final secondMessages = (requestBodies[1]['messages'] as List)
+            .cast<Map>();
+        final userMsg = secondMessages.firstWhere((m) => m['role'] == 'user');
         expect(userMsg['content'], isA<List>());
-        final parts =
-            (userMsg['content'] as List).cast<Map<String, dynamic>>();
+        final parts = (userMsg['content'] as List).cast<Map<String, dynamic>>();
         expect(
           parts.any((part) => part['type'] == 'image_url'),
           isTrue,
@@ -703,138 +678,123 @@ void main() {
       },
     );
 
-    test(
-      'tool follow-up keeps bare userImagePaths on last user',
-      () async {
-        final dir =
-            await Directory.systemTemp.createTemp('kelivo_tool_user_paths_');
-        addTearDown(() async {
-          if (await dir.exists()) await dir.delete(recursive: true);
-        });
-        final file = File('${dir.path}/user.png');
-        await file.writeAsBytes(const [1, 2, 3, 4]);
+    test('tool follow-up keeps bare userImagePaths on last user', () async {
+      final dir = await Directory.systemTemp.createTemp(
+        'kelivo_tool_user_paths_',
+      );
+      addTearDown(() async {
+        if (await dir.exists()) await dir.delete(recursive: true);
+      });
+      final file = File('${dir.path}/user.png');
+      await file.writeAsBytes(const [1, 2, 3, 4]);
 
-        final requestBodies = <Map<String, dynamic>>[];
-        var requestCount = 0;
-        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-        addTearDown(() async {
-          await server.close(force: true);
-        });
+      final requestBodies = <Map<String, dynamic>>[];
+      var requestCount = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
 
-        server.listen((request) async {
-          requestCount += 1;
-          final raw = await utf8.decoder.bind(request).join();
-          requestBodies.add((jsonDecode(raw) as Map).cast<String, dynamic>());
+      server.listen((request) async {
+        requestCount += 1;
+        final raw = await utf8.decoder.bind(request).join();
+        requestBodies.add((jsonDecode(raw) as Map).cast<String, dynamic>());
 
-          request.response.statusCode = HttpStatus.ok;
-          request.response.headers.contentType = ContentType(
-            'text',
-            'event-stream',
-            charset: 'utf-8',
-          );
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType(
+          'text',
+          'event-stream',
+          charset: 'utf-8',
+        );
 
-          if (requestCount == 1) {
-            request.response.write(
-              'data: ${jsonEncode({
-                'id': 'cmpl-1',
-                'object': 'chat.completion.chunk',
-                'choices': [
-                  {
-                    'index': 0,
-                    'delta': {
-                      'role': 'assistant',
-                      'content': 'checking',
-                      'tool_calls': [
-                        {
-                          'index': 0,
-                          'id': 'call_user_paths_1',
-                          'type': 'function',
-                          'function': {
-                            'name': 'lookup',
-                            'arguments': '{}',
-                          },
-                        },
-                      ],
-                    },
-                    'finish_reason': 'tool_calls',
+        if (requestCount == 1) {
+          request.response.write(
+            'data: ${jsonEncode({
+              'id': 'cmpl-1',
+              'object': 'chat.completion.chunk',
+              'choices': [
+                {
+                  'index': 0,
+                  'delta': {
+                    'role': 'assistant',
+                    'content': 'checking',
+                    'tool_calls': [
+                      {
+                        'index': 0,
+                        'id': 'call_user_paths_1',
+                        'type': 'function',
+                        'function': {'name': 'lookup', 'arguments': '{}'},
+                      },
+                    ],
                   },
-                ],
-              })}\n\n',
-            );
-          } else {
-            request.response.write(
-              'data: ${jsonEncode({
-                'id': 'cmpl-2',
-                'object': 'chat.completion.chunk',
-                'choices': [
-                  {
-                    'index': 0,
-                    'delta': {
-                      'role': 'assistant',
-                      'content': 'done',
-                    },
-                    'finish_reason': 'stop',
-                  },
-                ],
-              })}\n\n',
-            );
-          }
-          request.response.write('data: [DONE]\n\n');
-          await request.response.close();
-        });
-
-        final baseUrl =
-            'http://${server.address.address}:${server.port}/v1';
-        await ChatApiService.sendMessageStream(
-          config: _openAiConfig(baseUrl),
-          modelId: 'gpt-4.1',
-          messages: [
-            {
-              'role': 'user',
-              'content': 'inspect this',
-            },
-          ],
-          userImagePaths: [file.path],
-          tools: const [
-            {
-              'type': 'function',
-              'function': {
-                'name': 'lookup',
-                'description': 'Lookup helper',
-                'parameters': {
-                  'type': 'object',
-                  'properties': <String, dynamic>{},
+                  'finish_reason': 'tool_calls',
                 },
+              ],
+            })}\n\n',
+          );
+        } else {
+          request.response.write(
+            'data: ${jsonEncode({
+              'id': 'cmpl-2',
+              'object': 'chat.completion.chunk',
+              'choices': [
+                {
+                  'index': 0,
+                  'delta': {'role': 'assistant', 'content': 'done'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            })}\n\n',
+          );
+        }
+        request.response.write('data: [DONE]\n\n');
+        await request.response.close();
+      });
+
+      final baseUrl = 'http://${server.address.address}:${server.port}/v1';
+      await ChatApiService.sendMessageStream(
+        config: _openAiConfig(baseUrl),
+        modelId: 'gpt-4.1',
+        messages: [
+          {'role': 'user', 'content': 'inspect this'},
+        ],
+        userImagePaths: [file.path],
+        tools: const [
+          {
+            'type': 'function',
+            'function': {
+              'name': 'lookup',
+              'description': 'Lookup helper',
+              'parameters': {
+                'type': 'object',
+                'properties': <String, dynamic>{},
               },
             },
-          ],
-          onToolCall: (_, __, {toolCallId}) async => 'ok',
-        ).toList();
+          },
+        ],
+        onToolCall: (_, __, {toolCallId}) async => 'ok',
+      ).toList();
 
-        expect(requestBodies, hasLength(2));
-        final secondMessages =
-            (requestBodies[1]['messages'] as List).cast<Map>();
-        final userMsg = secondMessages.firstWhere(
-          (m) => m['role'] == 'user',
-        );
-        expect(userMsg['content'], isA<List>());
-        final parts =
-            (userMsg['content'] as List).cast<Map<String, dynamic>>();
-        expect(
-          parts.any((part) => part['type'] == 'image_url'),
-          isTrue,
-          reason:
-              'bare userImagePaths must survive tool follow-up even when the '
-              'user message is no longer array-tail and has no structured refs',
-        );
-      },
-    );
+      expect(requestBodies, hasLength(2));
+      final secondMessages = (requestBodies[1]['messages'] as List).cast<Map>();
+      final userMsg = secondMessages.firstWhere((m) => m['role'] == 'user');
+      expect(userMsg['content'], isA<List>());
+      final parts = (userMsg['content'] as List).cast<Map<String, dynamic>>();
+      expect(
+        parts.any((part) => part['type'] == 'image_url'),
+        isTrue,
+        reason:
+            'bare userImagePaths must survive tool follow-up even when the '
+            'user message is no longer array-tail and has no structured refs',
+      );
+    });
 
     test(
       'List-shaped user content still receives stashed assistant media',
       () async {
-        final dir =
-            await Directory.systemTemp.createTemp('kelivo_list_user_asst_');
+        final dir = await Directory.systemTemp.createTemp(
+          'kelivo_list_user_asst_',
+        );
         addTearDown(() async {
           if (await dir.exists()) await dir.delete(recursive: true);
         });
@@ -876,10 +836,7 @@ void main() {
                           'index': 0,
                           'id': 'call_list_user_1',
                           'type': 'function',
-                          'function': {
-                            'name': 'lookup',
-                            'arguments': '{}',
-                          },
+                          'function': {'name': 'lookup', 'arguments': '{}'},
                         },
                       ],
                     },
@@ -896,10 +853,7 @@ void main() {
                 'choices': [
                   {
                     'index': 0,
-                    'delta': {
-                      'role': 'assistant',
-                      'content': 'done',
-                    },
+                    'delta': {'role': 'assistant', 'content': 'done'},
                     'finish_reason': 'stop',
                   },
                 ],
@@ -910,8 +864,7 @@ void main() {
           await request.response.close();
         });
 
-        final baseUrl =
-            'http://${server.address.address}:${server.port}/v1';
+        final baseUrl = 'http://${server.address.address}:${server.port}/v1';
         await ChatApiService.sendMessageStream(
           config: _openAiConfig(baseUrl),
           modelId: 'gpt-4.1',
@@ -920,10 +873,7 @@ void main() {
               'role': 'assistant',
               'content': 'prior image',
               multimodalInternalMediaPathsKey: [
-                {
-                  'uri': file.path,
-                  'mime': 'image/png',
-                },
+                {'uri': file.path, 'mime': 'image/png'},
               ],
             },
             {
@@ -952,14 +902,11 @@ void main() {
         ).toList();
 
         expect(requestBodies, hasLength(2));
-        final secondMessages =
-            (requestBodies[1]['messages'] as List).cast<Map>();
-        final userMsg = secondMessages.firstWhere(
-          (m) => m['role'] == 'user',
-        );
+        final secondMessages = (requestBodies[1]['messages'] as List)
+            .cast<Map>();
+        final userMsg = secondMessages.firstWhere((m) => m['role'] == 'user');
         expect(userMsg['content'], isA<List>());
-        final parts =
-            (userMsg['content'] as List).cast<Map<String, dynamic>>();
+        final parts = (userMsg['content'] as List).cast<Map<String, dynamic>>();
         expect(
           parts.any(
             (part) =>
@@ -977,11 +924,9 @@ void main() {
         );
       },
     );
-
   });
 
   group('ChatApiService Responses API structured media paths', () {
-
     test('local video/mp4 is not encoded as input_image', () async {
       final body = await _sendAndCaptureResponsesBody((baseUrl) async {
         final dir = await Directory.systemTemp.createTemp('kelivo_resp_vid_');
@@ -1001,10 +946,7 @@ void main() {
               'role': 'user',
               'content': 'watch this',
               multimodalInternalMediaPathsKey: [
-                {
-                  'uri': file.path,
-                  'mime': 'video/mp4',
-                },
+                {'uri': file.path, 'mime': 'video/mp4'},
               ],
             },
           ],
@@ -1027,7 +969,9 @@ void main() {
     test('pure local video attachment keeps non-empty text content', () async {
       late final String videoPath;
       final body = await _sendAndCaptureResponsesBody((baseUrl) async {
-        final dir = await Directory.systemTemp.createTemp('kelivo_resp_pure_vid_');
+        final dir = await Directory.systemTemp.createTemp(
+          'kelivo_resp_pure_vid_',
+        );
         addTearDown(() async {
           if (await dir.exists()) {
             await dir.delete(recursive: true);
@@ -1045,10 +989,7 @@ void main() {
               'role': 'user',
               'content': '',
               multimodalInternalMediaPathsKey: [
-                {
-                  'uri': file.path,
-                  'mime': 'video/mp4',
-                },
+                {'uri': file.path, 'mime': 'video/mp4'},
               ],
             },
           ],
@@ -1082,10 +1023,7 @@ void main() {
               'role': 'user',
               'content': 'watch this',
               multimodalInternalMediaPathsKey: const [
-                {
-                  'uri': 'https://example.com/clip.mp4',
-                  'mime': 'video/mp4',
-                },
+                {'uri': 'https://example.com/clip.mp4', 'mime': 'video/mp4'},
               ],
             },
           ],
@@ -1169,67 +1107,71 @@ void main() {
       }
     });
 
-    test('assistant ImagePart does not put input_image in assistant output', () async {
-      final body = await _sendAndCaptureResponsesBody((baseUrl) async {
-        final dir = await Directory.systemTemp.createTemp('kelivo_resp_asst_img_');
-        addTearDown(() async {
-          if (await dir.exists()) {
-            await dir.delete(recursive: true);
-          }
+    test(
+      'assistant ImagePart does not put input_image in assistant output',
+      () async {
+        final body = await _sendAndCaptureResponsesBody((baseUrl) async {
+          final dir = await Directory.systemTemp.createTemp(
+            'kelivo_resp_asst_img_',
+          );
+          addTearDown(() async {
+            if (await dir.exists()) {
+              await dir.delete(recursive: true);
+            }
+          });
+          final file = File('${dir.path}/assistant.png');
+          await file.writeAsBytes(const [1, 2, 3, 4]);
+
+          return ChatApiService.sendMessageStream(
+            config: _openAiConfig(baseUrl, useResponseApi: true),
+            modelId: 'gpt-4.1',
+            messages: [
+              {
+                'role': 'assistant',
+                'content': '',
+                multimodalInternalMediaPathsKey: [file.path],
+              },
+              {'role': 'user', 'content': 'what do you see?'},
+            ],
+            stream: false,
+          ).toList();
         });
-        final file = File('${dir.path}/assistant.png');
-        await file.writeAsBytes(const [1, 2, 3, 4]);
 
-        return ChatApiService.sendMessageStream(
-          config: _openAiConfig(baseUrl, useResponseApi: true),
-          modelId: 'gpt-4.1',
-          messages: [
-            {
-              'role': 'assistant',
-              'content': '',
-              multimodalInternalMediaPathsKey: [file.path],
-            },
-            {
-              'role': 'user',
-              'content': 'what do you see?',
-            },
-          ],
-          stream: false,
-        ).toList();
-      });
+        final input = (body['input'] as List).cast<Map>();
+        expect(input, hasLength(2));
 
-      final input = (body['input'] as List).cast<Map>();
-      expect(input, hasLength(2));
+        final assistant = input.first;
+        expect(assistant['role'], 'assistant');
+        expect(assistant['status'], 'completed');
+        final assistantParts = (assistant['content'] as List).cast<Map>();
+        expect(
+          assistantParts.every(
+            (part) =>
+                part['type'] == 'output_text' || part['type'] == 'refusal',
+          ),
+          isTrue,
+        );
+        expect(
+          assistantParts.any((part) => part['type'] == 'input_image'),
+          isFalse,
+        );
+        expect(
+          assistantParts.any((part) => part['type'] == 'output_text'),
+          isTrue,
+        );
 
-      final assistant = input.first;
-      expect(assistant['role'], 'assistant');
-      expect(assistant['status'], 'completed');
-      final assistantParts = (assistant['content'] as List).cast<Map>();
-      expect(
-        assistantParts.every(
-          (part) => part['type'] == 'output_text' || part['type'] == 'refusal',
-        ),
-        isTrue,
-      );
-      expect(
-        assistantParts.any((part) => part['type'] == 'input_image'),
-        isFalse,
-      );
-      expect(
-        assistantParts.any((part) => part['type'] == 'output_text'),
-        isTrue,
-      );
-
-      final user = input.last;
-      expect(user['role'], 'user');
-      final userParts = (user['content'] as List).cast<Map>();
-      expect(userParts.any((part) => part['type'] == 'input_image'), isTrue);
-    });
-
+        final user = input.last;
+        expect(user['role'], 'user');
+        final userParts = (user['content'] as List).cast<Map>();
+        expect(userParts.any((part) => part['type'] == 'input_image'), isTrue);
+      },
+    );
 
     test('multiple assistant images all attach to following user', () async {
       final body = await _sendAndCaptureResponsesBody((baseUrl) async {
-        final dir = await Directory.systemTemp.createTemp('kelivo_resp_multi_asst_');
+        final dir = await Directory.systemTemp.createTemp(
+          'kelivo_resp_multi_asst_',
+        );
         addTearDown(() async {
           if (await dir.exists()) {
             await dir.delete(recursive: true);
@@ -1249,10 +1191,7 @@ void main() {
               'content': '',
               multimodalInternalMediaPathsKey: [file1.path, file2.path],
             },
-            {
-              'role': 'user',
-              'content': 'compare both',
-            },
+            {'role': 'user', 'content': 'compare both'},
           ],
           stream: false,
         ).toList();
@@ -1285,87 +1224,96 @@ void main() {
       );
     });
 
-    test('remote structured media stays as text when allowRemoteImages is false', () async {
-      final body = await _sendAndCaptureRequestBody((baseUrl) async {
-        return ChatApiService.sendMessageStream(
-          config: _openAiConfig(baseUrl),
-          modelId: 'moonshotai/kimi-k3',
-          messages: [
-            {
-              'role': 'user',
-              'content': 'describe this',
-              multimodalInternalMediaPathsKey: [
-                encodeInternalMediaRef(
-                  uri: 'https://example.com/remote-structured.png',
-                  mime: 'image/png',
-                ),
-              ],
-            },
-          ],
-          stream: false,
-        ).toList();
-      });
-
-      final parts = _extractSingleMessageParts(body);
-      expect(
-        parts.any(
-          (part) =>
-              part['type'] == 'text' &&
-              part['text'] == 'https://example.com/remote-structured.png',
-        ),
-        isTrue,
-      );
-      expect(
-        parts.any((part) => part['type'] == 'image_url'),
-        isFalse,
-      );
-      expect(jsonEncode(body), contains('https://example.com/remote-structured.png'));
-    });
-  });
-
-  group('Claude structured media paths (ticket 10)', () {
-    test('encodes multimodalInternalMediaPathsKey as Anthropic image blocks', () async {
-      final file = await _tempPng('kelivo_claude_media_');
-      addTearDown(() async {
-        final dir = file.parent;
-        if (await dir.exists()) await dir.delete(recursive: true);
-      });
-
-      final body = await _captureProviderBody(
-        (baseUrl) {
+    test(
+      'remote structured media stays as text when allowRemoteImages is false',
+      () async {
+        final body = await _sendAndCaptureRequestBody((baseUrl) async {
           return ChatApiService.sendMessageStream(
-            config: _claudeConfig(baseUrl),
-            modelId: 'claude-sonnet-4-6',
+            config: _openAiConfig(baseUrl),
+            modelId: 'moonshotai/kimi-k3',
             messages: [
               {
                 'role': 'user',
-                'content': 'before after',
-                multimodalInternalMediaPathsKey: [file.path],
+                'content': 'describe this',
+                multimodalInternalMediaPathsKey: [
+                  encodeInternalMediaRef(
+                    uri: 'https://example.com/remote-structured.png',
+                    mime: 'image/png',
+                  ),
+                ],
               },
             ],
             stream: false,
           ).toList();
-        },
-        responseBody: const <String, dynamic>{
-          'id': 'msg_1',
-          'content': [
-            {'type': 'text', 'text': 'ok'},
-          ],
-          'usage': {'input_tokens': 1, 'output_tokens': 1},
-        },
-      );
+        });
 
-      final messages = (body['messages'] as List).cast<Map>();
-      final parts = (messages.single['content'] as List).cast<Map>();
-      expect(parts.first['type'], 'text');
-      expect(parts.first['text'], 'before after');
-      expect(parts.last['type'], 'image');
-      expect(parts.last['source']['type'], 'base64');
-      expect(parts.last['source']['media_type'], 'image/png');
-      expect(parts.last['source']['data'], 'AQIDBA==');
-      expect(jsonEncode(body), isNot(contains('[image:')));
-      expect(jsonEncode(body), isNot(contains(multimodalInternalMediaPathsKey)));
-    });
+        final parts = _extractSingleMessageParts(body);
+        expect(
+          parts.any(
+            (part) =>
+                part['type'] == 'text' &&
+                part['text'] == 'https://example.com/remote-structured.png',
+          ),
+          isTrue,
+        );
+        expect(parts.any((part) => part['type'] == 'image_url'), isFalse);
+        expect(
+          jsonEncode(body),
+          contains('https://example.com/remote-structured.png'),
+        );
+      },
+    );
+  });
+
+  group('Claude structured media paths (ticket 10)', () {
+    test(
+      'encodes multimodalInternalMediaPathsKey as Anthropic image blocks',
+      () async {
+        final file = await _tempPng('kelivo_claude_media_');
+        addTearDown(() async {
+          final dir = file.parent;
+          if (await dir.exists()) await dir.delete(recursive: true);
+        });
+
+        final body = await _captureProviderBody(
+          (baseUrl) {
+            return ChatApiService.sendMessageStream(
+              config: _claudeConfig(baseUrl),
+              modelId: 'claude-sonnet-4-6',
+              messages: [
+                {
+                  'role': 'user',
+                  'content': 'before after',
+                  multimodalInternalMediaPathsKey: [file.path],
+                },
+              ],
+              stream: false,
+            ).toList();
+          },
+          responseBody: const <String, dynamic>{
+            'id': 'msg_1',
+            'content': [
+              {'type': 'text', 'text': 'ok'},
+            ],
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+          },
+        );
+
+        final messages = (body['messages'] as List).cast<Map>();
+        final parts = (messages.single['content'] as List).cast<Map>();
+        expect(parts.first['type'], 'text');
+        expect(parts.first['text'], 'before after');
+        expect(parts.last['type'], 'image');
+        expect(parts.last['source']['type'], 'base64');
+        expect(parts.last['source']['media_type'], 'image/png');
+        expect(parts.last['source']['data'], 'AQIDBA==');
+        expect(jsonEncode(body), isNot(contains('[image:')));
+        expect(
+          jsonEncode(body),
+          isNot(contains(multimodalInternalMediaPathsKey)),
+        );
+      },
+    );
 
     test('literal [image:...] text is not treated as an attachment', () async {
       final body = await _captureProviderBody(
@@ -1398,7 +1346,8 @@ void main() {
     });
 
     test('skips missing local media paths without crashing', () async {
-      final missing = '${Directory.systemTemp.path}/kelivo_missing_claude_${DateTime.now().microsecondsSinceEpoch}.png';
+      final missing =
+          '${Directory.systemTemp.path}/kelivo_missing_claude_${DateTime.now().microsecondsSinceEpoch}.png';
       final body = await _captureProviderBody(
         (baseUrl) {
           return ChatApiService.sendMessageStream(
@@ -1476,139 +1425,149 @@ void main() {
       expect(images[1]['source']['data'], 'BQYHCA==');
     });
 
+    test(
+      'image/jpg supplemental mime is emitted as media_type image/jpeg',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('kelivo_claude_jpg_');
+        addTearDown(() async {
+          if (await dir.exists()) await dir.delete(recursive: true);
+        });
+        final file = File('${dir.path}/photo.jpg');
+        await file.writeAsBytes(const [1, 2, 3, 4]);
 
-    test('image/jpg supplemental mime is emitted as media_type image/jpeg', () async {
-      final dir = await Directory.systemTemp.createTemp('kelivo_claude_jpg_');
-      addTearDown(() async {
-        if (await dir.exists()) await dir.delete(recursive: true);
-      });
-      final file = File('${dir.path}/photo.jpg');
-      await file.writeAsBytes(const [1, 2, 3, 4]);
-
-      final body = await _captureProviderBody(
-        (baseUrl) {
-          return ChatApiService.sendMessageStream(
-            config: _claudeConfig(baseUrl),
-            modelId: 'claude-sonnet-4-6',
-            messages: [
-              {
-                'role': 'user',
-                'content': 'see this',
-                multimodalInternalMediaPathsKey: [
-                  encodeInternalMediaRef(uri: file.path, mime: 'image/jpg'),
-                ],
-              },
+        final body = await _captureProviderBody(
+          (baseUrl) {
+            return ChatApiService.sendMessageStream(
+              config: _claudeConfig(baseUrl),
+              modelId: 'claude-sonnet-4-6',
+              messages: [
+                {
+                  'role': 'user',
+                  'content': 'see this',
+                  multimodalInternalMediaPathsKey: [
+                    encodeInternalMediaRef(uri: file.path, mime: 'image/jpg'),
+                  ],
+                },
+              ],
+              stream: false,
+            ).toList();
+          },
+          responseBody: const <String, dynamic>{
+            'id': 'msg_1',
+            'content': [
+              {'type': 'text', 'text': 'ok'},
             ],
-            stream: false,
-          ).toList();
-        },
-        responseBody: const <String, dynamic>{
-          'id': 'msg_1',
-          'content': [
-            {'type': 'text', 'text': 'ok'},
-          ],
-          'usage': {'input_tokens': 1, 'output_tokens': 1},
-        },
-      );
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+          },
+        );
 
-      final messages = (body['messages'] as List).cast<Map>();
-      final parts = (messages.single['content'] as List).cast<Map>();
-      final image = parts.firstWhere((part) => part['type'] == 'image');
-      expect(image['source']['media_type'], 'image/jpeg');
-      expect(jsonEncode(body), isNot(contains('"media_type":"image/jpg"')));
-    });
+        final messages = (body['messages'] as List).cast<Map>();
+        final parts = (messages.single['content'] as List).cast<Map>();
+        final image = parts.firstWhere((part) => part['type'] == 'image');
+        expect(image['source']['media_type'], 'image/jpeg');
+        expect(jsonEncode(body), isNot(contains('"media_type":"image/jpg"')));
+      },
+    );
 
-    test('video/mp4 supplemental ref does not become Claude image block', () async {
-      final dir = await Directory.systemTemp.createTemp('kelivo_claude_video_');
-      addTearDown(() async {
-        if (await dir.exists()) await dir.delete(recursive: true);
-      });
-      final file = File('${dir.path}/clip.mp4');
-      await file.writeAsBytes(const [1, 2, 3, 4]);
+    test(
+      'video/mp4 supplemental ref does not become Claude image block',
+      () async {
+        final dir = await Directory.systemTemp.createTemp(
+          'kelivo_claude_video_',
+        );
+        addTearDown(() async {
+          if (await dir.exists()) await dir.delete(recursive: true);
+        });
+        final file = File('${dir.path}/clip.mp4');
+        await file.writeAsBytes(const [1, 2, 3, 4]);
 
-      final body = await _captureProviderBody(
-        (baseUrl) {
-          return ChatApiService.sendMessageStream(
-            config: _claudeConfig(baseUrl),
-            modelId: 'claude-sonnet-4-6',
-            messages: [
-              {
-                'role': 'user',
-                'content': 'watch this',
-                multimodalInternalMediaPathsKey: [
-                  encodeInternalMediaRef(uri: file.path, mime: 'video/mp4'),
-                ],
-              },
+        final body = await _captureProviderBody(
+          (baseUrl) {
+            return ChatApiService.sendMessageStream(
+              config: _claudeConfig(baseUrl),
+              modelId: 'claude-sonnet-4-6',
+              messages: [
+                {
+                  'role': 'user',
+                  'content': 'watch this',
+                  multimodalInternalMediaPathsKey: [
+                    encodeInternalMediaRef(uri: file.path, mime: 'video/mp4'),
+                  ],
+                },
+              ],
+              stream: false,
+            ).toList();
+          },
+          responseBody: const <String, dynamic>{
+            'id': 'msg_1',
+            'content': [
+              {'type': 'text', 'text': 'ok'},
             ],
-            stream: false,
-          ).toList();
-        },
-        responseBody: const <String, dynamic>{
-          'id': 'msg_1',
-          'content': [
-            {'type': 'text', 'text': 'ok'},
-          ],
-          'usage': {'input_tokens': 1, 'output_tokens': 1},
-        },
-      );
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+          },
+        );
 
-      final messages = (body['messages'] as List).cast<Map>();
-      final content = messages.single['content'];
-      if (content is List) {
-        final parts = content.cast<Map>();
+        final messages = (body['messages'] as List).cast<Map>();
+        final content = messages.single['content'];
+        if (content is List) {
+          final parts = content.cast<Map>();
+          expect(parts.any((part) => part['type'] == 'image'), isFalse);
+          expect(
+            parts.any(
+              (part) =>
+                  part['type'] == 'image' &&
+                  (part['source'] as Map?)?['media_type'] == 'video/mp4',
+            ),
+            isFalse,
+          );
+          expect(parts.first['text'], 'watch this');
+        } else {
+          expect(content, 'watch this');
+        }
+        expect(jsonEncode(body), isNot(contains('"media_type":"video/mp4"')));
+      },
+    );
+
+    test(
+      'remote video/mp4 supplemental ref is kept as text, not image',
+      () async {
+        const remote = 'https://cdn.example.com/clip.mp4';
+        final body = await _captureProviderBody(
+          (baseUrl) {
+            return ChatApiService.sendMessageStream(
+              config: _claudeConfig(baseUrl),
+              modelId: 'claude-sonnet-4-6',
+              messages: [
+                {
+                  'role': 'user',
+                  'content': 'remote clip',
+                  multimodalInternalMediaPathsKey: [
+                    encodeInternalMediaRef(uri: remote, mime: 'video/mp4'),
+                  ],
+                },
+              ],
+              stream: false,
+            ).toList();
+          },
+          responseBody: const <String, dynamic>{
+            'id': 'msg_1',
+            'content': [
+              {'type': 'text', 'text': 'ok'},
+            ],
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+          },
+        );
+
+        final messages = (body['messages'] as List).cast<Map>();
+        final parts = (messages.single['content'] as List).cast<Map>();
         expect(parts.any((part) => part['type'] == 'image'), isFalse);
         expect(
-          parts.any(
-            (part) =>
-                part['type'] == 'image' &&
-                (part['source'] as Map?)?['media_type'] == 'video/mp4',
-          ),
-          isFalse,
+          parts.any((part) => part['type'] == 'text' && part['text'] == remote),
+          isTrue,
         );
-        expect(parts.first['text'], 'watch this');
-      } else {
-        expect(content, 'watch this');
-      }
-      expect(jsonEncode(body), isNot(contains('"media_type":"video/mp4"')));
-    });
-
-    test('remote video/mp4 supplemental ref is kept as text, not image', () async {
-      const remote = 'https://cdn.example.com/clip.mp4';
-      final body = await _captureProviderBody(
-        (baseUrl) {
-          return ChatApiService.sendMessageStream(
-            config: _claudeConfig(baseUrl),
-            modelId: 'claude-sonnet-4-6',
-            messages: [
-              {
-                'role': 'user',
-                'content': 'remote clip',
-                multimodalInternalMediaPathsKey: [
-                  encodeInternalMediaRef(uri: remote, mime: 'video/mp4'),
-                ],
-              },
-            ],
-            stream: false,
-          ).toList();
-        },
-        responseBody: const <String, dynamic>{
-          'id': 'msg_1',
-          'content': [
-            {'type': 'text', 'text': 'ok'},
-          ],
-          'usage': {'input_tokens': 1, 'output_tokens': 1},
-        },
-      );
-
-      final messages = (body['messages'] as List).cast<Map>();
-      final parts = (messages.single['content'] as List).cast<Map>();
-      expect(parts.any((part) => part['type'] == 'image'), isFalse);
-      expect(
-        parts.any((part) => part['type'] == 'text' && part['text'] == remote),
-        isTrue,
-      );
-      expect(jsonEncode(body), isNot(contains('"media_type":"video/mp4"')));
-    });
+        expect(jsonEncode(body), isNot(contains('"media_type":"video/mp4"')));
+      },
+    );
   });
 
   group('Gemini structured media paths (ticket 10)', () {
@@ -1693,7 +1652,8 @@ void main() {
     });
 
     test('skips missing local media paths without crashing', () async {
-      final missing = '${Directory.systemTemp.path}/kelivo_missing_gemini_${DateTime.now().microsecondsSinceEpoch}.png';
+      final missing =
+          '${Directory.systemTemp.path}/kelivo_missing_gemini_${DateTime.now().microsecondsSinceEpoch}.png';
       final body = await _captureProviderBody(
         (baseUrl) {
           return ChatApiService.sendMessageStream(
@@ -1729,7 +1689,6 @@ void main() {
     });
   });
 
-
   group('LongCat host / streaming usage detection', () {
     test('recognizes bare hostname and full URL', () {
       expect(ChatApiService.isLongCatHostForTest('api.longcat.chat'), isTrue);
@@ -1754,10 +1713,11 @@ void main() {
         isFalse,
       );
       expect(
-        ChatApiService.shouldIncludeStreamingUsageOptionsForTest('api.openai.com'),
+        ChatApiService.shouldIncludeStreamingUsageOptionsForTest(
+          'api.openai.com',
+        ),
         isTrue,
       );
     });
   });
-
 }

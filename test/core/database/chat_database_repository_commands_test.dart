@@ -197,31 +197,28 @@ void main() {
     },
   );
 
-  test(
-    'batch delete removes generation runs for deleted revisions',
-    () async {
-      await repository.appendLinearMessageToConversation(
-        conversation: conversation(),
-        message: message(id: 'message-1'),
-      );
-      await repository.createGenerationRun(
-        id: 'run-1',
-        conversationId: 'conversation-1',
-        targetRevisionId: 'message-1',
-        createdAt: DateTime.utc(2000),
-      );
-      await repository.resetStaleStreamingState();
+  test('batch delete removes generation runs for deleted revisions', () async {
+    await repository.appendLinearMessageToConversation(
+      conversation: conversation(),
+      message: message(id: 'message-1'),
+    );
+    await repository.createGenerationRun(
+      id: 'run-1',
+      conversationId: 'conversation-1',
+      targetRevisionId: 'message-1',
+      createdAt: DateTime.utc(2000),
+    );
+    await repository.resetStaleStreamingState();
 
-      await repository.deleteMessages(
-        conversationId: 'conversation-1',
-        messageIds: {'message-1'},
-        versionSelectionChanges: const {},
-      );
+    await repository.deleteMessages(
+      conversationId: 'conversation-1',
+      messageIds: {'message-1'},
+      versionSelectionChanges: const {},
+    );
 
-      expect(await repository.getMessage('message-1'), isNull);
-      expect(await repository.getGenerationRun('run-1'), isNull);
-    },
-  );
+    expect(await repository.getMessage('message-1'), isNull);
+    expect(await repository.getGenerationRun('run-1'), isNull);
+  });
 
   test(
     'batch delete rejects a partial target set without changing data',

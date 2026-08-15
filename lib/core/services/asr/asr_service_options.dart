@@ -500,8 +500,7 @@ class QwenAudioAsrOptions extends AsrServiceOptions {
   }
 
   @override
-  bool get isConfigured =>
-      apiKey.trim().isNotEmpty && model.trim().isNotEmpty;
+  bool get isConfigured => apiKey.trim().isNotEmpty && model.trim().isNotEmpty;
 
   QwenAudioAsrOptions copyWith({
     String? id,

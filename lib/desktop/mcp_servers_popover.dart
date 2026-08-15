@@ -176,9 +176,7 @@ class _GlassPanel extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: cs.surface.withValues(
-              alpha: isDark ? 0.28 : 0.56,
-            ),
+            color: cs.surface.withValues(alpha: isDark ? 0.28 : 0.56),
             border: Border(
               top: BorderSide(
                 color: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.18),
@@ -310,9 +308,7 @@ class _RowItemState extends State<_RowItem> {
     final isDark = theme.brightness == Brightness.dark;
     final onColor = widget.selected ? cs.primary : cs.onSurface;
     final baseBg = Colors.transparent;
-    final hoverBg = cs.onSurface.withValues(
-      alpha: isDark ? 0.12 : 0.10,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.10);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),

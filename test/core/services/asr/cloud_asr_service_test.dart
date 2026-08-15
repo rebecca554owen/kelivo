@@ -456,15 +456,18 @@ void main() {
   });
 
   group('Qwen Audio ASR', () {
-    test('combineQwenAudioTranscript inserts space after Latin punctuation', () {
-      expect(combineQwenAudioTranscript('Hello.', 'World'), 'Hello. World');
-      expect(combineQwenAudioTranscript('Hello!', 'World'), 'Hello! World');
-      expect(combineQwenAudioTranscript('Hello', 'World'), 'Hello World');
-      expect(combineQwenAudioTranscript('Hello. ', 'World'), 'Hello. World');
-      // CJK joins stay unspaced.
-      expect(combineQwenAudioTranscript('你好。', '今天'), '你好。今天');
-      expect(combineQwenAudioTranscript('你好', '世界'), '你好世界');
-    });
+    test(
+      'combineQwenAudioTranscript inserts space after Latin punctuation',
+      () {
+        expect(combineQwenAudioTranscript('Hello.', 'World'), 'Hello. World');
+        expect(combineQwenAudioTranscript('Hello!', 'World'), 'Hello! World');
+        expect(combineQwenAudioTranscript('Hello', 'World'), 'Hello World');
+        expect(combineQwenAudioTranscript('Hello. ', 'World'), 'Hello. World');
+        // CJK joins stay unspaced.
+        expect(combineQwenAudioTranscript('你好。', '今天'), '你好。今天');
+        expect(combineQwenAudioTranscript('你好', '世界'), '你好世界');
+      },
+    );
 
     test('accumulates finalized sentences with the current partial', () async {
       final socket = _FakeWebSocket();
@@ -553,64 +556,67 @@ void main() {
       await subscription.cancel();
     });
 
-    test('inserts a space between English sentences ending with punctuation',
-        () async {
-      final socket = _FakeWebSocket();
-      final session = await CloudAsrService(
-        websocketConnector: (uri, headers) async => socket,
-      ).startSession(
-        QwenAudioAsrOptions(
-          apiKey: 'qwen-audio-secret',
-          model: 'qwen-audio-3.0-asr-flash-streaming',
-        ),
-      );
+    test(
+      'inserts a space between English sentences ending with punctuation',
+      () async {
+        final socket = _FakeWebSocket();
+        final session =
+            await CloudAsrService(
+              websocketConnector: (uri, headers) async => socket,
+            ).startSession(
+              QwenAudioAsrOptions(
+                apiKey: 'qwen-audio-secret',
+                model: 'qwen-audio-3.0-asr-flash-streaming',
+              ),
+            );
 
-      final partials = <String>[];
-      final subscription = session.partialTranscripts.listen(partials.add);
+        final partials = <String>[];
+        final subscription = session.partialTranscripts.listen(partials.add);
 
-      socket.serverJson({
-        'header': {'event': 'task-started', 'task_id': 't1'},
-        'payload': const <String, dynamic>{},
-      });
+        socket.serverJson({
+          'header': {'event': 'task-started', 'task_id': 't1'},
+          'payload': const <String, dynamic>{},
+        });
 
-      socket.serverJson({
-        'header': {'event': 'result-generated'},
-        'payload': {
-          'output': {
-            'sentence': {'text': 'Hello.', 'sentence_end': true},
+        socket.serverJson({
+          'header': {'event': 'result-generated'},
+          'payload': {
+            'output': {
+              'sentence': {'text': 'Hello.', 'sentence_end': true},
+            },
           },
-        },
-      });
-      expect(partials.last, 'Hello.');
+        });
+        expect(partials.last, 'Hello.');
 
-      socket.serverJson({
-        'header': {'event': 'result-generated'},
-        'payload': {
-          'output': {
-            'sentence': {'text': 'World', 'sentence_end': false},
+        socket.serverJson({
+          'header': {'event': 'result-generated'},
+          'payload': {
+            'output': {
+              'sentence': {'text': 'World', 'sentence_end': false},
+            },
           },
-        },
-      });
-      expect(partials.last, 'Hello. World');
+        });
+        expect(partials.last, 'Hello. World');
 
-      socket.serverJson({
-        'header': {'event': 'result-generated'},
-        'payload': {
-          'output': {
-            'sentence': {'text': 'World', 'sentence_end': true},
+        socket.serverJson({
+          'header': {'event': 'result-generated'},
+          'payload': {
+            'output': {
+              'sentence': {'text': 'World', 'sentence_end': true},
+            },
           },
-        },
-      });
-      expect(partials.last, 'Hello. World');
+        });
+        expect(partials.last, 'Hello. World');
 
-      final resultFuture = session.finish();
-      socket.serverJson({
-        'header': {'event': 'task-finished'},
-        'payload': const <String, dynamic>{},
-      });
-      expect(await resultFuture, 'Hello. World');
-      await subscription.cancel();
-    });
+        final resultFuture = session.finish();
+        socket.serverJson({
+          'header': {'event': 'task-finished'},
+          'payload': const <String, dynamic>{},
+        });
+        expect(await resultFuture, 'Hello. World');
+        await subscription.cancel();
+      },
+    );
   });
 
   group('Step ASR', () {

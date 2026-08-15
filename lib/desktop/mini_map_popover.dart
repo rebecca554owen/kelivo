@@ -221,9 +221,7 @@ class _GlassPanel extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: cs.surface.withValues(
-              alpha: isDark ? 0.28 : 0.56,
-            ),
+            color: cs.surface.withValues(alpha: isDark ? 0.28 : 0.56),
             border: Border(
               top: BorderSide(
                 color: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.18),

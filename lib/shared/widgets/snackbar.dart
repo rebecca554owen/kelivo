@@ -395,7 +395,11 @@ class _NotificationWidgetState extends State<NotificationWidget>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(_getIcon(), size: 22, color: _getIconColor(cs, context.appColors)),
+                  Icon(
+                    _getIcon(),
+                    size: 22,
+                    color: _getIconColor(cs, context.appColors),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

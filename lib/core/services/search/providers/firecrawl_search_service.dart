@@ -71,8 +71,8 @@ class FirecrawlSearchService extends SearchService<FirecrawlOptions> {
       }
 
       final payload = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = (payload['data'] as Map?)?.cast<String, dynamic>() ??
-          payload;
+      final data =
+          (payload['data'] as Map?)?.cast<String, dynamic>() ?? payload;
       final items = <SearchResultItem>[];
 
       void addWeb(List? list) {

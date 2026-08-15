@@ -366,7 +366,9 @@ class _DeskAssistantRowState extends State<_DeskAssistantRow> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (Theme.of(context).colorScheme.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
+        ? (Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

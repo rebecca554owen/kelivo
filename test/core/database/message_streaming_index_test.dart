@@ -75,11 +75,15 @@ void main() {
             'WHERE is_streaming = 1;',
           )
           .get();
-      final planDetail = plan.map((row) => row.read<String>('detail')).join('\n');
+      final planDetail = plan
+          .map((row) => row.read<String>('detail'))
+          .join('\n');
       expect(planDetail, contains('idx_message_rows_streaming'));
       expect(
-        RegExp(r'scan message_rows(?! using index)', caseSensitive: false)
-            .hasMatch(planDetail),
+        RegExp(
+          r'scan message_rows(?! using index)',
+          caseSensitive: false,
+        ).hasMatch(planDetail),
         isFalse,
       );
 

@@ -1241,8 +1241,10 @@ class _QwenAudioAsrSession implements CloudAsrSession {
   final Completer<void> _started = Completer<void>();
   Completer<String>? _finishCompleter;
   Future<String>? _finishFuture;
+
   /// Finalized sentences accumulated across `result-generated` events.
   var _finalizedTranscript = '';
+
   /// Full transcript shown to callers: finalized + current partial sentence.
   var _transcript = '';
   var _cleanedUp = false;
@@ -1296,7 +1298,9 @@ class _QwenAudioAsrSession implements CloudAsrSession {
   @override
   Future<void> cancel() async {
     _cancelled = true;
-    _terminalError ??= const AsrException('Qwen Audio ASR session was cancelled');
+    _terminalError ??= const AsrException(
+      'Qwen Audio ASR session was cancelled',
+    );
     final completer = _finishCompleter;
     if (completer != null && !completer.isCompleted) {
       completer.completeError(_terminalError!);

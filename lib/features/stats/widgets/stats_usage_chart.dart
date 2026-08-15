@@ -124,7 +124,8 @@ class _StatsUsageChartState extends State<StatsUsageChart> {
                                         .colorScheme
                                         .onSurface
                                         .withValues(
-                                          alpha: Theme.of(context).brightness ==
+                                          alpha:
+                                              Theme.of(context).brightness ==
                                                   Brightness.dark
                                               ? 0.08
                                               : 0.10,
@@ -133,7 +134,8 @@ class _StatsUsageChartState extends State<StatsUsageChart> {
                                         .colorScheme
                                         .onSurface
                                         .withValues(
-                                          alpha: Theme.of(context).brightness ==
+                                          alpha:
+                                              Theme.of(context).brightness ==
                                                   Brightness.dark
                                               ? 0.72
                                               : 0.46,
@@ -384,8 +386,7 @@ class _UsageChartPainter extends CustomPainter {
         if (weight <= 0) continue;
         final segmentHeight = barHeight * weight / total;
         final segmentTop = segmentBottom - segmentHeight;
-        final paint = Paint()
-          ..color = series[providerIndex % series.length];
+        final paint = Paint()..color = series[providerIndex % series.length];
         canvas.drawRect(
           Rect.fromLTWH(x, segmentTop, barWidth, segmentHeight),
           paint,

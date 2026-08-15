@@ -100,7 +100,10 @@ void main() {
       // Bodies are cached on the first-page return path; the full order
       // skeleton (and ordered projection) arrives via Issue 7 backfill.
       expect(
-        service.getMessages(conversationId).map((message) => message.id).toSet(),
+        service
+            .getMessages(conversationId)
+            .map((message) => message.id)
+            .toSet(),
         ids.toSet(),
       );
       await _flushIdleTasks();

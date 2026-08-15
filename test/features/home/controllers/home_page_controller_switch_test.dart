@@ -27,7 +27,8 @@ class _ControlledChatService extends ChatService {
   _ControlledChatService(this._messagesByConversation);
 
   final Map<String, List<ChatMessage>> _messagesByConversation;
-  final Map<String, Conversation> _draftConversations = <String, Conversation>{};
+  final Map<String, Conversation> _draftConversations =
+      <String, Conversation>{};
   final List<_PageRequest> pageRequests = <_PageRequest>[];
   final List<String?> setCurrentCalls = <String?>[];
   String? _trackedCurrentConversationId;
@@ -640,11 +641,7 @@ void main() {
 
         final afterA = service.pageRequests.length;
         final switchB = controller.switchConversationAnimated('conv-b');
-        for (
-          var i = 0;
-          i < 40 && service.pageRequests.length <= afterA;
-          i++
-        ) {
+        for (var i = 0; i < 40 && service.pageRequests.length <= afterA; i++) {
           await tester.pump(const Duration(milliseconds: 10));
         }
         expect(service.pageRequests.length, afterA + 1);

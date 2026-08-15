@@ -229,24 +229,21 @@ void main() {
   );
 
   test('unavailable tools are not reported as invalid arguments', () async {
-    final provider = _RecordingMcpProvider(
-      [
-        McpServerConfig(
-          id: 'server-id',
-          enabled: true,
-          name: 'Remote MCP',
-          transport: McpTransportType.http,
-          tools: [
-            McpToolConfig(
-              enabled: true,
-              name: 'get_self',
-              schema: const {'type': 'object', 'properties': {}},
-            ),
-          ],
-        ),
-      ],
-      errorMessage: 'connection failed',
-    );
+    final provider = _RecordingMcpProvider([
+      McpServerConfig(
+        id: 'server-id',
+        enabled: true,
+        name: 'Remote MCP',
+        transport: McpTransportType.http,
+        tools: [
+          McpToolConfig(
+            enabled: true,
+            name: 'get_self',
+            schema: const {'type': 'object', 'properties': {}},
+          ),
+        ],
+      ),
+    ], errorMessage: 'connection failed');
     final assistants = AssistantProvider(
       preferences: createBusinessTestPreferences(),
     );

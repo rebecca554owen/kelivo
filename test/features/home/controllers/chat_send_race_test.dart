@@ -466,13 +466,15 @@ void main() {
         () => !controller.chatController.isConversationLoading(convo.id),
         'edited temporary streaming to finish',
       );
-      final edited = service.getMessages(convo.id).firstWhere(
-        (message) =>
-            message.role == 'user' &&
-            (message.groupId ?? message.id) ==
-                (original.groupId ?? original.id) &&
-            message.version == 1,
-      );
+      final edited = service
+          .getMessages(convo.id)
+          .firstWhere(
+            (message) =>
+                message.role == 'user' &&
+                (message.groupId ?? message.id) ==
+                    (original.groupId ?? original.id) &&
+                message.version == 1,
+          );
       expect(edited.content, 'edited question');
       expect(
         service.getVersionSelections(convo.id),

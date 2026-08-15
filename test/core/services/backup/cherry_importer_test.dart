@@ -500,49 +500,51 @@ void main() {
         expect(chatService.getAllConversations(), isEmpty);
         expect(
           () => CherryDirectBackupReader.readArchive(
-            Archive()
-              ..add(
-                ArchiveFile.string(
-                  'metadata.json',
-                  jsonEncode(<String, dynamic>{'version': 7}),
-                ),
+            Archive()..add(
+              ArchiveFile.string(
+                'metadata.json',
+                jsonEncode(<String, dynamic>{'version': 7}),
               ),
+            ),
           ),
           throwsA(isA<CherryUnsupportedBackupVersionException>()),
         );
       },
     );
 
-    test('version 6 direct backup does not throw unsupported-version', () async {
-      final backup = await _createZip(tempDir, <String, List<int>>{
-        'metadata.json': utf8.encode(
-          jsonEncode(<String, dynamic>{
-            'version': 6,
-            'timestamp': 1780403199033,
-            'appName': 'Cherry Studio',
-          }),
-        ),
-        'Local Storage/leveldb/000001.log': _levelDbLogBytes(
-          _persistStateJson(),
-        ),
-        'IndexedDB/file__0.indexeddb.leveldb/000001.log': <int>[
-          0,
-          1,
-          ..._hex(_topicValueHex),
-          2,
-          3,
-          ..._hex(_blockValueHex),
-        ],
-      });
+    test(
+      'version 6 direct backup does not throw unsupported-version',
+      () async {
+        final backup = await _createZip(tempDir, <String, List<int>>{
+          'metadata.json': utf8.encode(
+            jsonEncode(<String, dynamic>{
+              'version': 6,
+              'timestamp': 1780403199033,
+              'appName': 'Cherry Studio',
+            }),
+          ),
+          'Local Storage/leveldb/000001.log': _levelDbLogBytes(
+            _persistStateJson(),
+          ),
+          'IndexedDB/file__0.indexeddb.leveldb/000001.log': <int>[
+            0,
+            1,
+            ..._hex(_topicValueHex),
+            2,
+            3,
+            ..._hex(_blockValueHex),
+          ],
+        });
 
-      final result = await CherryImporter.importFromCherryStudio(
-        file: backup,
-        mode: RestoreMode.overwrite,
-        businessRepository: businessRepository,
-        chatService: chatService,
-      );
-      expect(result.conversations, greaterThan(0));
-    });
+        final result = await CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        expect(result.conversations, greaterThan(0));
+      },
+    );
 
     test(
       'rejects v7 full archive before importing nested old-format backup JSON',
@@ -611,43 +613,40 @@ void main() {
       },
     );
 
-    test(
-      'rejects v7 before probing a large nested .json entry',
-      () async {
-        const tinyIdentifiedCap = 256;
-        CherryImporter.debugIdentifiedArchiveJsonBytes = tinyIdentifiedCap;
-        CherryImporter.debugZipJsonProbeDecodeCount = 0;
+    test('rejects v7 before probing a large nested .json entry', () async {
+      const tinyIdentifiedCap = 256;
+      CherryImporter.debugIdentifiedArchiveJsonBytes = tinyIdentifiedCap;
+      CherryImporter.debugZipJsonProbeDecodeCount = 0;
 
-        final nestedLarge = <int>[
-          ...utf8.encode('{"pad":"'),
-          ...List<int>.filled(tinyIdentifiedCap, 0x41),
-          ...utf8.encode('"}'),
-        ];
-        expect(nestedLarge.length, greaterThan(tinyIdentifiedCap));
+      final nestedLarge = <int>[
+        ...utf8.encode('{"pad":"'),
+        ...List<int>.filled(tinyIdentifiedCap, 0x41),
+        ...utf8.encode('"}'),
+      ];
+      expect(nestedLarge.length, greaterThan(tinyIdentifiedCap));
 
-        final backup = await _createZip(tempDir, <String, List<int>>{
-          'metadata.json': utf8.encode(
-            jsonEncode(<String, dynamic>{
-              'version': 7,
-              'appName': 'Cherry Studio',
-            }),
-          ),
-          'Data/Files/huge-dataset.json': nestedLarge,
-          'cache.json': utf8.encode('{}'),
-        });
+      final backup = await _createZip(tempDir, <String, List<int>>{
+        'metadata.json': utf8.encode(
+          jsonEncode(<String, dynamic>{
+            'version': 7,
+            'appName': 'Cherry Studio',
+          }),
+        ),
+        'Data/Files/huge-dataset.json': nestedLarge,
+        'cache.json': utf8.encode('{}'),
+      });
 
-        await expectLater(
-          CherryImporter.importFromCherryStudio(
-            file: backup,
-            mode: RestoreMode.overwrite,
-            businessRepository: businessRepository,
-            chatService: chatService,
-          ),
-          throwsA(isA<CherryUnsupportedBackupVersionException>()),
-        );
-        expect(CherryImporter.debugZipJsonProbeDecodeCount, 0);
-      },
-    );
+      await expectLater(
+        CherryImporter.importFromCherryStudio(
+          file: backup,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        ),
+        throwsA(isA<CherryUnsupportedBackupVersionException>()),
+      );
+      expect(CherryImporter.debugZipJsonProbeDecodeCount, 0);
+    });
 
     test(
       'imports nested backup JSON when archive has no metadata.json',
@@ -761,35 +760,32 @@ void main() {
       );
     });
 
-    test(
-      'plain JSON larger than the speculative cap still imports',
-      () async {
-        const tinyCap = 64;
-        CherryImporter.debugSpeculativeJsonProbeBytes = tinyCap;
-        final root = _legacyBackupRoot(
-          topicId: 'topic-large-plain',
-          messageId: 'msg-large-plain',
-          content: 'x' * (tinyCap + 32),
-        );
-        final bytes = utf8.encode(jsonEncode(root));
-        expect(bytes.length, greaterThan(tinyCap));
+    test('plain JSON larger than the speculative cap still imports', () async {
+      const tinyCap = 64;
+      CherryImporter.debugSpeculativeJsonProbeBytes = tinyCap;
+      final root = _legacyBackupRoot(
+        topicId: 'topic-large-plain',
+        messageId: 'msg-large-plain',
+        content: 'x' * (tinyCap + 32),
+      );
+      final bytes = utf8.encode(jsonEncode(root));
+      expect(bytes.length, greaterThan(tinyCap));
 
-        final plain = File('${tempDir.path}/large_plain.bak');
-        await plain.writeAsBytes(bytes);
+      final plain = File('${tempDir.path}/large_plain.bak');
+      await plain.writeAsBytes(bytes);
 
-        final result = await CherryImporter.importFromCherryStudio(
-          file: plain,
-          mode: RestoreMode.overwrite,
-          businessRepository: businessRepository,
-          chatService: chatService,
-        );
-        expect(result.conversations, greaterThanOrEqualTo(1));
-        expect(
-          (await chatService.loadMessages('topic-large-plain')).single.content,
-          'x' * (tinyCap + 32),
-        );
-      },
-    );
+      final result = await CherryImporter.importFromCherryStudio(
+        file: plain,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+      expect(result.conversations, greaterThanOrEqualTo(1));
+      expect(
+        (await chatService.loadMessages('topic-large-plain')).single.content,
+        'x' * (tinyCap + 32),
+      );
+    });
 
     test(
       'in-zip data.json larger than the speculative cap still imports',
@@ -803,10 +799,7 @@ void main() {
         );
         final dataJson = utf8.encode(jsonEncode(root));
         expect(dataJson.length, greaterThan(tinyCap));
-        expect(
-          CherryImporter.isIdentifiedJsonEntryName('data.json'),
-          isTrue,
-        );
+        expect(CherryImporter.isIdentifiedJsonEntryName('data.json'), isTrue);
 
         final backup = await _createZip(tempDir, <String, List<int>>{
           'data.json': dataJson,
@@ -920,10 +913,7 @@ void main() {
             ? hugePoison
             : <int>[
                 ...hugePoison,
-                ...List<int>.filled(
-                  tinyCap - hugePoison.length + 1,
-                  0x41,
-                ),
+                ...List<int>.filled(tinyCap - hugePoison.length + 1, 0x41),
               ];
         expect(oversized.length, greaterThan(tinyCap));
         expect(
@@ -974,16 +964,8 @@ void main() {
         '},"indexedDB":{"topics":[{"id":"topic-bad","messages":[{"id":"msg-bad","role":"user","topicId":"topic-bad","assistantId":"assistant-1","createdAt":"2026-01-01T00:00:00.000Z","status":"success","content":"ok-with-bad-byte","blocks":[]}],"name":"Bad"},{"id":"pad","messages":[],"name":"',
       );
       // Insert a stray invalid UTF-8 byte inside a JSON string value.
-      final suffix = utf8.encode(
-        '"}],"message_blocks":[],"files":[]}}',
-      );
-      final bytes = <int>[
-        ...prefix,
-        ...persist,
-        ...mid,
-        0xff,
-        ...suffix,
-      ];
+      final suffix = utf8.encode('"}],"message_blocks":[],"files":[]}}');
+      final bytes = <int>[...prefix, ...persist, ...mid, 0xff, ...suffix];
 
       final plain = File('${tempDir.path}/malformed_utf8.bak');
       await plain.writeAsBytes(bytes);
@@ -1082,15 +1064,12 @@ void main() {
         expect(message.content.contains('[image:'), isFalse);
         final files = message.parts.whereType<FilePart>().toList();
         expect(files, hasLength(4));
-        expect(
-          files.map((part) => part.name).toSet(),
-          {
-            'by-base.txt',
-            'rel-doc.bin',
-            'id-route.bin',
-            'large.bin',
-          },
-        );
+        expect(files.map((part) => part.name).toSet(), {
+          'by-base.txt',
+          'rel-doc.bin',
+          'id-route.bin',
+          'large.bin',
+        });
         for (final part in message.parts) {
           expect(part.encodePayload().contains('[file:'), isFalse);
           expect(part.encodePayload().contains('[image:'), isFalse);
@@ -1098,232 +1077,219 @@ void main() {
       },
     );
 
-
-    test(
-      'missing archive file yields unavailable part',
-      () async {
-        final backup = await _createZip(tempDir, <String, List<int>>{
-          'data.json': utf8.encode(
-            jsonEncode(
-              _legacyBackupWithAttachments(
-                files: <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'id': 'file-missing',
-                    'name': 'ghost.png',
-                    // No path/origin_name/url → stable cherry-missing placeholder.
-                    'type': 'image/png',
-                  },
-                  <String, dynamic>{
-                    'id': 'file-missing-path',
-                    'name': 'gone.bin',
-                    'origin_name': 'gone.bin',
-                    'path': 'Data/Files/gone.bin',
-                    'type': 'application/octet-stream',
-                  },
-                ],
-              ),
+    test('missing archive file yields unavailable part', () async {
+      final backup = await _createZip(tempDir, <String, List<int>>{
+        'data.json': utf8.encode(
+          jsonEncode(
+            _legacyBackupWithAttachments(
+              files: <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'file-missing',
+                  'name': 'ghost.png',
+                  // No path/origin_name/url → stable cherry-missing placeholder.
+                  'type': 'image/png',
+                },
+                <String, dynamic>{
+                  'id': 'file-missing-path',
+                  'name': 'gone.bin',
+                  'origin_name': 'gone.bin',
+                  'path': 'Data/Files/gone.bin',
+                  'type': 'application/octet-stream',
+                },
+              ],
             ),
           ),
-          // Intentionally no Data/Files entries for either id.
-        });
+        ),
+        // Intentionally no Data/Files entries for either id.
+      });
 
-        await CherryImporter.importFromCherryStudio(
-          file: backup,
-          mode: RestoreMode.overwrite,
-          businessRepository: businessRepository,
-          chatService: chatService,
-        );
+      await CherryImporter.importFromCherryStudio(
+        file: backup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
 
-        final imported = await chatService.loadMessages('topic-files');
-        expect(imported, hasLength(1));
-        final parts = imported.single.parts;
-        final image = parts.whereType<ImagePart>().single;
-        expect(image.unavailable, isTrue);
-        expect(image.uri, 'cherry-missing:file-missing');
-        final file = parts.whereType<FilePart>().single;
-        expect(file.unavailable, isTrue);
-        expect(file.uri, 'Data/Files/gone.bin');
-        expect(file.name, 'gone.bin');
-      },
-    );
+      final imported = await chatService.loadMessages('topic-files');
+      expect(imported, hasLength(1));
+      final parts = imported.single.parts;
+      final image = parts.whereType<ImagePart>().single;
+      expect(image.unavailable, isTrue);
+      expect(image.uri, 'cherry-missing:file-missing');
+      final file = parts.whereType<FilePart>().single;
+      expect(file.unavailable, isTrue);
+      expect(file.uri, 'Data/Files/gone.bin');
+      expect(file.name, 'gone.bin');
+    });
 
-    test(
-      'missing message_block fileId yields unavailable part',
-      () async {
-        final backup = await _createZip(tempDir, <String, List<int>>{
-          'data.json': utf8.encode(
-            jsonEncode(<String, dynamic>{
-              'version': 5,
-              'localStorage': <String, dynamic>{
-                'persist:cherry-studio': _persistStateJson(),
-              },
-              'indexedDB': <String, dynamic>{
-                'topics': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'id': 'topic-blocks',
-                    'messages': <Map<String, dynamic>>[
-                      <String, dynamic>{
-                        'id': 'msg-blocks',
-                        'role': 'user',
-                        'topicId': 'topic-blocks',
-                        'assistantId': 'assistant-1',
-                        'createdAt': '2026-01-01T00:00:00.000Z',
-                        'status': 'success',
-                        'content': 'with-block-attachment',
-                        'blocks': <String>['block-img', 'block-file'],
-                        'files': <dynamic>[],
-                      },
-                    ],
-                  },
-                ],
-                'message_blocks': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'id': 'block-img',
-                    'messageId': 'msg-blocks',
-                    'type': 'image',
-                    'createdAt': '2026-01-01T00:00:01.000Z',
-                    'status': 'success',
-                    'file': <String, dynamic>{
-                      'id': 'block-file-missing',
-                      'name': 'shot.png',
-                      'origin_name': 'shot.png',
-                      'type': 'image/png',
+    test('missing message_block fileId yields unavailable part', () async {
+      final backup = await _createZip(tempDir, <String, List<int>>{
+        'data.json': utf8.encode(
+          jsonEncode(<String, dynamic>{
+            'version': 5,
+            'localStorage': <String, dynamic>{
+              'persist:cherry-studio': _persistStateJson(),
+            },
+            'indexedDB': <String, dynamic>{
+              'topics': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'topic-blocks',
+                  'messages': <Map<String, dynamic>>[
+                    <String, dynamic>{
+                      'id': 'msg-blocks',
+                      'role': 'user',
+                      'topicId': 'topic-blocks',
+                      'assistantId': 'assistant-1',
+                      'createdAt': '2026-01-01T00:00:00.000Z',
+                      'status': 'success',
+                      'content': 'with-block-attachment',
+                      'blocks': <String>['block-img', 'block-file'],
+                      'files': <dynamic>[],
                     },
-                  },
-                  <String, dynamic>{
-                    'id': 'block-file',
-                    'messageId': 'msg-blocks',
-                    'type': 'file',
-                    'createdAt': '2026-01-01T00:00:02.000Z',
-                    'status': 'success',
-                    'file': <String, dynamic>{
-                      'id': 'block-doc-missing',
-                      'name': 'notes.bin',
-                      'origin_name': 'notes.bin',
-                      'path': 'Data/Files/notes.bin',
-                      'type': 'application/octet-stream',
-                    },
-                  },
-                ],
-                'files': <Map<String, dynamic>>[
-                  <String, dynamic>{
+                  ],
+                },
+              ],
+              'message_blocks': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'block-img',
+                  'messageId': 'msg-blocks',
+                  'type': 'image',
+                  'createdAt': '2026-01-01T00:00:01.000Z',
+                  'status': 'success',
+                  'file': <String, dynamic>{
                     'id': 'block-file-missing',
                     'name': 'shot.png',
                     'origin_name': 'shot.png',
                     'type': 'image/png',
                   },
-                  <String, dynamic>{
+                },
+                <String, dynamic>{
+                  'id': 'block-file',
+                  'messageId': 'msg-blocks',
+                  'type': 'file',
+                  'createdAt': '2026-01-01T00:00:02.000Z',
+                  'status': 'success',
+                  'file': <String, dynamic>{
                     'id': 'block-doc-missing',
                     'name': 'notes.bin',
                     'origin_name': 'notes.bin',
                     'path': 'Data/Files/notes.bin',
                     'type': 'application/octet-stream',
                   },
-                ],
-              },
-            }),
-          ),
-          // Intentionally omit Data/Files entries.
-        });
+                },
+              ],
+              'files': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'block-file-missing',
+                  'name': 'shot.png',
+                  'origin_name': 'shot.png',
+                  'type': 'image/png',
+                },
+                <String, dynamic>{
+                  'id': 'block-doc-missing',
+                  'name': 'notes.bin',
+                  'origin_name': 'notes.bin',
+                  'path': 'Data/Files/notes.bin',
+                  'type': 'application/octet-stream',
+                },
+              ],
+            },
+          }),
+        ),
+        // Intentionally omit Data/Files entries.
+      });
 
-        await CherryImporter.importFromCherryStudio(
-          file: backup,
-          mode: RestoreMode.overwrite,
-          businessRepository: businessRepository,
-          chatService: chatService,
-        );
+      await CherryImporter.importFromCherryStudio(
+        file: backup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
 
-        final imported = await chatService.loadMessages('topic-blocks');
-        expect(imported, hasLength(1));
-        final parts = imported.single.parts;
-        final image = parts.whereType<ImagePart>().single;
-        expect(image.unavailable, isTrue);
-        expect(image.uri, 'cherry-missing:block-file-missing');
-        final file = parts.whereType<FilePart>().single;
-        expect(file.unavailable, isTrue);
-        expect(file.uri, 'Data/Files/notes.bin');
-        expect(file.name, 'notes.bin');
-      },
-    );
+      final imported = await chatService.loadMessages('topic-blocks');
+      expect(imported, hasLength(1));
+      final parts = imported.single.parts;
+      final image = parts.whereType<ImagePart>().single;
+      expect(image.unavailable, isTrue);
+      expect(image.uri, 'cherry-missing:block-file-missing');
+      final file = parts.whereType<FilePart>().single;
+      expect(file.unavailable, isTrue);
+      expect(file.uri, 'Data/Files/notes.bin');
+      expect(file.name, 'notes.bin');
+    });
 
-    test(
-      'extensionless image URL with image MIME becomes ImagePart',
-      () async {
-        final backup = await _createZip(tempDir, <String, List<int>>{
-          'data.json': utf8.encode(
-            jsonEncode(
-              _legacyBackupWithAttachments(
-                files: <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'id': 'file-presigned',
-                    'name': 'photo',
-                    'origin_name': 'photo',
-                    'type': 'image/png',
-                    'url': 'https://cdn.example.com/download?id=1',
-                  },
-                ],
-              ),
-            ),
-          ),
-        });
-
-        await CherryImporter.importFromCherryStudio(
-          file: backup,
-          mode: RestoreMode.overwrite,
-          businessRepository: businessRepository,
-          chatService: chatService,
-        );
-
-        final imported = await chatService.loadMessages('topic-files');
-        expect(imported, hasLength(1));
-        final image = imported.single.parts.whereType<ImagePart>().single;
-        expect(image.unavailable, isFalse);
-        expect(image.uri, 'https://cdn.example.com/download?id=1');
-        expect(image.mime, 'image/png');
-      },
-    );
-
-    test(
-      'non-ZIP backup falls back to sibling Data/Files directory',
-      () async {
-        final filesDir = Directory('${tempDir.path}/Data/Files')
-          ..createSync(recursive: true);
-        final diskBytes = utf8.encode('from-sibling-disk');
-        await File('${filesDir.path}/disk-only.txt').writeAsBytes(diskBytes);
-
-        final bak = File('${tempDir.path}/cherry_disk.bak');
-        await bak.writeAsString(
+    test('extensionless image URL with image MIME becomes ImagePart', () async {
+      final backup = await _createZip(tempDir, <String, List<int>>{
+        'data.json': utf8.encode(
           jsonEncode(
             _legacyBackupWithAttachments(
               files: <Map<String, dynamic>>[
                 <String, dynamic>{
-                  'id': 'file-disk',
-                  'name': 'disk-only.txt',
-                  'origin_name': 'disk-only.txt',
-                  'path': 'Data/Files/disk-only.txt',
-                  'type': 'text/plain',
+                  'id': 'file-presigned',
+                  'name': 'photo',
+                  'origin_name': 'photo',
+                  'type': 'image/png',
+                  'url': 'https://cdn.example.com/download?id=1',
                 },
               ],
             ),
           ),
-        );
+        ),
+      });
 
-        final result = await CherryImporter.importFromCherryStudio(
-          file: bak,
-          mode: RestoreMode.overwrite,
-          businessRepository: businessRepository,
-          chatService: chatService,
-        );
-        expect(result.files, greaterThanOrEqualTo(1));
-        final upload = await AppDirectories.getUploadDirectory();
-        expect(
-          await File(
-            '${upload.path}/cherry_file-disk_disk-only.txt',
-          ).readAsBytes(),
-          diskBytes,
-        );
-      },
-    );
+      await CherryImporter.importFromCherryStudio(
+        file: backup,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+
+      final imported = await chatService.loadMessages('topic-files');
+      expect(imported, hasLength(1));
+      final image = imported.single.parts.whereType<ImagePart>().single;
+      expect(image.unavailable, isFalse);
+      expect(image.uri, 'https://cdn.example.com/download?id=1');
+      expect(image.mime, 'image/png');
+    });
+
+    test('non-ZIP backup falls back to sibling Data/Files directory', () async {
+      final filesDir = Directory('${tempDir.path}/Data/Files')
+        ..createSync(recursive: true);
+      final diskBytes = utf8.encode('from-sibling-disk');
+      await File('${filesDir.path}/disk-only.txt').writeAsBytes(diskBytes);
+
+      final bak = File('${tempDir.path}/cherry_disk.bak');
+      await bak.writeAsString(
+        jsonEncode(
+          _legacyBackupWithAttachments(
+            files: <Map<String, dynamic>>[
+              <String, dynamic>{
+                'id': 'file-disk',
+                'name': 'disk-only.txt',
+                'origin_name': 'disk-only.txt',
+                'path': 'Data/Files/disk-only.txt',
+                'type': 'text/plain',
+              },
+            ],
+          ),
+        ),
+      );
+
+      final result = await CherryImporter.importFromCherryStudio(
+        file: bak,
+        mode: RestoreMode.overwrite,
+        businessRepository: businessRepository,
+        chatService: chatService,
+      );
+      expect(result.files, greaterThanOrEqualTo(1));
+      final upload = await AppDirectories.getUploadDirectory();
+      expect(
+        await File(
+          '${upload.path}/cherry_file-disk_disk-only.txt',
+        ).readAsBytes(),
+        diskBytes,
+      );
+    });
 
     test(
       'already-written attachment path is reused without rewriting',

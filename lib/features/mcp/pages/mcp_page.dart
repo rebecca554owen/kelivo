@@ -104,8 +104,7 @@ class McpPage extends StatelessWidget {
                           ),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(44),
-                            backgroundColor:
-                                context.appColors.surfaceFill,
+                            backgroundColor: context.appColors.surfaceFill,
                             side: BorderSide(
                               color: cs.outlineVariant.withValues(alpha: 0.35),
                             ),
@@ -261,9 +260,7 @@ class McpPage extends StatelessWidget {
                       base: base,
                       builder: (c) {
                         final overlay = pressed
-                            ? cs.surface.withValues(
-                                alpha: isDark ? 0.06 : 0.05,
-                              )
+                            ? cs.surface.withValues(alpha: isDark ? 0.06 : 0.05)
                             : Colors.transparent;
                         return Container(
                           decoration: BoxDecoration(
@@ -408,7 +405,9 @@ class McpPage extends StatelessWidget {
                                             Icon(
                                               Lucide.MessageCircleWarning,
                                               size: 14,
-                                              color: Theme.of(context).colorScheme.error,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
                                             ),
                                             const SizedBox(width: 6),
                                             Expanded(
@@ -416,7 +415,9 @@ class McpPage extends StatelessWidget {
                                                 l10n.mcpPageConnectionFailed,
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: Theme.of(context).colorScheme.error,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.error,
                                                 ),
                                               ),
                                             ),
@@ -447,7 +448,8 @@ class McpPage extends StatelessWidget {
                                                 l10n.mcpPageOAuthRequired,
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: context.appColors.warning,
+                                                  color:
+                                                      context.appColors.warning,
                                                 ),
                                               ),
                                             ),

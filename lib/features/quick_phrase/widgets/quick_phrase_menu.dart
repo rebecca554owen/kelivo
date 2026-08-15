@@ -62,10 +62,9 @@ class QuickPhraseMenu extends StatelessWidget {
                   width: menuWidth,
                   constraints: BoxConstraints(maxHeight: maxMenuHeight),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHigh
-                        .withValues(alpha: 0.66),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.66),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isDark

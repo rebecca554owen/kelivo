@@ -80,8 +80,7 @@ class _QuickPhraseTab extends StatelessWidget {
                           decoration: InputDecoration(
                             labelText: l10n.quickPhraseTitleLabel,
                             filled: true,
-                            fillColor:
-                                ctx.appColors.surfaceFill,
+                            fillColor: ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
@@ -105,8 +104,7 @@ class _QuickPhraseTab extends StatelessWidget {
                             labelText: l10n.quickPhraseContentLabel,
                             alignLabelWithHint: true,
                             filled: true,
-                            fillColor:
-                                ctx.appColors.surfaceFill,
+                            fillColor: ctx.appColors.surfaceFill,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
@@ -358,7 +356,9 @@ class _QuickPhraseTab extends StatelessWidget {
                       pressedScale: 0.98,
                       builder: (pressed) {
                         final bg = context.appColors.surfaceCard;
-                        final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
+                        final overlay = cs.onSurface.withValues(
+                          alpha: isDark ? 0.06 : 0.05,
+                        );
                         final pressedBg = Color.alphaBlend(overlay, bg);
                         return Container(
                           decoration: BoxDecoration(

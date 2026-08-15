@@ -849,9 +849,7 @@ Future<T?> showMemoryOptionPicker<T>(
                   ),
                 ),
                 const SizedBox(height: 12),
-                Flexible(
-                  child: SingleChildScrollView(child: optionsCard(ctx)),
-                ),
+                Flexible(child: SingleChildScrollView(child: optionsCard(ctx))),
               ],
             ),
           ),
@@ -1097,10 +1095,7 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
     navigator.maybePop();
   }
 
-  List<Widget> _formFields(
-    AppLocalizations l10n,
-    List<Assistant> assistants,
-  ) {
+  List<Widget> _formFields(AppLocalizations l10n, List<Assistant> assistants) {
     return [
       MemorySectionCard(
         children: [
@@ -1152,8 +1147,7 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
             ),
           ],
         ),
-        if (widget.allowAssistantPicker &&
-            _scope == MemoryScope.assistant) ...[
+        if (widget.allowAssistantPicker && _scope == MemoryScope.assistant) ...[
           const SizedBox(height: 16),
           MemorySectionLabel(text: l10n.memoryUiAssistantLabel),
           Wrap(

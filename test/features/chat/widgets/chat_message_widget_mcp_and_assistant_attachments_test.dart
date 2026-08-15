@@ -25,7 +25,8 @@ Widget _harness(Widget child) {
             UserProvider(preferences: createBusinessTestPreferences()),
       ),
       ChangeNotifierProvider(
-        create: (_) => TtsProvider(preferences: createBusinessTestPreferences()),
+        create: (_) =>
+            TtsProvider(preferences: createBusinessTestPreferences()),
       ),
       ChangeNotifierProvider(create: (_) => ToolApprovalService()),
       ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
@@ -52,10 +53,7 @@ more text
 ![shot](https://example.com/a.png)
 ''';
       final (clean, images) = parseMcpImagePathsForTesting(content);
-      expect(images, [
-        '/tmp/mcp_img_1.png',
-        'https://example.com/a.png',
-      ]);
+      expect(images, ['/tmp/mcp_img_1.png', 'https://example.com/a.png']);
       expect(clean.contains('!['), isFalse);
       expect(clean.contains('result ok'), isTrue);
       expect(clean.contains('more text'), isTrue);

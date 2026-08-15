@@ -19,7 +19,8 @@ Widget _harness(Widget child) {
         create: (_) => SettingsProvider(createBusinessTestPreferences()),
       ),
       ChangeNotifierProvider(
-        create: (_) => UserProvider(preferences: createBusinessTestPreferences()),
+        create: (_) =>
+            UserProvider(preferences: createBusinessTestPreferences()),
       ),
     ],
     child: MaterialApp(
@@ -133,7 +134,10 @@ void main() {
       find.byKey(ValueKey('user-message-text-bubble:$messageId')),
       findsOneWidget,
     );
-    expect(find.textContaining('[image:missing-user-image.png]'), findsOneWidget);
+    expect(
+      find.textContaining('[image:missing-user-image.png]'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('[file:/tmp/spec.pdf|spec.pdf|application/pdf]'),
       findsOneWidget,
@@ -253,8 +257,14 @@ void main() {
     );
     expect(fileFinder, findsOneWidget);
     expect(imageFinder, findsOneWidget);
-    expect(tester.getRect(fileFinder).left, lessThan(tester.getRect(imageFinder).left));
-    expect(find.descendant(of: fileFinder, matching: find.text('first.pdf')), findsOneWidget);
+    expect(
+      tester.getRect(fileFinder).left,
+      lessThan(tester.getRect(imageFinder).left),
+    );
+    expect(
+      find.descendant(of: fileFinder, matching: find.text('first.pdf')),
+      findsOneWidget,
+    );
 
     final image = tester.widget<Image>(
       find.descendant(of: imageFinder, matching: find.byType(Image)),
@@ -336,7 +346,9 @@ void main() {
     expect(find.textContaining('文件不存在'), findsNothing);
   });
 
-  testWidgets('tapping data: FilePart shows unsupported snackbar', (tester) async {
+  testWidgets('tapping data: FilePart shows unsupported snackbar', (
+    tester,
+  ) async {
     const messageId = 'user-data-file';
     await tester.pumpWidget(
       _harness(
@@ -375,5 +387,4 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
   });
-
 }

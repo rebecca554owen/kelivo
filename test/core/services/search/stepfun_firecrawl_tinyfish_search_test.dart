@@ -40,77 +40,89 @@ void main() {
       expect(captured?.headers['Authorization'], 'Bearer k');
       expect(jsonDecode(captured!.body)['query'], 'kelivo');
       expect(result.items.single.title, 'Step');
-      expect(SearchService.getService(StepFunOptions(id: 'x', apiKey: '')),
-          isA<StepFunSearchService>());
+      expect(
+        SearchService.getService(StepFunOptions(id: 'x', apiKey: '')),
+        isA<StepFunSearchService>(),
+      );
     });
 
-    test('Firecrawl sends bearer key when present and parses v2 web results',
-        () async {
-      http.Request? captured;
-      final service = FirecrawlSearchService(
-        client: MockClient((request) async {
-          captured = request;
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'web': [
-                  {
-                    'title': 'Fire',
-                    'url': 'https://example.com/a',
-                    'description': 'desc',
-                  },
-                ],
-              },
-            }),
-            200,
-          );
-        }),
-      );
+    test(
+      'Firecrawl sends bearer key when present and parses v2 web results',
+      () async {
+        http.Request? captured;
+        final service = FirecrawlSearchService(
+          client: MockClient((request) async {
+            captured = request;
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'web': [
+                    {
+                      'title': 'Fire',
+                      'url': 'https://example.com/a',
+                      'description': 'desc',
+                    },
+                  ],
+                },
+              }),
+              200,
+            );
+          }),
+        );
 
-      final result = await service.search(
-        query: 'docs',
-        commonOptions: const SearchCommonOptions(resultSize: 3, timeout: 1000),
-        serviceOptions: FirecrawlOptions(id: 'f1', apiKey: 'fc-key'),
-      );
+        final result = await service.search(
+          query: 'docs',
+          commonOptions: const SearchCommonOptions(
+            resultSize: 3,
+            timeout: 1000,
+          ),
+          serviceOptions: FirecrawlOptions(id: 'f1', apiKey: 'fc-key'),
+        );
 
-      expect(captured?.url.toString(), FirecrawlOptions.defaultUrl);
-      expect(captured?.headers['Authorization'], 'Bearer fc-key');
-      expect(result.items.single.url, 'https://example.com/a');
-    });
+        expect(captured?.url.toString(), FirecrawlOptions.defaultUrl);
+        expect(captured?.headers['Authorization'], 'Bearer fc-key');
+        expect(result.items.single.url, 'https://example.com/a');
+      },
+    );
 
-    test('Firecrawl omits Authorization when no API key is configured',
-        () async {
-      http.Request? captured;
-      final service = FirecrawlSearchService(
-        client: MockClient((request) async {
-          captured = request;
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'web': [
-                  {
-                    'title': 'Fire',
-                    'url': 'https://example.com/a',
-                    'description': 'desc',
-                  },
-                ],
-              },
-            }),
-            200,
-          );
-        }),
-      );
+    test(
+      'Firecrawl omits Authorization when no API key is configured',
+      () async {
+        http.Request? captured;
+        final service = FirecrawlSearchService(
+          client: MockClient((request) async {
+            captured = request;
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'web': [
+                    {
+                      'title': 'Fire',
+                      'url': 'https://example.com/a',
+                      'description': 'desc',
+                    },
+                  ],
+                },
+              }),
+              200,
+            );
+          }),
+        );
 
-      final result = await service.search(
-        query: 'docs',
-        commonOptions: const SearchCommonOptions(resultSize: 3, timeout: 1000),
-        serviceOptions: FirecrawlOptions(id: 'f1', apiKey: ''),
-      );
+        final result = await service.search(
+          query: 'docs',
+          commonOptions: const SearchCommonOptions(
+            resultSize: 3,
+            timeout: 1000,
+          ),
+          serviceOptions: FirecrawlOptions(id: 'f1', apiKey: ''),
+        );
 
-      expect(captured?.url.toString(), FirecrawlOptions.defaultUrl);
-      expect(captured?.headers.containsKey('Authorization'), isFalse);
-      expect(result.items.single.url, 'https://example.com/a');
-    });
+        expect(captured?.url.toString(), FirecrawlOptions.defaultUrl);
+        expect(captured?.headers.containsKey('Authorization'), isFalse);
+        expect(result.items.single.url, 'https://example.com/a');
+      },
+    );
 
     test('Firecrawl serializes sources/categories and posts them', () async {
       http.Request? captured;
@@ -185,42 +197,48 @@ void main() {
       expect(body['country'], 'CA');
     });
 
-    test('TinyFish uses X-API-Key and location/language query params', () async {
-      http.Request? captured;
-      final service = TinyFishSearchService(
-        client: MockClient((request) async {
-          captured = request;
-          return http.Response(
-            jsonEncode({
-              'results': [
-                {
-                  'title': 'Tiny',
-                  'url': 'https://example.com/t',
-                  'snippet': 'fish',
-                },
-              ],
-            }),
-            200,
-          );
-        }),
-      );
+    test(
+      'TinyFish uses X-API-Key and location/language query params',
+      () async {
+        http.Request? captured;
+        final service = TinyFishSearchService(
+          client: MockClient((request) async {
+            captured = request;
+            return http.Response(
+              jsonEncode({
+                'results': [
+                  {
+                    'title': 'Tiny',
+                    'url': 'https://example.com/t',
+                    'snippet': 'fish',
+                  },
+                ],
+              }),
+              200,
+            );
+          }),
+        );
 
-      final result = await service.search(
-        query: 'automation',
-        commonOptions: const SearchCommonOptions(resultSize: 2, timeout: 1000),
-        serviceOptions: TinyFishOptions(
-          id: 't1',
-          apiKey: 'tf-key',
-          location: 'US',
-          language: 'en',
-        ),
-      );
+        final result = await service.search(
+          query: 'automation',
+          commonOptions: const SearchCommonOptions(
+            resultSize: 2,
+            timeout: 1000,
+          ),
+          serviceOptions: TinyFishOptions(
+            id: 't1',
+            apiKey: 'tf-key',
+            location: 'US',
+            language: 'en',
+          ),
+        );
 
-      expect(captured?.headers['X-API-Key'], 'tf-key');
-      expect(captured?.url.queryParameters['query'], 'automation');
-      expect(captured?.url.queryParameters['location'], 'US');
-      expect(captured?.url.queryParameters['language'], 'en');
-      expect(result.items.single.title, 'Tiny');
-    });
+        expect(captured?.headers['X-API-Key'], 'tf-key');
+        expect(captured?.url.queryParameters['query'], 'automation');
+        expect(captured?.url.queryParameters['location'], 'US');
+        expect(captured?.url.queryParameters['language'], 'en');
+        expect(result.items.single.title, 'Tiny');
+      },
+    );
   });
 }

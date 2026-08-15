@@ -268,12 +268,7 @@ void main() {
         versionSelectionChanges: const {},
       );
 
-      expect(await visibleIds(), [
-        'user-0',
-        editedId,
-        'user-1',
-        'assistant-1',
-      ]);
+      expect(await visibleIds(), ['user-0', editedId, 'user-1', 'assistant-1']);
       expect(await repository.getMessageIndex(conversation.id, editedId), 1);
       expect(await repository.getMessageIds(conversation.id), [
         'user-0',
