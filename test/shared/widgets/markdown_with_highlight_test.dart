@@ -989,7 +989,11 @@ Inline ***strong emphasis*** text.
       await tester.pump(const Duration(milliseconds: 50));
       text.value = '$baseLines\nframe-3';
       await tester.pump(const Duration(milliseconds: 50));
-      await tester.pump(const Duration(milliseconds: 40));
+      // The throttle publishes the text the last build saw, so the newest value
+      // lands one window later. Give it that window rather than pinning the
+      // test to the exact interval.
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.pump(const Duration(milliseconds: 60));
 
       expect(find.textContaining('frame-3'), findsOneWidget);
     },

@@ -101,8 +101,12 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
 
 class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
   static const int _streamingDebounceThresholdChars = 8000;
+  // Matches the stream controller's publish interval. A longer window would
+  // batch several publishes into one render, and since the timeline is pinned
+  // to the tail while generating, each batch lands as a single upward step
+  // instead of the steady crawl the character smoothing is there to produce.
   static const Duration _streamingLongRenderDebounce = Duration(
-    milliseconds: 120,
+    milliseconds: 50,
   );
 
   late String _renderText;
@@ -592,13 +596,25 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     final markdownWidget = useIncrementalBlocks
         ? _MarkdownBlockColumn(
             children: [
-              for (final block in sourceBlocks)
+              for (var i = 0; i < sourceBlocks.length; i++) ...[
+                // Rendering the document as one string keeps the blank line
+                // between two blocks as a real line box. Rendering block by
+                // block drops it, so a long reply is laid out tighter while it
+                // streams and then grows by one line per block the moment it
+                // finishes and switches to the whole-document render. Put the
+                // separator back so both paths agree. A list block already ends
+                // with its own break, so it takes no separator after it.
+                if (i > 0 && !sourceBlocks[i - 1].isList)
+                  _MarkdownBlockSeparator(style: baseTextStyle),
                 _CachedMarkdownBlock(
-                  key: ValueKey('markdown-source-block-${block.start}'),
-                  content: normalize(block.text),
+                  key: ValueKey(
+                    'markdown-source-block-${sourceBlocks[i].start}',
+                  ),
+                  content: normalize(sourceBlocks[i].text),
                   signature: themeSignature,
                   builder: buildMarkdown,
                 ),
+              ],
             ],
           )
         : _CachedMarkdownBlock(
@@ -684,6 +700,37 @@ class _CachedMarkdownBlockState extends State<_CachedMarkdownBlock> {
     return _rendered ??= widget.builder(
       widget.content,
       ValueKey('parsed-markdown-${widget.signature}'),
+    );
+  }
+}
+
+/// The blank line a whole-document render keeps between two blocks.
+///
+/// `gpt_markdown` renders a run of blank lines through its `NewLines` inline
+/// component, which is a span of the base font size at a fixed line height of
+/// [_newLinesHeight]. This mirrors that exactly, so a block-by-block render
+/// comes out the same height as a whole-document render of the same text.
+class _MarkdownBlockSeparator extends StatelessWidget {
+  const _MarkdownBlockSeparator({required this.style});
+
+  /// The `height` hardcoded by `NewLines` in `gpt_markdown`.
+  static const double _newLinesHeight = 1.15;
+
+  /// The `fontSize` `NewLines` falls back to when the config carries no style.
+  static const double _fallbackFontSize = 14;
+
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    // RichText, not Text, so the ambient DefaultTextStyle cannot merge its own
+    // line height back in: the separator has to be exactly one `NewLines` line
+    // box. An empty span lays out at `fontSize * height`, which is that box.
+    // The text engine rounds a line box up to a whole pixel, so the spacer has
+    // to round the same way or the two paths drift by a fraction per boundary.
+    return SizedBox(
+      height: ((style?.fontSize ?? _fallbackFontSize) * _newLinesHeight)
+          .ceilToDouble(),
     );
   }
 }

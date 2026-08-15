@@ -24,6 +24,13 @@ class ChatAutoFollowScrollController extends ScrollController {
   /// while the new list is being laid out, so an old conversation offset is
   /// never painted for the new conversation.
   bool _positionAtBottomDuringLayout = false;
+
+  /// Whether the active bottom request must stand down while the user drags.
+  ///
+  /// A single-frame request (opening a conversation) owns the frame outright.
+  /// A request held across several frames has to yield to a real gesture, or
+  /// it would fight the drag for as long as it is held.
+  bool _bottomRequestYieldsToUserScroll = false;
   int _layoutBottomRequest = 0;
   bool _preserveDistanceFromEndDuringLayout = false;
   double _preservedDistanceFromEnd = 0;
@@ -36,8 +43,9 @@ class ChatAutoFollowScrollController extends ScrollController {
   bool get hasActiveLayoutPositioningRequest =>
       _positionAtBottomDuringLayout || _preserveDistanceFromEndDuringLayout;
 
-  int requestPositionAtBottomDuringLayout() {
+  int requestPositionAtBottomDuringLayout({bool yieldsToUserScroll = false}) {
     _positionAtBottomDuringLayout = true;
+    _bottomRequestYieldsToUserScroll = yieldsToUserScroll;
     return ++_layoutBottomRequest;
   }
 
@@ -116,8 +124,12 @@ class _AutoFollowScrollPosition extends ScrollPositionWithSingleContext {
     // controller listener that sets _isUserScrolling.  Without this check,
     // correctPixels would override the user's drag for one frame, causing a
     // "stuck / can't scroll up" feeling.
+    final bottomRequestActive =
+        controller._positionAtBottomDuringLayout &&
+        (!controller._bottomRequestYieldsToUserScroll ||
+            userScrollDirection == ScrollDirection.idle);
     final shouldPositionAtBottom =
-        controller._positionAtBottomDuringLayout ||
+        bottomRequestActive ||
         (controller.shouldAutoFollow() &&
             userScrollDirection == ScrollDirection.idle);
     if (shouldPositionAtBottom) {
@@ -247,6 +259,10 @@ class ChatScrollController {
 
   /// Timer for detecting end of user scroll.
   Timer? _userScrollTimer;
+
+  /// Live held bottom pin (see [stickToBottomAfterGeneration]).
+  Timer? _bottomHoldTimer;
+  int? _bottomHoldRequest;
 
   /// Request currently queued for the next-frame bottom scroll.
   int? _scheduledBottomScrollRequest;
@@ -507,9 +523,45 @@ class ChatScrollController {
   void stickToBottomAfterGeneration() {
     if (!_getAutoScrollEnabled()) return;
     if (!_autoStickToBottom || _isUserScrolling) return;
-    // Animate: the user is watching this spot, so an instant jump reads as a
-    // flash while a short eased scroll reads as the reply settling in.
-    scrollToBottomSoon(animate: true);
+    // The tail keeps changing height for a few frames after the reply ends:
+    // the terminal widget adds its action bar and token stats, a finished
+    // thinking card collapses, the sanitized content is republished. Each of
+    // those lands after layout-phase follow has been switched off, so catching
+    // up afterwards — instantly or animated — is visible as the timeline
+    // jumping and then sliding. Holding the layout pin across that window
+    // absorbs the height changes before they are ever painted.
+    _holdBottomDuringLayout(_postGenerationPinWindow);
+  }
+
+  /// How long the bottom pin is held after generation ends.
+  static const Duration _postGenerationPinWindow = Duration(milliseconds: 450);
+
+  /// Pin to the tail during layout for [duration], yielding to real gestures.
+  void _holdBottomDuringLayout(Duration duration) {
+    final controller = _scrollController;
+    if (controller is! ChatAutoFollowScrollController) {
+      _scheduleExplicitScrollToBottom(animate: false);
+      return;
+    }
+    _cancelProgrammaticNavigation();
+    final request = controller.requestPositionAtBottomDuringLayout(
+      yieldsToUserScroll: true,
+    );
+    _bottomHoldRequest = request;
+    _bottomHoldTimer = Timer(duration, _releaseBottomHold);
+  }
+
+  /// Ends an active held pin, if any.
+  void _releaseBottomHold() {
+    _bottomHoldTimer?.cancel();
+    _bottomHoldTimer = null;
+    final request = _bottomHoldRequest;
+    if (request == null) return;
+    _bottomHoldRequest = null;
+    final controller = _scrollController;
+    if (controller is ChatAutoFollowScrollController) {
+      controller.finishPositionAtBottomDuringLayout(request);
+    }
   }
 
   /// Ensure scroll reaches bottom even after widget tree transitions.
@@ -1063,6 +1115,7 @@ class ChatScrollController {
   }
 
   void _cancelProgrammaticNavigation({bool stopDrivenScroll = false}) {
+    _releaseBottomHold();
     _bottomScrollRequest++;
     _deferredBottomRequest++;
     _scheduledBottomScrollRequest = null;
@@ -1105,6 +1158,7 @@ class ChatScrollController {
     _scrollController.removeListener(_onScrollControllerChanged);
     _userScrollTimer?.cancel();
     _navButtonsHideTimer?.cancel();
+    _bottomHoldTimer?.cancel();
     _cancelIndexedNavigation();
     _messageListController.dispose();
   }

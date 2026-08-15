@@ -1,9 +1,17 @@
 /// A stable source block in an append-only streaming Markdown document.
 final class IncrementalMarkdownBlock {
-  const IncrementalMarkdownBlock({required this.start, required this.text});
+  const IncrementalMarkdownBlock({
+    required this.start,
+    required this.text,
+    this.isList = false,
+  });
 
   final int start;
   final String text;
+
+  /// Whether this block is a list. A whole-document render already ends a list
+  /// with its own line break, so the caller must not add a separator after it.
+  final bool isList;
 }
 
 /// Splits streaming Markdown at safe blank-line boundaries and only rescans
@@ -99,6 +107,7 @@ final class IncrementalMarkdownDocument {
       IncrementalMarkdownBlock(
         start: _blockStart,
         text: _source.substring(_blockStart, end),
+        isList: _currentBlockIsList(),
       ),
     );
     _blockStart = end;
