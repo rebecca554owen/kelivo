@@ -671,6 +671,7 @@ class SettingsProvider extends ChangeNotifier {
   int get appLaunchCount => _appLaunchCount;
 
   SettingsProvider(this._preferences) {
+    _appLocaleTag = _readAppLocaleTag(_preferences);
     _loaded = _load();
   }
 
@@ -1181,9 +1182,9 @@ class SettingsProvider extends ChangeNotifier {
     _desktopRightSidebarWidth =
         prefs.getDouble(_desktopRightSidebarWidthKey) ?? 300;
     // Load app locale; default to follow system on first launch
-    _appLocaleTag = prefs.getString(_appLocaleKey);
-    if (_appLocaleTag == null || _appLocaleTag!.isEmpty) {
-      _appLocaleTag = 'system';
+    final storedAppLocale = prefs.get(_appLocaleKey);
+    _appLocaleTag = _readAppLocaleTag(prefs);
+    if (storedAppLocale != _appLocaleTag) {
       await prefs.setString(_appLocaleKey, 'system');
     }
 
@@ -1998,6 +1999,12 @@ class SettingsProvider extends ChangeNotifier {
 
   // ===== App locale (UI language) =====
   String? _appLocaleTag; // 'system', 'zh_CN', 'zh_Hant', 'en_US'
+  static String _readAppLocaleTag(BusinessPreferences preferences) {
+    final value = preferences.get(_appLocaleKey);
+    const supportedTags = {'system', 'zh_CN', 'zh_Hant', 'en_US'};
+    return value is String && supportedTags.contains(value) ? value : 'system';
+  }
+
   Locale get appLocale => _parseLocaleTag(_appLocaleTag ?? 'en_US');
   bool get isFollowingSystemLocale =>
       (_appLocaleTag == null) || (_appLocaleTag == 'system');
