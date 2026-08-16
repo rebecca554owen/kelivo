@@ -1128,10 +1128,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          RichText(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            text: TextSpan(
+                          Text.rich(
+                            TextSpan(
                               children: _highlightText(
                                 result.conversationTitle,
                                 tokens,
@@ -1139,13 +1137,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 titleHighlight,
                               ),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (result.snippet.isNotEmpty) ...[
                             const SizedBox(height: 2),
-                            RichText(
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              text: TextSpan(
+                            Text.rich(
+                              TextSpan(
                                 children: _highlightText(
                                   result.snippet,
                                   tokens,
@@ -1153,6 +1151,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                   snippetHighlight,
                                 ),
                               ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ],
