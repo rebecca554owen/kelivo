@@ -452,7 +452,10 @@ class SseClientTransport implements ClientTransport {
         return;
       }
 
-      // Set headers
+      // Keep Content-Type charset-free for legacy SSE endpoints. Encode the
+      // body as UTF-8 bytes so non-Latin-1 tool arguments are not rejected by
+      // dart:io's default ISO-8859-1 write() encoding.
+      final bytes = utf8.encode(jsonMessage);
       request.headers.set('Content-Type', 'application/json');
       if (headers != null) {
         headers!.forEach((name, value) {
@@ -461,9 +464,8 @@ class SseClientTransport implements ClientTransport {
           }
         });
       }
-
-      // Send the request
-      request.write(jsonMessage);
+      request.contentLength = bytes.length;
+      request.add(bytes);
       final response = await request.close();
 
       // Check for successful delivery (200 OK or 202 Accepted)

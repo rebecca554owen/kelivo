@@ -1064,10 +1064,7 @@ class Client {
     } catch (e) {
       _removeRequestCompleter(id);
       if (e is! McpError) {
-        final error =
-            e is Exception
-                ? McpError('Request failed: $e')
-                : McpError('Request failed');
+        final error = McpError('Request failed: $e');
         _errorStreamController.add(error);
         throw error;
       }
