@@ -415,7 +415,7 @@ void main() {
       final manifest = jsonDecode(await manifestFile.readAsString()) as Map;
       final settingsMetadata =
           (manifest['entries'] as Map)['settings.json'] as Map;
-      settingsMetadata['bytes'] = 16 * 1024 * 1024 + 1;
+      settingsMetadata['bytes'] = 1024 * 1024 * 1024 + 1;
       await manifestFile.writeAsString(jsonEncode(manifest), flush: true);
 
       await expectLater(

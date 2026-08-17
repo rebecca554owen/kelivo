@@ -200,7 +200,7 @@ class DataSync {
   // A 16 MiB metadata cap keeps manifest parsing and entry metadata bounded.
   static const _maxManifestBytes = 16 * 1024 * 1024;
   // Settings are parsed as one JSON object, so keep their decoded input bound.
-  static const _maxSettingsBytes = 16 * 1024 * 1024;
+  static const _maxSettingsBytes = 1024 * 1024 * 1024;
   // ZIP64 supports larger entries. Restore keeps explicit, diagnosable bounds.
   static const _maxRestoreEntryBytes = 8 * 1024 * 1024 * 1024;
   static const _maxRestoreTotalBytes = 16 * 1024 * 1024 * 1024;

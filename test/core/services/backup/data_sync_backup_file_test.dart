@@ -1545,16 +1545,20 @@ void main() {
     test(
       'rejects oversized settings before extraction or JSON parsing',
       () async {
-        const maximumSettingsBytes = 16 * 1024 * 1024;
+        const maximumSettingsBytes = 1024 * 1024 * 1024;
         final settingsFile = File('${root.path}/oversized_settings.json');
         await settingsFile.writeAsString(
-          jsonEncode({'oversized_future_key': 'x' * maximumSettingsBytes}),
+          jsonEncode({'preserved_setting': 'imported'}),
         );
         final zipFile = File('${root.path}/oversized_settings.zip');
         final encoder = ZipFileEncoder();
         encoder.create(zipFile.path);
         encoder.addFileSync(settingsFile, 'settings.json');
         encoder.closeSync();
+        await _overwriteCentralDirectoryUncompressedSize(
+          zipFile,
+          maximumSettingsBytes + 1,
+        );
         final before = await BusinessRestoreService(
           businessRepository,
         ).exportSettings();

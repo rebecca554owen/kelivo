@@ -62,7 +62,7 @@ final class RestoreBundleStaging {
   static const _maximumManifestBytes = 16 * 1024 * 1024;
   // Settings contain structured preferences, never chat rows or binary assets.
   // Cap JSON before copying/parsing to bound UTF-8 and DOM amplification.
-  static const _maximumSettingsBytes = 16 * 1024 * 1024;
+  static const _maximumSettingsBytes = 1024 * 1024 * 1024;
 
   static Future<StagedRestoreBundle> create({
     required Directory appDataDirectory,
