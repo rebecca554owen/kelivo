@@ -1356,10 +1356,23 @@ class _BackupPageState extends State<BackupPage> {
 
   Future<void> _doExport(BuildContext context, BackupProvider vm) async {
     final l10n = AppLocalizations.of(context)!;
-    final file = await _runWithExportingOverlay(
-      context,
-      () => vm.exportToFile(),
-    );
+    final File file;
+    try {
+      file = await _runWithExportingOverlay(
+        context,
+        () => vm.exportToFile(),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      showAppSnackBar(
+        context,
+        message: l10n.backupPageExportFailedMessage(
+          backupRestoreErrorMessage(l10n, error),
+        ),
+        type: NotificationType.error,
+      );
+      return;
+    }
 
     try {
       if (!context.mounted) return;

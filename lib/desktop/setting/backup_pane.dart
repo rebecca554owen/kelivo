@@ -861,7 +861,20 @@ class _DesktopBackupPaneState extends State<DesktopBackupPane> {
                 onTap: () async {
                   final backupProvider = context.read<BackupProvider>();
                   await _saveConfig();
-                  final file = await backupProvider.exportToFile();
+                  final File file;
+                  try {
+                    file = await backupProvider.exportToFile();
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    showAppSnackBar(
+                      context,
+                      message: l10n.backupPageExportFailedMessage(
+                        backupRestoreErrorMessage(l10n, error),
+                      ),
+                      type: NotificationType.error,
+                    );
+                    return;
+                  }
                   String? savePath = await FilePicker.platform.saveFile(
                     dialogTitle: l10n.backupPageExportToFile,
                     fileName: file.uri.pathSegments.last,

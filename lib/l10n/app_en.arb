@@ -713,6 +713,14 @@
       }
     }
   },
+  "backupPageExportFailedMessage": "Export failed: {error}",
+  "@backupPageExportFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageOK": "OK",
   "backupPageCancel": "Cancel",
   "backupPageSelectImportMode": "Select Import Mode",

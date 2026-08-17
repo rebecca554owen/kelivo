@@ -3322,6 +3322,12 @@ abstract class AppLocalizations {
   /// **'Restore failed: {error}'**
   String backupPageRestoreFailedMessage(String error);
 
+  /// No description provided for @backupPageExportFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String backupPageExportFailedMessage(String error);
+
   /// No description provided for @backupPageOK.
   ///
   /// In en, this message translates to:

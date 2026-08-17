@@ -1687,6 +1687,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String backupPageExportFailedMessage(String error) {
+    return '导出失败：$error';
+  }
+
+  @override
   String get backupPageOK => '好的';
 
   @override
@@ -8919,6 +8924,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String backupPageExportFailedMessage(String error) {
+    return '导出失败：$error';
+  }
+
+  @override
   String get backupPageOK => '好的';
 
   @override
@@ -16074,6 +16084,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String backupPageRestoreFailedMessage(String error) {
     return '還原失敗：$error';
+  }
+
+  @override
+  String backupPageExportFailedMessage(String error) {
+    return '匯出失敗：$error';
   }
 
   @override

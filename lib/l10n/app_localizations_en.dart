@@ -1747,6 +1747,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String backupPageExportFailedMessage(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
   String get backupPageOK => 'OK';
 
   @override
