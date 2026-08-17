@@ -65,7 +65,7 @@ class _LocalToolsTab extends StatelessWidget {
           }
           await DeviceLocalTools.openUsageAccessSettings();
         }
-        // Match rikkahub: still enable even if Usage Access is not granted yet.
+        // Still enable even if Usage Access is not granted yet.
         await updateTool(toolId, true);
         return;
       }

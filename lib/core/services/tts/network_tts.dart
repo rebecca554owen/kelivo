@@ -1488,7 +1488,7 @@ class NetworkTtsService {
         'model': opt.model,
         'input': chunk,
         'voice': opt.voice,
-        // Official StepFun fields are snake_case (not RikkaHub camelCase).
+        // Official StepFun fields are snake_case.
         'response_format': opt.responseFormat,
         'speed': opt.speed,
         'volume': opt.volume,

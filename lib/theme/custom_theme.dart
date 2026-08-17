@@ -9,7 +9,7 @@ import 'palettes.dart';
 /// accents. Colors are stored as ARGB ints so the list can be persisted as
 /// JSON and shared between devices (copy/import).
 ///
-/// Palette generation mirrors RikkaHub: a Material You TONAL_SPOT
+/// Palette generation uses a Material You TONAL_SPOT
 /// [DynamicScheme] whose primary (and optionally secondary/tertiary) tonal
 /// palettes are built from the picked colors via HCT.
 class CustomTheme {

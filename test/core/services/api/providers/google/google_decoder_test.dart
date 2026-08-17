@@ -343,4 +343,47 @@ void main() {
     expect(decoder.textThoughtSigKey, 'thoughtSignature');
     expect(decoder.textThoughtSigVal, 'text-sig');
   });
+
+  test('malformed frame keeps parsed chunks and later text still decodes', () {
+    final decoder = GoogleStreamDecoder();
+    final first = decoder.accept(
+      _event(
+        _candidate(
+          parts: [
+            <String, dynamic>{'text': 'Hello'},
+          ],
+        ),
+      ),
+    );
+    final textId = first.chunks.whereType<TextDelta>().single.id;
+
+    final malformed = decoder.accept(
+      _event(<String, dynamic>{
+        'usageMetadata': <String, dynamic>{
+          'promptTokenCount': 1,
+          'candidatesTokenCount': 1,
+          'totalTokens': 2,
+        },
+        ..._candidate(
+          parts: [
+            <String, dynamic>{'text': 123},
+          ],
+        ),
+      }),
+    );
+    expect(malformed.completed, isFalse);
+    expect(malformed.chunks.whereType<Usage>(), isNotEmpty);
+
+    final later = decoder.accept(
+      _event(
+        _candidate(
+          parts: [
+            <String, dynamic>{'text': ' world'},
+          ],
+        ),
+      ),
+    );
+    expect(later.chunks.whereType<TextDelta>().single.text, ' world');
+    expect(later.chunks.whereType<TextDelta>().single.id, textId);
+  });
 }

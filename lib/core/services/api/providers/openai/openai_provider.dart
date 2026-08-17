@@ -731,9 +731,10 @@ Stream<StreamChunk> sendOpenAIStream(
           null,
           obj['usage'] ?? obj['response']?['usage'],
         );
-        yield* emitImages(images);
+        final ids = StreamChunkIds('finish');
+        yield* emitImages(images, ids: ids);
         yield* emitDone(
-          ids: StreamChunkIds('finish'),
+          ids: ids,
           content: outText,
           reasoning: reasoningText.isEmpty ? null : reasoningText,
           usage: usage,
@@ -790,9 +791,10 @@ Stream<StreamChunk> sendOpenAIStream(
         (firstChoice['message'] as Map?)?.cast<String, dynamic>(),
       );
       final firstMessage = openaiFirstChoiceMessage(lastObj);
-      yield* emitImages(visible.images);
+      final ids = StreamChunkIds('finish');
+      yield* emitImages(visible.images, ids: ids);
       yield* emitDone(
-        ids: StreamChunkIds('finish'),
+        ids: ids,
         content: visible.content,
         reasoning: openaiReasoningText(firstMessage),
         reasoningDetails: firstMessage?['reasoning_details'],

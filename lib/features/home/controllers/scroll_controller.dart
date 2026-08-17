@@ -430,10 +430,10 @@ class ChatScrollController {
 
   /// Position a newly opened conversation at its tail before the next paint.
   ///
-  /// RikkaHub uses the equivalent `requestScrollToItem` operation: the initial
-  /// position participates in layout instead of correcting a visible frame
-  /// afterward. The flag remains active for the whole frame because a lazy
-  /// viewport may refine its max extent more than once during layout.
+  /// The initial position participates in layout instead of correcting a
+  /// visible frame afterward. The flag remains active for the whole frame
+  /// because a lazy viewport may refine its max extent more than once
+  /// during layout.
   void positionAtBottomOnNextLayout() {
     _cancelProgrammaticNavigation(stopDrivenScroll: true);
     _lastJumpUserMessageId = null;
@@ -454,9 +454,8 @@ class ChatScrollController {
   /// Resolve the actual indexed tail before a switched conversation is shown.
   ///
   /// A lazy list's first maxScrollExtent can still be based on estimated item
-  /// heights. RikkaHub avoids treating that estimate as the destination by
-  /// requesting its last item directly; this performs the equivalent indexed
-  /// positioning and waits for the tail extent to become concrete.
+  /// heights. Avoid treating that estimate as the destination: request the
+  /// last item directly and wait for the tail extent to become concrete.
   Future<void> settleAtBottomBeforeReveal() async {
     _cancelProgrammaticNavigation(stopDrivenScroll: true);
     _lastJumpUserMessageId = null;
@@ -911,8 +910,8 @@ class ChatScrollController {
 
   /// Scroll to a specific message by index (from mini map or search).
   ///
-  /// Direct index positioning mirrors RikkaHub's `scrollToItem`: distant
-  /// targets do not build or animate through every intermediate message.
+  /// Direct index positioning: distant targets do not build or animate
+  /// through every intermediate message.
   Future<void> scrollToMessageId({
     required String targetId,
     required int targetIndex,

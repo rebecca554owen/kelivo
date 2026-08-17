@@ -730,7 +730,6 @@
   "backupPageImportBackupFile": "Import Backup File",
   "backupPageImportBackupFileSubtitle": "Import a local backup file",
   "backupPageImportFromOtherApps": "Import from Other Apps",
-  "backupPageImportFromRikkaHub": "Import from RikkaHub",
   "backupPageNotSupportedYet": "Not supported yet",
   "backupPageRemoteBackups": "Remote Backups",
   "backupPageNoBackups": "No backups",

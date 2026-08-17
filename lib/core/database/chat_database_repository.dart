@@ -5034,12 +5034,14 @@ class ChatDatabaseRepository {
 
   /// Partial-column UPDATE: only the non-null fields are written, so
   /// concurrent writers touching disjoint columns cannot clobber each other.
-  /// Message parts are rebuilt only when content or reasoning text changes;
-  /// the other columns never affect parts. Returns the post-update message,
+  /// Message parts are rebuilt when [parts], content, or reasoning text
+  /// changes; the other columns never affect parts. Returns the post-update
+  /// message,
   /// or null when no row matches [messageId].
   Future<ChatMessage?> updateMessageFields(
     String messageId, {
     String? content,
+    List<MessagePart>? parts,
     int? totalTokens,
     bool? isStreaming,
     String? reasoningText,
@@ -5088,9 +5090,13 @@ class ChatDatabaseRepository {
       )..where((t) => t.id.equals(messageId))).write(companion);
       final updated = await getMessage(messageId);
       if (updated == null) return null;
-      if (content == null && reasoningText == null) return updated;
+      if (content == null && reasoningText == null && parts == null) {
+        return updated;
+      }
       var nextParts = updated.parts;
-      if (content != null) {
+      if (parts != null) {
+        nextParts = parts;
+      } else if (content != null) {
         nextParts = ChatMessage.partsWithRedistributedText(nextParts, content);
       }
       if (reasoningText != null) {

@@ -179,6 +179,25 @@ class ChatMessage extends HiveObject {
     return next;
   }
 
+  /// Rewrite each [TextPart] in place. Non-text parts keep their ordinal.
+  static List<MessagePart> partsWithRewrittenText(
+    List<MessagePart> original,
+    String Function(String text) rewrite,
+  ) {
+    var changed = false;
+    final next = <MessagePart>[];
+    for (final part in original) {
+      if (part is! TextPart) {
+        next.add(part);
+        continue;
+      }
+      final rewritten = rewrite(part.text);
+      if (rewritten != part.text) changed = true;
+      next.add(rewritten == part.text ? part : TextPart(rewritten));
+    }
+    return changed ? next : original;
+  }
+
   /// Replace reasoning with a single scalar value.
   ///
   /// The first [ReasoningPart] is rewritten (or prepended when none exists);

@@ -3424,12 +3424,6 @@ abstract class AppLocalizations {
   /// **'Import from Other Apps'**
   String get backupPageImportFromOtherApps;
 
-  /// No description provided for @backupPageImportFromRikkaHub.
-  ///
-  /// In en, this message translates to:
-  /// **'Import from RikkaHub'**
-  String get backupPageImportFromRikkaHub;
-
   /// No description provided for @backupPageNotSupportedYet.
   ///
   /// In en, this message translates to:

@@ -1801,9 +1801,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageImportFromOtherApps => 'Import from Other Apps';
 
   @override
-  String get backupPageImportFromRikkaHub => 'Import from RikkaHub';
-
-  @override
   String get backupPageNotSupportedYet => 'Not supported yet';
 
   @override

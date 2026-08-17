@@ -67,27 +67,36 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
       final decoded = jsonDecode(data);
       if (decoded is! Map) return const DecodeResult();
       obj = decoded.cast<String, dynamic>();
-    } catch (_) {
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'claude',
+        eventType: event.event ?? 'json',
+        error: error,
+      );
       return const DecodeResult();
     }
 
     final type = (obj['type'] ?? event.event ?? '').toString();
     final chunks = <StreamChunk>[];
 
-    switch (type) {
-      case 'content_block_start':
-        chunks.addAll(_onBlockStart(obj));
-      case 'content_block_delta':
-        chunks.addAll(_onBlockDelta(obj));
-      case 'content_block_stop':
-        chunks.addAll(_onBlockStop(obj));
-      case 'message_delta':
-        chunks.addAll(_onMessageDelta(obj));
-      case 'message_stop':
-        _flushTextBlock();
-        chunks.addAll(_flushCitations());
-        messageStopped = true;
-        return DecodeResult(chunks: chunks, completed: true);
+    try {
+      switch (type) {
+        case 'content_block_start':
+          chunks.addAll(_onBlockStart(obj));
+        case 'content_block_delta':
+          chunks.addAll(_onBlockDelta(obj));
+        case 'content_block_stop':
+          chunks.addAll(_onBlockStop(obj));
+        case 'message_delta':
+          chunks.addAll(_onMessageDelta(obj));
+        case 'message_stop':
+          _flushTextBlock();
+          chunks.addAll(_flushCitations());
+          messageStopped = true;
+          return DecodeResult(chunks: chunks, completed: true);
+      }
+    } catch (error) {
+      logDecoderParseError(provider: 'claude', eventType: type, error: error);
     }
 
     return DecodeResult(chunks: chunks, completed: messageStopped);

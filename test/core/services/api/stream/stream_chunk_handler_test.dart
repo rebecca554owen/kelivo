@@ -109,6 +109,22 @@ void main() {
     expect(handler.toResult().parts.whereType<ImagePart>(), isEmpty);
   });
 
+  test(
+    'ImageSnapshot replaces a non-data URI instead of splitting on a comma',
+    () {
+      final handler = StreamChunkHandler();
+      handler.handle(const ImageStart(id: 'img', mimeType: 'image/png'));
+      handler.handle(
+        const ImageSnapshot(id: 'img', data: 'https://img.example/a,b.png'),
+      );
+      handler.handle(const ImageSnapshot(id: 'img', data: 'bbb'));
+
+      final image = handler.parts.single as ImagePart;
+      expect(image.uri, 'data:image/png;base64,bbb');
+      expect(image.mime, 'image/png');
+    },
+  );
+
   test('keeps a complete image URI instead of wrapping it as base64', () {
     final handler = StreamChunkHandler();
     handler.handle(const ImageStart(id: 'img', mimeType: 'image/png'));

@@ -1740,9 +1740,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageImportFromOtherApps => '从其他APP导入';
 
   @override
-  String get backupPageImportFromRikkaHub => '从 RikkaHub 导入';
-
-  @override
   String get backupPageNotSupportedYet => '暂不支持';
 
   @override
@@ -8975,9 +8972,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backupPageImportFromOtherApps => '从其他APP导入';
 
   @override
-  String get backupPageImportFromRikkaHub => '从 RikkaHub 导入';
-
-  @override
   String get backupPageNotSupportedYet => '暂不支持';
 
   @override
@@ -16134,9 +16128,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupPageImportFromOtherApps => '從其他APP匯入';
-
-  @override
-  String get backupPageImportFromRikkaHub => '從 RikkaHub 匯入';
 
   @override
   String get backupPageNotSupportedYet => '暫不支援';

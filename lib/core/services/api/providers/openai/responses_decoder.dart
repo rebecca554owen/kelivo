@@ -121,15 +121,24 @@ class ResponsesStreamDecoder implements StreamChunkDecoder {
       final decoded = jsonDecode(data);
       if (decoded is! Map) return const DecodeResult();
       obj = decoded.cast<String, dynamic>();
-    } catch (_) {
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'responses',
+        eventType: event.event ?? 'json',
+        error: error,
+      );
       return const DecodeResult();
     }
 
     final chunks = <StreamChunk>[];
     try {
       _parseEvent(obj, chunks);
-    } catch (_) {
-      return const DecodeResult();
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'responses',
+        eventType: (obj['type'] ?? event.event ?? 'response').toString(),
+        error: error,
+      );
     }
     return DecodeResult(chunks: chunks, completed: completed);
   }

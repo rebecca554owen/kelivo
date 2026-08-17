@@ -597,7 +597,6 @@
   "backupPageImportBackupFile": "備份檔案匯入",
   "backupPageImportBackupFileSubtitle": "匯入本機備份檔案",
   "backupPageImportFromOtherApps": "從其他APP匯入",
-  "backupPageImportFromRikkaHub": "從 RikkaHub 匯入",
   "backupPageNotSupportedYet": "暫不支援",
   "backupPageRemoteBackups": "遠端備份",
   "backupPageNoBackups": "暫無備份",

@@ -432,7 +432,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _dynamicColorSupported = false; // runtime capability, not persisted
   bool get dynamicColorSupported => _dynamicColorSupported;
 
-  // Custom user themes (RikkaHub-style: name + primary/secondary/tertiary)
+  // Custom user themes: name + primary/secondary/tertiary
   List<CustomTheme> _customThemes = const <CustomTheme>[];
   List<CustomTheme> get customThemes =>
       List<CustomTheme>.unmodifiable(_customThemes);

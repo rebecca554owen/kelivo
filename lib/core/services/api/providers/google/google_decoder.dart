@@ -212,15 +212,24 @@ class GoogleStreamDecoder implements StreamChunkDecoder {
       final decoded = jsonDecode(data);
       if (decoded is! Map) return const DecodeResult();
       obj = decoded.cast<String, dynamic>();
-    } catch (_) {
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'google',
+        eventType: event.event ?? 'json',
+        error: error,
+      );
       return const DecodeResult();
     }
 
     final chunks = <StreamChunk>[];
     try {
       _parseEvent(obj, chunks);
-    } catch (_) {
-      return const DecodeResult();
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'google',
+        eventType: event.event ?? 'generateContent',
+        error: error,
+      );
     }
 
     if (finishReason == 'MALFORMED_RESPONSE' && functionCalls.isEmpty) {

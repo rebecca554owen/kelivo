@@ -94,9 +94,9 @@ Stream<StreamChunk> emitDone({
 }
 
 Stream<StreamChunk> emitImages(
-  Iterable<({String uri, String mimeType})> images,
-) async* {
-  final ids = StreamChunkIds('images');
+  Iterable<({String uri, String mimeType})> images, {
+  required StreamChunkIds ids,
+}) async* {
   for (final image in images) {
     if (image.uri.isEmpty) continue;
     final id = ids.next('image');

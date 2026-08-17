@@ -36,6 +36,29 @@ void main() {
   );
 
   test(
+    'reusing emitImages ids appends a second ImagePart on the same handler',
+    () async {
+      final handler = StreamChunkHandler();
+      final ids = StreamChunkIds('images');
+      await for (final chunk in emitImages([
+        (uri: 'https://img.example/a.png', mimeType: 'image/png'),
+      ], ids: ids)) {
+        handler.handle(chunk);
+      }
+      await for (final chunk in emitImages([
+        (uri: 'https://img.example/b.png', mimeType: 'image/png'),
+      ], ids: ids)) {
+        handler.handle(chunk);
+      }
+
+      final images = handler.parts.whereType<ImagePart>().toList();
+      expect(images, hasLength(2));
+      expect(images[0].uri, 'https://img.example/a.png');
+      expect(images[1].uri, 'https://img.example/b.png');
+    },
+  );
+
+  test(
     'reusing an emit sourceId merges later text into the first part',
     () async {
       final handler = StreamChunkHandler();

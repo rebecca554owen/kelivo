@@ -199,16 +199,18 @@ class StreamChunkHandler {
         if (data.isEmpty) return;
         final mime = _imageMime[id] ?? 'image/png';
         final index = _imageIndex[id];
+        final current = index != null && _parts[index] is ImagePart
+            ? _parts[index] as ImagePart
+            : null;
         if (isCompleteImageUri(data) ||
-            index == null ||
-            _parts[index] is! ImagePart) {
+            current == null ||
+            !current.uri.startsWith('data:')) {
           _ensureImage(id, mimeType: mime, data: data);
         } else {
-          final current = _parts[index] as ImagePart;
           final prefix = current.uri.contains(',')
               ? current.uri.substring(0, current.uri.indexOf(',') + 1)
               : 'data:$mime;base64,';
-          _parts[index] = ImagePart(
+          _parts[index!] = ImagePart(
             uri: '$prefix$data',
             mime: current.mime ?? mime,
           );

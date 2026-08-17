@@ -85,9 +85,10 @@ Stream<StreamChunk> sendOpenAIImagesStream(
     outputMime: outputMime,
   );
   final usage = _openAIImagesUsage(response);
-  yield* emitImages(images);
+  final ids = StreamChunkIds('finish');
+  yield* emitImages(images, ids: ids);
   yield* emitFinish(
-    ids: StreamChunkIds('finish'),
+    ids: ids,
     usage: usage,
     totalTokens: usage?.totalTokens ?? 0,
   );

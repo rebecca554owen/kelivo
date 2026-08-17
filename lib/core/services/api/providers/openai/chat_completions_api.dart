@@ -966,9 +966,10 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
         (choice['message'] as Map?)?.cast<String, dynamic>(),
       );
       final lastMessage = openaiFirstChoiceMessage(lastObj);
-      yield* emitImages(visible.images);
+      final ids = StreamChunkIds('finish');
+      yield* emitImages(visible.images, ids: ids);
       yield* emitDone(
-        ids: StreamChunkIds('finish'),
+        ids: ids,
         content: visible.content,
         reasoning: openaiReasoningText(lastMessage),
         reasoningDetails: lastMessage?['reasoning_details'],

@@ -129,6 +129,36 @@ void main() {
       },
     );
 
+    test('sanitizing a long base64 TextPart keeps the tool card in place', () {
+      const longB64 = 'data:image/png;base64,AAAAAAAAAAAAAAAA';
+      const shortUri = 'kelivo-file:///images/a.png';
+      final original = <MessagePart>[
+        const TextPart('see $longB64 please'),
+        ToolCallPart('{"id":"t1","name":"lookup"}'),
+        const TextPart('after'),
+      ];
+
+      final joined = original.whereType<TextPart>().map((p) => p.text).join();
+      final sanitizedJoined = joined.replaceAll(longB64, shortUri);
+      final drifted = ChatMessage.partsWithRedistributedText(
+        original,
+        sanitizedJoined,
+      );
+      expect((drifted[2] as TextPart).text, isNot('after'));
+
+      final sanitized = ChatMessage.partsWithRewrittenText(
+        original,
+        (text) => text.replaceAll(longB64, shortUri),
+      );
+      expect(sanitized.map((part) => part.kind), ['text', 'tool_call', 'text']);
+      expect((sanitized[0] as TextPart).text, 'see $shortUri please');
+      expect(
+        (sanitized[1] as ToolCallPart).payloadJson,
+        (original[1] as ToolCallPart).payloadJson,
+      );
+      expect((sanitized[2] as TextPart).text, 'after');
+    });
+
     test(
       'partsWithRedistributedText keeps later TextParts after a tool card',
       () {

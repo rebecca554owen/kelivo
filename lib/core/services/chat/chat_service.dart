@@ -2858,6 +2858,7 @@ class ChatService extends ChangeNotifier {
   Future<void> updateMessage(
     String messageId, {
     String? content,
+    List<MessagePart>? parts,
     int? totalTokens,
     bool? isStreaming,
     String? reasoningText,
@@ -2874,6 +2875,7 @@ class ChatService extends ChangeNotifier {
       messageId,
       notify: true,
       content: content,
+      parts: parts,
       totalTokens: totalTokens,
       isStreaming: isStreaming,
       reasoningText: reasoningText,
@@ -2930,6 +2932,7 @@ class ChatService extends ChangeNotifier {
     String messageId, {
     required bool notify,
     String? content,
+    List<MessagePart>? parts,
     int? totalTokens,
     bool? isStreaming,
     String? reasoningText,
@@ -2950,6 +2953,7 @@ class ChatService extends ChangeNotifier {
       _replaceCachedMessage(
         temporaryMessage.copyWith(
           content: content,
+          parts: parts,
           totalTokens: totalTokens,
           isStreaming: isStreaming,
           reasoningText: reasoningText,
@@ -2967,13 +2971,14 @@ class ChatService extends ChangeNotifier {
       return;
     }
 
-    if (content != null) {
+    if (content != null || parts != null) {
       await _repo.markMessageAssetReferencesDirty(messageId);
     }
 
     final updatedMessage = await _repo.updateMessageFields(
       messageId,
       content: content,
+      parts: parts,
       totalTokens: totalTokens,
       isStreaming: isStreaming,
       reasoningText: reasoningText,
@@ -2988,7 +2993,7 @@ class ChatService extends ChangeNotifier {
     );
     if (updatedMessage == null) return;
 
-    if (content != null) {
+    if (content != null || parts != null) {
       await _synchronizeMessageAssetsBestEffort(updatedMessage);
     }
 

@@ -484,4 +484,54 @@ void main() {
     expect(second.approxCompletionChars, 8);
     expect(first.approxCompletionChars + second.approxCompletionChars, 12);
   });
+
+  test('malformed frame keeps parsed chunks and later text still decodes', () {
+    final decoder = ChatCompletionsStreamDecoder();
+    final first = decoder.accept(
+      _event(_choice(delta: <String, dynamic>{'content': 'Hello'})),
+    );
+    final textId = first.chunks.whereType<TextDelta>().single.id;
+
+    final malformed = decoder.accept(
+      _event(
+        _choice(
+          delta: <String, dynamic>{
+            'tool_calls': [
+              <String, dynamic>{
+                'index': 0,
+                'id': 'call_1',
+                'function': <String, dynamic>{
+                  'name': 'lookup',
+                  'arguments': '{}',
+                },
+              },
+              <String, dynamic>{
+                'index': 'bad',
+                'function': <String, dynamic>{'name': 'x'},
+              },
+            ],
+          },
+        ),
+      ),
+    );
+    expect(malformed.completed, isFalse);
+    expect(malformed.chunks.whereType<ToolCallStart>().single.id, 'call_1');
+
+    final later = decoder.accept(
+      _event(_choice(delta: <String, dynamic>{'content': ' world'})),
+    );
+    expect(later.chunks.whereType<TextDelta>().single.text, ' world');
+    expect(later.chunks.whereType<TextDelta>().single.id, textId);
+
+    final handler = StreamChunkHandler();
+    for (final chunk in [
+      ...first.chunks,
+      ...malformed.chunks,
+      ...later.chunks,
+    ]) {
+      handler.handle(chunk);
+    }
+    expect(handler.parts.whereType<TextPart>().single.text, 'Hello world');
+    expect(handler.parts.whereType<ToolCallPart>(), hasLength(1));
+  });
 }

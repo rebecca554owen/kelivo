@@ -57,12 +57,25 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
       final decoded = jsonDecode(data);
       if (decoded is! Map) return const DecodeResult();
       obj = decoded.cast<String, dynamic>();
-    } catch (_) {
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'chat_completions',
+        eventType: event.event ?? 'json',
+        error: error,
+      );
       return const DecodeResult();
     }
 
     final chunks = <StreamChunk>[];
-    _parseEvent(obj, chunks);
+    try {
+      _parseEvent(obj, chunks);
+    } catch (error) {
+      logDecoderParseError(
+        provider: 'chat_completions',
+        eventType: event.event ?? 'chat.completion.chunk',
+        error: error,
+      );
+    }
     return DecodeResult(chunks: chunks, completed: _completed);
   }
 

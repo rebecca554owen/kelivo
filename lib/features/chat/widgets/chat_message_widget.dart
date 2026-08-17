@@ -2318,28 +2318,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     hasContentSplits: _hasContentSplits,
   );
 
-  ToolUIPart? _toolUiFromPayload(String payloadJson) {
-    try {
-      final decoded = jsonDecode(payloadJson);
-      if (decoded is! Map) return null;
-      final id = (decoded['id'] ?? '').toString();
-      if (id.isEmpty) return null;
-      final args = decoded['arguments'];
-      final content = decoded['content']?.toString();
-      return ToolUIPart(
-        id: id,
-        toolName: (decoded['name'] ?? '').toString(),
-        arguments: args is Map
-            ? args.cast<String, dynamic>()
-            : const <String, dynamic>{},
-        content: content,
-        loading: content == null || content.isEmpty,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
   List<_RenderBlock> _buildRenderBlocksFromParts(
     List<MessagePart> parts, {
     List<ReasoningSegment>? reasoningSegments,
@@ -2403,7 +2381,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             ),
           );
         case ToolCallPart(:final payloadJson):
-          final parsed = _toolUiFromPayload(payloadJson);
+          final parsed = toolUiFromPayload(
+            payloadJson,
+            fallbackOrdinal: toolCount,
+          );
           if (parsed == null || parsed.toolName == 'builtin_search') continue;
           pendingSteps.add(
             _TimelineStepData.tool(
@@ -3784,6 +3765,31 @@ class _StreamingAssistantMessageMotion extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: child,
     );
+  }
+}
+
+ToolUIPart? toolUiFromPayload(String payloadJson, {int fallbackOrdinal = 0}) {
+  try {
+    final decoded = jsonDecode(payloadJson);
+    if (decoded is! Map) return null;
+    var id = (decoded['id'] ?? '').toString();
+    final name = (decoded['name'] ?? '').toString();
+    if (id.isEmpty) {
+      id = '${name.isEmpty ? 'tool' : name}-$fallbackOrdinal';
+    }
+    final args = decoded['arguments'];
+    final content = decoded['content']?.toString();
+    return ToolUIPart(
+      id: id,
+      toolName: name,
+      arguments: args is Map
+          ? args.cast<String, dynamic>()
+          : const <String, dynamic>{},
+      content: content,
+      loading: content == null || content.isEmpty,
+    );
+  } catch (_) {
+    return null;
   }
 }
 
