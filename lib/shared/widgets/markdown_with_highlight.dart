@@ -593,24 +593,31 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       },
     );
 
+    final blockContents = useIncrementalBlocks
+        ? [for (final block in sourceBlocks) normalize(block.text)]
+        : const <String>[];
     final markdownWidget = useIncrementalBlocks
         ? _MarkdownBlockColumn(
             children: [
-              for (var i = 0; i < sourceBlocks.length; i++) ...[
+              for (var i = 0; i < blockContents.length; i++) ...[
                 // Rendering the document as one string keeps the blank line
                 // between two blocks as a real line box. Rendering block by
                 // block drops it, so a long reply is laid out tighter while it
                 // streams and then grows by one line per block the moment it
                 // finishes and switches to the whole-document render. Put the
-                // separator back so both paths agree. A list block already ends
-                // with its own break, so it takes no separator after it.
-                if (i > 0 && !sourceBlocks[i - 1].isList)
+                // separator back so both paths agree — except after a block
+                // whose own renderer already eats the blank line.
+                if (i > 0 &&
+                    !_swallowsTrailingBlankLine(
+                      blockContents[i - 1],
+                      mathEnabled: settings.enableMathRendering,
+                    ))
                   _MarkdownBlockSeparator(style: baseTextStyle),
                 _CachedMarkdownBlock(
                   key: ValueKey(
                     'markdown-source-block-${sourceBlocks[i].start}',
                   ),
-                  content: normalize(sourceBlocks[i].text),
+                  content: blockContents[i],
                   signature: themeSignature,
                   builder: buildMarkdown,
                 ),
@@ -704,6 +711,28 @@ class _CachedMarkdownBlockState extends State<_CachedMarkdownBlock> {
   }
 }
 
+/// A horizontal rule on the last line of a block.
+final RegExp _trailingSoftHrLine = RegExp(
+  r'(?:^|\n)[ \t]*(?:-{3,}|\*{3,}|_{3,}|⸻)\s*$',
+);
+
+/// A display-math block on the last line(s) of a block.
+final RegExp _trailingDisplayMath = RegExp(
+  r'(?:^|\n)[ \t]*(?:\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])\s*$',
+);
+
+/// Whether a whole-document render would fold the blank line after [content]
+/// into the block itself, leaving no gap for a separator to reproduce.
+///
+/// [SoftHrLine] and [LatexBlockScrollableMd] both close their pattern with
+/// `\s*$`, so the match runs past the trailing newlines and no `NewLines` span
+/// is ever generated after them. Every other block leaves the blank line
+/// behind, which is what [_MarkdownBlockSeparator] stands in for.
+bool _swallowsTrailingBlankLine(String content, {required bool mathEnabled}) {
+  if (_trailingSoftHrLine.hasMatch(content)) return true;
+  return mathEnabled && _trailingDisplayMath.hasMatch(content);
+}
+
 /// The blank line a whole-document render keeps between two blocks.
 ///
 /// `gpt_markdown` renders a run of blank lines through its `NewLines` inline
@@ -723,14 +752,27 @@ class _MarkdownBlockSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // RichText, not Text, so the ambient DefaultTextStyle cannot merge its own
-    // line height back in: the separator has to be exactly one `NewLines` line
-    // box. An empty span lays out at `fontSize * height`, which is that box.
-    // The text engine rounds a line box up to a whole pixel, so the spacer has
-    // to round the same way or the two paths drift by a fraction per boundary.
-    return SizedBox(
-      height: ((style?.fontSize ?? _fallbackFontSize) * _newLinesHeight)
-          .ceilToDouble(),
+    // Lay the blank line out with the text engine instead of computing it as
+    // `fontSize * height`: the engine rounds a line's ascent and descent
+    // separately, off the font's own metrics, so arithmetic here drifts by up
+    // to a pixel per block boundary — a long reply then visibly tightens the
+    // moment it stops streaming. `Text.rich` also picks the text scale up from
+    // the ambient `MediaQuery`, which the whole-document render applies to its
+    // blank lines and a raw `SizedBox` would ignore.
+    //
+    // The paragraph carries the `NewLines` style, and its one run is a space:
+    // the style has to sit on the paragraph because a line box is measured from
+    // the paragraph style when there is no run, and that path rounds
+    // differently from a line that has one. A space is invisible, and the
+    // separator stays out of selection so it cannot be copied.
+    return SelectionContainer.disabled(
+      child: Text.rich(
+        const TextSpan(text: ' '),
+        style: (style ?? const TextStyle()).copyWith(
+          fontSize: style?.fontSize ?? _fallbackFontSize,
+          height: _newLinesHeight,
+        ),
+      ),
     );
   }
 }

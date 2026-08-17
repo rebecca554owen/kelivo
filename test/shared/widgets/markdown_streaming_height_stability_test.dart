@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import "../../support/business_test_harness.dart";
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/shared/widgets/markdown_with_highlight.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +18,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// difference on the frame the reply ends. Every case here must measure the
 /// same height on both paths.
 void main() {
+  setUpAll(() async {
+    // The default test font reports whole-pixel metrics for every size, which
+    // hides the per-line rounding a real font goes through. Lay these cases out
+    // with a real font so a separator that only matches on paper still fails.
+    final bytes = File(
+      'dependencies/gpt_markdown/lib/fonts/JetBrainsMono-Regular.ttf',
+    ).readAsBytesSync();
+    await (FontLoader(
+      'markdown-metrics',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
@@ -25,7 +41,8 @@ void main() {
       String text, {
       required bool streaming,
       required String tag,
-      TextStyle? style,
+      required TextStyle style,
+      double textScale = 1.0,
     }) async {
       await boundTester.pumpWidget(
         ChangeNotifierProvider(
@@ -34,12 +51,19 @@ void main() {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: SingleChildScrollView(
-                child: MarkdownWithCodeHighlight(
-                  key: ValueKey<String>(tag),
-                  text: text,
-                  streaming: streaming,
-                  baseStyle: style,
+              body: Builder(
+                builder: (context) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(textScale)),
+                  child: SingleChildScrollView(
+                    child: MarkdownWithCodeHighlight(
+                      key: ValueKey<String>(tag),
+                      text: text,
+                      streaming: streaming,
+                      baseStyle: style,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -50,22 +74,45 @@ void main() {
       return boundTester.getSize(find.byType(MarkdownWithCodeHighlight)).height;
     }
 
+    /// The chat bubble's own base style, with the test font substituted in.
+    const baseStyle = TextStyle(
+      fontFamily: 'markdown-metrics',
+      fontSize: 15.7,
+      height: 1.5,
+    );
+
     Future<void> expectStableHeight(
       String label,
       List<String> blocks, {
-      TextStyle? style,
+      TextStyle style = baseStyle,
+      double textScale = 1.0,
     }) async {
-      final text = blocks.join('\n\n');
+      // The splitter only closes a block once the next line is complete, so
+      // without the trailing newline the last boundary is never split and the
+      // case would measure a single block on both paths — passing for free.
+      final text = '${blocks.join('\n\n')}\n';
       final streamingHeight = await heightFor(
         text,
         streaming: true,
         style: style,
+        textScale: textScale,
         tag: '$label-streaming',
+      );
+      final renderedBlocks = boundTester
+          .widgetList(find.byType(GptMarkdown))
+          .length;
+      expect(
+        renderedBlocks,
+        greaterThan(1),
+        reason:
+            '$label: the streaming render was not split into blocks, so it '
+            'cannot say anything about block boundaries',
       );
       final finishedHeight = await heightFor(
         text,
         streaming: false,
         style: style,
+        textScale: textScale,
         tag: '$label-finished',
       );
       expect(
@@ -78,11 +125,11 @@ void main() {
     }
 
     // Only replies over 512 characters are rendered block by block, so every
-    // block has to be padded past that threshold for the case to be meaningful.
+    // case has to be padded past that threshold to be meaningful.
     String pad(int index) =>
         'Body $index. ${'The rain kept falling on the quiet street. ' * 16}';
 
-    testWidgets('across block shapes and base font sizes', (tester) async {
+    testWidgets('across block shapes', (tester) async {
       boundTester = tester;
       tester.view.physicalSize = const Size(1170, 2100);
       tester.view.devicePixelRatio = 3.0;
@@ -104,31 +151,100 @@ void main() {
       await expectStableHeight('paragraph then list', [
         pad(1),
         '- one\n- two\n- three',
+        pad(2),
       ]);
       await expectStableHeight('list then paragraph', [
         '- one\n- two\n- three',
         pad(1),
       ]);
+      await expectStableHeight('ordered and nested lists', [
+        '1. one\n2. two',
+        pad(1),
+        '- one\n  - a\n  - b\n- two',
+        pad(2),
+      ]);
+      await expectStableHeight('a list that trails off into prose', [
+        '- one\n- two\ntrailing prose on the list',
+        pad(1),
+      ]);
+      await expectStableHeight('a loose list', ['- one\n\n- two', pad(1)]);
       await expectStableHeight('paragraph then code', [
         pad(1),
         '```dart\nvar a = 1;\n```',
+        pad(2),
       ]);
       await expectStableHeight('code then paragraph', [
         '```dart\nvar a = 1;\n```',
         pad(1),
       ]);
-      await expectStableHeight('larger base font', [
+      await expectStableHeight('blockquote and table', [
+        '> quoted line one\n> quoted line two',
         pad(1),
+        '| a | b |\n| --- | --- |\n| 1 | 2 |',
         pad(2),
-        pad(3),
-        pad(4),
-      ], style: const TextStyle(fontSize: 20, height: 1.5));
-      await expectStableHeight('smaller base font', [
+      ]);
+      // A horizontal rule and a display-math block both close their pattern
+      // with `\s*$`, so the whole-document render folds the blank line after
+      // them into the block and leaves no gap to reproduce.
+      await expectStableHeight('horizontal rules', [
         pad(1),
+        '---',
         pad(2),
+        'prose then a rule\n---',
         pad(3),
+      ]);
+      await expectStableHeight('display math', [
+        pad(1),
+        r'$$\frac{a}{b}$$',
+        pad(2),
+        'prose then math\n'
+            r'$$a + b = c$$',
+        pad(3),
+        r'\[a^2 + b^2 = c^2\]',
         pad(4),
-      ], style: const TextStyle(fontSize: 12, height: 1.5));
+      ]);
+      await expectStableHeight('CJK paragraphs', [
+        '这是一个中文段落。' * 12,
+        '这是另一个中文段落。' * 12,
+        pad(1),
+      ]);
+    });
+
+    testWidgets('across base font metrics and text scales', (tester) async {
+      boundTester = tester;
+      tester.view.physicalSize = const Size(1170, 2100);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
+
+      final shapes = <String>[
+        pad(1),
+        '- one\n- two',
+        pad(2),
+        '---',
+        pad(3),
+        '```dart\nvar a = 1;\n```',
+        pad(4),
+      ];
+
+      for (final fontSize in <double>[11, 14, 15.7, 20, 24]) {
+        for (final height in <double>[1.2, 1.5, 1.7]) {
+          await expectStableHeight(
+            'fontSize $fontSize height $height',
+            shapes,
+            style: baseStyle.copyWith(fontSize: fontSize, height: height),
+          );
+        }
+      }
+      // The chat font scale and the system text scale both land here as a
+      // `MediaQuery` text scale, which the blank lines of a whole-document
+      // render scale with.
+      for (final textScale in <double>[0.7, 0.85, 1.15, 1.3, 2.0]) {
+        await expectStableHeight(
+          'text scale $textScale',
+          shapes,
+          textScale: textScale,
+        );
+      }
     });
 
     testWidgets('for a long multi-paragraph reply', (tester) async {
