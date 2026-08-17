@@ -3,6 +3,10 @@ final class IncrementalMarkdownBlock {
   const IncrementalMarkdownBlock({required this.start, required this.text});
 
   final int start;
+
+  /// The block's source, the blank run that ends it included. The run holds
+  /// nothing but line breaks — a run carrying whitespace is never a boundary —
+  /// so a whole-document render lays it out as exactly one blank line.
   final String text;
 }
 
@@ -26,6 +30,7 @@ final class IncrementalMarkdownDocument {
   String? _math;
   int _detailsDepth = 0;
   int? _pendingListBlankEnd;
+  bool _blankRunCarriesWhitespace = false;
 
   List<IncrementalMarkdownBlock> get blocks => _blocks;
   int get rescannedCodeUnits => _rescannedCodeUnits;
@@ -41,19 +46,21 @@ final class IncrementalMarkdownDocument {
       _math = null;
       _detailsDepth = 0;
       _pendingListBlankEnd = null;
+      _blankRunCarriesWhitespace = false;
       _rescannedCodeUnits += source.length;
     } else {
       _rescannedCodeUnits += source.length - _source.length;
     }
     _source = source;
     _scanCompletedLines();
-    final tail = IncrementalMarkdownBlock(
-      start: _blockStart,
-      text: source.substring(_blockStart),
-    );
+    final tailText = source.substring(_blockStart);
+    // A tail of nothing but whitespace — the reply pausing on a paragraph break
+    // — is not a block: a whole-document render trims the end of the document,
+    // so there is nothing there to lay out.
     _blocks = List<IncrementalMarkdownBlock>.unmodifiable([
       ..._stableBlocks,
-      tail,
+      if (tailText.trim().isNotEmpty)
+        IncrementalMarkdownBlock(start: _blockStart, text: tailText),
     ]);
     return _blocks;
   }
@@ -74,19 +81,53 @@ final class IncrementalMarkdownDocument {
       }
       final protected = _fence != null || _math != null || _detailsDepth > 0;
       final isBlank = line.trim().isEmpty;
-      if (!protected && isBlank && _lineStart > _blockStart) {
+      if (!protected && isBlank) {
         final end = newline + 1;
-        if (_currentBlockIsList()) {
-          _pendingListBlankEnd = end;
+        if (_hasWhitespaceContent(rawLine)) _blankRunCarriesWhitespace = true;
+        if (_blankRunCarriesWhitespace) {
+          // A blank line carrying whitespace is content to the renderers around
+          // it: a rule, a heading and a display-math block each absorb it into
+          // their own match, and plain text lays it out as a line of its own.
+          // Rather than model all of that, refuse the boundary and leave the
+          // run inside one block, which renders the way the document reads.
+          _pendingListBlankEnd = null;
+          if (_lineStart == _blockStart) _mergeLastBlockBack();
+        } else if (_lineStart > _blockStart) {
+          if (_currentBlockIsList()) {
+            _pendingListBlankEnd = end;
+          } else if (_endsOnCrossLineHeadingClose()) {
+            // The hashes closing this heading sit on a line of their own from
+            // the ones opening it, and a whole-document render reads the next
+            // line of hashes as part of the same heading, across the blank line.
+            // Keep the region in one block so the renderer sees it whole.
+            _pendingListBlankEnd = null;
+          } else {
+            _emitStableBlock(end);
+          }
         } else {
-          _emitStableBlock(end);
+          // A blank line with no content behind it continues the run that ended
+          // the block before it, which is one gap in a whole-document render,
+          // not a block of its own.
+          _extendLastBlock(end);
         }
-      } else if (!protected && !isBlank && _pendingListBlankEnd != null) {
-        if (_isListContinuation(rawLine, line)) {
-          _pendingListBlankEnd = null;
-        } else {
-          _emitStableBlock(_pendingListBlankEnd!);
-          _pendingListBlankEnd = null;
+      } else if (!protected && !isBlank) {
+        _blankRunCarriesWhitespace = false;
+        if (_pendingListBlankEnd != null) {
+          if (_isListContinuation(rawLine, line)) {
+            _pendingListBlankEnd = null;
+          } else {
+            _emitStableBlock(_pendingListBlankEnd!);
+            _pendingListBlankEnd = null;
+          }
+        } else if (_lineStart == _blockStart &&
+            (_isIndented(rawLine) || _isBareHashRun(line))) {
+          // Indentation is part of the syntax — four spaces stop a heading from
+          // being one — and a block-by-block render trims the leading
+          // whitespace off every block. A bare run of hashes is worse: a
+          // whole-document render reads it as the closing hashes of the heading
+          // before it, across the blank line. Keep either with the block above
+          // so both reach the renderer the way they read in the document.
+          _mergeLastBlockBack();
         }
       }
       _lineStart = newline + 1;
@@ -103,6 +144,97 @@ final class IncrementalMarkdownDocument {
     );
     _blockStart = end;
   }
+
+  /// Grows the last block's blank run out to [end].
+  void _extendLastBlock(int end) {
+    if (_stableBlocks.isEmpty) {
+      // Nothing but blank lines so far: leave them out of the first block, the
+      // way both render paths trim the head of the document.
+      _blockStart = end;
+      return;
+    }
+    final last = _stableBlocks.removeLast();
+    _stableBlocks.add(
+      IncrementalMarkdownBlock(
+        start: last.start,
+        text: _source.substring(last.start, end),
+      ),
+    );
+    _blockStart = end;
+  }
+
+  /// Reopens the last block so the line just scanned joins it.
+  void _mergeLastBlockBack() {
+    if (_stableBlocks.isEmpty) return;
+    _blockStart = _stableBlocks.removeLast().start;
+  }
+
+  static bool _isIndented(String rawLine) =>
+      rawLine.isNotEmpty && _isWhitespace(rawLine.codeUnitAt(0));
+
+  /// Whether a blank [rawLine] carries whitespace rather than only the line
+  /// breaks a source can leave behind, a lone CR among them.
+  static bool _hasWhitespaceContent(String rawLine) {
+    for (var i = 0; i < rawLine.length; i++) {
+      final unit = rawLine.codeUnitAt(i);
+      if (unit != 0x0A && unit != 0x0D && unit != 0x2028 && unit != 0x2029) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Whether the block ends on a line that closes an ATX heading with hashes
+  /// without opening one, which means the hashes opening it are on an earlier
+  /// line — the one spelling a whole-document render can carry across a blank
+  /// line into the heading that follows.
+  bool _endsOnCrossLineHeadingClose() {
+    var end = _lineStart;
+    while (end > _blockStart && _isWhitespace(_source.codeUnitAt(end - 1))) {
+      end--;
+    }
+    if (end == _blockStart || _source.codeUnitAt(end - 1) != 0x23) return false;
+    var lineStart = end;
+    while (lineStart > _blockStart &&
+        !_isLineBreakUnit(_source.codeUnitAt(lineStart - 1))) {
+      lineStart--;
+    }
+    var first = lineStart;
+    while (first < end && _isWhitespace(_source.codeUnitAt(first))) {
+      first++;
+    }
+    return first < end && _source.codeUnitAt(first) != 0x23;
+  }
+
+  static bool _isLineBreakUnit(int unit) =>
+      unit == 0x0A || unit == 0x0D || unit == 0x2028 || unit == 0x2029;
+
+  /// Whether [line] is a bare run of one to six hashes.
+  static bool _isBareHashRun(String line) {
+    final run = line.trimRight();
+    if (run.isEmpty || run.length > 6) return false;
+    for (var i = 0; i < run.length; i++) {
+      if (run.codeUnitAt(i) != 0x23) return false;
+    }
+    return true;
+  }
+
+  static bool _isWhitespace(int unit) =>
+      unit == 0x20 ||
+      (unit >= 0x09 && unit <= 0x0D) ||
+      (unit >= 0x80 && _isWideWhitespace(unit));
+
+  static bool _isWideWhitespace(int unit) =>
+      unit == 0x85 ||
+      unit == 0xA0 ||
+      unit == 0x1680 ||
+      (unit >= 0x2000 && unit <= 0x200A) ||
+      unit == 0x2028 ||
+      unit == 0x2029 ||
+      unit == 0x202F ||
+      unit == 0x205F ||
+      unit == 0x3000 ||
+      unit == 0xFEFF;
 
   void _updateFence(String line) {
     final marker = line.startsWith('```')
