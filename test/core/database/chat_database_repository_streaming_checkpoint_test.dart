@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/database/generation_run.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk_handler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
@@ -109,8 +113,8 @@ void main() {
         );
         expect(parts.map((row) => row['kind']), const [
           'reasoning',
-          'tool_call',
           'text',
+          'tool_call',
         ]);
         expect(
           raw
@@ -128,6 +132,37 @@ void main() {
       final authoritative = await repository.getMessage('streaming');
       expect(authoritative?.content, 'partial answer');
       expect(authoritative?.reasoningText, 'thinking');
+    });
+
+    test('checkpoint 按 parts 交错顺序落库而不是拍平', () async {
+      const toolEvents = [
+        {'id': 'tool-1', 'name': 'search', 'content': 'result'},
+      ];
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ReasoningPart('thinking'),
+            TextPart('before '),
+            ToolCallPart('{"id":"tool-1","name":"search","content":"result"}'),
+            TextPart('after'),
+          ],
+        ),
+        toolEvents,
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts.map((part) => part.kind).toList(), [
+        'reasoning',
+        'text',
+        'tool_call',
+        'text',
+      ]);
+      expect(persisted.content, 'before after');
+      expect(await repository.getToolEvents('streaming'), toolEvents);
     });
 
     test('已 finalize 的消息不会被迟到的流式 checkpoint 复活', () async {
@@ -266,7 +301,7 @@ void main() {
       }
     });
 
-    test('tool parts 未变化时 checkpoint 跳过重写且内容等价', () async {
+    test('tool parts 内容与 ordinal 在仅正文变化的 checkpoint 后保持等价', () async {
       const toolEvents = [
         {
           'id': 'tool-1',
@@ -320,9 +355,14 @@ void main() {
         toolEvents,
       );
 
-      // Unchanged tool parts keep their rows (updated_at untouched); only the
-      // text part is rewritten.
-      expect(toolPartRows(), before);
+      // Full rewrite is fine as long as tool payloads and ordinals stay
+      // equivalent. The old contiguous-tool fast path is gone.
+      expect(
+        toolPartRows().map(
+          (row) => (row['kind'], row['payload'], row['ordinal']),
+        ),
+        before.map((row) => (row['kind'], row['payload'], row['ordinal'])),
+      );
       final persisted = await repository.getMessage('streaming');
       expect(persisted?.content, 'draft two is longer');
       expect(persisted?.reasoningText, 'thinking');
@@ -447,7 +487,7 @@ void main() {
                 "WHERE revision_id = 'streaming' ORDER BY ordinal;",
               )
               .map((row) => row['kind']),
-          const ['reasoning', 'tool_call', 'text'],
+          const ['reasoning', 'text', 'tool_call'],
         );
       } finally {
         raw.close();
@@ -630,6 +670,354 @@ void main() {
       expect(await repository.getToolEvents('assistant-1'), hasLength(2));
       final message = await repository.getMessage('assistant-1');
       expect(message?.reasoningText, 'let me think');
+    });
+
+    test('ServerToolStart 到 checkpoint 再到 ServerToolEnd 工具卡不丢且位置不变', () async {
+      final handler = StreamChunkHandler();
+      handler.handle(
+        const ServerToolStart(id: 'srv_1', toolName: 'search_web'),
+      );
+      handler.handle(const TextDelta(id: 't', text: '我查一下'));
+
+      ChatMessage snapshot() => ChatMessage(
+        id: 'streaming',
+        role: 'assistant',
+        conversationId: 'conversation',
+        isStreaming: true,
+        parts: handler.parts,
+      );
+
+      await repository.updateStreamingCheckpoint(snapshot(), const []);
+      var persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts.map((part) => part.kind), ['tool_call', 'text']);
+      expect(
+        jsonDecode((persisted.parts[0] as ToolCallPart).payloadJson)['id'],
+        'srv_1',
+      );
+      expect(
+        jsonDecode((persisted.parts[0] as ToolCallPart).payloadJson)['server'],
+        isTrue,
+      );
+      expect((persisted.parts[1] as TextPart).text, '我查一下');
+
+      handler.handle(
+        const ServerToolEnd(id: 'srv_1', output: {'items': <Object>[]}),
+      );
+      handler.handle(const TextDelta(id: 't', text: '结果是 X'));
+      await repository.updateStreamingCheckpoint(snapshot(), const [
+        {
+          'id': 'srv_1',
+          'name': 'search_web',
+          'content': {'items': <Object>[]},
+          'server': true,
+        },
+      ]);
+
+      persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts.map((part) => part.kind), ['tool_call', 'text']);
+      final payload = jsonDecode(
+        (persisted.parts[0] as ToolCallPart).payloadJson,
+      );
+      expect(payload['id'], 'srv_1');
+      expect(payload['server'], isTrue);
+      expect((persisted.parts[1] as TextPart).text, '我查一下结果是 X');
+    });
+
+    test('toolEvents 少于 ToolCallPart 时未匹配的工具卡保留原位', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            TextPart('我查一下'),
+            ToolCallPart('{"id":"local_1","name":"lookup","arguments":{}}'),
+            ToolCallPart('{"id":"srv_1","name":"search_web","server":true}'),
+            TextPart('结果是 X'),
+          ],
+        ),
+        const [
+          {'id': 'local_1', 'name': 'lookup', 'content': 'local result'},
+        ],
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts.map((part) => part.kind), [
+        'text',
+        'tool_call',
+        'tool_call',
+        'text',
+      ]);
+      expect(
+        jsonDecode((persisted.parts[1] as ToolCallPart).payloadJson)['id'],
+        'local_1',
+      );
+      expect(
+        jsonDecode((persisted.parts[2] as ToolCallPart).payloadJson)['id'],
+        'srv_1',
+      );
+      expect(
+        jsonDecode((persisted.parts[2] as ToolCallPart).payloadJson)['server'],
+        isTrue,
+      );
+      expect((persisted.parts[0] as TextPart).text, '我查一下');
+      expect((persisted.parts[3] as TextPart).text, '结果是 X');
+    });
+
+    test('多余 toolEvents 插在最后一个工具卡之后而不是全文末尾', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            TextPart('我查一下'),
+            ToolCallPart('{"id":"local_1","name":"lookup"}'),
+            TextPart('结果是 X'),
+          ],
+        ),
+        const [
+          {'id': 'local_1', 'name': 'lookup', 'content': 'local result'},
+          {'id': 'extra_1', 'name': 'search_web', 'content': 'extra'},
+        ],
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts.map((part) => part.kind), [
+        'text',
+        'tool_call',
+        'tool_call',
+        'text',
+      ]);
+      expect(
+        jsonDecode((persisted.parts[1] as ToolCallPart).payloadJson)['id'],
+        'local_1',
+      );
+      expect(
+        jsonDecode((persisted.parts[2] as ToolCallPart).payloadJson)['id'],
+        'extra_1',
+      );
+      expect((persisted.parts[3] as TextPart).text, '结果是 X');
+    });
+
+    test('未匹配的非空 toolEvent ID 不会改写另一张工具卡', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ToolCallPart('{"id":"A","name":"lookup","arguments":{"q":"one"}}'),
+          ],
+        ),
+        const [
+          {
+            'id': 'C',
+            'name': 'search_web',
+            'arguments': {'q': 'two'},
+            'content': 'hits',
+          },
+        ],
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts.map((part) => part.kind), [
+        'tool_call',
+        'tool_call',
+      ]);
+      expect(
+        jsonDecode((persisted.parts[0] as ToolCallPart).payloadJson)['id'],
+        'A',
+      );
+      expect(
+        jsonDecode((persisted.parts[0] as ToolCallPart).payloadJson)['name'],
+        'lookup',
+      );
+      expect(
+        jsonDecode((persisted.parts[1] as ToolCallPart).payloadJson)['id'],
+        'C',
+      );
+    });
+
+    test('有 ID 的事件不会被前面的无 ID 工具卡抢走', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ToolCallPart('{"name":"lookup","arguments":{"q":"legacy"}}'),
+            ToolCallPart(
+              '{"id":"C","name":"lookup_web","arguments":{"q":"keep"}}',
+            ),
+          ],
+        ),
+        const [
+          {
+            'id': 'C',
+            'name': 'lookup_web',
+            'arguments': {'q': 'keep'},
+            'content': 'hits',
+          },
+        ],
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts, hasLength(2));
+      expect(
+        jsonDecode((persisted.parts[0] as ToolCallPart).payloadJson)['id'],
+        isNot(equals('C')),
+      );
+      expect(
+        jsonDecode((persisted.parts[0] as ToolCallPart).payloadJson)['name'],
+        'lookup',
+      );
+      expect(
+        jsonDecode((persisted.parts[1] as ToolCallPart).payloadJson)['id'],
+        'C',
+      );
+      expect(
+        jsonDecode((persisted.parts[1] as ToolCallPart).payloadJson)['content'],
+        'hits',
+      );
+    });
+
+    test('只有无 ID 工具卡时仍允许按位置合并有 ID 的事件', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ToolCallPart('{"name":"lookup","arguments":{"q":"legacy"}}'),
+          ],
+        ),
+        const [
+          {
+            'id': 'C',
+            'name': 'lookup_web',
+            'arguments': {'q': 'two'},
+            'content': 'hits',
+          },
+        ],
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      expect(persisted!.parts, hasLength(1));
+      final payload = jsonDecode(
+        (persisted.parts.single as ToolCallPart).payloadJson,
+      );
+      expect(payload['id'], 'C');
+      expect(payload['content'], 'hits');
+      expect(payload['arguments'], {'q': 'two'});
+    });
+
+    test('checkpoint 合并同 id 引用 items 而不是只留最后一条', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ToolCallPart(
+              '{"id":"round-0:search-1","name":"builtin_search","server":true,"content":{"items":[{"url":"https://a.example","title":"A"},{"url":"https://b.example","title":"B"}]}}',
+            ),
+          ],
+        ),
+        const [
+          {
+            'id': 'round-0:search-1',
+            'name': 'builtin_search',
+            'content': {
+              'items': [
+                {'url': 'https://b.example', 'title': 'B'},
+              ],
+            },
+          },
+        ],
+      );
+
+      final events = await repository.getToolEvents('streaming');
+      expect(events, hasLength(1));
+      expect(events.single['content'], isA<String>());
+      expect(jsonDecode(events.single['content'] as String)['items'], [
+        {'url': 'https://a.example', 'title': 'A'},
+        {'url': 'https://b.example', 'title': 'B'},
+      ]);
+    });
+
+    test('空 toolEvent arguments 不会覆盖 checkpoint 里已有的代码', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ToolCallPart(
+              '{"id":"code_1","name":"code_execution","arguments":{"language":"python","code":"print(1)"},"server":true}',
+            ),
+          ],
+        ),
+        const [
+          {
+            'id': 'code_1',
+            'name': 'code_execution',
+            'arguments': <String, dynamic>{},
+            'content': null,
+            'server': true,
+          },
+        ],
+      );
+
+      final persisted = await repository.getMessage('streaming');
+      final payload = jsonDecode(
+        (persisted!.parts.single as ToolCallPart).payloadJson,
+      );
+      expect(payload['id'], 'code_1');
+      expect(payload['arguments'], {'language': 'python', 'code': 'print(1)'});
+      expect(payload['server'], isTrue);
+    });
+
+    test('普通工具的 items 不被当成搜索引用合并', () async {
+      await repository.updateStreamingCheckpoint(
+        ChatMessage(
+          id: 'streaming',
+          role: 'assistant',
+          conversationId: 'conversation',
+          isStreaming: true,
+          parts: const [
+            ToolCallPart(
+              '{"id":"lookup_1","name":"lookup","content":{"items":[{"id":1}]}}',
+            ),
+          ],
+        ),
+        const [
+          {
+            'id': 'lookup_1',
+            'name': 'lookup',
+            'content': {
+              'items': [
+                {'id': 2},
+              ],
+            },
+          },
+        ],
+      );
+
+      final events = await repository.getToolEvents('streaming');
+      expect(events, hasLength(1));
+      expect(events.single['content'], {
+        'items': [
+          {'id': 2},
+        ],
+      });
     });
   });
 }

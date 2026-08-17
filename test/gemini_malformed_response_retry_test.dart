@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _geminiConfig(String baseUrl) {
   return ProviderConfig(
@@ -179,10 +180,10 @@ void main() {
       expect(requestCount, 4);
       expect(toolCalls, ['search_first', 'search_second', 'search_follow_up']);
       expect(
-        chunks.map((chunk) => chunk.content).join(),
+        chunks.joinedContent,
         contains('Finished after the follow-up search.'),
       );
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
     },
   );
 

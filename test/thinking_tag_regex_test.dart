@@ -75,4 +75,70 @@ void main() {
       expect(parsed.thinkingTexts, isEmpty);
     });
   });
+
+  group('ThinkingTagParser.parseWithRanges', () {
+    test('hides a think span that is split across arbitrary offsets', () {
+      const input = '<think>secret</think>answer';
+      final parsed = ThinkingTagParser.parseWithRanges(input);
+      expect(parsed.hiddenRanges, isNotEmpty);
+      expect(
+        ThinkingTagParser.visibleSlice(
+          input,
+          start: 0,
+          end: 2,
+          hiddenRanges: parsed.hiddenRanges,
+        ),
+        isEmpty,
+      );
+      expect(
+        ThinkingTagParser.visibleSlice(
+          input,
+          start: 2,
+          end: input.length,
+          hiddenRanges: parsed.hiddenRanges,
+        ),
+        'answer',
+      );
+      expect(parsed.thinkingTexts, ['secret']);
+    });
+
+    test('hides an unclosed think block and still returns its text', () {
+      const input = 'visible <think>partial';
+      final parsed = ThinkingTagParser.parseWithRanges(input);
+      expect(parsed.visibleContent, 'visible ');
+      expect(parsed.thinkingTexts, ['partial']);
+      expect(parsed.hiddenRanges.single.end, input.length);
+    });
+
+    test('keeps an empty think range aligned with later thinking text', () {
+      const input = 'before<think></think>middle<think>secret</think>after';
+      final parsed = ThinkingTagParser.parseWithRanges(input);
+      expect(parsed.hiddenRanges, hasLength(2));
+      expect(parsed.hiddenRanges[0].bodyStart, parsed.hiddenRanges[0].bodyEnd);
+      expect(
+        input.substring(
+          parsed.hiddenRanges[1].bodyStart,
+          parsed.hiddenRanges[1].bodyEnd,
+        ),
+        'secret',
+      );
+      expect(parsed.thinkingTexts, ['secret']);
+      expect(parsed.visibleContent, 'beforemiddleafter');
+    });
+
+    test('visibleSlice without hidden ranges is the original substring', () {
+      const input = '    indented\nline  ';
+      final parsed = ThinkingTagParser.parseWithRanges(input);
+      expect(parsed.hiddenRanges, isEmpty);
+      expect(
+        ThinkingTagParser.visibleSlice(
+          input,
+          start: 0,
+          end: input.length,
+          hiddenRanges: parsed.hiddenRanges,
+        ),
+        input,
+      );
+    });
+  });
 }

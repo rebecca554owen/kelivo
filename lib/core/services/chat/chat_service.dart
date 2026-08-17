@@ -3298,11 +3298,14 @@ class ChatService extends ChangeNotifier {
       final nextVersion = versions.isEmpty
           ? 0
           : versions.reduce((a, b) => a > b ? a : b) + 1;
-      // Content-only append must keep prior ImagePart/FilePart attachments
-      // and preserve ordinal ([Image, Text] stays [Image, Text(new)]).
+      // Content-only append must keep prior attachments and TextPart slots
+      // ([Text, Tool, Text] stays three parts, not a merged first TextPart).
       final resolvedParts =
           parts ??
-          ChatMessage.partsWithReplacedText(temporaryOriginal.parts, content);
+          ChatMessage.partsWithRedistributedText(
+            temporaryOriginal.parts,
+            content,
+          );
       final newMsg = ChatMessage(
         role: temporaryOriginal.role,
         parts: resolvedParts,

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,135 @@ void main() {
   tearDown(() async {
     await repository.close();
     await root.delete(recursive: true);
+  });
+
+  test('interleaved reasoning and tool parts keep arrival order', () async {
+    final now = DateTime.utc(2026, 8, 16, 12);
+    const conversationId = 'conversation-interleaved';
+    const messageId = 'message-interleaved';
+    final message = ChatMessage(
+      id: messageId,
+      role: 'assistant',
+      conversationId: conversationId,
+      timestamp: now,
+      parts: const [
+        ReasoningPart('plan'),
+        TextPart('hello '),
+        ToolCallPart('{"id":"call_1","name":"lookup"}'),
+        TextPart('world'),
+        ImagePart(uri: 'https://example.com/a.png'),
+        ReasoningPart('check'),
+        ToolCallPart('{"id":"call_2","name":"search"}'),
+        TextPart(' done'),
+      ],
+    );
+
+    await repository.putMigrationBatch(
+      conversations: [
+        Conversation(
+          id: conversationId,
+          title: 'Interleaved',
+          createdAt: now,
+          updatedAt: now,
+          messageIds: const [messageId],
+        ),
+      ],
+      messages: [(message: message, messageOrder: 0)],
+      toolEventsByMessageId: const {},
+      geminiSignaturesByMessageId: const {},
+    );
+
+    final reloaded = await repository.getMessage(messageId);
+    expect(reloaded, isNotNull);
+    expect(reloaded!.parts.map((part) => part.kind).toList(), [
+      'reasoning',
+      'text',
+      'tool_call',
+      'text',
+      'image',
+      'reasoning',
+      'tool_call',
+      'text',
+    ]);
+    expect((reloaded.parts[0] as ReasoningPart).text, 'plan');
+    expect((reloaded.parts[1] as TextPart).text, 'hello ');
+    expect((reloaded.parts[2] as ToolCallPart).payloadJson, contains('lookup'));
+    expect((reloaded.parts[3] as TextPart).text, 'world');
+    expect((reloaded.parts[4] as ImagePart).uri, 'https://example.com/a.png');
+    expect((reloaded.parts[5] as ReasoningPart).text, 'check');
+    expect((reloaded.parts[6] as ToolCallPart).payloadJson, contains('search'));
+    expect((reloaded.parts[7] as TextPart).text, ' done');
+    expect(reloaded.content, 'hello world done');
+    expect(reloaded.reasoningText, 'plan\ncheck');
+    expect(await repository.getToolEvents(messageId), [
+      {'id': 'call_1', 'name': 'lookup'},
+      {'id': 'call_2', 'name': 'search'},
+    ]);
+
+    await repository.updateMessage(reloaded);
+    final again = await repository.getMessage(messageId);
+    expect(again!.parts.map((part) => part.kind).toList(), [
+      'reasoning',
+      'text',
+      'tool_call',
+      'text',
+      'image',
+      'reasoning',
+      'tool_call',
+      'text',
+    ]);
+  });
+
+  test('tool event overlay matches existing parts by id', () async {
+    final now = DateTime.utc(2026, 8, 16, 13);
+    const conversationId = 'conversation-tool-ids';
+    const messageId = 'message-tool-ids';
+    await repository.putConversation(
+      Conversation(
+        id: conversationId,
+        title: 'Tool ids',
+        createdAt: now,
+        updatedAt: now,
+        messageIds: const [messageId],
+      ),
+    );
+    await repository.putMessage(
+      ChatMessage(
+        id: messageId,
+        role: 'assistant',
+        conversationId: conversationId,
+        timestamp: now,
+        parts: const [
+          TextPart('before'),
+          ToolCallPart('{"id":"call_b","name":"second","content":"old-b"}'),
+          TextPart('mid'),
+          ToolCallPart('{"id":"call_a","name":"first","content":"old-a"}'),
+        ],
+      ),
+    );
+
+    await repository.setToolEvents(messageId, [
+      {'id': 'call_a', 'name': 'first', 'content': 'new-a'},
+      {'id': 'call_b', 'name': 'second', 'content': 'new-b'},
+    ]);
+
+    final reloaded = await repository.getMessage(messageId);
+    expect(reloaded!.parts.map((part) => part.kind).toList(), [
+      'text',
+      'tool_call',
+      'text',
+      'tool_call',
+    ]);
+    expect(jsonDecode((reloaded.parts[1] as ToolCallPart).payloadJson), {
+      'id': 'call_b',
+      'name': 'second',
+      'content': 'new-b',
+    });
+    expect(jsonDecode((reloaded.parts[3] as ToolCallPart).payloadJson), {
+      'id': 'call_a',
+      'name': 'first',
+      'content': 'new-a',
+    });
   });
 
   test('text+image+file parts roundtrip preserves order and payload', () async {
@@ -185,6 +315,60 @@ void main() {
     expect(persisted.parts[1], isA<TextPart>());
     expect((persisted.parts[1] as TextPart).text, 'edited caption');
   });
+
+  test(
+    'appendMessageVersion content-only keeps interleaved TextPart slots',
+    () async {
+      final now = DateTime.utc(2026, 8, 9, 14);
+      const conversationId = 'conversation-append-interleave';
+      const messageId = 'message-append-interleave';
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: conversationId,
+            title: 'Append interleave',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const [messageId],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: messageId,
+              role: 'assistant',
+              conversationId: conversationId,
+              timestamp: now,
+              groupId: messageId,
+              version: 0,
+              parts: const [
+                TextPart('我查一下'),
+                ToolCallPart('{"id":"search","name":"search"}'),
+                TextPart('结果是 X'),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final result = await repository.appendMessageVersion(
+        messageId: messageId,
+        content: '我查一下结果是 X',
+      );
+      expect(result, isNotNull);
+      final persisted = await repository.getMessage(result!.message.id);
+      expect(persisted!.parts.map((part) => part.kind), [
+        'text',
+        'tool_call',
+        'text',
+      ]);
+      expect((persisted.parts[0] as TextPart).text, '我查一下');
+      expect((persisted.parts[2] as TextPart).text, '结果是 X');
+    },
+  );
 
   test(
     'unknown future_widget part persists and writes back unchanged',

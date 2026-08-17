@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _moonshotConfig(String baseUrl) {
   return ProviderConfig(
@@ -195,7 +196,7 @@ void main() {
         ).toList();
 
         final body = await requestBodyCompleter.future;
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
         expect(body['thinking'], {'type': 'disabled'});
         expect(body.containsKey('reasoning_effort'), isFalse);
         expect(body.containsKey('temperature'), isFalse);
@@ -258,7 +259,7 @@ void main() {
         ).toList();
 
         final body = await requestBodyCompleter.future;
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
         expect(body.containsKey('thinking'), isFalse);
         expect(body.containsKey('reasoning_effort'), isFalse);
         expect(body.containsKey('temperature'), isFalse);
@@ -395,10 +396,7 @@ void main() {
         expect(toolMessage['tool_call_id'], 'call_1');
         expect(toolMessage['name'], 'date');
         expect(toolMessage['content'], '2026-03-27');
-        expect(
-          chunks.map((chunk) => chunk.content).join(),
-          contains('今天是 2026-03-27'),
-        );
+        expect(chunks.joinedContent, contains('今天是 2026-03-27'));
       },
     );
 
@@ -494,7 +492,7 @@ void main() {
         },
       ).toList();
 
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
       expect(toolCallIds.single, isNotEmpty);
     });
 
@@ -608,7 +606,7 @@ void main() {
           (m) => m['role'] == 'assistant' && m['tool_calls'] is List,
         );
 
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
         expect(secondBody.containsKey('reasoning_effort'), isFalse);
         expect(secondBody.containsKey('thinking'), isFalse);
         expect(assistantToolMessage['content'], '我来帮您查看当前时间。');

@@ -118,29 +118,17 @@ class OcrService {
       },
     ];
 
-    final stream = ChatApiService.sendMessageStream(
-      config: cfg,
-      modelId: model,
-      messages: messages,
-      userImagePaths: imagePaths,
-      thinkingBudget: settings.ocrGenerationThinkingBudgetFor(null),
-      topP: null,
-      maxTokens: null,
-      tools: null,
-      onToolCall: null,
-      extraHeaders: null,
-      extraBody: null,
-      stream: false,
-      ocrActive: true,
-    );
-
     String out = '';
     try {
-      await for (final chunk in stream) {
-        if (chunk.content.isNotEmpty) {
-          out += chunk.content;
-        }
-      }
+      final result = await ChatApiService.generateMessage(
+        config: cfg,
+        modelId: model,
+        messages: messages,
+        userImagePaths: imagePaths,
+        thinkingBudget: settings.ocrGenerationThinkingBudgetFor(null),
+        ocrActive: true,
+      );
+      out = result.text;
     } catch (e) {
       onError?.call(e);
       return null;

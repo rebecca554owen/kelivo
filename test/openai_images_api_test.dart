@@ -7,8 +7,10 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
 import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 import 'package:Kelivo/utils/sandbox_path_resolver.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _openAiConfig(String baseUrl, {bool useResponseApi = false}) {
   return ProviderConfig(
@@ -88,18 +90,15 @@ void main() {
         messages: const [
           {'role': 'user', 'content': 'draw a tabby cat'},
         ],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/generations');
       expect(authorization, 'Bearer test-key');
       expect(requestBody['model'], 'gpt-image-2');
       expect(requestBody['prompt'], 'draw a tabby cat');
-      expect(chunks, hasLength(1));
-      expect(
-        chunks.single.content,
-        '![image](https://example.com/generated.png)',
-      );
-      expect(chunks.single.usage?.totalTokens, 8);
+      expect(chunks.firstImageUri, 'https://example.com/generated.png');
+      expect(chunks.lastUsage?.totalTokens, 8);
     });
 
     test(
@@ -135,6 +134,7 @@ void main() {
           messages: const [
             {'role': 'user', 'content': 'generate an empty image'},
           ],
+          stream: false,
         ).toList();
 
         expect(requestUri.path, '/v1/images/generations');
@@ -175,12 +175,13 @@ void main() {
         messages: const [
           {'role': 'user', 'content': 'draw a clean app icon'},
         ],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/generations');
       expect(requestBody['model'], 'agnes-image-2.1-flash');
       expect(requestBody['prompt'], 'draw a clean app icon');
-      expect(chunks.single.content, contains('agnes-generated.png'));
+      expect(chunks.firstImageUri, contains('agnes-generated.png'));
     });
 
     test('can disable Images API routing for image models', () async {
@@ -222,7 +223,7 @@ void main() {
 
       expect(requestUri.path, '/v1/chat/completions');
       expect(requestBody['model'], 'gpt-image-2');
-      expect(chunks.single.content, 'chat route');
+      expect(chunks.joinedContent, 'chat route');
     });
 
     test(
@@ -281,7 +282,7 @@ void main() {
         expect(requestUri.path, '/v1/chat/completions');
         expect(contentType, ContentType.json.mimeType);
         expect(requestBody['model'], 'gpt-image-2');
-        expect(chunks.single.content, 'chat route with image');
+        expect(chunks.joinedContent, 'chat route with image');
       },
     );
 
@@ -328,6 +329,7 @@ void main() {
           {'role': 'user', 'content': 'make the background blue'},
         ],
         userImagePaths: [inputImage.path],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/edits');
@@ -339,7 +341,7 @@ void main() {
       expect(requestBody, contains('name="image[]"'));
       expect(requestBody, contains('content-type: image/png'));
       expect(requestBody, contains('filename="source.png"'));
-      expect(chunks.single.content, '![image](https://example.com/edited.png)');
+      expect(chunks.firstImageUri, 'https://example.com/edited.png');
     });
 
     test('sets jpeg content type for jpg image edit uploads', () async {
@@ -381,6 +383,7 @@ void main() {
           {'role': 'user', 'content': 'make it cinematic'},
         ],
         userImagePaths: [inputImage.path],
+        stream: false,
       ).toList();
 
       expect(requestBody, contains('filename="source.jpg"'));
@@ -431,6 +434,7 @@ void main() {
             ],
           },
         ],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/edits');
@@ -487,6 +491,7 @@ void main() {
           },
         ],
         userImagePaths: [inputImage.path],
+        stream: false,
       ).toList();
 
       expect(requestBody, contains('name="image[]"'));
@@ -540,6 +545,7 @@ void main() {
             multimodalInternalMediaPathsKey: [inputImage.path],
           },
         ],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/edits');
@@ -611,6 +617,7 @@ void main() {
             ],
           },
         ],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/edits');
@@ -675,6 +682,7 @@ void main() {
             ],
           },
         ],
+        stream: false,
       ).toList();
 
       expect(requestUri.path, '/v1/images/generations');
@@ -711,14 +719,12 @@ void main() {
             'content': 'draw a cat [image:data:image/png;base64,AQIDBA==]',
           },
         ],
+        stream: false,
       ).toList();
 
       // Marker text must not force edits; generations path is used instead.
       expect(requestUri.path, '/v1/images/generations');
-      expect(
-        chunks.single.content,
-        '![image](https://example.com/generated.png)',
-      );
+      expect(chunks.firstImageUri, 'https://example.com/generated.png');
     });
 
     test('rejects dall-e-3 edits before sending a request', () async {
@@ -730,6 +736,7 @@ void main() {
             {'role': 'user', 'content': 'edit this image'},
           ],
           userImagePaths: const ['/tmp/source.png'],
+          stream: false,
         ).toList(),
         throwsA(
           isA<UnsupportedError>().having(
@@ -787,11 +794,10 @@ void main() {
           {'role': 'user', 'content': 'draw a tabby cat'},
         ],
         extraBody: const {'output_format': 'webp'},
+        stream: false,
       ).toList();
 
-      final imageUri = RegExp(
-        r'!\[image\]\(([^)]+)\)',
-      ).firstMatch(chunks.single.content)!.group(1)!;
+      final imageUri = chunks.firstImageUri!;
       expect(requestBody['output_format'], 'webp');
       expect(imageUri, startsWith('kelivo-file:///'));
       expect(imageUri.endsWith('.webp'), isTrue);
@@ -842,6 +848,7 @@ void main() {
             messages: const [
               {'role': 'user', 'content': 'draw a tabby cat'},
             ],
+            stream: false,
           ).toList(),
           throwsA(
             isA<FileSystemException>().having(
@@ -892,6 +899,7 @@ void main() {
             },
             {'role': 'user', 'content': 'make it realistic'},
           ],
+          stream: false,
         ).toList();
 
         expect(requestUri.path, '/v1/images/edits');
@@ -901,10 +909,7 @@ void main() {
         expect(requestBody, isNot(contains('draw a tabby cat')));
         expect(requestBody, isNot(contains('Original image request:')));
         expect(requestBody, isNot(contains('Edit request:')));
-        expect(
-          chunks.single.content,
-          '![image](https://example.com/follow-up-edit.png)',
-        );
+        expect(chunks.firstImageUri, 'https://example.com/follow-up-edit.png');
       },
     );
 
@@ -931,6 +936,7 @@ void main() {
             messages: const [
               {'role': 'user', 'content': 'draw'},
             ],
+            stream: false,
           ).toList(),
           throwsA(
             isA<HttpException>().having(
@@ -997,12 +1003,13 @@ void main() {
         stream: false,
       ).toList();
 
-      final content = chunks.map((chunk) => chunk.content).join();
-      expect(content, contains('Done'));
-      expect(content, contains('![image](https://example.com/generated.png)'));
-      final imageUris = RegExp(
-        r'!\[image\]\(([^)]+)\)',
-      ).allMatches(content).map((match) => match.group(1)!).toList();
+      expect(chunks.joinedContent, contains('Done'));
+      final imageUris = chunks
+          .whereType<ImageSnapshot>()
+          .map((chunk) => chunk.data)
+          .toList();
+      // Remote URLs pass through untouched; base64 is saved to a local file.
+      expect(imageUris, contains('https://example.com/generated.png'));
       final imageUri = imageUris.singleWhere(
         (uri) => uri.startsWith('kelivo-file:///'),
       );
@@ -1012,7 +1019,72 @@ void main() {
         await File(SandboxPathResolver.fix(imageUri)).readAsBytes(),
         const [1, 2, 3, 4],
       );
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
+    });
+
+    test('emits Image events from non-stream output array', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_openrouter_responses_image_events_',
+      );
+      final previousPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+      SandboxPathResolver.debugSetDirs(docsDir: tempDir.path);
+      addTearDown(() async {
+        PathProviderPlatform.instance = previousPathProvider;
+        SandboxPathResolver.debugSetDirs(docsDir: null, supportDir: null);
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        await request.drain<void>();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'output_text': 'Done',
+            'output': [
+              {
+                'type': 'openrouter:image_generation',
+                'result':
+                    'data:image/png;base64,${base64Encode(const [1, 2, 3, 4])}',
+              },
+            ],
+            'usage': {'input_tokens': 1, 'output_tokens': 1},
+          }),
+        );
+        await request.response.close();
+      });
+
+      final chunks = await ChatApiService.sendMessageStream(
+        config: _openAiConfig(_baseUrl(server), useResponseApi: true),
+        modelId: 'gpt-5.6-luna',
+        messages: const [
+          {'role': 'user', 'content': 'draw a cat'},
+        ],
+        stream: false,
+      ).toList();
+
+      expect(chunks.whereType<ImageStart>(), hasLength(1));
+      expect(chunks.whereType<ImageStart>().single.mimeType, 'image/png');
+      final uri = chunks.whereType<ImageSnapshot>().single.data;
+      expect(uri, startsWith('kelivo-file:///'));
+      expect(uri.endsWith('.png'), isTrue);
+      expect(chunks.whereType<ImageEnd>(), hasLength(1));
+      expect(chunks.whereType<TextDelta>().single.text, 'Done');
+      expect(chunks.whereType<Finish>(), hasLength(1));
+      expect(await File(SandboxPathResolver.fix(uri)).readAsBytes(), const [
+        1,
+        2,
+        3,
+        4,
+      ]);
     });
 
     test('renders partial image when completed output is empty', () async {
@@ -1096,16 +1168,10 @@ void main() {
         ],
       ).toList();
 
-      final content = chunks.map((chunk) => chunk.content).join();
-      final imageUri = RegExp(
-        r'!\[image\]\(([^)]+)\)',
-      ).firstMatch(content)!.group(1)!;
-      expect(content, contains('![image]('));
-      expect(imageUri, startsWith('kelivo-file:///'));
-      expect(imageUri.endsWith('.png'), isTrue);
-      final imagePath = SandboxPathResolver.fix(imageUri);
-      expect(await File(imagePath).readAsBytes(), const [1, 2, 3, 4]);
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.whereType<ImageStart>(), hasLength(1));
+      expect(chunks.firstImageUri, base64Encode(const [1, 2, 3, 4]));
+      expect(chunks.whereType<ImageEnd>(), hasLength(1));
+      expect(chunks.isGenerationDone, isTrue);
     });
 
     test('renders streamed OpenRouter result URL', () async {
@@ -1150,10 +1216,10 @@ void main() {
       ).toList();
 
       expect(
-        chunks.map((chunk) => chunk.content).join(),
-        contains('![image](https://example.com/streamed.png)'),
+        chunks.whereType<ImageSnapshot>().map((chunk) => chunk.data),
+        contains('https://example.com/streamed.png'),
       );
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
     });
   });
 }

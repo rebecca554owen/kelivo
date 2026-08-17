@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image_lib;
 
+import 'package:Kelivo/core/models/chat_message.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/features/chat/widgets/message_export_sheet.dart';
 
 Uint8List _solidPng({
@@ -377,4 +379,628 @@ void main() {
       expect(image.getPixel(2, 9).g, greaterThan(image.getPixel(2, 9).r));
     },
   );
+
+  test(
+    'hiding thinking drops reasoning and tool parts from export message',
+    () {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          ReasoningPart('plan'),
+          ToolCallPart('{"id":"call_1","name":"lookup"}'),
+          TextPart('answer'),
+          ImagePart(uri: 'https://example.com/a.png'),
+        ],
+      );
+
+      final hidden = messageForThinkingExport(
+        message,
+        showThinkingAndToolCards: false,
+      );
+      expect(hidden.parts.whereType<ReasoningPart>(), isEmpty);
+      expect(hidden.parts.whereType<ToolCallPart>(), isEmpty);
+      expect(hidden.content, 'answer');
+      expect(
+        hidden.parts.whereType<ImagePart>().single.uri,
+        'https://example.com/a.png',
+      );
+
+      final shown = messageForThinkingExport(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown.parts.whereType<ReasoningPart>(), isNotEmpty);
+      expect(shown.parts.whereType<ToolCallPart>(), isNotEmpty);
+    },
+  );
+
+  test('image export with cards on strips unclosed think from the body', () {
+    final message = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      parts: const [
+        TextPart('visible <think>partial'),
+        ToolCallPart('{"id":"lookup","name":"lookup"}'),
+      ],
+    );
+
+    final shown = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: true,
+    );
+    expect(shown.parts.whereType<ToolCallPart>(), isNotEmpty);
+    expect(shown.parts.whereType<ReasoningPart>().map((part) => part.text), [
+      'partial',
+    ]);
+    expect(shown.content, 'visible ');
+    expect(shown.content, isNot(contains('partial')));
+    expect(shown.content, isNot(contains('<think>')));
+    expect(shown.parts.map((part) => part.kind), [
+      'text',
+      'reasoning',
+      'tool_call',
+    ]);
+
+    final hidden = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: false,
+    );
+    expect(hidden.parts.whereType<ToolCallPart>(), isEmpty);
+    expect(hidden.parts.whereType<ReasoningPart>(), isEmpty);
+    expect(hidden.content, 'visible ');
+  });
+
+  test('image export with cards on inserts ReasoningPart before ImagePart', () {
+    final message = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      parts: const [
+        TextPart('before <think>secret</think>'),
+        ImagePart(uri: 'https://example.com/a.png'),
+        TextPart(' after'),
+      ],
+    );
+
+    final shown = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: true,
+    );
+    expect(shown.parts.whereType<ImagePart>(), isNotEmpty);
+    expect(shown.parts.whereType<ReasoningPart>().map((part) => part.text), [
+      'secret',
+    ]);
+    expect(shown.content, 'before  after');
+    expect(shown.parts.map((part) => part.kind), [
+      'text',
+      'reasoning',
+      'image',
+      'text',
+    ]);
+
+    final hidden = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: false,
+    );
+    expect(hidden.parts.whereType<ReasoningPart>(), isEmpty);
+    expect(hidden.parts.whereType<ImagePart>(), isNotEmpty);
+    expect(hidden.content, 'before  after');
+  });
+
+  test('image export splits a think range that spans a ToolCallPart', () {
+    final message = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      parts: const [
+        TextPart('<think>A'),
+        ToolCallPart('{"id":"lookup","name":"lookup"}'),
+        TextPart('B</think>answer'),
+      ],
+    );
+
+    final shown = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: true,
+    );
+    expect(shown.parts.map((part) => part.kind), [
+      'reasoning',
+      'tool_call',
+      'reasoning',
+      'text',
+    ]);
+    expect(shown.parts.whereType<ReasoningPart>().map((part) => part.text), [
+      'A',
+      'B',
+    ]);
+    expect(shown.content, 'answer');
+
+    final hidden = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: false,
+    );
+    expect(hidden.parts.whereType<ReasoningPart>(), isEmpty);
+    expect(hidden.parts.whereType<ToolCallPart>(), isEmpty);
+    expect(hidden.content, 'answer');
+  });
+
+  test(
+    'image export keeps split think fragments collapsed when expand is off',
+    () {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('<think>A'),
+          ToolCallPart('{"id":"lookup","name":"lookup"}'),
+          TextPart('B</think>answer'),
+        ],
+      );
+
+      expect(
+        exportReasoningExpandedFlagsForTesting(
+          message,
+          expandThinkingContent: false,
+        ),
+        [false, false],
+      );
+      expect(
+        exportReasoningExpandedFlagsForTesting(
+          message,
+          expandThinkingContent: true,
+        ),
+        [true, true],
+      );
+    },
+  );
+
+  test(
+    'image export inherits collapse onto padded fragments when segments json has one block',
+    () {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('<think>A'),
+          ImagePart(uri: 'https://example.com/a.png'),
+          TextPart('B</think>answer'),
+        ],
+        reasoningSegmentsJson: '{"segments":[{"text":"AB"}]}',
+      );
+
+      expect(
+        exportReasoningExpandedFlagsForTesting(
+          message,
+          expandThinkingContent: false,
+        ),
+        [false, false],
+      );
+    },
+  );
+
+  test(
+    'image export copies think timing onto split fragments of the same block',
+    () {
+      final firstStart = DateTime.utc(2026, 1, 1, 0, 0, 0);
+      final firstEnd = DateTime.utc(2026, 1, 1, 0, 0, 10);
+      final secondStart = DateTime.utc(2026, 1, 1, 0, 0, 20);
+      final secondEnd = DateTime.utc(2026, 1, 1, 0, 0, 30);
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('<think>A'),
+          ToolCallPart('{"id":"lookup","name":"lookup"}'),
+          TextPart('B</think>mid<think>C</think>answer'),
+        ],
+        reasoningSegmentsJson:
+            '{"segments":['
+            '{"text":"AB","startAt":"${firstStart.toIso8601String()}","finishedAt":"${firstEnd.toIso8601String()}"},'
+            '{"text":"C","startAt":"${secondStart.toIso8601String()}","finishedAt":"${secondEnd.toIso8601String()}"}'
+            ']}',
+      );
+
+      final metadata = exportReasoningMetadataForTesting(
+        message,
+        expandThinkingContent: false,
+      );
+      expect(metadata, hasLength(3));
+      expect(metadata.map((item) => item.expanded), [false, false, false]);
+      expect(metadata[0].startAt, firstStart);
+      expect(metadata[0].finishedAt, firstEnd);
+      expect(metadata[1].startAt, firstStart);
+      expect(metadata[1].finishedAt, firstEnd);
+      expect(metadata[2].startAt, secondStart);
+      expect(metadata[2].finishedAt, secondEnd);
+    },
+  );
+
+  test(
+    'image export aligns extra structured ReasoningParts to the expand toggle',
+    () {
+      final startAt = DateTime.utc(2026, 1, 1, 0, 0, 0);
+      final finishedAt = DateTime.utc(2026, 1, 1, 0, 0, 8);
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          ReasoningPart('first thought'),
+          ReasoningPart('second thought'),
+          TextPart('answer'),
+        ],
+        reasoningSegmentsJson:
+            '{"segments":[{"text":"first thought","startAt":"${startAt.toIso8601String()}","finishedAt":"${finishedAt.toIso8601String()}"}]}',
+      );
+
+      final collapsed = exportReasoningMetadataForTesting(
+        message,
+        expandThinkingContent: false,
+      );
+      expect(collapsed.map((item) => item.expanded), [false, false]);
+      expect(collapsed[0].startAt, startAt);
+      expect(collapsed[0].finishedAt, finishedAt);
+      expect(collapsed[1].startAt, isNull);
+      expect(collapsed[1].finishedAt, isNull);
+
+      final expanded = exportReasoningMetadataForTesting(
+        message,
+        expandThinkingContent: true,
+      );
+      expect(expanded.map((item) => item.expanded), [true, true]);
+
+      final noJson = exportReasoningExpandedFlagsForTesting(
+        ChatMessage(
+          role: 'assistant',
+          conversationId: 'c1',
+          parts: const [
+            ReasoningPart('first thought'),
+            ReasoningPart('second thought'),
+          ],
+        ),
+        expandThinkingContent: false,
+      );
+      expect(noJson, [false, false]);
+    },
+  );
+
+  test('image export splits a think range that spans an ImagePart', () {
+    final message = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      parts: const [
+        TextPart('<think>A'),
+        ImagePart(uri: 'https://example.com/a.png'),
+        TextPart('B</think>answer'),
+      ],
+    );
+
+    final shown = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: true,
+    );
+    expect(shown.parts.map((part) => part.kind), [
+      'reasoning',
+      'image',
+      'reasoning',
+      'text',
+    ]);
+    expect(shown.parts.whereType<ReasoningPart>().map((part) => part.text), [
+      'A',
+      'B',
+    ]);
+    expect(shown.content, 'answer');
+  });
+
+  test(
+    'image export keeps adjacent TextParts of one think as one ReasoningPart',
+    () {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [TextPart('<think>A'), TextPart('B</think>answer')],
+      );
+
+      final shown = messageForThinkingExport(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown.parts.map((part) => part.kind), ['reasoning', 'text']);
+      expect(shown.parts.whereType<ReasoningPart>().map((part) => part.text), [
+        'AB',
+      ]);
+      expect(shown.content, 'answer');
+    },
+  );
+
+  test(
+    'image export does not attach later think text to an empty think block',
+    () {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('before<think></think>middle<think>secret</think>after'),
+        ],
+      );
+
+      final shown = messageForThinkingExport(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown.parts.whereType<ReasoningPart>().map((part) => part.text), [
+        'secret',
+      ]);
+      expect(shown.content, 'beforemiddleafter');
+      expect(shown.parts.map((part) => part.kind), [
+        'text',
+        'text',
+        'reasoning',
+        'text',
+      ]);
+      expect((shown.parts[0] as TextPart).text, 'before');
+      expect((shown.parts[1] as TextPart).text, 'middle');
+      expect((shown.parts[3] as TextPart).text, 'after');
+    },
+  );
+
+  test('image export keeps TextParts on both sides of an ImagePart', () {
+    final message = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      parts: const [
+        TextPart('before'),
+        ImagePart(uri: 'https://example.com/a.png'),
+        TextPart('after'),
+      ],
+    );
+
+    final hidden = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: false,
+    );
+    expect(hidden.parts.map((part) => part.kind), ['text', 'image', 'text']);
+    expect((hidden.parts[0] as TextPart).text, 'before');
+    expect((hidden.parts[1] as ImagePart).uri, 'https://example.com/a.png');
+    expect((hidden.parts[2] as TextPart).text, 'after');
+
+    final shown = messageForThinkingExport(
+      message,
+      showThinkingAndToolCards: true,
+    );
+    expect(shown.parts.map((part) => part.kind), ['text', 'image', 'text']);
+    expect((shown.parts[0] as TextPart).text, 'before');
+    expect((shown.parts[2] as TextPart).text, 'after');
+  });
+
+  test(
+    'legacy <think> assistant text is stripped and not duplicated',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [TextPart('<think>secret plan</think>\nvisible answer')],
+      );
+
+      final hidden = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: false,
+      );
+      expect(hidden, contains('visible answer'));
+      expect(hidden, isNot(contains('secret plan')));
+      expect(hidden, isNot(contains('<think>')));
+
+      final shown = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown, contains('visible answer'));
+      expect(shown, contains('[Thinking]'));
+      expect(shown, contains('secret plan'));
+      expect(shown, isNot(contains('<think>')));
+      expect('secret plan'.allMatches(shown).length, 1);
+    },
+  );
+
+  test(
+    'think tags split across TextParts stay hidden and keep tool order',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('<t'),
+          ToolCallPart('{"id":"lookup","name":"lookup","content":"hits"}'),
+          TextPart('hink>secret</think>answer'),
+        ],
+      );
+
+      final hidden = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: false,
+      );
+      expect(hidden, isNot(contains('secret')));
+      expect(hidden, isNot(contains('<think>')));
+      expect(hidden, contains('answer'));
+
+      final shown = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown.split('[Thinking]').first, isNot(contains('secret')));
+      expect(shown.indexOf('[lookup]'), lessThan(shown.indexOf('answer')));
+    },
+  );
+
+  test(
+    'think tags that span TextParts stay hidden and keep tool order',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('<think>secret'),
+          ToolCallPart('{"id":"lookup","name":"lookup","content":"hits"}'),
+          TextPart(' continued</think>answer'),
+        ],
+      );
+
+      final hidden = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: false,
+      );
+      expect(hidden, isNot(contains('secret')));
+      expect(hidden, isNot(contains('<think>')));
+      expect(hidden, isNot(contains('</think>')));
+      expect(hidden, contains('answer'));
+
+      final shown = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown, isNot(contains('<think>')));
+      expect(shown, isNot(contains('</think>')));
+      expect(shown.split('[Thinking]').first, isNot(contains('secret')));
+      expect(shown.indexOf('[lookup]'), lessThan(shown.indexOf('answer')));
+    },
+  );
+
+  test(
+    'unclosed trailing think is hidden or shown from the whole-string parse',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [TextPart('visible <think>partial')],
+      );
+
+      final hidden = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: false,
+      );
+      expect(hidden, contains('visible'));
+      expect(hidden, isNot(contains('partial')));
+      expect(hidden, isNot(contains('<think>')));
+
+      final shown = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown, contains('[Thinking]'));
+      expect(shown, contains('partial'));
+      expect(shown.split('[Thinking]').first, isNot(contains('partial')));
+    },
+  );
+
+  test(
+    'multi TextPart export without think keeps indent and trailing spaces',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('    indented\nline  '),
+          ToolCallPart('{"id":"lookup","name":"lookup","content":"hits"}'),
+          TextPart('after  '),
+        ],
+      );
+
+      final exported = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(exported, contains('    indented\nline  \n'));
+      expect(exported, contains('after  \n'));
+      expect(
+        exported.indexOf('    indented'),
+        lessThan(exported.indexOf('[lookup]')),
+      );
+      expect(
+        exported.indexOf('[lookup]'),
+        lessThan(exported.indexOf('after  ')),
+      );
+    },
+  );
+
+  test(
+    'interleaved Text/Tool/Text with one <think> part keeps order and hides think',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('before <think>secret plan</think>'),
+          ToolCallPart('{"id":"lookup","name":"lookup","content":"hits"}'),
+          TextPart('after'),
+        ],
+      );
+
+      final hidden = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: false,
+      );
+      expect(hidden, contains('before \n\nafter\n'));
+      expect(hidden.indexOf('before'), lessThan(hidden.indexOf('after')));
+      expect(hidden, isNot(contains('[lookup]')));
+      expect(hidden, isNot(contains('secret plan')));
+      expect(hidden, isNot(contains('<think>')));
+
+      final shown = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(shown, contains('before \n\n[lookup]\nhits\n\nafter\n'));
+      expect(shown.indexOf('before'), lessThan(shown.indexOf('[lookup]')));
+      expect(shown.indexOf('[lookup]'), lessThan(shown.indexOf('after')));
+      expect(shown, isNot(contains('<think>')));
+      expect('secret plan'.allMatches(shown).length, 1);
+      expect(shown.indexOf('after'), lessThan(shown.indexOf('secret plan')));
+    },
+  );
+
+  test(
+    'non-reasoning interleaved Text/Tool/Text export keeps part order',
+    () async {
+      final message = ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        parts: const [
+          TextPart('before'),
+          ToolCallPart('{"id":"lookup","name":"lookup","content":"hits"}'),
+          TextPart('after'),
+        ],
+      );
+
+      final exported = await exportMessageBlocksForTesting(
+        message,
+        showThinkingAndToolCards: true,
+      );
+      expect(exported, contains('before\n\n[lookup]\nhits\n\nafter\n'));
+      expect(
+        exported.indexOf('before'),
+        lessThan(exported.indexOf('[lookup]')),
+      );
+      expect(exported.indexOf('[lookup]'), lessThan(exported.indexOf('after')));
+    },
+  );
+
+  test('md/txt export walks parts in screen order including tools', () async {
+    final message = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      parts: const [
+        TextPart('我查一下'),
+        ToolCallPart('{"id":"search","name":"search","content":"hits"}'),
+        TextPart('结果是 X'),
+        ReasoningPart('plan'),
+      ],
+    );
+
+    final exported = await exportMessageBlocksForTesting(
+      message,
+      showThinkingAndToolCards: true,
+    );
+    expect(
+      exported,
+      contains('我查一下\n\n[search]\nhits\n\n结果是 X\n\n\n[Thinking]\n\nplan\n\n'),
+    );
+  });
 }

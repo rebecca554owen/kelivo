@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _zhipuConfig(String baseUrl) {
   return ProviderConfig(
@@ -203,7 +204,7 @@ void main() {
         (m) => m['role'] == 'assistant' && m['tool_calls'] is List,
       );
 
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
       expect(secondBody['thinking'], {'type': 'enabled'});
       expect(secondBody.containsKey('reasoning_effort'), isFalse);
       expect(assistantToolMessage['content'], '我先查一下日期。');

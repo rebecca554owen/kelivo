@@ -6,17 +6,20 @@ import '../../../core/database/generation_run.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/message_part.dart';
+import '../../../utils/app_directories.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/token_usage.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
+import '../../../core/services/api/stream/stream_chunk.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/ios_background_generation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant_regex.dart';
-import '../../../utils/markdown_media_sanitizer.dart';
 import '../services/ask_user_interaction_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/tool_approval_service.dart';
@@ -354,6 +357,8 @@ class ChatActions {
       <String, _GenerationCheckpointCursor>{};
   final ActiveStreamingMessageStore _activeAssistantMessages =
       ActiveStreamingMessageStore();
+  final Map<String, stream_ctrl.StreamingState> _streamingStates =
+      <String, stream_ctrl.StreamingState>{};
   final Map<String, Future<void>> _cancelStreamingFutures =
       <String, Future<void>>{};
 
@@ -374,7 +379,6 @@ class ChatActions {
 
   List<ChatMessage> get _messages => chatController.messages;
   Map<String, int> get _versionSelections => chatController.versionSelections;
-  Conversation? get _currentConversation => chatController.currentConversation;
   Set<String> get _loadingConversationIds =>
       chatController.loadingConversationIds;
   Map<String, StreamSubscription<dynamic>> get _conversationStreams =>
@@ -422,15 +426,10 @@ class ChatActions {
     final messageId = message.id;
     final reasoning = streamController.reasoning[messageId];
     final segments = streamController.reasoningSegments[messageId];
-    final splits = streamController.getContentSplitData(messageId);
     final details = streamController.reasoningDetails[messageId];
-    final reasoningSegmentsJson =
-        segments != null || splits != null || details != null
+    final reasoningSegmentsJson = segments != null || details != null
         ? streamController.serializeReasoningSegmentsWithSplits(
             segments ?? const [],
-            contentSplitOffsets: splits?.offsets,
-            reasoningCountAtSplit: splits?.reasoningCounts,
-            toolCountAtSplit: splits?.toolCounts,
             reasoningDetails: details,
           )
         : message.reasoningSegmentsJson;
@@ -458,7 +457,7 @@ class ChatActions {
       index < 0 ? state.ctx.assistantMessage : _messages[index],
     );
     return base.copyWith(
-      content: _transformAssistantContent(state),
+      parts: _assistantPartsForState(state),
       totalTokens: state.totalTokens,
       promptTokens: state.usage?.promptTokens,
       completionTokens: state.usage?.completionTokens,
@@ -554,6 +553,7 @@ class ChatActions {
   void _clearGenerationRuntimeState(ChatMessage message) {
     _generationCheckpointCursors.remove(message.id);
     _streamingToolEvents.remove(message.id);
+    _streamingStates.remove(message.id);
     _activeAssistantMessages.removeIfMatches(message);
   }
 
@@ -615,12 +615,50 @@ class ChatActions {
     if (index < 0) {
       events.add(record);
     } else {
-      final existingMetadata = events[index]['metadata'];
-      if (!record.containsKey('metadata') && existingMetadata is Map) {
-        record['metadata'] = Map<String, dynamic>.from(existingMetadata);
-      }
-      events[index] = record;
+      events[index] = mergeStreamingToolEventRecord(events[index], record);
     }
+  }
+
+  @visibleForTesting
+  static Map<String, dynamic> mergeStreamingToolEventRecord(
+    Map<String, dynamic> existing,
+    Map<String, dynamic> incoming,
+  ) {
+    final merged = Map<String, dynamic>.from(existing);
+    for (final entry in incoming.entries) {
+      if (entry.key == 'metadata') continue;
+      if (_isEmptyToolOverlay(entry.value) &&
+          !_isEmptyToolOverlay(merged[entry.key])) {
+        continue;
+      }
+      merged[entry.key] = entry.value;
+    }
+    if (existing['server'] == true && incoming['server'] != false) {
+      merged['server'] = true;
+    }
+    final incomingMetadata = incoming['metadata'];
+    if (incomingMetadata is Map && incomingMetadata.isNotEmpty) {
+      final existingMetadata = merged['metadata'];
+      merged['metadata'] = <String, dynamic>{
+        if (existingMetadata is Map)
+          ...Map<String, dynamic>.from(existingMetadata),
+        ...Map<String, dynamic>.from(incomingMetadata),
+      };
+    } else if (!merged.containsKey('metadata')) {
+      final existingMetadata = existing['metadata'];
+      if (existingMetadata is Map) {
+        merged['metadata'] = Map<String, dynamic>.from(existingMetadata);
+      }
+    }
+    return merged;
+  }
+
+  static bool _isEmptyToolOverlay(Object? value) {
+    if (value == null) return true;
+    if (value is String) return value.isEmpty;
+    if (value is Map) return value.isEmpty;
+    if (value is List) return value.isEmpty;
+    return false;
   }
 
   bool _isReasoningModel(String providerKey, String modelId) {
@@ -666,6 +704,72 @@ class ChatActions {
     required String partialContent,
     required String errorText,
   }) => partialContent.isEmpty ? errorText : partialContent;
+
+  /// Assemble the assistant part list after a stream error.
+  ///
+  /// When no visible text arrived, the error string is written through
+  /// [ChatMessage.partsWithReplacedText] so reasoning / tool / image parts
+  /// already accumulated stay in place.
+  /// Truncate [parts] so joined [TextPart]s match the typewriter slice.
+  ///
+  /// Non-text cards stay in place. Text after the visible prefix is omitted
+  /// so the consumer can keep using `content: parts == null ? display : null`.
+  @visibleForTesting
+  static List<MessagePart> assistantPartsForVisibleText({
+    required List<MessagePart> parts,
+    required String visibleText,
+  }) {
+    if (parts.isEmpty) return <MessagePart>[TextPart(visibleText)];
+    var remaining = visibleText.length;
+    final out = <MessagePart>[];
+    for (final part in parts) {
+      if (part is! TextPart) {
+        out.add(part);
+        continue;
+      }
+      if (remaining <= 0) continue;
+      if (part.text.length <= remaining) {
+        out.add(part);
+        remaining -= part.text.length;
+      } else {
+        out.add(TextPart(part.text.substring(0, remaining)));
+        remaining = 0;
+      }
+    }
+    return out;
+  }
+
+  @visibleForTesting
+  static List<MessagePart> assistantPartsForStreamError({
+    required List<MessagePart> parts,
+    required String partialContent,
+    required String errorText,
+  }) {
+    final displayContent = resolveStreamErrorContent(
+      partialContent: partialContent,
+      errorText: errorText,
+    );
+    if (partialContent.isEmpty) {
+      if (parts.any((part) => part is TextPart)) {
+        return ChatMessage.partsWithReplacedText(parts, displayContent);
+      }
+      return [...parts, TextPart(displayContent)];
+    }
+    return List<MessagePart>.of(parts);
+  }
+
+  @visibleForTesting
+  Future<void> debugFinishStreaming(stream_ctrl.StreamingState state) {
+    return _finishStreaming(state);
+  }
+
+  @visibleForTesting
+  Future<void> debugHandleStreamError(
+    Object error,
+    stream_ctrl.StreamingState state,
+  ) {
+    return _handleStreamError(error, state);
+  }
 
   @visibleForTesting
   static StreamSubscription<T> listenSequentiallyToStream<T>({
@@ -876,6 +980,67 @@ class ChatActions {
       scope: AssistantRegexScope.assistant,
       target: AssistantRegexTransformTarget.persist,
     );
+  }
+
+  List<MessagePart> _assistantPartsForState(
+    stream_ctrl.StreamingState state, {
+    String? visibleText,
+  }) {
+    final parts = state.partsHandler.parts;
+    if (parts.isEmpty) {
+      return <MessagePart>[
+        TextPart(visibleText ?? _transformAssistantContent(state)),
+      ];
+    }
+    final transformed = [
+      for (final part in parts)
+        if (part is TextPart)
+          TextPart(_transformAssistantContent(state, part.text))
+        else if (part is! ImagePart || !isBlankImageUri(part.uri))
+          part,
+    ];
+    if (visibleText == null) return transformed;
+    return assistantPartsForVisibleText(
+      parts: transformed,
+      visibleText: visibleText,
+    );
+  }
+
+  Future<List<MessagePart>> _sanitizeAssistantImageParts(
+    List<MessagePart> parts,
+  ) async {
+    final out = <MessagePart>[];
+    for (final part in parts) {
+      if (part is! ImagePart || !part.uri.startsWith('data:')) {
+        out.add(part);
+        continue;
+      }
+      final comma = part.uri.indexOf(',');
+      if (comma < 0) {
+        out.add(part);
+        continue;
+      }
+      final header = part.uri.substring(5, comma);
+      final semi = header.indexOf(';');
+      final mime = semi < 0 ? header : header.substring(0, semi);
+      final saved = await AppDirectories.saveBase64Image(
+        mime.isEmpty ? 'image/png' : mime,
+        part.uri.substring(comma + 1),
+      );
+      if (saved == null || saved.isEmpty) {
+        out.add(part);
+        continue;
+      }
+      out.add(
+        ImagePart(
+          uri: SandboxPathResolver.canonicalize(saved),
+          mime: part.mime ?? (mime.isEmpty ? 'image/png' : mime),
+          assetId: part.assetId,
+          unavailable: part.unavailable,
+        ),
+      );
+    }
+    return out;
   }
 
   // ============================================================================
@@ -1636,9 +1801,15 @@ class ChatActions {
       }
 
       streamController.finishReasoningIfNeeded(streaming.id);
-      final finalizedMessage = _messageWithCurrentReasoning(
-        latestStreaming,
-      ).copyWith(isStreaming: false);
+      final state = _streamingStates[streaming.id];
+      final assistantParts = await _sanitizeAssistantImageParts(
+        state == null ? latestStreaming.parts : _assistantPartsForState(state),
+      );
+      final finalizedMessage =
+          (state == null
+                  ? _messageWithCurrentReasoning(latestStreaming)
+                  : _streamingMessageSnapshot(state))
+              .copyWith(parts: assistantParts, isStreaming: false);
       try {
         await _finalizeStreamingCheckpoint(
           finalizedMessage,
@@ -1671,6 +1842,7 @@ class ChatActions {
   /// Execute generation with the given context.
   Future<void> _executeGeneration(stream_ctrl.GenerationContext ctx) async {
     final state = stream_ctrl.StreamingState(ctx);
+    _streamingStates[state.messageId] = state;
     final assistant = ctx.assistant;
     final conversationId = state.conversationId;
     final existingSplit = streamController.getContentSplitData(state.messageId);
@@ -1679,10 +1851,6 @@ class ChatActions {
       state.reasoningCountAtSplit = List<int>.of(existingSplit.reasoningCounts);
       state.toolCountAtSplit = List<int>.of(existingSplit.toolCounts);
     }
-    if (streamController.getToolPartsCount(state.messageId) > 0) {
-      state.hadThinkingBlock = true;
-    }
-
     // Mark this message as actively streaming to suppress UI rebuilds
     streamController.markStreamingStarted(state.messageId);
     _activeAssistantMessages.put(state.ctx.assistantMessage);
@@ -1728,6 +1896,57 @@ class ChatActions {
           ..stateRevision = run.stateRevision
           ..nextSeq = run.checkpointSeq + 1;
       }
+      final previousSub = _conversationStreams.remove(conversationId);
+      if (previousSub != null) {
+        ChatApiService.cancelRequest(conversationId);
+        await _cancelSubscriptionWithTimeout(previousSub);
+      }
+
+      if (!ctx.streamOutput) {
+        try {
+          final result = await ChatApiService.generateMessage(
+            config: ctx.config,
+            modelId: ctx.modelId,
+            messages: ctx.apiMessages,
+            userImagePaths: ctx.userImagePaths,
+            thinkingBudget:
+                assistant?.thinkingBudget ?? ctx.settings.thinkingBudget,
+            temperature: assistant?.temperature,
+            topP: assistant?.topP,
+            maxTokens: assistant?.maxTokens,
+            tools: ctx.toolDefs.isEmpty ? null : ctx.toolDefs,
+            onToolCall: ctx.onToolCall,
+            extraHeaders: ctx.extraHeaders,
+            extraBody: ctx.extraBody,
+            requestId: conversationId,
+            allowImagesApiRouting: ctx.allowImagesApiRouting,
+            ocrActive: ctx.ocrActive,
+          );
+          state.streamStartedAt ??= DateTime.now();
+          await _markGenerationStreaming(state);
+          state.partsHandler.handleResult(result);
+          state.fullContentRaw = [
+            for (final part in state.partsHandler.parts)
+              if (part is TextPart) part.text,
+          ].join();
+          state.bufferedReasoning = [
+            for (final part in state.partsHandler.parts)
+              if (part is ReasoningPart && part.text.isNotEmpty) part.text,
+          ].join();
+          if (result.usage != null) _applyUsage(state, result.usage!);
+          if (result.reasoningDetails != null) {
+            streamController.setReasoningDetails(
+              state.messageId,
+              result.reasoningDetails,
+            );
+          }
+          await _handleStreamFinish(state);
+        } catch (e) {
+          await _handleStreamError(e, state);
+        }
+        return;
+      }
+
       final stream = ChatApiService.sendMessageStream(
         config: ctx.config,
         modelId: ctx.modelId,
@@ -1742,22 +1961,12 @@ class ChatActions {
         onToolCall: ctx.onToolCall,
         extraHeaders: ctx.extraHeaders,
         extraBody: ctx.extraBody,
-        stream: ctx.streamOutput,
         requestId: conversationId,
         allowImagesApiRouting: ctx.allowImagesApiRouting,
         ocrActive: ctx.ocrActive,
       );
 
-      // Replacing a previous stream: the new request has not registered its
-      // cancel token yet (that happens on listen), so cancelRequest still
-      // targets the old one. Break its network wait first so the barrier
-      // cancel below cannot stall on a dead connection.
-      final previousSub = _conversationStreams.remove(conversationId);
-      if (previousSub != null) {
-        ChatApiService.cancelRequest(conversationId);
-        await _cancelSubscriptionWithTimeout(previousSub);
-      }
-      final sub = listenSequentiallyToStream<ChatStreamChunk>(
+      final sub = listenSequentiallyToStream<StreamChunk>(
         stream: stream,
         onData: (chunk) => _handleStreamChunk(chunk, state),
         onError: (error, stackTrace) => _handleStreamError(error, state),
@@ -1775,48 +1984,68 @@ class ChatActions {
 
   /// Dispatch stream chunk to appropriate handler.
   Future<void> _handleStreamChunk(
-    ChatStreamChunk chunk,
+    StreamChunk chunk,
     stream_ctrl.StreamingState state,
   ) async {
     await _markGenerationStreaming(state);
-    final chunkContent = chunk.content.isNotEmpty
-        ? streamController.captureGeminiThoughtSignature(
-            chunk.content,
-            state.messageId,
-          )
-        : '';
-
-    // Persist vendor reasoning details (may carry thinking signatures) so
-    // they can be echoed back on subsequent turns.
-    if (chunk.reasoningDetails != null) {
-      streamController.setReasoningDetails(
-        state.messageId,
-        chunk.reasoningDetails,
-      );
+    state.partsHandler.handle(chunk);
+    switch (chunk) {
+      case TextDelta(:final text):
+        final cleaned = text.isNotEmpty
+            ? streamController.captureGeminiThoughtSignature(
+                text,
+                state.messageId,
+              )
+            : '';
+        await _handleContentChunk(state, cleaned);
+        _scheduleStreamingCheckpoint(state);
+      case ReasoningDelta(:final text, :final details):
+        if (details != null) {
+          streamController.setReasoningDetails(state.messageId, details);
+        }
+        if (text.isNotEmpty && state.ctx.supportsReasoning) {
+          await _handleReasoningChunk(text, state);
+        }
+        _scheduleStreamingCheckpoint(state);
+      case ToolCallStart(:final id, :final toolName):
+        if (toolName.isNotEmpty) state.pendingToolNames[id] = toolName;
+        await _handleToolCallsChunk(chunk, state);
+        _scheduleStreamingCheckpoint(state);
+      case ToolCallDelta(:final id, :final toolNameDelta):
+        if (toolNameDelta.isNotEmpty) {
+          state.pendingToolNames[id] =
+              '${state.pendingToolNames[id] ?? ''}$toolNameDelta';
+        }
+      case ToolCallEnd():
+        await _handleToolCallsChunk(chunk, state);
+        _scheduleStreamingCheckpoint(state);
+      case ServerToolStart(:final id, :final toolName):
+        if (toolName.isNotEmpty) state.pendingToolNames[id] = toolName;
+        await _handleToolCallsChunk(chunk, state);
+        _scheduleStreamingCheckpoint(state);
+      case ServerToolEnd() || ToolCallResult() || Annotations():
+        await _handleToolResultsChunk(chunk, state);
+        _scheduleStreamingCheckpoint(state);
+      case Usage(:final usage):
+        _applyUsage(state, usage);
+      case Finish():
+        await _handleStreamFinish(state);
+      case ImageStart() || ImageDelta() || ImageSnapshot() || ImageEnd():
+        _publishAssistantParts(state);
+        _scheduleStreamingCheckpoint(state);
+      case TextStart() ||
+          TextEnd() ||
+          ReasoningStart() ||
+          ReasoningEnd() ||
+          ServerToolInputDelta() ||
+          ServerToolInputEnd():
+        break;
     }
+  }
 
-    // Handle reasoning
-    if ((chunk.reasoning ?? '').isNotEmpty && state.ctx.supportsReasoning) {
-      await _handleReasoningChunk(chunk, state);
-    }
-
-    // Handle tool calls
-    if ((chunk.toolCalls ?? const []).isNotEmpty) {
-      await _handleToolCallsChunk(chunk, state);
-    }
-
-    // Handle tool results
-    if ((chunk.toolResults ?? const []).isNotEmpty) {
-      await _handleToolResultsChunk(chunk, state);
-    }
-
-    // Handle finish or content
-    if (chunk.isDone) {
-      await _handleStreamFinish(chunk, state, chunkContent);
-    } else {
-      await _handleContentChunk(chunk, state, chunkContent);
-      _scheduleStreamingCheckpoint(state);
-    }
+  void _applyUsage(stream_ctrl.StreamingState state, TokenUsage usage) {
+    state.usage = (state.usage ?? const TokenUsage()).merge(usage);
+    state.totalTokens = state.usage!.totalTokens;
   }
 
   Future<void> _markGenerationStreaming(
@@ -1848,15 +2077,16 @@ class ChatActions {
 
   /// Handle reasoning chunk from stream.
   Future<void> _handleReasoningChunk(
-    ChatStreamChunk chunk,
+    String reasoning,
     stream_ctrl.StreamingState state,
   ) async {
-    await streamController.handleReasoningChunk(chunk, state);
+    await streamController.handleReasoningChunk(reasoning, state);
+    _publishAssistantParts(state);
   }
 
   /// Handle tool calls chunk from stream.
   Future<void> _handleToolCallsChunk(
-    ChatStreamChunk chunk,
+    StreamChunk chunk,
     stream_ctrl.StreamingState state,
   ) async {
     await streamController.handleToolCallsChunk(
@@ -1873,11 +2103,12 @@ class ChatActions {
           },
       getToolEventsFromDb: _copyToolEvents,
     );
+    _publishAssistantParts(state);
   }
 
   /// Handle tool results chunk from stream.
   Future<void> _handleToolResultsChunk(
-    ChatStreamChunk chunk,
+    StreamChunk chunk,
     stream_ctrl.StreamingState state,
   ) async {
     await streamController.handleToolResultsChunk(
@@ -1902,11 +2133,22 @@ class ChatActions {
             );
           },
     );
+    _publishAssistantParts(state);
+  }
+
+  void _publishAssistantParts(stream_ctrl.StreamingState state) {
+    if (!state.ctx.streamOutput || state.finishHandled) return;
+    streamController.streamingContentNotifier.getNotifier(state.messageId);
+    streamController.streamingContentNotifier.updateContent(
+      state.messageId,
+      _transformAssistantContent(state),
+      state.totalTokens,
+      parts: _assistantPartsForState(state),
+    );
   }
 
   /// Handle content chunk from stream (non-done).
   Future<void> _handleContentChunk(
-    ChatStreamChunk chunk,
     stream_ctrl.StreamingState state,
     String chunkContent,
   ) async {
@@ -1916,85 +2158,8 @@ class ChatActions {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
 
-    if (state.hadThinkingBlock && chunkContent.isNotEmpty) {
-      state.contentSplitOffsets.add(state.fullContentRaw.length);
-      state.reasoningCountAtSplit.add(
-        streamController.getReasoningSegmentCount(messageId),
-      );
-      state.toolCountAtSplit.add(streamController.getToolPartsCount(messageId));
-      state.hadThinkingBlock = false;
-      streamController.setContentSplitData(
-        messageId,
-        stream_ctrl.ContentSplitData(
-          offsets: List<int>.of(state.contentSplitOffsets),
-          reasoningCounts: List<int>.of(state.reasoningCountAtSplit),
-          toolCounts: List<int>.of(state.toolCountAtSplit),
-        ),
-      );
-    }
-
-    state.fullContentRaw += chunkContent;
+    _recordContent(state, chunkContent);
     state.streamStartedAt ??= DateTime.now();
-    if (chunk.totalTokens > 0) {
-      state.totalTokens = chunk.totalTokens;
-    }
-    if (chunk.usage != null) {
-      state.usage = (state.usage ?? const TokenUsage()).merge(chunk.usage!);
-      state.totalTokens = state.usage!.totalTokens;
-    }
-
-    final probe = state.inlineBase64TailProbe + chunkContent;
-    if (!state.hasInlineBase64 && probe.contains('data:image')) {
-      state.hasInlineBase64 = true;
-    }
-    if (chunkContent.isNotEmpty) {
-      state.inlineBase64TailProbe = chunkContent.length > 16
-          ? chunkContent.substring(chunkContent.length - 16)
-          : chunkContent;
-    }
-
-    if (state.hasInlineBase64) {
-      String streamingProcessed = _transformAssistantContent(state);
-      if (streamingProcessed.contains('data:image') &&
-          streamingProcessed.contains('base64,')) {
-        try {
-          final sanitized =
-              await MarkdownMediaSanitizer.replaceInlineBase64Images(
-                streamingProcessed,
-              );
-          if (sanitized != streamingProcessed) {
-            streamingProcessed = sanitized;
-            state.fullContentRaw = sanitized;
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      // After any await point, _finishStreaming may have already run and
-      // updated _messages[index] with the FULL final content. If we continue
-      // with this stale streamingProcessed we would overwrite the final content
-      // with a partial snapshot. Bail out early to prevent that.
-      if (state.finishHandled) return;
-
-      onScheduleImageSanitize?.call(
-        messageId,
-        streamingProcessed,
-        immediate: true,
-      );
-      if (state.ctx.streamOutput &&
-          _currentConversation?.id == conversationId) {
-        final index = _messages.indexWhere((m) => m.id == messageId);
-        if (index != -1) {
-          chatController.replaceMessageSnapshot(
-            _messages[index].copyWith(
-              content: streamingProcessed,
-              totalTokens: state.totalTokens,
-            ),
-          );
-        }
-      }
-    }
 
     // End reasoning when content starts
     if (state.ctx.streamOutput && chunkContent.isNotEmpty) {
@@ -2014,10 +2179,9 @@ class ChatActions {
         messageId,
         conversationId,
         () => _transformAssistantContent(state),
+        partsBuilder: (visibleText) =>
+            _assistantPartsForState(state, visibleText: visibleText),
         totalTokens: state.totalTokens,
-        contentSplitOffsets: state.contentSplitOffsets,
-        reasoningCountAtSplit: state.reasoningCountAtSplit,
-        toolCountAtSplit: state.toolCountAtSplit,
         promptTokens: state.usage?.promptTokens,
         completionTokens: state.usage?.completionTokens,
         cachedTokens: state.usage?.cachedTokens,
@@ -2048,11 +2212,7 @@ class ChatActions {
   }
 
   /// Handle stream finish (isDone == true).
-  Future<void> _handleStreamFinish(
-    ChatStreamChunk chunk,
-    stream_ctrl.StreamingState state,
-    String chunkContent,
-  ) async {
+  Future<void> _handleStreamFinish(stream_ctrl.StreamingState state) async {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final autoCollapseThinking =
@@ -2060,40 +2220,11 @@ class ChatActions {
         ? contextProvider.read<SettingsProvider>().autoCollapseThinking
         : null;
 
-    if (state.hadThinkingBlock && chunkContent.isNotEmpty) {
-      state.contentSplitOffsets.add(state.fullContentRaw.length);
-      state.reasoningCountAtSplit.add(
-        streamController.getReasoningSegmentCount(messageId),
-      );
-      state.toolCountAtSplit.add(streamController.getToolPartsCount(messageId));
-      state.hadThinkingBlock = false;
-      streamController.setContentSplitData(
-        messageId,
-        stream_ctrl.ContentSplitData(
-          offsets: List<int>.of(state.contentSplitOffsets),
-          reasoningCounts: List<int>.of(state.reasoningCountAtSplit),
-          toolCounts: List<int>.of(state.toolCountAtSplit),
-        ),
-      );
-    }
-
-    if (chunkContent.isNotEmpty) {
-      state.fullContentRaw += chunkContent;
-    }
-
     // Don't finish if tools are still loading
     final hasLoadingTool =
         (streamController.toolParts[messageId]?.any((p) => p.loading) ?? false);
     if (hasLoadingTool) {
       return;
-    }
-
-    if (chunk.totalTokens > 0) {
-      state.totalTokens = chunk.totalTokens;
-    }
-    if (chunk.usage != null) {
-      state.usage = (state.usage ?? const TokenUsage()).merge(chunk.usage!);
-      state.totalTokens = state.usage!.totalTokens;
     }
 
     // Materialize buffered reasoning before the final checkpoint.
@@ -2174,25 +2305,22 @@ class ChatActions {
     // This ensures any intermediate rebuild (e.g., from isProcessingFiles change
     // or onDone firing concurrently) still shows the correct content via the
     // notifier-based streaming path.
+    final assistantParts = await _sanitizeAssistantImageParts(
+      _assistantPartsForState(state),
+    );
     streamController.streamingContentNotifier.updateContent(
       messageId,
       processedContent,
       state.totalTokens,
-      contentSplitOffsets: state.contentSplitOffsets,
-      reasoningCountAtSplit: state.reasoningCountAtSplit,
-      toolCountAtSplit: state.toolCountAtSplit,
+      parts: assistantParts,
       promptTokens: finalPromptTokens,
       completionTokens: finalCompletionTokens,
       cachedTokens: finalCachedTokens,
       durationMs: finalDurationMs,
     );
 
-    final sanitizedContent =
-        await MarkdownMediaSanitizer.replaceInlineBase64Images(
-          processedContent,
-        );
     final finalizedMessage = _streamingMessageSnapshot(state).copyWith(
-      content: sanitizedContent,
+      parts: assistantParts,
       totalTokens: state.totalTokens,
       isStreaming: false,
       promptTokens: finalPromptTokens,
@@ -2205,6 +2333,7 @@ class ChatActions {
         finalizedMessage,
         terminalState: GenerationRunState.completed,
       );
+      state.terminalPersisted = true;
 
       onAssistantMessageFinished?.call(finalizedMessage);
 
@@ -2237,6 +2366,8 @@ class ChatActions {
     dynamic e,
     stream_ctrl.StreamingState state,
   ) async {
+    if (state.terminalPersisted) return;
+    state.finishHandled = true;
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final errorText = e.toString();
@@ -2252,12 +2383,15 @@ class ChatActions {
     final partialContent = state.fullContentRaw.isEmpty
         ? ''
         : _transformAssistantContent(state, state.fullContentRaw);
-    final displayContent = resolveStreamErrorContent(
-      partialContent: partialContent,
-      errorText: errorText,
+    final errorParts = await _sanitizeAssistantImageParts(
+      assistantPartsForStreamError(
+        parts: _assistantPartsForState(state),
+        partialContent: partialContent,
+        errorText: errorText,
+      ),
     );
     final errorMessage = _streamingMessageSnapshot(state).copyWith(
-      content: displayContent,
+      parts: errorParts,
       totalTokens: state.totalTokens,
       isStreaming: false,
     );
@@ -2267,6 +2401,7 @@ class ChatActions {
         terminalState: GenerationRunState.failed,
         errorCode: 'generation_failed',
       );
+      state.terminalPersisted = true;
     } finally {
       _clearGenerationRuntimeState(errorMessage);
       if (chatController.publishTerminalMessage(errorMessage)) {
@@ -2352,15 +2487,10 @@ class ChatActions {
     final r = streamController.reasoning[streaming.id];
     final segs = streamController.reasoningSegments[streaming.id];
 
-    final splits = streamController.getContentSplitData(streaming.id);
     final details = streamController.reasoningDetails[streaming.id];
-    final reasoningSegmentsJson =
-        segs != null || splits != null || details != null
+    final reasoningSegmentsJson = segs != null || details != null
         ? streamController.serializeReasoningSegmentsWithSplits(
             segs ?? const [],
-            contentSplitOffsets: splits?.offsets,
-            reasoningCountAtSplit: splits?.reasoningCounts,
-            toolCountAtSplit: splits?.toolCounts,
             reasoningDetails: details,
           )
         : streaming.reasoningSegmentsJson;
@@ -2383,5 +2513,11 @@ class ChatActions {
     }
     // Ensure any inline data URLs get converted even if the user navigates away mid-stream
     onScheduleImageSanitize?.call(streaming.id, latestContent, immediate: true);
+  }
+
+  void _recordContent(stream_ctrl.StreamingState state, String chunkContent) {
+    if (chunkContent.isNotEmpty) {
+      state.fullContentRaw += chunkContent;
+    }
   }
 }

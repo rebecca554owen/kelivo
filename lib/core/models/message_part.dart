@@ -45,6 +45,13 @@ final class TextPart extends MessagePart {
 
   @override
   String encodePayload() => text;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is TextPart && text == other.text;
+
+  @override
+  int get hashCode => text.hashCode;
 }
 
 final class ReasoningPart extends MessagePart {
@@ -57,6 +64,13 @@ final class ReasoningPart extends MessagePart {
 
   @override
   String encodePayload() => text;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is ReasoningPart && text == other.text;
+
+  @override
+  int get hashCode => text.hashCode;
 }
 
 final class ToolCallPart extends MessagePart {
@@ -69,6 +83,14 @@ final class ToolCallPart extends MessagePart {
 
   @override
   String encodePayload() => payloadJson;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ToolCallPart && payloadJson == other.payloadJson;
+
+  @override
+  int get hashCode => payloadJson.hashCode;
 }
 
 final class ImagePart extends MessagePart {
@@ -108,6 +130,18 @@ final class ImagePart extends MessagePart {
     if (assetId != null) 'assetId': assetId,
     if (unavailable) 'unavailable': true,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImagePart &&
+          uri == other.uri &&
+          mime == other.mime &&
+          assetId == other.assetId &&
+          unavailable == other.unavailable;
+
+  @override
+  int get hashCode => Object.hash(uri, mime, assetId, unavailable);
 }
 
 final class FilePart extends MessagePart {
@@ -155,6 +189,19 @@ final class FilePart extends MessagePart {
     if (assetId != null) 'assetId': assetId,
     if (unavailable) 'unavailable': true,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FilePart &&
+          uri == other.uri &&
+          name == other.name &&
+          mime == other.mime &&
+          assetId == other.assetId &&
+          unavailable == other.unavailable;
+
+  @override
+  int get hashCode => Object.hash(uri, name, mime, assetId, unavailable);
 }
 
 /// Forward-compatible carrier for kinds this build does not understand.
@@ -169,6 +216,16 @@ final class UnknownPart extends MessagePart {
 
   @override
   String encodePayload() => payload;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UnknownPart &&
+          rawKind == other.rawKind &&
+          payload == other.payload;
+
+  @override
+  int get hashCode => Object.hash(rawKind, payload);
 }
 
 /// A known part kind whose persisted payload cannot be parsed.
@@ -194,6 +251,17 @@ final class MalformedPart extends MessagePart {
 
   @override
   String encodePayload() => rawPayload;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MalformedPart &&
+          rawKind == other.rawKind &&
+          rawPayload == other.rawPayload &&
+          parseError == other.parseError;
+
+  @override
+  int get hashCode => Object.hash(rawKind, rawPayload, parseError);
 }
 
 String messagePartParseErrorCategory(FormatException error) {
@@ -242,4 +310,21 @@ bool _optionalBool(Map<String, dynamic> map, String key) {
     throw const _MessagePartFormatException('invalid_unavailable');
   }
   return value;
+}
+
+/// Whether the assistant bubble should walk [parts] instead of contentSplits.
+///
+/// Historical rows keep a flat `[reasoning, tools…, body]` layout plus
+/// persisted split triples that reconstruct interleaving. Those stay on the
+/// split renderer. New streams persist [ReasoningPart] / [ToolCallPart]
+/// (and generated [ImagePart]s) in arrival order and have no splits.
+bool renderAssistantFromParts({
+  required List<MessagePart> parts,
+  required bool hasContentSplits,
+}) {
+  if (hasContentSplits) return false;
+  for (final part in parts) {
+    if (part is ReasoningPart || part is ToolCallPart) return true;
+  }
+  return parts.any((part) => part is ImagePart);
 }

@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _testConfig(String baseUrl) {
   return ProviderConfig(
@@ -60,7 +62,7 @@ void main() {
         });
 
         final config = _testConfig('http://localhost:${server.port}/v1');
-        final chunks = <ChatStreamChunk>[];
+        final chunks = <StreamChunk>[];
 
         await for (final c in ChatApiService.sendMessageStream(
           config: config,
@@ -72,10 +74,10 @@ void main() {
           chunks.add(c);
         }
 
-        final fullContent = chunks.map((c) => c.content).join();
+        final fullContent = chunks.joinedContent;
         expect(fullContent, contains('Hello '));
         expect(fullContent, contains('World'));
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
       },
     );
 
@@ -115,7 +117,7 @@ void main() {
       });
 
       final config = _testConfig('http://localhost:${server.port}/v1');
-      final chunks = <ChatStreamChunk>[];
+      final chunks = <StreamChunk>[];
 
       await for (final c in ChatApiService.sendMessageStream(
         config: config,
@@ -127,10 +129,10 @@ void main() {
         chunks.add(c);
       }
 
-      final fullContent = chunks.map((c) => c.content).join();
+      final fullContent = chunks.joinedContent;
       expect(fullContent, contains('Partial'));
       expect(fullContent, contains(' response'));
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
     });
 
     test('usage-only chunk after stop still populates token details', () async {
@@ -192,11 +194,11 @@ void main() {
         ],
       ).toList();
 
-      expect(chunks.last.isDone, isTrue);
-      expect(chunks.last.totalTokens, 895);
-      expect(chunks.last.usage?.promptTokens, 842);
-      expect(chunks.last.usage?.completionTokens, 53);
-      expect(chunks.last.usage?.cachedTokens, 384);
+      expect(chunks.isGenerationDone, isTrue);
+      expect(chunks.lastTotalTokens, 895);
+      expect(chunks.lastUsage?.promptTokens, 842);
+      expect(chunks.lastUsage?.completionTokens, 53);
+      expect(chunks.lastUsage?.cachedTokens, 384);
     });
   });
 }

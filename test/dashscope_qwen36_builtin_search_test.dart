@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/builtin_tools.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _dashScopeConfig({
   required bool useResponseApi,
@@ -115,7 +116,7 @@ void main() {
             stream: false,
           ).toList();
 
-          expect(chunks.last.isDone, isTrue);
+          expect(chunks.isGenerationDone, isTrue);
         },
         createHttpClient: (context) {
           return _ProxyHttpOverrides(server.port).createHttpClient(context);
@@ -170,7 +171,7 @@ void main() {
             stream: false,
           ).toList();
 
-          expect(chunks.last.isDone, isTrue);
+          expect(chunks.isGenerationDone, isTrue);
         },
         createHttpClient: (context) {
           return _ProxyHttpOverrides(server.port).createHttpClient(context);

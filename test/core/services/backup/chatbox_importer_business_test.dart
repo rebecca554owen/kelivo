@@ -420,9 +420,21 @@ void main() {
       expect(assistant.reasoningText, 'first thought\nsecond thought');
       expect(assistant.content, 'Because.');
       expect(
-        assistant.parts.whereType<ReasoningPart>().single.text,
-        'first thought\nsecond thought',
+        assistant.parts.whereType<ReasoningPart>().map((part) => part.text),
+        ['first thought', 'second thought'],
       );
+      expect(
+        renderAssistantFromParts(
+          parts: assistant.parts,
+          hasContentSplits: false,
+        ),
+        isTrue,
+      );
+      expect(assistant.parts.map((part) => part.kind).toList(), [
+        'reasoning',
+        'reasoning',
+        'text',
+      ]);
     });
 
     test('preserves newline across attachment boundary', () async {
@@ -600,6 +612,18 @@ void main() {
         'before\nafter',
       );
       expect(assistant.content, 'before\nafter');
+      expect(
+        renderAssistantFromParts(
+          parts: assistant.parts,
+          hasContentSplits: false,
+        ),
+        isTrue,
+      );
+      expect(assistant.parts.map((part) => part.kind).toList(), [
+        'text',
+        'reasoning',
+        'text',
+      ]);
     });
   });
 }

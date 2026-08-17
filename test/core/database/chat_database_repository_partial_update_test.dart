@@ -6,6 +6,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:Kelivo/core/database/chat_database_repository.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/message_part.dart';
 
 void main() {
   late Directory root;
@@ -163,7 +164,7 @@ void main() {
               "WHERE revision_id = '${message.id}' ORDER BY ordinal;",
             )
             .map((row) => row['kind']),
-        const ['reasoning', 'tool_call', 'text'],
+        const ['reasoning', 'text', 'tool_call'],
       );
     } finally {
       raw.close();
@@ -183,6 +184,69 @@ void main() {
     final reloaded = await repository.getMessage(message.id);
     expect(reloaded!.content, 'new body only');
     expect(reloaded.reasoningText, 'original reasoning');
+  });
+
+  test(
+    'reasoningText update replaces the first ReasoningPart and drops the rest',
+    () async {
+      final now = DateTime.utc(2026, 7, 12);
+      await repository.putMigrationBatch(
+        conversations: [
+          Conversation(
+            id: 'conversation-1',
+            title: 'Conversation',
+            createdAt: now,
+            updatedAt: now,
+            messageIds: const ['message-1'],
+          ),
+        ],
+        messages: [
+          (
+            message: ChatMessage(
+              id: 'message-1',
+              role: 'assistant',
+              conversationId: 'conversation-1',
+              timestamp: now,
+              parts: const [
+                ReasoningPart('a'),
+                TextPart('body'),
+                ReasoningPart('b'),
+              ],
+            ),
+            messageOrder: 0,
+          ),
+        ],
+        toolEventsByMessageId: const {},
+        geminiSignaturesByMessageId: const {},
+      );
+
+      final updated = await repository.updateMessageFields(
+        'message-1',
+        reasoningText: 'new',
+      );
+      expect(updated!.reasoningText, 'new');
+      final reloaded = await repository.getMessage('message-1');
+      expect(reloaded!.reasoningText, 'new');
+      expect(
+        reloaded.parts.whereType<ReasoningPart>().map((part) => part.text),
+        ['new'],
+      );
+    },
+  );
+
+  test('reasoningText update rewrites an existing ReasoningPart', () async {
+    final message = await seedMessage();
+    final updated = await repository.updateMessageFields(
+      message.id,
+      reasoningText: 'rewritten reasoning',
+    );
+    expect(updated!.reasoningText, 'rewritten reasoning');
+    final reloaded = await repository.getMessage(message.id);
+    expect(reloaded!.reasoningText, 'rewritten reasoning');
+    expect(
+      reloaded.parts.whereType<ReasoningPart>().single.text,
+      'rewritten reasoning',
+    );
   });
 
   test('returns null when the message does not exist', () async {

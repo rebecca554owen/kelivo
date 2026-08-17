@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
 import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
+import 'support/collect_generation.dart';
 
 ProviderConfig _geminiConfig(String baseUrl) {
   return ProviderConfig(
@@ -228,7 +229,7 @@ void main() {
           },
         ).toList();
 
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
         expect(seenToolCallIds.single, 'api_live_call');
         expect(requestCount, 2);
         expect(requestBodies, hasLength(2));
@@ -296,7 +297,7 @@ void main() {
         stream: false,
       ).toList();
 
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
       expect(seenToolCallIds.single, 'api_non_stream_call');
       expect(requestBodies, hasLength(2));
       final contents = (requestBodies[1]['contents'] as List).cast<Map>();
@@ -370,7 +371,7 @@ void main() {
         onToolCall: (name, args, {toolCallId}) async => '{"result":"ok"}',
       ).toList();
 
-      expect(chunks.last.isDone, isTrue);
+      expect(chunks.isGenerationDone, isTrue);
       expect(requestBodies, hasLength(2));
       final contents = (requestBodies[1]['contents'] as List).cast<Map>();
       final firstUserParts = (contents.first['parts'] as List).cast<Map>();

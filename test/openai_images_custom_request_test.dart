@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 void main() {
   test('Images API uses the same custom request priority', () async {
@@ -63,9 +64,10 @@ void main() {
       ],
       extraHeaders: const {'X-Level': 'assistant'},
       extraBody: const {'quality': 'assistant'},
+      stream: false,
     ).toList();
 
-    expect(chunks.single.isDone, isTrue);
+    expect(chunks.isGenerationDone, isTrue);
     expect(receivedHeaders.value('x-level'), 'model');
     expect(receivedBody['quality'], 'model');
   });

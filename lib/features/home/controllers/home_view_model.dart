@@ -175,6 +175,9 @@ class HomeViewModel extends ChangeNotifier {
   final ChatSuggestionService _suggestionService =
       const ChatSuggestionService();
   late final ChatActions _chatActions;
+
+  @visibleForTesting
+  ChatActions get debugChatActions => _chatActions;
   QueuedChatInput? _queuedInput;
   bool _isDrainingQueuedInput = false;
 

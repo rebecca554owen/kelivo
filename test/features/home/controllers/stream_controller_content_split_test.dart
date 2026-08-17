@@ -1,8 +1,10 @@
+import 'dart:convert';
+
 import "../../../support/business_test_harness.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart'
     show ToolUIPart;
@@ -141,42 +143,37 @@ void main() {
     expect(state.fullContentRaw, '先确认一下。');
   });
 
-  test(
-    'finishReasoningAndPersist writes v2 payload for tool-only splits',
-    () async {
-      final controller = buildController();
-      const messageId = 'assistant-message';
-      controller.setContentSplitData(
-        messageId,
-        const ContentSplitData(
-          offsets: [8],
-          reasoningCounts: [0],
-          toolCounts: [1],
-        ),
-      );
+  test('finishReasoningAndPersist no longer writes content splits', () async {
+    final controller = buildController();
+    const messageId = 'assistant-message';
+    controller.setContentSplitData(
+      messageId,
+      const ContentSplitData(
+        offsets: [8],
+        reasoningCounts: [0],
+        toolCounts: [1],
+      ),
+    );
 
-      String? persistedJson;
-      await controller.finishReasoningAndPersist(
-        messageId,
-        updateReasoningInDb:
-            (
-              messageId, {
-              String? reasoningText,
-              DateTime? reasoningFinishedAt,
-              String? reasoningSegmentsJson,
-            }) async {
-              expect(messageId, 'assistant-message');
-              persistedJson = reasoningSegmentsJson ?? persistedJson;
-            },
-      );
+    String? persistedJson;
+    await controller.finishReasoningAndPersist(
+      messageId,
+      updateReasoningInDb:
+          (
+            messageId, {
+            String? reasoningText,
+            DateTime? reasoningFinishedAt,
+            String? reasoningSegmentsJson,
+          }) async {
+            expect(messageId, 'assistant-message');
+            persistedJson = reasoningSegmentsJson ?? persistedJson;
+          },
+    );
 
-      expect(persistedJson, isNotNull);
-      expect(controller.deserializeReasoningSegments(persistedJson), isEmpty);
-      final restoredSplits = controller.deserializeContentSplits(persistedJson);
-      expect(restoredSplits, isNotNull);
-      expect(restoredSplits!.toolCounts, const [1]);
-    },
-  );
+    expect(persistedJson, isNotNull);
+    expect(controller.deserializeReasoningSegments(persistedJson), isEmpty);
+    expect(controller.deserializeContentSplits(persistedJson), isNull);
+  });
 
   test('streaming reasoning honors disabled auto-collapse setting', () async {
     final harness = await createBusinessTestHarness(
@@ -188,15 +185,7 @@ void main() {
     final state = buildStreamingState(settings);
     addTearDown(() => controller.cleanupTimers(state.messageId));
 
-    await controller.handleReasoningChunk(
-      ChatStreamChunk(
-        content: '',
-        reasoning: 'thinking',
-        isDone: false,
-        totalTokens: 0,
-      ),
-      state,
-    );
+    await controller.handleReasoningChunk('thinking', state);
 
     expect(
       controller.reasoningSegments[state.messageId]!.single.expanded,
@@ -389,36 +378,18 @@ void main() {
       }) async {}
 
       await controller.handleToolResultsChunk(
-        ChatStreamChunk(
-          content: '',
-          isDone: false,
-          totalTokens: 0,
-          toolResults: [
-            ToolResultInfo(
-              id: 'builtin_search',
-              name: 'builtin_search',
-              arguments: const <String, dynamic>{},
-              content: '{"items":[{"title":"First"}]}',
-            ),
-          ],
+        const ToolCallResult(
+          id: 'builtin_search',
+          output: '{"items":[{"title":"First"}]}',
         ),
         state,
         upsertToolEventInDb: upsertToolEventInDb,
       );
 
       await controller.handleToolResultsChunk(
-        ChatStreamChunk(
-          content: '',
-          isDone: false,
-          totalTokens: 0,
-          toolResults: [
-            ToolResultInfo(
-              id: 'builtin_search',
-              name: 'builtin_search',
-              arguments: const <String, dynamic>{},
-              content: '{"items":[{"title":"First"},{"title":"Second"}]}',
-            ),
-          ],
+        const ToolCallResult(
+          id: 'builtin_search',
+          output: '{"items":[{"title":"First"},{"title":"Second"}]}',
         ),
         state,
         upsertToolEventInDb: upsertToolEventInDb,
@@ -430,6 +401,94 @@ void main() {
         parts.single.content,
         '{"items":[{"title":"First"},{"title":"Second"}]}',
       );
+    },
+  );
+
+  test(
+    'handleToolResultsChunk keeps accumulated Annotations for the same search id',
+    () async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final controller = buildController(
+        settings: settings,
+        currentConversationId: 'conversation-1',
+      );
+      final state = buildStreamingState(settings);
+      final upserted = <Map<String, dynamic>>[];
+
+      Future<void> upsertToolEventInDb(
+        String messageId, {
+        required String id,
+        required String name,
+        required Map<String, dynamic> arguments,
+        String? content,
+        Map<String, dynamic>? metadata,
+      }) async {
+        upserted.add({'id': id, 'name': name, 'content': content});
+      }
+
+      const first = Annotations([
+        UrlCitationAnnotation(url: 'https://a.example', title: 'A'),
+      ], id: 'round-0:search-1');
+      const second = Annotations([
+        UrlCitationAnnotation(url: 'https://b.example', title: 'B'),
+      ], id: 'round-0:search-1');
+
+      state.partsHandler.handle(first);
+      await controller.handleToolResultsChunk(
+        first,
+        state,
+        upsertToolEventInDb: upsertToolEventInDb,
+      );
+      state.partsHandler.handle(second);
+      await controller.handleToolResultsChunk(
+        second,
+        state,
+        upsertToolEventInDb: upsertToolEventInDb,
+      );
+
+      expect(upserted, hasLength(2));
+      final items = jsonDecode(upserted.last['content'] as String)['items'];
+      expect(items, [
+        {'url': 'https://a.example', 'title': 'A'},
+        {'url': 'https://b.example', 'title': 'B'},
+      ]);
+    },
+  );
+
+  test(
+    'handleToolResultsChunk does not add annotation search when a server tool exists',
+    () async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final controller = buildController(
+        settings: settings,
+        currentConversationId: 'conversation-1',
+      );
+      final state = buildStreamingState(settings);
+
+      Future<void> upsertToolEventInDb(
+        String messageId, {
+        required String id,
+        required String name,
+        required Map<String, dynamic> arguments,
+        String? content,
+        Map<String, dynamic>? metadata,
+      }) async {}
+
+      state.pendingToolNames['st_1'] = 'search_web';
+      await controller.handleToolResultsChunk(
+        const ServerToolEnd(id: 'st_1', output: '{"query":"kotlin"}'),
+        state,
+        upsertToolEventInDb: upsertToolEventInDb,
+      );
+      await controller.handleToolResultsChunk(
+        const Annotations([UrlCitationAnnotation(url: 'https://example.com')]),
+        state,
+        upsertToolEventInDb: upsertToolEventInDb,
+      );
+
+      final parts = controller.toolParts[state.messageId]!;
+      expect(parts, hasLength(1));
+      expect(parts.single.id, 'st_1');
     },
   );
 
@@ -721,4 +780,141 @@ void main() {
     expect(listContent, 'visible after cancel');
     smoothController.dispose();
   });
+
+  test('handleToolCallsChunk keeps OpenAI server-tool action input', () async {
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    final controller = buildController(
+      settings: settings,
+      currentConversationId: 'conversation-1',
+    );
+    final state = buildStreamingState(settings);
+    final stored = <Map<String, dynamic>>[];
+    const chunk = ServerToolStart(
+      id: 'st_1',
+      toolName: 'web_search_preview',
+      input: {
+        'action': {'query': 'kotlin coroutines'},
+      },
+    );
+
+    state.partsHandler.handle(chunk);
+    await controller.handleToolCallsChunk(
+      chunk,
+      state,
+      updateReasoningSegmentsInDb: (_, __) async {},
+      setToolEventsInDb: (_, events) async {
+        stored
+          ..clear()
+          ..addAll(events);
+      },
+      getToolEventsFromDb: (_) => const [],
+    );
+
+    expect(stored.single['arguments'], {
+      'action': {'query': 'kotlin coroutines'},
+    });
+    expect(controller.toolParts[state.messageId]!.single.arguments, {
+      'action': {'query': 'kotlin coroutines'},
+    });
+  });
+
+  test(
+    'handleToolCallsChunk keeps Gemini code after an empty ServerToolStart',
+    () async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final controller = buildController(
+        settings: settings,
+        currentConversationId: 'conversation-1',
+      );
+      final state = buildStreamingState(settings);
+      final stored = <Map<String, dynamic>>[];
+      const start = ToolCallStart(id: 'code_1', toolName: 'code_execution');
+      const delta = ToolCallDelta(
+        id: 'code_1',
+        inputDelta: '{"language":"python","code":"print(1)"}',
+      );
+      const end = ToolCallEnd('code_1');
+      const serverStart = ServerToolStart(
+        id: 'code_1',
+        toolName: 'code_execution',
+      );
+
+      for (final chunk in [start, delta, end]) {
+        state.partsHandler.handle(chunk);
+      }
+      await controller.handleToolCallsChunk(
+        end,
+        state,
+        updateReasoningSegmentsInDb: (_, __) async {},
+        setToolEventsInDb: (_, events) async {
+          stored
+            ..clear()
+            ..addAll(events);
+        },
+        getToolEventsFromDb: (_) => const [],
+      );
+
+      state.partsHandler.handle(serverStart);
+      await controller.handleToolCallsChunk(
+        serverStart,
+        state,
+        updateReasoningSegmentsInDb: (_, __) async {},
+        setToolEventsInDb: (_, events) async {
+          stored
+            ..clear()
+            ..addAll(events);
+        },
+        getToolEventsFromDb: (_) => List<Map<String, dynamic>>.from(stored),
+      );
+
+      expect(stored.last['arguments'], {
+        'language': 'python',
+        'code': 'print(1)',
+      });
+    },
+  );
+
+  test(
+    'handleToolResultsChunk keeps handler content when ServerToolEnd has no output',
+    () async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      final controller = buildController(
+        settings: settings,
+        currentConversationId: 'conversation-1',
+      );
+      final state = buildStreamingState(settings);
+      Map<String, dynamic>? upserted;
+      const start = ServerToolStart(
+        id: 'st_1',
+        toolName: 'web_search_preview',
+        input: {
+          'action': {'query': 'kelivo'},
+        },
+      );
+      const end = ServerToolEnd(id: 'st_1');
+
+      state.partsHandler.handle(start);
+      state.partsHandler.handle(end);
+      await controller.handleToolResultsChunk(
+        end,
+        state,
+        upsertToolEventInDb:
+            (
+              _, {
+              required id,
+              required name,
+              required arguments,
+              content,
+              metadata,
+            }) async {
+              upserted = {'id': id, 'arguments': arguments, 'content': content};
+            },
+      );
+
+      expect(upserted!['arguments'], {
+        'action': {'query': 'kelivo'},
+      });
+      expect(upserted!['content'], isNotEmpty);
+    },
+  );
 }

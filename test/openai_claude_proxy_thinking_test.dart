@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 /// Regression tests for https://github.com/Chevey339/kelivo/issues/764
 ///
@@ -59,10 +60,12 @@ void main() {
         ],
       ).toList();
 
-      final done = chunks.last;
-      expect(done.isDone, isTrue);
-      expect(done.reasoningDetails, isA<List>());
-      expect((done.reasoningDetails as List).first['signature'], 'sig-proxy-1');
+      expect(chunks.isGenerationDone, isTrue);
+      expect(chunks.lastReasoningDetails, isA<List>());
+      expect(
+        (chunks.lastReasoningDetails as List).first['signature'],
+        'sig-proxy-1',
+      );
     });
 
     test(
@@ -106,7 +109,7 @@ void main() {
           ],
         ).toList();
 
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
         final messages = (requestBody['messages'] as List).cast<Map>();
         final assistant = messages[1];
         expect(assistant.containsKey('reasoning_content'), isFalse);
@@ -164,7 +167,7 @@ void main() {
           ],
         ).toList();
 
-        expect(chunks.last.isDone, isTrue);
+        expect(chunks.isGenerationDone, isTrue);
         final messages = (requestBody['messages'] as List).cast<Map>();
         final assistant = messages[1];
         expect(assistant.containsKey('reasoning_content'), isFalse);
@@ -209,7 +212,7 @@ void main() {
         ],
       ).toList();
 
-      final details = chunks.last.reasoningDetails as List;
+      final details = chunks.lastReasoningDetails as List;
       expect(details, hasLength(2));
       expect(details[0]['signature'], 'sig-a');
       expect(details[1]['signature'], 'sig-b');
@@ -251,7 +254,7 @@ void main() {
         ],
       ).toList();
 
-      final details = chunks.last.reasoningDetails as List;
+      final details = chunks.lastReasoningDetails as List;
       expect(details, hasLength(2));
       expect(details[0]['signature'], 'sig-x');
       expect(details[1]['signature'], 'sig-x');
@@ -300,7 +303,7 @@ void main() {
           ],
         ).toList();
 
-        final details = chunks.last.reasoningDetails as List;
+        final details = chunks.lastReasoningDetails as List;
         expect(details, hasLength(3));
         expect(details[0]['signature'], 'sig-x');
         expect(details[1]['signature'], 'sig-x');
@@ -346,7 +349,7 @@ void main() {
         ],
       ).toList();
 
-      final details = chunks.last.reasoningDetails as List;
+      final details = chunks.lastReasoningDetails as List;
       expect(details, hasLength(2));
       expect(details[0]['signature'], 'sig-a');
       expect(details[1]['signature'], 'sig-b');
@@ -398,7 +401,7 @@ void main() {
             ],
           ).toList();
 
-          expect(chunks.last.isDone, isTrue);
+          expect(chunks.isGenerationDone, isTrue);
         }
 
         expect(requestBodies, hasLength(2));

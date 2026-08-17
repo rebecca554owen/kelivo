@@ -129,6 +129,50 @@ void main() {
       },
     );
 
+    test(
+      'partsWithRedistributedText keeps later TextParts after a tool card',
+      () {
+        final next = ChatMessage.partsWithRedistributedText(const [
+          TextPart('我查一下'),
+          ToolCallPart('{"id":"search","name":"search"}'),
+          TextPart('结果是 X'),
+        ], '我查一下结果是 X');
+        expect(next.map((part) => part.kind), ['text', 'tool_call', 'text']);
+        expect((next[0] as TextPart).text, '我查一下');
+        expect((next[2] as TextPart).text, '结果是 X');
+      },
+    );
+
+    test('partsWithReplacedReasoning updates the first reasoning part', () {
+      final next = ChatMessage.partsWithReplacedReasoning(const [
+        ReasoningPart('old'),
+        TextPart('body'),
+      ], 'new');
+      expect((next[0] as ReasoningPart).text, 'new');
+      expect((next[1] as TextPart).text, 'body');
+    });
+
+    test(
+      'partsWithReplacedReasoning drops later reasoning so join equals the scalar',
+      () {
+        final next = ChatMessage.partsWithReplacedReasoning(const [
+          ReasoningPart('a'),
+          TextPart('body'),
+          ReasoningPart('b'),
+        ], 'new');
+        expect(next.map((part) => part.kind), ['reasoning', 'text']);
+        expect((next[0] as ReasoningPart).text, 'new');
+        expect(
+          next.whereType<ReasoningPart>().map((part) => part.text).join('\n'),
+          'new',
+        );
+
+        final cleared = ChatMessage.partsWithReplacedReasoning(next, '');
+        expect(cleared.whereType<ReasoningPart>(), isEmpty);
+        expect(cleared.single, isA<TextPart>());
+      },
+    );
+
     test('copyWith without content/parts keeps existing parts', () {
       final original = ChatMessage(
         role: 'user',
