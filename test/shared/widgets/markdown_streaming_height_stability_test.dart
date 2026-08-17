@@ -86,11 +86,12 @@ void main() {
       List<String> blocks, {
       TextStyle style = baseStyle,
       double textScale = 1.0,
+      String terminator = '\n',
     }) async {
       // The splitter only closes a block once the next line is complete, so
       // without the trailing newline the last boundary is never split and the
       // case would measure a single block on both paths — passing for free.
-      final text = '${blocks.join('\n\n')}\n';
+      final text = '${blocks.join('\n\n')}$terminator';
       final streamingHeight = await heightFor(
         text,
         streaming: true,
@@ -203,6 +204,37 @@ void main() {
         r'\[a^2 + b^2 = c^2\]',
         pad(4),
       ]);
+      // Only the closing-hash branch of an ATX heading ends in `\s*`, so only
+      // that spelling eats the blank line after the heading.
+      await expectStableHeight('headings that close with hashes', [
+        pad(1),
+        '# Heading one #',
+        pad(2),
+        '### Heading three ###',
+        pad(3),
+      ]);
+      // The rule and math patterns spell their line breaks and indents as `\s`,
+      // which covers a bare CR and a non-breaking space.
+      await expectStableHeight('rules behind unusual whitespace', [
+        pad(1),
+        'prose then a rule\r---',
+        pad(2),
+        '\u00a0---',
+        pad(3),
+        '\u00a0'
+            r'$$a + b$$',
+        pad(4),
+      ]);
+      // A reply that has just emitted a paragraph break leaves a blank tail
+      // block, which the whole-document render trims away.
+      await expectStableHeight('a reply sitting on a paragraph break', [
+        pad(1),
+        pad(2),
+      ], terminator: '\n\n');
+      await expectStableHeight('a reply sitting on several blank lines', [
+        pad(1),
+        pad(2),
+      ], terminator: '\n\n\n\n');
       await expectStableHeight('CJK paragraphs', [
         '这是一个中文段落。' * 12,
         '这是另一个中文段落。' * 12,

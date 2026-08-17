@@ -593,9 +593,20 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       },
     );
 
-    final blockContents = useIncrementalBlocks
-        ? [for (final block in sourceBlocks) normalize(block.text)]
-        : const <String>[];
+    // A whole-document render trims the source, so a blank block — the tail
+    // right after the reply emits a paragraph break — has to render as nothing
+    // here too, separator included, or the reply gains a line for as long as it
+    // sits on that break.
+    final blockContents = <String>[];
+    final blockStarts = <int>[];
+    if (useIncrementalBlocks) {
+      for (final block in sourceBlocks) {
+        final content = normalize(block.text);
+        if (_isBlank(content)) continue;
+        blockContents.add(content);
+        blockStarts.add(block.start);
+      }
+    }
     final markdownWidget = useIncrementalBlocks
         ? _MarkdownBlockColumn(
             children: [
@@ -614,9 +625,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                     ))
                   _MarkdownBlockSeparator(style: baseTextStyle),
                 _CachedMarkdownBlock(
-                  key: ValueKey(
-                    'markdown-source-block-${sourceBlocks[i].start}',
-                  ),
+                  key: ValueKey('markdown-source-block-${blockStarts[i]}'),
                   content: blockContents[i],
                   signature: themeSignature,
                   builder: buildMarkdown,
@@ -711,27 +720,160 @@ class _CachedMarkdownBlockState extends State<_CachedMarkdownBlock> {
   }
 }
 
-/// A horizontal rule on the last line of a block.
-final RegExp _trailingSoftHrLine = RegExp(
-  r'(?:^|\n)[ \t]*(?:-{3,}|\*{3,}|_{3,}|⸻)\s*$',
-);
-
-/// A display-math block on the last line(s) of a block.
-final RegExp _trailingDisplayMath = RegExp(
-  r'(?:^|\n)[ \t]*(?:\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])\s*$',
-);
-
 /// Whether a whole-document render would fold the blank line after [content]
 /// into the block itself, leaving no gap for a separator to reproduce.
 ///
-/// [SoftHrLine] and [LatexBlockScrollableMd] both close their pattern with
-/// `\s*$`, so the match runs past the trailing newlines and no `NewLines` span
-/// is ever generated after them. Every other block leaves the blank line
-/// behind, which is what [_MarkdownBlockSeparator] stands in for.
+/// [SoftHrLine] and [LatexBlockScrollableMd] close their pattern with `\s*$`,
+/// and [AtxHeadingMd] does the same in its closing-hash branch (`# Title #`).
+/// The match then runs past the newline that ends the block, so `NewLines`
+/// never sees the `\n\n` it needs and the render lays out no gap. Every other
+/// block leaves the blank line behind, which is what
+/// [_MarkdownBlockSeparator] stands in for.
+///
+/// This walks in from the end of the block rather than matching a regex over
+/// the whole of it: a pattern like `\$\$[\s\S]*?\$\$\s*$` retries from every
+/// line-leading `$$`, which turns quadratic on a block full of unclosed math,
+/// and the check runs for every stable block on every streaming frame.
 bool _swallowsTrailingBlankLine(String content, {required bool mathEnabled}) {
-  if (_trailingSoftHrLine.hasMatch(content)) return true;
-  return mathEnabled && _trailingDisplayMath.hasMatch(content);
+  final end = _lastNonWhitespace(content);
+  if (end == 0) return false;
+  final lineStart = _lineStartBefore(content, end);
+  if (_isSoftHrLine(content, lineStart, end)) return true;
+  if (_isAtxHeadingWithClosingHashes(content, lineStart, end)) return true;
+  return mathEnabled && _endsWithDisplayMath(content, end);
 }
+
+/// One past the last non-whitespace code unit of [content].
+int _lastNonWhitespace(String content) {
+  var end = content.length;
+  while (end > 0 && _isWhitespace(content.codeUnitAt(end - 1))) {
+    end--;
+  }
+  return end;
+}
+
+/// The start of the line that [end] (exclusive) sits on.
+int _lineStartBefore(String content, int end) {
+  var i = end;
+  while (i > 0 && !_isLineBreak(content.codeUnitAt(i - 1))) {
+    i--;
+  }
+  return i;
+}
+
+/// Whether `[start, end)` holds nothing but a run of one rule marker, the way
+/// [SoftHrLine] matches it.
+bool _isSoftHrLine(String content, int start, int end) {
+  var i = start;
+  while (i < end && _isWhitespace(content.codeUnitAt(i))) {
+    i++;
+  }
+  if (i >= end) return false;
+  final marker = content.codeUnitAt(i);
+  if (marker == 0x2E3B) return i + 1 == end; // ⸻, matched on its own
+  if (marker != 0x2D && marker != 0x2A && marker != 0x5F) return false; // -*_
+  var run = 0;
+  while (i < end && content.codeUnitAt(i) == marker) {
+    i++;
+    run++;
+  }
+  return run >= 3 && i == end;
+}
+
+/// Whether `[start, end)` holds an ATX heading that closes with hashes, the
+/// only [AtxHeadingMd] branch that eats the newline after the heading.
+bool _isAtxHeadingWithClosingHashes(String content, int start, int end) {
+  var i = start;
+  while (i < end && _isWhitespace(content.codeUnitAt(i))) {
+    i++;
+  }
+  var opening = 0;
+  while (i < end && content.codeUnitAt(i) == 0x23) {
+    i++;
+    opening++;
+  }
+  if (opening < 1 || opening > 6) return false;
+  if (i >= end || !_isWhitespace(content.codeUnitAt(i))) return false;
+  var j = end;
+  var closing = 0;
+  while (j > i && content.codeUnitAt(j - 1) == 0x23) {
+    j--;
+    closing++;
+  }
+  if (closing < 1) return false;
+  // The hashes only close the heading when whitespace separates them from a
+  // non-empty title; otherwise they are part of the title itself.
+  if (j <= i || !_isWhitespace(content.codeUnitAt(j - 1))) return false;
+  while (j > i && _isWhitespace(content.codeUnitAt(j - 1))) {
+    j--;
+  }
+  return j > i;
+}
+
+/// Whether [content] ends (at [end]) with a display-math block that
+/// [LatexBlockScrollableMd] would match, `$$…$$` or `\[…\]`.
+bool _endsWithDisplayMath(String content, int end) {
+  for (final delimiter in const [
+    (opener: r'$$', closer: r'$$'),
+    (opener: r'\[', closer: r'\]'),
+  ]) {
+    final closerStart = end - delimiter.closer.length;
+    if (closerStart <= 0) continue;
+    if (!content.startsWith(delimiter.closer, closerStart)) continue;
+    // Walk back to the nearest line-leading opener. An earlier one cannot be
+    // the match: the whole-document scan reaches it first and closes it on the
+    // first closer that follows, which is then not the one at the end.
+    var i = closerStart - delimiter.opener.length;
+    while (i >= 0) {
+      final opener = content.lastIndexOf(delimiter.opener, i);
+      if (opener < 0) return false;
+      if (_isLineLeading(content, opener)) {
+        return content.indexOf(
+              delimiter.closer,
+              opener + delimiter.opener.length,
+            ) ==
+            closerStart;
+      }
+      i = opener - 1;
+    }
+  }
+  return false;
+}
+
+/// Whether [index] is preceded by nothing but whitespace on its own line.
+bool _isLineLeading(String content, int index) {
+  var i = index;
+  while (i > 0) {
+    final unit = content.codeUnitAt(i - 1);
+    if (_isLineBreak(unit)) return true;
+    if (!_isWhitespace(unit)) return false;
+    i--;
+  }
+  return true;
+}
+
+bool _isBlank(String content) => _lastNonWhitespace(content) == 0;
+
+/// Whitespace as `\s` in a Dart pattern reads it, so leading and trailing runs
+/// are judged the same way the block patterns judge them.
+bool _isWhitespace(int unit) {
+  if (unit == 0x20) return true;
+  if (unit >= 0x09 && unit <= 0x0D) return true;
+  if (unit < 0x80) return false;
+  return unit == 0xA0 ||
+      unit == 0x1680 ||
+      (unit >= 0x2000 && unit <= 0x200A) ||
+      unit == 0x2028 ||
+      unit == 0x2029 ||
+      unit == 0x202F ||
+      unit == 0x205F ||
+      unit == 0x3000 ||
+      unit == 0xFEFF;
+}
+
+/// The line terminators `^` and `$` recognise in a multi-line Dart pattern.
+bool _isLineBreak(int unit) =>
+    unit == 0x0A || unit == 0x0D || unit == 0x2028 || unit == 0x2029;
 
 /// The blank line a whole-document render keeps between two blocks.
 ///
