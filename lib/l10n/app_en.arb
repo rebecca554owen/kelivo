@@ -2464,6 +2464,7 @@
   "contextLogSourceChatHistory": "Chat history",
   "contextLogSourceToolCall": "Tool call",
   "contextLogSourceToolResult": "Tool result",
+  "contextLogTokensEstimateHint": "Token counts are estimates only; use the model's actual usage as the source of truth.",
   "contextLogSnapshotsCount": "{count} snapshots",
   "@contextLogSnapshotsCount": {
     "placeholders": {

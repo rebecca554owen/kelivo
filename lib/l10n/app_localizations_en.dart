@@ -5939,6 +5939,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextLogSourceToolResult => 'Tool result';
 
   @override
+  String get contextLogTokensEstimateHint =>
+      'Token counts are estimates only; use the model\'s actual usage as the source of truth.';
+
+  @override
   String contextLogSnapshotsCount(int count) {
     return '$count snapshots';
   }

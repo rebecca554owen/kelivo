@@ -5708,6 +5708,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextLogSourceToolResult => '工具结果';
 
   @override
+  String get contextLogTokensEstimateHint => 'tokens 仅为预估值，请以模型实际消耗为准。';
+
+  @override
   String contextLogSnapshotsCount(int count) {
     return '$count 条快照';
   }
@@ -12872,6 +12875,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get contextLogSourceToolResult => '工具结果';
+
+  @override
+  String get contextLogTokensEstimateHint => 'tokens 仅为预估值，请以模型实际消耗为准。';
 
   @override
   String contextLogSnapshotsCount(int count) {
@@ -20112,6 +20118,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get contextLogSourceToolResult => '工具結果';
+
+  @override
+  String get contextLogTokensEstimateHint => 'tokens 僅為預估值，請以模型實際消耗為準。';
 
   @override
   String contextLogSnapshotsCount(int count) {

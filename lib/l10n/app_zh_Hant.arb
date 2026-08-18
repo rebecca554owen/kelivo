@@ -2059,6 +2059,7 @@
   "contextLogSourceChatHistory": "聊天歷史",
   "contextLogSourceToolCall": "工具呼叫",
   "contextLogSourceToolResult": "工具結果",
+  "contextLogTokensEstimateHint": "tokens 僅為預估值，請以模型實際消耗為準。",
   "contextLogSnapshotsCount": "{count} 則快照",
   "contextLogSnapshotFallbackTitle": "快照",
   "contextLogKindFull": "全量快照",

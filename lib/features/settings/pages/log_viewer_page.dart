@@ -965,24 +965,38 @@ class _ContextSummaryBar extends StatelessWidget {
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              l10n.contextLogSnapshotsCount(snapshots.length),
-              style: TextStyle(
-                fontWeight: AppFontWeights.emphasis,
-                color: cs.onSurface.withValues(alpha: 0.90),
-                letterSpacing: -0.2,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.contextLogSnapshotsCount(snapshots.length),
+                  style: TextStyle(
+                    fontWeight: AppFontWeights.emphasis,
+                    color: cs.onSurface.withValues(alpha: 0.90),
+                    letterSpacing: -0.2,
+                  ),
+                ),
               ),
-            ),
+              Text(
+                l10n.contextLogSnapshotTokens(totalTokens),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: AppFontWeights.medium,
+                  color: cs.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
           Text(
-            l10n.contextLogSnapshotTokens(totalTokens),
+            l10n.contextLogTokensEstimateHint,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: AppFontWeights.medium,
               color: cs.onSurface.withValues(alpha: 0.55),
+              height: 1.25,
             ),
           ),
         ],

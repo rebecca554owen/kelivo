@@ -10933,6 +10933,12 @@ abstract class AppLocalizations {
   /// **'Tool result'**
   String get contextLogSourceToolResult;
 
+  /// No description provided for @contextLogTokensEstimateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Token counts are estimates only; use the model\'s actual usage as the source of truth.'**
+  String get contextLogTokensEstimateHint;
+
   /// No description provided for @contextLogSnapshotsCount.
   ///
   /// In en, this message translates to:

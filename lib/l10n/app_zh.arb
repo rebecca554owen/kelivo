@@ -2060,6 +2060,7 @@
   "contextLogSourceChatHistory": "聊天历史",
   "contextLogSourceToolCall": "工具调用",
   "contextLogSourceToolResult": "工具结果",
+  "contextLogTokensEstimateHint": "tokens 仅为预估值，请以模型实际消耗为准。",
   "contextLogSnapshotsCount": "{count} 条快照",
   "contextLogSnapshotFallbackTitle": "快照",
   "contextLogKindFull": "全量快照",
