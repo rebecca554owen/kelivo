@@ -93,6 +93,22 @@ void main() {
       );
       expect(d.relatedIds, ['mem_a1b2c3d4']);
     });
+
+    test('MERGE target outside mergeableIds degrades to NEW', () {
+      final d = MemorySmartAdd.normalizeDecision(
+        const SmartAddDecision(
+          action: SmartAddAction.merge,
+          targetId: 'mem_global01',
+          mergedContent: 'merged',
+          relatedIds: ['mem_global01'],
+        ),
+        {'mem_global01'},
+        mergeableIds: const <String>{},
+      );
+      expect(d.action, SmartAddAction.neu);
+      expect(d.targetId, isNull);
+      expect(d.relatedIds, ['mem_global01']);
+    });
   });
 
   group('parse batch / per-item (§18.1 item 12)', () {
@@ -308,5 +324,46 @@ Sure:
       expect(r.action, SmartAddAction.neu);
       expect(r.id, isNotNull);
     });
+
+    test(
+      'assistant-scoped item does not MERGE into a global candidate',
+      () async {
+        await seedAssistant('a1');
+        final global = await memoryRepository.create(
+          scope: MemoryScope.global,
+          type: MemoryType.identity,
+          content: '用户住在上海。',
+          source: MemorySource.manual,
+        );
+        final r = await smartAdd.addOne(
+          item: const SmartAddItem(
+            type: MemoryType.identity,
+            content: '用户住在杭州。',
+            scope: MemoryScope.assistant,
+            assistantId: 'a1',
+          ),
+          visibilityAssistantId: 'a1',
+          source: MemorySource.tool,
+          lang: MemoryPromptLang.zh,
+          llmCall: (_) async => jsonEncode({
+            'action': 'MERGE',
+            'targetId': global.id,
+            'mergedContent': '用户住在上海和杭州。',
+            'relatedIds': <String>[],
+          }),
+        );
+        expect(r.action, SmartAddAction.neu);
+        expect(r.id, isNot(global.id));
+        final afterGlobal = (await chatRepository.memoriesByIds([
+          global.id,
+        ])).single;
+        expect(afterGlobal.content, '用户住在上海。');
+        expect(afterGlobal.scope, MemoryScope.global);
+        final created = (await chatRepository.memoriesByIds([r.id!])).single;
+        expect(created.scope, MemoryScope.assistant);
+        expect(created.assistantId, 'a1');
+        expect(created.content, '用户住在杭州。');
+      },
+    );
   });
 }

@@ -277,10 +277,15 @@ class MemorySmartAdd {
   }
 
   /// Validate / degrade one decision against [candidateIds] (§12.6).
+  ///
+  /// [mergeableIds] defaults to [candidateIds]. MERGE/CONFLICT targets must be
+  /// in that set so an assistant-scoped item cannot rewrite a global entry.
+  /// [relatedIds] still filter against the full [candidateIds].
   static SmartAddDecision normalizeDecision(
     SmartAddDecision decision,
-    Set<String> candidateIds,
-  ) {
+    Set<String> candidateIds, {
+    Set<String>? mergeableIds,
+  }) {
     var action = decision.action;
     var targetId = decision.targetId;
     var merged = decision.mergedContent;
@@ -288,9 +293,10 @@ class MemorySmartAdd {
       for (final id in decision.relatedIds)
         if (candidateIds.contains(id)) id,
     ];
+    final mergeTargets = mergeableIds ?? candidateIds;
 
     if (action == SmartAddAction.merge || action == SmartAddAction.conflict) {
-      if (targetId == null || !candidateIds.contains(targetId)) {
+      if (targetId == null || !mergeTargets.contains(targetId)) {
         action = SmartAddAction.neu;
         targetId = null;
         merged = null;
@@ -416,8 +422,13 @@ class MemorySmartAdd {
     required Set<String> candidateIds,
     required MemorySource source,
     MemoryTraceStep? traceStep,
+    Set<String>? mergeableIds,
   }) async {
-    final normalized = normalizeDecision(decision, candidateIds);
+    final normalized = normalizeDecision(
+      decision,
+      candidateIds,
+      mergeableIds: mergeableIds,
+    );
     final typeLabel = MemoryEntry.typeToString(item.type);
     switch (normalized.action) {
       case SmartAddAction.skip:
@@ -557,6 +568,10 @@ class MemorySmartAdd {
       newInfo: item.content,
     );
     final candidateIds = {for (final e in candidates) e.id};
+    final mergeableIds = {
+      for (final e in candidates)
+        if (e.scope == item.scope && e.assistantId == item.assistantId) e.id,
+    };
 
     SmartAddDecision decision;
     if (llmCall == null) {
@@ -600,6 +615,7 @@ class MemorySmartAdd {
       item: item,
       decision: decision,
       candidateIds: candidateIds,
+      mergeableIds: mergeableIds,
       source: source,
       traceStep: traceStep,
     );
@@ -747,6 +763,10 @@ class MemorySmartAdd {
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       final candidateIds = {for (final e in perItemCandidates[i]) e.id};
+      final mergeableIds = {
+        for (final e in perItemCandidates[i])
+          if (e.scope == item.scope && e.assistantId == item.assistantId) e.id,
+      };
       // Also allow relatedIds / targetId from the union for batched mode
       // (entriesText is the union). §12.6: relatedIds not in *candidate set*
       // for that item — use per-item candidates.
@@ -761,6 +781,7 @@ class MemorySmartAdd {
         item: item,
         decision: decision,
         candidateIds: candidateIds,
+        mergeableIds: mergeableIds,
         source: source,
         traceStep: traceStep,
       );
