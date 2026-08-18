@@ -4330,10 +4330,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep Message Versions When Forking';
 
   @override
-  String get displaySettingsPageForkKeepMessageVersionsSubtitle =>
-      'The fork carries every regenerated version of each message so you can still switch between them; off keeps only the selected answer.';
-
-  @override
   String chainOfThoughtExpandSteps(Object count) {
     return 'Show $count more steps';
   }

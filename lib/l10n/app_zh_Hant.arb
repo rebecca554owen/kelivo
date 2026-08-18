@@ -1450,7 +1450,6 @@
   "displaySettingsPageRegenerateDeleteTrailingMessagesTitle": "重新生成時刪除下面的訊息",
   "displaySettingsPageShowRegenerateConfirmDialogTitle": "重新生成前彈出確認",
   "displaySettingsPageForkKeepMessageVersionsTitle": "建立分支時保留訊息版本",
-  "displaySettingsPageForkKeepMessageVersionsSubtitle": "分支會帶上每則訊息 roll 出的歷史版本，可繼續左右切換；關閉則只帶目前選中的回答",
   "chainOfThoughtExpandSteps": "展開更多 {count} 步",
   "@chainOfThoughtExpandSteps": {
     "placeholders": {

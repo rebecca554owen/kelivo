@@ -2173,8 +2173,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 context,
                 icon: Lucide.GitFork,
                 label: l10n.displaySettingsPageForkKeepMessageVersionsTitle,
-                subtitle:
-                    l10n.displaySettingsPageForkKeepMessageVersionsSubtitle,
                 value: sp.forkKeepMessageVersions,
                 onChanged: (v) => context
                     .read<SettingsProvider>()
