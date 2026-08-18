@@ -32,6 +32,7 @@ import '../../../shared/widgets/snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../theme/chat_bubble_style.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../../../shared/widgets/custom_bottom_sheet.dart';
@@ -1500,7 +1501,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 context,
                 visualText,
                 userMessageSettings.enableMarkdown,
-                cs,
               ),
             ),
           )
@@ -1780,7 +1780,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     BuildContext context,
     String visualText,
     bool enableUserMarkdown,
-    ColorScheme cs,
   ) {
     final bool isDesktop =
         defaultTargetPlatform == TargetPlatform.macOS ||
@@ -1800,7 +1799,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     } else {
       content = Text(
         visualText,
-        style: TextStyle(fontSize: baseUser, height: 1.4, color: cs.onSurface),
+        style: TextStyle(
+          fontSize: baseUser,
+          height: 1.4,
+          color: _chatSurfacePlainTextColor(context),
+        ),
       );
     }
 
@@ -2154,7 +2157,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     SettingsProvider settings,
     Map<String, String> citationIndexLookup,
   ) {
-    final cs = Theme.of(context).colorScheme;
     final bool isDesktop =
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
@@ -2177,7 +2179,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         style: TextStyle(
           fontSize: baseAssistant,
           height: 1.5,
-          color: cs.onSurface,
+          color: _chatSurfacePlainTextColor(context),
         ),
       );
     }
@@ -2835,7 +2837,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                         style: TextStyle(
                                           fontSize: baseTranslation,
                                           height: 1.4,
-                                          color: cs.onSurface,
+                                          color: _chatSurfacePlainTextColor(
+                                            context,
+                                          ),
                                         ),
                                       );
                                     }
@@ -3406,6 +3410,34 @@ class _AnimatedPopupState extends State<_AnimatedPopup> {
   }
 }
 
+({ChatMessageBackgroundStyle style, ChatBubbleStyleOverrides overrides})
+_chatSurfaceStyleSelection(BuildContext context) {
+  return context.select<
+    SettingsProvider,
+    ({ChatMessageBackgroundStyle style, ChatBubbleStyleOverrides overrides})
+  >(
+    (s) => (
+      style: s.chatMessageBackgroundStyle,
+      overrides: s.chatBubbleStyleOverrides,
+    ),
+  );
+}
+
+Color _chatSurfacePlainTextColor(BuildContext context) {
+  final theme = Theme.of(context);
+  final cs = theme.colorScheme;
+  final selection = _chatSurfaceStyleSelection(context);
+  if (selection.style == ChatMessageBackgroundStyle.defaultStyle) {
+    return cs.onSurface;
+  }
+  return resolveBubbleStyle(
+    cs,
+    theme.brightness,
+    selection.style,
+    selection.overrides,
+  ).text;
+}
+
 Widget _buildSharedChatSurface(
   BuildContext context, {
   required Widget child,
@@ -3416,24 +3448,36 @@ Widget _buildSharedChatSurface(
 }) {
   final theme = Theme.of(context);
   final cs = theme.colorScheme;
-  final style = context.select<SettingsProvider, ChatMessageBackgroundStyle>(
-    (s) => s.chatMessageBackgroundStyle,
-  );
-  final paddedChild = Padding(padding: padding, child: child);
+  final selection = _chatSurfaceStyleSelection(context);
+  final style = selection.style;
+  final overrides = selection.overrides;
+  final resolved = resolveBubbleStyle(cs, theme.brightness, style, overrides);
+  Widget paddedChild = Padding(padding: padding, child: child);
+  if (style != ChatMessageBackgroundStyle.defaultStyle &&
+      overrides.hasTextOverride(theme.brightness)) {
+    paddedChild = DefaultTextStyle.merge(
+      style: TextStyle(color: resolved.text),
+      child: paddedChild,
+    );
+  }
 
   switch (style) {
     case ChatMessageBackgroundStyle.frosted:
+      final radius = BorderRadius.circular(resolved.radius);
       return ClipRRect(
-        borderRadius: borderRadius,
+        borderRadius: radius,
         child: BackdropFilter.grouped(
-          filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          filter: ui.ImageFilter.blur(
+            sigmaX: resolved.blurSigma,
+            sigmaY: resolved.blurSigma,
+          ),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: cs.surfaceContainerHigh.withValues(alpha: 0.66),
-              borderRadius: borderRadius,
+              color: resolved.background,
+              borderRadius: radius,
               border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: 0.14),
-                width: 0.8,
+                color: resolved.border,
+                width: resolved.borderWidth,
               ),
             ),
             child: paddedChild,
@@ -3441,13 +3485,14 @@ Widget _buildSharedChatSurface(
         ),
       );
     case ChatMessageBackgroundStyle.solid:
+      final radius = BorderRadius.circular(resolved.radius);
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHigh,
-          borderRadius: borderRadius,
+          color: resolved.background,
+          borderRadius: radius,
           border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.16),
-            width: 0.8,
+            color: resolved.border,
+            width: resolved.borderWidth,
           ),
         ),
         child: paddedChild,
@@ -3492,10 +3537,8 @@ _ChatSurfaceForegroundPalette _chatSurfaceForegroundPalette(
 ) {
   final theme = Theme.of(context);
   final cs = theme.colorScheme;
-  final style = context.select<SettingsProvider, ChatMessageBackgroundStyle>(
-    (s) => s.chatMessageBackgroundStyle,
-  );
-  if (style == ChatMessageBackgroundStyle.defaultStyle) {
+  final selection = _chatSurfaceStyleSelection(context);
+  if (selection.style == ChatMessageBackgroundStyle.defaultStyle) {
     return _ChatSurfaceForegroundPalette(
       strong: cs.secondary,
       medium: cs.secondary.withValues(alpha: 0.9),
@@ -3508,7 +3551,12 @@ _ChatSurfaceForegroundPalette _chatSurfaceForegroundPalette(
     );
   }
 
-  final base = cs.onSurface;
+  final base = resolveBubbleStyle(
+    cs,
+    theme.brightness,
+    selection.style,
+    selection.overrides,
+  ).text;
   final bool isDark = theme.brightness == Brightness.dark;
   return _ChatSurfaceForegroundPalette(
     strong: base.withValues(alpha: isDark ? 0.88 : 0.78),

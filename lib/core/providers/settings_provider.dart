@@ -33,6 +33,7 @@ import '../services/memory/memory_prompts.dart';
 import '../services/memory/memory_trace.dart';
 import '../../theme/palettes.dart';
 import '../../theme/custom_theme.dart';
+import '../../theme/chat_bubble_style.dart';
 
 // Desktop: topic list position
 enum DesktopTopicPosition { left, right }
@@ -256,6 +257,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_use_pure_background_v1';
   static const String _displayChatMessageBackgroundStyleKey =
       'display_chat_message_background_style_v1';
+  static const String _chatBubbleStyleOverridesKey =
+      'chat_bubble_style_overrides_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
   static const String _mobileAssistantEditTabHiddenKey =
@@ -1171,6 +1174,23 @@ class SettingsProvider extends ChangeNotifier {
         break;
       default:
         _chatMessageBackgroundStyle = ChatMessageBackgroundStyle.defaultStyle;
+    }
+    final bubbleOverridesRaw = prefs.getString(_chatBubbleStyleOverridesKey);
+    if (bubbleOverridesRaw != null && bubbleOverridesRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(bubbleOverridesRaw);
+        if (decoded is Map<String, dynamic>) {
+          _chatBubbleStyleOverrides = ChatBubbleStyleOverrides.fromJson(
+            decoded,
+          );
+        } else if (decoded is Map) {
+          _chatBubbleStyleOverrides = ChatBubbleStyleOverrides.fromJson(
+            Map<String, dynamic>.from(decoded),
+          );
+        }
+      } catch (_) {
+        _chatBubbleStyleOverrides = const ChatBubbleStyleOverrides();
+      }
     }
     _mobileAssistantEditTabOrder = List.unmodifiable(
       prefs.getStringList(_mobileAssistantEditTabOrderKey) ?? const <String>[],
@@ -2636,6 +2656,20 @@ class SettingsProvider extends ChangeNotifier {
       ChatMessageBackgroundStyle.defaultStyle => 'default',
     };
     await prefs.setString(_displayChatMessageBackgroundStyleKey, v);
+  }
+
+  ChatBubbleStyleOverrides _chatBubbleStyleOverrides =
+      const ChatBubbleStyleOverrides();
+  ChatBubbleStyleOverrides get chatBubbleStyleOverrides =>
+      _chatBubbleStyleOverrides;
+  Future<void> setChatBubbleStyleOverrides(ChatBubbleStyleOverrides v) async {
+    if (_chatBubbleStyleOverrides == v) return;
+    _chatBubbleStyleOverrides = v;
+    notifyListeners();
+    await _preferences.setString(
+      _chatBubbleStyleOverridesKey,
+      jsonEncode(v.toJson()),
+    );
   }
 
   List<String> _mobileAssistantEditTabOrder = const <String>[];
@@ -5093,6 +5127,7 @@ Requirements:
     copy._desktopMinimizeToTrayOnClose = _desktopMinimizeToTrayOnClose;
     copy._usePureBackground = _usePureBackground;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;
+    copy._chatBubbleStyleOverrides = _chatBubbleStyleOverrides;
     copy._mobileAssistantEditTabOrder = _mobileAssistantEditTabOrder;
     copy._hiddenMobileAssistantEditTabs = _hiddenMobileAssistantEditTabs;
     copy._mobileAssistantDetailOutlineEnabled =

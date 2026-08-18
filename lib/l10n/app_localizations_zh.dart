@@ -7245,6 +7245,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryTraceShowLess => '收起';
+
+  @override
+  String get messageStyleSettingsPageTitle => '消息样式';
+
+  @override
+  String get messageStyleSettingsPageReset => '重置';
+
+  @override
+  String get messageStyleSettingsPageResetConfirm => '恢复全部消息样式自定义？';
+
+  @override
+  String get messageStyleSettingsPageCancel => '取消';
+
+  @override
+  String get messageStyleSettingsPageLight => '浅色';
+
+  @override
+  String get messageStyleSettingsPageDark => '深色';
+
+  @override
+  String get messageStyleSettingsPageBlur => '模糊强度';
+
+  @override
+  String get messageStyleSettingsPageBlurHint => '模糊作用于气泡背后的内容，未设置聊天壁纸时效果不明显';
+
+  @override
+  String get messageStyleSettingsPageBackgroundColor => '背景颜色';
+
+  @override
+  String get messageStyleSettingsPageBackgroundOpacity => '背景不透明度';
+
+  @override
+  String get messageStyleSettingsPageBorderColor => '边框颜色';
+
+  @override
+  String get messageStyleSettingsPageBorderOpacity => '边框不透明度';
+
+  @override
+  String get messageStyleSettingsPageBorderWidth => '边框宽度';
+
+  @override
+  String get messageStyleSettingsPageTextColor => '文字颜色';
+
+  @override
+  String get messageStyleSettingsPageCornerRadius => '圆角半径';
+
+  @override
+  String get messageStyleSettingsPagePreviewUser => '这是一条用户消息';
+
+  @override
+  String get messageStyleSettingsPagePreviewAssistant => '这是一条助手回复。';
+
+  @override
+  String get messageStyleSettingsPagePreviewThinking => '思考中';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -14414,6 +14468,60 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get memoryTraceShowLess => '收起';
+
+  @override
+  String get messageStyleSettingsPageTitle => '消息样式';
+
+  @override
+  String get messageStyleSettingsPageReset => '重置';
+
+  @override
+  String get messageStyleSettingsPageResetConfirm => '恢复全部消息样式自定义？';
+
+  @override
+  String get messageStyleSettingsPageCancel => '取消';
+
+  @override
+  String get messageStyleSettingsPageLight => '浅色';
+
+  @override
+  String get messageStyleSettingsPageDark => '深色';
+
+  @override
+  String get messageStyleSettingsPageBlur => '模糊强度';
+
+  @override
+  String get messageStyleSettingsPageBlurHint => '模糊作用于气泡背后的内容，未设置聊天壁纸时效果不明显';
+
+  @override
+  String get messageStyleSettingsPageBackgroundColor => '背景颜色';
+
+  @override
+  String get messageStyleSettingsPageBackgroundOpacity => '背景不透明度';
+
+  @override
+  String get messageStyleSettingsPageBorderColor => '边框颜色';
+
+  @override
+  String get messageStyleSettingsPageBorderOpacity => '边框不透明度';
+
+  @override
+  String get messageStyleSettingsPageBorderWidth => '边框宽度';
+
+  @override
+  String get messageStyleSettingsPageTextColor => '文字颜色';
+
+  @override
+  String get messageStyleSettingsPageCornerRadius => '圆角半径';
+
+  @override
+  String get messageStyleSettingsPagePreviewUser => '这是一条用户消息';
+
+  @override
+  String get messageStyleSettingsPagePreviewAssistant => '这是一条助手回复。';
+
+  @override
+  String get messageStyleSettingsPagePreviewThinking => '思考中';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -21657,4 +21765,58 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get memoryTraceShowLess => '收合';
+
+  @override
+  String get messageStyleSettingsPageTitle => '訊息樣式';
+
+  @override
+  String get messageStyleSettingsPageReset => '重設';
+
+  @override
+  String get messageStyleSettingsPageResetConfirm => '恢復全部訊息樣式自訂？';
+
+  @override
+  String get messageStyleSettingsPageCancel => '取消';
+
+  @override
+  String get messageStyleSettingsPageLight => '淺色';
+
+  @override
+  String get messageStyleSettingsPageDark => '深色';
+
+  @override
+  String get messageStyleSettingsPageBlur => '模糊強度';
+
+  @override
+  String get messageStyleSettingsPageBlurHint => '模糊作用於氣泡背後的內容，未設定聊天桌布時效果不明顯';
+
+  @override
+  String get messageStyleSettingsPageBackgroundColor => '背景顏色';
+
+  @override
+  String get messageStyleSettingsPageBackgroundOpacity => '背景不透明度';
+
+  @override
+  String get messageStyleSettingsPageBorderColor => '邊框顏色';
+
+  @override
+  String get messageStyleSettingsPageBorderOpacity => '邊框不透明度';
+
+  @override
+  String get messageStyleSettingsPageBorderWidth => '邊框寬度';
+
+  @override
+  String get messageStyleSettingsPageTextColor => '文字顏色';
+
+  @override
+  String get messageStyleSettingsPageCornerRadius => '圓角半徑';
+
+  @override
+  String get messageStyleSettingsPagePreviewUser => '這是一則使用者訊息';
+
+  @override
+  String get messageStyleSettingsPagePreviewAssistant => '這是一則助手回覆。';
+
+  @override
+  String get messageStyleSettingsPagePreviewThinking => '思考中';
 }
