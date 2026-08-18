@@ -170,6 +170,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_regenerate_delete_trailing_messages_v1';
   static const String _displayShowRegenerateConfirmDialogKey =
       'display_show_regenerate_confirm_dialog_v1';
+  static const String _chatForkKeepMessageVersionsKey =
+      'chat_fork_keep_message_versions_v1';
   static const String _displayShowMessageNavKey = 'display_show_message_nav_v1';
   static const String _displayDesktopMessageNavButtonsModeKey =
       'display_desktop_message_nav_buttons_mode_v1';
@@ -983,6 +985,8 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayRegenerateDeleteTrailingMessagesKey) ?? false;
     _showRegenerateConfirmDialog =
         prefs.getBool(_displayShowRegenerateConfirmDialogKey) ?? true;
+    _forkKeepMessageVersions =
+        prefs.getBool(_chatForkKeepMessageVersionsKey) ?? false;
     _showMessageNavButtons = prefs.getBool(_displayShowMessageNavKey) ?? true;
     _mobileMessageNavButtonsMode = _parseMobileMessageNavButtonsMode(
       prefs.getString(_displayMobileMessageNavButtonsModeKey),
@@ -4144,6 +4148,15 @@ Requirements:
     await prefs.setBool(_displayShowRegenerateConfirmDialogKey, v);
   }
 
+  bool _forkKeepMessageVersions = false;
+  bool get forkKeepMessageVersions => _forkKeepMessageVersions;
+  Future<void> setForkKeepMessageVersions(bool v) async {
+    if (_forkKeepMessageVersions == v) return;
+    _forkKeepMessageVersions = v;
+    notifyListeners();
+    await _preferences.setBool(_chatForkKeepMessageVersionsKey, v);
+  }
+
   // Display: show message navigation button
   bool _showMessageNavButtons = true;
   bool get showMessageNavButtons => _showMessageNavButtons;
@@ -5029,6 +5042,7 @@ Requirements:
     copy._showToolResultSummary = _showToolResultSummary;
     copy._regenerateDeleteTrailingMessages = _regenerateDeleteTrailingMessages;
     copy._showRegenerateConfirmDialog = _showRegenerateConfirmDialog;
+    copy._forkKeepMessageVersions = _forkKeepMessageVersions;
     copy._showMessageNavButtons = _showMessageNavButtons;
     copy._mobileMessageNavButtonsMode = _mobileMessageNavButtonsMode;
     copy._useNewAssistantAvatarUx = _useNewAssistantAvatarUx;

@@ -3670,69 +3670,188 @@ class ChatDatabaseRepository {
           .into(_db.conversationRows)
           .insert(_conversationCompanion(duplicate));
       await _replaceMcpServers(targetId, duplicate.mcpServerIds);
-
-      for (final message in sourceMessages) {
-        final targetMessageId = messageIdMap[message.id]!;
-        await _db
-            .into(_db.messageRows)
-            .insert(
-              MessageRowsCompanion.insert(
-                id: targetMessageId,
-                conversationId: targetId,
-                role: message.role,
-                timestamp: message.timestamp,
-                modelId: Value(message.modelId),
-                providerId: Value(message.providerId),
-                totalTokens: Value(message.totalTokens),
-                isStreaming: const Value(false),
-                reasoningStartAt: Value(message.reasoningStartAt),
-                reasoningFinishedAt: Value(message.reasoningFinishedAt),
-                translation: Value(message.translation),
-                reasoningSegmentsJson: Value(message.reasoningSegmentsJson),
-                groupId: Value(
-                  message.groupId == null ? null : groupIdMap[message.groupId],
-                ),
-                version: Value(message.version),
-                promptTokens: Value(message.promptTokens),
-                completionTokens: Value(message.completionTokens),
-                cachedTokens: Value(message.cachedTokens),
-                durationMs: Value(message.durationMs),
-                messageOrder: message.messageOrder,
-              ),
-            );
-        await _db.customStatement(
-          'INSERT INTO message_part_rows '
-          '(conversation_id, revision_id, ordinal, kind, payload, '
-          'created_at, updated_at) '
-          'SELECT ?, ?, ordinal, kind, payload, created_at, updated_at '
-          'FROM message_part_rows WHERE revision_id = ?;',
-          [targetId, targetMessageId, message.id],
-        );
-        await _db.customStatement(
-          'INSERT INTO provider_artifact_rows '
-          '(conversation_id, revision_id, kind, payload, created_at, '
-          'updated_at) '
-          'SELECT ?, ?, kind, payload, created_at, updated_at '
-          'FROM provider_artifact_rows WHERE revision_id = ?;',
-          [targetId, targetMessageId, message.id],
-        );
-        await _db.customStatement(
-          'INSERT INTO message_asset_rows '
-          '(conversation_id, revision_id, asset_id, kind) '
-          'SELECT ?, ?, asset_id, kind FROM message_asset_rows '
-          'WHERE revision_id = ?;',
-          [targetId, targetMessageId, message.id],
-        );
-      }
-      await _db.customStatement(
-        'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
-        'SELECT revision_id FROM message_asset_rows WHERE conversation_id = ? '
-        'UNION '
-        'SELECT revision_id FROM message_part_rows '
-        "WHERE conversation_id = ? AND kind IN ('image', 'file');",
-        [targetId, targetId],
+      await _copyMessageRowsInto(
+        targetConversationId: targetId,
+        messages: sourceMessages,
+        messageIdMap: messageIdMap,
+        groupIdMap: groupIdMap,
       );
       return duplicate;
+    });
+  }
+
+  Future<void> _copyMessageRowsInto({
+    required String targetConversationId,
+    required List<MessageRow> messages,
+    required Map<String, String> messageIdMap,
+    required Map<String, String> groupIdMap,
+  }) async {
+    for (final message in messages) {
+      final targetMessageId = messageIdMap[message.id]!;
+      await _db
+          .into(_db.messageRows)
+          .insert(
+            MessageRowsCompanion.insert(
+              id: targetMessageId,
+              conversationId: targetConversationId,
+              role: message.role,
+              timestamp: message.timestamp,
+              modelId: Value(message.modelId),
+              providerId: Value(message.providerId),
+              totalTokens: Value(message.totalTokens),
+              isStreaming: const Value(false),
+              reasoningStartAt: Value(message.reasoningStartAt),
+              reasoningFinishedAt: Value(message.reasoningFinishedAt),
+              translation: Value(message.translation),
+              reasoningSegmentsJson: Value(message.reasoningSegmentsJson),
+              groupId: Value(
+                message.groupId == null ? null : groupIdMap[message.groupId],
+              ),
+              version: Value(message.version),
+              promptTokens: Value(message.promptTokens),
+              completionTokens: Value(message.completionTokens),
+              cachedTokens: Value(message.cachedTokens),
+              durationMs: Value(message.durationMs),
+              messageOrder: message.messageOrder,
+            ),
+          );
+      await _db.customStatement(
+        'INSERT INTO message_part_rows '
+        '(conversation_id, revision_id, ordinal, kind, payload, '
+        'created_at, updated_at) '
+        'SELECT ?, ?, ordinal, kind, payload, created_at, updated_at '
+        'FROM message_part_rows WHERE revision_id = ?;',
+        [targetConversationId, targetMessageId, message.id],
+      );
+      await _db.customStatement(
+        'INSERT INTO provider_artifact_rows '
+        '(conversation_id, revision_id, kind, payload, created_at, '
+        'updated_at) '
+        'SELECT ?, ?, kind, payload, created_at, updated_at '
+        'FROM provider_artifact_rows WHERE revision_id = ?;',
+        [targetConversationId, targetMessageId, message.id],
+      );
+      await _db.customStatement(
+        'INSERT INTO message_asset_rows '
+        '(conversation_id, revision_id, asset_id, kind) '
+        'SELECT ?, ?, asset_id, kind FROM message_asset_rows '
+        'WHERE revision_id = ?;',
+        [targetConversationId, targetMessageId, message.id],
+      );
+    }
+    await _db.customStatement(
+      'INSERT OR IGNORE INTO asset_reference_dirty_rows(revision_id) '
+      'SELECT revision_id FROM message_asset_rows WHERE conversation_id = ? '
+      'UNION '
+      'SELECT revision_id FROM message_part_rows '
+      "WHERE conversation_id = ? AND kind IN ('image', 'file');",
+      [targetConversationId, targetConversationId],
+    );
+  }
+
+  Future<Conversation?> forkConversationWithVersions({
+    required String sourceId,
+    required String targetRevisionId,
+    required String title,
+    String? assistantId,
+  }) {
+    return _db.transaction(() async {
+      final sourceRow = await (_db.select(
+        _db.conversationRows,
+      )..where((row) => row.id.equals(sourceId))).getSingleOrNull();
+      if (sourceRow == null) return null;
+
+      final sourceMessages =
+          await (_db.select(_db.messageRows)
+                ..where((row) => row.conversationId.equals(sourceId))
+                ..orderBy([(row) => OrderingTerm.asc(row.messageOrder)]))
+              .get();
+
+      final firstOrderByGroup = <String, int>{};
+      for (final row in sourceMessages) {
+        final groupId = row.groupId ?? row.id;
+        final current = firstOrderByGroup[groupId];
+        if (current == null || row.messageOrder < current) {
+          firstOrderByGroup[groupId] = row.messageOrder;
+        }
+      }
+
+      MessageRow? target;
+      for (final row in sourceMessages) {
+        if (row.id == targetRevisionId) {
+          target = row;
+          break;
+        }
+      }
+      if (target == null || target.conversationId != sourceId) {
+        return null;
+      }
+
+      final targetGroupId = target.groupId ?? target.id;
+      final anchorOrder = firstOrderByGroup[targetGroupId];
+      if (anchorOrder == null) return null;
+
+      final kept = sourceMessages
+          .where((row) {
+            final firstOrder = firstOrderByGroup[row.groupId ?? row.id];
+            return firstOrder != null && firstOrder <= anchorOrder;
+          })
+          .toList(growable: false);
+
+      const uuid = Uuid();
+      final targetId = uuid.v4();
+      final messageIdMap = {for (final message in kept) message.id: uuid.v4()};
+      final groupIdMap = <String, String>{};
+      for (final message in kept) {
+        final groupId = message.groupId ?? message.id;
+        groupIdMap.putIfAbsent(
+          groupId,
+          () => messageIdMap[groupId] ?? uuid.v4(),
+        );
+      }
+
+      final source = await _conversationFromRow(
+        sourceRow,
+        includeMessageIds: false,
+      );
+      final keptSourceGroupIds = {
+        for (final row in kept) row.groupId ?? row.id,
+      };
+      final selections = <String, int>{
+        for (final entry in source.versionSelections.entries)
+          if (keptSourceGroupIds.contains(entry.key))
+            (groupIdMap[entry.key] ?? entry.key): entry.value,
+      };
+      selections[groupIdMap[targetGroupId]!] = target.version;
+
+      final now = DateTime.now();
+      await _db
+          .into(_db.conversationRows)
+          .insert(
+            _conversationCompanion(
+              Conversation(
+                id: targetId,
+                title: title,
+                createdAt: now,
+                updatedAt: now,
+                assistantId: assistantId,
+                versionSelections: selections,
+                messageIds: [
+                  for (final message in kept) messageIdMap[message.id]!,
+                ],
+              ),
+            ),
+          );
+      await _copyMessageRowsInto(
+        targetConversationId: targetId,
+        messages: kept,
+        messageIdMap: messageIdMap,
+        groupIdMap: groupIdMap,
+      );
+      final insertedRow = await (_db.select(
+        _db.conversationRows,
+      )..where((row) => row.id.equals(targetId))).getSingle();
+      return _conversationFromRow(insertedRow);
     });
   }
 

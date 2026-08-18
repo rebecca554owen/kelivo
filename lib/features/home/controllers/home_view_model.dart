@@ -1090,6 +1090,9 @@ class HomeViewModel extends ChangeNotifier {
       sourceConversationId: sourceConversation.id,
       sourceRevisionId: message.id,
       title: title,
+      preserveVersions: _contextProvider
+          .read<SettingsProvider>()
+          .forkKeepMessageVersions,
     );
 
     // Switch to the new conversation

@@ -3216,10 +3216,27 @@ class ChatService extends ChangeNotifier {
     required String sourceConversationId,
     required String sourceRevisionId,
     required String title,
+    bool preserveVersions = false,
   }) async {
     if (!_initialized) await init();
     final source = _conversationsCache[sourceConversationId];
     if (source == null) throw StateError('conversation_missing');
+    if (preserveVersions) {
+      final forked = await _repo.forkConversationWithVersions(
+        sourceId: sourceConversationId,
+        targetRevisionId: sourceRevisionId,
+        title: source.title,
+        assistantId: source.assistantId,
+      );
+      if (forked == null) throw StateError('linear_fork_target_missing');
+      _conversationsCache[forked.id] = forked;
+      _messageOrderIds[forked.id] = List<String>.of(forked.messageIds);
+      _messageCounts[forked.id] = forked.messageIds.length;
+      _bumpConversationListRevision();
+      _currentConversationId = forked.id;
+      notifyListeners();
+      return forked;
+    }
     final targetMessage = await _repo.getMessage(sourceRevisionId);
     if (targetMessage == null ||
         targetMessage.conversationId != sourceConversationId) {

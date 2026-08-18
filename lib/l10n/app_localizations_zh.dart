@@ -4165,6 +4165,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageShowRegenerateConfirmDialogTitle => '重新生成前弹出确认';
 
   @override
+  String get displaySettingsPageForkKeepMessageVersionsTitle => '创建分支时保留消息版本';
+
+  @override
+  String get displaySettingsPageForkKeepMessageVersionsSubtitle =>
+      '分支会带上每条消息 roll 出的历史版本，可继续左右切换；关闭则只带当前选中的回答';
+
+  @override
   String chainOfThoughtExpandSteps(Object count) {
     return '展开更多 $count 步';
   }
@@ -11402,6 +11409,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageShowRegenerateConfirmDialogTitle => '重新生成前弹出确认';
 
   @override
+  String get displaySettingsPageForkKeepMessageVersionsTitle => '创建分支时保留消息版本';
+
+  @override
+  String get displaySettingsPageForkKeepMessageVersionsSubtitle =>
+      '分支会带上每条消息 roll 出的历史版本，可继续左右切换；关闭则只带当前选中的回答';
+
+  @override
   String chainOfThoughtExpandSteps(Object count) {
     return '展开更多 $count 步';
   }
@@ -18561,6 +18575,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageShowRegenerateConfirmDialogTitle => '重新生成前彈出確認';
+
+  @override
+  String get displaySettingsPageForkKeepMessageVersionsTitle => '建立分支時保留訊息版本';
+
+  @override
+  String get displaySettingsPageForkKeepMessageVersionsSubtitle =>
+      '分支會帶上每則訊息 roll 出的歷史版本，可繼續左右切換；關閉則只帶目前選中的回答';
 
   @override
   String chainOfThoughtExpandSteps(Object count) {

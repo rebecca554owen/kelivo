@@ -114,6 +114,8 @@ class _DisplaySettingsBody extends StatelessWidget {
                   _RowDivider(),
                   _ToggleRowShowRegenerateConfirmDialog(),
                   _RowDivider(),
+                  _ToggleRowForkKeepMessageVersions(),
+                  _RowDivider(),
                   _ToggleRowShowUpdates(),
                   _RowDivider(),
                   _ToggleRowShowChatListDate(),
@@ -2550,6 +2552,21 @@ class _ToggleRowShowRegenerateConfirmDialog extends StatelessWidget {
       value: sp.showRegenerateConfirmDialog,
       onChanged: (v) =>
           context.read<SettingsProvider>().setShowRegenerateConfirmDialog(v),
+    );
+  }
+}
+
+class _ToggleRowForkKeepMessageVersions extends StatelessWidget {
+  const _ToggleRowForkKeepMessageVersions();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sp = context.watch<SettingsProvider>();
+    return _ToggleRow(
+      label: l10n.displaySettingsPageForkKeepMessageVersionsTitle,
+      value: sp.forkKeepMessageVersions,
+      onChanged: (v) =>
+          context.read<SettingsProvider>().setForkKeepMessageVersions(v),
     );
   }
 }

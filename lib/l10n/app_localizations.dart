@@ -7999,6 +7999,18 @@ abstract class AppLocalizations {
   /// **'Confirm before regenerating'**
   String get displaySettingsPageShowRegenerateConfirmDialogTitle;
 
+  /// No description provided for @displaySettingsPageForkKeepMessageVersionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Message Versions When Forking'**
+  String get displaySettingsPageForkKeepMessageVersionsTitle;
+
+  /// No description provided for @displaySettingsPageForkKeepMessageVersionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The fork carries every regenerated version of each message so you can still switch between them; off keeps only the selected answer.'**
+  String get displaySettingsPageForkKeepMessageVersionsSubtitle;
+
   /// No description provided for @chainOfThoughtExpandSteps.
   ///
   /// In en, this message translates to:

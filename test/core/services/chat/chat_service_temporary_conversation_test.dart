@@ -1058,6 +1058,73 @@ void main() {
         expect(service.getVersionSelections(fork.id), isEmpty);
       },
     );
+
+    test(
+      'preserveVersions copies every version up to the target group',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final source = await service.createConversation(title: 'Source');
+        await service.addMessage(
+          conversationId: source.id,
+          role: 'user',
+          content: 'q1',
+        );
+        final original = await service.addMessage(
+          conversationId: source.id,
+          role: 'assistant',
+          content: 'original answer',
+        );
+        final edited = await service.appendMessageVersion(
+          messageId: original.id,
+          content: 'edited answer',
+        );
+        expect(edited, isNotNull);
+        await service.addMessage(
+          conversationId: source.id,
+          role: 'user',
+          content: 'q2',
+        );
+        await service.addMessage(
+          conversationId: source.id,
+          role: 'assistant',
+          content: 'later answer',
+        );
+
+        final fork = await service.forkConversationAtRevision(
+          sourceConversationId: source.id,
+          sourceRevisionId: original.id,
+          title: 'Fork',
+          preserveVersions: true,
+        );
+
+        expect(fork.title, source.title);
+        expect(service.getMessages(fork.id), isEmpty);
+
+        final timeline = await service.loadActiveTimelineMessages(fork.id);
+        expect(timeline.map((message) => message.content), [
+          'q1',
+          'original answer',
+        ]);
+        expect(timeline.map((message) => message.version), [0, 0]);
+
+        final assistantGroupId = timeline.last.groupId ?? timeline.last.id;
+        final versions = await service.loadMessagesForGroups(fork.id, [
+          assistantGroupId,
+        ]);
+        expect(versions.map((message) => message.version).toSet(), {0, 1});
+        expect(versions.map((message) => message.content).toSet(), {
+          'original answer',
+          'edited answer',
+        });
+        expect(
+          versions.map((message) => message.groupId ?? message.id).toSet(),
+          {assistantGroupId},
+        );
+        expect(service.getVersionSelections(fork.id), {assistantGroupId: 0});
+      },
+    );
   });
 
   test('final generation commit publishes one statistics revision', () async {
