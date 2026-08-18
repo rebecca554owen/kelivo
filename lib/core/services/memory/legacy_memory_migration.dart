@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 
 import '../../models/memory_entry.dart';
 import '../../providers/settings_provider.dart';
 import '../api/chat_api_service.dart';
+import 'memory_prompts.dart';
 import 'memory_repository.dart';
 import 'memory_smart_add.dart';
 
@@ -37,8 +39,7 @@ class LegacyMemoryMigrationProgress {
 
   double get fraction {
     if (total == 0) return 1;
-    final phaseOffset = phase == LegacyMemoryMigrationPhase.writing ? total : 0;
-    return ((phaseOffset + processed) / (total * 2)).clamp(0, 1).toDouble();
+    return (processed / total).clamp(0, 1).toDouble();
   }
 }
 
@@ -46,10 +47,14 @@ class LegacyMemoryMigrationResult {
   const LegacyMemoryMigrationResult({
     required this.created,
     required this.skipped,
+    this.failed = 0,
+    this.errorMessage,
   });
 
   final int created;
   final int skipped;
+  final int failed;
+  final String? errorMessage;
 }
 
 typedef LegacyMemoryTextGenerator =
@@ -64,32 +69,18 @@ class LegacyMemoryMigrationService {
   LegacyMemoryMigrationService({
     required this.repository,
     LegacyMemoryTextGenerator? generateText,
-  }) : _generateText = generateText ?? ChatApiService.generateText;
+    int batchSize = 12,
+    Future<void> Function(Duration duration)? delay,
+  }) : batchSize = batchSize.clamp(1, 24),
+       _generateText = generateText ?? ChatApiService.generateText,
+       _delay = delay ?? ((duration) => Future<void>.delayed(duration));
 
-  static const int batchSize = 12;
-
-  static const String migrationPrompt = '''
-You are migrating legacy long-term memories into a typed memory system.
-
-For every input item, return exactly one output item with the same integer id. Preserve every fact, preference, negation, qualification, and uncertainty. Keep the original language. Rewrite only enough to make the memory concise, self-contained, and understandable without conversation context. When appropriate, phrase it as a third-person statement about the user.
-
-Choose exactly one type:
-- identity: stable facts, preferences, background, relationships, interests, or personal context
-- workflow: recurring ways the user works, decides, plans, or uses tools
-- voice: preferred tone, wording, language, formatting, or communication style
-- instruction: durable rules for how an assistant should behave or respond
-
-Do not invent, translate, merge, split, omit, deduplicate, explain, or add advice.
-
-Return only a JSON array in this exact shape:
-[{"id":1,"type":"identity","content":"..."}]
-
-Input:
-{{items}}
-''';
+  final int batchSize;
 
   final MemoryRepository repository;
   final LegacyMemoryTextGenerator _generateText;
+  final Future<void> Function(Duration duration) _delay;
+  final Random _random = Random();
 
   Future<LegacyMemoryMigrationResult> migrate({
     required List<LegacyMemoryMigrationInput> inputs,
@@ -97,6 +88,8 @@ Input:
     required ProviderConfig config,
     required String modelId,
     void Function(LegacyMemoryMigrationProgress progress)? onProgress,
+    bool preserveOriginal = true,
+    String? promptTemplate,
   }) async {
     if (inputs.isEmpty) {
       return const LegacyMemoryMigrationResult(created: 0, skipped: 0);
@@ -136,77 +129,207 @@ Input:
       );
     }
 
-    final converted = <LegacyMemoryMigrationOutput>[];
-    onProgress?.call(
-      LegacyMemoryMigrationProgress(
-        phase: LegacyMemoryMigrationPhase.analyzing,
-        processed: skipped,
-        total: inputs.length,
-      ),
-    );
+    var created = 0;
+    var failed = 0;
+    String? errorMessage;
+    var processed = skipped;
+    final template =
+        promptTemplate ??
+        (preserveOriginal
+            ? MemoryPrompts.migratePreserveEn
+            : MemoryPrompts.migrateEn);
+
+    void report() {
+      onProgress?.call(
+        LegacyMemoryMigrationProgress(
+          phase: LegacyMemoryMigrationPhase.analyzing,
+          processed: processed,
+          total: inputs.length,
+        ),
+      );
+    }
+
+    report();
+    if (pending.isEmpty) {
+      return LegacyMemoryMigrationResult(created: 0, skipped: skipped);
+    }
 
     for (var start = 0; start < pending.length; start += batchSize) {
       final end = start + batchSize < pending.length
           ? start + batchSize
           : pending.length;
       final batch = pending.sublist(start, end);
-      final ids = <int>[for (final item in batch) item.promptId];
-      final prompt = buildPrompt(
-        batch: [for (final item in batch) item.input],
-        ids: ids,
-      );
-      final response = await _generateText(
+      final outcome = await _convertBatchWithRetry(
+        batch,
         config: config,
         modelId: modelId,
-        prompt: prompt,
-        thinkingBudget: 0,
+        preserveOriginal: preserveOriginal,
+        promptTemplate: template,
       );
-      converted.addAll(parseResponse(response, expectedIds: ids));
-      onProgress?.call(
-        LegacyMemoryMigrationProgress(
-          phase: LegacyMemoryMigrationPhase.analyzing,
-          processed: skipped + end,
-          total: inputs.length,
-        ),
+      created += outcome.created;
+      skipped += outcome.skipped;
+      failed += outcome.failed;
+      if (outcome.errorMessage != null) {
+        errorMessage = outcome.errorMessage;
+      }
+      processed += batch.length;
+      report();
+    }
+
+    return LegacyMemoryMigrationResult(
+      created: created,
+      skipped: skipped,
+      failed: failed,
+      errorMessage: errorMessage,
+    );
+  }
+
+  Future<_BatchWriteOutcome> _convertBatchWithRetry(
+    List<_PendingLegacyMemory> batch, {
+    required ProviderConfig config,
+    required String modelId,
+    required bool preserveOriginal,
+    required String promptTemplate,
+  }) async {
+    if (batch.isEmpty) {
+      return const _BatchWriteOutcome(created: 0, skipped: 0, failed: 0);
+    }
+
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        return await _convertAndWriteBatch(
+          batch,
+          config: config,
+          modelId: modelId,
+          preserveOriginal: preserveOriginal,
+          promptTemplate: promptTemplate,
+        );
+      } catch (e) {
+        lastError = e;
+        if (attempt >= 2 && batch.length > 1) {
+          return _splitAndRetry(
+            batch,
+            config: config,
+            modelId: modelId,
+            preserveOriginal: preserveOriginal,
+            promptTemplate: promptTemplate,
+          );
+        }
+        if (attempt < 3) {
+          await _delay(_backoffAfter(attempt));
+        }
+      }
+    }
+
+    if (batch.length > 1) {
+      return _splitAndRetry(
+        batch,
+        config: config,
+        modelId: modelId,
+        preserveOriginal: preserveOriginal,
+        promptTemplate: promptTemplate,
       );
     }
 
-    onProgress?.call(
-      LegacyMemoryMigrationProgress(
-        phase: LegacyMemoryMigrationPhase.writing,
-        processed: skipped,
-        total: inputs.length,
-      ),
+    return _BatchWriteOutcome(
+      created: 0,
+      skipped: 0,
+      failed: batch.length,
+      errorMessage: lastError?.toString(),
     );
+  }
 
-    final writeResult = await repository.createMany(<MemoryCreateDraft>[
-      for (var i = 0; i < converted.length; i++)
+  Future<_BatchWriteOutcome> _splitAndRetry(
+    List<_PendingLegacyMemory> batch, {
+    required ProviderConfig config,
+    required String modelId,
+    required bool preserveOriginal,
+    required String promptTemplate,
+  }) async {
+    final mid = batch.length ~/ 2;
+    final left = await _convertBatchWithRetry(
+      batch.sublist(0, mid),
+      config: config,
+      modelId: modelId,
+      preserveOriginal: preserveOriginal,
+      promptTemplate: promptTemplate,
+    );
+    final right = await _convertBatchWithRetry(
+      batch.sublist(mid),
+      config: config,
+      modelId: modelId,
+      preserveOriginal: preserveOriginal,
+      promptTemplate: promptTemplate,
+    );
+    return _BatchWriteOutcome(
+      created: left.created + right.created,
+      skipped: left.skipped + right.skipped,
+      failed: left.failed + right.failed,
+      errorMessage: right.errorMessage ?? left.errorMessage,
+    );
+  }
+
+  Future<_BatchWriteOutcome> _convertAndWriteBatch(
+    List<_PendingLegacyMemory> batch, {
+    required ProviderConfig config,
+    required String modelId,
+    required bool preserveOriginal,
+    required String promptTemplate,
+  }) async {
+    final ids = <int>[for (final item in batch) item.promptId];
+    final prompt = buildPrompt(
+      batch: [for (final item in batch) item.input],
+      ids: ids,
+      template: promptTemplate,
+    );
+    final response = await _generateText(
+      config: config,
+      modelId: modelId,
+      prompt: prompt,
+      thinkingBudget: 0,
+    );
+    final converted = parseResponse(
+      response,
+      expectedIds: ids,
+      expectContent: !preserveOriginal,
+    );
+    final drafts = <MemoryCreateDraft>[
+      for (var i = 0; i < batch.length; i++)
         MemoryCreateDraft(
-          scope: pending[i].scope,
-          assistantId: pending[i].assistantId,
+          scope: batch[i].scope,
+          assistantId: batch[i].assistantId,
           type: converted[i].type,
-          content: converted[i].content,
+          content: preserveOriginal
+              ? batch[i].input.content
+              : converted[i].content,
           source: MemorySource.extracted,
-          migrationId: pending[i].migrationId,
+          migrationId: batch[i].migrationId,
         ),
-    ]);
-    onProgress?.call(
-      LegacyMemoryMigrationProgress(
-        phase: LegacyMemoryMigrationPhase.writing,
-        processed: inputs.length,
-        total: inputs.length,
-      ),
+    ];
+    final write = await repository.createMany(drafts);
+    return _BatchWriteOutcome(
+      created: write.created,
+      skipped: write.skipped,
+      failed: 0,
     );
+  }
 
-    return LegacyMemoryMigrationResult(
-      created: writeResult.created,
-      skipped: skipped + writeResult.skipped,
-    );
+  Duration _backoffAfter(int failedAttempt) {
+    final baseMs = switch (failedAttempt) {
+      1 => 1000,
+      2 => 2000,
+      _ => 4000,
+    };
+    final jitterMs = _random.nextInt(201);
+    return Duration(milliseconds: baseMs + jitterMs);
   }
 
   static String buildPrompt({
     required List<LegacyMemoryMigrationInput> batch,
     required List<int> ids,
+    String? template,
+    bool preserveOriginal = true,
   }) {
     if (batch.length != ids.length) {
       throw ArgumentError('batch and ids must have the same length');
@@ -215,7 +338,12 @@ Input:
       for (var i = 0; i < batch.length; i++)
         <String, Object>{'id': ids[i], 'content': batch[i].content},
     ];
-    return migrationPrompt.replaceFirst('{{items}}', jsonEncode(items));
+    final resolved =
+        template ??
+        (preserveOriginal
+            ? MemoryPrompts.migratePreserveEn
+            : MemoryPrompts.migrateEn);
+    return resolved.replaceFirst('{{items}}', jsonEncode(items));
   }
 
   static String migrationIdFor({
@@ -243,6 +371,7 @@ Input:
   static List<LegacyMemoryMigrationOutput> parseResponse(
     String response, {
     required List<int> expectedIds,
+    bool expectContent = true,
   }) {
     final decoded = MemorySmartAdd.extractJson(response);
     if (decoded is! List) {
@@ -262,7 +391,9 @@ Input:
       };
       final typeValue = raw['type']?.toString().trim().toLowerCase();
       final content = raw['content']?.toString().trim() ?? '';
-      if (id == null || typeValue == null || content.isEmpty) {
+      if (id == null ||
+          typeValue == null ||
+          (expectContent && content.isEmpty)) {
         throw const FormatException('legacy_memory_response_item_invalid');
       }
       final type = MemoryEntry.typeFromString(typeValue);
@@ -300,6 +431,20 @@ class _PendingLegacyMemory {
   final MemoryScope scope;
   final String? assistantId;
   final String migrationId;
+}
+
+class _BatchWriteOutcome {
+  const _BatchWriteOutcome({
+    required this.created,
+    required this.skipped,
+    required this.failed,
+    this.errorMessage,
+  });
+
+  final int created;
+  final int skipped;
+  final int failed;
+  final String? errorMessage;
 }
 
 class LegacyMemoryMigrationOutput {
