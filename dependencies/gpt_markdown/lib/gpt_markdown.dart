@@ -44,6 +44,8 @@ class GptMarkdown extends StatelessWidget {
     this.components,
     this.inlineComponents,
     this.useDollarSignsForLatex = false,
+    this.preprocessBlocks,
+    this.generation,
   });
 
   /// The direction of the text.
@@ -148,6 +150,12 @@ class GptMarkdown extends StatelessWidget {
   /// ```
   final List<MarkdownComponent>? inlineComponents;
 
+  /// See [GptMarkdownConfig.preprocessBlocks].
+  final String Function(String text)? preprocessBlocks;
+
+  /// See [GptMarkdownConfig.generation].
+  final Object? generation;
+
   /// A method to remove extra lines inside block LaTeX.
   // String _removeExtraLinesInsideBlockLatex(String text) {
   //   return text.replaceAllMapped(
@@ -210,6 +218,8 @@ class GptMarkdown extends StatelessWidget {
           components: components,
           inlineComponents: inlineComponents,
           tableBuilder: tableBuilder,
+          preprocessBlocks: preprocessBlocks,
+          generation: generation,
         ),
       ),
     );

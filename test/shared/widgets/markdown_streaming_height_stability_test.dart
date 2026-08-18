@@ -218,8 +218,28 @@ void main() {
         r'\[a^2 + b^2 = c^2\]',
         pad(4),
       ]);
-      // Only the closing-hash branch of an ATX heading ends in `\s*`, so only
-      // that spelling eats the blank line after the heading.
+      await expectStableHeight('crossed display math openers', [
+        pad(1),
+        '\$\$\n\\[\n\$\$\n\\]',
+        pad(2),
+      ]);
+      await expectStableHeight('crossed display math openers reversed', [
+        pad(1),
+        '\\[\n\$\$\n\\]\n\$\$',
+        pad(2),
+      ]);
+      await expectStableHeight('tailed dollar closer then real closer', [
+        pad(1),
+        '\$\$\n\$\$ tail\n\ninside\n\$\$',
+        pad(2),
+      ]);
+      await expectStableHeight('crossed nested openers', [
+        pad(1),
+        '\\[\n\$\$\n\\[\n\$\$\n\\]',
+        pad(2),
+      ]);
+      // Closing hashes are optional decoration on a one-line heading; they
+      // no longer swallow the blank line after it.
       await expectStableHeight('headings that close with hashes', [
         pad(1),
         '# Heading one #',
@@ -312,17 +332,14 @@ void main() {
           '${pad(1)}\n\n$indented\n\n${pad(2)}\n',
         );
       }
-      // A heading can span the line break between its hashes and its title,
-      // and a whole-document render reads a bare run of hashes as the close of
-      // the heading above it, across a blank line.
-      // The splitter refuses a boundary around these, so the leading pair of
-      // paragraphs is what keeps the case split into blocks at all.
+      // Opening hashes cannot reach a title on a later line, so these stay
+      // ordinary paragraphs on both render paths.
       await expectStableText(
-        'a heading opened on its own line',
+        'hashes and a title on separate lines',
         '${pad(1)}\n\n${pad(2)}\n\n#\nHeading #\n\n${pad(3)}\n',
       );
       await expectStableText(
-        'a heading closed across a blank line',
+        'a heading then a lone hash line',
         '${pad(1)}\n\n${pad(2)}\n\n# Heading one\n\n#\nHeading #'
             '\n\n## Heading two\n\n${pad(3)}\n',
       );
@@ -398,6 +415,141 @@ void main() {
         'thirty paragraphs',
         List<String>.generate(30, pad),
       );
+    });
+
+    testWidgets('for streaming prefixes and suffix endings', (tester) async {
+      boundTester = tester;
+      tester.view.physicalSize = const Size(1170, 2100);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
+
+      final suffixes = <String, String>{
+        'indented heading': '    # Heading #',
+        'three-space heading': '   # Heading #',
+        'tab heading': '\t# Heading #',
+        'one closing hash': '# Heading #',
+        'six closing hashes': '# Heading ######',
+        'seven closing hashes': '# Heading #######',
+        'twenty closing hashes': '# Heading ${'#' * 20}',
+        'seven bare hashes': '#######',
+        'C# paragraph': 'Language: C#',
+        'two dollar formulas':
+            r'$$a$$'
+            '\ntext\n'
+            r'$$b$$',
+        'two bracket formulas':
+            r'\[a\]'
+            '\ntext\n'
+            r'\[b\]',
+        'mixed math':
+            r'$$a$$'
+            '\ntext\n'
+            r'\[b\]',
+        'dollar with tail then bracket':
+            r'$$a$$ tail'
+            '\ntext\n'
+            r'\[b\]',
+        'unclosed bracket then dollar':
+            r'\['
+            '\ntext\n'
+            r'$$b$$',
+        'fence bracket then dollar':
+            '```\n\\[\n```\n'
+            r'$$b$$',
+        'line separator between paragraphs': 'A\n\u2028\nB',
+        'paragraph separator between paragraphs': 'A\n\u2029\nB',
+        'crlf paragraphs': 'A\r\n\r\nB',
+        'bare cr paragraphs': 'A\r\rB',
+        'nbsp blank run': 'A\n\u00a0\nB',
+        'next-line blank run': 'A\n\u0085\nB',
+        'hash then title across a blank': '#\n\nHeading #',
+        'opening hash then indented title': '#\n    #Title #',
+        'unclosed backtick then dollar': '`unclosed\n\$\$ `x` \$\$',
+        'mid-line details then dollar': 'Use <details> here\n\$\$b\$\$',
+        'line separator then dollar': 'Text\u2028\$\$b\$\$',
+        'paragraph separator then dollar': 'Text\u2029\$\$b\$\$',
+        'line separator then fence': 'Text\u2028```dart\ncode\n\ninside\n```',
+        'paragraph separator then fence':
+            'Text\u2029```dart\ncode\n\ninside\n```',
+        'line separator then tilde fence': 'Text\u2028~~~\ncode\n\ninside\n~~~',
+        'line separator then details':
+            'Text\u2028<details>\n\nbody\n</details>',
+        'four-backtick fence with short closer': '````dart\na\n```\n\nb\n````',
+        'four-tilde fence with short closer': '~~~~\na\n~~~\n\nb\n~~~~',
+        'fence info closer': '```dart\na\n``` not-a-closer\nfollowing\n```',
+        'tilde fence info closer': '~~~\na\n~~~ not-a-closer\nfollowing\n~~~',
+        'four-backtick fence info closer':
+            '````dart\na\n```` not-a-closer\nfollowing\n````',
+        'mid-line nested details':
+            '<details>\n<summary>outer</summary>\n'
+            'prefix <details>\n<summary>inner</summary>\n\n'
+            'inner body\n</details>\n\nouter body\n</details>',
+        'details with inline-code tag':
+            '<details>\n<summary>s</summary>\n'
+            'Use `<details>` here\n\nmore\n</details>',
+        'cross-line details opener':
+            '<details\nopen>\n<summary>s</summary>\n\nbody\n</details>',
+        'seven nested details': [
+          for (var i = 1; i <= 7; i++) '<details>\n<summary>L$i</summary>',
+          'deep-body',
+          for (var i = 0; i < 7; i++) '</details>',
+        ].join('\n'),
+        'uppercase details tags': '<DETAILS><SUMMARY>s</SUMMARY>more</DETAILS>',
+        'dotted details lookalike':
+            '<details>\n<summary>s</summary>\n<details.foo>\n\nmore\n</details>',
+        'self-closing details lookalike':
+            '<details>\n<summary>s</summary>\n<details/>\n\nmore\n</details>',
+        'unclosed details with code spans':
+            '<details><summary>s</summary>${List.filled(20, '`x`').join(' ')}',
+        'rematched details backticks':
+            r'<details><summary>s</summary>`x`<details>y`</details>',
+        'mixed one and three tick details':
+            r'<details><summary>s</summary>`x```<details>y`</details>',
+        'mixed two-tick details':
+            r'<details><summary>s</summary>``x``<details>y``</details>',
+        'same-line details prefix without gt':
+            '<details><summary>s</summary>before <details missing </details>',
+        'sixty backtick details prefix':
+            '<details><summary>s</summary>${'`' * 60}',
+      };
+
+      for (final suffix in suffixes.entries) {
+        for (final ending in const ['', '\n', '\n\n']) {
+          await expectStableText(
+            '${suffix.key} ending ${ending.length} LFs',
+            '${pad(1)}\n\n${pad(2)}\n\n${suffix.value}$ending',
+          );
+        }
+      }
+
+      await expectStableText(
+        'twenty C# paragraphs',
+        [
+          pad(1),
+          for (var i = 0; i < 20; i++) 'Language: C# sample $i',
+          pad(2),
+        ].join('\n\n'),
+      );
+
+      const growth = <String, String>{
+        'indented heading growth': '    # Heading #',
+        'two dollar formulas growth':
+            r'$$a$$'
+            '\ntext\n'
+            r'$$b$$',
+        'hash then title growth': '#\n\nHeading #',
+      };
+      for (final item in growth.entries) {
+        final text = '${pad(1)}\n\n${item.value}\n\n${pad(2)}\n';
+        for (var i = 0; i < text.length; i++) {
+          if (text.codeUnitAt(i) != 0x0A && i != text.length - 1) continue;
+          await expectStableText(
+            '${item.key} prefix ${i + 1}',
+            text.substring(0, i + 1),
+            minBlocks: 1,
+          );
+        }
+      }
     });
   });
 }

@@ -38,6 +38,7 @@ import '../../core/providers/settings_provider.dart';
 import 'package:Kelivo/desktop/html_preview_dialog.dart';
 import '../cache/byte_lru_cache.dart';
 import 'incremental_markdown_document.dart';
+import 'markdown_line_lexer.dart';
 
 // Inline math is parsed on the UI thread. Bound the lookahead window so a long
 // line with many unmatched openers cannot trigger repeated whole-line scans.
@@ -163,16 +164,16 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     final cs = Theme.of(context).colorScheme;
     final sanitizedText = _sanitizeImageLinks(_renderText);
     final imageUrls = _extractImageUrls(sanitizedText);
-    String normalize(String source) {
+    String normalize(String source, {required bool streaming}) {
       final cacheKey =
-          '${settings.enableMathRendering}:${settings.enableDollarLatex}:${widget.streaming}:$source';
+          '${settings.enableMathRendering}:${settings.enableDollarLatex}:$streaming:$source';
       final cached = _normalizedBlockCache.get(cacheKey);
       if (cached != null) return cached;
       final value = _preprocessFences(
         source,
         enableMath: settings.enableMathRendering,
         enableDollarLatex: settings.enableDollarLatex,
-        streaming: widget.streaming,
+        streaming: streaming,
       );
       _normalizedBlockCache.put(cacheKey, value);
       return value;
@@ -183,7 +184,9 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     final sourceBlocks = useIncrementalBlocks
         ? _incrementalDocument.update(sanitizedText)
         : const <IncrementalMarkdownBlock>[];
-    final normalized = useIncrementalBlocks ? null : normalize(sanitizedText);
+    final normalized = useIncrementalBlocks
+        ? null
+        : normalize(sanitizedText, streaming: widget.streaming);
     // Base text style (can be overridden by caller)
     final baseTextStyle =
         (widget.baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
@@ -198,7 +201,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     final components = List<MarkdownComponent>.from(
       MarkdownComponent.globalComponents,
     );
-    components.removeWhere((c) => c is LatexMathMultiLine);
+    components.removeWhere((c) => c is LatexMathMultiLine || c is HTag);
     final hrIdx = components.indexWhere((c) => c is HrLine);
     if (hrIdx != -1) components[hrIdx] = SoftHrLine();
     components.removeWhere((c) => c is BlockQuote);
@@ -223,7 +226,6 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     // so lines like "# comment" inside code fences are not parsed as headings.
     components.insert(0, ModernBlockQuote());
     components.insert(0, FencedCodeBlockMd(streaming: widget.streaming));
-    components.insert(0, DetailsHtmlMd());
     // Inline components: keep defaults but make link parsing line-scoped
     final inlineComponents = List<MarkdownComponent>.from(
       MarkdownComponent.inlineComponents,
@@ -311,290 +313,305 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     // Everything baked into the memoized markdown widget below must be part of
     // this signature (theme colors, math flags, fonts, font metrics, streaming
     // mode), otherwise a theme/settings change would keep stale rendering.
+    final documentRevision =
+        '${_imageRevision(imageUrls)}\u0002${_citationRevision(sanitizedText, widget.citationIndexResolver)}';
     final themeSignature =
-        '${Theme.of(context).brightness.index}-${cs.surface.toARGB32()}-${cs.onSurface.toARGB32()}-${cs.primary.toARGB32()}-${cs.outlineVariant.toARGB32()}-${settings.enableMathRendering}-${settings.enableDollarLatex}-${widget.streaming}-${baseTextStyle?.fontSize}-${baseTextStyle?.height}-${baseTextStyle?.letterSpacing}-${baseTextStyle?.fontFamily}-$codeFontFamily-$appFontFamily';
+        '${Theme.of(context).brightness.index}-${cs.surface.toARGB32()}-${cs.onSurface.toARGB32()}-${cs.primary.toARGB32()}-${cs.outlineVariant.toARGB32()}-${settings.enableMathRendering}-${settings.enableDollarLatex}-${widget.streaming}-${baseTextStyle?.fontSize}-${baseTextStyle?.height}-${baseTextStyle?.letterSpacing}-${baseTextStyle?.fontFamily}-$codeFontFamily-$appFontFamily-$documentRevision';
 
-    Widget buildMarkdown(String markdown, Key key) => GptMarkdown(
-      key: key,
-      markdown,
-      style: baseTextStyle,
-      followLinkColor: true,
-      // Disable built-in $...$ LaTeX so our custom scrollable handlers take over
-      useDollarSignsForLatex: false,
-      onLinkTap: (url, title) => _handleLinkTap(context, url),
-      components: components,
-      inlineComponents: inlineComponents,
-      imageBuilder: (ctx, url, width, height) {
-        final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
-        final idx = imgs.indexOf(url);
-        final initial = idx >= 0 ? idx : 0;
-        final provider = _imageProviderFor(url);
-        return GestureDetector(
-          onTap: () {
-            Navigator.of(ctx).push(
-              PageRouteBuilder(
-                pageBuilder: (_, __, ___) =>
-                    ImageViewerPage(images: imgs, initialIndex: initial),
-                transitionDuration: const Duration(milliseconds: 360),
-                reverseTransitionDuration: const Duration(milliseconds: 280),
-                transitionsBuilder: (context, anim, sec, child) {
-                  final curved = CurvedAnimation(
-                    parent: anim,
-                    curve: Curves.easeOutCubic,
-                    reverseCurve: Curves.easeInCubic,
-                  );
-                  return FadeTransition(
-                    opacity: curved,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.02),
-                        end: Offset.zero,
-                      ).animate(curved),
-                      child: child,
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: () {
-                  if (provider == null) {
-                    // Missing or unsupported source: show a broken image indicator
-                    return const Icon(Icons.broken_image);
-                  }
-                  final displayWidth = width ?? constraints.maxWidth;
-                  final devicePixelRatio = MediaQuery.devicePixelRatioOf(
-                    context,
-                  );
-                  final cacheWidth = displayWidth.isFinite
-                      ? math.max(1, (displayWidth * devicePixelRatio).ceil())
-                      : null;
-                  final cacheHeight = height == null
-                      ? null
-                      : math.max(1, (height * devicePixelRatio).ceil());
-                  final resized = ResizeImage.resizeIfNeeded(
-                    cacheWidth,
-                    cacheHeight,
-                    provider,
-                  );
-                  return Image(
-                    image: resized,
-                    width: displayWidth,
-                    height: height,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stack) =>
-                        const Icon(Icons.broken_image),
-                  );
-                }(),
+    Widget buildMarkdown(String markdown, Key key) {
+      final detailsRegistry = MarkdownDetailsRegistry(
+        enableMath: settings.enableMathRendering,
+      );
+      return GptMarkdown(
+        key: key,
+        markdown,
+        style: baseTextStyle,
+        followLinkColor: true,
+        // Disable built-in $...$ LaTeX so our custom scrollable handlers take over
+        useDollarSignsForLatex: false,
+        onLinkTap: (url, title) => _handleLinkTap(context, url),
+        preprocessBlocks: detailsRegistry.rewrite,
+        generation: themeSignature,
+        components: [DetailsHtmlMd(detailsRegistry), ...components],
+        inlineComponents: inlineComponents,
+        imageBuilder: (ctx, url, width, height) {
+          final imgs = imageUrls.isNotEmpty ? imageUrls : <String>[url];
+          final idx = imgs.indexOf(url);
+          final initial = idx >= 0 ? idx : 0;
+          final provider = _imageProviderFor(url);
+          return GestureDetector(
+            onTap: () {
+              Navigator.of(ctx).push(
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) =>
+                      ImageViewerPage(images: imgs, initialIndex: initial),
+                  transitionDuration: const Duration(milliseconds: 360),
+                  reverseTransitionDuration: const Duration(milliseconds: 280),
+                  transitionsBuilder: (context, anim, sec, child) {
+                    final curved = CurvedAnimation(
+                      parent: anim,
+                      curve: Curves.easeOutCubic,
+                      reverseCurve: Curves.easeInCubic,
+                    );
+                    return FadeTransition(
+                      opacity: curved,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.02),
+                          end: Offset.zero,
+                        ).animate(curved),
+                        child: child,
+                      ),
+                    );
+                  },
+                ),
               );
             },
-          ),
-        );
-      },
-      linkBuilder: (ctx, span, url, style) {
-        final label = span.toPlainText().trim();
-        // Special handling: [citation](id) and legacy [citation](index:id)
-        if (label.toLowerCase() == 'citation') {
-          final citation = _parseCitationRef(url);
-          if (citation != null) {
-            final cs = Theme.of(ctx).colorScheme;
-            // Prefer the index resolved from this message's search results;
-            // fall back to the inline index for legacy `index:id` markers.
-            final resolved = widget.citationIndexResolver?.call(citation.id);
-            final String display;
-            if (resolved != null && resolved.isNotEmpty) {
-              display = resolved;
-            } else if (citation.indexText != citation.id) {
-              display = citation.indexText; // legacy index:id marker
-            } else if (int.tryParse(citation.indexText) != null) {
-              display = citation.indexText; // legacy pure-index shorthand
-            } else {
-              display = '?'; // id-only marker with no matching result
-            }
-            // gpt_markdown embeds this widget baseline-aligned. The capsule is
-            // taller than the text ascent, so without correction it hangs
-            // below the line. Translate it up (layout-neutral) so it looks
-            // vertically centered, and pad horizontally so adjacent capsules
-            // don't touch.
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1.5),
-              child: Transform.translate(
-                offset: const Offset(0, -2),
-                child: GestureDetector(
-                  onTap: () {
-                    if (widget.onCitationTap != null &&
-                        citation.id.isNotEmpty) {
-                      widget.onCitationTap!(citation.id);
-                    } else {
-                      // Fallback: do nothing
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: () {
+                    if (provider == null) {
+                      // Missing or unsupported source: show a broken image indicator
+                      return const Icon(Icons.broken_image);
                     }
-                  },
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 20),
-                    height: 20,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withValues(alpha: 0.20),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      widthFactor: 1.0,
-                      child: Text(
-                        display,
-                        style: TextStyle(fontSize: 12, height: 1.0),
+                    final displayWidth = width ?? constraints.maxWidth;
+                    final devicePixelRatio = MediaQuery.devicePixelRatioOf(
+                      context,
+                    );
+                    final cacheWidth = displayWidth.isFinite
+                        ? math.max(1, (displayWidth * devicePixelRatio).ceil())
+                        : null;
+                    final cacheHeight = height == null
+                        ? null
+                        : math.max(1, (height * devicePixelRatio).ceil());
+                    final resized = ResizeImage.resizeIfNeeded(
+                      cacheWidth,
+                      cacheHeight,
+                      provider,
+                    );
+                    return Image(
+                      image: resized,
+                      width: displayWidth,
+                      height: height,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stack) =>
+                          const Icon(Icons.broken_image),
+                    );
+                  }(),
+                );
+              },
+            ),
+          );
+        },
+        linkBuilder: (ctx, span, url, style) {
+          final label = span.toPlainText().trim();
+          // Special handling: [citation](id) and legacy [citation](index:id)
+          if (label.toLowerCase() == 'citation') {
+            final citation = _parseCitationRef(url);
+            if (citation != null) {
+              final cs = Theme.of(ctx).colorScheme;
+              // Prefer the index resolved from this message's search results;
+              // fall back to the inline index for legacy `index:id` markers.
+              final resolved = widget.citationIndexResolver?.call(citation.id);
+              final String display;
+              if (resolved != null && resolved.isNotEmpty) {
+                display = resolved;
+              } else if (citation.indexText != citation.id) {
+                display = citation.indexText; // legacy index:id marker
+              } else if (int.tryParse(citation.indexText) != null) {
+                display = citation.indexText; // legacy pure-index shorthand
+              } else {
+                display = '?'; // id-only marker with no matching result
+              }
+              // gpt_markdown embeds this widget baseline-aligned. The capsule is
+              // taller than the text ascent, so without correction it hangs
+              // below the line. Translate it up (layout-neutral) so it looks
+              // vertically centered, and pad horizontally so adjacent capsules
+              // don't touch.
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: Transform.translate(
+                  offset: const Offset(0, -2),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (widget.onCitationTap != null &&
+                          citation.id.isNotEmpty) {
+                        widget.onCitationTap!(citation.id);
+                      } else {
+                        // Fallback: do nothing
+                      }
+                    },
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 20),
+                      height: 20,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        widthFactor: 1.0,
+                        child: Text(
+                          display,
+                          style: TextStyle(fontSize: 12, height: 1.0),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
+              );
+            }
           }
-        }
-        // Default link appearance
-        final cs = Theme.of(ctx).colorScheme;
-        return Text(
-          span.toPlainText(),
-          style: style.copyWith(
-            color: cs.primary,
-            decoration: TextDecoration.none,
-          ),
-          textAlign: TextAlign.start,
-        );
-      },
-      orderedListBuilder: (ctx, no, child, cfg) {
-        final style = (cfg.style ?? TextStyle()).copyWith(
-          fontWeight: AppFontWeights.regular,
-        );
-        // Apply a soft compensation so when chat scale != 100%,
-        // list items don't visually feel larger/smaller than body text.
-        final double kListComp =
-            MarkdownWithCodeHighlight.kMarkdownListScaleCompensation;
-        final mediaQuery = MediaQuery.of(ctx);
-        final double s = mediaQuery.textScaler.scale(1);
-        final double comp = math.pow(s == 0 ? 1.0 : s, -kListComp).toDouble();
-        final double newScale = (s * comp).clamp(0.5, 3.0);
-        return MediaQuery(
-          data: mediaQuery.copyWith(textScaler: TextScaler.linear(newScale)),
-          child: Directionality(
-            textDirection: cfg.textDirection,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              textBaseline: TextBaseline.alphabetic,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 6, end: 6),
-                  child: Text("$no.", style: style),
-                ),
-                // Keep child as-is so it inherits context MediaQuery scaling once
-                Flexible(child: child),
-              ],
+          // Default link appearance
+          final cs = Theme.of(ctx).colorScheme;
+          return Text(
+            span.toPlainText(),
+            style: style.copyWith(
+              color: cs.primary,
+              decoration: TextDecoration.none,
             ),
-          ),
-        );
-      },
-      // Note: property name is unOrderedListBuilder (camel-cased with capital O)
-      // Signature in gpt_markdown 1.1.4: (BuildContext ctx, Widget child, GptMarkdownConfig cfg) -> Widget
-      // We compose the bullet + content here to control scaling/spacing.
-      unOrderedListBuilder: (ctx, child, cfg) {
-        final style = (cfg.style ?? TextStyle()).copyWith(
-          fontWeight: AppFontWeights.regular,
-        );
-        final double kListComp =
-            MarkdownWithCodeHighlight.kMarkdownListScaleCompensation;
-        final mediaQuery = MediaQuery.of(ctx);
-        final double s = mediaQuery.textScaler.scale(1);
-        final double comp = math.pow(s == 0 ? 1.0 : s, -kListComp).toDouble();
-        final double newScale = (s * comp).clamp(0.5, 3.0);
-        return MediaQuery(
-          data: mediaQuery.copyWith(textScaler: TextScaler.linear(newScale)),
-          child: Directionality(
-            textDirection: cfg.textDirection,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              textBaseline: TextBaseline.alphabetic,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 6, end: 6),
-                  child: Text('•', style: style),
-                ),
-                // Keep child untouched to follow context scaling exactly once
-                Flexible(child: child),
-              ],
-            ),
-          ),
-        );
-      },
-      tableBuilder: (ctx, rows, style, cfg) {
-        return _MarkdownTableBlock(
-          rows: _MarkdownTableData.fromRows(
-            rows,
-            maxBodyRows: widget.streaming
-                ? MarkdownWithCodeHighlight._streamingTableMaxRows
-                : null,
-          ),
-          style: style,
-          config: cfg,
-          appFontFamily: appFontFamily.isEmpty ? null : appFontFamily,
-        );
-      },
-      // Inline `code` styling via highlightBuilder in gpt_markdown
-      highlightBuilder: (ctx, inline, style) {
-        // Unmask dollar signs that were protected during preprocessing
-        String unmasked = inline.replaceAll(_codeDollarMask, r'$');
-        String softened = _softBreakInline(unmasked);
-        final bool isDarkCtx = Theme.of(ctx).brightness == Brightness.dark;
-        final csCtx = Theme.of(ctx).colorScheme;
-        final bg = isDarkCtx ? Colors.white12 : const Color(0xFFF1F3F5);
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: csCtx.outlineVariant.withValues(alpha: 0.22),
-            ),
-          ),
-          child: Text(
-            softened,
-            style: TextStyle(
-              fontFamily: codeFontFamily,
-              fontSize: 13,
-              height: 1.4,
-            ).copyWith(color: csCtx.onSurface),
-            softWrap: true,
-            overflow: TextOverflow.visible,
-          ),
-        );
-      },
-      // Fenced code block styling via codeBuilder (with collapse/expand)
-      codeBuilder: (ctx, name, code, closed) {
-        final lang = name.trim();
-        final restoredCode = _unmaskHtmlTagStartsInsideFencedCode(code);
-        if (lang.toLowerCase() == 'mermaid') {
-          return _MermaidBlock(
-            code: restoredCode,
-            streaming: widget.streaming && !closed,
+            textAlign: TextAlign.start,
           );
-        } else if (lang.toLowerCase() == 'plantuml') {
-          return PlantUMLBlock(code: restoredCode);
-        }
-        return _CollapsibleCodeBlock(
-          language: lang,
-          code: restoredCode,
-          streaming: widget.streaming,
-          closed: closed,
-        );
-      },
-    );
+        },
+        orderedListBuilder: (ctx, no, child, cfg) {
+          final style = (cfg.style ?? TextStyle()).copyWith(
+            fontWeight: AppFontWeights.regular,
+          );
+          // Apply a soft compensation so when chat scale != 100%,
+          // list items don't visually feel larger/smaller than body text.
+          final double kListComp =
+              MarkdownWithCodeHighlight.kMarkdownListScaleCompensation;
+          final mediaQuery = MediaQuery.of(ctx);
+          final double s = mediaQuery.textScaler.scale(1);
+          final double comp = math.pow(s == 0 ? 1.0 : s, -kListComp).toDouble();
+          final double newScale = (s * comp).clamp(0.5, 3.0);
+          return MediaQuery(
+            data: mediaQuery.copyWith(textScaler: TextScaler.linear(newScale)),
+            child: Directionality(
+              textDirection: cfg.textDirection,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 6, end: 6),
+                    child: Text("$no.", style: style),
+                  ),
+                  // Keep child as-is so it inherits context MediaQuery scaling once
+                  Flexible(child: child),
+                ],
+              ),
+            ),
+          );
+        },
+        // Note: property name is unOrderedListBuilder (camel-cased with capital O)
+        // Signature in gpt_markdown 1.1.4: (BuildContext ctx, Widget child, GptMarkdownConfig cfg) -> Widget
+        // We compose the bullet + content here to control scaling/spacing.
+        unOrderedListBuilder: (ctx, child, cfg) {
+          final style = (cfg.style ?? TextStyle()).copyWith(
+            fontWeight: AppFontWeights.regular,
+          );
+          final double kListComp =
+              MarkdownWithCodeHighlight.kMarkdownListScaleCompensation;
+          final mediaQuery = MediaQuery.of(ctx);
+          final double s = mediaQuery.textScaler.scale(1);
+          final double comp = math.pow(s == 0 ? 1.0 : s, -kListComp).toDouble();
+          final double newScale = (s * comp).clamp(0.5, 3.0);
+          return MediaQuery(
+            data: mediaQuery.copyWith(textScaler: TextScaler.linear(newScale)),
+            child: Directionality(
+              textDirection: cfg.textDirection,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 6, end: 6),
+                    child: Text('•', style: style),
+                  ),
+                  // Keep child untouched to follow context scaling exactly once
+                  Flexible(child: child),
+                ],
+              ),
+            ),
+          );
+        },
+        tableBuilder: (ctx, rows, style, cfg) {
+          return _MarkdownTableBlock(
+            rows: _MarkdownTableData.fromRows(
+              rows,
+              maxBodyRows: widget.streaming
+                  ? MarkdownWithCodeHighlight._streamingTableMaxRows
+                  : null,
+            ),
+            style: style,
+            config: cfg,
+            appFontFamily: appFontFamily.isEmpty ? null : appFontFamily,
+          );
+        },
+        // Inline `code` styling via highlightBuilder in gpt_markdown
+        highlightBuilder: (ctx, inline, style) {
+          // Unmask dollar signs that were protected during preprocessing
+          String unmasked = inline.replaceAll(_codeDollarMask, r'$');
+          String softened = _softBreakInline(unmasked);
+          final bool isDarkCtx = Theme.of(ctx).brightness == Brightness.dark;
+          final csCtx = Theme.of(ctx).colorScheme;
+          final bg = isDarkCtx ? Colors.white12 : const Color(0xFFF1F3F5);
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: csCtx.outlineVariant.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Text(
+              softened,
+              style: TextStyle(
+                fontFamily: codeFontFamily,
+                fontSize: 13,
+                height: 1.4,
+              ).copyWith(color: csCtx.onSurface),
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          );
+        },
+        // Fenced code block styling via codeBuilder (with collapse/expand)
+        codeBuilder: (ctx, name, code, closed) {
+          final lang = name.trim();
+          final restoredCode = _unmaskHtmlTagStartsInsideFencedCode(code);
+          if (lang.toLowerCase() == 'mermaid') {
+            return _MermaidBlock(
+              code: restoredCode,
+              streaming: widget.streaming && !closed,
+            );
+          } else if (lang.toLowerCase() == 'plantuml') {
+            return PlantUMLBlock(code: restoredCode);
+          }
+          return _CollapsibleCodeBlock(
+            language: lang,
+            code: restoredCode,
+            streaming: widget.streaming,
+            closed: closed,
+          );
+        },
+      );
+    }
 
     final blockContents = useIncrementalBlocks
-        ? [for (final block in sourceBlocks) normalize(block.text)]
+        ? [
+            for (final block in sourceBlocks)
+              normalize(
+                block.text,
+                streaming: widget.streaming && !block.stable,
+              ),
+          ]
         : const <String>[];
     final markdownWidget = useIncrementalBlocks
         ? _MarkdownBlockColumn(
@@ -692,6 +709,8 @@ class _CachedMarkdownBlock extends StatefulWidget {
 
 class _CachedMarkdownBlockState extends State<_CachedMarkdownBlock> {
   Widget? _rendered;
+  String? _identityContent;
+  int _identityEpoch = 0;
 
   @override
   void didUpdateWidget(covariant _CachedMarkdownBlock oldWidget) {
@@ -702,11 +721,21 @@ class _CachedMarkdownBlockState extends State<_CachedMarkdownBlock> {
     }
   }
 
+  Key _parseIdentity(String content) {
+    final previous = _identityContent;
+    if (previous != null &&
+        (content.length < previous.length || !content.startsWith(previous))) {
+      _identityEpoch++;
+    }
+    _identityContent = content;
+    return ValueKey('parsed-markdown-$_identityEpoch');
+  }
+
   @override
   Widget build(BuildContext context) {
     return _rendered ??= widget.builder(
       widget.content,
-      ValueKey('parsed-markdown-${widget.signature}'),
+      _parseIdentity(widget.content),
     );
   }
 }
@@ -714,12 +743,12 @@ class _CachedMarkdownBlockState extends State<_CachedMarkdownBlock> {
 /// Whether a whole-document render would fold the blank line after [content]
 /// into the block itself, leaving no gap for a separator to reproduce.
 ///
-/// [SoftHrLine] and [LatexBlockScrollableMd] close their pattern with `\s*$`,
-/// and [AtxHeadingMd] does the same in its closing-hash branch (`# Title #`).
+/// [SoftHrLine] and [LatexBlockScrollableMd] close their pattern with `\s*$`.
 /// The match then runs past the newline that ends the block, so `NewLines`
 /// never sees the `\n\n` it needs and the render lays out no gap. Every other
-/// block leaves the blank line behind, which is what
-/// [_MarkdownBlockSeparator] stands in for.
+/// block — ATX headings included, which only allow horizontal whitespace —
+/// leaves the blank line behind, which is what [_MarkdownBlockSeparator]
+/// stands in for.
 ///
 /// This walks in from the end of the block rather than matching a regex over
 /// the whole of it: a pattern like `\$\$[\s\S]*?\$\$\s*$` retries from every
@@ -729,14 +758,8 @@ bool _swallowsTrailingBlankLine(String content, {required bool mathEnabled}) {
   final end = _lastNonWhitespace(content);
   if (end == 0) return false;
   if (_isSoftHrLine(content, _lineStartBefore(content, end), end)) return true;
-  if (_endsWithAtxHeadingClosingHashes(content, end)) return true;
-  return mathEnabled && _endsWithDisplayMath(content, end);
+  return mathEnabled && markdownEndsWithDisplayMath(content, end);
 }
-
-/// Leading whitespace [AtxHeadingMd] and [SoftHrLine] allow ahead of their
-/// marker. `SoftHrLine` opens with `^\s*`, while a heading opens with
-/// `^\s{0,3}`, past which four spaces make the line indented content instead.
-const int _atxHeadingMaxIndent = 3;
 
 /// One past the last non-whitespace code unit of [content].
 int _lastNonWhitespace(String content) {
@@ -775,156 +798,12 @@ bool _isSoftHrLine(String content, int start, int end) {
   return run >= 3 && i == end;
 }
 
-/// Whether [content] ends (at [end]) with an ATX heading that closes with
-/// hashes, the only [AtxHeadingMd] branch that eats the newline after itself.
-///
-/// The pattern is `^\s{0,3}(#{1,6})\s+([^\n]+?)(?:\s+#+\s*)?$`. Both `\s+`
-/// runs match line breaks too, so the opening hashes can sit on the line above
-/// the title; only the title itself is held to one line.
-bool _endsWithAtxHeadingClosingHashes(String content, int end) {
-  var closingStart = end;
-  while (closingStart > 0 && content.codeUnitAt(closingStart - 1) == 0x23) {
-    closingStart--;
-  }
-  if (closingStart == end) return false;
-  var titleEnd = closingStart;
-  while (titleEnd > 0 && _isWhitespace(content.codeUnitAt(titleEnd - 1))) {
-    titleEnd--;
-  }
-  // Without whitespace in front of them the hashes are part of the title.
-  if (titleEnd == closingStart) return false;
-  final titleLineStart = _lineStartBefore(content, titleEnd);
-  var titleStart = titleLineStart;
-  while (titleStart < titleEnd &&
-      _isWhitespace(content.codeUnitAt(titleStart))) {
-    titleStart++;
-  }
-  if (titleStart >= titleEnd) return false;
-  if (titleStart - titleLineStart > _atxHeadingMaxIndent) return false;
-
-  // `# Title #`: the opening hashes lead the title's own line.
-  var afterOpening = titleStart;
-  while (afterOpening < titleEnd && content.codeUnitAt(afterOpening) == 0x23) {
-    afterOpening++;
-  }
-  final openingOnTitleLine = afterOpening - titleStart;
-  if (openingOnTitleLine >= 1 &&
-      openingOnTitleLine <= 6 &&
-      afterOpening < titleEnd &&
-      _isWhitespace(content.codeUnitAt(afterOpening))) {
-    var title = afterOpening;
-    while (title < titleEnd && _isWhitespace(content.codeUnitAt(title))) {
-      title++;
-    }
-    return title < titleEnd;
-  }
-
-  // `#\nTitle #`: the opening hashes close a line above, with the `\s+`
-  // between them spanning the break.
-  var openingEnd = titleLineStart;
-  while (openingEnd > 0 && _isWhitespace(content.codeUnitAt(openingEnd - 1))) {
-    openingEnd--;
-  }
-  var openingStart = openingEnd;
-  while (openingStart > 0 && content.codeUnitAt(openingStart - 1) == 0x23) {
-    openingStart--;
-  }
-  final opening = openingEnd - openingStart;
-  if (opening < 1 || opening > 6) return false;
-  final openingLineStart = _lineStartBefore(content, openingStart);
-  if (openingStart - openingLineStart > _atxHeadingMaxIndent) return false;
-  for (var i = openingLineStart; i < openingStart; i++) {
-    if (!_isWhitespace(content.codeUnitAt(i))) return false;
-  }
-  return true;
-}
-
-/// Whether [content] ends (at [end]) with a display-math block that
-/// [LatexBlockScrollableMd] would match, `$$…$$` or `\[…\]`.
-///
-/// The pattern's body is lazy and its tail is `\s*$`, with `$` matching at the
-/// end of any line: the match closes on the first closer that has nothing but
-/// whitespace behind it on its line, and runs past earlier closers that do not.
-/// Only when that closer is the one at the end of the block does the match
-/// reach the trailing blank run and eat it.
-bool _endsWithDisplayMath(String content, int end) {
-  for (final delimiter in const [
-    (opener: r'$$', closer: r'$$'),
-    (opener: r'\[', closer: r'\]'),
-  ]) {
-    final closerStart = end - delimiter.closer.length;
-    if (closerStart <= 0) continue;
-    if (!content.startsWith(delimiter.closer, closerStart)) continue;
-    final opener = _firstLineLeading(content, delimiter.opener, closerStart);
-    if (opener < 0) continue;
-    var search = opener + delimiter.opener.length;
-    while (true) {
-      final closer = content.indexOf(delimiter.closer, search);
-      if (closer < 0) break;
-      final closerEnd = closer + delimiter.closer.length;
-      if (_restOfLineIsWhitespace(content, closerEnd)) {
-        if (closerEnd == end) return true;
-        break; // the block closes here, ahead of the tail
-      }
-      search = closer + 1;
-    }
-  }
-  return false;
-}
-
-/// The first line-leading [needle] before [limit], or -1.
-int _firstLineLeading(String content, String needle, int limit) {
-  var i = 0;
-  while (true) {
-    final found = content.indexOf(needle, i);
-    if (found < 0 || found >= limit) return -1;
-    if (_isLineLeading(content, found)) return found;
-    i = found + 1;
-  }
-}
-
-/// Whether [from] reaches the end of its line over nothing but whitespace.
-bool _restOfLineIsWhitespace(String content, int from) {
-  for (var i = from; i < content.length; i++) {
-    final unit = content.codeUnitAt(i);
-    if (_isLineBreak(unit)) return true;
-    if (!_isWhitespace(unit)) return false;
-  }
-  return true;
-}
-
-/// Whether [index] is preceded by nothing but whitespace on its own line.
-bool _isLineLeading(String content, int index) {
-  var i = index;
-  while (i > 0) {
-    final unit = content.codeUnitAt(i - 1);
-    if (_isLineBreak(unit)) return true;
-    if (!_isWhitespace(unit)) return false;
-    i--;
-  }
-  return true;
-}
-
 /// Whitespace as `\s` in a Dart pattern reads it, so leading and trailing runs
 /// are judged the same way the block patterns judge them.
-bool _isWhitespace(int unit) {
-  if (unit == 0x20) return true;
-  if (unit >= 0x09 && unit <= 0x0D) return true;
-  if (unit < 0x80) return false;
-  return unit == 0xA0 ||
-      unit == 0x1680 ||
-      (unit >= 0x2000 && unit <= 0x200A) ||
-      unit == 0x2028 ||
-      unit == 0x2029 ||
-      unit == 0x202F ||
-      unit == 0x205F ||
-      unit == 0x3000 ||
-      unit == 0xFEFF;
-}
+bool _isWhitespace(int unit) => markdownIsWhitespace(unit);
 
 /// The line terminators `^` and `$` recognise in a multi-line Dart pattern.
-bool _isLineBreak(int unit) =>
-    unit == 0x0A || unit == 0x0D || unit == 0x2028 || unit == 0x2029;
+bool _isLineBreak(int unit) => markdownIsLogicalLineBreak(unit);
 
 /// The blank line a whole-document render keeps between two blocks.
 ///
@@ -1082,8 +961,8 @@ String _preprocessFences(
   required bool enableDollarLatex,
   bool streaming = false,
 }) {
-  // Normalize newlines to simplify regex handling
-  var out = input.replaceAll('\r\n', '\n');
+  // Normalize newlines the same way GptMarkdown does before it parses.
+  var out = input.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   out = _maskBlockquoteFenceMarkers(out);
 
   // Move fenced code from list lines to the next line before masking so list
@@ -1221,7 +1100,10 @@ String _preprocessFences(
 
   // 6) Allow ATX headings starting with enumerations like "## 1.引言" or "## 1. 引言"
   // Insert a zero-width non-joiner after the dot to prevent list parsing without changing visual text.
-  final atxEnum = RegExp(r"^(\s{0,3}#{1,6}\s+\d+)\.(\s*)(\S)", multiLine: true);
+  final atxEnum = RegExp(
+    r'^([ \t]{0,3}#{1,6}[ \t]+\d+)\.([ \t]*)(\S)',
+    multiLine: true,
+  );
   out = out.replaceAllMapped(atxEnum, (m) => "${m[1]}.\u200C${m[2]}${m[3]}");
 
   // 7) Normalize double-bracket citation links: [[n]](url) → [n](url)
@@ -2360,6 +2242,55 @@ List<String> _extractImageUrls(String md) {
       .map((m) => (m.group(1) ?? '').trim())
       .where((s) => s.isNotEmpty)
       .toList();
+}
+
+/// Compact image-list revision. Full URLs — including large data URIs —
+/// must not be copied into every block's cache key.
+int _imageRevision(List<String> urls) =>
+    Object.hash(urls.length, Object.hashAll(urls));
+
+/// Citation cache key from the actual `(id, resolvedIndex)` pairs. Callback
+/// identity is ignored: a new closure over the same map must not rebuild,
+/// and a map update through a stable closure must.
+int _citationRevision(String md, String? Function(String id)? resolver) {
+  final ids = _citationIds(md);
+  var hash = ids.length;
+  for (final id in ids) {
+    hash = Object.hash(hash, id, resolver?.call(id));
+  }
+  return hash;
+}
+
+List<String> _citationIds(String md) {
+  final ids = <String>[];
+  void addId(String id) {
+    if (id.isNotEmpty) ids.add(id);
+  }
+
+  for (final match in RegExp(
+    r'\[cite:\s*([^\]]+)\]',
+    caseSensitive: false,
+  ).allMatches(md)) {
+    for (final part in (match.group(1) ?? '').split(',')) {
+      addId(part.trim());
+    }
+  }
+  for (final match in RegExp(
+    r'\[citation\]\(([^)]+)\)',
+    caseSensitive: false,
+  ).allMatches(md)) {
+    final ref = _parseCitationRef(match.group(1) ?? '');
+    if (ref != null) addId(ref.id);
+  }
+  for (final match in RegExp(
+    r'\[citation:([^\]\r\n]+)\]',
+    caseSensitive: false,
+  ).allMatches(md)) {
+    for (final ref in _parseCitationRefList(match.group(1) ?? '')) {
+      addId(ref.id);
+    }
+  }
+  return ids;
 }
 
 String _sanitizeImageLinks(String input) {
@@ -5060,7 +4991,7 @@ class FencedCodeBlockMd extends BlockMd {
   // - supports both ``` and ~~~
   String get expString =>
       (r"^[ \t]*(([`~])\2{2,})[ \t]*([^\n]*?)\n"
-      r"(?:(?:([\s\S]*?)^[ \t]*\1\2*[ \t]*)|([\s\S]*))");
+      r"(?:(?:([\s\S]*?)^[ \t]*\1\2*[ \t]*$)|([\s\S]*))");
 
   @override
   Widget build(BuildContext context, String text, GptMarkdownConfig config) {
@@ -5196,13 +5127,21 @@ class InlineLatexParenScrollableMd extends InlineMd {
   }
 }
 
+/// Single-line ATX. Opening `#{1,6}`, closing `#+`, horizontal blanks only.
+/// Shared by [AtxHeadingMd] and the `## 1.引言` preprocessor so they cannot
+/// drift back into `\s` / cross-line matching.
+const String _atxHeadingLine =
+    r'[ \t]{0,3}(#{1,6})[ \t]+([^\r\n\u2028\u2029]+?)(?:[ \t]+#+[ \t]*)?';
+
 // Balanced ATX-style headings (#, ##, ###, …) with consistent spacing and typography
 class AtxHeadingMd extends BlockMd {
   @override
-  // Restrict heading content to a single line to avoid swallowing
-  // subsequent blocks (e.g., fenced code) when the engine builds
-  // the regex with dotAll=true. Using [^\n]+ keeps it line-bound.
-  String get expString => (r"^\s{0,3}(#{1,6})\s+([^\n]+?)(?:\s+#+\s*)?$");
+  // `exp` is overridden so BlockMd's `^\ *?` prefix cannot widen the
+  // 0–3 space indent the way `^\ *?^[ \t]{0,3}` would.
+  String get expString => _atxHeadingLine;
+
+  @override
+  RegExp get exp => RegExp('^$_atxHeadingLine\$', multiLine: true);
 
   @override
   Widget build(BuildContext context, String text, GptMarkdownConfig config) {
@@ -5586,6 +5525,8 @@ class _BlockquoteMarkdownContent extends StatelessWidget {
       inlineComponents: config.inlineComponents,
       followLinkColor: config.followLinkColor,
       useDollarSignsForLatex: false,
+      preprocessBlocks: config.preprocessBlocks,
+      generation: config.generation,
     );
   }
 }
@@ -5868,53 +5809,36 @@ class BackslashEscapeMd extends InlineMd {
 }
 
 class DetailsHtmlMd extends BlockMd {
+  DetailsHtmlMd([this.registry]);
+
+  final MarkdownDetailsRegistry? registry;
+
   @override
   RegExp get exp => RegExp(
-    r'^\ *?(?:' + expString + r")$",
+    r'^\ *?(?:' + expString + r')[ \t]*$',
     dotAll: true,
     multiLine: true,
     caseSensitive: false,
   );
 
   @override
-  String get expString => _detailsPattern(6);
+  String get expString =>
+      registry?.placeholderSource ?? MarkdownDetailsWalker.blockPattern();
 
   @override
   Widget build(BuildContext context, String text, GptMarkdownConfig config) {
-    final match = RegExp(
-      r"^<details(?<attrs>[^>]*)>\s*<summary(?:\s+[^>]*)?>(?<summary>[\s\S]*?)<\/summary>(?<body>[\s\S]*)<\/details>$",
-      caseSensitive: false,
-      dotAll: true,
-    ).firstMatch(text.trim());
-
-    if (match == null) {
+    final parsed = registry?.lookup(text) ?? markdownParseDetails(text);
+    if (parsed == null) {
       return config.getRich(TextSpan(text: text, style: config.style));
     }
 
-    final attrs = match.namedGroup('attrs') ?? '';
-    final summary = _plainHtmlText(match.namedGroup('summary') ?? '').trim();
-    final body = (match.namedGroup('body') ?? '').trim();
-    final initiallyExpanded = RegExp(
-      r"(?:^|\s)open(?:\s|$|=)",
-      caseSensitive: false,
-    ).hasMatch(attrs);
-
+    final body = parsed.body.trim();
     return _DetailsHtmlBlock(
-      summary: summary,
-      body: body,
-      initiallyExpanded: initiallyExpanded,
+      summary: _plainHtmlText(parsed.summary).trim(),
+      body: registry?.rewrite(body) ?? body,
+      initiallyExpanded: parsed.initiallyExpanded,
       config: config,
     );
-  }
-
-  static String _detailsPattern(int depth) {
-    final open = r"<details(?:\s+[^>]*)?>";
-    final summary = r"\s*<summary(?:\s+[^>]*)?>[\s\S]*?<\/summary>";
-    if (depth <= 1) {
-      return '$open$summary(?:(?!<details\\b|<\\/details>)[\\s\\S])*<\\/details>';
-    }
-    final nested = _detailsPattern(depth - 1);
-    return '$open$summary(?:(?!<details\\b|<\\/details>)[\\s\\S]|$nested)*<\\/details>';
   }
 
   static String _plainHtmlText(String input) {

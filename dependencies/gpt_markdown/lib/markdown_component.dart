@@ -38,6 +38,12 @@ abstract class MarkdownComponent {
     final GptMarkdownConfig config,
     bool includeGlobalComponents,
   ) {
+    if (includeGlobalComponents) {
+      final preprocess = config.preprocessBlocks;
+      if (preprocess != null) {
+        text = preprocess(text);
+      }
+    }
     var components =
         includeGlobalComponents
             ? config.components ?? MarkdownComponent.globalComponents
