@@ -159,6 +159,7 @@ final class BusinessKeyRegistry {
     'memory_smart_add_batch_prompt_en_v1',
     'memory_profile_distill_prompt_zh_v1',
     'memory_profile_distill_prompt_en_v1',
+    'chat_bubble_style_overrides_v1',
   };
 
   static BusinessKeyDisposition classify(String key) {
