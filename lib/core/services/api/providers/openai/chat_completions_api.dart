@@ -17,6 +17,7 @@ import '../../stream/stream_chunk_emit.dart';
 import '../../stream/stream_chunk_ids.dart';
 import 'chat_completions_decoder.dart';
 import 'openai_tool_transcript.dart';
+import 'reasoning_details_replay.dart';
 import 'openai_vendor_compat.dart';
 
 Map<String, dynamic> copyChatCompletionMessage(Map<String, dynamic> m) {
@@ -242,6 +243,7 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
   required bool allowRemoteImages,
   required ReasoningContentReplayPolicy reasoningContentReplayPolicy,
   bool stripReasoningContent = false,
+  bool normalizeReasoningDetails = false,
 }) async {
   final out = <Map<String, dynamic>>[];
   // Assistant turns cannot carry image_url/video_url; stash for the last user
@@ -298,6 +300,19 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
       if (!keepReasoningContent) {
         outMsg.remove('reasoning_content');
         outMsg.remove('reasoning');
+      }
+      // Only Anthropic upstreams need the streamed fragments rebuilt into
+      // whole blocks; other vendors document replaying the sequence verbatim.
+      final rawDetails = outMsg['reasoning_details'];
+      if (rawDetails != null &&
+          (normalizeReasoningDetails ||
+              reasoningDetailsLookAnthropic(rawDetails))) {
+        final details = normalizeReasoningDetailsForReplay(rawDetails);
+        if (details == null) {
+          outMsg.remove('reasoning_details');
+        } else {
+          outMsg['reasoning_details'] = details;
+        }
       }
     }
 
@@ -753,6 +768,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           allowRemoteImages: allowRemoteImages,
           reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
           stripReasoningContent: isClaudeUpstream,
+          normalizeReasoningDetails: isClaudeUpstream,
         ),
         'stream': true,
         if (temperature != null) 'temperature': temperature,
@@ -933,6 +949,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
         allowRemoteImages: allowRemoteImages,
         reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
         stripReasoningContent: isClaudeUpstream,
+        normalizeReasoningDetails: isClaudeUpstream,
       );
       reqBody.remove('stream');
       req.body = jsonEncode(reqBody);

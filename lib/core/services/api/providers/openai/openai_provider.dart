@@ -559,6 +559,7 @@ Stream<StreamChunk> sendOpenAIStream(
       allowRemoteImages: allowRemoteImages,
       reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
       stripReasoningContent: isClaudeUpstream,
+      normalizeReasoningDetails: isClaudeUpstream,
     );
     body = {
       'model': upstreamModelId,
