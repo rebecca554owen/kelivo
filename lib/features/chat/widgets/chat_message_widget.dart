@@ -2837,7 +2837,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                         style: TextStyle(
                                           fontSize: baseTranslation,
                                           height: 1.4,
-                                          color: cs.onSurface,
+                                          color: _chatSurfacePlainTextColor(
+                                            context,
+                                          ),
                                         ),
                                       );
                                     }

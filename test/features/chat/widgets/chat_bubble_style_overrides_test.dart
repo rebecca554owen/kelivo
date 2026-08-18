@@ -75,4 +75,51 @@ void main() {
       const Color(0xFF224466),
     );
   });
+
+  testWidgets('plain translation text uses the override color', (tester) async {
+    final harness = await createBusinessTestHarness(
+      initial: {'display_chat_message_background_style_v1': 'solid'},
+    );
+    final settings = SettingsProvider(harness.preferences);
+    await settings.loaded;
+    await settings.setEnableAssistantMarkdown(false);
+    await settings.setChatBubbleStyleOverrides(
+      const ChatBubbleStyleOverrides(textArgbLight: 0xFF224466),
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+          ChangeNotifierProvider(
+            create: (_) =>
+                TtsProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider(create: (_) => ToolApprovalService()),
+          ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ChatMessageWidget(
+              message: ChatMessage(
+                role: 'assistant',
+                content: 'Answer',
+                translation: 'Translated answer',
+                conversationId: 'conversation-translation-overrides',
+              ),
+              showModelIcon: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      tester.widget<Text>(find.text('Translated answer')).style?.color,
+      const Color(0xFF224466),
+    );
+  });
 }
