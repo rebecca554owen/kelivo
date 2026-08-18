@@ -20,37 +20,13 @@ import '../../../theme/theme_factory.dart';
 import '../../home/pages/home_mobile_layout.dart';
 import '../widgets/custom_theme_widgets.dart';
 
-class MessageStyleSettingsPage extends StatefulWidget {
+class MessageStyleSettingsPage extends StatelessWidget {
   const MessageStyleSettingsPage({super.key});
-
-  @override
-  State<MessageStyleSettingsPage> createState() =>
-      _MessageStyleSettingsPageState();
-}
-
-class _MessageStyleSettingsPageState extends State<MessageStyleSettingsPage> {
-  bool? _editingDark;
-
-  bool get _isEditingDark =>
-      _editingDark ?? Theme.of(context).brightness == Brightness.dark;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final settings = context.watch<SettingsProvider>();
-    final style = settings.chatMessageBackgroundStyle;
-    final overrides = settings.chatBubbleStyleOverrides;
-    final editingDark = _isEditingDark;
-    final previewTheme = _previewTheme(context, editingDark);
-    final previewCs = previewTheme.colorScheme;
-    final resolved = resolveBubbleStyle(
-      previewCs,
-      previewTheme.brightness,
-      style,
-      overrides,
-    );
-
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
@@ -75,246 +51,299 @@ class _MessageStyleSettingsPageState extends State<MessageStyleSettingsPage> {
               size: 20,
               minSize: 44,
               semanticLabel: l10n.messageStyleSettingsPageReset,
-              onTap: () => _reset(context),
+              onTap: () => resetMessageStyleSettings(context),
             ),
           ),
         ],
       ),
-      body: Column(
+      body: const MessageStyleSettingsBody(),
+    );
+  }
+}
+
+Future<void> resetMessageStyleSettings(BuildContext context) async {
+  final ok = await _confirmReset(context);
+  if (!ok || !context.mounted) return;
+  await context.read<SettingsProvider>().setChatBubbleStyleOverrides(
+    const ChatBubbleStyleOverrides(),
+  );
+}
+
+Future<void> showMessageStyleSettingsDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
+  final cs = Theme.of(context).colorScheme;
+  return showAppDialog<void>(
+    context,
+    maxWidth: 520,
+    child: SizedBox(
+      height: MediaQuery.of(context).size.height * 0.82,
+      child: Column(
         children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
+          AppDialogHeader(
+            title: l10n.messageStyleSettingsPageTitle,
+            actions: [
+              IosIconButton(
+                icon: Lucide.RotateCcw,
+                size: 18,
+                color: cs.onSurface.withValues(alpha: 0.62),
+                semanticLabel: l10n.messageStyleSettingsPageReset,
+                onTap: () => resetMessageStyleSettings(context),
+              ),
+            ],
+          ),
+          const Expanded(child: MessageStyleSettingsBody()),
+        ],
+      ),
+    ),
+  );
+}
+
+class MessageStyleSettingsBody extends StatefulWidget {
+  const MessageStyleSettingsBody({super.key});
+
+  @override
+  State<MessageStyleSettingsBody> createState() =>
+      _MessageStyleSettingsBodyState();
+}
+
+class _MessageStyleSettingsBodyState extends State<MessageStyleSettingsBody> {
+  bool? _editingDark;
+
+  bool get _isEditingDark =>
+      _editingDark ?? Theme.of(context).brightness == Brightness.dark;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    final style = settings.chatMessageBackgroundStyle;
+    final overrides = settings.chatBubbleStyleOverrides;
+    final editingDark = _isEditingDark;
+    final previewTheme = _previewTheme(context, editingDark);
+    final previewCs = previewTheme.colorScheme;
+    final resolved = resolveBubbleStyle(
+      previewCs,
+      previewTheme.brightness,
+      style,
+      overrides,
+    );
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            children: [
+              _iosSectionCard(
+                children: [
+                  _StyleRow(
+                    label: l10n.displaySettingsPageChatMessageBackgroundDefault,
+                    selected: style == ChatMessageBackgroundStyle.defaultStyle,
+                    onTap: () => settings.setChatMessageBackgroundStyle(
+                      ChatMessageBackgroundStyle.defaultStyle,
+                    ),
+                  ),
+                  _iosDivider(context),
+                  _StyleRow(
+                    label: l10n.displaySettingsPageChatMessageBackgroundFrosted,
+                    selected: style == ChatMessageBackgroundStyle.frosted,
+                    onTap: () => settings.setChatMessageBackgroundStyle(
+                      ChatMessageBackgroundStyle.frosted,
+                    ),
+                  ),
+                  _iosDivider(context),
+                  _StyleRow(
+                    label: l10n.displaySettingsPageChatMessageBackgroundSolid,
+                    selected: style == ChatMessageBackgroundStyle.solid,
+                    onTap: () => settings.setChatMessageBackgroundStyle(
+                      ChatMessageBackgroundStyle.solid,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _LightDarkToggle(
+                editingDark: editingDark,
+                onChanged: (v) => setState(() => _editingDark = v),
+              ),
+              if (style != ChatMessageBackgroundStyle.defaultStyle) ...[
+                const SizedBox(height: 12),
                 _iosSectionCard(
                   children: [
-                    _StyleRow(
-                      label:
-                          l10n.displaySettingsPageChatMessageBackgroundDefault,
-                      selected:
-                          style == ChatMessageBackgroundStyle.defaultStyle,
-                      onTap: () => settings.setChatMessageBackgroundStyle(
-                        ChatMessageBackgroundStyle.defaultStyle,
+                    if (style == ChatMessageBackgroundStyle.frosted) ...[
+                      _SliderRow(
+                        label: l10n.messageStyleSettingsPageBlur,
+                        valueText: resolved.blurSigma.round().toString(),
+                        child: _ThemedSlider(
+                          value: resolved.blurSigma,
+                          min: 0,
+                          max: 30,
+                          stepSize: 1,
+                          onChanged: (v) =>
+                              settings.setChatBubbleStyleOverrides(
+                                overrides.copyWith(blurSigma: () => v),
+                              ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                        child: Text(
+                          l10n.messageStyleSettingsPageBlurHint,
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: cs.onSurface.withValues(alpha: 0.58),
+                          ),
+                        ),
+                      ),
+                      _iosDivider(context, indent: 14),
+                    ],
+                    _ColorRow(
+                      label: l10n.messageStyleSettingsPageBackgroundColor,
+                      color: resolved.background.withValues(alpha: 1),
+                      onTap: () => _pickColor(
+                        context,
+                        title: l10n.messageStyleSettingsPageBackgroundColor,
+                        initial: resolved.background.withValues(alpha: 1),
+                        onPicked: (color) {
+                          final argb = _opaqueArgb(color);
+                          settings.setChatBubbleStyleOverrides(
+                            editingDark
+                                ? overrides.copyWith(
+                                    backgroundArgbDark: () => argb,
+                                  )
+                                : overrides.copyWith(
+                                    backgroundArgbLight: () => argb,
+                                  ),
+                          );
+                        },
                       ),
                     ),
-                    _iosDivider(context),
-                    _StyleRow(
-                      label:
-                          l10n.displaySettingsPageChatMessageBackgroundFrosted,
-                      selected: style == ChatMessageBackgroundStyle.frosted,
-                      onTap: () => settings.setChatMessageBackgroundStyle(
-                        ChatMessageBackgroundStyle.frosted,
+                    _iosDivider(context, indent: 14),
+                    _SliderRow(
+                      label: l10n.messageStyleSettingsPageBackgroundOpacity,
+                      valueText:
+                          '${((_styleOpacity(style, overrides) * 100).round())}%',
+                      child: _ThemedSlider(
+                        value: _styleOpacity(style, overrides) * 100,
+                        min: 0,
+                        max: 100,
+                        stepSize: 1,
+                        onChanged: (v) {
+                          final opacity = (v / 100).clamp(0.0, 1.0);
+                          settings.setChatBubbleStyleOverrides(
+                            style == ChatMessageBackgroundStyle.frosted
+                                ? overrides.copyWith(
+                                    frostedOpacity: () => opacity,
+                                  )
+                                : overrides.copyWith(
+                                    solidOpacity: () => opacity,
+                                  ),
+                          );
+                        },
                       ),
                     ),
-                    _iosDivider(context),
-                    _StyleRow(
-                      label: l10n.displaySettingsPageChatMessageBackgroundSolid,
-                      selected: style == ChatMessageBackgroundStyle.solid,
-                      onTap: () => settings.setChatMessageBackgroundStyle(
-                        ChatMessageBackgroundStyle.solid,
+                    _iosDivider(context, indent: 14),
+                    _ColorRow(
+                      label: l10n.messageStyleSettingsPageBorderColor,
+                      color: resolved.border.withValues(alpha: 1),
+                      onTap: () => _pickColor(
+                        context,
+                        title: l10n.messageStyleSettingsPageBorderColor,
+                        initial: resolved.border.withValues(alpha: 1),
+                        onPicked: (color) {
+                          final argb = _opaqueArgb(color);
+                          settings.setChatBubbleStyleOverrides(
+                            editingDark
+                                ? overrides.copyWith(borderArgbDark: () => argb)
+                                : overrides.copyWith(
+                                    borderArgbLight: () => argb,
+                                  ),
+                          );
+                        },
+                      ),
+                    ),
+                    _iosDivider(context, indent: 14),
+                    _SliderRow(
+                      label: l10n.messageStyleSettingsPageBorderOpacity,
+                      valueText: '${((resolved.border.a * 100).round())}%',
+                      child: _ThemedSlider(
+                        value: resolved.border.a * 100,
+                        min: 0,
+                        max: 100,
+                        stepSize: 1,
+                        onChanged: (v) => settings.setChatBubbleStyleOverrides(
+                          overrides.copyWith(
+                            borderOpacity: () => (v / 100).clamp(0.0, 1.0),
+                          ),
+                        ),
+                      ),
+                    ),
+                    _iosDivider(context, indent: 14),
+                    _SliderRow(
+                      label: l10n.messageStyleSettingsPageBorderWidth,
+                      valueText: resolved.borderWidth.toStringAsFixed(1),
+                      child: _ThemedSlider(
+                        value: resolved.borderWidth,
+                        min: 0,
+                        max: 3,
+                        stepSize: 0.1,
+                        onChanged: (v) => settings.setChatBubbleStyleOverrides(
+                          overrides.copyWith(borderWidth: () => v),
+                        ),
+                      ),
+                    ),
+                    _iosDivider(context, indent: 14),
+                    _ColorRow(
+                      label: l10n.messageStyleSettingsPageTextColor,
+                      color: resolved.text.withValues(alpha: 1),
+                      onTap: () => _pickColor(
+                        context,
+                        title: l10n.messageStyleSettingsPageTextColor,
+                        initial: resolved.text.withValues(alpha: 1),
+                        onPicked: (color) {
+                          final argb = _opaqueArgb(color);
+                          settings.setChatBubbleStyleOverrides(
+                            editingDark
+                                ? overrides.copyWith(textArgbDark: () => argb)
+                                : overrides.copyWith(textArgbLight: () => argb),
+                          );
+                        },
+                      ),
+                    ),
+                    _iosDivider(context, indent: 14),
+                    _SliderRow(
+                      label: l10n.messageStyleSettingsPageCornerRadius,
+                      valueText: resolved.radius.round().toString(),
+                      child: _ThemedSlider(
+                        value: resolved.radius,
+                        min: 0,
+                        max: 28,
+                        stepSize: 1,
+                        onChanged: (v) => settings.setChatBubbleStyleOverrides(
+                          overrides.copyWith(cornerRadius: () => v),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _LightDarkToggle(
-                  editingDark: editingDark,
-                  onChanged: (v) => setState(() => _editingDark = v),
-                ),
-                if (style != ChatMessageBackgroundStyle.defaultStyle) ...[
-                  const SizedBox(height: 12),
-                  _iosSectionCard(
-                    children: [
-                      if (style == ChatMessageBackgroundStyle.frosted) ...[
-                        _SliderRow(
-                          label: l10n.messageStyleSettingsPageBlur,
-                          valueText: resolved.blurSigma.round().toString(),
-                          child: _ThemedSlider(
-                            value: resolved.blurSigma,
-                            min: 0,
-                            max: 30,
-                            stepSize: 1,
-                            onChanged: (v) =>
-                                settings.setChatBubbleStyleOverrides(
-                                  overrides.copyWith(blurSigma: () => v),
-                                ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                          child: Text(
-                            l10n.messageStyleSettingsPageBlurHint,
-                            style: TextStyle(
-                              fontSize: 12,
-                              height: 1.35,
-                              color: cs.onSurface.withValues(alpha: 0.58),
-                            ),
-                          ),
-                        ),
-                        _iosDivider(context, indent: 14),
-                      ],
-                      _ColorRow(
-                        label: l10n.messageStyleSettingsPageBackgroundColor,
-                        color: resolved.background.withValues(alpha: 1),
-                        onTap: () => _pickColor(
-                          context,
-                          title: l10n.messageStyleSettingsPageBackgroundColor,
-                          initial: resolved.background.withValues(alpha: 1),
-                          onPicked: (color) {
-                            final argb = _opaqueArgb(color);
-                            settings.setChatBubbleStyleOverrides(
-                              editingDark
-                                  ? overrides.copyWith(
-                                      backgroundArgbDark: () => argb,
-                                    )
-                                  : overrides.copyWith(
-                                      backgroundArgbLight: () => argb,
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                      _SliderRow(
-                        label: l10n.messageStyleSettingsPageBackgroundOpacity,
-                        valueText:
-                            '${((_styleOpacity(style, overrides) * 100).round())}%',
-                        child: _ThemedSlider(
-                          value: _styleOpacity(style, overrides) * 100,
-                          min: 0,
-                          max: 100,
-                          stepSize: 1,
-                          onChanged: (v) {
-                            final opacity = (v / 100).clamp(0.0, 1.0);
-                            settings.setChatBubbleStyleOverrides(
-                              style == ChatMessageBackgroundStyle.frosted
-                                  ? overrides.copyWith(
-                                      frostedOpacity: () => opacity,
-                                    )
-                                  : overrides.copyWith(
-                                      solidOpacity: () => opacity,
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                      _ColorRow(
-                        label: l10n.messageStyleSettingsPageBorderColor,
-                        color: resolved.border.withValues(alpha: 1),
-                        onTap: () => _pickColor(
-                          context,
-                          title: l10n.messageStyleSettingsPageBorderColor,
-                          initial: resolved.border.withValues(alpha: 1),
-                          onPicked: (color) {
-                            final argb = _opaqueArgb(color);
-                            settings.setChatBubbleStyleOverrides(
-                              editingDark
-                                  ? overrides.copyWith(
-                                      borderArgbDark: () => argb,
-                                    )
-                                  : overrides.copyWith(
-                                      borderArgbLight: () => argb,
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                      _SliderRow(
-                        label: l10n.messageStyleSettingsPageBorderOpacity,
-                        valueText: '${((resolved.border.a * 100).round())}%',
-                        child: _ThemedSlider(
-                          value: resolved.border.a * 100,
-                          min: 0,
-                          max: 100,
-                          stepSize: 1,
-                          onChanged: (v) =>
-                              settings.setChatBubbleStyleOverrides(
-                                overrides.copyWith(
-                                  borderOpacity: () =>
-                                      (v / 100).clamp(0.0, 1.0),
-                                ),
-                              ),
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                      _SliderRow(
-                        label: l10n.messageStyleSettingsPageBorderWidth,
-                        valueText: resolved.borderWidth.toStringAsFixed(1),
-                        child: _ThemedSlider(
-                          value: resolved.borderWidth,
-                          min: 0,
-                          max: 3,
-                          stepSize: 0.1,
-                          onChanged: (v) =>
-                              settings.setChatBubbleStyleOverrides(
-                                overrides.copyWith(borderWidth: () => v),
-                              ),
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                      _ColorRow(
-                        label: l10n.messageStyleSettingsPageTextColor,
-                        color: resolved.text.withValues(alpha: 1),
-                        onTap: () => _pickColor(
-                          context,
-                          title: l10n.messageStyleSettingsPageTextColor,
-                          initial: resolved.text.withValues(alpha: 1),
-                          onPicked: (color) {
-                            final argb = _opaqueArgb(color);
-                            settings.setChatBubbleStyleOverrides(
-                              editingDark
-                                  ? overrides.copyWith(textArgbDark: () => argb)
-                                  : overrides.copyWith(
-                                      textArgbLight: () => argb,
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                      _SliderRow(
-                        label: l10n.messageStyleSettingsPageCornerRadius,
-                        valueText: resolved.radius.round().toString(),
-                        child: _ThemedSlider(
-                          value: resolved.radius,
-                          min: 0,
-                          max: 28,
-                          stepSize: 1,
-                          onChanged: (v) =>
-                              settings.setChatBubbleStyleOverrides(
-                                overrides.copyWith(cornerRadius: () => v),
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ],
+            ],
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: _PreviewPanel(
+              theme: previewTheme,
+              style: style,
+              overrides: overrides,
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: _PreviewPanel(
-                theme: previewTheme,
-                style: style,
-                overrides: overrides,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _reset(BuildContext context) async {
-    final ok = await _confirmReset(context);
-    if (!ok || !context.mounted) return;
-    await context.read<SettingsProvider>().setChatBubbleStyleOverrides(
-      const ChatBubbleStyleOverrides(),
+        ),
+      ],
     );
   }
 
