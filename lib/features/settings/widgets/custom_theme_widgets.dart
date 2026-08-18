@@ -649,7 +649,7 @@ class _HsvColorPickerState extends State<HsvColorPicker> {
 }
 
 /// Adaptive color picker (sheet on mobile, dialog on desktop).
-Future<Color?> _showColorPicker(
+Future<Color?> showAppColorPicker(
   BuildContext context, {
   required String title,
   required Color initial,
@@ -744,7 +744,7 @@ class _CustomThemeEditorState extends State<CustomThemeEditor> {
     required Color initial,
     required ValueChanged<Color> onResult,
   }) async {
-    final result = await _showColorPicker(
+    final result = await showAppColorPicker(
       context,
       title: title,
       initial: initial,

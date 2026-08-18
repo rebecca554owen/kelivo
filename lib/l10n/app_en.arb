@@ -3226,5 +3226,23 @@
     }
   },
   "memoryTraceShowMore": "Show full text",
-  "memoryTraceShowLess": "Collapse"
+  "memoryTraceShowLess": "Collapse",
+  "messageStyleSettingsPageTitle": "Message Style",
+  "messageStyleSettingsPageReset": "Reset",
+  "messageStyleSettingsPageResetConfirm": "Reset all message style customizations?",
+  "messageStyleSettingsPageCancel": "Cancel",
+  "messageStyleSettingsPageLight": "Light",
+  "messageStyleSettingsPageDark": "Dark",
+  "messageStyleSettingsPageBlur": "Blur",
+  "messageStyleSettingsPageBlurHint": "Blur applies to content behind the bubble. It is barely visible without a chat wallpaper.",
+  "messageStyleSettingsPageBackgroundColor": "Background",
+  "messageStyleSettingsPageBackgroundOpacity": "Background Opacity",
+  "messageStyleSettingsPageBorderColor": "Border",
+  "messageStyleSettingsPageBorderOpacity": "Border Opacity",
+  "messageStyleSettingsPageBorderWidth": "Border Width",
+  "messageStyleSettingsPageTextColor": "Text",
+  "messageStyleSettingsPageCornerRadius": "Corner Radius",
+  "messageStyleSettingsPagePreviewUser": "This is a user message",
+  "messageStyleSettingsPagePreviewAssistant": "This is an assistant reply.",
+  "messageStyleSettingsPagePreviewThinking": "Thinking"
 }
