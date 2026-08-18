@@ -159,6 +159,9 @@ final class BusinessKeyRegistry {
     'memory_smart_add_batch_prompt_en_v1',
     'memory_profile_distill_prompt_zh_v1',
     'memory_profile_distill_prompt_en_v1',
+    'memory_migrate_prompt_zh_v1',
+    'memory_migrate_prompt_en_v1',
+    'memory_migration_batch_size_v1',
     'chat_bubble_style_overrides_v1',
   };
 

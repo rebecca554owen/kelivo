@@ -1019,8 +1019,8 @@ abstract final class MemoryTools {
       'function': {
         'name': chatSearch,
         'description': zh
-            ? '在历史对话中按关键词搜索消息内容（跨全部会话）。需要回忆之前聊过什么，或者用户提到「上次」「之前说的」「我们讨论过」时，优先使用这个工具。默认不搜索当前对话，因为当前对话的内容已经在上下文里。'
-            : 'Search message content across past conversations by keywords. Prefer this when recalling prior discussion, or when the user mentions "last time", "earlier", or "we discussed". By default the current conversation is excluded because it is already in context.',
+            ? '在历史对话中按关键词搜索消息内容（仅当前助手的会话，以及没有归属助手的旧会话）。需要回忆之前聊过什么，或者用户提到「上次」「之前说的」「我们讨论过」时，优先使用这个工具。默认不搜索当前对话，因为当前对话的内容已经在上下文里。'
+            : 'Search message content in this assistant\'s past conversations (and unowned older chats) by keywords. Prefer this when recalling prior discussion, or when the user mentions "last time", "earlier", or "we discussed". By default the current conversation is excluded because it is already in context.',
         'parameters': {
           'type': 'object',
           'properties': {
@@ -1041,8 +1041,8 @@ abstract final class MemoryTools {
             'conversation_id': {
               'type': 'string',
               'description': zh
-                  ? '只在指定会话内搜索。省略则搜索除当前会话外的全部会话。'
-                  : 'Search only within this conversation. Omit to search all conversations except the current one.',
+                  ? '只在指定会话内搜索。省略则搜索除当前会话外、当前助手可见的会话。'
+                  : 'Search only within this conversation. Omit to search this assistant\'s visible conversations except the current one.',
             },
           },
           'required': ['query'],
