@@ -140,6 +140,7 @@ abstract final class MemoryTools {
           args: args,
           chatService: chatService,
           conversationId: conversationId,
+          assistantId: assistant.id,
         );
         _finishToolTrace(handle, step, result: result);
         return result;
@@ -724,6 +725,7 @@ abstract final class MemoryTools {
     required Map<String, dynamic> args,
     required ChatService? chatService,
     required String? conversationId,
+    required String assistantId,
   }) async {
     final query = (args['query'] ?? '').toString();
     if (query.trim().isEmpty) {
@@ -759,6 +761,7 @@ abstract final class MemoryTools {
       limit: limit * 8,
       conversationId: scoped ? filterConversationId : null,
       excludeConversationId: scoped ? null : conversationId,
+      assistantId: assistantId,
     );
 
     final results = <Map<String, dynamic>>[];

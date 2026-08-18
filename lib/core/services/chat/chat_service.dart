@@ -1214,6 +1214,7 @@ class ChatService extends ChangeNotifier {
     bool includeAllRevisions = false,
     String? conversationId,
     String? excludeConversationId,
+    String? assistantId,
   }) async {
     if (!_initialized) return const <ConversationSearchMatch>[];
     return _repo.searchConversationMatches(
@@ -1222,6 +1223,7 @@ class ChatService extends ChangeNotifier {
       includeAllRevisions: includeAllRevisions,
       conversationId: conversationId,
       excludeConversationId: excludeConversationId,
+      assistantId: assistantId,
     );
   }
 
