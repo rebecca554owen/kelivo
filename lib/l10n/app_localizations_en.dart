@@ -7565,6 +7565,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messageStyleSettingsPageDark => 'Dark';
 
   @override
+  String get messageStyleSettingsPageDefaultHint =>
+      'Default style follows the current theme and has no extra controls.';
+
+  @override
+  String get messageStyleSettingsPageStyleDefaultSubtitle =>
+      'Follows the theme; not customizable';
+
+  @override
+  String get messageStyleSettingsPageStyleFrostedSubtitle =>
+      'Translucent frosted glass';
+
+  @override
+  String get messageStyleSettingsPageStyleSolidSubtitle => 'Opaque solid fill';
+
+  @override
   String get messageStyleSettingsPageBlur => 'Blur';
 
   @override

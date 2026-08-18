@@ -9,6 +9,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../icons/reasoning_icons.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/services/haptics.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../theme/app_font_weights.dart';
@@ -108,6 +109,9 @@ class MessageStyleSettingsBody extends StatefulWidget {
 
 class _MessageStyleSettingsBodyState extends State<MessageStyleSettingsBody> {
   bool? _editingDark;
+  ThemeData? _cachedLightTheme;
+  ThemeData? _cachedDarkTheme;
+  String? _previewThemeKey;
 
   bool get _isEditingDark =>
       _editingDark ?? Theme.of(context).brightness == Brightness.dark;
@@ -120,231 +124,279 @@ class _MessageStyleSettingsBodyState extends State<MessageStyleSettingsBody> {
     final style = settings.chatMessageBackgroundStyle;
     final overrides = settings.chatBubbleStyleOverrides;
     final editingDark = _isEditingDark;
-    final previewTheme = _previewTheme(context, editingDark);
-    final previewCs = previewTheme.colorScheme;
+    final isDefault = style == ChatMessageBackgroundStyle.defaultStyle;
+    final previewThemes = _previewThemes(context);
+    final lightTheme = previewThemes.$1;
+    final darkTheme = previewThemes.$2;
+    final previewTheme = editingDark ? darkTheme : lightTheme;
     final resolved = resolveBubbleStyle(
-      previewCs,
+      previewTheme.colorScheme,
       previewTheme.brightness,
       style,
       overrides,
     );
 
-    return Column(
+    final stylePicker = _iosSectionCard(
       children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            children: [
-              _iosSectionCard(
-                children: [
-                  _StyleRow(
-                    label: l10n.displaySettingsPageChatMessageBackgroundDefault,
-                    selected: style == ChatMessageBackgroundStyle.defaultStyle,
-                    onTap: () => settings.setChatMessageBackgroundStyle(
-                      ChatMessageBackgroundStyle.defaultStyle,
-                    ),
-                  ),
-                  _iosDivider(context),
-                  _StyleRow(
-                    label: l10n.displaySettingsPageChatMessageBackgroundFrosted,
-                    selected: style == ChatMessageBackgroundStyle.frosted,
-                    onTap: () => settings.setChatMessageBackgroundStyle(
-                      ChatMessageBackgroundStyle.frosted,
-                    ),
-                  ),
-                  _iosDivider(context),
-                  _StyleRow(
-                    label: l10n.displaySettingsPageChatMessageBackgroundSolid,
-                    selected: style == ChatMessageBackgroundStyle.solid,
-                    onTap: () => settings.setChatMessageBackgroundStyle(
-                      ChatMessageBackgroundStyle.solid,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _LightDarkToggle(
-                editingDark: editingDark,
-                onChanged: (v) => setState(() => _editingDark = v),
-              ),
-              if (style != ChatMessageBackgroundStyle.defaultStyle) ...[
-                const SizedBox(height: 12),
-                _iosSectionCard(
-                  children: [
-                    if (style == ChatMessageBackgroundStyle.frosted) ...[
-                      _SliderRow(
-                        label: l10n.messageStyleSettingsPageBlur,
-                        valueText: resolved.blurSigma.round().toString(),
-                        child: _ThemedSlider(
-                          value: resolved.blurSigma,
-                          min: 0,
-                          max: 30,
-                          stepSize: 1,
-                          onChanged: (v) =>
-                              settings.setChatBubbleStyleOverrides(
-                                overrides.copyWith(blurSigma: () => v),
-                              ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                        child: Text(
-                          l10n.messageStyleSettingsPageBlurHint,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: cs.onSurface.withValues(alpha: 0.58),
-                          ),
-                        ),
-                      ),
-                      _iosDivider(context, indent: 14),
-                    ],
-                    _ColorRow(
-                      label: l10n.messageStyleSettingsPageBackgroundColor,
-                      color: resolved.background.withValues(alpha: 1),
-                      onTap: () => _pickColor(
-                        context,
-                        title: l10n.messageStyleSettingsPageBackgroundColor,
-                        initial: resolved.background.withValues(alpha: 1),
-                        onPicked: (color) {
-                          final argb = _opaqueArgb(color);
-                          settings.setChatBubbleStyleOverrides(
-                            editingDark
-                                ? overrides.copyWith(
-                                    backgroundArgbDark: () => argb,
-                                  )
-                                : overrides.copyWith(
-                                    backgroundArgbLight: () => argb,
-                                  ),
-                          );
-                        },
-                      ),
-                    ),
-                    _iosDivider(context, indent: 14),
-                    _SliderRow(
-                      label: l10n.messageStyleSettingsPageBackgroundOpacity,
-                      valueText:
-                          '${((_styleOpacity(style, overrides) * 100).round())}%',
-                      child: _ThemedSlider(
-                        value: _styleOpacity(style, overrides) * 100,
-                        min: 0,
-                        max: 100,
-                        stepSize: 1,
-                        onChanged: (v) {
-                          final opacity = (v / 100).clamp(0.0, 1.0);
-                          settings.setChatBubbleStyleOverrides(
-                            style == ChatMessageBackgroundStyle.frosted
-                                ? overrides.copyWith(
-                                    frostedOpacity: () => opacity,
-                                  )
-                                : overrides.copyWith(
-                                    solidOpacity: () => opacity,
-                                  ),
-                          );
-                        },
-                      ),
-                    ),
-                    _iosDivider(context, indent: 14),
-                    _ColorRow(
-                      label: l10n.messageStyleSettingsPageBorderColor,
-                      color: resolved.border.withValues(alpha: 1),
-                      onTap: () => _pickColor(
-                        context,
-                        title: l10n.messageStyleSettingsPageBorderColor,
-                        initial: resolved.border.withValues(alpha: 1),
-                        onPicked: (color) {
-                          final argb = _opaqueArgb(color);
-                          settings.setChatBubbleStyleOverrides(
-                            editingDark
-                                ? overrides.copyWith(borderArgbDark: () => argb)
-                                : overrides.copyWith(
-                                    borderArgbLight: () => argb,
-                                  ),
-                          );
-                        },
-                      ),
-                    ),
-                    _iosDivider(context, indent: 14),
-                    _SliderRow(
-                      label: l10n.messageStyleSettingsPageBorderOpacity,
-                      valueText: '${((resolved.border.a * 100).round())}%',
-                      child: _ThemedSlider(
-                        value: resolved.border.a * 100,
-                        min: 0,
-                        max: 100,
-                        stepSize: 1,
-                        onChanged: (v) => settings.setChatBubbleStyleOverrides(
-                          overrides.copyWith(
-                            borderOpacity: () => (v / 100).clamp(0.0, 1.0),
-                          ),
-                        ),
-                      ),
-                    ),
-                    _iosDivider(context, indent: 14),
-                    _SliderRow(
-                      label: l10n.messageStyleSettingsPageBorderWidth,
-                      valueText: resolved.borderWidth.toStringAsFixed(1),
-                      child: _ThemedSlider(
-                        value: resolved.borderWidth,
-                        min: 0,
-                        max: 3,
-                        stepSize: 0.1,
-                        onChanged: (v) => settings.setChatBubbleStyleOverrides(
-                          overrides.copyWith(borderWidth: () => v),
-                        ),
-                      ),
-                    ),
-                    _iosDivider(context, indent: 14),
-                    _ColorRow(
-                      label: l10n.messageStyleSettingsPageTextColor,
-                      color: resolved.text.withValues(alpha: 1),
-                      onTap: () => _pickColor(
-                        context,
-                        title: l10n.messageStyleSettingsPageTextColor,
-                        initial: resolved.text.withValues(alpha: 1),
-                        onPicked: (color) {
-                          final argb = _opaqueArgb(color);
-                          settings.setChatBubbleStyleOverrides(
-                            editingDark
-                                ? overrides.copyWith(textArgbDark: () => argb)
-                                : overrides.copyWith(textArgbLight: () => argb),
-                          );
-                        },
-                      ),
-                    ),
-                    _iosDivider(context, indent: 14),
-                    _SliderRow(
-                      label: l10n.messageStyleSettingsPageCornerRadius,
-                      valueText: resolved.radius.round().toString(),
-                      child: _ThemedSlider(
-                        value: resolved.radius,
-                        min: 0,
-                        max: 28,
-                        stepSize: 1,
-                        onChanged: (v) => settings.setChatBubbleStyleOverrides(
-                          overrides.copyWith(cornerRadius: () => v),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
+        _StyleRow(
+          style: ChatMessageBackgroundStyle.defaultStyle,
+          label: l10n.displaySettingsPageChatMessageBackgroundDefault,
+          subtitle: l10n.messageStyleSettingsPageStyleDefaultSubtitle,
+          selected: isDefault,
+          onTap: () => settings.setChatMessageBackgroundStyle(
+            ChatMessageBackgroundStyle.defaultStyle,
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: _PreviewPanel(
-              theme: previewTheme,
-              style: style,
-              overrides: overrides,
+        _iosDivider(context),
+        _StyleRow(
+          style: ChatMessageBackgroundStyle.frosted,
+          label: l10n.displaySettingsPageChatMessageBackgroundFrosted,
+          subtitle: l10n.messageStyleSettingsPageStyleFrostedSubtitle,
+          selected: style == ChatMessageBackgroundStyle.frosted,
+          onTap: () => settings.setChatMessageBackgroundStyle(
+            ChatMessageBackgroundStyle.frosted,
+          ),
+        ),
+        _iosDivider(context),
+        _StyleRow(
+          style: ChatMessageBackgroundStyle.solid,
+          label: l10n.displaySettingsPageChatMessageBackgroundSolid,
+          subtitle: l10n.messageStyleSettingsPageStyleSolidSubtitle,
+          selected: style == ChatMessageBackgroundStyle.solid,
+          onTap: () => settings.setChatMessageBackgroundStyle(
+            ChatMessageBackgroundStyle.solid,
+          ),
+        ),
+      ],
+    );
+
+    final preview = _PreviewPanel(
+      theme: previewTheme,
+      editingDark: editingDark,
+      style: style,
+      overrides: overrides,
+    );
+
+    final params = _iosSectionCard(
+      children: [
+        if (style == ChatMessageBackgroundStyle.frosted) ...[
+          _SliderRow(
+            label: l10n.messageStyleSettingsPageBlur,
+            valueText: resolved.blurSigma.round().toString(),
+            child: _ThemedSlider(
+              value: resolved.blurSigma,
+              min: 0,
+              max: 30,
+              stepSize: 1,
+              onChanged: (v) => settings.setChatBubbleStyleOverrides(
+                overrides.copyWith(blurSigma: () => v),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            child: Text(
+              l10n.messageStyleSettingsPageBlurHint,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: cs.onSurface.withValues(alpha: 0.58),
+              ),
+            ),
+          ),
+          _iosDivider(context, indent: 14),
+        ],
+        _ColorRow(
+          label: l10n.messageStyleSettingsPageBackgroundColor,
+          color: resolved.background.withValues(alpha: 1),
+          onTap: () => _pickColor(
+            context,
+            title: l10n.messageStyleSettingsPageBackgroundColor,
+            initial: resolved.background.withValues(alpha: 1),
+            onPicked: (color) {
+              final argb = _opaqueArgb(color);
+              settings.setChatBubbleStyleOverrides(
+                editingDark
+                    ? overrides.copyWith(backgroundArgbDark: () => argb)
+                    : overrides.copyWith(backgroundArgbLight: () => argb),
+              );
+            },
+          ),
+        ),
+        _iosDivider(context, indent: 14),
+        _SliderRow(
+          label: l10n.messageStyleSettingsPageBackgroundOpacity,
+          valueText: '${((_styleOpacity(style, overrides) * 100).round())}%',
+          child: _ThemedSlider(
+            value: _styleOpacity(style, overrides) * 100,
+            min: 0,
+            max: 100,
+            stepSize: 1,
+            onChanged: (v) {
+              final opacity = (v / 100).clamp(0.0, 1.0);
+              settings.setChatBubbleStyleOverrides(
+                style == ChatMessageBackgroundStyle.frosted
+                    ? overrides.copyWith(frostedOpacity: () => opacity)
+                    : overrides.copyWith(solidOpacity: () => opacity),
+              );
+            },
+          ),
+        ),
+        _iosDivider(context, indent: 14),
+        _ColorRow(
+          label: l10n.messageStyleSettingsPageBorderColor,
+          color: resolved.border.withValues(alpha: 1),
+          onTap: () => _pickColor(
+            context,
+            title: l10n.messageStyleSettingsPageBorderColor,
+            initial: resolved.border.withValues(alpha: 1),
+            onPicked: (color) {
+              final argb = _opaqueArgb(color);
+              settings.setChatBubbleStyleOverrides(
+                editingDark
+                    ? overrides.copyWith(borderArgbDark: () => argb)
+                    : overrides.copyWith(borderArgbLight: () => argb),
+              );
+            },
+          ),
+        ),
+        _iosDivider(context, indent: 14),
+        _SliderRow(
+          label: l10n.messageStyleSettingsPageBorderOpacity,
+          valueText: '${((resolved.border.a * 100).round())}%',
+          child: _ThemedSlider(
+            value: resolved.border.a * 100,
+            min: 0,
+            max: 100,
+            stepSize: 1,
+            onChanged: (v) => settings.setChatBubbleStyleOverrides(
+              overrides.copyWith(
+                borderOpacity: () => (v / 100).clamp(0.0, 1.0),
+              ),
+            ),
+          ),
+        ),
+        _iosDivider(context, indent: 14),
+        _SliderRow(
+          label: l10n.messageStyleSettingsPageBorderWidth,
+          valueText: resolved.borderWidth.toStringAsFixed(1),
+          child: _ThemedSlider(
+            value: resolved.borderWidth,
+            min: 0,
+            max: 3,
+            stepSize: 0.1,
+            onChanged: (v) => settings.setChatBubbleStyleOverrides(
+              overrides.copyWith(borderWidth: () => v),
+            ),
+          ),
+        ),
+        _iosDivider(context, indent: 14),
+        _ColorRow(
+          label: l10n.messageStyleSettingsPageTextColor,
+          color: resolved.text.withValues(alpha: 1),
+          onTap: () => _pickColor(
+            context,
+            title: l10n.messageStyleSettingsPageTextColor,
+            initial: resolved.text.withValues(alpha: 1),
+            onPicked: (color) {
+              final argb = _opaqueArgb(color);
+              settings.setChatBubbleStyleOverrides(
+                editingDark
+                    ? overrides.copyWith(textArgbDark: () => argb)
+                    : overrides.copyWith(textArgbLight: () => argb),
+              );
+            },
+          ),
+        ),
+        _iosDivider(context, indent: 14),
+        _SliderRow(
+          label: l10n.messageStyleSettingsPageCornerRadius,
+          valueText: resolved.radius.round().toString(),
+          child: _ThemedSlider(
+            value: resolved.radius,
+            min: 0,
+            max: 28,
+            stepSize: 1,
+            onChanged: (v) => settings.setChatBubbleStyleOverrides(
+              overrides.copyWith(cornerRadius: () => v),
             ),
           ),
         ),
       ],
     );
+
+    return SafeArea(
+      top: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          stylePicker,
+          const SizedBox(height: 12),
+          _PreviewThemeToggle(
+            editingDark: editingDark,
+            onChanged: (value) {
+              if (value == editingDark) return;
+              Haptics.soft();
+              setState(() => _editingDark = value);
+            },
+          ),
+          const SizedBox(height: 12),
+          preview,
+          if (isDefault)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: Text(
+                l10n.messageStyleSettingsPageDefaultHint,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: cs.onSurface.withValues(alpha: 0.56),
+                ),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 12),
+            params,
+          ],
+        ],
+      ),
+    );
+  }
+
+  (ThemeData, ThemeData) _previewThemes(BuildContext context) {
+    final current = Theme.of(context);
+    final settings = context.read<SettingsProvider>();
+    final custom = settings.selectedCustomTheme;
+    final key =
+        '${current.brightness.name}|${settings.themePaletteId}|${custom?.id}|${settings.usePureBackground}';
+    if (_cachedLightTheme != null &&
+        _cachedDarkTheme != null &&
+        _previewThemeKey == key) {
+      return (_cachedLightTheme!, _cachedDarkTheme!);
+    }
+
+    final palette =
+        settings.themePaletteId == ThemePalettes.customPaletteId &&
+            custom != null
+        ? buildCustomThemePalette(custom)
+        : ThemePalettes.byId(settings.themePaletteId);
+    final light = current.brightness == Brightness.light
+        ? current
+        : buildLightThemeForScheme(
+            palette.light,
+            pureBackground: settings.usePureBackground,
+          );
+    final dark = current.brightness == Brightness.dark
+        ? current
+        : buildDarkThemeForScheme(
+            palette.dark,
+            pureBackground: settings.usePureBackground,
+          );
+    _cachedLightTheme = light;
+    _cachedDarkTheme = dark;
+    _previewThemeKey = key;
+    return (light, dark);
   }
 
   Future<void> _pickColor(
@@ -361,28 +413,6 @@ class _MessageStyleSettingsBodyState extends State<MessageStyleSettingsBody> {
     if (!mounted || result == null) return;
     onPicked(result);
   }
-}
-
-ThemeData _previewTheme(BuildContext context, bool editingDark) {
-  final current = Theme.of(context);
-  if ((current.brightness == Brightness.dark) == editingDark) {
-    return current;
-  }
-  final settings = context.read<SettingsProvider>();
-  final custom = settings.selectedCustomTheme;
-  final palette =
-      settings.themePaletteId == ThemePalettes.customPaletteId && custom != null
-      ? buildCustomThemePalette(custom)
-      : ThemePalettes.byId(settings.themePaletteId);
-  return editingDark
-      ? buildDarkThemeForScheme(
-          palette.dark,
-          pureBackground: settings.usePureBackground,
-        )
-      : buildLightThemeForScheme(
-          palette.light,
-          pureBackground: settings.usePureBackground,
-        );
 }
 
 double _styleOpacity(
@@ -481,12 +511,16 @@ Future<bool> _confirmReset(BuildContext context) async {
 
 class _StyleRow extends StatelessWidget {
   const _StyleRow({
+    required this.style,
     required this.label,
+    required this.subtitle,
     required this.selected,
     required this.onTap,
   });
 
+  final ChatMessageBackgroundStyle style;
   final String label;
+  final String subtitle;
   final bool selected;
   final VoidCallback onTap;
 
@@ -499,16 +533,32 @@ class _StyleRow extends StatelessWidget {
       padding: EdgeInsets.zero,
       baseColor: Colors.transparent,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
+            _StyleSwatch(style: style),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: cs.onSurface.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.25,
+                      color: cs.onSurface.withValues(alpha: 0.52),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (selected)
@@ -522,8 +572,45 @@ class _StyleRow extends StatelessWidget {
   }
 }
 
-class _LightDarkToggle extends StatelessWidget {
-  const _LightDarkToggle({required this.editingDark, required this.onChanged});
+class _StyleSwatch extends StatelessWidget {
+  const _StyleSwatch({required this.style});
+
+  final ChatMessageBackgroundStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color fill;
+    final Color border;
+    switch (style) {
+      case ChatMessageBackgroundStyle.defaultStyle:
+        fill = cs.primary.withValues(alpha: isDark ? 0.22 : 0.14);
+        border = cs.primary.withValues(alpha: 0.18);
+      case ChatMessageBackgroundStyle.frosted:
+        fill = cs.surfaceContainerHigh.withValues(alpha: 0.62);
+        border = cs.outlineVariant.withValues(alpha: 0.42);
+      case ChatMessageBackgroundStyle.solid:
+        fill = cs.surfaceContainerHigh;
+        border = cs.outlineVariant.withValues(alpha: 0.55);
+    }
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border, width: 0.8),
+      ),
+    );
+  }
+}
+
+class _PreviewThemeToggle extends StatelessWidget {
+  const _PreviewThemeToggle({
+    required this.editingDark,
+    required this.onChanged,
+  });
 
   final bool editingDark;
   final ValueChanged<bool> onChanged;
@@ -533,7 +620,7 @@ class _LightDarkToggle extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: context.appColors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
@@ -542,33 +629,70 @@ class _LightDarkToggle extends StatelessWidget {
           width: 0.6,
         ),
       ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          Expanded(
-            child: _Segment(
-              label: l10n.messageStyleSettingsPageLight,
-              icon: Lucide.Sun,
-              selected: !editingDark,
-              onTap: () => onChanged(false),
-            ),
+      child: SizedBox(
+        height: 40,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Stack(
+            children: [
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: editingDark
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: 0.5,
+                  heightFactor: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white12 : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: isDark
+                          ? const []
+                          : [
+                              BoxShadow(
+                                color: cs.shadow.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _PreviewThemeHit(
+                      label: l10n.messageStyleSettingsPageLight,
+                      icon: Lucide.Sun,
+                      selected: !editingDark,
+                      onTap: () => onChanged(false),
+                    ),
+                  ),
+                  Expanded(
+                    child: _PreviewThemeHit(
+                      label: l10n.messageStyleSettingsPageDark,
+                      icon: Lucide.Moon,
+                      selected: editingDark,
+                      onTap: () => onChanged(true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          Expanded(
-            child: _Segment(
-              label: l10n.messageStyleSettingsPageDark,
-              icon: Lucide.Moon,
-              selected: editingDark,
-              onTap: () => onChanged(true),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _Segment extends StatelessWidget {
-  const _Segment({
+class _PreviewThemeHit extends StatelessWidget {
+  const _PreviewThemeHit({
     required this.label,
     required this.icon,
     required this.selected,
@@ -583,36 +707,42 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return IosCardPress(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(9),
-      baseColor: selected
-          ? (isDark ? Colors.white10 : Colors.white)
-          : Colors.transparent,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: selected ? cs.primary : cs.onSurface.withValues(alpha: 0.62),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: selected
-                  ? AppFontWeights.semibold
-                  : AppFontWeights.regular,
-              color: selected
-                  ? cs.onSurface
-                  : cs.onSurface.withValues(alpha: 0.62),
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Icon(
+                icon,
+                size: 16,
+                color: selected
+                    ? cs.primary
+                    : cs.onSurface.withValues(alpha: 0.52),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.1,
+                fontWeight: selected
+                    ? AppFontWeights.semibold
+                    : AppFontWeights.regular,
+                color: selected
+                    ? cs.onSurface
+                    : cs.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -792,141 +922,154 @@ class _ThemedSlider extends StatelessWidget {
 class _PreviewPanel extends StatelessWidget {
   const _PreviewPanel({
     required this.theme,
+    required this.editingDark,
     required this.style,
     required this.overrides,
   });
 
   final ThemeData theme;
+  final bool editingDark;
   final ChatMessageBackgroundStyle style;
   final ChatBubbleStyleOverrides overrides;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        height: 232,
-        child: Theme(
-          data: theme,
-          child: Builder(
-            builder: (context) {
-              final cs = Theme.of(context).colorScheme;
-              final l10n = AppLocalizations.of(context)!;
-              final resolved = resolveBubbleStyle(
-                cs,
-                Theme.of(context).brightness,
-                style,
-                overrides,
-              );
-              return Stack(
-                children: [
-                  Positioned.fill(child: ColoredBox(color: cs.surface)),
-                  const MobileBackgroundLayer(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 240),
-                            child: _PreviewSurface(
-                              style: style,
-                              resolved: resolved,
-                              defaultColor:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? cs.primary.withValues(alpha: 0.15)
-                                  : cs.primary.withValues(alpha: 0.08),
-                              padding: const EdgeInsets.all(12),
-                              child: Text(
-                                l10n.messageStyleSettingsPagePreviewUser,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
-                                  color:
-                                      style ==
-                                          ChatMessageBackgroundStyle
-                                              .defaultStyle
-                                      ? cs.onSurface
-                                      : resolved.text,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _PreviewSurface(
-                          style: style,
-                          resolved: resolved,
-                          defaultColor: cs.primaryContainer.withValues(
-                            alpha:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? 0.25
-                                : 0.30,
-                          ),
-                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                          child: Row(
-                            children: [
-                              ReasoningIcons.thinkingCardIcon(
-                                size: 16,
-                                color: _previewStrong(context, resolved),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  l10n.messageStyleSettingsPagePreviewThinking,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: AppFontWeights.emphasis,
-                                    color: _previewStrong(context, resolved),
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Lucide.ChevronRight,
-                                size: 16,
-                                color: _previewStrong(context, resolved),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 260),
-                            child: _PreviewSurface(
-                              style: style,
-                              resolved: resolved,
-                              bareOnDefault: true,
-                              padding: const EdgeInsets.all(12),
-                              child: Text(
-                                l10n.messageStyleSettingsPagePreviewAssistant,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  height: 1.45,
-                                  color:
-                                      style ==
-                                          ChatMessageBackgroundStyle
-                                              .defaultStyle
-                                      ? cs.onSurface
-                                      : resolved.text,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.10),
+          width: 0.6,
         ),
       ),
+      child: SizedBox(
+        height: 220,
+        child: Theme(
+          key: ValueKey<bool>(editingDark),
+          data: theme,
+          child: _PreviewScene(style: style, overrides: overrides),
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewScene extends StatelessWidget {
+  const _PreviewScene({required this.style, required this.overrides});
+
+  final ChatMessageBackgroundStyle style;
+  final ChatBubbleStyleOverrides overrides;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final resolved = resolveBubbleStyle(
+      cs,
+      Theme.of(context).brightness,
+      style,
+      overrides,
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(child: ColoredBox(color: cs.surface)),
+        const MobileBackgroundLayer(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  child: _PreviewSurface(
+                    style: style,
+                    resolved: resolved,
+                    defaultColor:
+                        Theme.of(context).brightness == Brightness.dark
+                        ? cs.primary.withValues(alpha: 0.15)
+                        : cs.primary.withValues(alpha: 0.08),
+                    padding: const EdgeInsets.all(11),
+                    child: Text(
+                      l10n.messageStyleSettingsPagePreviewUser,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.35,
+                        color: style == ChatMessageBackgroundStyle.defaultStyle
+                            ? cs.onSurface
+                            : resolved.text,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              _PreviewSurface(
+                style: style,
+                resolved: resolved,
+                defaultColor: cs.primaryContainer.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.25
+                      : 0.30,
+                ),
+                padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                child: Row(
+                  children: [
+                    ReasoningIcons.thinkingCardIcon(
+                      size: 16,
+                      color: _previewStrong(context, resolved),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.messageStyleSettingsPagePreviewThinking,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: AppFontWeights.emphasis,
+                          color: _previewStrong(context, resolved),
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Lucide.ChevronRight,
+                      size: 16,
+                      color: _previewStrong(context, resolved),
+                    ),
+                  ],
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  child: _PreviewSurface(
+                    style: style,
+                    resolved: resolved,
+                    bareOnDefault: true,
+                    padding: const EdgeInsets.all(11),
+                    child: Text(
+                      l10n.messageStyleSettingsPagePreviewAssistant,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: style == ChatMessageBackgroundStyle.defaultStyle
+                            ? cs.onSurface
+                            : resolved.text,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

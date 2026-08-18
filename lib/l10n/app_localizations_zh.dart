@@ -7265,6 +7265,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messageStyleSettingsPageDark => '深色';
 
   @override
+  String get messageStyleSettingsPageDefaultHint => '默认样式跟随当前主题，没有可调参数。';
+
+  @override
+  String get messageStyleSettingsPageStyleDefaultSubtitle => '跟随主题，不可调节';
+
+  @override
+  String get messageStyleSettingsPageStyleFrostedSubtitle => '半透明毛玻璃';
+
+  @override
+  String get messageStyleSettingsPageStyleSolidSubtitle => '不透明纯色底';
+
+  @override
   String get messageStyleSettingsPageBlur => '模糊强度';
 
   @override
@@ -14486,6 +14498,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get messageStyleSettingsPageDark => '深色';
+
+  @override
+  String get messageStyleSettingsPageDefaultHint => '默认样式跟随当前主题，没有可调参数。';
+
+  @override
+  String get messageStyleSettingsPageStyleDefaultSubtitle => '跟随主题，不可调节';
+
+  @override
+  String get messageStyleSettingsPageStyleFrostedSubtitle => '半透明毛玻璃';
+
+  @override
+  String get messageStyleSettingsPageStyleSolidSubtitle => '不透明纯色底';
 
   @override
   String get messageStyleSettingsPageBlur => '模糊强度';
@@ -21783,6 +21807,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get messageStyleSettingsPageDark => '深色';
+
+  @override
+  String get messageStyleSettingsPageDefaultHint => '預設樣式跟隨目前主題，沒有可調參數。';
+
+  @override
+  String get messageStyleSettingsPageStyleDefaultSubtitle => '跟隨主題，不可調節';
+
+  @override
+  String get messageStyleSettingsPageStyleFrostedSubtitle => '半透明毛玻璃';
+
+  @override
+  String get messageStyleSettingsPageStyleSolidSubtitle => '不透明純色底';
 
   @override
   String get messageStyleSettingsPageBlur => '模糊強度';

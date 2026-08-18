@@ -13813,6 +13813,30 @@ abstract class AppLocalizations {
   /// **'Dark'**
   String get messageStyleSettingsPageDark;
 
+  /// No description provided for @messageStyleSettingsPageDefaultHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Default style follows the current theme and has no extra controls.'**
+  String get messageStyleSettingsPageDefaultHint;
+
+  /// No description provided for @messageStyleSettingsPageStyleDefaultSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follows the theme; not customizable'**
+  String get messageStyleSettingsPageStyleDefaultSubtitle;
+
+  /// No description provided for @messageStyleSettingsPageStyleFrostedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translucent frosted glass'**
+  String get messageStyleSettingsPageStyleFrostedSubtitle;
+
+  /// No description provided for @messageStyleSettingsPageStyleSolidSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opaque solid fill'**
+  String get messageStyleSettingsPageStyleSolidSubtitle;
+
   /// No description provided for @messageStyleSettingsPageBlur.
   ///
   /// In en, this message translates to:
