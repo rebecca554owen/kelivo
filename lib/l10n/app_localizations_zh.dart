@@ -5980,6 +5980,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryPromptEditDistillSubtitle => '从身份类记忆提炼画像字段';
 
   @override
+  String get memoryPromptEditMigrateTitle => '旧版记忆迁移';
+
+  @override
+  String get memoryPromptEditMigrateSubtitle => '选择「模型整理」时用于改写记忆原文';
+
+  @override
   String get memoryPromptEditReset => '恢复默认';
 
   @override
@@ -6374,6 +6380,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get legacyMemoryMigrationClose => '完成';
+
+  @override
+  String get legacyMemoryMigrationContentMode => '内容处理';
+
+  @override
+  String get legacyMemoryMigrationContentPreserve => '保留原文';
+
+  @override
+  String get legacyMemoryMigrationContentOrganize => '模型整理';
+
+  @override
+  String get legacyMemoryMigrationContentPreserveDescription =>
+      '模型只负责分类，写入时保留旧记忆原文。';
+
+  @override
+  String get legacyMemoryMigrationContentOrganizeDescription =>
+      '模型会分类并改写内容，使用可编辑的迁移提示词。';
+
+  @override
+  String get legacyMemoryMigrationBatchSize => '批大小';
+
+  @override
+  String legacyMemoryMigrationPartial(int created, int skipped, int failed) {
+    return '已迁移 $created · 跳过 $skipped · 失败 $failed';
+  }
+
+  @override
+  String get legacyMemoryMigrationContinue => '继续迁移';
+
+  @override
+  String get legacyMemoryMigrationErrorNetwork => '网络异常，请检查连接后重试。';
+
+  @override
+  String get legacyMemoryMigrationErrorFormat => '模型返回格式不正确。';
+
+  @override
+  String get legacyMemoryMigrationErrorAuth => '鉴权失败，请检查 API 密钥。';
+
+  @override
+  String legacyMemoryMigrationErrorOther(String message) {
+    return '迁移失败：$message';
+  }
 
   @override
   String get legacyMemoryModeTitle => '使用旧版记忆';
@@ -13203,6 +13251,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memoryPromptEditDistillSubtitle => '从身份类记忆提炼画像字段';
 
   @override
+  String get memoryPromptEditMigrateTitle => '旧版记忆迁移';
+
+  @override
+  String get memoryPromptEditMigrateSubtitle => '选择「模型整理」时用于改写记忆原文';
+
+  @override
   String get memoryPromptEditReset => '恢复默认';
 
   @override
@@ -13597,6 +13651,48 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get legacyMemoryMigrationClose => '完成';
+
+  @override
+  String get legacyMemoryMigrationContentMode => '内容处理';
+
+  @override
+  String get legacyMemoryMigrationContentPreserve => '保留原文';
+
+  @override
+  String get legacyMemoryMigrationContentOrganize => '模型整理';
+
+  @override
+  String get legacyMemoryMigrationContentPreserveDescription =>
+      '模型只负责分类，写入时保留旧记忆原文。';
+
+  @override
+  String get legacyMemoryMigrationContentOrganizeDescription =>
+      '模型会分类并改写内容，使用可编辑的迁移提示词。';
+
+  @override
+  String get legacyMemoryMigrationBatchSize => '批大小';
+
+  @override
+  String legacyMemoryMigrationPartial(int created, int skipped, int failed) {
+    return '已迁移 $created · 跳过 $skipped · 失败 $failed';
+  }
+
+  @override
+  String get legacyMemoryMigrationContinue => '继续迁移';
+
+  @override
+  String get legacyMemoryMigrationErrorNetwork => '网络异常，请检查连接后重试。';
+
+  @override
+  String get legacyMemoryMigrationErrorFormat => '模型返回格式不正确。';
+
+  @override
+  String get legacyMemoryMigrationErrorAuth => '鉴权失败，请检查 API 密钥。';
+
+  @override
+  String legacyMemoryMigrationErrorOther(String message) {
+    return '迁移失败：$message';
+  }
 
   @override
   String get legacyMemoryModeTitle => '使用旧版记忆';
@@ -20500,6 +20596,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memoryPromptEditDistillSubtitle => '從身分類記憶提煉畫像欄位';
 
   @override
+  String get memoryPromptEditMigrateTitle => '舊版記憶遷移';
+
+  @override
+  String get memoryPromptEditMigrateSubtitle => '選擇「模型整理」時用於改寫記憶原文';
+
+  @override
   String get memoryPromptEditReset => '恢復預設';
 
   @override
@@ -20894,6 +20996,48 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get legacyMemoryMigrationClose => '完成';
+
+  @override
+  String get legacyMemoryMigrationContentMode => '內容處理';
+
+  @override
+  String get legacyMemoryMigrationContentPreserve => '保留原文';
+
+  @override
+  String get legacyMemoryMigrationContentOrganize => '模型整理';
+
+  @override
+  String get legacyMemoryMigrationContentPreserveDescription =>
+      '模型只負責分類，寫入時保留舊記憶原文。';
+
+  @override
+  String get legacyMemoryMigrationContentOrganizeDescription =>
+      '模型會分類並改寫內容，使用可編輯的遷移提示詞。';
+
+  @override
+  String get legacyMemoryMigrationBatchSize => '批大小';
+
+  @override
+  String legacyMemoryMigrationPartial(int created, int skipped, int failed) {
+    return '已遷移 $created · 略過 $skipped · 失敗 $failed';
+  }
+
+  @override
+  String get legacyMemoryMigrationContinue => '繼續遷移';
+
+  @override
+  String get legacyMemoryMigrationErrorNetwork => '網路異常，請檢查連線後重試。';
+
+  @override
+  String get legacyMemoryMigrationErrorFormat => '模型回傳格式不正確。';
+
+  @override
+  String get legacyMemoryMigrationErrorAuth => '鑑權失敗，請檢查 API 金鑰。';
+
+  @override
+  String legacyMemoryMigrationErrorOther(String message) {
+    return '遷移失敗：$message';
+  }
 
   @override
   String get legacyMemoryModeTitle => '使用舊版記憶';

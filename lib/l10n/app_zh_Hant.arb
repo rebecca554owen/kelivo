@@ -2146,6 +2146,8 @@
   "memoryPromptEditSmartAddSubtitle": "NEW / MERGE / CONFLICT / SKIP 去重判定",
   "memoryPromptEditDistillTitle": "Profile Distiller",
   "memoryPromptEditDistillSubtitle": "從身分類記憶提煉畫像欄位",
+  "memoryPromptEditMigrateTitle": "舊版記憶遷移",
+  "memoryPromptEditMigrateSubtitle": "選擇「模型整理」時用於改寫記憶原文",
   "memoryPromptEditReset": "恢復預設",
   "memoryPromptEditSave": "儲存",
   "memoryPromptEditSectionPerItem": "逐條提示詞",
@@ -2345,6 +2347,30 @@
   "legacyMemoryMigrationFailed": "遷移已停止。可以重試，已儲存的記憶會自動略過。",
   "legacyMemoryMigrationRetry": "重試",
   "legacyMemoryMigrationClose": "完成",
+  "legacyMemoryMigrationContentMode": "內容處理",
+  "legacyMemoryMigrationContentPreserve": "保留原文",
+  "legacyMemoryMigrationContentOrganize": "模型整理",
+  "legacyMemoryMigrationContentPreserveDescription": "模型只負責分類，寫入時保留舊記憶原文。",
+  "legacyMemoryMigrationContentOrganizeDescription": "模型會分類並改寫內容，使用可編輯的遷移提示詞。",
+  "legacyMemoryMigrationBatchSize": "批大小",
+  "legacyMemoryMigrationPartial": "已遷移 {created} · 略過 {skipped} · 失敗 {failed}",
+  "@legacyMemoryMigrationPartial": {
+    "placeholders": {
+      "created": {"type": "int"},
+      "skipped": {"type": "int"},
+      "failed": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationContinue": "繼續遷移",
+  "legacyMemoryMigrationErrorNetwork": "網路異常，請檢查連線後重試。",
+  "legacyMemoryMigrationErrorFormat": "模型回傳格式不正確。",
+  "legacyMemoryMigrationErrorAuth": "鑑權失敗，請檢查 API 金鑰。",
+  "legacyMemoryMigrationErrorOther": "遷移失敗：{message}",
+  "@legacyMemoryMigrationErrorOther": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
   "legacyMemoryModeTitle": "使用舊版記憶",
   "legacyMemoryModeSubtitle": "全域設定，影響所有助手。兩套資料各自保留，可隨時切回。舊版記憶僅按助手隔離，沒有全域記憶、使用者畫像、背景整理、記憶追蹤和歷史對話搜尋。",
   "legacyMemoryModeCacheWarning": "舊版會把全部記憶內容與目前時間寫進系統提示詞，每輪都在變，無法命中 prompt cache，長對話成本更高。",

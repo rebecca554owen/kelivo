@@ -11449,6 +11449,18 @@ abstract class AppLocalizations {
   /// **'Distills identity memories into profile fields'**
   String get memoryPromptEditDistillSubtitle;
 
+  /// No description provided for @memoryPromptEditMigrateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy migration'**
+  String get memoryPromptEditMigrateTitle;
+
+  /// No description provided for @memoryPromptEditMigrateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Used when migration rewrites memory wording'**
+  String get memoryPromptEditMigrateSubtitle;
+
   /// No description provided for @memoryPromptEditReset.
   ///
   /// In en, this message translates to:
@@ -12180,6 +12192,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get legacyMemoryMigrationClose;
+
+  /// No description provided for @legacyMemoryMigrationContentMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get legacyMemoryMigrationContentMode;
+
+  /// No description provided for @legacyMemoryMigrationContentPreserve.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep original'**
+  String get legacyMemoryMigrationContentPreserve;
+
+  /// No description provided for @legacyMemoryMigrationContentOrganize.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite with model'**
+  String get legacyMemoryMigrationContentOrganize;
+
+  /// No description provided for @legacyMemoryMigrationContentPreserveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The model only assigns a type. The original wording is saved as-is.'**
+  String get legacyMemoryMigrationContentPreserveDescription;
+
+  /// No description provided for @legacyMemoryMigrationContentOrganizeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The model classifies and rewrites each memory using the editable migrate prompt.'**
+  String get legacyMemoryMigrationContentOrganizeDescription;
+
+  /// No description provided for @legacyMemoryMigrationBatchSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch size'**
+  String get legacyMemoryMigrationBatchSize;
+
+  /// No description provided for @legacyMemoryMigrationPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'{created} migrated · {skipped} skipped · {failed} failed'**
+  String legacyMemoryMigrationPartial(int created, int skipped, int failed);
+
+  /// No description provided for @legacyMemoryMigrationContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue migration'**
+  String get legacyMemoryMigrationContinue;
+
+  /// No description provided for @legacyMemoryMigrationErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error. Check the connection and try again.'**
+  String get legacyMemoryMigrationErrorNetwork;
+
+  /// No description provided for @legacyMemoryMigrationErrorFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'The model returned an invalid response.'**
+  String get legacyMemoryMigrationErrorFormat;
+
+  /// No description provided for @legacyMemoryMigrationErrorAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Check the API key.'**
+  String get legacyMemoryMigrationErrorAuth;
+
+  /// No description provided for @legacyMemoryMigrationErrorOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Migration failed: {message}'**
+  String legacyMemoryMigrationErrorOther(String message);
 
   /// No description provided for @legacyMemoryModeTitle.
   ///
