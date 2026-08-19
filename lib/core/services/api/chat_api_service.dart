@@ -20,6 +20,7 @@ import 'providers/openai_chat_completions.dart';
 import 'providers/openai/openai_vendor_compat.dart';
 import 'providers/openai_images.dart';
 import 'providers/openai_responses.dart';
+import 'providers/zhipu_layout_parsing.dart';
 
 export 'chat_api_helpers.dart' show ToolCallHandler;
 export 'generation/text_generation_result.dart';
@@ -170,10 +171,12 @@ class ChatApiService {
         kind == ProviderKind.openai &&
         allowImagesApiRouting &&
         shouldUseOpenAIImagesApi(config, modelId);
+    final useZhipuLayoutParsing = shouldUseZhipuLayoutParsing(config, modelId);
     final unicodeSafeMessages = _sanitizeMessages(messages);
     final stripUnsupportedImageInputs =
         !ocrActive &&
         !useOpenAIImagesApi &&
+        !useZhipuLayoutParsing &&
         !_supportsImageInput(config, modelId);
     final safeMessages = stripUnsupportedImageInputs
         ? await _stripImageInputsFromMessages(unicodeSafeMessages)
@@ -184,7 +187,16 @@ class ChatApiService {
     final client = _clientFor(config, cancelToken);
 
     try {
-      if (kind == ProviderKind.openai) {
+      if (useZhipuLayoutParsing) {
+        yield* sendZhipuLayoutParsingStream(
+          client,
+          config,
+          modelId,
+          safeMessages,
+          userImagePaths: safeUserImagePaths,
+          extraHeaders: extraHeaders,
+        );
+      } else if (kind == ProviderKind.openai) {
         if (useOpenAIImagesApi) {
           yield* sendOpenAIImagesStream(
             client,

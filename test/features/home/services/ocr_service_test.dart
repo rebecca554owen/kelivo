@@ -310,4 +310,19 @@ void main() {
       expect(service.getCachedOcrText('h3'), 'three');
     });
   });
+
+  group('OcrService request messages', () {
+    test('includes a system message when the OCR prompt is set', () {
+      expect(OcrService.buildOcrRequestMessages('Read the image.'), [
+        {'role': 'system', 'content': 'Read the image.'},
+        {'role': 'user', 'content': OcrService.defaultOcrUserPrompt},
+      ]);
+    });
+
+    test('omits the system message when the OCR prompt is empty', () {
+      expect(OcrService.buildOcrRequestMessages('   '), [
+        {'role': 'user', 'content': OcrService.defaultOcrUserPrompt},
+      ]);
+    });
+  });
 }

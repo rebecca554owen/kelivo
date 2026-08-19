@@ -823,11 +823,9 @@ class SettingsProvider extends ChangeNotifier {
         _ocrModelId = parts.sublist(1).join('::');
       }
     }
-    // load OCR prompt
+    // load OCR prompt (null = default; empty string is an explicit clear)
     final ocrp = prefs.getString(_ocrPromptKey);
-    _ocrPrompt = (ocrp == null || ocrp.trim().isEmpty)
-        ? defaultOcrPrompt
-        : ocrp;
+    _ocrPrompt = ocrp ?? defaultOcrPrompt;
     // load OCR enabled (only effective when model is configured)
     _ocrEnabled = prefs.getBool(_ocrEnabledKey) ?? false;
     if (_ocrModelProvider == null || _ocrModelId == null) {
@@ -3407,7 +3405,7 @@ Do not interpret or translate—only transcribe and describe what is visually pr
   }
 
   Future<void> setOcrPrompt(String prompt) async {
-    _ocrPrompt = prompt.trim().isEmpty ? defaultOcrPrompt : prompt;
+    _ocrPrompt = prompt.trim();
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_ocrPromptKey, _ocrPrompt);
