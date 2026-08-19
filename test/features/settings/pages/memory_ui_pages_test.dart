@@ -526,4 +526,73 @@ void main() {
     expect(text, contains('- One'));
     expect(text, contains('- Two'));
   });
+
+  testWidgets('edit form renders type and scope chips', (tester) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness();
+    final entry = await h.memoryV2.create(
+      scope: MemoryScope.global,
+      type: MemoryType.identity,
+      content: 'Original fact',
+      source: MemorySource.manual,
+    );
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(
+      _wrap(h, MemoryEntryEditForm(title: 'Edit memory', existing: entry)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Identity'), findsOneWidget);
+    expect(find.text('Workflow'), findsOneWidget);
+    expect(find.text('Voice'), findsOneWidget);
+    expect(find.text('Instruction'), findsOneWidget);
+    expect(find.text('Global'), findsWidgets);
+    expect(find.text('This assistant'), findsOneWidget);
+  });
+
+  testWidgets('edit form content-only save does not confirm scope', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness();
+    final entry = await h.memoryV2.create(
+      scope: MemoryScope.global,
+      type: MemoryType.identity,
+      content: 'Original fact',
+      source: MemorySource.manual,
+    );
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(
+      _wrap(h, MemoryEntryEditForm(title: 'Edit memory', existing: entry)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MemoryEntryEditForm),
+        matching: find.byType(TextField),
+      ),
+      'Updated fact',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change memory scope?'), findsNothing);
+    expect(tester.takeException(), isNull);
+    final saved = h.memoryV2.entries.singleWhere((e) => e.id == entry.id);
+    expect(saved.content, 'Updated fact');
+    expect(saved.type, MemoryType.identity);
+    expect(saved.scope, MemoryScope.global);
+  });
 }

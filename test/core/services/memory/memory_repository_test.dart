@@ -293,6 +293,31 @@ void main() {
       );
     });
 
+    test('updateType round-trips and refreshes updatedAt', () async {
+      final created = await memoryRepository.create(
+        scope: MemoryScope.global,
+        type: MemoryType.workflow,
+        content: 'Typed content',
+        source: MemorySource.extracted,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      final updated = await memoryRepository.updateType(
+        created.id,
+        MemoryType.voice,
+      );
+      expect(updated, isNotNull);
+      expect(updated!.type, MemoryType.voice);
+      expect(updated.content, 'Typed content');
+      expect(updated.scope, MemoryScope.global);
+      expect(
+        updated.updatedAt.microsecondsSinceEpoch,
+        greaterThan(created.updatedAt.microsecondsSinceEpoch),
+      );
+      final loaded = (await chatRepository.memoriesByIds([created.id])).single;
+      expect(loaded.type, MemoryType.voice);
+      expect(loaded.content, 'Typed content');
+    });
+
     test('restore flips archived to active', () async {
       final entry = await memoryRepository.create(
         scope: MemoryScope.global,
