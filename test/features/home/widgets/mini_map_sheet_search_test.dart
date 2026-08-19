@@ -141,6 +141,38 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
+  testWidgets('drops in-flight results after the query changes', (
+    tester,
+  ) async {
+    final first = Completer<List<MiniMapSearchHit>>();
+    await pumpSheet(
+      tester,
+      onSearch: (query) {
+        if (query == 'alpha') return first.future;
+        return Future.value(const <MiniMapSearchHit>[]);
+      },
+    );
+    await openSearch(tester);
+
+    await tester.enterText(find.byType(TextField), 'alpha');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'beta');
+    await tester.pump();
+
+    first.complete([
+      const MiniMapSearchHit(
+        messageId: 'asst-1',
+        matchCount: 1,
+        snippet: 'stale-snippet-token',
+        snippetStart: 0,
+      ),
+    ]);
+    await tester.pump();
+    expect(find.text('stale-snippet-token', findRichText: true), findsNothing);
+  });
+
   testWidgets('renders snippet and match count from onSearch hits', (
     tester,
   ) async {

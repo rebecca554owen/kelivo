@@ -152,6 +152,7 @@ class _MiniMapSheetState extends State<_MiniMapSheet>
       });
       return;
     }
+    _searchSerial++;
     setState(() => _query = value);
     _searchDebounce = Timer(const Duration(milliseconds: 250), () {
       unawaited(_runSearch(trimmed));
@@ -161,7 +162,7 @@ class _MiniMapSheetState extends State<_MiniMapSheet>
   Future<void> _runSearch(String needle) async {
     final onSearch = widget.onSearch;
     if (onSearch == null) return;
-    final serial = ++_searchSerial;
+    final serial = _searchSerial;
     if (mounted) {
       setState(() => _searchLoading = true);
     }
