@@ -517,7 +517,15 @@ class ChatboxBackupArchive {
   static int _compressedLength(ArchiveFile entry) {
     final raw = entry.rawContent;
     if (raw == null) return 0;
-    if (raw.isCompressed) return raw.length;
+    // ZipFile.length calls getRawContent()/toUint8List() and would load the
+    // whole compressed entry. Prefer the central-directory size, then the
+    // undecoded stream length (InputFileStream.length is remaining bytes).
+    if (raw is ZipFile && raw.compressedSize > 0) {
+      return raw.compressedSize;
+    }
+    if (raw.isCompressed) {
+      return raw.getStream(decompress: false).length;
+    }
     return entry.size;
   }
 

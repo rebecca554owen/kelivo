@@ -246,6 +246,38 @@ void main() {
     expect(ChatboxBackupArchive.isUnsafeCompressionRatio(1000, 0), isFalse);
   });
 
+  test(
+    'file-backed ZIP budget check does not require loading entry bytes',
+    () async {
+      final png = _pngBytes();
+      final zipFile = File('${root.path}/from-disk.zip');
+      await zipFile.writeAsBytes(
+        _encodeChatboxZipV2(
+          settings: _settings(),
+          session: _session(imageStorageKey: 'picture:test'),
+          resources: [
+            _resource(
+              id: 'resource-000001',
+              storageKey: 'picture:test',
+              bytes: png,
+            ),
+          ],
+        ),
+        flush: true,
+      );
+
+      final result = await ChatboxBackupArchive.readZipV2(
+        file: zipFile,
+        stagingDir: Directory('${root.path}/staging-disk'),
+        resourceDestDir: '${root.path}/dest-disk',
+      );
+
+      expect(result.root['session:assistant-1'], isA<Map>());
+      expect(result.stagedResourceFiles, hasLength(1));
+      expect(await result.stagedResourceFiles.single.readAsBytes(), png);
+    },
+  );
+
   test('aborts raw DEFLATE as soon as the byte bound is exceeded', () {
     final compressed = ZLibCodec(raw: true).encode(Uint8List(64 * 1024));
     expect(
