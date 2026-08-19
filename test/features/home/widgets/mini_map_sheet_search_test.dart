@@ -8,6 +8,7 @@ import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/features/home/widgets/mini_map_sheet.dart';
 import 'package:Kelivo/icons/lucide_adapter.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 void main() {
   final messages = [
@@ -261,5 +262,54 @@ void main() {
       find.text('context visible-needle', findRichText: true),
       findsOneWidget,
     );
+  });
+
+  testWidgets('highlights a flattened needle after collapsing snippet spaces', (
+    tester,
+  ) async {
+    await pumpSheet(
+      tester,
+      onSearch: (query) async {
+        return const [
+          MiniMapSearchHit(
+            messageId: 'asst-1',
+            matchCount: 1,
+            snippet: 'prefix foo  bar suffix',
+            snippetStart: 0,
+          ),
+        ];
+      },
+    );
+    await openSearch(tester);
+
+    await tester.enterText(find.byType(TextField), 'foo  bar');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
+
+    expect(
+      find.text('prefix foo bar suffix', findRichText: true),
+      findsOneWidget,
+    );
+
+    final highlight = tester
+        .element(find.byType(TextField))
+        .appColors
+        .searchHighlight;
+    final highlighted = <String>[];
+    for (final rich in tester.widgetList<RichText>(find.byType(RichText))) {
+      final root = rich.text;
+      if (root is! TextSpan) continue;
+      if (root.toPlainText() != 'prefix foo bar suffix') continue;
+      void walk(InlineSpan span) {
+        if (span is! TextSpan) return;
+        if (span.style?.backgroundColor == highlight && span.text != null) {
+          highlighted.add(span.text!);
+        }
+        span.children?.forEach(walk);
+      }
+
+      walk(root);
+    }
+    expect(highlighted, ['foo bar']);
   });
 }

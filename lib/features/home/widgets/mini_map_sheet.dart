@@ -536,9 +536,10 @@ class _MiniMapRow extends StatelessWidget {
   }) {
     if (hit != null) {
       final display = _snippetDisplay(hit);
-      final tokens = searchNeedle.isEmpty
+      final flattenedNeedle = _flattenWhitespace(searchNeedle);
+      final tokens = flattenedNeedle.isEmpty
           ? const <String>[]
-          : <String>[searchNeedle];
+          : <String>[flattenedNeedle];
       final highlight = style.copyWith(
         backgroundColor: context.appColors.searchHighlight,
       );
