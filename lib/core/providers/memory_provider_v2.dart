@@ -169,6 +169,12 @@ class MemoryProviderV2 extends ChangeNotifier {
     return entry;
   }
 
+  Future<MemoryEntry?> updateType(String id, MemoryType type) async {
+    final entry = await repository.updateType(id, type);
+    await _refreshAfterWrite();
+    return entry;
+  }
+
   Future<MemoryEntry?> updateScope(
     String id, {
     required MemoryScope scope,

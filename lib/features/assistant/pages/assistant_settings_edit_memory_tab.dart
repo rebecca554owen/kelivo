@@ -220,7 +220,13 @@ class _MemoryTabState extends State<_MemoryTab> {
     final when = _formatRelative(l10n, lastAt);
     final parts = <String>[l10n.memoryOrganizeStatusLast(when)];
     if (result.error != null && result.error!.isNotEmpty) {
-      parts.add(l10n.memoryOrganizeStatusFailed(result.error!));
+      final code = result.error!;
+      final label = memoryOutcomeLabel(l10n, code);
+      if (MemoryPipelineService.skipReasonCodes.contains(code)) {
+        parts.add(l10n.memoryOrganizeStatusSkippedReason(label));
+      } else {
+        parts.add(l10n.memoryOrganizeStatusFailed(label));
+      }
     } else if (result.gate == MemoryGateParseResult.skip ||
         (result.extractedCount == 0 && result.advanced)) {
       parts.add(l10n.memoryOrganizeStatusSkipped);

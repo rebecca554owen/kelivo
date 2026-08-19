@@ -76,6 +76,47 @@ String memoryScopeLabel(
   return l10n.memoryEntryScopeAssistantNamed(assistantName);
 }
 
+/// Human-readable label for a pipeline / tool outcome code.
+///
+/// Known codes map to l10n strings. Prefixed codes such as
+/// `gate_request_failed:…` match by prefix. Unknown codes are returned as-is.
+String memoryOutcomeLabel(AppLocalizations l10n, String code) {
+  final key = _memoryOutcomeKey(code);
+  return switch (key) {
+    'temporary_conversation' => l10n.memoryOutcomeTemporaryConversation,
+    'memory_disabled' => l10n.memoryOutcomeMemoryDisabled,
+    'auto_organize_off' => l10n.memoryOutcomeAutoOrganizeOff,
+    'streaming' => l10n.memoryOutcomeStreaming,
+    'below_threshold' => l10n.memoryOutcomeBelowThreshold,
+    'empty_window' => l10n.memoryOutcomeEmptyWindow,
+    'memory_model_unset' => l10n.memoryOutcomeMemoryModelUnset,
+    'memory_model_missing' => l10n.memoryOutcomeMemoryModelMissing,
+    'assistant_missing' => l10n.memoryOutcomeAssistantMissing,
+    'conversation_missing' => l10n.memoryOutcomeConversationMissing,
+    'queue_overflow' => l10n.memoryOutcomeQueueOverflow,
+    'gate_request_failed' => l10n.memoryOutcomeGateRequestFailed,
+    'gate_parse_failed' => l10n.memoryOutcomeGateParseFailed,
+    'extract_request_failed' => l10n.memoryOutcomeExtractRequestFailed,
+    'extract_parse_failed' => l10n.memoryOutcomeExtractParseFailed,
+    'distill_failed' => l10n.memoryOutcomeDistillFailed,
+    'memory_execution_error' => l10n.memoryOutcomeMemoryExecutionError,
+    'unsupported_tool' => l10n.memoryOutcomeUnsupportedTool,
+    'invalid_memory_type' => l10n.memoryOutcomeInvalidMemoryType,
+    'invalid_memory_content' => l10n.memoryOutcomeInvalidMemoryContent,
+    'invalid_query' => l10n.memoryOutcomeInvalidQuery,
+    'invalid_memory_id' => l10n.memoryOutcomeInvalidMemoryId,
+    'memory_not_found' => l10n.memoryOutcomeMemoryNotFound,
+    'invalid_profile_fields' => l10n.memoryOutcomeInvalidProfileFields,
+    'chat_search_unavailable' => l10n.memoryOutcomeChatSearchUnavailable,
+    _ => code,
+  };
+}
+
+String _memoryOutcomeKey(String code) {
+  final colon = code.indexOf(':');
+  return colon < 0 ? code : code.substring(0, colon);
+}
+
 Future<bool> confirmHardDeleteMemory(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
   final result = await showDialog<bool>(
@@ -1056,8 +1097,6 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
     super.dispose();
   }
 
-  bool get _isCreate => widget.existing == null;
-
   String? _resolvedAssistantId(List<Assistant> assistants) {
     if (_scope != MemoryScope.assistant) return null;
     final current = _assistantId;
@@ -1074,25 +1113,53 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
     final mp = context.read<MemoryProviderV2>();
     final assistants = context.read<AssistantProvider>().assistants;
     final assistantId = _resolvedAssistantId(assistants);
-    if (_isCreate &&
-        _scope == MemoryScope.assistant &&
+    if (_scope == MemoryScope.assistant &&
         (assistantId == null || assistantId.isEmpty)) {
       return;
     }
     setState(() => _saving = true);
     final existing = widget.existing;
-    if (existing == null) {
-      await mp.create(
-        scope: _scope,
-        assistantId: assistantId,
-        type: _type,
-        content: text,
-        source: MemorySource.manual,
-      );
-    } else {
-      await mp.updateContent(existing.id, text);
+    try {
+      if (existing == null) {
+        await mp.create(
+          scope: _scope,
+          assistantId: assistantId,
+          type: _type,
+          content: text,
+          source: MemorySource.manual,
+        );
+      } else {
+        final scopeChanged =
+            _scope != existing.scope ||
+            (_scope == MemoryScope.assistant &&
+                existing.assistantId != assistantId);
+        if (scopeChanged) {
+          if (!context.mounted) return;
+          final confirmed = await confirmScopeSwitch(
+            context,
+            toGlobal: _scope == MemoryScope.global,
+          );
+          if (!confirmed) return;
+        }
+        if (text != existing.content) {
+          await mp.updateContent(existing.id, text);
+        }
+        if (_type != existing.type) {
+          await mp.updateType(existing.id, _type);
+        }
+        if (scopeChanged) {
+          if (!context.mounted) return;
+          await mp.updateScope(
+            existing.id,
+            scope: _scope,
+            assistantId: assistantId,
+          );
+        }
+      }
+      navigator.maybePop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    navigator.maybePop();
   }
 
   List<Widget> _formFields(AppLocalizations l10n, List<Assistant> assistants) {
@@ -1114,55 +1181,53 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
           ),
         ],
       ),
-      if (_isCreate) ...[
+      const SizedBox(height: 16),
+      MemorySectionLabel(text: l10n.memoryEntryTypeLabel),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final t in MemoryType.values)
+            MemorySelectChip(
+              label: memoryTypeLabel(l10n, t),
+              selected: _type == t,
+              onTap: () => setState(() => _type = t),
+            ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      MemorySectionLabel(text: l10n.memoryEntryScopeLabel),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          MemorySelectChip(
+            label: l10n.memoryEntryScopeGlobal,
+            selected: _scope == MemoryScope.global,
+            onTap: () => setState(() => _scope = MemoryScope.global),
+          ),
+          MemorySelectChip(
+            label: l10n.memoryEntryScopeAssistant,
+            selected: _scope == MemoryScope.assistant,
+            onTap: () => setState(() => _scope = MemoryScope.assistant),
+          ),
+        ],
+      ),
+      if (widget.allowAssistantPicker && _scope == MemoryScope.assistant) ...[
         const SizedBox(height: 16),
-        MemorySectionLabel(text: l10n.memoryEntryTypeLabel),
+        MemorySectionLabel(text: l10n.memoryUiAssistantLabel),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final t in MemoryType.values)
+            for (final a in assistants)
               MemorySelectChip(
-                label: memoryTypeLabel(l10n, t),
-                selected: _type == t,
-                onTap: () => setState(() => _type = t),
+                label: a.name,
+                selected: _resolvedAssistantId(assistants) == a.id,
+                onTap: () => setState(() => _assistantId = a.id),
               ),
           ],
         ),
-        const SizedBox(height: 16),
-        MemorySectionLabel(text: l10n.memoryEntryScopeLabel),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            MemorySelectChip(
-              label: l10n.memoryEntryScopeGlobal,
-              selected: _scope == MemoryScope.global,
-              onTap: () => setState(() => _scope = MemoryScope.global),
-            ),
-            MemorySelectChip(
-              label: l10n.memoryEntryScopeAssistant,
-              selected: _scope == MemoryScope.assistant,
-              onTap: () => setState(() => _scope = MemoryScope.assistant),
-            ),
-          ],
-        ),
-        if (widget.allowAssistantPicker && _scope == MemoryScope.assistant) ...[
-          const SizedBox(height: 16),
-          MemorySectionLabel(text: l10n.memoryUiAssistantLabel),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final a in assistants)
-                MemorySelectChip(
-                  label: a.name,
-                  selected: _resolvedAssistantId(assistants) == a.id,
-                  onTap: () => setState(() => _assistantId = a.id),
-                ),
-            ],
-          ),
-        ],
       ],
     ];
   }
