@@ -19,6 +19,17 @@ class LocalToolNames {
   static const String screenTime = 'get_screen_time';
   static const String calendarQuery = 'calendar_query';
   static const String calendarCreate = 'calendar_create';
+
+  static const List<String> all = [
+    timeInfo,
+    clipboard,
+    textToSpeech,
+    askUser,
+    calculate,
+    screenTime,
+    calendarQuery,
+    calendarCreate,
+  ];
 }
 
 /// Platform availability of the device-backed local tools (implemented over

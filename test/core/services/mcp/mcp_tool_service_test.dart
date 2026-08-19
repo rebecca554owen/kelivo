@@ -274,6 +274,338 @@ void main() {
     expect(error, isNot(contains('parametersSchema')));
     expect(error, isNot(contains('instruction')));
   });
+
+  test(
+    'qualifies reserved built-in names and still calls the original tool',
+    () async {
+      final provider = _RecordingMcpProvider([
+        McpServerConfig(
+          id: 'srv-id',
+          enabled: true,
+          name: 'srv',
+          transport: McpTransportType.http,
+          tools: [McpToolConfig(enabled: true, name: 'memory_read')],
+        ),
+      ]);
+      final assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      final service = McpToolService();
+      addTearDown(provider.dispose);
+      addTearDown(assistants.dispose);
+      addTearDown(service.dispose);
+
+      await assistants.loaded;
+      final assistantId = await assistants.addAssistant(name: 'Test');
+      await assistants.updateAssistant(
+        assistants
+            .getById(assistantId)!
+            .copyWith(mcpServerIds: const ['srv-id']),
+      );
+
+      const reservedNames = {'memory_read'};
+      final tools = service.listAvailableToolsForAssistant(
+        provider,
+        assistants,
+        assistantId,
+        reservedNames: reservedNames,
+      );
+      expect(tools.map((tool) => tool.name), ['srv__memory_read']);
+
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: 'srv__memory_read',
+          reservedNames: reservedNames,
+        ),
+        'srv-id:memory_read',
+      );
+      expect(provider.calls, [(serverId: 'srv-id', toolName: 'memory_read')]);
+    },
+  );
+
+  test(
+    'qualifies reserved calculate even when the assistant has no local tools',
+    () async {
+      final provider = _RecordingMcpProvider([
+        McpServerConfig(
+          id: 'srv-id',
+          enabled: true,
+          name: 'srv',
+          transport: McpTransportType.http,
+          tools: [McpToolConfig(enabled: true, name: 'calculate')],
+        ),
+      ]);
+      final assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      final service = McpToolService();
+      addTearDown(provider.dispose);
+      addTearDown(assistants.dispose);
+      addTearDown(service.dispose);
+
+      await assistants.loaded;
+      final assistantId = await assistants.addAssistant(name: 'Test');
+      await assistants.updateAssistant(
+        assistants
+            .getById(assistantId)!
+            .copyWith(mcpServerIds: const ['srv-id'], localToolIds: const []),
+      );
+      expect(assistants.getById(assistantId)!.localToolIds, isEmpty);
+
+      const reservedNames = {'calculate'};
+      final tools = service.listAvailableToolsForAssistant(
+        provider,
+        assistants,
+        assistantId,
+        reservedNames: reservedNames,
+      );
+      expect(tools.map((tool) => tool.name), ['srv__calculate']);
+    },
+  );
+
+  test(
+    'qualifies MCP duplicates and reserved names in the same pass',
+    () async {
+      final provider = _RecordingMcpProvider([
+        McpServerConfig(
+          id: 'alpha-id',
+          enabled: true,
+          name: '123 MCP',
+          transport: McpTransportType.http,
+          tools: [
+            McpToolConfig(enabled: true, name: 'shared'),
+            McpToolConfig(enabled: true, name: 'memory_read'),
+            McpToolConfig(enabled: true, name: 'alpha_only'),
+          ],
+        ),
+        McpServerConfig(
+          id: 'beta-id',
+          enabled: true,
+          name: 'Beta MCP',
+          transport: McpTransportType.http,
+          tools: [
+            McpToolConfig(enabled: true, name: 'shared', needsApproval: true),
+          ],
+        ),
+      ]);
+      final assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      final service = McpToolService();
+      addTearDown(provider.dispose);
+      addTearDown(assistants.dispose);
+      addTearDown(service.dispose);
+
+      await assistants.loaded;
+      final assistantId = await assistants.addAssistant(name: 'Test');
+      await assistants.updateAssistant(
+        assistants
+            .getById(assistantId)!
+            .copyWith(mcpServerIds: const ['alpha-id', 'beta-id']),
+      );
+
+      const reservedNames = {'memory_read', 'calculate'};
+      final tools = service.listAvailableToolsForAssistant(
+        provider,
+        assistants,
+        assistantId,
+        reservedNames: reservedNames,
+      );
+      expect(tools.map((tool) => tool.name), [
+        'mcp_123_MCP__shared',
+        'mcp_123_MCP__memory_read',
+        'alpha_only',
+        'Beta_MCP__shared',
+      ]);
+
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: 'mcp_123_MCP__memory_read',
+          reservedNames: reservedNames,
+        ),
+        'alpha-id:memory_read',
+      );
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: 'mcp_123_MCP__shared',
+          reservedNames: reservedNames,
+        ),
+        'alpha-id:shared',
+      );
+      expect(provider.calls, [
+        (serverId: 'alpha-id', toolName: 'memory_read'),
+        (serverId: 'alpha-id', toolName: 'shared'),
+      ]);
+    },
+  );
+
+  test(
+    'limits names to 64 chars and suffixes post-truncation collisions',
+    () async {
+      final prefix = 'n' * 64;
+      final longA = '${prefix}aaa';
+      final longB = '${prefix}bbb';
+      final longC = '${prefix}ccc';
+
+      final provider = _RecordingMcpProvider([
+        McpServerConfig(
+          id: 'alpha-id',
+          enabled: true,
+          name: 'srv',
+          transport: McpTransportType.http,
+          tools: [
+            McpToolConfig(enabled: true, name: longA),
+            McpToolConfig(enabled: true, name: longB),
+            McpToolConfig(enabled: true, name: longC),
+          ],
+        ),
+      ]);
+      final assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      final service = McpToolService();
+      addTearDown(provider.dispose);
+      addTearDown(assistants.dispose);
+      addTearDown(service.dispose);
+
+      await assistants.loaded;
+      final assistantId = await assistants.addAssistant(name: 'Test');
+      await assistants.updateAssistant(
+        assistants
+            .getById(assistantId)!
+            .copyWith(mcpServerIds: const ['alpha-id']),
+      );
+
+      final tools = service.listAvailableToolsForAssistant(
+        provider,
+        assistants,
+        assistantId,
+      );
+      final names = tools.map((tool) => tool.name).toList();
+      expect(names, hasLength(3));
+      expect(names.toSet(), hasLength(3));
+      expect(names.every((name) => name.length <= 64), isTrue);
+      expect(names[0], prefix);
+      expect(names[1], '${prefix.substring(0, 55)}_alpha-id');
+      expect(names[2], '${prefix.substring(0, 62)}_2');
+
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: names[0],
+        ),
+        'alpha-id:$longA',
+      );
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: names[1],
+        ),
+        'alpha-id:$longB',
+      );
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: names[2],
+        ),
+        'alpha-id:$longC',
+      );
+    },
+  );
+
+  test(
+    'renamed reserved MCP tool keeps approval and routes via snapshot',
+    () async {
+      final provider = _RecordingMcpProvider([
+        McpServerConfig(
+          id: 'srv-id',
+          enabled: true,
+          name: 'srv',
+          transport: McpTransportType.http,
+          tools: [
+            McpToolConfig(
+              enabled: true,
+              name: 'memory_read',
+              needsApproval: true,
+            ),
+          ],
+        ),
+      ]);
+      final assistants = AssistantProvider(
+        preferences: createBusinessTestPreferences(),
+      );
+      final service = McpToolService();
+      addTearDown(provider.dispose);
+      addTearDown(assistants.dispose);
+      addTearDown(service.dispose);
+
+      await assistants.loaded;
+      final assistantId = await assistants.addAssistant(name: 'Test');
+      await assistants.updateAssistant(
+        assistants
+            .getById(assistantId)!
+            .copyWith(mcpServerIds: const ['srv-id']),
+      );
+
+      const reservedNames = {'memory_read'};
+      final snapshot = service.captureRoutesForAssistant(
+        provider,
+        assistants,
+        assistantId: assistantId,
+        reservedNames: reservedNames,
+      );
+      expect(snapshot.containsExposedName('srv__memory_read'), isTrue);
+      expect(snapshot.containsExposedName('memory_read'), isFalse);
+      expect(
+        service
+            .listAvailableToolsForAssistant(
+              provider,
+              assistants,
+              assistantId,
+              routeSnapshot: snapshot,
+            )
+            .single
+            .name,
+        'srv__memory_read',
+      );
+      expect(
+        service.toolNeedsApprovalForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: 'srv__memory_read',
+          routeSnapshot: snapshot,
+        ),
+        isTrue,
+      );
+      expect(
+        await service.callToolTextForAssistant(
+          provider,
+          assistants,
+          assistantId: assistantId,
+          toolName: 'srv__memory_read',
+          routeSnapshot: snapshot,
+        ),
+        'srv-id:memory_read',
+      );
+      expect(provider.calls, [(serverId: 'srv-id', toolName: 'memory_read')]);
+    },
+  );
 }
 
 class _RecordingMcpProvider extends McpProvider {
