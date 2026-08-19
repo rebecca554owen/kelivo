@@ -457,10 +457,16 @@ class LegacyMemoryMigrationService {
       final content = raw['content']?.toString().trim() ?? '';
       if (id == null ||
           typeValue == null ||
+          typeValue.isEmpty ||
           (expectContent && content.isEmpty)) {
         throw const FormatException('legacy_memory_response_item_invalid');
       }
-      final type = MemoryEntry.typeFromString(typeValue);
+      final MemoryType type;
+      try {
+        type = MemoryEntry.typeFromString(typeValue);
+      } on FormatException {
+        throw const FormatException('legacy_memory_response_item_invalid');
+      }
       if (byId.containsKey(id)) {
         throw const FormatException('legacy_memory_response_duplicate_id');
       }
