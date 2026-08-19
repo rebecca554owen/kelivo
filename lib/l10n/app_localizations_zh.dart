@@ -5905,6 +5905,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memorySettingsPageTitle => '记忆';
 
   @override
+  String get memorySettingsGlobalSubtitle => '记忆模式、模型与提示词';
+
+  @override
+  String get memorySettingsModeSection => '记忆模式';
+
+  @override
   String get memorySettingsModelSection => '记忆模型';
 
   @override
@@ -6039,6 +6045,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memorySettingsPromptsSection => '提示词模板';
 
   @override
+  String get memorySettingsLegacyPromptTitle => '旧版记忆规则';
+
+  @override
   String get memoryPromptEditRulesTitle => '记忆规则';
 
   @override
@@ -6089,6 +6098,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memorySettingsEntriesSection => '全部记忆';
+
+  @override
+  String get memorySettingsLegacySection => '旧版记忆';
 
   @override
   String get memorySettingsEntriesTitle => '记忆列表';
@@ -6597,12 +6609,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get legacyMemoryModeTitle => '使用旧版记忆';
 
   @override
-  String get legacyMemoryModeSubtitle =>
-      '全局设置，影响所有助手。两套数据各自保留，可随时切回。旧版记忆仅按助手隔离，没有全局记忆、用户画像、后台整理、记忆追踪和历史对话搜索。';
+  String get legacyMemoryModeSubtitle => '全局设置，影响所有助手';
 
   @override
-  String get legacyMemoryModeCacheWarning =>
-      '旧版会把全部记忆内容与当前时间写进系统提示词，每轮都在变，无法命中 prompt cache，长对话成本更高。';
+  String legacyMemoryModeCacheWarning(String token) {
+    return '默认模板会注入当前时间 $token，影响缓存命中率，如不需要可删除';
+  }
 
   @override
   String get memoryUiContentLabel => '内容';
@@ -13383,6 +13395,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memorySettingsPageTitle => '记忆';
 
   @override
+  String get memorySettingsGlobalSubtitle => '记忆模式、模型与提示词';
+
+  @override
+  String get memorySettingsModeSection => '记忆模式';
+
+  @override
   String get memorySettingsModelSection => '记忆模型';
 
   @override
@@ -13517,6 +13535,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memorySettingsPromptsSection => '提示词模板';
 
   @override
+  String get memorySettingsLegacyPromptTitle => '旧版记忆规则';
+
+  @override
   String get memoryPromptEditRulesTitle => '记忆规则';
 
   @override
@@ -13567,6 +13588,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get memorySettingsEntriesSection => '全部记忆';
+
+  @override
+  String get memorySettingsLegacySection => '旧版记忆';
 
   @override
   String get memorySettingsEntriesTitle => '记忆列表';
@@ -14075,12 +14099,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get legacyMemoryModeTitle => '使用旧版记忆';
 
   @override
-  String get legacyMemoryModeSubtitle =>
-      '全局设置，影响所有助手。两套数据各自保留，可随时切回。旧版记忆仅按助手隔离，没有全局记忆、用户画像、后台整理、记忆追踪和历史对话搜索。';
+  String get legacyMemoryModeSubtitle => '全局设置，影响所有助手';
 
   @override
-  String get legacyMemoryModeCacheWarning =>
-      '旧版会把全部记忆内容与当前时间写进系统提示词，每轮都在变，无法命中 prompt cache，长对话成本更高。';
+  String legacyMemoryModeCacheWarning(String token) {
+    return '默认模板会注入当前时间 $token，影响缓存命中率，如不需要可删除';
+  }
 
   @override
   String get memoryUiContentLabel => '内容';
@@ -20935,6 +20959,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memorySettingsPageTitle => '記憶';
 
   @override
+  String get memorySettingsGlobalSubtitle => '記憶模式、模型與提示詞';
+
+  @override
+  String get memorySettingsModeSection => '記憶模式';
+
+  @override
   String get memorySettingsModelSection => '記憶模型';
 
   @override
@@ -21069,6 +21099,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memorySettingsPromptsSection => '提示詞模板';
 
   @override
+  String get memorySettingsLegacyPromptTitle => '舊版記憶規則';
+
+  @override
   String get memoryPromptEditRulesTitle => '記憶規則';
 
   @override
@@ -21119,6 +21152,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get memorySettingsEntriesSection => '全部記憶';
+
+  @override
+  String get memorySettingsLegacySection => '舊版記憶';
 
   @override
   String get memorySettingsEntriesTitle => '記憶列表';
@@ -21627,12 +21663,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get legacyMemoryModeTitle => '使用舊版記憶';
 
   @override
-  String get legacyMemoryModeSubtitle =>
-      '全域設定，影響所有助手。兩套資料各自保留，可隨時切回。舊版記憶僅按助手隔離，沒有全域記憶、使用者畫像、背景整理、記憶追蹤和歷史對話搜尋。';
+  String get legacyMemoryModeSubtitle => '全域設定，影響所有助手';
 
   @override
-  String get legacyMemoryModeCacheWarning =>
-      '舊版會把全部記憶內容與目前時間寫進系統提示詞，每輪都在變，無法命中 prompt cache，長對話成本更高。';
+  String legacyMemoryModeCacheWarning(String token) {
+    return '預設模板會注入目前時間 $token，影響快取命中率，如不需要可刪除';
+  }
 
   @override
   String get memoryUiContentLabel => '內容';

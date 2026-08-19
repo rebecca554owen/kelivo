@@ -14,6 +14,7 @@ import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
+import '../../../core/services/memory/memory_prompts.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import 'ask_user_interaction_service.dart';
@@ -225,7 +226,9 @@ class ToolHandlerService {
     // Memory tools (§10.1)
     if (settings.legacyMemoryMode) {
       if (assistant?.enableMemory == true && supportsTools) {
-        toolDefs.addAll(_buildLegacyMemoryToolDefinitions());
+        toolDefs.addAll(
+          _buildLegacyMemoryToolDefinitions(settings.resolvedMemoryPromptLang),
+        );
       }
     } else if (supportsTools && assistant != null) {
       toolDefs.addAll(
@@ -261,19 +264,27 @@ class ToolHandlerService {
   }
 
   /// Legacy create/edit/delete_memory tool schemas (pre-v2 memory system).
-  List<Map<String, dynamic>> _buildLegacyMemoryToolDefinitions() {
+  ///
+  /// Localised by [lang] like [MemoryTools.buildDefinitions], so the schemas
+  /// match the language the legacy rules are sent in.
+  List<Map<String, dynamic>> _buildLegacyMemoryToolDefinitions(
+    MemoryPromptLang lang,
+  ) {
+    final zh = lang == MemoryPromptLang.zh;
     return [
       {
         'type': 'function',
         'function': {
           'name': 'create_memory',
-          'description': 'create a memory record',
+          'description': zh ? '新增一条记忆记录。' : 'Create a memory record.',
           'parameters': {
             'type': 'object',
             'properties': {
               'content': {
                 'type': 'string',
-                'description': 'The content of the memory record',
+                'description': zh
+                    ? '记忆记录的内容。'
+                    : 'The content of the memory record.',
               },
             },
             'required': ['content'],
@@ -284,17 +295,23 @@ class ToolHandlerService {
         'type': 'function',
         'function': {
           'name': 'edit_memory',
-          'description': 'update a memory record',
+          'description': zh
+              ? '更新一条已有的记忆记录。'
+              : 'Update an existing memory record.',
           'parameters': {
             'type': 'object',
             'properties': {
               'id': {
                 'type': 'integer',
-                'description': 'The id of the memory record',
+                'description': zh
+                    ? '记忆记录的 id。'
+                    : 'The id of the memory record.',
               },
               'content': {
                 'type': 'string',
-                'description': 'The content of the memory record',
+                'description': zh
+                    ? '记忆记录的内容。'
+                    : 'The content of the memory record.',
               },
             },
             'required': ['id', 'content'],
@@ -305,13 +322,15 @@ class ToolHandlerService {
         'type': 'function',
         'function': {
           'name': 'delete_memory',
-          'description': 'delete a memory record',
+          'description': zh ? '删除一条记忆记录。' : 'Delete a memory record.',
           'parameters': {
             'type': 'object',
             'properties': {
               'id': {
                 'type': 'integer',
-                'description': 'The id of the memory record',
+                'description': zh
+                    ? '记忆记录的 id。'
+                    : 'The id of the memory record.',
               },
             },
             'required': ['id'],

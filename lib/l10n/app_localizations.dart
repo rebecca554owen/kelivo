@@ -11299,6 +11299,18 @@ abstract class AppLocalizations {
   /// **'Memory'**
   String get memorySettingsPageTitle;
 
+  /// No description provided for @memorySettingsGlobalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory mode, model, and prompts'**
+  String get memorySettingsGlobalSubtitle;
+
+  /// No description provided for @memorySettingsModeSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory mode'**
+  String get memorySettingsModeSection;
+
   /// No description provided for @memorySettingsModelSection.
   ///
   /// In en, this message translates to:
@@ -11545,6 +11557,12 @@ abstract class AppLocalizations {
   /// **'Prompt templates'**
   String get memorySettingsPromptsSection;
 
+  /// No description provided for @memorySettingsLegacyPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy memory rules'**
+  String get memorySettingsLegacyPromptTitle;
+
   /// No description provided for @memoryPromptEditRulesTitle.
   ///
   /// In en, this message translates to:
@@ -11646,6 +11664,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All memories'**
   String get memorySettingsEntriesSection;
+
+  /// No description provided for @memorySettingsLegacySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy memory'**
+  String get memorySettingsLegacySection;
 
   /// No description provided for @memorySettingsEntriesTitle.
   ///
@@ -12586,14 +12610,14 @@ abstract class AppLocalizations {
   /// No description provided for @legacyMemoryModeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Global setting for all assistants. Both datasets are kept; you can switch back anytime. Legacy memory is per-assistant only — no global memory, user profile, background organize, traces, or past-conversation search.'**
+  /// **'Global setting for all assistants'**
   String get legacyMemoryModeSubtitle;
 
   /// No description provided for @legacyMemoryModeCacheWarning.
   ///
   /// In en, this message translates to:
-  /// **'Legacy mode writes all memories and the current time into the system prompt every turn, so prompt cache cannot hit and long chats cost more.'**
-  String get legacyMemoryModeCacheWarning;
+  /// **'The default template injects the current time via {token}, which affects cache hit rate. Remove it if you do not need it.'**
+  String legacyMemoryModeCacheWarning(String token);
 
   /// No description provided for @memoryUiContentLabel.
   ///

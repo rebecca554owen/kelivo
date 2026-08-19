@@ -1,82 +1,24 @@
 part of 'assistant_settings_edit_page.dart';
 
-class _LegacyMemoryModeToggleCard extends StatelessWidget {
-  const _LegacyMemoryModeToggleCard();
+class _MemorySettingsNavCard extends StatelessWidget {
+  const _MemorySettingsNavCard({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final settings = context.watch<SettingsProvider>();
-    final tip =
-        '${l10n.legacyMemoryModeSubtitle}\n\n${l10n.legacyMemoryModeCacheWarning}';
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: context.appColors.surfaceCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-            width: 0.6,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: MemorySectionCard(
+        padding: EdgeInsets.zero,
+        children: [
+          MemoryNavRow(
+            title: l10n.settingsPageMemory,
+            subtitle: l10n.memorySettingsGlobalSubtitle,
+            onTap: onTap,
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: _TactileRow(
-                  onTap: () {
-                    context.read<SettingsProvider>().setLegacyMemoryMode(
-                      !settings.legacyMemoryMode,
-                    );
-                  },
-                  builder: (pressed) {
-                    final baseColor = cs.onSurface.withValues(alpha: 0.9);
-                    return _AnimatedPressColor(
-                      pressed: pressed,
-                      base: baseColor,
-                      builder: (c) {
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 4, 0, 4),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 36,
-                                child: Icon(Lucide.Globe, size: 20, color: c),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  l10n.legacyMemoryModeTitle,
-                                  style: TextStyle(fontSize: 15, color: c),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              MemoryTipIcon(message: tip),
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: IosSwitch(
-                  value: settings.legacyMemoryMode,
-                  onChanged: (v) {
-                    context.read<SettingsProvider>().setLegacyMemoryMode(v);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -119,21 +61,6 @@ class _MemoryTabState extends State<_MemoryTab> {
       defaultScope: existing == null && prefersAssistant
           ? MemoryScope.assistant
           : MemoryScope.global,
-    );
-  }
-
-  Future<void> _goLegacyMemory() async {
-    if (PlatformUtils.isDesktopTarget) {
-      await showDesktopLegacyMemoryDialog(
-        context,
-        assistantId: widget.assistantId,
-      );
-      return;
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => LegacyMemoryPage(assistantId: widget.assistantId),
-      ),
     );
   }
 
@@ -234,11 +161,10 @@ class _MemoryTabState extends State<_MemoryTab> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    const toggleCard = _LegacyMemoryModeToggleCard();
     if (settings.legacyMemoryMode) {
       return _LegacyMemoryTabBody(
         assistantId: widget.assistantId,
-        header: toggleCard,
+        footer: _MemorySettingsNavCard(onTap: _goMemorySettings),
       );
     }
 
@@ -285,7 +211,6 @@ class _MemoryTabState extends State<_MemoryTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       children: [
-        toggleCard,
         sectionCard(
           child: Column(
             children: [
@@ -417,6 +342,8 @@ class _MemoryTabState extends State<_MemoryTab> {
           ),
         ),
 
+        _MemorySettingsNavCard(onTap: _goMemorySettings),
+
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Row(
@@ -508,32 +435,6 @@ class _MemoryTabState extends State<_MemoryTab> {
               fontSize: 12,
               color: cs.onSurface.withValues(alpha: 0.55),
             ),
-          ),
-        ),
-
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: MemorySectionCard(
-            padding: EdgeInsets.zero,
-            children: [
-              MemoryNavRow(
-                title: l10n.settingsPageMemory,
-                subtitle: l10n.memorySettingsEntriesSubtitle,
-                onTap: _goMemorySettings,
-              ),
-              Divider(
-                height: 1,
-                thickness: 0.6,
-                indent: 14,
-                endIndent: 12,
-                color: cs.outlineVariant.withValues(alpha: 0.18),
-              ),
-              MemoryNavRow(
-                title: l10n.memoryUiAssistantLegacyTitle,
-                subtitle: l10n.memoryUiAssistantLegacySubtitle,
-                onTap: _goLegacyMemory,
-              ),
-            ],
           ),
         ),
 

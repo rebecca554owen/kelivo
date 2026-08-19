@@ -21,7 +21,6 @@ import 'package:Kelivo/core/services/memory/memory_pipeline.dart';
 import 'package:Kelivo/core/services/memory/memory_repository.dart';
 import 'package:Kelivo/core/services/tts/tts_playback_models.dart';
 import 'package:Kelivo/features/assistant/pages/assistant_settings_edit_page.dart';
-import 'package:Kelivo/features/settings/pages/legacy_memory_page.dart';
 import 'package:Kelivo/features/settings/pages/memory_settings_page.dart';
 import 'package:Kelivo/features/settings/widgets/memory_ui.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -383,7 +382,7 @@ void main() {
     expect(memoryV2.entries, isEmpty);
   });
 
-  testWidgets('memory tab links to this assistant\'s legacy memories', (
+  testWidgets('memory tab exposes only the global memory settings link', (
     tester,
   ) async {
     final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
@@ -400,13 +399,8 @@ void main() {
     );
     await _openMemoryTab(tester);
 
-    final legacyRow = find.text('Legacy memories (read-only)').hitTestable();
-    await tester.ensureVisible(legacyRow);
-    await tester.tap(legacyRow);
-    await tester.pumpAndSettle();
-
-    final page = tester.widget<LegacyMemoryPage>(find.byType(LegacyMemoryPage));
-    expect(page.assistantId, _assistantId);
+    expect(find.text('Legacy memories (read-only)'), findsNothing);
+    expect(find.text('Memory mode, model, and prompts'), findsOneWidget);
   });
 
   testWidgets('write scope and dedupe sheet choices persist', (tester) async {
@@ -528,7 +522,7 @@ void main() {
 
     // Title "Memory" also appears on the tab; use the row subtitle.
     final settingsRow = find
-        .text('Browse, edit, archive, and delete memories')
+        .text('Memory mode, model, and prompts')
         .hitTestable();
     await tester.ensureVisible(settingsRow);
     await tester.tap(settingsRow);
@@ -551,18 +545,18 @@ void main() {
     );
     await _openMemoryTab(tester);
 
-    expect(find.text('Use legacy memory'), findsOneWidget);
-    expect(find.text('Recent Chats Reference'), findsNothing);
-    expect(find.text('Legacy memories (read-only)'), findsOneWidget);
+    final settings = tester
+        .element(find.byType(AssistantSettingsEditPage))
+        .read<SettingsProvider>();
+    await settings.setLegacyMemoryMode(true);
+    await tester.pumpAndSettle();
 
-    await _tapSwitchNearLabel(tester, 'Use legacy memory');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
+    expect(find.text('Use legacy memory'), findsNothing);
     expect(find.text('Recent Chats Reference'), findsOneWidget);
     expect(find.text('Auto-organize memory'), findsNothing);
     expect(find.text('Memory write scope'), findsNothing);
     expect(find.text('Legacy memories (read-only)'), findsNothing);
     expect(find.text('Use long-term memory'), findsOneWidget);
+    expect(find.text('Memory mode, model, and prompts'), findsOneWidget);
   });
 }

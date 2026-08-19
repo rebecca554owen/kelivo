@@ -2567,6 +2567,8 @@
   "settingsPageWorldBook": "World Book",
   "settingsPageMemory": "Memory",
   "memorySettingsPageTitle": "Memory",
+  "memorySettingsGlobalSubtitle": "Memory mode, model, and prompts",
+  "memorySettingsModeSection": "Memory mode",
   "memorySettingsModelSection": "Memory model",
   "memorySettingsModelTitle": "Processing model",
   "memorySettingsModelUnset": "Not selected",
@@ -2613,6 +2615,7 @@
   "memorySettingsPromptLangEn": "English",
   "memorySettingsPromptLangEnSubtitle": "Always use English memory prompts and tool descriptions",
   "memorySettingsPromptsSection": "Prompt templates",
+  "memorySettingsLegacyPromptTitle": "Legacy memory rules",
   "memoryPromptEditRulesTitle": "Memory rules",
   "memoryPromptEditRulesSubtitle": "Injected into the main chat system prompt",
   "memoryPromptEditGateTitle": "Gatekeeper",
@@ -2630,6 +2633,7 @@
   "memoryPromptEditSectionPerItem": "Per-item prompt",
   "memoryPromptEditSectionBatch": "Batched prompt",
   "memorySettingsEntriesSection": "All memories",
+  "memorySettingsLegacySection": "Legacy memory",
   "memorySettingsEntriesTitle": "Memory list",
   "memorySettingsEntriesSubtitle": "Browse, edit, archive, and delete memories",
   "memorySettingsProfileTitle": "User profile",
@@ -2880,8 +2884,15 @@
     }
   },
   "legacyMemoryModeTitle": "Use legacy memory",
-  "legacyMemoryModeSubtitle": "Global setting for all assistants. Both datasets are kept; you can switch back anytime. Legacy memory is per-assistant only — no global memory, user profile, background organize, traces, or past-conversation search.",
-  "legacyMemoryModeCacheWarning": "Legacy mode writes all memories and the current time into the system prompt every turn, so prompt cache cannot hit and long chats cost more.",
+  "legacyMemoryModeSubtitle": "Global setting for all assistants",
+  "legacyMemoryModeCacheWarning": "The default template injects the current time via {token}, which affects cache hit rate. Remove it if you do not need it.",
+  "@legacyMemoryModeCacheWarning": {
+    "placeholders": {
+      "token": {
+        "type": "String"
+      }
+    }
+  },
   "memoryUiContentLabel": "Content",
   "memoryUiValueLabel": "Value",
   "memoryUiCustomKeyLabel": "Key",

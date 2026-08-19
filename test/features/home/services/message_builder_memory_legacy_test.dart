@@ -353,6 +353,7 @@ void main() {
         late String content;
         await tester.runAsync(() async {
           await settings.setLegacyMemoryMode(true);
+          await settings.setMemoryPromptLang('zh');
           await memoryProvider.add(
             assistantId: assistant.id,
             content: 'User likes Flutter.',
@@ -397,5 +398,48 @@ void main() {
         );
       },
     );
+
+    testWidgets('uses the customizable legacy rules template', (tester) async {
+      await tester.runAsync(openHarness);
+      addTearDown(() => tester.runAsync(closeHarness));
+
+      late String content;
+      await tester.runAsync(() async {
+        await settings.setLegacyMemoryMode(true);
+        await settings.setMemoryPromptLang('en');
+        await settings.setLegacyMemoryPromptEn(
+          'Custom legacy rules at {{currentTime}}',
+        );
+        await memoryProvider.add(
+          assistantId: assistant.id,
+          content: 'User likes Flutter.',
+        );
+      });
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+            ChangeNotifierProvider<MemoryProvider>.value(value: memoryProvider),
+          ],
+          child: const SizedBox.shrink(),
+        ),
+      );
+      final context = tester.element(find.byType(SizedBox));
+      final api = <Map<String, dynamic>>[
+        {'role': 'system', 'content': 'base system'},
+      ];
+
+      await tester.runAsync(() async {
+        await buildService(
+          context: context,
+        ).injectMemoryAndRecentChats(api, assistant, settings: settings);
+        content = (api.first['content'] ?? '').toString();
+      });
+
+      expect(content, contains('Custom legacy rules at '));
+      expect(content, isNot(contains('{{currentTime}}')));
+      expect(content, contains('User likes Flutter.'));
+    });
   });
 }

@@ -380,6 +380,35 @@ void main() {
       },
     );
 
+    testWidgets('legacy tool descriptions follow the prompt language', (
+      tester,
+    ) async {
+      final (service, settings, _) = await pumpLegacyHandler(tester);
+      await settings.setLegacyMemoryMode(true);
+
+      List<String> descriptionsFor(String lang) {
+        settings.setMemoryPromptLang(lang);
+        return service
+            .buildToolDefinitions(
+              settings,
+              assistant(enableMemory: true),
+              'openai',
+              'gpt',
+              false,
+              isToolModel: (_, __) => true,
+            )
+            .map((d) => (d['function'] as Map)['description'] as String)
+            .toList();
+      }
+
+      final zh = descriptionsFor('zh');
+      final en = descriptionsFor('en');
+
+      expect(zh, everyElement(contains('记忆')));
+      expect(en, everyElement(contains('memory record')));
+      expect(zh, isNot(equals(en)));
+    });
+
     testWidgets('legacy ON + enableMemory false registers no memory tools', (
       tester,
     ) async {

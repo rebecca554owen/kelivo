@@ -6139,6 +6139,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memorySettingsPageTitle => 'Memory';
 
   @override
+  String get memorySettingsGlobalSubtitle => 'Memory mode, model, and prompts';
+
+  @override
+  String get memorySettingsModeSection => 'Memory mode';
+
+  @override
   String get memorySettingsModelSection => 'Memory model';
 
   @override
@@ -6281,6 +6287,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memorySettingsPromptsSection => 'Prompt templates';
 
   @override
+  String get memorySettingsLegacyPromptTitle => 'Legacy memory rules';
+
+  @override
   String get memoryPromptEditRulesTitle => 'Memory rules';
 
   @override
@@ -6336,6 +6345,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memorySettingsEntriesSection => 'All memories';
+
+  @override
+  String get memorySettingsLegacySection => 'Legacy memory';
 
   @override
   String get memorySettingsEntriesTitle => 'Memory list';
@@ -6876,12 +6888,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legacyMemoryModeTitle => 'Use legacy memory';
 
   @override
-  String get legacyMemoryModeSubtitle =>
-      'Global setting for all assistants. Both datasets are kept; you can switch back anytime. Legacy memory is per-assistant only — no global memory, user profile, background organize, traces, or past-conversation search.';
+  String get legacyMemoryModeSubtitle => 'Global setting for all assistants';
 
   @override
-  String get legacyMemoryModeCacheWarning =>
-      'Legacy mode writes all memories and the current time into the system prompt every turn, so prompt cache cannot hit and long chats cost more.';
+  String legacyMemoryModeCacheWarning(String token) {
+    return 'The default template injects the current time via $token, which affects cache hit rate. Remove it if you do not need it.';
+  }
 
   @override
   String get memoryUiContentLabel => 'Content';

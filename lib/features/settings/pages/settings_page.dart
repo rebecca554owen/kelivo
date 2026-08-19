@@ -261,21 +261,19 @@ class SettingsPage extends StatelessWidget {
                   );
                 },
               ),
-              if (!settings.legacyMemoryMode) ...[
-                _iosDivider(context),
-                _iosNavRow(
-                  context,
-                  icon: Lucide.Brain,
-                  label: l10n.settingsPageMemory,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const MemorySettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-              ],
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Brain,
+                label: l10n.settingsPageMemory,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MemorySettingsPage(),
+                    ),
+                  );
+                },
+              ),
               _iosDivider(context),
               _iosNavRow(
                 context,

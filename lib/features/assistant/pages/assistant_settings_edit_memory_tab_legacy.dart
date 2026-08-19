@@ -1,9 +1,9 @@
 part of 'assistant_settings_edit_page.dart';
 
 class _LegacyMemoryTabBody extends StatelessWidget {
-  const _LegacyMemoryTabBody({required this.assistantId, this.header});
+  const _LegacyMemoryTabBody({required this.assistantId, this.footer});
   final String assistantId;
-  final Widget? header;
+  final Widget? footer;
 
   Future<void> _showAddEditSheet(
     BuildContext context, {
@@ -310,7 +310,6 @@ class _LegacyMemoryTabBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       children: [
-        if (header != null) header!,
         // Feature switches
         sectionCard(
           child: Column(
@@ -355,6 +354,8 @@ class _LegacyMemoryTabBody extends StatelessWidget {
             ],
           ),
         ),
+
+        if (footer != null) footer!,
 
         // Manage memories header with add button
         Padding(
