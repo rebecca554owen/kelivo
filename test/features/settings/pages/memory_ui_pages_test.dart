@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -526,4 +528,224 @@ void main() {
     expect(text, contains('- One'));
     expect(text, contains('- Two'));
   });
+
+  testWidgets('edit form renders type and scope chips', (tester) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness();
+    final entry = await h.memoryV2.create(
+      scope: MemoryScope.global,
+      type: MemoryType.identity,
+      content: 'Original fact',
+      source: MemorySource.manual,
+    );
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(
+      _wrap(h, MemoryEntryEditForm(title: 'Edit memory', existing: entry)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Identity'), findsOneWidget);
+    expect(find.text('Workflow'), findsOneWidget);
+    expect(find.text('Voice'), findsOneWidget);
+    expect(find.text('Instruction'), findsOneWidget);
+    expect(find.text('Global'), findsWidgets);
+    expect(find.text('This assistant'), findsOneWidget);
+  });
+
+  testWidgets('edit form content-only save does not confirm scope', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness();
+    final entry = await h.memoryV2.create(
+      scope: MemoryScope.global,
+      type: MemoryType.identity,
+      content: 'Original fact',
+      source: MemorySource.manual,
+    );
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(
+      _wrap(h, MemoryEntryEditForm(title: 'Edit memory', existing: entry)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MemoryEntryEditForm),
+        matching: find.byType(TextField),
+      ),
+      'Updated fact',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change memory scope?'), findsNothing);
+    expect(tester.takeException(), isNull);
+    final saved = h.memoryV2.entries.singleWhere((e) => e.id == entry.id);
+    expect(saved.content, 'Updated fact');
+    expect(saved.type, MemoryType.identity);
+    expect(saved.scope, MemoryScope.global);
+  });
+
+  testWidgets('edit form saves content type and scope together', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness(
+      assistantList: const [
+        Assistant(id: 'a1', name: 'Alpha', temperature: 0.6),
+      ],
+    );
+    final entry = await h.memoryV2.create(
+      scope: MemoryScope.global,
+      type: MemoryType.identity,
+      content: 'Original fact',
+      source: MemorySource.manual,
+    );
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(
+      _wrap(
+        h,
+        MemoryEntryEditForm(
+          title: 'Edit memory',
+          existing: entry,
+          defaultAssistantId: 'a1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MemoryEntryEditForm),
+        matching: find.byType(TextField),
+      ),
+      'Updated fact',
+    );
+    await tester.tap(find.text('Workflow'));
+    await tester.tap(find.text('This assistant'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Change memory scope?'), findsOneWidget);
+    await tester.tap(find.text('Change scope'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final saved = h.memoryV2.entries.singleWhere((e) => e.id == entry.id);
+    expect(saved.content, 'Updated fact');
+    expect(saved.type, MemoryType.workflow);
+    expect(saved.scope, MemoryScope.assistant);
+    expect(saved.assistantId, 'a1');
+  });
+
+  testWidgets('edit form still writes remaining fields after dismiss', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+    final harness = await createBusinessTestHarness(
+      initial: {
+        'assistants_v1': Assistant.encodeList(const [
+          Assistant(id: 'a1', name: 'Alpha', temperature: 0.6),
+        ]),
+      },
+    );
+    final chatRepository = ChatDatabaseRepository(harness.database);
+    await chatRepository.ensureReady();
+    final gate = Completer<void>();
+    final memoryRepo = _GateOnContentRepo(harness.preferences, gate: gate);
+    final memoryV2 = MemoryProviderV2(
+      repository: memoryRepo,
+      chatRepository: chatRepository,
+    );
+    final h = _MemoryHarness(
+      preferences: harness.preferences,
+      chatRepository: chatRepository,
+      memoryV2: memoryV2,
+      legacyMemory: MemoryProvider(preferences: harness.preferences),
+      assistants: AssistantProvider(preferences: harness.preferences),
+      settings: SettingsProvider(harness.preferences),
+    );
+    await h.assistants.loaded;
+    await h.settings.loaded;
+
+    final entry = await h.memoryV2.create(
+      scope: MemoryScope.global,
+      type: MemoryType.identity,
+      content: 'Original fact',
+      source: MemorySource.manual,
+    );
+    await h.memoryV2.refreshAll();
+
+    await tester.pumpWidget(
+      _wrap(
+        h,
+        MemoryEntryEditForm(
+          title: 'Edit memory',
+          existing: entry,
+          defaultAssistantId: 'a1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MemoryEntryEditForm),
+        matching: find.byType(TextField),
+      ),
+      'Updated fact',
+    );
+    await tester.tap(find.text('Workflow'));
+    await tester.tap(find.text('This assistant'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change scope'));
+    await tester.pump();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    gate.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final saved = h.memoryV2.entries.singleWhere((e) => e.id == entry.id);
+    expect(saved.content, 'Updated fact');
+    expect(saved.type, MemoryType.workflow);
+    expect(saved.scope, MemoryScope.assistant);
+    expect(saved.assistantId, 'a1');
+  });
+}
+
+class _GateOnContentRepo extends MemoryRepository {
+  _GateOnContentRepo(super.preferences, {required this.gate});
+
+  final Completer<void> gate;
+
+  @override
+  Future<MemoryEntry?> updateContent(String id, String content) async {
+    await gate.future;
+    return super.updateContent(id, content);
+  }
 }

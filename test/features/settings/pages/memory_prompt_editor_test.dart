@@ -32,7 +32,15 @@ Widget _wrap(SettingsProvider settings, {required Locale locale}) {
 
 /// Opens the "memory rules" template editor from the settings list.
 Future<void> _openRulesEditor(WidgetTester tester, String title) async {
-  await tester.tap(find.text(title));
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpAndSettle();
+  final target = find.text(title);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target.hitTestable());
   await tester.pumpAndSettle();
 }
 

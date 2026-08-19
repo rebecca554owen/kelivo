@@ -17,7 +17,7 @@ abstract final class MemoryPrompts {
 
 - <user_profile> 是用户的稳定身份信息，例如希望你怎么称呼他、语言偏好、时区。
 - <user_memory type="..."> 是分四类的长期记忆。每行形如 `- [2026-08-07] 内容`，方括号里是这条记忆最后更新的日期。带 `(assistant) ` 前缀的条目只属于当前助手，其余对所有助手可见。
-- 标了 mode="summary" total="N" 的块表示该类型共有 N 条，只列出了最近 10 条；需要更多时用 memory_search_profile 查询。
+- 标了 mode="summary" 的块表示该类型共有 total 属性标明的条数，只列出了 shown 属性指明的最近若干条；需要更多时用 memory_search_profile 查询。
 - 形如 <user_memory type="voice"/> 的空标签表示该类型目前没有记忆。
 - 对话进行中出现的 <user_memory_update> 是记忆的最新完整快照，用它替换你之前看到的记忆内容。
 
@@ -41,7 +41,7 @@ The conversation may contain memory information provided by the system. It is no
 
 - <user_profile> holds stable facts about the user, such as how they want to be addressed, language preference and timezone.
 - <user_memory type="..."> holds long-term memory in four categories. Each line looks like `- [2026-08-07] content`, where the bracket is the date this entry was last updated. Entries prefixed with `(assistant) ` belong only to the current assistant; the rest are visible to all assistants.
-- A block marked mode="summary" total="N" means the category has N entries in total and only the 10 most recent are listed. Use memory_search_profile when you need more.
+- A block marked mode="summary" means the category has the number of entries given by the total attribute, and only the most recent ones indicated by the shown attribute are listed. Use memory_search_profile when you need more.
 - An empty tag such as <user_memory type="voice"/> means the category currently has no entries.
 - A <user_memory_update> appearing mid-conversation is the latest complete snapshot. Replace the memory you saw earlier with it.
 

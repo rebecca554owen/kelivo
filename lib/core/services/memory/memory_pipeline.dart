@@ -328,14 +328,17 @@ class MemoryPipelineService {
     }
   }
 
-  static bool _isTaskFailure(String error) => !const {
+  /// Outcome codes that skip organize without counting as a task failure.
+  static const Set<String> skipReasonCodes = {
     'temporary_conversation',
     'memory_disabled',
     'auto_organize_off',
     'streaming',
     'below_threshold',
     'empty_window',
-  }.contains(error);
+  };
+
+  static bool _isTaskFailure(String error) => !skipReasonCodes.contains(error);
 
   /// Open a trace for [job]. Returns null when recording is off or fails.
   MemoryTraceHandle? _beginJobTrace(_PipelineJob job) {
@@ -675,6 +678,7 @@ class MemoryPipelineService {
       visible: visible,
       totalByType: totals,
       lang: lang,
+      maxItems: settings.memoryInjectionMaxItems,
     );
     final extractPrompt = MemoryExtractor.buildPrompt(
       lang: lang,

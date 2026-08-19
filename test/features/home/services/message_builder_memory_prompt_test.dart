@@ -300,6 +300,7 @@ void main() {
         visible: visible,
         totalByType: totals,
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
       final hash = MemoryBlockBuilder.hashBlocks(profileBlock, memoryBlock);
 
@@ -486,6 +487,7 @@ void main() {
             visible: visible,
             totalByType: totals,
             lang: MemoryPromptLang.zh,
+            maxItems: 10,
           ),
         );
 
@@ -614,6 +616,7 @@ void main() {
             visible: visible,
             totalByType: totals,
             lang: MemoryPromptLang.zh,
+            maxItems: 10,
           ),
         );
 
@@ -959,6 +962,7 @@ void main() {
             visible: const [],
             totalByType: const {},
             lang: MemoryPromptLang.zh,
+            maxItems: 10,
           ),
           MemoryPromptLang.zh,
         );

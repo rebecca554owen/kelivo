@@ -220,7 +220,13 @@ class _MemoryTabState extends State<_MemoryTab> {
     final when = _formatRelative(l10n, lastAt);
     final parts = <String>[l10n.memoryOrganizeStatusLast(when)];
     if (result.error != null && result.error!.isNotEmpty) {
-      parts.add(l10n.memoryOrganizeStatusFailed(result.error!));
+      final code = result.error!;
+      final label = memoryOutcomeLabel(l10n, code);
+      if (MemoryPipelineService.skipReasonCodes.contains(code)) {
+        parts.add(l10n.memoryOrganizeStatusSkippedReason(label));
+      } else {
+        parts.add(l10n.memoryOrganizeStatusFailed(label));
+      }
     } else if (result.gate == MemoryGateParseResult.skip ||
         (result.extractedCount == 0 && result.advanced)) {
       parts.add(l10n.memoryOrganizeStatusSkipped);
@@ -250,6 +256,16 @@ class _MemoryTabState extends State<_MemoryTab> {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const MemorySettingsPage()));
+  }
+
+  Future<void> _goMemoryAbout() async {
+    if (PlatformUtils.isDesktopTarget) {
+      await showDesktopMemoryAboutDialog(context);
+      return;
+    }
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const MemoryAboutPage()));
   }
 
   bool get _isDesktopPlatform {
@@ -314,6 +330,19 @@ class _MemoryTabState extends State<_MemoryTab> {
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
       children: [
         toggleCard,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: MemorySectionCard(
+            padding: EdgeInsets.zero,
+            children: [
+              MemoryNavRow(
+                title: l10n.memorySettingsAboutTitle,
+                subtitle: l10n.memorySettingsAboutSubtitle,
+                onTap: _goMemoryAbout,
+              ),
+            ],
+          ),
+        ),
         sectionCard(
           child: Column(
             children: [
@@ -321,6 +350,7 @@ class _MemoryTabState extends State<_MemoryTab> {
                 context,
                 icon: Lucide.bookHeart,
                 label: l10n.assistantEditMemorySwitchTitle,
+                subtitle: l10n.assistantEditMemorySwitchSubtitle,
                 value: a.enableMemory,
                 onChanged: (v) async {
                   await context.read<AssistantProvider>().updateAssistant(
@@ -339,6 +369,7 @@ class _MemoryTabState extends State<_MemoryTab> {
                             context,
                             icon: Lucide.Sparkles,
                             label: l10n.assistantEditAutoOrganizeTitle,
+                            subtitle: l10n.assistantEditAutoOrganizeSubtitle,
                             value: a.autoOrganizeMemory,
                             onChanged: (v) async {
                               await context
@@ -386,6 +417,7 @@ class _MemoryTabState extends State<_MemoryTab> {
                 context,
                 icon: Lucide.History,
                 label: l10n.assistantEditAllowPastRecallTitle,
+                subtitle: l10n.assistantEditAllowPastRecallSubtitle,
                 value: a.allowPastConversationRecall,
                 onChanged: (v) async {
                   await context.read<AssistantProvider>().updateAssistant(
@@ -409,6 +441,7 @@ class _MemoryTabState extends State<_MemoryTab> {
                             context,
                             icon: Lucide.FileText,
                             label: l10n.assistantEditGenerateSummaryTitle,
+                            subtitle: l10n.assistantEditGenerateSummarySubtitle,
                             value: a.generateConversationSummary,
                             onChanged: (v) async {
                               await context
@@ -1100,6 +1133,7 @@ Widget _memoryDesktopSelectRow<T>({
   required T value,
   required List<DesktopSelectOption<T>> options,
   required Future<void> Function(T value) onSelected,
+  String? subtitle,
 }) {
   final cs = Theme.of(context).colorScheme;
   return Padding(
@@ -1116,15 +1150,38 @@ Widget _memoryDesktopSelectRow<T>({
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              color: cs.onSurface.withValues(alpha: 0.9),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: subtitle == null
+              ? Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: cs.onSurface.withValues(alpha: 0.9),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: cs.onSurface.withValues(alpha: 0.9),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
         ),
         const SizedBox(width: 8),
         DesktopSelectDropdown<T>(
@@ -1225,6 +1282,7 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
         context: context,
         icon: Lucide.FileClock,
         label: l10n.assistantEditOrganizeFrequencyTitle,
+        subtitle: l10n.assistantEditOrganizeFrequencySubtitle,
         value: selected,
         options: [
           for (final count in counts)
@@ -1245,6 +1303,7 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
       context,
       icon: Lucide.FileClock,
       label: l10n.assistantEditOrganizeFrequencyTitle,
+      subtitle: l10n.assistantEditOrganizeFrequencySubtitle,
       detailText: detail,
       onTap: () => _openMobilePicker(context),
     );
@@ -1267,22 +1326,37 @@ class _MemoryDedupeModeSection extends StatelessWidget {
     };
   }
 
+  String _subtitle(AppLocalizations l10n, MemorySmartAddMode mode) {
+    return switch (mode) {
+      MemorySmartAddMode.batched => l10n.assistantEditDedupeModeBatchedSubtitle,
+      MemorySmartAddMode.perItem => l10n.assistantEditDedupeModePerItemSubtitle,
+    };
+  }
+
+  List<MemoryPickerOption<MemorySmartAddMode>> _options(
+    AppLocalizations l10n,
+  ) => [
+    for (final mode in MemorySmartAddMode.values)
+      MemoryPickerOption(
+        value: mode,
+        label: _label(l10n, mode),
+        subtitle: _subtitle(l10n, mode),
+      ),
+  ];
+
   Future<void> _apply(BuildContext context, MemorySmartAddMode mode) async {
     await context.read<AssistantProvider>().updateAssistant(
       assistant.copyWith(memorySmartAddMode: mode),
     );
   }
 
-  Future<void> _openMobilePicker(BuildContext context) async {
+  Future<void> _openPicker(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    final choice = await _showMemoryChoiceSheet<MemorySmartAddMode>(
+    final choice = await showMemoryOptionPicker<MemorySmartAddMode>(
       context,
       title: l10n.assistantEditDedupeModeTitle,
       selected: assistant.memorySmartAddMode,
-      options: [
-        for (final mode in MemorySmartAddMode.values)
-          (mode, _label(l10n, mode)),
-      ],
+      options: _options(l10n),
     );
     if (choice == null || !context.mounted) return;
     await _apply(context, choice);
@@ -1298,10 +1372,15 @@ class _MemoryDedupeModeSection extends StatelessWidget {
         context: context,
         icon: Lucide.Layers,
         label: l10n.assistantEditDedupeModeTitle,
+        subtitle: l10n.assistantEditDedupeModeSubtitle,
         value: selected,
         options: [
           for (final mode in MemorySmartAddMode.values)
-            DesktopSelectOption(value: mode, label: _label(l10n, mode)),
+            DesktopSelectOption(
+              value: mode,
+              label: _label(l10n, mode),
+              subtitle: _subtitle(l10n, mode),
+            ),
         ],
         onSelected: (mode) => _apply(context, mode),
       );
@@ -1311,8 +1390,9 @@ class _MemoryDedupeModeSection extends StatelessWidget {
       context,
       icon: Lucide.Layers,
       label: l10n.assistantEditDedupeModeTitle,
+      subtitle: l10n.assistantEditDedupeModeSubtitle,
       detailText: _label(l10n, selected),
-      onTap: () => _openMobilePicker(context),
+      onTap: () => _openPicker(context),
     );
   }
 }
@@ -1326,27 +1406,35 @@ class _MemoryWriteScopeSection extends StatelessWidget {
   final Assistant assistant;
   final bool desktop;
 
-  List<(MemoryWriteScope, String)> _items(AppLocalizations l10n) => [
-    (MemoryWriteScope.alwaysGlobal, l10n.assistantEditWriteScopeAlwaysGlobal),
-    (
-      MemoryWriteScope.alwaysAssistant,
-      l10n.assistantEditWriteScopeAlwaysAssistant,
-    ),
-    (
-      MemoryWriteScope.toolDefaultGlobal,
-      l10n.assistantEditWriteScopeToolDefaultGlobal,
-    ),
-    (
-      MemoryWriteScope.toolDefaultAssistant,
-      l10n.assistantEditWriteScopeToolDefaultAssistant,
-    ),
-  ];
+  List<MemoryPickerOption<MemoryWriteScope>> _options(AppLocalizations l10n) =>
+      [
+        MemoryPickerOption(
+          value: MemoryWriteScope.alwaysGlobal,
+          label: l10n.assistantEditWriteScopeAlwaysGlobal,
+          subtitle: l10n.assistantEditWriteScopeAlwaysGlobalSubtitle,
+        ),
+        MemoryPickerOption(
+          value: MemoryWriteScope.alwaysAssistant,
+          label: l10n.assistantEditWriteScopeAlwaysAssistant,
+          subtitle: l10n.assistantEditWriteScopeAlwaysAssistantSubtitle,
+        ),
+        MemoryPickerOption(
+          value: MemoryWriteScope.toolDefaultGlobal,
+          label: l10n.assistantEditWriteScopeToolDefaultGlobal,
+          subtitle: l10n.assistantEditWriteScopeToolDefaultGlobalSubtitle,
+        ),
+        MemoryPickerOption(
+          value: MemoryWriteScope.toolDefaultAssistant,
+          label: l10n.assistantEditWriteScopeToolDefaultAssistant,
+          subtitle: l10n.assistantEditWriteScopeToolDefaultAssistantSubtitle,
+        ),
+      ];
 
   String _label(AppLocalizations l10n, MemoryWriteScope scope) {
-    for (final item in _items(l10n)) {
-      if (item.$1 == scope) return item.$2;
+    for (final item in _options(l10n)) {
+      if (item.value == scope) return item.label;
     }
-    return _items(l10n).first.$2;
+    return _options(l10n).first.label;
   }
 
   Future<void> _apply(BuildContext context, MemoryWriteScope scope) async {
@@ -1355,13 +1443,13 @@ class _MemoryWriteScopeSection extends StatelessWidget {
     );
   }
 
-  Future<void> _openMobilePicker(BuildContext context) async {
+  Future<void> _openPicker(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-    final choice = await _showMemoryChoiceSheet<MemoryWriteScope>(
+    final choice = await showMemoryOptionPicker<MemoryWriteScope>(
       context,
       title: l10n.assistantEditWriteScopeTitle,
       selected: assistant.memoryWriteScope,
-      options: _items(l10n),
+      options: _options(l10n),
     );
     if (choice == null || !context.mounted) return;
     await _apply(context, choice);
@@ -1377,10 +1465,15 @@ class _MemoryWriteScopeSection extends StatelessWidget {
         context: context,
         icon: Lucide.Globe,
         label: l10n.assistantEditWriteScopeTitle,
+        subtitle: l10n.assistantEditWriteScopeSubtitle,
         value: selected,
         options: [
-          for (final item in _items(l10n))
-            DesktopSelectOption(value: item.$1, label: item.$2),
+          for (final item in _options(l10n))
+            DesktopSelectOption(
+              value: item.value,
+              label: item.label,
+              subtitle: item.subtitle,
+            ),
         ],
         onSelected: (scope) => _apply(context, scope),
       );
@@ -1390,8 +1483,9 @@ class _MemoryWriteScopeSection extends StatelessWidget {
       context,
       icon: Lucide.Globe,
       label: l10n.assistantEditWriteScopeTitle,
+      subtitle: l10n.assistantEditWriteScopeSubtitle,
       detailText: _label(l10n, selected),
-      onTap: () => _openMobilePicker(context),
+      onTap: () => _openPicker(context),
     );
   }
 }

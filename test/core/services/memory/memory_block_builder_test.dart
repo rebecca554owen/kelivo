@@ -98,6 +98,7 @@ void main() {
         visible: entries,
         totalByType: totals,
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
 
       expect(profile, '''
@@ -160,6 +161,7 @@ void main() {
               MemoryType.instruction: 0,
             },
             lang: MemoryPromptLang.en,
+            maxItems: 10,
           );
 
       expect(build([a, b, c]), build([c, b, a]));
@@ -196,6 +198,7 @@ void main() {
         visible: const [],
         totalByType: const {},
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
       expect(out, '''
 <user_memory type="identity"/>
@@ -205,7 +208,7 @@ void main() {
 ''');
     });
 
-    test('exactly 30 entries are full; 31 trigger summary of 10', () {
+    test('total == maxItems is full; total == maxItems+1 folds with shown', () {
       MemoryEntry make(int i) => _entry(
         id: 'mem_${i.toString().padLeft(8, '0')}',
         type: MemoryType.identity,
@@ -214,34 +217,109 @@ void main() {
         updatedAt: DateTime(2026, 1, 1).add(Duration(days: i)),
       );
 
-      final thirty = List.generate(30, make);
+      const maxItems = 10;
+      final atLimit = List.generate(maxItems, make);
       final full = MemoryBlockBuilder.buildMemoryBlock(
-        visible: thirty,
-        totalByType: {MemoryType.identity: 30},
+        visible: atLimit,
+        totalByType: {MemoryType.identity: maxItems},
         lang: MemoryPromptLang.zh,
+        maxItems: maxItems,
       );
       expect(full.contains('mode="summary"'), isFalse);
-      expect('\n- ['.allMatches(full).length, 30);
+      expect(full.contains('shown='), isFalse);
+      expect('\n- ['.allMatches(full).length, maxItems);
 
-      final thirtyOne = List.generate(31, make);
+      final overLimit = List.generate(maxItems + 1, make);
       final summary = MemoryBlockBuilder.buildMemoryBlock(
-        visible: thirtyOne,
-        totalByType: {MemoryType.identity: 31},
+        visible: overLimit,
+        totalByType: {MemoryType.identity: maxItems + 1},
         lang: MemoryPromptLang.zh,
+        maxItems: maxItems,
       );
       expect(
         summary.startsWith(
-          '<user_memory type="identity" mode="summary" total="31">\n',
+          '<user_memory type="identity" mode="summary" total="${maxItems + 1}" shown="$maxItems">\n',
         ),
         isTrue,
       );
-      expect('\n- ['.allMatches(summary).length, 10);
+      expect('\n- ['.allMatches(summary).length, maxItems);
       expect(summary.contains(MemoryPrompts.moreHintZh), isTrue);
-      // Most recently updated among 0..30 is index 30; take 10 newest = 21..30
-      // then re-sort by createdAt ASC → still 21..30 chronologically.
-      expect(summary.contains('entry 21'), isTrue);
-      expect(summary.contains('entry 30'), isTrue);
-      expect(summary.contains('entry 20'), isFalse);
+      // Newest among 0..10 is index 10; take 10 newest = 1..10, then
+      // re-sort by createdAt ASC → still 1..10 chronologically.
+      expect(summary.contains('entry 1'), isTrue);
+      expect(summary.contains('entry 10'), isTrue);
+      expect(summary.contains('entry 0'), isFalse);
+    });
+
+    test('maxItems=1 folds extra items to a single shown entry', () {
+      MemoryEntry make(int i) => _entry(
+        id: 'mem_${i.toString().padLeft(8, '0')}',
+        type: MemoryType.identity,
+        content: 'entry $i',
+        createdAt: DateTime(2026, 1, 1).add(Duration(days: i)),
+        updatedAt: DateTime(2026, 1, 1).add(Duration(days: i)),
+      );
+
+      final full = MemoryBlockBuilder.buildMemoryBlock(
+        visible: [make(0)],
+        totalByType: {MemoryType.identity: 1},
+        lang: MemoryPromptLang.en,
+        maxItems: 1,
+      );
+      expect(full.contains('mode="summary"'), isFalse);
+      expect('\n- ['.allMatches(full).length, 1);
+
+      final summary = MemoryBlockBuilder.buildMemoryBlock(
+        visible: [make(0), make(1)],
+        totalByType: {MemoryType.identity: 2},
+        lang: MemoryPromptLang.en,
+        maxItems: 1,
+      );
+      expect(
+        summary,
+        contains(
+          '<user_memory type="identity" mode="summary" total="2" shown="1">',
+        ),
+      );
+      expect('\n- ['.allMatches(summary).length, 1);
+      expect(summary.contains('entry 1'), isTrue);
+      expect(summary.contains('entry 0'), isFalse);
+      expect(summary.contains(MemoryPrompts.moreHintEn), isTrue);
+    });
+
+    test('maxItems=50 keeps 50 full and folds 51', () {
+      MemoryEntry make(int i) => _entry(
+        id: 'mem_${i.toString().padLeft(8, '0')}',
+        type: MemoryType.identity,
+        content: 'entry $i',
+        createdAt: DateTime(2026, 1, 1).add(Duration(days: i)),
+        updatedAt: DateTime(2026, 1, 1).add(Duration(days: i)),
+      );
+
+      final fifty = List.generate(50, make);
+      final full = MemoryBlockBuilder.buildMemoryBlock(
+        visible: fifty,
+        totalByType: {MemoryType.identity: 50},
+        lang: MemoryPromptLang.zh,
+        maxItems: 50,
+      );
+      expect(full.contains('mode="summary"'), isFalse);
+      expect('\n- ['.allMatches(full).length, 50);
+
+      final fiftyOne = List.generate(51, make);
+      final summary = MemoryBlockBuilder.buildMemoryBlock(
+        visible: fiftyOne,
+        totalByType: {MemoryType.identity: 51},
+        lang: MemoryPromptLang.zh,
+        maxItems: 50,
+      );
+      expect(
+        summary,
+        contains(
+          '<user_memory type="identity" mode="summary" total="51" shown="50">',
+        ),
+      );
+      expect('\n- ['.allMatches(summary).length, 50);
     });
   });
 
@@ -257,6 +335,7 @@ void main() {
         visible: [entry],
         totalByType: {MemoryType.identity: 1},
         lang: MemoryPromptLang.en,
+        maxItems: 10,
       );
       expect(
         out,
@@ -296,11 +375,13 @@ void main() {
           visible: [e1, e2],
           totalByType: totals,
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         final m2 = MemoryBlockBuilder.buildMemoryBlock(
           visible: [e2, e1],
           totalByType: totals,
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         expect(
           MemoryBlockBuilder.hashBlocks(profile, m1),
@@ -320,6 +401,7 @@ void main() {
           ],
           totalByType: totals,
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         expect(
           MemoryBlockBuilder.hashBlocks(profile, edited),
@@ -340,11 +422,13 @@ void main() {
           visible: many,
           totalByType: {MemoryType.identity: 31},
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         final en = MemoryBlockBuilder.buildMemoryBlock(
           visible: many,
           totalByType: {MemoryType.identity: 31},
           lang: MemoryPromptLang.en,
+          maxItems: 10,
         );
         expect(
           MemoryBlockBuilder.hashBlocks(profile, zh),
@@ -397,6 +481,7 @@ void main() {
           visible: const [],
           totalByType: const {},
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         ),
         MemoryPromptLang.zh,
       );
@@ -417,6 +502,7 @@ void main() {
           visible: const [],
           totalByType: const {},
           lang: MemoryPromptLang.en,
+          maxItems: 10,
         ),
         MemoryPromptLang.en,
       );
@@ -432,6 +518,25 @@ void main() {
         MemoryBlockBuilder.splitInjectedPrefix('just a user message'),
         isNull,
       );
+    });
+
+    test('legacy summary payload without shown still splits', () {
+      final prefix =
+          '${MemoryPrompts.introFullZh}\n'
+          '<user_profile/>\n'
+          '<user_memory type="identity" mode="summary" total="31">\n'
+          '- [2026-01-01] old entry\n'
+          '${MemoryPrompts.moreHintZh}\n'
+          '</user_memory>\n'
+          '<user_memory type="workflow"/>\n'
+          '<user_memory type="voice"/>\n'
+          '<user_memory type="instruction"/>\n'
+          '\n';
+      final split = MemoryBlockBuilder.splitInjectedPrefix('${prefix}你好');
+      expect(split, isNotNull);
+      expect(split!.kind, 'full');
+      expect(split.prefix, prefix);
+      expect(split.rest, '你好');
     });
   });
 }

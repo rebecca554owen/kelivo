@@ -1122,6 +1122,16 @@ class MessageBuilderService {
       return (prefix: '', hash: null, snapshotKind: null);
     }
 
+    SettingsProvider? resolvedSettings = settings;
+    if (resolvedSettings == null) {
+      try {
+        resolvedSettings = contextProvider.read<SettingsProvider>();
+      } catch (_) {}
+    }
+    final maxItems =
+        resolvedSettings?.memoryInjectionMaxItems ??
+        SettingsProvider.defaultMemoryInjectionMaxItems;
+
     final fields = await repo.readProfileFields();
     final totalByType = await repo.countVisibleMemoriesByType(
       assistantId: assistant.id,
@@ -1140,6 +1150,7 @@ class MessageBuilderService {
       visible: visible,
       totalByType: totalByType,
       lang: lang,
+      maxItems: maxItems,
     );
 
     final currentHash = MemoryBlockBuilder.hashBlocks(

@@ -153,6 +153,11 @@ class SettingsProvider extends ChangeNotifier {
   static const int defaultMemoryMigrationBatchSize = 12;
   static const int minMemoryMigrationBatchSize = 1;
   static const int maxMemoryMigrationBatchSize = 24;
+  static const String _memoryInjectionMaxItemsKey =
+      'memory_injection_max_items_v1';
+  static const int defaultMemoryInjectionMaxItems = 10;
+  static const int minMemoryInjectionMaxItems = 1;
+  static const int maxMemoryInjectionMaxItems = 50;
   static const String _displayShowUserAvatarKey = 'display_show_user_avatar_v1';
   static const String _displayShowModelIconKey = 'display_show_model_icon_v1';
   static const String _displayShowModelNameTimestampKey =
@@ -974,6 +979,10 @@ class SettingsProvider extends ChangeNotifier {
         (prefs.getInt(_memoryMigrationBatchSizeKey) ??
                 defaultMemoryMigrationBatchSize)
             .clamp(minMemoryMigrationBatchSize, maxMemoryMigrationBatchSize);
+    _memoryInjectionMaxItems =
+        (prefs.getInt(_memoryInjectionMaxItemsKey) ??
+                defaultMemoryInjectionMaxItems)
+            .clamp(minMemoryInjectionMaxItems, maxMemoryInjectionMaxItems);
 
     // display settings
     _showUserAvatar = prefs.getBool(_displayShowUserAvatarKey) ?? true;
@@ -3796,6 +3805,7 @@ Requirements:
   String _memoryMigratePromptZh = MemoryPrompts.migrateZh;
   String _memoryMigratePromptEn = MemoryPrompts.migrateEn;
   int _memoryMigrationBatchSize = defaultMemoryMigrationBatchSize;
+  int _memoryInjectionMaxItems = defaultMemoryInjectionMaxItems;
 
   String get memoryRulesPromptZh => _memoryRulesPromptZh;
   String get memoryRulesPromptEn => _memoryRulesPromptEn;
@@ -3812,6 +3822,16 @@ Requirements:
   String get memoryMigratePromptZh => _memoryMigratePromptZh;
   String get memoryMigratePromptEn => _memoryMigratePromptEn;
   int get memoryMigrationBatchSize => _memoryMigrationBatchSize;
+  int get memoryInjectionMaxItems {
+    final value = _memoryInjectionMaxItems;
+    if (value < minMemoryInjectionMaxItems) {
+      return minMemoryInjectionMaxItems;
+    }
+    if (value > maxMemoryInjectionMaxItems) {
+      return maxMemoryInjectionMaxItems;
+    }
+    return value;
+  }
 
   Future<void> setMemoryModel(String providerKey, String modelId) async {
     _memoryModelProvider = providerKey;
@@ -4009,6 +4029,17 @@ Requirements:
     _memoryMigrationBatchSize = next;
     notifyListeners();
     await _preferences.setInt(_memoryMigrationBatchSizeKey, next);
+  }
+
+  Future<void> setMemoryInjectionMaxItems(int size) async {
+    final next = size.clamp(
+      minMemoryInjectionMaxItems,
+      maxMemoryInjectionMaxItems,
+    );
+    if (_memoryInjectionMaxItems == next) return;
+    _memoryInjectionMaxItems = next;
+    notifyListeners();
+    await _preferences.setInt(_memoryInjectionMaxItemsKey, next);
   }
 
   Future<void> resetMemoryRulesPromptZh() async =>
@@ -5124,6 +5155,7 @@ Requirements:
     copy._memoryMigratePromptZh = _memoryMigratePromptZh;
     copy._memoryMigratePromptEn = _memoryMigratePromptEn;
     copy._memoryMigrationBatchSize = _memoryMigrationBatchSize;
+    copy._memoryInjectionMaxItems = _memoryInjectionMaxItems;
     copy._showUserAvatar = _showUserAvatar;
     copy._showModelIcon = _showModelIcon;
     copy._showModelNameTimestamp = _showModelNameTimestamp;

@@ -195,6 +195,21 @@ class MemoryRepository extends JsonBlobStore<MemoryEntry> {
     });
   }
 
+  Future<MemoryEntry?> updateType(String id, MemoryType type) {
+    return runExclusive(() async {
+      final all = await readAll();
+      final index = all.indexWhere((entry) => entry.id == id);
+      if (index == -1) return null;
+      final updated = all[index].copyWith(
+        type: type,
+        updatedAt: DateTime.now().toUtc(),
+      );
+      all[index] = updated;
+      await writeAll(all);
+      return updated;
+    });
+  }
+
   /// Move an entry between global and an assistant scope (§14.2 scope badge).
   Future<MemoryEntry?> updateScope(
     String id, {
