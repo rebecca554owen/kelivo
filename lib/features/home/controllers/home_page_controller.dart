@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
@@ -2310,6 +2311,9 @@ class HomePageController extends ChangeNotifier {
 
   Future<List<ChatMessage>> loadAllCollapsedMessagesForCurrentConversation() =>
       _chatController.loadAllCollapsedMessagesForCurrentConversation();
+
+  Future<List<MiniMapSearchHit>> searchMiniMapMatches(String query) =>
+      _chatController.searchMiniMapMatches(query);
 
   // Issue 7 audit: jumps via collapsed-index + loadUntilMessageVisible only.
   // Does not call ChatService.getMessageIndex, so an absent message-order

@@ -1812,6 +1812,8 @@
   "miniMapTitle": "迷你地圖",
   "miniMapTooltip": "迷你地圖",
   "miniMapScrollToBottomTooltip": "捲動到底部",
+  "miniMapSearchMatchCount": "{count} 處",
+  "miniMapSearchNoResults": "沒有匹配的訊息",
   "displaySettingsPageEnableDollarLatexTitle": "啟用 $...$ 渲染",
   "displaySettingsPageEnableDollarLatexSubtitle": "將 $...$ 之間的內容以行內數學公式渲染",
   "displaySettingsPageEnableMathTitle": "啟用數學公式渲染",
