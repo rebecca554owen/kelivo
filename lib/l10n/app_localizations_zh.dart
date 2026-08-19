@@ -5925,6 +5925,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memorySettingsThinkingSubtitle => '在模型支持时允许记忆模型使用推理';
 
   @override
+  String get memorySettingsInjectionSection => '记忆注入';
+
+  @override
+  String get memorySettingsInjectionMaxItemsTitle => '每类注入条数';
+
+  @override
+  String get memorySettingsInjectionMaxItemsSubtitle =>
+      '某一类型的记忆超过该条数时，只注入最近的若干条，其余由模型用 memory_search_profile 按需查询。调大更全面但更费 token。若你改过规则提示词，请一并更新或恢复默认。';
+
+  @override
+  String memorySettingsInjectionMaxItemsOption(int n) {
+    return '$n';
+  }
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomButton => '自定义';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomTitle => '自定义注入条数';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomDescription =>
+      '请输入 1 到 50 之间的整数。';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomLabel => '条数';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomInvalid => '请输入 1 到 50 之间的整数';
+
+  @override
   String get memorySettingsPromptLangSection => '提示词语言';
 
   @override
@@ -6204,6 +6238,86 @@ class AppLocalizationsZh extends AppLocalizations {
   String memoryOrganizeStatusFailed(String reason) {
     return '失败：$reason';
   }
+
+  @override
+  String memoryOrganizeStatusSkippedReason(String reason) {
+    return '已跳过：$reason';
+  }
+
+  @override
+  String get memoryOutcomeTemporaryConversation => '临时对话不会写入记忆';
+
+  @override
+  String get memoryOutcomeMemoryDisabled => '该助手已关闭记忆';
+
+  @override
+  String get memoryOutcomeAutoOrganizeOff => '自动整理已关闭';
+
+  @override
+  String get memoryOutcomeStreaming => '回复仍在生成，已跳过整理';
+
+  @override
+  String get memoryOutcomeBelowThreshold => '新消息不足，暂不整理';
+
+  @override
+  String get memoryOutcomeEmptyWindow => '没有新消息需要整理';
+
+  @override
+  String get memoryOutcomeMemoryModelUnset => '尚未选择记忆处理模型';
+
+  @override
+  String get memoryOutcomeMemoryModelMissing => '所选记忆模型已不可用';
+
+  @override
+  String get memoryOutcomeAssistantMissing => '找不到助手';
+
+  @override
+  String get memoryOutcomeConversationMissing => '找不到对话';
+
+  @override
+  String get memoryOutcomeQueueOverflow => '整理队列已满，本次任务被丢弃';
+
+  @override
+  String get memoryOutcomeGateRequestFailed => '判断是否值得记忆时，无法请求记忆模型';
+
+  @override
+  String get memoryOutcomeGateParseFailed => '判断是否值得记忆的回复无法解析';
+
+  @override
+  String get memoryOutcomeExtractRequestFailed => '提取记忆时，无法请求记忆模型';
+
+  @override
+  String get memoryOutcomeExtractParseFailed => '提取记忆的回复无法解析';
+
+  @override
+  String get memoryOutcomeDistillFailed => '用户画像提炼失败';
+
+  @override
+  String get memoryOutcomeMemoryExecutionError => '记忆工具执行失败';
+
+  @override
+  String get memoryOutcomeUnsupportedTool => '不支持的记忆工具';
+
+  @override
+  String get memoryOutcomeInvalidMemoryType => '记忆类型无效';
+
+  @override
+  String get memoryOutcomeInvalidMemoryContent => '记忆内容无效';
+
+  @override
+  String get memoryOutcomeInvalidQuery => '查询无效';
+
+  @override
+  String get memoryOutcomeInvalidMemoryId => '记忆 ID 无效';
+
+  @override
+  String get memoryOutcomeMemoryNotFound => '找不到这条记忆';
+
+  @override
+  String get memoryOutcomeInvalidProfileFields => '画像字段无效';
+
+  @override
+  String get memoryOutcomeChatSearchUnavailable => '对话搜索不可用';
 
   @override
   String get memoryOrganizeJustNow => '刚刚';
@@ -13208,6 +13322,40 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get memorySettingsThinkingSubtitle => '在模型支持时允许记忆模型使用推理';
 
   @override
+  String get memorySettingsInjectionSection => '记忆注入';
+
+  @override
+  String get memorySettingsInjectionMaxItemsTitle => '每类注入条数';
+
+  @override
+  String get memorySettingsInjectionMaxItemsSubtitle =>
+      '某一类型的记忆超过该条数时，只注入最近的若干条，其余由模型用 memory_search_profile 按需查询。调大更全面但更费 token。若你改过规则提示词，请一并更新或恢复默认。';
+
+  @override
+  String memorySettingsInjectionMaxItemsOption(int n) {
+    return '$n';
+  }
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomButton => '自定义';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomTitle => '自定义注入条数';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomDescription =>
+      '请输入 1 到 50 之间的整数。';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomLabel => '条数';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomInvalid => '请输入 1 到 50 之间的整数';
+
+  @override
   String get memorySettingsPromptLangSection => '提示词语言';
 
   @override
@@ -13487,6 +13635,86 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String memoryOrganizeStatusFailed(String reason) {
     return '失败：$reason';
   }
+
+  @override
+  String memoryOrganizeStatusSkippedReason(String reason) {
+    return '已跳过：$reason';
+  }
+
+  @override
+  String get memoryOutcomeTemporaryConversation => '临时对话不会写入记忆';
+
+  @override
+  String get memoryOutcomeMemoryDisabled => '该助手已关闭记忆';
+
+  @override
+  String get memoryOutcomeAutoOrganizeOff => '自动整理已关闭';
+
+  @override
+  String get memoryOutcomeStreaming => '回复仍在生成，已跳过整理';
+
+  @override
+  String get memoryOutcomeBelowThreshold => '新消息不足，暂不整理';
+
+  @override
+  String get memoryOutcomeEmptyWindow => '没有新消息需要整理';
+
+  @override
+  String get memoryOutcomeMemoryModelUnset => '尚未选择记忆处理模型';
+
+  @override
+  String get memoryOutcomeMemoryModelMissing => '所选记忆模型已不可用';
+
+  @override
+  String get memoryOutcomeAssistantMissing => '找不到助手';
+
+  @override
+  String get memoryOutcomeConversationMissing => '找不到对话';
+
+  @override
+  String get memoryOutcomeQueueOverflow => '整理队列已满，本次任务被丢弃';
+
+  @override
+  String get memoryOutcomeGateRequestFailed => '判断是否值得记忆时，无法请求记忆模型';
+
+  @override
+  String get memoryOutcomeGateParseFailed => '判断是否值得记忆的回复无法解析';
+
+  @override
+  String get memoryOutcomeExtractRequestFailed => '提取记忆时，无法请求记忆模型';
+
+  @override
+  String get memoryOutcomeExtractParseFailed => '提取记忆的回复无法解析';
+
+  @override
+  String get memoryOutcomeDistillFailed => '用户画像提炼失败';
+
+  @override
+  String get memoryOutcomeMemoryExecutionError => '记忆工具执行失败';
+
+  @override
+  String get memoryOutcomeUnsupportedTool => '不支持的记忆工具';
+
+  @override
+  String get memoryOutcomeInvalidMemoryType => '记忆类型无效';
+
+  @override
+  String get memoryOutcomeInvalidMemoryContent => '记忆内容无效';
+
+  @override
+  String get memoryOutcomeInvalidQuery => '查询无效';
+
+  @override
+  String get memoryOutcomeInvalidMemoryId => '记忆 ID 无效';
+
+  @override
+  String get memoryOutcomeMemoryNotFound => '找不到这条记忆';
+
+  @override
+  String get memoryOutcomeInvalidProfileFields => '画像字段无效';
+
+  @override
+  String get memoryOutcomeChatSearchUnavailable => '对话搜索不可用';
 
   @override
   String get memoryOrganizeJustNow => '刚刚';
@@ -20565,6 +20793,40 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memorySettingsThinkingSubtitle => '在模型支援時允許記憶模型使用推理';
 
   @override
+  String get memorySettingsInjectionSection => '記憶注入';
+
+  @override
+  String get memorySettingsInjectionMaxItemsTitle => '每類注入條數';
+
+  @override
+  String get memorySettingsInjectionMaxItemsSubtitle =>
+      '某一類型的記憶超過該條數時，只注入最近的若干條，其餘由模型用 memory_search_profile 按需查詢。調大更全面但更費 token。若你改過規則提示詞，請一併更新或恢復預設。';
+
+  @override
+  String memorySettingsInjectionMaxItemsOption(int n) {
+    return '$n';
+  }
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomButton => '自訂';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomTitle => '自訂注入條數';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomDescription =>
+      '請輸入 1 到 50 之間的整數。';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomLabel => '條數';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomInvalid => '請輸入 1 到 50 之間的整數';
+
+  @override
   String get memorySettingsPromptLangSection => '提示詞語言';
 
   @override
@@ -20844,6 +21106,86 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String memoryOrganizeStatusFailed(String reason) {
     return '失敗：$reason';
   }
+
+  @override
+  String memoryOrganizeStatusSkippedReason(String reason) {
+    return '已跳過：$reason';
+  }
+
+  @override
+  String get memoryOutcomeTemporaryConversation => '臨時對話不會寫入記憶';
+
+  @override
+  String get memoryOutcomeMemoryDisabled => '此助手已關閉記憶';
+
+  @override
+  String get memoryOutcomeAutoOrganizeOff => '自動整理已關閉';
+
+  @override
+  String get memoryOutcomeStreaming => '回覆仍在產生，已跳過整理';
+
+  @override
+  String get memoryOutcomeBelowThreshold => '新訊息不足，暫不整理';
+
+  @override
+  String get memoryOutcomeEmptyWindow => '沒有新訊息需要整理';
+
+  @override
+  String get memoryOutcomeMemoryModelUnset => '尚未選擇記憶處理模型';
+
+  @override
+  String get memoryOutcomeMemoryModelMissing => '所選記憶模型已不可用';
+
+  @override
+  String get memoryOutcomeAssistantMissing => '找不到助手';
+
+  @override
+  String get memoryOutcomeConversationMissing => '找不到對話';
+
+  @override
+  String get memoryOutcomeQueueOverflow => '整理佇列已滿，本次任務被捨棄';
+
+  @override
+  String get memoryOutcomeGateRequestFailed => '判斷是否值得記憶時，無法請求記憶模型';
+
+  @override
+  String get memoryOutcomeGateParseFailed => '判斷是否值得記憶的回覆無法解析';
+
+  @override
+  String get memoryOutcomeExtractRequestFailed => '擷取記憶時，無法請求記憶模型';
+
+  @override
+  String get memoryOutcomeExtractParseFailed => '擷取記憶的回覆無法解析';
+
+  @override
+  String get memoryOutcomeDistillFailed => '使用者畫像提煉失敗';
+
+  @override
+  String get memoryOutcomeMemoryExecutionError => '記憶工具執行失敗';
+
+  @override
+  String get memoryOutcomeUnsupportedTool => '不支援的記憶工具';
+
+  @override
+  String get memoryOutcomeInvalidMemoryType => '記憶類型無效';
+
+  @override
+  String get memoryOutcomeInvalidMemoryContent => '記憶內容無效';
+
+  @override
+  String get memoryOutcomeInvalidQuery => '查詢無效';
+
+  @override
+  String get memoryOutcomeInvalidMemoryId => '記憶 ID 無效';
+
+  @override
+  String get memoryOutcomeMemoryNotFound => '找不到這條記憶';
+
+  @override
+  String get memoryOutcomeInvalidProfileFields => '畫像欄位無效';
+
+  @override
+  String get memoryOutcomeChatSearchUnavailable => '對話搜尋不可用';
 
   @override
   String get memoryOrganizeJustNow => '剛剛';

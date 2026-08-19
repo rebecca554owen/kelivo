@@ -2567,6 +2567,21 @@
   "memorySettingsAboutBody": "How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.",
   "memorySettingsThinkingTitle": "Enable thinking",
   "memorySettingsThinkingSubtitle": "Allow the memory model to use reasoning when supported",
+  "memorySettingsInjectionSection": "Memory injection",
+  "memorySettingsInjectionMaxItemsTitle": "Items injected per type",
+  "memorySettingsInjectionMaxItemsSubtitle": "When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.",
+  "memorySettingsInjectionMaxItemsOption": "{n}",
+  "@memorySettingsInjectionMaxItemsOption": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "memorySettingsInjectionMaxItemsCustomButton": "Custom",
+  "memorySettingsInjectionMaxItemsCustomTitle": "Custom injection count",
+  "memorySettingsInjectionMaxItemsCustomDescription": "Enter a number between 1 and 50.",
+  "memorySettingsInjectionMaxItemsCustomLabel": "Count",
+  "memorySettingsInjectionMaxItemsCustomHint": "1–50",
+  "memorySettingsInjectionMaxItemsCustomInvalid": "Enter a number between 1 and 50",
   "memorySettingsPromptLangSection": "Prompt language",
   "memorySettingsPromptLangAuto": "Auto",
   "memorySettingsPromptLangAutoSubtitle": "Follow the UI language (Chinese → zh, otherwise en)",
@@ -2695,6 +2710,37 @@
       "reason": {"type": "String"}
     }
   },
+  "memoryOrganizeStatusSkippedReason": "skipped: {reason}",
+  "@memoryOrganizeStatusSkippedReason": {
+    "placeholders": {
+      "reason": {"type": "String"}
+    }
+  },
+  "memoryOutcomeTemporaryConversation": "Temporary chats are not saved to memory",
+  "memoryOutcomeMemoryDisabled": "Memory is off for this assistant",
+  "memoryOutcomeAutoOrganizeOff": "Auto-organize is off",
+  "memoryOutcomeStreaming": "Skipped while a reply is still streaming",
+  "memoryOutcomeBelowThreshold": "Not enough new messages to organize",
+  "memoryOutcomeEmptyWindow": "No new messages to organize",
+  "memoryOutcomeMemoryModelUnset": "No memory processing model selected",
+  "memoryOutcomeMemoryModelMissing": "The selected memory model is no longer available",
+  "memoryOutcomeAssistantMissing": "Assistant not found",
+  "memoryOutcomeConversationMissing": "Conversation not found",
+  "memoryOutcomeQueueOverflow": "The organize queue was full, so this run was dropped",
+  "memoryOutcomeGateRequestFailed": "Could not reach the memory model for the remember/skip check",
+  "memoryOutcomeGateParseFailed": "The remember/skip check returned an unreadable reply",
+  "memoryOutcomeExtractRequestFailed": "Could not reach the memory model to extract memories",
+  "memoryOutcomeExtractParseFailed": "The memory extract reply could not be parsed",
+  "memoryOutcomeDistillFailed": "Could not distill the user profile",
+  "memoryOutcomeMemoryExecutionError": "A memory tool failed to run",
+  "memoryOutcomeUnsupportedTool": "Unsupported memory tool",
+  "memoryOutcomeInvalidMemoryType": "Invalid memory type",
+  "memoryOutcomeInvalidMemoryContent": "Invalid memory content",
+  "memoryOutcomeInvalidQuery": "Invalid search query",
+  "memoryOutcomeInvalidMemoryId": "Invalid memory id",
+  "memoryOutcomeMemoryNotFound": "Memory not found",
+  "memoryOutcomeInvalidProfileFields": "Invalid profile fields",
+  "memoryOutcomeChatSearchUnavailable": "Chat search is unavailable",
   "memoryOrganizeJustNow": "just now",
   "memoryOrganizeMinutesAgo": "{n} min ago",
   "@memoryOrganizeMinutesAgo": {

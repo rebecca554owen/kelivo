@@ -11341,6 +11341,66 @@ abstract class AppLocalizations {
   /// **'Allow the memory model to use reasoning when supported'**
   String get memorySettingsThinkingSubtitle;
 
+  /// No description provided for @memorySettingsInjectionSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory injection'**
+  String get memorySettingsInjectionSection;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Items injected per type'**
+  String get memorySettingsInjectionMaxItemsTitle;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.'**
+  String get memorySettingsInjectionMaxItemsSubtitle;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsOption.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}'**
+  String memorySettingsInjectionMaxItemsOption(int n);
+
+  /// No description provided for @memorySettingsInjectionMaxItemsCustomButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get memorySettingsInjectionMaxItemsCustomButton;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsCustomTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom injection count'**
+  String get memorySettingsInjectionMaxItemsCustomTitle;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsCustomDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number between 1 and 50.'**
+  String get memorySettingsInjectionMaxItemsCustomDescription;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsCustomLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Count'**
+  String get memorySettingsInjectionMaxItemsCustomLabel;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'1–50'**
+  String get memorySettingsInjectionMaxItemsCustomHint;
+
+  /// No description provided for @memorySettingsInjectionMaxItemsCustomInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number between 1 and 50'**
+  String get memorySettingsInjectionMaxItemsCustomInvalid;
+
   /// No description provided for @memorySettingsPromptLangSection.
   ///
   /// In en, this message translates to:
@@ -11868,6 +11928,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed: {reason}'**
   String memoryOrganizeStatusFailed(String reason);
+
+  /// No description provided for @memoryOrganizeStatusSkippedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'skipped: {reason}'**
+  String memoryOrganizeStatusSkippedReason(String reason);
+
+  /// No description provided for @memoryOutcomeTemporaryConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary chats are not saved to memory'**
+  String get memoryOutcomeTemporaryConversation;
+
+  /// No description provided for @memoryOutcomeMemoryDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory is off for this assistant'**
+  String get memoryOutcomeMemoryDisabled;
+
+  /// No description provided for @memoryOutcomeAutoOrganizeOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-organize is off'**
+  String get memoryOutcomeAutoOrganizeOff;
+
+  /// No description provided for @memoryOutcomeStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped while a reply is still streaming'**
+  String get memoryOutcomeStreaming;
+
+  /// No description provided for @memoryOutcomeBelowThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough new messages to organize'**
+  String get memoryOutcomeBelowThreshold;
+
+  /// No description provided for @memoryOutcomeEmptyWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'No new messages to organize'**
+  String get memoryOutcomeEmptyWindow;
+
+  /// No description provided for @memoryOutcomeMemoryModelUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'No memory processing model selected'**
+  String get memoryOutcomeMemoryModelUnset;
+
+  /// No description provided for @memoryOutcomeMemoryModelMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected memory model is no longer available'**
+  String get memoryOutcomeMemoryModelMissing;
+
+  /// No description provided for @memoryOutcomeAssistantMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant not found'**
+  String get memoryOutcomeAssistantMissing;
+
+  /// No description provided for @memoryOutcomeConversationMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation not found'**
+  String get memoryOutcomeConversationMissing;
+
+  /// No description provided for @memoryOutcomeQueueOverflow.
+  ///
+  /// In en, this message translates to:
+  /// **'The organize queue was full, so this run was dropped'**
+  String get memoryOutcomeQueueOverflow;
+
+  /// No description provided for @memoryOutcomeGateRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach the memory model for the remember/skip check'**
+  String get memoryOutcomeGateRequestFailed;
+
+  /// No description provided for @memoryOutcomeGateParseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The remember/skip check returned an unreadable reply'**
+  String get memoryOutcomeGateParseFailed;
+
+  /// No description provided for @memoryOutcomeExtractRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach the memory model to extract memories'**
+  String get memoryOutcomeExtractRequestFailed;
+
+  /// No description provided for @memoryOutcomeExtractParseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The memory extract reply could not be parsed'**
+  String get memoryOutcomeExtractParseFailed;
+
+  /// No description provided for @memoryOutcomeDistillFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not distill the user profile'**
+  String get memoryOutcomeDistillFailed;
+
+  /// No description provided for @memoryOutcomeMemoryExecutionError.
+  ///
+  /// In en, this message translates to:
+  /// **'A memory tool failed to run'**
+  String get memoryOutcomeMemoryExecutionError;
+
+  /// No description provided for @memoryOutcomeUnsupportedTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported memory tool'**
+  String get memoryOutcomeUnsupportedTool;
+
+  /// No description provided for @memoryOutcomeInvalidMemoryType.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid memory type'**
+  String get memoryOutcomeInvalidMemoryType;
+
+  /// No description provided for @memoryOutcomeInvalidMemoryContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid memory content'**
+  String get memoryOutcomeInvalidMemoryContent;
+
+  /// No description provided for @memoryOutcomeInvalidQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid search query'**
+  String get memoryOutcomeInvalidQuery;
+
+  /// No description provided for @memoryOutcomeInvalidMemoryId.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid memory id'**
+  String get memoryOutcomeInvalidMemoryId;
+
+  /// No description provided for @memoryOutcomeMemoryNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory not found'**
+  String get memoryOutcomeMemoryNotFound;
+
+  /// No description provided for @memoryOutcomeInvalidProfileFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid profile fields'**
+  String get memoryOutcomeInvalidProfileFields;
+
+  /// No description provided for @memoryOutcomeChatSearchUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat search is unavailable'**
+  String get memoryOutcomeChatSearchUnavailable;
 
   /// No description provided for @memoryOrganizeJustNow.
   ///

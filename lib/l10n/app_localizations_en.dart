@@ -6161,6 +6161,42 @@ class AppLocalizationsEn extends AppLocalizations {
       'Allow the memory model to use reasoning when supported';
 
   @override
+  String get memorySettingsInjectionSection => 'Memory injection';
+
+  @override
+  String get memorySettingsInjectionMaxItemsTitle => 'Items injected per type';
+
+  @override
+  String get memorySettingsInjectionMaxItemsSubtitle =>
+      'When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.';
+
+  @override
+  String memorySettingsInjectionMaxItemsOption(int n) {
+    return '$n';
+  }
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomButton => 'Custom';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomTitle =>
+      'Custom injection count';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomDescription =>
+      'Enter a number between 1 and 50.';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomLabel => 'Count';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomInvalid =>
+      'Enter a number between 1 and 50';
+
+  @override
   String get memorySettingsPromptLangSection => 'Prompt language';
 
   @override
@@ -6458,6 +6494,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String memoryOrganizeStatusFailed(String reason) {
     return 'Failed: $reason';
   }
+
+  @override
+  String memoryOrganizeStatusSkippedReason(String reason) {
+    return 'skipped: $reason';
+  }
+
+  @override
+  String get memoryOutcomeTemporaryConversation =>
+      'Temporary chats are not saved to memory';
+
+  @override
+  String get memoryOutcomeMemoryDisabled => 'Memory is off for this assistant';
+
+  @override
+  String get memoryOutcomeAutoOrganizeOff => 'Auto-organize is off';
+
+  @override
+  String get memoryOutcomeStreaming =>
+      'Skipped while a reply is still streaming';
+
+  @override
+  String get memoryOutcomeBelowThreshold =>
+      'Not enough new messages to organize';
+
+  @override
+  String get memoryOutcomeEmptyWindow => 'No new messages to organize';
+
+  @override
+  String get memoryOutcomeMemoryModelUnset =>
+      'No memory processing model selected';
+
+  @override
+  String get memoryOutcomeMemoryModelMissing =>
+      'The selected memory model is no longer available';
+
+  @override
+  String get memoryOutcomeAssistantMissing => 'Assistant not found';
+
+  @override
+  String get memoryOutcomeConversationMissing => 'Conversation not found';
+
+  @override
+  String get memoryOutcomeQueueOverflow =>
+      'The organize queue was full, so this run was dropped';
+
+  @override
+  String get memoryOutcomeGateRequestFailed =>
+      'Could not reach the memory model for the remember/skip check';
+
+  @override
+  String get memoryOutcomeGateParseFailed =>
+      'The remember/skip check returned an unreadable reply';
+
+  @override
+  String get memoryOutcomeExtractRequestFailed =>
+      'Could not reach the memory model to extract memories';
+
+  @override
+  String get memoryOutcomeExtractParseFailed =>
+      'The memory extract reply could not be parsed';
+
+  @override
+  String get memoryOutcomeDistillFailed => 'Could not distill the user profile';
+
+  @override
+  String get memoryOutcomeMemoryExecutionError => 'A memory tool failed to run';
+
+  @override
+  String get memoryOutcomeUnsupportedTool => 'Unsupported memory tool';
+
+  @override
+  String get memoryOutcomeInvalidMemoryType => 'Invalid memory type';
+
+  @override
+  String get memoryOutcomeInvalidMemoryContent => 'Invalid memory content';
+
+  @override
+  String get memoryOutcomeInvalidQuery => 'Invalid search query';
+
+  @override
+  String get memoryOutcomeInvalidMemoryId => 'Invalid memory id';
+
+  @override
+  String get memoryOutcomeMemoryNotFound => 'Memory not found';
+
+  @override
+  String get memoryOutcomeInvalidProfileFields => 'Invalid profile fields';
+
+  @override
+  String get memoryOutcomeChatSearchUnavailable => 'Chat search is unavailable';
 
   @override
   String get memoryOrganizeJustNow => 'just now';
