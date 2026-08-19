@@ -71,11 +71,18 @@ class LegacyMemoryMigrationService {
     LegacyMemoryTextGenerator? generateText,
     int batchSize = 12,
     Future<void> Function(Duration duration)? delay,
+    this.generateCallLimit,
   }) : batchSize = batchSize.clamp(1, 24),
        _generateText = generateText ?? ChatApiService.generateText,
        _delay = delay ?? ((duration) => Future<void>.delayed(duration));
 
+  static const int _maxAttempts = 3;
+
   final int batchSize;
+
+  /// Optional hard cap on `_generateText` calls for one `migrate()`.
+  /// When null, the run uses `3 * pendingCount`.
+  final int? generateCallLimit;
 
   final MemoryRepository repository;
   final LegacyMemoryTextGenerator _generateText;
@@ -154,13 +161,25 @@ class LegacyMemoryMigrationService {
       return LegacyMemoryMigrationResult(created: 0, skipped: skipped);
     }
 
+    final run = _MigrateRun(
+      generateCallLimit: generateCallLimit ?? pending.length * 3,
+    );
+
     for (var start = 0; start < pending.length; start += batchSize) {
+      if (run.stopped) {
+        failed += pending.length - start;
+        errorMessage ??= run.stopReason;
+        processed = inputs.length;
+        report();
+        break;
+      }
       final end = start + batchSize < pending.length
           ? start + batchSize
           : pending.length;
       final batch = pending.sublist(start, end);
       final outcome = await _convertBatchWithRetry(
         batch,
+        run: run,
         config: config,
         modelId: modelId,
         preserveOriginal: preserveOriginal,
@@ -186,6 +205,7 @@ class LegacyMemoryMigrationService {
 
   Future<_BatchWriteOutcome> _convertBatchWithRetry(
     List<_PendingLegacyMemory> batch, {
+    required _MigrateRun run,
     required ProviderConfig config,
     required String modelId,
     required bool preserveOriginal,
@@ -194,12 +214,24 @@ class LegacyMemoryMigrationService {
     if (batch.isEmpty) {
       return const _BatchWriteOutcome(created: 0, skipped: 0, failed: 0);
     }
+    if (run.stopped || !run.hasBudget) {
+      run.stopped = true;
+      run.stopReason ??= 'legacy_memory_request_budget_exceeded';
+      return _BatchWriteOutcome(
+        created: 0,
+        skipped: 0,
+        failed: batch.length,
+        errorMessage: run.stopReason,
+      );
+    }
 
     Object? lastError;
-    for (var attempt = 1; attempt <= 3; attempt++) {
+    var lastKind = _MigrationFailureKind.stopAfterRetry;
+    for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
       try {
         return await _convertAndWriteBatch(
           batch,
+          run: run,
           config: config,
           modelId: modelId,
           preserveOriginal: preserveOriginal,
@@ -207,29 +239,51 @@ class LegacyMemoryMigrationService {
         );
       } catch (e) {
         lastError = e;
-        if (attempt >= 2 && batch.length > 1) {
+        lastKind = _classifyMigrationFailure(e);
+        if (lastKind == _MigrationFailureKind.stopNow) {
+          run.stopped = true;
+          run.stopReason = e.toString();
+          return _BatchWriteOutcome(
+            created: 0,
+            skipped: 0,
+            failed: batch.length,
+            errorMessage: run.stopReason,
+          );
+        }
+        // Only oversized / incomplete model output can recover by shrinking
+        // the batch. Auth, network, config, and storage errors will not.
+        if (lastKind == _MigrationFailureKind.split &&
+            attempt >= 2 &&
+            batch.length > 1) {
           return _splitAndRetry(
             batch,
+            run: run,
             config: config,
             modelId: modelId,
             preserveOriginal: preserveOriginal,
             promptTemplate: promptTemplate,
           );
         }
-        if (attempt < 3) {
+        if (attempt < _maxAttempts) {
           await _delay(_backoffAfter(attempt));
         }
       }
     }
 
-    if (batch.length > 1) {
+    if (lastKind == _MigrationFailureKind.split && batch.length > 1) {
       return _splitAndRetry(
         batch,
+        run: run,
         config: config,
         modelId: modelId,
         preserveOriginal: preserveOriginal,
         promptTemplate: promptTemplate,
       );
+    }
+
+    if (lastKind == _MigrationFailureKind.stopAfterRetry) {
+      run.stopped = true;
+      run.stopReason = lastError?.toString();
     }
 
     return _BatchWriteOutcome(
@@ -242,6 +296,7 @@ class LegacyMemoryMigrationService {
 
   Future<_BatchWriteOutcome> _splitAndRetry(
     List<_PendingLegacyMemory> batch, {
+    required _MigrateRun run,
     required ProviderConfig config,
     required String modelId,
     required bool preserveOriginal,
@@ -250,6 +305,7 @@ class LegacyMemoryMigrationService {
     final mid = batch.length ~/ 2;
     final left = await _convertBatchWithRetry(
       batch.sublist(0, mid),
+      run: run,
       config: config,
       modelId: modelId,
       preserveOriginal: preserveOriginal,
@@ -257,6 +313,7 @@ class LegacyMemoryMigrationService {
     );
     final right = await _convertBatchWithRetry(
       batch.sublist(mid),
+      run: run,
       config: config,
       modelId: modelId,
       preserveOriginal: preserveOriginal,
@@ -272,11 +329,18 @@ class LegacyMemoryMigrationService {
 
   Future<_BatchWriteOutcome> _convertAndWriteBatch(
     List<_PendingLegacyMemory> batch, {
+    required _MigrateRun run,
     required ProviderConfig config,
     required String modelId,
     required bool preserveOriginal,
     required String promptTemplate,
   }) async {
+    if (!run.hasBudget) {
+      throw const _LegacyMemoryMigrationStop(
+        'legacy_memory_request_budget_exceeded',
+      );
+    }
+    run.generateCalls++;
     final ids = <int>[for (final item in batch) item.promptId];
     final prompt = buildPrompt(
       batch: [for (final item in batch) item.input],
@@ -415,6 +479,56 @@ class LegacyMemoryMigrationService {
       for (final id in expectedIds) byId[id]!,
     ];
   }
+
+  static _MigrationFailureKind _classifyMigrationFailure(Object error) {
+    if (error is _LegacyMemoryMigrationStop) {
+      return _MigrationFailureKind.stopNow;
+    }
+    if (_isSplittableMigrationError(error)) {
+      return _MigrationFailureKind.split;
+    }
+    return _MigrationFailureKind.stopAfterRetry;
+  }
+
+  static bool _isSplittableMigrationError(Object error) {
+    if (error is FormatException) {
+      final message = error.message.toLowerCase();
+      if (message.contains('legacy_memory_response')) return true;
+    }
+    final lower = error.toString().toLowerCase();
+    return lower.contains('legacy_memory_response') ||
+        lower.contains('payload too large') ||
+        lower.contains('context_length') ||
+        lower.contains('context length') ||
+        lower.contains('too many tokens') ||
+        lower.contains('maximum context') ||
+        lower.contains('max context') ||
+        lower.contains('http 413') ||
+        lower.contains('status code 413') ||
+        lower.contains('status: 413');
+  }
+}
+
+enum _MigrationFailureKind { split, stopAfterRetry, stopNow }
+
+class _LegacyMemoryMigrationStop implements Exception {
+  const _LegacyMemoryMigrationStop(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+class _MigrateRun {
+  _MigrateRun({required this.generateCallLimit});
+
+  final int generateCallLimit;
+  int generateCalls = 0;
+  bool stopped = false;
+  String? stopReason;
+
+  bool get hasBudget => !stopped && generateCalls < generateCallLimit;
 }
 
 class _PendingLegacyMemory {

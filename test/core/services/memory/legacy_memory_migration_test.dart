@@ -441,6 +441,167 @@ void main() {
       expect(await repository.readAll(), isEmpty);
     });
 
+    test('auth failure retries the same batch and does not split', () async {
+      final harness = await createBusinessTestHarness();
+      final repository = MemoryRepository(harness.preferences);
+      var calls = 0;
+      final service = LegacyMemoryMigrationService(
+        repository: repository,
+        batchSize: 3,
+        delay: (_) async {},
+        generateText:
+            ({
+              required ProviderConfig config,
+              required String modelId,
+              required String prompt,
+              int? thinkingBudget,
+            }) async {
+              calls++;
+              throw Exception('HTTP 401: invalid api key');
+            },
+      );
+
+      final result = await service.migrate(
+        inputs: const [
+          LegacyMemoryMigrationInput(
+            legacyId: 1,
+            assistantId: 'assistant-1',
+            content: 'One',
+          ),
+          LegacyMemoryMigrationInput(
+            legacyId: 2,
+            assistantId: 'assistant-1',
+            content: 'Two',
+          ),
+          LegacyMemoryMigrationInput(
+            legacyId: 3,
+            assistantId: 'assistant-1',
+            content: 'Three',
+          ),
+          LegacyMemoryMigrationInput(
+            legacyId: 4,
+            assistantId: 'assistant-1',
+            content: 'Four',
+          ),
+          LegacyMemoryMigrationInput(
+            legacyId: 5,
+            assistantId: 'assistant-1',
+            content: 'Five',
+          ),
+          LegacyMemoryMigrationInput(
+            legacyId: 6,
+            assistantId: 'assistant-1',
+            content: 'Six',
+          ),
+        ],
+        target: LegacyMemoryMigrationTarget.global,
+        config: _config(),
+        modelId: 'test-model',
+      );
+
+      expect(result.created, 0);
+      expect(result.failed, 6);
+      expect(result.errorMessage, contains('401'));
+      expect(calls, 3);
+      expect(await repository.readAll(), isEmpty);
+    });
+
+    test(
+      'network failure does not split and stops remaining batches',
+      () async {
+        final harness = await createBusinessTestHarness();
+        final repository = MemoryRepository(harness.preferences);
+        var calls = 0;
+        final service = LegacyMemoryMigrationService(
+          repository: repository,
+          batchSize: 2,
+          delay: (_) async {},
+          generateText:
+              ({
+                required ProviderConfig config,
+                required String modelId,
+                required String prompt,
+                int? thinkingBudget,
+              }) async {
+                calls++;
+                throw Exception('ClientException: connection refused');
+              },
+        );
+
+        final result = await service.migrate(
+          inputs: const [
+            LegacyMemoryMigrationInput(
+              legacyId: 1,
+              assistantId: 'assistant-1',
+              content: 'One',
+            ),
+            LegacyMemoryMigrationInput(
+              legacyId: 2,
+              assistantId: 'assistant-1',
+              content: 'Two',
+            ),
+            LegacyMemoryMigrationInput(
+              legacyId: 3,
+              assistantId: 'assistant-1',
+              content: 'Three',
+            ),
+            LegacyMemoryMigrationInput(
+              legacyId: 4,
+              assistantId: 'assistant-1',
+              content: 'Four',
+            ),
+          ],
+          target: LegacyMemoryMigrationTarget.global,
+          config: _config(),
+          modelId: 'test-model',
+        );
+
+        expect(result.failed, 4);
+        expect(calls, 3);
+      },
+    );
+
+    test('generate call cap stops further model requests', () async {
+      final harness = await createBusinessTestHarness();
+      final repository = MemoryRepository(harness.preferences);
+      var calls = 0;
+      final service = LegacyMemoryMigrationService(
+        repository: repository,
+        batchSize: 8,
+        generateCallLimit: 4,
+        delay: (_) async {},
+        generateText:
+            ({
+              required ProviderConfig config,
+              required String modelId,
+              required String prompt,
+              int? thinkingBudget,
+            }) async {
+              calls++;
+              throw const FormatException('legacy_memory_response_incomplete');
+            },
+      );
+
+      final result = await service.migrate(
+        inputs: [
+          for (var i = 1; i <= 8; i++)
+            LegacyMemoryMigrationInput(
+              legacyId: i,
+              assistantId: 'assistant-1',
+              content: 'Item $i',
+            ),
+        ],
+        target: LegacyMemoryMigrationTarget.global,
+        config: _config(),
+        modelId: 'test-model',
+      );
+
+      expect(result.created, 0);
+      expect(result.failed, 8);
+      expect(calls, 4);
+      expect(result.errorMessage, contains('legacy_memory_request_budget'));
+    });
+
     test(
       'preserve-original stores the legacy text when the model returns type only',
       () async {
