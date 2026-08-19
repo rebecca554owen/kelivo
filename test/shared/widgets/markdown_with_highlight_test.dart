@@ -1796,6 +1796,57 @@ $code
     expect(find.textContaining('graph TD'), findsNothing);
   });
 
+  testWidgets('Mermaid keeps theme ink instead of inherited text color', (
+    tester,
+  ) async {
+    addTearDown(MermaidImageCache.clear);
+    addTearDown(() => debugMermaidBitmapRenderOverride = null);
+    MermaidImageCache.clear();
+
+    const inheritedInk = Color(0xFFCC3300);
+    const themeInk = Color(0xFF112233);
+    Map<String, String>? capturedThemeVars;
+    debugMermaidBitmapRenderOverride = (code, isDark, themeVars) async {
+      capturedThemeVars = Map<String, String>.from(themeVars);
+      return MermaidBitmapRenderResult.failed();
+    };
+
+    final baseTheme = ThemeData.light();
+    final theme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(onSurface: themeInk),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => SettingsProvider(createBusinessTestPreferences()),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: theme,
+          home: Scaffold(
+            body: DefaultTextStyle.merge(
+              style: const TextStyle(color: inheritedInk),
+              child: const MarkdownWithCodeHighlight(
+                text: '```mermaid\ngraph TD\nA-->B\n```',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 240));
+
+    expect(capturedThemeVars, isNotNull);
+    for (final key in const [
+      'lineColor',
+      'textColor',
+      'actorTextColor',
+      'taskTextDarkColor',
+      'labelColor',
+    ]) {
+      expect(capturedThemeVars![key], '#112233', reason: key);
+    }
+  });
+
   testWidgets(
     'MarkdownWithCodeHighlight shows fixed Mermaid loading state while rendering',
     (tester) async {
@@ -4083,6 +4134,74 @@ void main() {
     expect(markdown.components!.whereType<HTag>(), isEmpty);
     expect(markdown.components!.whereType<AtxHeadingMd>(), hasLength(1));
     expect(_spanFontSize(tester, 'Real heading'), 24);
+  });
+
+  testWidgets('regular and inline code text follow inherited ink color', (
+    tester,
+  ) async {
+    const inheritedInk = Color(0xFF224466);
+    const themeInk = Color(0xFF112233);
+    _overrideMarkdownTablePlatform(TargetPlatform.android);
+    final baseTheme = ThemeData.light();
+    final theme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(onSurface: themeInk),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => SettingsProvider(createBusinessTestPreferences()),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: theme,
+          home: Scaffold(
+            body: DefaultTextStyle.merge(
+              style: const TextStyle(color: inheritedInk),
+              child: const MarkdownWithCodeHighlight(
+                text: '''
+# Real heading
+
+Body copy with `code`.
+
+| Theme table header |
+| --- |
+| Theme table body |
+
+```text
+Fenced code body
+```
+''',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      _paragraphContaining('Real heading').text.style?.color,
+      inheritedInk,
+    );
+    expect(
+      _paragraphContaining('Body copy with').text.style?.color,
+      inheritedInk,
+    );
+    expect(tester.widget<Text>(find.text('code')).style?.color, inheritedInk);
+    expect(
+      _paragraphContaining('Theme table header').text.style?.color,
+      themeInk,
+    );
+    expect(
+      _paragraphContaining('Theme table body').text.style?.color,
+      themeInk.withValues(alpha: 0.90),
+    );
+    final fencedCode = tester.widget<SelectableText>(
+      find.descendant(
+        of: find.byType(SelectableHighlightView),
+        matching: find.byType(SelectableText),
+      ),
+    );
+    expect(fencedCode.textSpan?.style?.color, themeInk);
   });
 
   testWidgets(

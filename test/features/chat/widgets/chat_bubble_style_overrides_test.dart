@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -121,5 +122,56 @@ void main() {
       tester.widget<Text>(find.text('Translated answer')).style?.color,
       const Color(0xFF224466),
     );
+  });
+
+  testWidgets('markdown headings use the override text color', (tester) async {
+    final harness = await createBusinessTestHarness(
+      initial: {'display_chat_message_background_style_v1': 'solid'},
+    );
+    final settings = SettingsProvider(harness.preferences);
+    await settings.loaded;
+    await settings.setChatBubbleStyleOverrides(
+      const ChatBubbleStyleOverrides(textArgbLight: 0xFF224466),
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+          ChangeNotifierProvider(
+            create: (_) =>
+                TtsProvider(preferences: createBusinessTestPreferences()),
+          ),
+          ChangeNotifierProvider(create: (_) => ToolApprovalService()),
+          ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ChatMessageWidget(
+              message: ChatMessage(
+                role: 'assistant',
+                content: '# Custom heading\n\nBody copy.',
+                conversationId: 'conversation-heading-overrides',
+              ),
+              showModelIcon: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final heading = find
+        .byType(RichText)
+        .evaluate()
+        .map((element) => element.renderObject)
+        .whereType<RenderParagraph>()
+        .firstWhere(
+          (paragraph) =>
+              paragraph.text.toPlainText().contains('Custom heading'),
+        );
+    expect(heading.text.style?.color, const Color(0xFF224466));
   });
 }

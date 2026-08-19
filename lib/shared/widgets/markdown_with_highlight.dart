@@ -45,6 +45,16 @@ const int _maxInlineMathBodyLength = 512;
 const String _codeDollarMask = '___CODE_DOLLAR_MASK___';
 const String _fencedHtmlTagStartMask = '\uE002';
 
+/// Ink used by regular markdown text that inherits the surrounding bubble.
+///
+/// Dedicated surfaces such as fenced code blocks, tables, and diagrams keep
+/// their own theme palette. Fall back to the theme when nothing was inherited.
+Color _markdownInkColor(BuildContext context, [double alpha = 1]) {
+  final inherited = DefaultTextStyle.of(context).style.color;
+  final base = inherited ?? Theme.of(context).colorScheme.onSurface;
+  return alpha >= 1 ? base : base.withValues(alpha: alpha);
+}
+
 /// Global LRU of parsed highlight node trees, keyed by language + source.
 /// Node trees are theme-independent (the theme is applied while converting
 /// nodes to spans), so entries survive theme switches and widget disposal.
@@ -187,13 +197,14 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
         ? null
         : normalize(sanitizedText, streaming: widget.streaming);
     // Base text style (can be overridden by caller)
+    final inkColor = _markdownInkColor(context);
     final baseTextStyle =
         (widget.baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
           fontSize: widget.baseStyle?.fontSize ?? 15.5,
           height: widget.baseStyle?.height ?? 1.55,
           letterSpacing:
               widget.baseStyle?.letterSpacing ?? (_isZh(context) ? 0.0 : 0.05),
-          color: null,
+          color: inkColor,
         );
 
     // Replace default components and add our own where needed
@@ -299,7 +310,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     final documentRevision =
         '${_imageRevision(imageUrls)}\u0002${_citationRevision(sanitizedText, widget.citationIndexResolver)}';
     final themeSignature =
-        '${Theme.of(context).brightness.index}-${cs.surface.toARGB32()}-${cs.onSurface.toARGB32()}-${cs.primary.toARGB32()}-${cs.outlineVariant.toARGB32()}-${settings.enableMathRendering}-${settings.enableDollarLatex}-${widget.streaming}-${baseTextStyle?.fontSize}-${baseTextStyle?.height}-${baseTextStyle?.letterSpacing}-${baseTextStyle?.fontFamily}-$codeFontFamily-$appFontFamily-$documentRevision';
+        '${Theme.of(context).brightness.index}-${cs.surface.toARGB32()}-${inkColor.toARGB32()}-${cs.primary.toARGB32()}-${cs.outlineVariant.toARGB32()}-${settings.enableMathRendering}-${settings.enableDollarLatex}-${widget.streaming}-${baseTextStyle?.fontSize}-${baseTextStyle?.height}-${baseTextStyle?.letterSpacing}-${baseTextStyle?.fontFamily}-$codeFontFamily-$appFontFamily-$documentRevision';
 
     Widget buildMarkdown(String markdown, Key key) {
       final detailsRegistry = MarkdownDetailsRegistry(
@@ -559,7 +570,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
                 fontFamily: codeFontFamily,
                 fontSize: 13,
                 height: 1.4,
-              ).copyWith(color: csCtx.onSurface),
+              ).copyWith(color: _markdownInkColor(ctx)),
               softWrap: true,
               overflow: TextOverflow.visible,
             ),
@@ -2459,6 +2470,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
       fontFamily: codeFontFamily,
       fontSize: 13,
       height: 1.5,
+      color: cs.onSurface,
     );
     final codeLanguage = _normalizeLanguage(widget.language) ?? 'plaintext';
     final codeTheme = _transparentBgTheme(
@@ -5160,7 +5172,6 @@ class AtxHeadingMd extends BlockMd {
     GptMarkdownConfig cfg,
     int level,
   ) {
-    final cs = Theme.of(ctx).colorScheme;
     final isZh = _isZh(ctx);
     final settings = ctx.read<SettingsProvider>();
     String? appFamily;
@@ -5209,7 +5220,7 @@ class AtxHeadingMd extends BlockMd {
       fontWeight: weight,
       height: h,
       letterSpacing: ls,
-      color: cs.onSurface,
+      color: _markdownInkColor(ctx),
       fontFamily: appFamily,
       fontFamilyFallback: getPlatformFontFallback(),
     );
@@ -5276,16 +5287,15 @@ class LabelValueLineMd extends InlineMd {
     rawLabel = rawLabel.replaceFirst(RegExp(r"[：:]+$"), '');
 
     final t = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
     // 继承基础样式，确保字间距/行高一致
     final base = (config.style ?? t.bodyMedium ?? TextStyle(fontSize: 14));
     final labelStyle = base.copyWith(
       fontWeight: AppFontWeights.strong,
-      color: cs.onSurface,
+      color: _markdownInkColor(context),
     );
     final valueStyle = base.copyWith(
       fontWeight: AppFontWeights.regular,
-      color: cs.onSurface.withValues(alpha: 0.92),
+      color: _markdownInkColor(context, 0.92),
     );
 
     // 将值部分继续按 markdown 解析，保证链接/引用等语法正常
@@ -5850,11 +5860,11 @@ class _DetailsHtmlBlockState extends State<_DetailsHtmlBlock> {
       alpha: isDark ? 0.18 : 0.30,
     );
     final summaryStyle = (widget.config.style ?? TextStyle()).copyWith(
-      color: cs.onSurface,
+      color: _markdownInkColor(context),
       fontWeight: AppFontWeights.medium,
     );
     final bodyStyle = (widget.config.style ?? TextStyle()).copyWith(
-      color: cs.onSurface,
+      color: _markdownInkColor(context),
     );
     final bodyConfig = widget.config.copyWith(style: bodyStyle);
 

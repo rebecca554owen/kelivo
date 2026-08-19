@@ -621,6 +621,7 @@ class LatexMathMultiLine extends BlockMd {
                   sizeUnderTextStyle: MathSize.large,
                   color:
                       config.style?.color ??
+                      DefaultTextStyle.of(context).style.color ??
                       Theme.of(context).colorScheme.onSurface,
                   fontSize:
                       config.style?.fontSize ??
@@ -696,6 +697,7 @@ class LatexMath extends InlineMd {
                   sizeUnderTextStyle: MathSize.large,
                   color:
                       config.style?.color ??
+                      DefaultTextStyle.of(context).style.color ??
                       Theme.of(context).colorScheme.onSurface,
                   fontSize:
                       config.style?.fontSize ??
