@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
@@ -39,6 +39,7 @@ class ChatboxBackupArchive {
   static const int maxJsonEntryBytes = 128 * 1024 * 1024;
   static const int maxResourceEntryBytes = 512 * 1024 * 1024;
   static const int maxTotalUncompressedBytes = 4 * 1024 * 1024 * 1024;
+  static const int maxCompressionRatio = 2000;
 
   static const String _manifestPath = 'manifest.json';
   static const String _settingsPath = 'settings.json';
@@ -77,19 +78,64 @@ class ChatboxBackupArchive {
             (bytes[2] == 0x07 && bytes[3] == 0x08));
   }
 
+  static Future<bool> looksLikeZipFile(File file) async {
+    RandomAccessFile? raf;
+    try {
+      raf = await file.open();
+      return looksLikeZip(await raf.read(4));
+    } catch (_) {
+      return false;
+    } finally {
+      try {
+        await raf?.close();
+      } catch (_) {}
+    }
+  }
+
   static Future<ChatboxBackupReadResult> readZipV2({
-    required List<int> bytes,
+    File? file,
+    List<int>? bytes,
     required Directory stagingDir,
     required String resourceDestDir,
   }) async {
-    late final Archive archive;
-    try {
-      archive = ZipDecoder().decodeBytes(bytes, verify: true);
-    } catch (e) {
-      throw ChatboxImportException('Unable to read Chatbox backup ZIP: $e');
+    if (file == null && bytes == null) {
+      throw ArgumentError('Pass file or bytes');
     }
+    InputFileStream? input;
+    Archive? archive;
+    try {
+      try {
+        if (file != null) {
+          input = InputFileStream(file.path);
+          archive = ZipDecoder().decodeStream(input, verify: true);
+        } else {
+          archive = ZipDecoder().decodeBytes(bytes!, verify: true);
+        }
+      } catch (e) {
+        if (e is ChatboxImportException) rethrow;
+        throw ChatboxImportException('Unable to read Chatbox backup ZIP: $e');
+      }
+      return await _interpretArchive(
+        archive,
+        stagingDir: stagingDir,
+        resourceDestDir: resourceDestDir,
+      );
+    } finally {
+      try {
+        archive?.clearSync();
+      } catch (_) {}
+      try {
+        input?.closeSync();
+      } catch (_) {}
+    }
+  }
 
-    final files = <String, Uint8List>{};
+  static Future<ChatboxBackupReadResult> _interpretArchive(
+    Archive archive, {
+    required Directory stagingDir,
+    required String resourceDestDir,
+  }) async {
+    final entries = <String, ArchiveFile>{};
     var totalUncompressed = 0;
     var fileCount = 0;
     for (final entry in archive) {
@@ -98,46 +144,60 @@ class ChatboxBackupArchive {
         throw ChatboxImportException('Unsafe ZIP entry path: ${entry.name}');
       }
       final path = _normalizedArchivePath(entry.name);
-      if (files.containsKey(path)) {
+      if (entries.containsKey(path)) {
         throw ChatboxImportException('Duplicate ZIP entry: $path');
       }
       fileCount++;
       if (fileCount > maxFileEntries) {
         throw const ChatboxImportException('Backup contains too many entries.');
       }
-      final limit = _isBackupJsonPath(path)
-          ? maxJsonEntryBytes
-          : maxResourceEntryBytes;
-      final data = entry.content;
-      if (data.length > limit) {
-        throw ChatboxImportException('Backup entry is too large: $path');
-      }
-      totalUncompressed += data.length;
+      _assertEntryBudget(
+        path: path,
+        uncompressed: entry.size,
+        compressed: _compressedLength(entry),
+      );
+      totalUncompressed += entry.size;
       if (totalUncompressed > maxTotalUncompressedBytes) {
         throw const ChatboxImportException(
           'Backup uncompressed size exceeds the safety limit.',
         );
       }
-      files[path] = data;
+      entries[path] = entry;
     }
 
-    final manifestBytes = files[_manifestPath];
-    if (manifestBytes == null) {
+    final manifestEntry = entries[_manifestPath];
+    if (manifestEntry == null) {
       throw const ChatboxImportException(
         'Not a Chatbox backup archive (missing manifest.json).',
       );
     }
-    final manifest = _parseManifest(manifestBytes);
-    _validateManifestEntries(manifest, files);
+    final manifest = _parseManifest(
+      _decompressVerified(manifestEntry, <String, dynamic>{
+        'path': _manifestPath,
+        'size': manifestEntry.size,
+        'checksum': null,
+      }, verifyChecksum: false),
+    );
+    _validateManifestMembership(manifest, entries);
 
     final keyToUri = <String, String>{};
+    final keyToText = <String, String>{};
     final staged = <File>[];
     await stagingDir.create(recursive: true);
+
     final resources = manifest['resources'] as List;
     for (final raw in resources) {
       final resource = _asStringMap(raw);
       final path = resource['path'] as String;
-      final data = files[path]!;
+      final data = _decompressVerified(entries[path]!, resource);
+      final kind = (resource['kind'] ?? '').toString();
+      if (kind == 'tool-result') {
+        final text = utf8.decode(data);
+        for (final key in resource['originalStorageKeys'] as List) {
+          keyToText[key.toString()] = text;
+        }
+        continue;
+      }
       final fileName = _resourceFileName(resource);
       final stagedFile = File(p.join(stagingDir.path, fileName));
       await stagedFile.writeAsBytes(data, flush: true);
@@ -154,14 +214,22 @@ class ChatboxBackupArchive {
     final data = _asStringMap(manifest['data']);
     final settingsDesc = data['settings'];
     if (settingsDesc is Map) {
-      final settingsPath = (settingsDesc['path'] ?? _settingsPath).toString();
-      root['settings'] = _decodeJsonObject(files[settingsPath]!, settingsPath);
+      final settingsMap = _asStringMap(settingsDesc);
+      final settingsPath = (settingsMap['path'] ?? _settingsPath).toString();
+      root['settings'] = _decodeJsonObject(
+        _decompressVerified(entries[settingsPath]!, settingsMap),
+        settingsPath,
+      );
     }
 
     final copilotsDesc = data['copilots'];
     if (copilotsDesc is Map) {
-      final copilotsPath = (copilotsDesc['path'] ?? _copilotsPath).toString();
-      final copilots = _decodeJsonArray(files[copilotsPath]!, copilotsPath);
+      final copilotsMap = _asStringMap(copilotsDesc);
+      final copilotsPath = (copilotsMap['path'] ?? _copilotsPath).toString();
+      final copilots = _decodeJsonArray(
+        _decompressVerified(entries[copilotsPath]!, copilotsMap),
+        copilotsPath,
+      );
       root['myCopilots'] = [
         for (final item in copilots)
           if (item is Map)
@@ -171,13 +239,24 @@ class ChatboxBackupArchive {
       ];
     }
 
+    final sessionSettingsDesc = data['sessionSettings'];
+    if (sessionSettingsDesc is Map) {
+      _decompressVerified(
+        entries[_asStringMap(sessionSettingsDesc)['path'] as String]!,
+        _asStringMap(sessionSettingsDesc),
+      );
+    }
+
     final sessionList = <Map<String, dynamic>>[];
     final sessions = manifest['sessions'] as List;
     for (final raw in sessions) {
       final descriptor = _asStringMap(raw);
       final sessionPath = descriptor['path'] as String;
       final sessionId = descriptor['id'] as String;
-      final parsed = _decodeJsonObject(files[sessionPath]!, sessionPath);
+      final parsed = _decodeJsonObject(
+        _decompressVerified(entries[sessionPath]!, descriptor),
+        sessionPath,
+      );
       if (!_isBackupSession(parsed)) {
         throw ChatboxImportException('Invalid session entry: $sessionPath');
       }
@@ -186,7 +265,7 @@ class ChatboxBackupArchive {
           'Session id does not match manifest: $sessionPath',
         );
       }
-      final rewritten = _rewriteSession(parsed, keyToUri);
+      final rewritten = _rewriteSession(parsed, keyToUri, keyToText);
       root['session:$sessionId'] = rewritten;
       sessionList.add(_sessionMetaForList(descriptor, rewritten, keyToUri));
     }
@@ -211,6 +290,7 @@ class ChatboxBackupArchive {
           'Refusing to write resource outside the destination directory.',
         );
       }
+      if (await dest.exists()) continue;
       await staged.copy(dest.path);
     }
   }
@@ -333,9 +413,9 @@ class ChatboxBackupArchive {
     return manifest;
   }
 
-  static void _validateManifestEntries(
+  static void _validateManifestMembership(
     Map<String, dynamic> manifest,
-    Map<String, Uint8List> files,
+    Map<String, ArchiveFile> entries,
   ) {
     final expected = <String>{_manifestPath};
     void addDescriptor(Object? raw, {required bool requiredId}) {
@@ -347,20 +427,8 @@ class ChatboxBackupArchive {
           'Manifest contains a duplicate path: $path',
         );
       }
-      final staged = files[path];
-      if (staged == null) {
+      if (!entries.containsKey(path)) {
         throw ChatboxImportException('Backup entry is missing: $path');
-      }
-      if (staged.length != descriptor['size']) {
-        throw ChatboxImportException('Backup entry size mismatch: $path');
-      }
-      final checksumRaw = descriptor['checksum'];
-      if (checksumRaw is! Map) {
-        throw ChatboxImportException('Backup entry checksum mismatch: $path');
-      }
-      final checksum = _asStringMap(checksumRaw);
-      if (sha256.convert(staged).toString() != checksum['value']) {
-        throw ChatboxImportException('Backup entry checksum mismatch: $path');
       }
       if (requiredId && (descriptor['id'] ?? '').toString().isEmpty) {
         throw ChatboxImportException('Backup entry is missing an id: $path');
@@ -378,17 +446,83 @@ class ChatboxBackupArchive {
       addDescriptor(resource, requiredId: true);
     }
 
-    for (final path in files.keys) {
+    for (final path in entries.keys) {
       if (!expected.contains(path)) {
         throw ChatboxImportException(
           'Backup contains an entry not listed in manifest: $path',
         );
       }
     }
-    if (expected.length != files.length) {
+    if (expected.length != entries.length) {
       throw const ChatboxImportException(
         'Backup manifest entry list is incomplete.',
       );
+    }
+  }
+
+  static int _compressedLength(ArchiveFile entry) {
+    final raw = entry.rawContent;
+    if (raw == null) return 0;
+    if (raw.isCompressed) return raw.length;
+    return entry.size;
+  }
+
+  static bool isUnsafeCompressionRatio(int uncompressed, int compressed) {
+    return compressed > 0 && uncompressed > compressed * maxCompressionRatio;
+  }
+
+  static void _assertEntryBudget({
+    required String path,
+    required int uncompressed,
+    required int compressed,
+  }) {
+    final limit = _isBackupJsonPath(path)
+        ? maxJsonEntryBytes
+        : maxResourceEntryBytes;
+    if (uncompressed > limit) {
+      throw ChatboxImportException('Backup entry is too large: $path');
+    }
+    if (isUnsafeCompressionRatio(uncompressed, compressed)) {
+      throw ChatboxImportException(
+        'Backup entry compression ratio is too high: $path',
+      );
+    }
+  }
+
+  static Uint8List _decompressVerified(
+    ArchiveFile entry,
+    Map<String, dynamic> descriptor, {
+    bool verifyChecksum = true,
+  }) {
+    final path = (descriptor['path'] ?? entry.name).toString();
+    final expectedSize = descriptor['size'];
+    if (expectedSize is int && entry.size != expectedSize) {
+      throw ChatboxImportException('Backup entry size mismatch: $path');
+    }
+    final data = entry.content;
+    try {
+      if (expectedSize is int && data.length != expectedSize) {
+        throw ChatboxImportException('Backup entry size mismatch: $path');
+      }
+      final limit = _isBackupJsonPath(path)
+          ? maxJsonEntryBytes
+          : maxResourceEntryBytes;
+      if (data.length > limit) {
+        throw ChatboxImportException('Backup entry is too large: $path');
+      }
+      if (verifyChecksum) {
+        final checksumRaw = descriptor['checksum'];
+        if (checksumRaw is! Map) {
+          throw ChatboxImportException('Backup entry checksum mismatch: $path');
+        }
+        final checksum = _asStringMap(checksumRaw);
+        if (sha256.convert(data).toString() != checksum['value']) {
+          throw ChatboxImportException('Backup entry checksum mismatch: $path');
+        }
+      }
+      return Uint8List.fromList(data);
+    } finally {
+      entry.clear();
     }
   }
 
@@ -650,13 +784,14 @@ class ChatboxBackupArchive {
   static Map<String, dynamic> _rewriteSession(
     Map<String, dynamic> session,
     Map<String, String> keyToUri,
+    Map<String, String> keyToText,
   ) {
-    _rewriteMessages(session['messages'], keyToUri);
+    _rewriteMessages(session['messages'], keyToUri, keyToText);
     final threads = session['threads'];
     if (threads is List) {
       for (final thread in threads) {
         if (thread is Map) {
-          _rewriteMessages(thread['messages'], keyToUri);
+          _rewriteMessages(thread['messages'], keyToUri, keyToText);
         }
       }
     }
@@ -668,7 +803,7 @@ class ChatboxBackupArchive {
         if (lists is! List) continue;
         for (final list in lists) {
           if (list is Map) {
-            _rewriteMessages(list['messages'], keyToUri);
+            _rewriteMessages(list['messages'], keyToUri, keyToText);
           }
         }
       }
@@ -709,7 +844,11 @@ class ChatboxBackupArchive {
     return copilot;
   }
 
-  static void _rewriteMessages(Object? raw, Map<String, String> keyToUri) {
+  static void _rewriteMessages(
+    Object? raw,
+    Map<String, String> keyToUri,
+    Map<String, String> keyToText,
+  ) {
     if (raw is! List) return;
     for (final item in raw) {
       if (item is! Map) continue;
@@ -719,7 +858,7 @@ class ChatboxBackupArchive {
         message['contentParts'] = [
           for (final part in parts)
             if (part is Map)
-              ..._rewriteContentPart(_asStringMap(part), keyToUri)
+              ..._rewriteContentPart(_asStringMap(part), keyToUri, keyToText)
             else
               part,
         ];
@@ -760,6 +899,7 @@ class ChatboxBackupArchive {
   static List<Map<String, dynamic>> _rewriteContentPart(
     Map<String, dynamic> part,
     Map<String, String> keyToUri,
+    Map<String, String> keyToText,
   ) {
     final type = (part['type'] ?? '').toString();
     if (type == 'image') {
@@ -776,9 +916,10 @@ class ChatboxBackupArchive {
     }
     if (type == 'tool-call') {
       final key = (part['resultStorageKey'] ?? '').toString();
-      if (key.isNotEmpty && !keyToUri.containsKey(key)) {
-        part.remove('resultStorageKey');
-      }
+      if (key.isEmpty) return [part];
+      final text = keyToText[key];
+      part.remove('resultStorageKey');
+      if (text != null) part['result'] = text;
     }
     return [part];
   }
@@ -886,6 +1027,10 @@ class ChatboxBackupArchive {
       (resource['id'] ?? 'resource').toString(),
       'resource',
     );
+    final checksumRaw = resource['checksum'];
+    final digest = checksumRaw is Map
+        ? _safeToken((checksumRaw['value'] ?? '').toString(), id)
+        : id;
     final path = (resource['path'] ?? '').toString();
     var ext = p.extension(path);
     if (ext.isEmpty) {
@@ -895,7 +1040,7 @@ class ChatboxBackupArchive {
     final filename = (resource['filename'] ?? '').toString();
     final fromName = filename.isEmpty ? '' : p.extension(filename);
     if (ext.isEmpty && fromName.isNotEmpty) ext = fromName;
-    return '$id$ext';
+    return '$id-$digest$ext';
   }
 
   static String _safeToken(String raw, String fallback) {

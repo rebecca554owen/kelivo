@@ -95,10 +95,6 @@ class ChatboxImporter {
         mode,
         chatService,
       );
-      if (archive != null) {
-        // Merge backfill indexes files during commit; publish first.
-        await ChatboxBackupArchive.publishStagedResources(archive);
-      }
       await chatService.commitParsedImport(
         businessRepository: businessRepository,
         overwrite: mode == RestoreMode.overwrite,
@@ -113,7 +109,8 @@ class ChatboxImporter {
         ),
       );
       if (archive != null) {
-        // Overwrite deletes Documents/upload after commit; restore last.
+        // Only publish after the DB commit succeeds. Overwrite also wipes
+        // Documents/upload during commit, so this is the sole dest write.
         await ChatboxBackupArchive.publishStagedResources(archive);
       }
 
@@ -139,16 +136,9 @@ class ChatboxImporter {
       throw const ChatboxImportException('Chatbox backup file not found.');
     }
 
-    late final List<int> bytes;
-    try {
-      bytes = await file.readAsBytes();
-    } catch (e) {
-      throw ChatboxImportException('Unable to read Chatbox backup file: $e');
-    }
-
     final treatAsZip =
-        ChatboxBackupArchive.looksLikeZip(bytes) ||
-        p.extension(file.path).toLowerCase() == '.zip';
+        p.extension(file.path).toLowerCase() == '.zip' ||
+        await ChatboxBackupArchive.looksLikeZipFile(file);
     if (treatAsZip) {
       final staging = await Directory.systemTemp.createTemp(
         'kelivo_chatbox_res_',
@@ -156,7 +146,7 @@ class ChatboxImporter {
       try {
         final upload = await AppDirectories.getUploadDirectory();
         final archive = await ChatboxBackupArchive.readZipV2(
-          bytes: bytes,
+          file: file,
           stagingDir: staging,
           resourceDestDir: p.join(upload.path, 'chatbox'),
         );
@@ -176,8 +166,9 @@ class ChatboxImporter {
 
     late final Object decoded;
     try {
-      decoded = jsonDecode(utf8.decode(bytes));
-    } catch (_) {
+      decoded = jsonDecode(await file.readAsString());
+    } catch (e) {
+      if (e is ChatboxImportException) rethrow;
       throw const ChatboxImportException(
         'Invalid JSON: unable to parse Chatbox backup file.',
       );
@@ -1047,6 +1038,8 @@ class ChatboxImporter {
                     .trim(),
               );
             }
+            final result = (part['result'] ?? '').toString();
+            if (result.trim().isNotEmpty) addText(result);
             break;
           default:
             break;
@@ -1152,8 +1145,7 @@ class ChatboxImporter {
             : (part['toolName'] ?? '').toString();
         final a = part['args'];
         if (a is Map) args = a.cast<String, dynamic>();
-        final state = (part['state'] ?? '').toString();
-        if (state == 'result' && part.containsKey('result')) {
+        if (part.containsKey('result')) {
           result = (part['result'] ?? '').toString();
         }
         break;

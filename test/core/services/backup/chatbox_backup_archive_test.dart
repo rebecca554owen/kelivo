@@ -58,7 +58,10 @@ void main() {
       final session = result.root['session:assistant-1'] as Map;
       final image =
           ((session['messages'] as List)[1] as Map)['contentParts'] as List;
-      expect((image[1] as Map)['url'], '${root.path}/dest/resource-000001.png');
+      expect(
+        (image[1] as Map)['url'],
+        '${root.path}/dest/resource-000001-${sha256.convert(png)}.png',
+      );
       expect(result.stagedResourceFiles, hasLength(1));
       expect(await result.stagedResourceFiles.single.readAsBytes(), png);
     },
@@ -129,6 +132,118 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('resource dest names include content checksums', () async {
+    final pngA = _pngBytes();
+    final pngB = Uint8List.fromList([...pngA, 1, 2, 3]);
+    final first = await ChatboxBackupArchive.readZipV2(
+      bytes: _encodeChatboxZipV2(
+        settings: _settings(),
+        session: _session(imageStorageKey: 'picture:a'),
+        resources: [
+          _resource(
+            id: 'resource-000001',
+            storageKey: 'picture:a',
+            bytes: pngA,
+          ),
+        ],
+      ),
+      stagingDir: Directory('${root.path}/staging-a'),
+      resourceDestDir: '${root.path}/dest',
+    );
+    final second = await ChatboxBackupArchive.readZipV2(
+      bytes: _encodeChatboxZipV2(
+        settings: _settings(),
+        session: _session(imageStorageKey: 'picture:b'),
+        resources: [
+          _resource(
+            id: 'resource-000001',
+            storageKey: 'picture:b',
+            bytes: pngB,
+          ),
+        ],
+      ),
+      stagingDir: Directory('${root.path}/staging-b'),
+      resourceDestDir: '${root.path}/dest',
+    );
+    final urlA =
+        ((((first.root['session:assistant-1'] as Map)['messages'] as List)[1]
+                    as Map)['contentParts']
+                as List)[1]
+            as Map;
+    final urlB =
+        ((((second.root['session:assistant-1'] as Map)['messages'] as List)[1]
+                    as Map)['contentParts']
+                as List)[1]
+            as Map;
+    expect(urlA['url'], isNot(urlB['url']));
+    expect(urlA['url'], contains('resource-000001-'));
+    expect(urlB['url'], contains('resource-000001-'));
+  });
+
+  test('inlines utf8 tool-result blobs into tool-call parts', () async {
+    const resultText = 'full tool output from chatbox blob';
+    final zip = _encodeChatboxZipV2(
+      settings: _settings(),
+      session: {
+        'id': 'assistant-1',
+        'name': 'Chatbox assistant',
+        'messages': [
+          {
+            'id': 'tool-1',
+            'role': 'tool',
+            'name': 'search',
+            'contentParts': [
+              {
+                'type': 'tool-call',
+                'state': 'result',
+                'toolName': 'search',
+                'args': {'q': 'hi'},
+                'resultStorageKey': 'tool-result:1',
+              },
+            ],
+          },
+        ],
+      },
+      resources: [
+        {
+          'id': 'resource-000002',
+          'storageKey': 'tool-result:1',
+          'path': 'sessions/assistant-1/resources/resource-000002.txt',
+          'bytes': utf8.encode(resultText),
+          'kind': 'tool-result',
+          'encoding': 'utf8',
+          'mimeType': 'text/plain',
+        },
+      ],
+    );
+
+    final result = await ChatboxBackupArchive.readZipV2(
+      bytes: zip,
+      stagingDir: Directory('${root.path}/staging'),
+      resourceDestDir: '${root.path}/dest',
+    );
+
+    final part =
+        ((((result.root['session:assistant-1'] as Map)['messages'] as List)
+                            .first
+                        as Map)['contentParts']
+                    as List)
+                .first
+            as Map;
+    expect(part['result'], resultText);
+    expect(part.containsKey('resultStorageKey'), isFalse);
+    expect(result.stagedResourceFiles, isEmpty);
+  });
+
+  test('treats extreme compression ratios as unsafe', () {
+    expect(
+      ChatboxBackupArchive.isUnsafeCompressionRatio(2 * 1024 * 1024, 200),
+      isTrue,
+    );
+    expect(ChatboxBackupArchive.isUnsafeCompressionRatio(1000, 900), isFalse);
+    expect(ChatboxBackupArchive.isUnsafeCompressionRatio(1000, 0), isFalse);
   });
 
   test('rejects a checksum mismatch', () async {
@@ -274,9 +389,9 @@ Uint8List _encodeChatboxZipV2({
       'originalStorageKeys': [resource['storageKey']],
       'sessionIds': ['assistant-1'],
       'scope': 'session',
-      'encoding': 'data-url-base64',
-      'mimeType': 'image/png',
-      'kind': 'image',
+      'encoding': resource['encoding'] ?? 'data-url-base64',
+      'mimeType': resource['mimeType'] ?? 'image/png',
+      'kind': resource['kind'] ?? 'image',
     });
   }
 

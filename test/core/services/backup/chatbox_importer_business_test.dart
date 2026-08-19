@@ -727,6 +727,211 @@ void main() {
       );
     });
 
+    test(
+      'merge of two ZIP backups does not overwrite the first image',
+      () async {
+        final pngA = _chatboxPngBytes();
+        final pngB = Uint8List.fromList([...pngA, 7, 8, 9]);
+        final zipA = await File('${root.path}/chatbox-a.zip').writeAsBytes(
+          _encodeChatboxZipV2(
+            settings: _chatboxZipSettings(),
+            session: _chatboxZipSession(
+              id: 'assistant-a',
+              messageId: 'message-a',
+              imageStorageKey: 'picture:a',
+            ),
+            resources: [
+              _ChatboxZipResource(
+                id: 'resource-000001',
+                storageKey: 'picture:a',
+                sessionId: 'assistant-a',
+                path: 'sessions/assistant-a/resources/resource-000001.png',
+                mimeType: 'image/png',
+                kind: 'image',
+                bytes: pngA,
+              ),
+            ],
+          ),
+          flush: true,
+        );
+        final zipB = await File('${root.path}/chatbox-b.zip').writeAsBytes(
+          _encodeChatboxZipV2(
+            settings: _chatboxZipSettings(),
+            session: _chatboxZipSession(
+              id: 'assistant-b',
+              messageId: 'message-b',
+              imageStorageKey: 'picture:b',
+            ),
+            resources: [
+              _ChatboxZipResource(
+                id: 'resource-000001',
+                storageKey: 'picture:b',
+                sessionId: 'assistant-b',
+                path: 'sessions/assistant-b/resources/resource-000001.png',
+                mimeType: 'image/png',
+                kind: 'image',
+                bytes: pngB,
+              ),
+            ],
+          ),
+          flush: true,
+        );
+
+        await ChatboxImporter.importFromChatbox(
+          file: zipA,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        final first = (await chatService.loadMessages(
+          'chatbox_default_assistant-a',
+        )).singleWhere((m) => m.id == 'message-a');
+        final pathA = SandboxPathResolver.fix(
+          first.parts.whereType<ImagePart>().single.uri,
+        );
+
+        await ChatboxImporter.importFromChatbox(
+          file: zipB,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        final second = (await chatService.loadMessages(
+          'chatbox_default_assistant-b',
+        )).singleWhere((m) => m.id == 'message-b');
+        final pathB = SandboxPathResolver.fix(
+          second.parts.whereType<ImagePart>().single.uri,
+        );
+
+        expect(pathA, isNot(pathB));
+        expect(await File(pathA).readAsBytes(), pngA);
+        expect(await File(pathB).readAsBytes(), pngB);
+      },
+    );
+
+    test('failed ZIP import does not publish resources', () async {
+      final png = _chatboxPngBytes();
+      final destDir = Directory('${root.path}/upload/chatbox');
+      await destDir.create(recursive: true);
+      final sentinel = File('${destDir.path}/resource-000001.png');
+      await sentinel.writeAsBytes(const [9, 9, 9], flush: true);
+
+      final zip = await File('${root.path}/chatbox-fail.zip').writeAsBytes(
+        _encodeChatboxZipV2(
+          settings: _chatboxZipSettings(),
+          session: _chatboxZipSession(imageStorageKey: 'picture:test'),
+          resources: [
+            _ChatboxZipResource(
+              id: 'resource-000001',
+              storageKey: 'picture:test',
+              sessionId: 'assistant-1',
+              path: 'sessions/assistant-1/resources/resource-000001.png',
+              mimeType: 'image/png',
+              kind: 'image',
+              bytes: png,
+            ),
+          ],
+        ),
+        flush: true,
+      );
+
+      final otherFile = File('${root.path}/other-fail.db');
+      final otherDatabase = AppDatabase.open(file: otherFile);
+      final otherBusinessRepository = BusinessRepository(otherDatabase);
+      try {
+        await expectLater(
+          ChatboxImporter.importFromChatbox(
+            file: zip,
+            mode: RestoreMode.merge,
+            businessRepository: otherBusinessRepository,
+            chatService: chatService,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'chat_business_database_mismatch',
+            ),
+          ),
+        );
+      } finally {
+        await otherDatabase.close();
+      }
+
+      expect(await sentinel.readAsBytes(), const [9, 9, 9]);
+      expect(destDir.listSync().whereType<File>(), hasLength(1));
+    });
+
+    test(
+      'imports ZIP tool-result text into the tool message payload',
+      () async {
+        const resultText = 'stored chatbox tool output';
+        final zip = await File('${root.path}/chatbox-tool.zip').writeAsBytes(
+          _encodeChatboxZipV2(
+            settings: _chatboxZipSettings(),
+            session: {
+              'id': 'assistant-1',
+              'name': 'Chatbox assistant',
+              'starred': true,
+              'settings': {'provider': 'openai', 'modelId': 'gpt-test'},
+              'messages': [
+                {
+                  'id': 'system-1',
+                  'role': 'system',
+                  'content': 'Imported system prompt',
+                },
+                {
+                  'id': 'tool-1',
+                  'role': 'tool',
+                  'name': 'search',
+                  'timestamp': 1784332800000,
+                  'contentParts': [
+                    {
+                      'type': 'tool-call',
+                      'state': 'result',
+                      'toolName': 'search',
+                      'args': {'q': 'kelivo'},
+                      'resultStorageKey': 'tool-result:1',
+                    },
+                  ],
+                },
+              ],
+              'threads': <dynamic>[],
+            },
+            resources: [
+              _ChatboxZipResource(
+                id: 'resource-000002',
+                storageKey: 'tool-result:1',
+                sessionId: 'assistant-1',
+                path: 'sessions/assistant-1/resources/resource-000002.txt',
+                mimeType: 'text/plain',
+                kind: 'tool-result',
+                encoding: 'utf8',
+                bytes: utf8.encode(resultText),
+              ),
+            ],
+          ),
+          flush: true,
+        );
+
+        await ChatboxImporter.importFromChatbox(
+          file: zip,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        final messages = await chatService.loadMessages(
+          'chatbox_default_assistant-1',
+        );
+        final tool = messages.singleWhere((m) => m.id == 'tool-1');
+        expect(tool.role, 'tool');
+        final payload = jsonDecode(tool.content) as Map<String, dynamic>;
+        expect(payload['tool'], 'search');
+        expect(payload['result'], resultText);
+      },
+    );
+
     test('rejects an unknown Chatbox formatVersion', () async {
       final zip = await File('${root.path}/chatbox-v99.zip').writeAsBytes(
         _encodeChatboxZipV2(settings: _chatboxZipSettings(), formatVersion: 99),
@@ -771,15 +976,19 @@ Map<String, dynamic> _chatboxZipSettings() => {
   },
 };
 
-Map<String, dynamic> _chatboxZipSession({required String imageStorageKey}) => {
-  'id': 'assistant-1',
+Map<String, dynamic> _chatboxZipSession({
+  String id = 'assistant-1',
+  String messageId = 'message-1',
+  required String imageStorageKey,
+}) => {
+  'id': id,
   'name': 'Chatbox assistant',
   'starred': true,
   'settings': {'provider': 'openai', 'modelId': 'gpt-test', 'temperature': 0.5},
   'messages': [
     {'id': 'system-1', 'role': 'system', 'content': 'Imported system prompt'},
     {
-      'id': 'message-1',
+      'id': messageId,
       'role': 'user',
       'content': 'Hello',
       'timestamp': 1784332800000,
@@ -801,6 +1010,7 @@ class _ChatboxZipResource {
     required this.mimeType,
     required this.kind,
     required this.bytes,
+    this.encoding = 'data-url-base64',
   });
 
   final String id;
@@ -809,6 +1019,7 @@ class _ChatboxZipResource {
   final String path;
   final String mimeType;
   final String kind;
+  final String encoding;
   final List<int> bytes;
 }
 
@@ -829,7 +1040,7 @@ Uint8List _encodeChatboxZipV2({
   final sessionEntries = <Map<String, dynamic>>[];
   if (session != null) {
     final bytes = utf8.encode(jsonEncode(session));
-    const path = 'sessions/assistant-1/session.json';
+    final path = 'sessions/${session['id']}/session.json';
     files[path] = bytes;
     sessionEntries.add({
       ..._zipJsonDescriptor(path, bytes),
@@ -854,7 +1065,7 @@ Uint8List _encodeChatboxZipV2({
       'originalStorageKeys': [resource.storageKey],
       'sessionIds': [resource.sessionId],
       'scope': 'session',
-      'encoding': 'data-url-base64',
+      'encoding': resource.encoding,
       'mimeType': resource.mimeType,
       'kind': resource.kind,
       'filename': 'pic.png',
