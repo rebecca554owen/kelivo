@@ -505,23 +505,26 @@ class _MiniMapRow extends StatelessWidget {
   String _oneLine(String s) {
     // Strip vendor inline reasoning blocks if present; attachment markers are
     // no longer parsed because summaries are built from TextPart only.
-    var t = s
-        .replaceAll(
-          RegExp(
-            r'<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>',
-            caseSensitive: false,
-          ),
-          '',
-        )
-        .replaceAll('\n', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    return t;
+    return _flattenWhitespace(
+      s.replaceAll(
+        RegExp(
+          r'<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>',
+          caseSensitive: false,
+        ),
+        '',
+      ),
+    );
+  }
+
+  /// Collapse newlines so maxLines: 1 still shows the hit. Do not strip
+  /// think/thought blocks — a keyword inside them must stay visible.
+  String _flattenWhitespace(String s) {
+    return s.replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   String _snippetDisplay(MiniMapSearchHit hit) {
     final prefix = hit.snippetStart > 0 ? '…' : '';
-    return '$prefix${hit.snippet}';
+    return '$prefix${_flattenWhitespace(hit.snippet)}';
   }
 
   Widget _bubbleLabel({

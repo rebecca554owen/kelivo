@@ -254,4 +254,36 @@ void main() {
     expect(hits.single.snippet, contains('keyword-token'));
     expect(hits.single.snippetStart, greaterThan(0));
   });
+
+  test('snippet window grows so a long keyword is not truncated', () async {
+    const conversationId = 'conversation-long-keyword';
+    const prefix =
+        'prefix-text-that-is-long-enough-to-fill-the-default-radius-xx';
+    final keyword = '${'k' * 90}-unique-tail';
+    expect(prefix.length, greaterThanOrEqualTo(40));
+    expect(keyword.length, greaterThan(80));
+    await seed(
+      conversation: Conversation(
+        id: conversationId,
+        title: 'Long keyword',
+        createdAt: DateTime.utc(2026, 8, 18),
+        updatedAt: DateTime.utc(2026, 8, 18),
+      ),
+      messages: [
+        ChatMessage(
+          id: 'msg-long-keyword',
+          role: 'user',
+          content: '$prefix$keyword and a tail',
+          conversationId: conversationId,
+        ),
+      ],
+    );
+
+    final hits = await repository.searchMiniMapMatches(conversationId, keyword);
+    expect(hits.single.snippet, contains(keyword));
+    expect(
+      miniMapSnippetLength(needleLength: keyword.length),
+      greaterThan(120),
+    );
+  });
 }

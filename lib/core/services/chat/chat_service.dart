@@ -1573,7 +1573,11 @@ class ChatService extends ChangeNotifier {
     final needle = query.trim().toLowerCase();
     if (needle.isEmpty) return const <MiniMapSearchHit>[];
     final radius = snippetRadius < 0 ? 0 : snippetRadius;
-    final length = snippetLength < 0 ? 0 : snippetLength;
+    final length = miniMapSnippetLength(
+      needleLength: needle.length,
+      snippetRadius: snippetRadius,
+      snippetLength: snippetLength,
+    );
     final messages = _messagesCache[conversationId] ?? const <ChatMessage>[];
     final groups = <String, List<ChatMessage>>{};
     final order = <String>[];

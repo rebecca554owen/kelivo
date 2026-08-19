@@ -2351,7 +2351,11 @@ class ChatDatabaseRepository {
     final needle = query.trim().toLowerCase();
     if (needle.isEmpty) return const <MiniMapSearchHit>[];
     final radius = snippetRadius < 0 ? 0 : snippetRadius;
-    final length = snippetLength < 0 ? 0 : snippetLength;
+    final length = miniMapSnippetLength(
+      needleLength: needle.length,
+      snippetRadius: snippetRadius,
+      snippetLength: snippetLength,
+    );
     final rows = await _db
         .customSelect(
           '''
@@ -7129,6 +7133,20 @@ class MiniMapSearchHit {
   final int matchCount;
   final String snippet;
   final int snippetStart;
+}
+
+/// Grows the snippet window so the first hit is not cut mid-keyword.
+///
+/// Default radius 40 + length 120 leaves only 80 characters for the needle.
+int miniMapSnippetLength({
+  required int needleLength,
+  int snippetRadius = 40,
+  int snippetLength = 120,
+}) {
+  final radius = snippetRadius < 0 ? 0 : snippetRadius;
+  final length = snippetLength < 0 ? 0 : snippetLength;
+  final needed = radius + needleLength;
+  return length < needed ? needed : length;
 }
 
 final class ChatStatsTotals {

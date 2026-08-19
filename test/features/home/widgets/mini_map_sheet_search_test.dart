@@ -234,4 +234,32 @@ void main() {
     expect(find.text('beta user prompt'), findsOneWidget);
     expect(find.text('only-first-hit', findRichText: true), findsNothing);
   });
+
+  testWidgets('flattens snippet newlines so the keyword stays visible', (
+    tester,
+  ) async {
+    await pumpSheet(
+      tester,
+      onSearch: (query) async {
+        return const [
+          MiniMapSearchHit(
+            messageId: 'asst-1',
+            matchCount: 1,
+            snippet: 'context\nvisible-needle',
+            snippetStart: 0,
+          ),
+        ];
+      },
+    );
+    await openSearch(tester);
+
+    await tester.enterText(find.byType(TextField), 'visible-needle');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
+
+    expect(
+      find.text('context visible-needle', findRichText: true),
+      findsOneWidget,
+    );
+  });
 }
