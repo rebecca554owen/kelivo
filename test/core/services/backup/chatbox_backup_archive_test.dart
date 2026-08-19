@@ -246,6 +246,62 @@ void main() {
     expect(ChatboxBackupArchive.isUnsafeCompressionRatio(1000, 0), isFalse);
   });
 
+  test('publish replaces a truncated dest with the staged file', () async {
+    final png = _pngBytes();
+    final result = await ChatboxBackupArchive.readZipV2(
+      bytes: _encodeChatboxZipV2(
+        settings: _settings(),
+        session: _session(imageStorageKey: 'picture:test'),
+        resources: [
+          _resource(
+            id: 'resource-000001',
+            storageKey: 'picture:test',
+            bytes: png,
+          ),
+        ],
+      ),
+      stagingDir: Directory('${root.path}/staging'),
+      resourceDestDir: '${root.path}/dest',
+    );
+    final dest = File(
+      '${result.resourceDestDir}/${result.stagedResourceFiles.single.uri.pathSegments.last}',
+    );
+    await dest.create(recursive: true);
+    await dest.writeAsBytes(const [1, 2, 3], flush: true);
+
+    await ChatboxBackupArchive.publishStagedResources(result);
+
+    expect(await dest.readAsBytes(), png);
+  });
+
+  test('publish leaves a dest that already matches the staged file', () async {
+    final png = _pngBytes();
+    final result = await ChatboxBackupArchive.readZipV2(
+      bytes: _encodeChatboxZipV2(
+        settings: _settings(),
+        session: _session(imageStorageKey: 'picture:test'),
+        resources: [
+          _resource(
+            id: 'resource-000001',
+            storageKey: 'picture:test',
+            bytes: png,
+          ),
+        ],
+      ),
+      stagingDir: Directory('${root.path}/staging'),
+      resourceDestDir: '${root.path}/dest',
+    );
+    final dest = File(
+      '${result.resourceDestDir}/${result.stagedResourceFiles.single.uri.pathSegments.last}',
+    );
+    await dest.create(recursive: true);
+    await dest.writeAsBytes(png, flush: true);
+
+    await ChatboxBackupArchive.publishStagedResources(result);
+
+    expect(await dest.readAsBytes(), png);
+  });
+
   test('rejects a checksum mismatch', () async {
     final settings = utf8.encode(jsonEncode(_settings()));
     final manifest = utf8.encode(

@@ -172,11 +172,16 @@ class ChatboxBackupArchive {
       );
     }
     final manifest = _parseManifest(
-      _decompressVerified(manifestEntry, <String, dynamic>{
-        'path': _manifestPath,
-        'size': manifestEntry.size,
-        'checksum': null,
-      }, verifyChecksum: false),
+      _extractVerified(
+        manifestEntry,
+        <String, dynamic>{
+          'path': _manifestPath,
+          'size': manifestEntry.size,
+          'checksum': null,
+        },
+        collectBytes: true,
+        verifyChecksum: false,
+      ).bytes!,
     );
     _validateManifestMembership(manifest, entries);
 
@@ -189,10 +194,14 @@ class ChatboxBackupArchive {
     for (final raw in resources) {
       final resource = _asStringMap(raw);
       final path = resource['path'] as String;
-      final data = _decompressVerified(entries[path]!, resource);
       final kind = (resource['kind'] ?? '').toString();
       if (kind == 'tool-result') {
-        final text = utf8.decode(data);
+        final extracted = _extractVerified(
+          entries[path]!,
+          resource,
+          collectBytes: true,
+        );
+        final text = utf8.decode(extracted.bytes!);
         for (final key in resource['originalStorageKeys'] as List) {
           keyToText[key.toString()] = text;
         }
@@ -200,7 +209,7 @@ class ChatboxBackupArchive {
       }
       final fileName = _resourceFileName(resource);
       final stagedFile = File(p.join(stagingDir.path, fileName));
-      await stagedFile.writeAsBytes(data, flush: true);
+      _extractVerified(entries[path]!, resource, destFile: stagedFile);
       staged.add(stagedFile);
       final destPath = p.join(resourceDestDir, fileName);
       final uri = SandboxPathResolver.canonicalize(destPath);
@@ -217,7 +226,11 @@ class ChatboxBackupArchive {
       final settingsMap = _asStringMap(settingsDesc);
       final settingsPath = (settingsMap['path'] ?? _settingsPath).toString();
       root['settings'] = _decodeJsonObject(
-        _decompressVerified(entries[settingsPath]!, settingsMap),
+        _extractVerified(
+          entries[settingsPath]!,
+          settingsMap,
+          collectBytes: true,
+        ).bytes!,
         settingsPath,
       );
     }
@@ -227,7 +240,11 @@ class ChatboxBackupArchive {
       final copilotsMap = _asStringMap(copilotsDesc);
       final copilotsPath = (copilotsMap['path'] ?? _copilotsPath).toString();
       final copilots = _decodeJsonArray(
-        _decompressVerified(entries[copilotsPath]!, copilotsMap),
+        _extractVerified(
+          entries[copilotsPath]!,
+          copilotsMap,
+          collectBytes: true,
+        ).bytes!,
         copilotsPath,
       );
       root['myCopilots'] = [
@@ -241,7 +258,7 @@ class ChatboxBackupArchive {
 
     final sessionSettingsDesc = data['sessionSettings'];
     if (sessionSettingsDesc is Map) {
-      _decompressVerified(
+      _extractVerified(
         entries[_asStringMap(sessionSettingsDesc)['path'] as String]!,
         _asStringMap(sessionSettingsDesc),
       );
@@ -254,7 +271,11 @@ class ChatboxBackupArchive {
       final sessionPath = descriptor['path'] as String;
       final sessionId = descriptor['id'] as String;
       final parsed = _decodeJsonObject(
-        _decompressVerified(entries[sessionPath]!, descriptor),
+        _extractVerified(
+          entries[sessionPath]!,
+          descriptor,
+          collectBytes: true,
+        ).bytes!,
         sessionPath,
       );
       if (!_isBackupSession(parsed)) {
@@ -290,9 +311,42 @@ class ChatboxBackupArchive {
           'Refusing to write resource outside the destination directory.',
         );
       }
-      if (await dest.exists()) continue;
-      await staged.copy(dest.path);
+      await _publishStagedFile(staged, dest);
     }
+  }
+
+  static Future<void> _publishStagedFile(File staged, File dest) async {
+    if (await dest.exists() && await _sameFileContent(dest, staged)) {
+      return;
+    }
+    final tmp = File('${dest.path}.part');
+    try {
+      if (await tmp.exists()) await tmp.delete();
+      await staged.copy(tmp.path);
+      if (await dest.exists()) await dest.delete();
+      await tmp.rename(dest.path);
+    } catch (e) {
+      try {
+        if (await tmp.exists()) await tmp.delete();
+      } catch (_) {}
+      if (e is ChatboxImportException) rethrow;
+      throw ChatboxImportException('Unable to publish backup resource: $e');
+    }
+  }
+
+  static Future<bool> _sameFileContent(File a, File b) async {
+    if (await a.length() != await b.length()) return false;
+    return await _fileSha256(a) == await _fileSha256(b);
+  }
+
+  static Future<Digest> _fileSha256(File file) async {
+    final collector = _DigestSink();
+    final hasher = sha256.startChunkedConversion(collector);
+    await for (final chunk in file.openRead()) {
+      hasher.add(chunk);
+    }
+    hasher.close();
+    return collector.digest!;
   }
 
   static Map<String, dynamic> _parseManifest(Uint8List bytes) {
@@ -489,9 +543,11 @@ class ChatboxBackupArchive {
     }
   }
 
-  static Uint8List _decompressVerified(
+  static _ExtractedEntry _extractVerified(
     ArchiveFile entry,
     Map<String, dynamic> descriptor, {
+    File? destFile,
+    bool collectBytes = false,
     bool verifyChecksum = true,
   }) {
     final path = (descriptor['path'] ?? entry.name).toString();
@@ -499,16 +555,22 @@ class ChatboxBackupArchive {
     if (expectedSize is int && entry.size != expectedSize) {
       throw ChatboxImportException('Backup entry size mismatch: $path');
     }
-    final data = entry.content;
+    final limit = _isBackupJsonPath(path)
+        ? maxJsonEntryBytes
+        : maxResourceEntryBytes;
+    final expected = expectedSize is int ? expectedSize : null;
+    final sink = _BoundedInflateSink(
+      path: path,
+      maxBytes: expected != null && expected < limit ? expected : limit,
+      expectedBytes: expected,
+      filePath: destFile?.path,
+      collectBytes: collectBytes,
+    );
     try {
-      if (expectedSize is int && data.length != expectedSize) {
+      entry.writeContent(sink);
+      final extracted = sink.finish();
+      if (expected != null && extracted.size != expected) {
         throw ChatboxImportException('Backup entry size mismatch: $path');
-      }
-      final limit = _isBackupJsonPath(path)
-          ? maxJsonEntryBytes
-          : maxResourceEntryBytes;
-      if (data.length > limit) {
-        throw ChatboxImportException('Backup entry is too large: $path');
       }
       if (verifyChecksum) {
         final checksumRaw = descriptor['checksum'];
@@ -516,11 +578,15 @@ class ChatboxBackupArchive {
           throw ChatboxImportException('Backup entry checksum mismatch: $path');
         }
         final checksum = _asStringMap(checksumRaw);
-        if (sha256.convert(data).toString() != checksum['value']) {
+        if (extracted.sha256 != checksum['value']) {
           throw ChatboxImportException('Backup entry checksum mismatch: $path');
         }
       }
-      return Uint8List.fromList(data);
+      return extracted;
+    } catch (e) {
+      sink.abort();
+      if (e is ChatboxImportException) rethrow;
+      throw ChatboxImportException('Unable to read backup entry: $path');
     } finally {
       entry.clear();
     }
@@ -1107,5 +1173,140 @@ class ChatboxBackupArchive {
   static int? _asNonNegInt(Object? raw) {
     if (raw is int && raw >= 0) return raw;
     return null;
+  }
+}
+
+class _ExtractedEntry {
+  const _ExtractedEntry({required this.size, required this.sha256, this.bytes});
+
+  final int size;
+  final String sha256;
+  final Uint8List? bytes;
+}
+
+class _DigestSink implements Sink<Digest> {
+  Digest? digest;
+
+  @override
+  void add(Digest data) => digest = data;
+
+  @override
+  void close() {}
+}
+
+class _BoundedInflateSink extends OutputStream {
+  _BoundedInflateSink({
+    required this.path,
+    required this.maxBytes,
+    this.expectedBytes,
+    this.filePath,
+    this.collectBytes = false,
+  }) : _file = filePath == null ? null : OutputFileStream(filePath),
+       _builder = collectBytes ? BytesBuilder(copy: false) : null,
+       super(byteOrder: ByteOrder.littleEndian);
+
+  final String path;
+  final int maxBytes;
+  final int? expectedBytes;
+  final String? filePath;
+  final bool collectBytes;
+  final OutputFileStream? _file;
+  final BytesBuilder? _builder;
+  final _DigestSink _digestSink = _DigestSink();
+  late final ByteConversionSink _hasher = sha256.startChunkedConversion(
+    _digestSink,
+  );
+  int _written = 0;
+  bool _closed = false;
+
+  @override
+  int get length => _written;
+
+  void _accept(List<int> bytes, int length) {
+    if (length <= 0) return;
+    if (_written + length > maxBytes) {
+      throw ChatboxImportException('Backup entry is too large: $path');
+    }
+    if (expectedBytes != null && _written + length > expectedBytes!) {
+      throw ChatboxImportException('Backup entry size mismatch: $path');
+    }
+    final slice = length == bytes.length ? bytes : bytes.sublist(0, length);
+    _written += length;
+    _hasher.add(slice);
+    _file?.writeBytes(slice);
+    _builder?.add(slice);
+  }
+
+  @override
+  void writeByte(int value) {
+    _accept(<int>[value], 1);
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    final writeLength = length ?? bytes.length;
+    if (writeLength < 0 || writeLength > bytes.length) {
+      throw RangeError.range(writeLength, 0, bytes.length, 'length');
+    }
+    _accept(bytes, writeLength);
+  }
+
+  @override
+  void writeStream(InputStream stream) {
+    const chunkSize = 64 * 1024;
+    while (!stream.isEOS) {
+      final remaining = stream.length;
+      final readSize = remaining < chunkSize ? remaining : chunkSize;
+      if (readSize <= 0) break;
+      final bytes = stream.readBytes(readSize).toUint8List();
+      if (bytes.isEmpty) break;
+      writeBytes(bytes);
+    }
+  }
+
+  @override
+  void flush() {
+    _file?.flush();
+  }
+
+  @override
+  void clear() {
+    _builder?.clear();
+  }
+
+  @override
+  Uint8List subset(int start, [int? end]) {
+    final bytes = _builder?.toBytes() ?? Uint8List(0);
+    return bytes.sublist(start, end ?? bytes.length);
+  }
+
+  _ExtractedEntry finish() {
+    _closeIo();
+    return _ExtractedEntry(
+      size: _written,
+      sha256: _digestSink.digest!.toString(),
+      bytes: _builder?.takeBytes(),
+    );
+  }
+
+  void abort() {
+    _closeIo();
+    final path = filePath;
+    if (path == null) return;
+    try {
+      final leftover = File(path);
+      if (leftover.existsSync()) leftover.deleteSync();
+    } catch (_) {}
+  }
+
+  void _closeIo() {
+    if (_closed) return;
+    _closed = true;
+    try {
+      _hasher.close();
+    } catch (_) {}
+    try {
+      _file?.closeSync();
+    } catch (_) {}
   }
 }
