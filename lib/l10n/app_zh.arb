@@ -1526,8 +1526,6 @@
   "displaySettingsPageAppFontTitle": "应用字体",
   "displaySettingsPageCodeFontTitle": "代码字体",
   "fontPickerChooseLocalFile": "选择本地文件",
-  "fontPickerGetFromGoogleFonts": "从 Google Fonts 获取",
-  "fontPickerFilterHint": "输入以过滤字体…",
   "desktopFontLoading": "正在加载字体…",
   "displaySettingsPageFontLocalFileLabel": "本地文件",
   "displaySettingsPageFontResetLabel": "恢复默认",

@@ -4549,12 +4549,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontPickerChooseLocalFile => 'Choose Local File';
 
   @override
-  String get fontPickerGetFromGoogleFonts => 'Browse Google Fonts';
-
-  @override
-  String get fontPickerFilterHint => 'Filter fonts...';
-
-  @override
   String get desktopFontLoading => 'Loading fonts…';
 
   @override

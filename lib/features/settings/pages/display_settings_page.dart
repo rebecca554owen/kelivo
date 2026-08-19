@@ -17,7 +17,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../core/services/haptics.dart';
 import 'package:file_picker/file_picker.dart';
-import 'google_fonts_picker_page.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 
@@ -420,12 +419,6 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
               _sheetDividerNoIcon(ctx),
               _sheetOption(
                 ctx,
-                label: l10n.fontPickerGetFromGoogleFonts,
-                onTap: () => Navigator.of(ctx).pop('google'),
-              ),
-              _sheetDividerNoIcon(ctx),
-              _sheetOption(
-                ctx,
                 label: l10n.displaySettingsPageFontResetLabel,
                 onTap: () => Navigator.of(ctx).pop('reset'),
               ),
@@ -450,22 +443,6 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
         await settings.setAppFontFromLocal(path: path);
       } else {
         await settings.setCodeFontFromLocal(path: path);
-      }
-      return;
-    }
-    if (choice == 'google') {
-      final title = target == _FontTarget.app
-          ? l10n.displaySettingsPageAppFontTitle
-          : l10n.displaySettingsPageCodeFontTitle;
-      final selected = await Navigator.of(context).push<String>(
-        MaterialPageRoute(builder: (_) => GoogleFontsPickerPage(title: title)),
-      );
-      if (selected == null || selected.isEmpty) return;
-      if (!context.mounted) return;
-      if (target == _FontTarget.app) {
-        await settings.setAppFontFromGoogle(selected);
-      } else {
-        await settings.setCodeFontFromGoogle(selected);
       }
       return;
     }

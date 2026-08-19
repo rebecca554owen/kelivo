@@ -8383,18 +8383,6 @@ abstract class AppLocalizations {
   /// **'Choose Local File'**
   String get fontPickerChooseLocalFile;
 
-  /// No description provided for @fontPickerGetFromGoogleFonts.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse Google Fonts'**
-  String get fontPickerGetFromGoogleFonts;
-
-  /// No description provided for @fontPickerFilterHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Filter fonts...'**
-  String get fontPickerFilterHint;
-
   /// No description provided for @desktopFontLoading.
   ///
   /// In en, this message translates to:

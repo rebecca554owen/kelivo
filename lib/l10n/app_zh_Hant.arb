@@ -1514,8 +1514,6 @@
   "displaySettingsPageAppFontTitle": "應用字體",
   "displaySettingsPageCodeFontTitle": "程式碼字體",
   "fontPickerChooseLocalFile": "選擇本機檔案",
-  "fontPickerGetFromGoogleFonts": "從 Google Fonts 取得",
-  "fontPickerFilterHint": "輸入以過濾字體…",
   "desktopFontLoading": "正在載入字體…",
   "displaySettingsPageFontLocalFileLabel": "本機檔案",
   "displaySettingsPageFontResetLabel": "回復預設設定",

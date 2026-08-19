@@ -1920,8 +1920,6 @@
   "displaySettingsPageAppFontTitle": "App Font",
   "displaySettingsPageCodeFontTitle": "Code Font",
   "fontPickerChooseLocalFile": "Choose Local File",
-  "fontPickerGetFromGoogleFonts": "Browse Google Fonts",
-  "fontPickerFilterHint": "Filter fonts...",
   "desktopFontLoading": "Loading fonts…",
   "displaySettingsPageFontLocalFileLabel": "Local file",
   "displaySettingsPageFontResetLabel": "Reset font settings",

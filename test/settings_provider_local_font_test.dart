@@ -172,6 +172,26 @@ void main() {
       expect(prefs.getString('display_app_font_local_path_v1'), isNull);
     });
 
+    test('legacy Google font flags are migrated and removed', () async {
+      final harness = await createBusinessTestHarness(
+        initial: {
+          'display_app_font_family_v1': 'Courier',
+          'display_app_font_is_google_v1': false,
+          'display_code_font_family_v1': 'Roboto Mono',
+          'display_code_font_is_google_v1': true,
+        },
+      );
+      final settings = SettingsProvider(harness.preferences);
+      await settings.loaded;
+
+      expect(settings.appFontFamily, 'Courier');
+      expect(settings.codeFontFamily, isNull);
+      final prefs = harness.preferences;
+      expect(prefs.containsKey('display_app_font_is_google_v1'), isFalse);
+      expect(prefs.containsKey('display_code_font_is_google_v1'), isFalse);
+      expect(prefs.getString('display_code_font_family_v1'), isNull);
+    });
+
     test('persisted iOS sandbox font path is remapped on reload', () async {
       final sourceFile = await _fixtureFontFile();
 

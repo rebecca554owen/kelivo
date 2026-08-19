@@ -309,9 +309,11 @@ class SettingsProvider extends ChangeNotifier {
   // Fonts
   static const String _displayAppFontFamilyKey = 'display_app_font_family_v1';
   static const String _displayCodeFontFamilyKey = 'display_code_font_family_v1';
-  static const String _displayAppFontIsGoogleKey =
+  // Legacy keys from the removed Google Fonts picker; only read once to
+  // migrate old selections back to the system default, then deleted.
+  static const String _legacyAppFontIsGoogleKey =
       'display_app_font_is_google_v1';
-  static const String _displayCodeFontIsGoogleKey =
+  static const String _legacyCodeFontIsGoogleKey =
       'display_code_font_is_google_v1';
   static const String _displayAppFontLocalPathKey =
       'display_app_font_local_path_v1';
@@ -1652,12 +1654,8 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== User Font Settings =====
-  String? _appFontFamily; // system or Google font family to use globally
-  String?
-  _codeFontFamily; // system or Google font family to use for code blocks
-  // Whether the above family names refer to Google Fonts (as opposed to system fonts)
-  bool _appFontIsGoogle = false;
-  bool _codeFontIsGoogle = false;
+  String? _appFontFamily; // system font family to use globally
+  String? _codeFontFamily; // system font family to use for code blocks
   // Local font file selections (mobile): persisted for reload
   String? _appFontLocalPath;
   String? _codeFontLocalPath;
@@ -1667,8 +1665,6 @@ class SettingsProvider extends ChangeNotifier {
 
   String? get appFontFamily => _effectiveAppFontAlias ?? _appFontFamily;
   String? get codeFontFamily => _effectiveCodeFontAlias ?? _codeFontFamily;
-  bool get appFontIsGoogle => _appFontIsGoogle;
-  bool get codeFontIsGoogle => _codeFontIsGoogle;
   String? get appFontLocalAlias => _appFontLocalAlias;
   String? get codeFontLocalAlias => _codeFontLocalAlias;
 
@@ -1679,7 +1675,6 @@ class SettingsProvider extends ChangeNotifier {
       (_codeFontLocalAlias?.isNotEmpty == true) ? _codeFontLocalAlias : null;
 
   Future<void> setAppFontSystemFamily(String? family) async {
-    _appFontIsGoogle = false;
     _appFontFamily = (family == null || family.trim().isEmpty)
         ? null
         : family.trim();
@@ -1689,13 +1684,11 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_displayAppFontFamilyKey, _appFontFamily ?? '');
-    await prefs.setBool(_displayAppFontIsGoogleKey, _appFontIsGoogle);
     await prefs.remove(_displayAppFontLocalAliasKey);
     await prefs.remove(_displayAppFontLocalPathKey);
   }
 
   Future<void> setCodeFontSystemFamily(String? family) async {
-    _codeFontIsGoogle = false;
     _codeFontFamily = (family == null || family.trim().isEmpty)
         ? null
         : family.trim();
@@ -1704,33 +1697,6 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_displayCodeFontFamilyKey, _codeFontFamily ?? '');
-    await prefs.setBool(_displayCodeFontIsGoogleKey, _codeFontIsGoogle);
-    await prefs.remove(_displayCodeFontLocalAliasKey);
-    await prefs.remove(_displayCodeFontLocalPathKey);
-  }
-
-  Future<void> setAppFontFromGoogle(String family) async {
-    _appFontIsGoogle = true;
-    _appFontFamily = family.trim();
-    _appFontLocalAlias = null;
-    _appFontLocalPath = null;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setString(_displayAppFontFamilyKey, _appFontFamily!);
-    await prefs.setBool(_displayAppFontIsGoogleKey, true);
-    await prefs.remove(_displayAppFontLocalAliasKey);
-    await prefs.remove(_displayAppFontLocalPathKey);
-  }
-
-  Future<void> setCodeFontFromGoogle(String family) async {
-    _codeFontIsGoogle = true;
-    _codeFontFamily = family.trim();
-    _codeFontLocalAlias = null;
-    _codeFontLocalPath = null;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setString(_displayCodeFontFamilyKey, _codeFontFamily!);
-    await prefs.setBool(_displayCodeFontIsGoogleKey, true);
     await prefs.remove(_displayCodeFontLocalAliasKey);
     await prefs.remove(_displayCodeFontLocalPathKey);
   }
@@ -1750,14 +1716,12 @@ class SettingsProvider extends ChangeNotifier {
       await _deleteManagedFontFileIfUnused(localPath);
       return;
     }
-    _appFontIsGoogle = false;
     _appFontFamily = fam;
     _appFontLocalAlias = fam;
     _appFontLocalPath = localPath;
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_displayAppFontFamilyKey, _appFontFamily!);
-    await prefs.setBool(_displayAppFontIsGoogleKey, false);
     await prefs.setString(_displayAppFontLocalAliasKey, _appFontLocalAlias!);
     await prefs.setString(_displayAppFontLocalPathKey, _appFontLocalPath!);
     await _deleteManagedFontFileIfUnused(previousPath);
@@ -1778,14 +1742,12 @@ class SettingsProvider extends ChangeNotifier {
       await _deleteManagedFontFileIfUnused(localPath);
       return;
     }
-    _codeFontIsGoogle = false;
     _codeFontFamily = fam;
     _codeFontLocalAlias = fam;
     _codeFontLocalPath = localPath;
     notifyListeners();
     final prefs = _preferences;
     await prefs.setString(_displayCodeFontFamilyKey, _codeFontFamily!);
-    await prefs.setBool(_displayCodeFontIsGoogleKey, false);
     await prefs.setString(_displayCodeFontLocalAliasKey, _codeFontLocalAlias!);
     await prefs.setString(_displayCodeFontLocalPathKey, _codeFontLocalPath!);
     await _deleteManagedFontFileIfUnused(previousPath);
@@ -1794,13 +1756,11 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> clearAppFont() async {
     final previousPath = _appFontLocalPath;
     _appFontFamily = null;
-    _appFontIsGoogle = false;
     _appFontLocalAlias = null;
     _appFontLocalPath = null;
     notifyListeners();
     final prefs = _preferences;
     await prefs.remove(_displayAppFontFamilyKey);
-    await prefs.remove(_displayAppFontIsGoogleKey);
     await prefs.remove(_displayAppFontLocalAliasKey);
     await prefs.remove(_displayAppFontLocalPathKey);
     await _deleteManagedFontFileIfUnused(previousPath);
@@ -1809,13 +1769,11 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> clearCodeFont() async {
     final previousPath = _codeFontLocalPath;
     _codeFontFamily = null;
-    _codeFontIsGoogle = false;
     _codeFontLocalAlias = null;
     _codeFontLocalPath = null;
     notifyListeners();
     final prefs = _preferences;
     await prefs.remove(_displayCodeFontFamilyKey);
-    await prefs.remove(_displayCodeFontIsGoogleKey);
     await prefs.remove(_displayCodeFontLocalAliasKey);
     await prefs.remove(_displayCodeFontLocalPathKey);
     await _deleteManagedFontFileIfUnused(previousPath);
@@ -1826,8 +1784,6 @@ class SettingsProvider extends ChangeNotifier {
     // Load persisted values
     _appFontFamily = _nonEmpty(prefs.getString(_displayAppFontFamilyKey));
     _codeFontFamily = _nonEmpty(prefs.getString(_displayCodeFontFamilyKey));
-    _appFontIsGoogle = prefs.getBool(_displayAppFontIsGoogleKey) ?? false;
-    _codeFontIsGoogle = prefs.getBool(_displayCodeFontIsGoogleKey) ?? false;
     _appFontLocalPath = _nonEmpty(prefs.getString(_displayAppFontLocalPathKey));
     _codeFontLocalPath = _nonEmpty(
       prefs.getString(_displayCodeFontLocalPathKey),
@@ -1840,6 +1796,21 @@ class SettingsProvider extends ChangeNotifier {
     );
 
     var changed = false;
+
+    // Migration: families picked from the removed Google Fonts picker are not
+    // installed on the device, so drop them back to the system default.
+    final legacyAppFontIsGoogle =
+        prefs.getBool(_legacyAppFontIsGoogleKey) ?? false;
+    final legacyCodeFontIsGoogle =
+        prefs.getBool(_legacyCodeFontIsGoogleKey) ?? false;
+    if (legacyAppFontIsGoogle) {
+      _appFontFamily = null;
+      changed = true;
+    }
+    if (legacyCodeFontIsGoogle) {
+      _codeFontFamily = null;
+      changed = true;
+    }
 
     // Re-register local fonts if paths are available.
     if (_appFontLocalPath != null && _appFontLocalPath!.isNotEmpty) {
@@ -1860,7 +1831,6 @@ class SettingsProvider extends ChangeNotifier {
         _appFontLocalAlias = null;
         _appFontLocalPath = null;
         _appFontFamily = null;
-        _appFontIsGoogle = false;
         changed = true;
       }
     }
@@ -1882,13 +1852,18 @@ class SettingsProvider extends ChangeNotifier {
         _codeFontLocalAlias = null;
         _codeFontLocalPath = null;
         _codeFontFamily = null;
-        _codeFontIsGoogle = false;
         changed = true;
       }
     }
 
     if (changed) {
       await _persistFontSettings(prefs);
+    }
+    if (prefs.containsKey(_legacyAppFontIsGoogleKey)) {
+      await prefs.remove(_legacyAppFontIsGoogleKey);
+    }
+    if (prefs.containsKey(_legacyCodeFontIsGoogleKey)) {
+      await prefs.remove(_legacyCodeFontIsGoogleKey);
     }
   }
 
@@ -1900,7 +1875,6 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       await prefs.setString(_displayAppFontFamilyKey, _appFontFamily!);
     }
-    await prefs.setBool(_displayAppFontIsGoogleKey, _appFontIsGoogle);
     if (_appFontLocalAlias == null || _appFontLocalAlias!.isEmpty) {
       await prefs.remove(_displayAppFontLocalAliasKey);
     } else {
@@ -1917,7 +1891,6 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       await prefs.setString(_displayCodeFontFamilyKey, _codeFontFamily!);
     }
-    await prefs.setBool(_displayCodeFontIsGoogleKey, _codeFontIsGoogle);
     if (_codeFontLocalAlias == null || _codeFontLocalAlias!.isEmpty) {
       await prefs.remove(_displayCodeFontLocalAliasKey);
     } else {

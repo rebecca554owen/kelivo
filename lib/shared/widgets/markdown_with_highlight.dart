@@ -32,7 +32,6 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 import 'package:Kelivo/theme/theme_factory.dart' show getPlatformFontFallback;
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import '../../core/providers/settings_provider.dart';
 import 'package:Kelivo/desktop/html_preview_dialog.dart';
@@ -280,14 +279,6 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     String resolveCodeFont() {
       final fam = settings.codeFontFamily;
       if (fam == null || fam.isEmpty) return 'monospace';
-      if (settings.codeFontIsGoogle) {
-        try {
-          final s = GoogleFonts.getFont(fam);
-          return s.fontFamily ?? fam;
-        } catch (_) {
-          return fam;
-        }
-      }
       return fam;
     }
 
@@ -297,14 +288,6 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     String resolveAppFont() {
       final fam = settings.appFontFamily;
       if (fam == null || fam.isEmpty) return '';
-      if (settings.appFontIsGoogle) {
-        try {
-          final s = GoogleFonts.getFont(fam);
-          return s.fontFamily ?? fam;
-        } catch (_) {
-          return fam;
-        }
-      }
       return fam;
     }
 
@@ -2468,14 +2451,6 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
     String resolveCodeFont() {
       final fam = settings.codeFontFamily;
       if (fam == null || fam.isEmpty) return 'monospace';
-      if (settings.codeFontIsGoogle) {
-        try {
-          final s = GoogleFonts.getFont(fam);
-          return s.fontFamily ?? fam;
-        } catch (_) {
-          return fam;
-        }
-      }
       return fam;
     }
 
@@ -5191,12 +5166,6 @@ class AtxHeadingMd extends BlockMd {
     String? appFamily;
     if ((settings.appFontFamily ?? '').isNotEmpty) {
       appFamily = settings.appFontFamily;
-      if (settings.appFontIsGoogle) {
-        try {
-          final s = GoogleFonts.getFont(appFamily!);
-          appFamily = s.fontFamily ?? appFamily;
-        } catch (_) {}
-      }
     }
     // Start from Material styles but tighten sizes for balance with body text
     TextStyle base;

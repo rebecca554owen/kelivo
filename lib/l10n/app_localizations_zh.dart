@@ -4366,12 +4366,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fontPickerChooseLocalFile => '选择本地文件';
 
   @override
-  String get fontPickerGetFromGoogleFonts => '从 Google Fonts 获取';
-
-  @override
-  String get fontPickerFilterHint => '输入以过滤字体…';
-
-  @override
   String get desktopFontLoading => '正在加载字体…';
 
   @override
@@ -11930,12 +11924,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get fontPickerChooseLocalFile => '选择本地文件';
 
   @override
-  String get fontPickerGetFromGoogleFonts => '从 Google Fonts 获取';
-
-  @override
-  String get fontPickerFilterHint => '输入以过滤字体…';
-
-  @override
   String get desktopFontLoading => '正在加载字体…';
 
   @override
@@ -19416,12 +19404,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fontPickerChooseLocalFile => '選擇本機檔案';
-
-  @override
-  String get fontPickerGetFromGoogleFonts => '從 Google Fonts 取得';
-
-  @override
-  String get fontPickerFilterHint => '輸入以過濾字體…';
 
   @override
   String get desktopFontLoading => '正在載入字體…';

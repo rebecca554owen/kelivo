@@ -63,7 +63,6 @@ import 'shared/widgets/app_overlays.dart';
 import 'shared/widgets/snackbar.dart';
 import 'shared/widgets/restore_failure_screen.dart';
 import 'shared/widgets/restore_outcome_notice.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:system_fonts/system_fonts.dart';
 import 'dart:io'
     show
@@ -652,15 +651,13 @@ class MyApp extends StatelessWidget {
                       defaultTargetPlatform == TargetPlatform.macOS ||
                       defaultTargetPlatform == TargetPlatform.linux);
               if (!isDesktop) return;
-              // Selected system app/code fonts (not Google, not local alias)
+              // Selected system app/code fonts (not local alias)
               final wantsAppSystem =
                   (settings.appFontFamily?.isNotEmpty == true) &&
-                  !settings.appFontIsGoogle &&
                   (settings.appFontLocalAlias == null ||
                       settings.appFontLocalAlias!.isEmpty);
               final wantsCodeSystem =
                   (settings.codeFontFamily?.isNotEmpty == true) &&
-                  !settings.codeFontIsGoogle &&
                   (settings.codeFontLocalAlias == null ||
                       settings.codeFontLocalAlias!.isEmpty);
               if (wantsAppSystem || wantsCodeSystem) {
@@ -777,18 +774,10 @@ class MyApp extends StatelessWidget {
                 dynamicScheme: useDyn ? darkDynamic : null,
                 pureBackground: settings.usePureBackground,
               );
-              // Resolve effective app font family (system/Google/local alias)
+              // Resolve effective app font family (system/local alias)
               String? effectiveAppFontFamily() {
                 final fam = settings.appFontFamily;
                 if (fam == null || fam.isEmpty) return null;
-                if (settings.appFontIsGoogle) {
-                  try {
-                    final s = GoogleFonts.getFont(fam);
-                    return s.fontFamily ?? fam;
-                  } catch (_) {
-                    return fam;
-                  }
-                }
                 return fam;
               }
 
