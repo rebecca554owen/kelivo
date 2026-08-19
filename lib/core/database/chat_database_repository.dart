@@ -2271,9 +2271,18 @@ class ChatDatabaseRepository {
           SELECT
             ranked.id,
             ranked.role,
-            (SELECT SUBSTR(p.payload, 1, ?)
-               FROM message_part_rows p
-              WHERE p.revision_id = ranked.id AND p.kind = 'text')
+            (SELECT SUBSTR(concat_text.txt, 1, ?)
+               FROM (
+                 SELECT GROUP_CONCAT(ordered.payload, '') AS txt
+                 FROM (
+                   SELECT p.payload AS payload
+                   FROM message_part_rows p
+                   WHERE p.revision_id = ranked.id
+                     AND p.kind = 'text'
+                     AND p.conversation_id = ranked.conversation_id
+                   ORDER BY p.revision_id, p.ordinal
+                 ) AS ordered
+               ) AS concat_text)
               AS content_summary,
             ranked.timestamp,
             ranked.conversation_id,
@@ -2306,6 +2315,138 @@ class ChatDatabaseRepository {
           conversationId: row.read<String>('conversation_id'),
           groupId: row.read<String>('group_id'),
           version: row.read<int>('version'),
+        ),
+    ];
+  }
+
+  /// Searches the selected visible revision of each message group.
+  ///
+  /// SQLite `LOWER` / `INSTR` only fold ASCII case. Non-ASCII case variants
+  /// (for example Greek or Cyrillic) are not matched; this path does not load
+  /// ICU.
+  Future<List<MiniMapSearchHit>> searchMiniMapMatches(
+    String conversationId,
+    String query, {
+    int snippetRadius = 40,
+    int snippetLength = 120,
+  }) {
+    return _observer.measure(
+      ChatDatabaseOperation.querySearch,
+      () => _searchMiniMapMatches(
+        conversationId,
+        query,
+        snippetRadius: snippetRadius,
+        snippetLength: snippetLength,
+      ),
+      resultCount: (rows) => rows.length,
+    );
+  }
+
+  Future<List<MiniMapSearchHit>> _searchMiniMapMatches(
+    String conversationId,
+    String query, {
+    required int snippetRadius,
+    required int snippetLength,
+  }) async {
+    final needle = query.trim().toLowerCase();
+    if (needle.isEmpty) return const <MiniMapSearchHit>[];
+    final radius = snippetRadius < 0 ? 0 : snippetRadius;
+    final length = snippetLength < 0 ? 0 : snippetLength;
+    final rows = await _db
+        .customSelect(
+          '''
+          WITH group_rows AS (
+            SELECT
+              COALESCE(m.group_id, m.id) AS group_id,
+              MIN(m.message_order) AS anchor_order,
+              MAX(m.version) AS latest_version
+            FROM message_rows m
+            WHERE m.conversation_id = ?
+            GROUP BY COALESCE(m.group_id, m.id)
+          ),
+          selections AS (
+            SELECT j.key AS group_id, CAST(j.value AS INTEGER) AS version
+            FROM conversation_rows c, json_each(c.version_selections_json) j
+            WHERE c.id = ?
+          ),
+          ranked AS (
+            SELECT
+              m.id,
+              m.role,
+              COALESCE(m.group_id, m.id) AS group_id,
+              g.anchor_order,
+              ROW_NUMBER() OVER (
+                PARTITION BY g.group_id
+                ORDER BY
+                  CASE
+                    WHEN m.version = COALESCE(s.version, g.latest_version)
+                    THEN 0 ELSE 1
+                  END,
+                  m.version DESC,
+                  m.message_order DESC,
+                  m.id DESC
+              ) AS version_rank
+            FROM group_rows g
+            JOIN message_rows m
+              ON m.conversation_id = ?
+             AND COALESCE(m.group_id, m.id) = g.group_id
+            LEFT JOIN selections s ON s.group_id = g.group_id
+          ),
+          text_bodies AS (
+            SELECT revision_id, GROUP_CONCAT(payload, '') AS txt
+            FROM (
+              SELECT p.revision_id AS revision_id, p.payload AS payload
+              FROM message_part_rows p
+              WHERE p.conversation_id = ?
+                AND p.kind = 'text'
+              ORDER BY p.revision_id, p.ordinal
+            )
+            GROUP BY revision_id
+          ),
+          params AS (
+            SELECT ? AS needle, ? AS radius, ? AS snippet_len
+          )
+          SELECT
+            ranked.id AS message_id,
+            (LENGTH(t.txt) - LENGTH(REPLACE(LOWER(t.txt), p.needle, '')))
+              / LENGTH(p.needle) AS match_count,
+            SUBSTR(
+              t.txt,
+              MAX(1, INSTR(LOWER(t.txt), p.needle) - p.radius),
+              p.snippet_len
+            ) AS snippet,
+            MAX(1, INSTR(LOWER(t.txt), p.needle) - p.radius) AS snippet_start
+          FROM ranked
+          JOIN text_bodies t ON t.revision_id = ranked.id
+          CROSS JOIN params p
+          WHERE ranked.version_rank = 1
+            AND ranked.role IN ('user', 'assistant')
+            AND INSTR(LOWER(t.txt), p.needle) > 0
+          ORDER BY ranked.anchor_order, ranked.group_id;
+          ''',
+          variables: [
+            Variable<String>(conversationId),
+            Variable<String>(conversationId),
+            Variable<String>(conversationId),
+            Variable<String>(conversationId),
+            Variable<String>(needle),
+            Variable<int>(radius),
+            Variable<int>(length),
+          ],
+          readsFrom: {
+            _db.conversationRows,
+            _db.messageRows,
+            _db.messagePartRows,
+          },
+        )
+        .get();
+    return [
+      for (final row in rows)
+        MiniMapSearchHit(
+          messageId: row.read<String>('message_id'),
+          matchCount: row.read<int>('match_count'),
+          snippet: row.readNullable<String>('snippet') ?? '',
+          snippetStart: row.read<int>('snippet_start') - 1,
         ),
     ];
   }
@@ -6974,6 +7115,20 @@ class ConversationSearchMatch {
   final String? groupId;
   final int? version;
   final int? maxVersion;
+}
+
+class MiniMapSearchHit {
+  const MiniMapSearchHit({
+    required this.messageId,
+    required this.matchCount,
+    required this.snippet,
+    required this.snippetStart,
+  });
+
+  final String messageId;
+  final int matchCount;
+  final String snippet;
+  final int snippetStart;
 }
 
 final class ChatStatsTotals {
