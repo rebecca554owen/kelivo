@@ -258,6 +258,7 @@ void main() {
             visible: const [],
             totalByType: const {},
             lang: MemoryPromptLang.zh,
+            maxItems: 10,
           ),
           MemoryPromptLang.zh,
         );

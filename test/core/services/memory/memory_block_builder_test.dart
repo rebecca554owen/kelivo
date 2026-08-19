@@ -98,6 +98,7 @@ void main() {
         visible: entries,
         totalByType: totals,
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
 
       expect(profile, '''
@@ -160,6 +161,7 @@ void main() {
               MemoryType.instruction: 0,
             },
             lang: MemoryPromptLang.en,
+            maxItems: 10,
           );
 
       expect(build([a, b, c]), build([c, b, a]));
@@ -196,6 +198,7 @@ void main() {
         visible: const [],
         totalByType: const {},
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
       expect(out, '''
 <user_memory type="identity"/>
@@ -219,6 +222,7 @@ void main() {
         visible: thirty,
         totalByType: {MemoryType.identity: 30},
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
       expect(full.contains('mode="summary"'), isFalse);
       expect('\n- ['.allMatches(full).length, 30);
@@ -228,6 +232,7 @@ void main() {
         visible: thirtyOne,
         totalByType: {MemoryType.identity: 31},
         lang: MemoryPromptLang.zh,
+        maxItems: 10,
       );
       expect(
         summary.startsWith(
@@ -257,6 +262,7 @@ void main() {
         visible: [entry],
         totalByType: {MemoryType.identity: 1},
         lang: MemoryPromptLang.en,
+        maxItems: 10,
       );
       expect(
         out,
@@ -296,11 +302,13 @@ void main() {
           visible: [e1, e2],
           totalByType: totals,
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         final m2 = MemoryBlockBuilder.buildMemoryBlock(
           visible: [e2, e1],
           totalByType: totals,
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         expect(
           MemoryBlockBuilder.hashBlocks(profile, m1),
@@ -320,6 +328,7 @@ void main() {
           ],
           totalByType: totals,
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         expect(
           MemoryBlockBuilder.hashBlocks(profile, edited),
@@ -340,11 +349,13 @@ void main() {
           visible: many,
           totalByType: {MemoryType.identity: 31},
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         );
         final en = MemoryBlockBuilder.buildMemoryBlock(
           visible: many,
           totalByType: {MemoryType.identity: 31},
           lang: MemoryPromptLang.en,
+          maxItems: 10,
         );
         expect(
           MemoryBlockBuilder.hashBlocks(profile, zh),
@@ -397,6 +408,7 @@ void main() {
           visible: const [],
           totalByType: const {},
           lang: MemoryPromptLang.zh,
+          maxItems: 10,
         ),
         MemoryPromptLang.zh,
       );
@@ -417,6 +429,7 @@ void main() {
           visible: const [],
           totalByType: const {},
           lang: MemoryPromptLang.en,
+          maxItems: 10,
         ),
         MemoryPromptLang.en,
       );

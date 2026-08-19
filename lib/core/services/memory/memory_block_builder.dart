@@ -23,6 +23,7 @@ abstract final class MemoryBlockBuilder {
     required List<MemoryEntry> visible,
     required Map<MemoryType, int> totalByType,
     required MemoryPromptLang lang,
+    required int maxItems,
   }) {
     final out = StringBuffer();
     for (final type in _typeOrder) {
@@ -33,7 +34,7 @@ abstract final class MemoryBlockBuilder {
       }
 
       final total = totalByType[type] ?? list.length;
-      final summary = total > 30;
+      final summary = total > maxItems;
       List<MemoryEntry> selected;
       if (!summary) {
         selected = List<MemoryEntry>.from(list);
@@ -44,8 +45,8 @@ abstract final class MemoryBlockBuilder {
             if (byUpdated != 0) return byUpdated;
             return a.id.compareTo(b.id);
           });
-        if (selected.length > 10) {
-          selected = selected.sublist(0, 10);
+        if (selected.length > maxItems) {
+          selected = selected.sublist(0, maxItems);
         }
       }
 
@@ -59,7 +60,7 @@ abstract final class MemoryBlockBuilder {
 
       if (summary) {
         out.writeln(
-          '<user_memory type="${MemoryEntry.typeToString(type)}" mode="summary" total="$total">',
+          '<user_memory type="${MemoryEntry.typeToString(type)}" mode="summary" total="$total" shown="${selected.length}">',
         );
       } else {
         out.writeln('<user_memory type="${MemoryEntry.typeToString(type)}">');

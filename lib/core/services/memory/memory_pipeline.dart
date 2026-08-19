@@ -678,6 +678,7 @@ class MemoryPipelineService {
       visible: visible,
       totalByType: totals,
       lang: lang,
+      maxItems: settings.memoryInjectionMaxItems,
     );
     final extractPrompt = MemoryExtractor.buildPrompt(
       lang: lang,

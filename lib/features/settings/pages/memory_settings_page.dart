@@ -10,6 +10,7 @@ import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/platform_utils.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/memory_ui.dart';
@@ -114,6 +115,18 @@ class MemorySettingsContent extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         _SettingsSection(
+          title: l10n.memorySettingsInjectionSection,
+          children: [
+            _NavRow(
+              title: l10n.memorySettingsInjectionMaxItemsTitle,
+              subtitle: l10n.memorySettingsInjectionMaxItemsSubtitle,
+              detailText: '${settings.memoryInjectionMaxItems}',
+              onTap: () => _pickMemoryInjectionMaxItems(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        _SettingsSection(
           title: l10n.memorySettingsPromptLangSection,
           children: [
             for (final lang in const ['auto', 'zh', 'en'])
@@ -177,6 +190,128 @@ class MemorySettingsContent extends StatelessWidget {
       ],
     );
   }
+}
+
+const int _kInjectionCustomSentinel = -1;
+const List<int> _kInjectionMaxItemOptions = [5, 10, 20, 30];
+
+Future<void> _pickMemoryInjectionMaxItems(BuildContext context) async {
+  final l10n = AppLocalizations.of(context)!;
+  final settings = context.read<SettingsProvider>();
+  final selected = settings.memoryInjectionMaxItems;
+  final counts = <int>{..._kInjectionMaxItemOptions, selected}.toList()..sort();
+  final choice = await showMemoryOptionPicker<int>(
+    context,
+    title: l10n.memorySettingsInjectionMaxItemsTitle,
+    selected: selected,
+    options: [
+      for (final n in counts)
+        MemoryPickerOption(
+          value: n,
+          label: l10n.memorySettingsInjectionMaxItemsOption(n),
+        ),
+      MemoryPickerOption(
+        value: _kInjectionCustomSentinel,
+        label: l10n.memorySettingsInjectionMaxItemsCustomButton,
+      ),
+    ],
+  );
+  if (choice == null || !context.mounted) return;
+  if (choice == _kInjectionCustomSentinel) {
+    await _showCustomMemoryInjectionMaxItems(context);
+    return;
+  }
+  await context.read<SettingsProvider>().setMemoryInjectionMaxItems(choice);
+}
+
+Future<void> _showCustomMemoryInjectionMaxItems(BuildContext context) async {
+  final l10n = AppLocalizations.of(context)!;
+  final settings = context.read<SettingsProvider>();
+  final input = await _showInjectionCountInput(
+    context,
+    initialValue: settings.memoryInjectionMaxItems.toString(),
+  );
+  final parsed = input == null ? null : int.tryParse(input);
+  if (parsed == null) return;
+  if (parsed < SettingsProvider.minMemoryInjectionMaxItems ||
+      parsed > SettingsProvider.maxMemoryInjectionMaxItems) {
+    if (context.mounted) {
+      showAppSnackBar(
+        context,
+        message: l10n.memorySettingsInjectionMaxItemsCustomInvalid,
+        type: NotificationType.error,
+      );
+    }
+    return;
+  }
+  if (!context.mounted) return;
+  await context.read<SettingsProvider>().setMemoryInjectionMaxItems(parsed);
+}
+
+Future<String?> _showInjectionCountInput(
+  BuildContext context, {
+  required String initialValue,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  if (PlatformUtils.isDesktopTarget) {
+    return showDesktopMemoryTextInputDialog(
+      context,
+      title: l10n.memorySettingsInjectionMaxItemsCustomTitle,
+      label: l10n.memorySettingsInjectionMaxItemsCustomLabel,
+      hintText: l10n.memorySettingsInjectionMaxItemsCustomHint,
+      description: l10n.memorySettingsInjectionMaxItemsCustomDescription,
+      initialValue: initialValue,
+      minLines: 1,
+      maxLines: 1,
+      keyboardType: TextInputType.number,
+    );
+  }
+  final controller = TextEditingController(text: initialValue);
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: Text(l10n.memorySettingsInjectionMaxItemsCustomTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.memorySettingsInjectionMaxItemsCustomLabel,
+                hintText: l10n.memorySettingsInjectionMaxItemsCustomHint,
+              ),
+              onSubmitted: (value) => Navigator.of(ctx).pop(value.trim()),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.memorySettingsInjectionMaxItemsCustomDescription,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: Theme.of(
+                  ctx,
+                ).colorScheme.onSurface.withValues(alpha: 0.62),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.homePageCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: Text(l10n.userProfileSave),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 Future<void> _openMemoryEntries(BuildContext context) async {
@@ -796,10 +931,12 @@ class _NavRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.detailText,
   });
 
   final String title;
   final String subtitle;
+  final String? detailText;
   final VoidCallback onTap;
 
   @override
@@ -817,6 +954,16 @@ class _NavRow extends StatelessWidget {
             Expanded(
               child: _RowText(title: title, subtitle: subtitle),
             ),
+            if (detailText != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                detailText!,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
             const SizedBox(width: 8),
             Icon(
               Lucide.ChevronRight,
