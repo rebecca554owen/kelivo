@@ -37,13 +37,10 @@ Map<String, dynamic> copyChatCompletionMessage(Map<String, dynamic> m) {
   if (role == 'assistant') {
     final toolCalls = m['tool_calls'];
     if (toolCalls is List && toolCalls.isNotEmpty) {
-      out['tool_calls'] = toolCalls.whereType<Map>().map((toolCall) {
-        final copy = toolCall.map(
-          (key, value) => MapEntry(key.toString(), value),
-        );
-        copy.remove('metadata');
-        return copy;
-      }).toList();
+      out['tool_calls'] = [
+        for (final toolCall in toolCalls.whereType<Map>())
+          openaiToolCallForRequest(toolCall),
+      ];
     }
     final functionCall = m['function_call'];
     if (functionCall != null) {
@@ -186,7 +183,14 @@ List<EmitToolCall> openaiCallsFromCompletionMessage(Map<String, dynamic>? msg) {
     } catch (_) {
       args = <String, dynamic>{};
     }
-    calls.add(emitToolCall(id: id, name: name, arguments: args));
+    calls.add(
+      emitToolCall(
+        id: id,
+        name: name,
+        arguments: args,
+        metadata: openaiMetadataForExtraContent(t['extra_content']),
+      ),
+    );
   }
   return calls;
 }
@@ -242,6 +246,7 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
   required bool canImageInput,
   required bool allowRemoteImages,
   required ReasoningContentReplayPolicy reasoningContentReplayPolicy,
+  bool supportsGoogleOpenAIThoughtSignatures = false,
   bool stripReasoningContent = false,
   bool normalizeReasoningDetails = false,
 }) async {
@@ -288,9 +293,20 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
     final outMsg = Map<String, dynamic>.from(m);
     outMsg.remove(multimodalInternalMediaPathsKey);
     outMsg.remove(multimodalInternalRevisionIdKey);
+    outMsg.remove('metadata');
     outMsg['role'] = role;
 
     if (isAssistant) {
+      final toolCalls = outMsg['tool_calls'];
+      if (toolCalls is List && toolCalls.isNotEmpty) {
+        outMsg['tool_calls'] = [
+          for (final toolCall in toolCalls.whereType<Map>())
+            openaiToolCallForRequest(
+              toolCall,
+              includeGoogleExtraContent: supportsGoogleOpenAIThoughtSignatures,
+            ),
+        ];
+      }
       final keepReasoningContent =
           !stripReasoningContent &&
           (reasoningContentReplayPolicy == ReasoningContentReplayPolicy.all ||
@@ -767,6 +783,8 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
           canImageInput: canImageInput,
           allowRemoteImages: allowRemoteImages,
           reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
+          supportsGoogleOpenAIThoughtSignatures:
+              info.supportsGoogleOpenAIThoughtSignatures,
           stripReasoningContent: isClaudeUpstream,
           normalizeReasoningDetails: isClaudeUpstream,
         ),
@@ -948,6 +966,8 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
         canImageInput: canImageInput,
         allowRemoteImages: allowRemoteImages,
         reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
+        supportsGoogleOpenAIThoughtSignatures:
+            info.supportsGoogleOpenAIThoughtSignatures,
         stripReasoningContent: isClaudeUpstream,
         normalizeReasoningDetails: isClaudeUpstream,
       );

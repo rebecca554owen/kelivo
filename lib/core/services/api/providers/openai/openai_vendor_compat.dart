@@ -471,6 +471,13 @@ class OpenAIProviderInfo {
       host.contains('intern') ||
       host.contains('chat.intern-ai.org.cn');
   bool get isKimiThinkingModel => _isKimiThinkingModel(upstreamModelId);
+  bool get supportsGoogleOpenAIThoughtSignatures {
+    final normalizedModelId = upstreamModelId.toLowerCase();
+    final isGoogleApiHost =
+        host == 'generativelanguage.googleapis.com' ||
+        host.endsWith('aiplatform.googleapis.com');
+    return isGoogleApiHost && normalizedModelId.contains('gemini');
+  }
 
   bool get needsReasoningEcho =>
       isDeepSeek || isMimo || isZhipu || isKimiThinkingModel;

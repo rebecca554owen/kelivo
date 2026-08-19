@@ -931,6 +931,48 @@ void main() {
       );
     });
 
+    test('工具历史会保留 OpenAI 兼容 Gemini 的 extra_content', () {
+      const extraContent = <String, dynamic>{
+        'google': <String, dynamic>{'thought_signature': 'sig-create-memory'},
+      };
+      final service = MessageBuilderService(
+        chatService: _FakeChatService({
+          'a1': [
+            {
+              'id': 'call_mem',
+              'name': 'create_memory',
+              'arguments': {'content': 'note'},
+              'content': '{"ok":true}',
+              'metadata': {
+                'google': {'extra_content': extraContent},
+              },
+            },
+          ],
+        }),
+        contextProvider: _FakeBuildContext(),
+      );
+
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          _message(id: 'u1', role: 'user', content: 'remember this'),
+          _message(id: 'a1', role: 'assistant', content: 'saved'),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+        includeToolMessages: true,
+      );
+
+      final toolCall =
+          (apiMessages.firstWhere(
+                        (message) => message['tool_calls'] is List,
+                      )['tool_calls']
+                      as List)
+                  .single
+              as Map<String, dynamic>;
+
+      expect(toolCall['metadata']['google']['extra_content'], extraContent);
+    });
+
     test('未完成的工具占位事件不会被重建为 API tool call', () {
       final service = MessageBuilderService(
         chatService: _FakeChatService({

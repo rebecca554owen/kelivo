@@ -28,7 +28,8 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
   int approxCompletionChars = 0;
   String reasoningEcho = '';
   String assistantContent = '';
-  final Map<int, Map<String, String>> toolCalls = <int, Map<String, String>>{};
+  final Map<int, Map<String, dynamic>> toolCalls =
+      <int, Map<String, dynamic>>{};
 
   final List<dynamic> _details = <dynamic>[];
   final Map<int, String> _toolIdsByIndex = <int, String>{};
@@ -165,15 +166,24 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
         if (name.isEmpty) continue;
         final idx = toolCalls.length;
         final eventId = _toolSeriesId(idx, vendorId: id);
+        final extraContent = _extraContentOf(t);
         final entry = toolCalls.putIfAbsent(
           idx,
-          () => <String, String>{'id': '', 'name': '', 'args': ''},
+          () => <String, dynamic>{'id': '', 'name': '', 'args': ''},
         );
         entry['id'] = id.isNotEmpty ? id : eventId;
         entry['name'] = name;
         entry['args'] = argsStr;
+        if (extraContent != null) {
+          entry['extra_content'] = extraContent;
+        }
         chunks.addAll(
-          _emitCompleteToolCall(eventId, name: name, args: argsStr),
+          _emitCompleteToolCall(
+            eventId,
+            name: name,
+            args: argsStr,
+            metadata: _metadataForExtraContent(extraContent),
+          ),
         );
       }
       if (rootToolCalls.isNotEmpty) {
@@ -229,25 +239,41 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
       final firstSeen = !toolCalls.containsKey(idx);
       final entry = toolCalls.putIfAbsent(
         idx,
-        () => <String, String>{'id': '', 'name': '', 'args': ''},
+        () => <String, dynamic>{'id': '', 'name': '', 'args': ''},
       );
       final eventId = _toolSeriesId(idx, vendorId: vendorId);
       if (vendorId.isNotEmpty) {
         entry['id'] = vendorId;
-      } else if ((entry['id'] ?? '').isEmpty) {
+      } else if ((entry['id'] ?? '').toString().isEmpty) {
         entry['id'] = eventId;
       }
-      final hadName = (entry['name'] ?? '').isNotEmpty;
+      final hadName = (entry['name'] ?? '').toString().isNotEmpty;
       if (name != null && name.isNotEmpty) entry['name'] = name;
       if (argsDelta != null && argsDelta.isNotEmpty) {
-        entry['args'] = (entry['args'] ?? '') + argsDelta;
+        entry['args'] = '${entry['args'] ?? ''}$argsDelta';
       }
+      final extraContent = _extraContentOf(t);
+      final firstExtra = extraContent != null && entry['extra_content'] == null;
+      if (firstExtra) {
+        entry['extra_content'] = extraContent;
+      }
+      final metadata = firstExtra
+          ? _metadataForExtraContent(extraContent)
+          : null;
       if (_openToolIds.add(eventId) && !_endedToolIds.contains(eventId)) {
         chunks.add(
-          ToolCallStart(id: eventId, toolName: entry['name'] ?? name ?? ''),
+          ToolCallStart(
+            id: eventId,
+            toolName: (entry['name'] ?? name ?? '').toString(),
+            metadata: metadata,
+          ),
         );
       } else if (!firstSeen && !hadName && name != null && name.isNotEmpty) {
-        chunks.add(ToolCallDelta(id: eventId, toolNameDelta: name));
+        chunks.add(
+          ToolCallDelta(id: eventId, toolNameDelta: name, metadata: metadata),
+        );
+      } else if (metadata != null) {
+        chunks.add(ToolCallDelta(id: eventId, metadata: metadata));
       }
       if (argsDelta != null && argsDelta.isNotEmpty) {
         chunks.add(ToolCallDelta(id: eventId, inputDelta: argsDelta));
@@ -267,14 +293,25 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
       final argsStr = (func['arguments'] ?? '').toString();
       if (name.isEmpty) continue;
       final eventId = _toolSeriesId(idx, vendorId: id);
+      final extraContent = _extraContentOf(t);
       final entry = toolCalls.putIfAbsent(
         idx,
-        () => <String, String>{'id': '', 'name': '', 'args': ''},
+        () => <String, dynamic>{'id': '', 'name': '', 'args': ''},
       );
       entry['id'] = id.isNotEmpty ? id : eventId;
       entry['name'] = name;
       entry['args'] = argsStr;
-      chunks.addAll(_emitCompleteToolCall(eventId, name: name, args: argsStr));
+      if (extraContent != null) {
+        entry['extra_content'] = extraContent;
+      }
+      chunks.addAll(
+        _emitCompleteToolCall(
+          eventId,
+          name: name,
+          args: argsStr,
+          metadata: _metadataForExtraContent(extraContent),
+        ),
+      );
     }
     if (raw.isNotEmpty) {
       finishReason ??= 'tool_calls';
@@ -293,11 +330,14 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
     String id, {
     required String name,
     required String args,
+    Map<String, dynamic>? metadata,
   }) {
     if (_endedToolIds.contains(id)) return const <StreamChunk>[];
     final chunks = <StreamChunk>[];
     if (_openToolIds.add(id)) {
-      chunks.add(ToolCallStart(id: id, toolName: name));
+      chunks.add(ToolCallStart(id: id, toolName: name, metadata: metadata));
+    } else if (metadata != null && metadata.isNotEmpty) {
+      chunks.add(ToolCallDelta(id: id, metadata: metadata));
     }
     if (args.isNotEmpty) {
       chunks.add(ToolCallDelta(id: id, inputDelta: args));
@@ -452,4 +492,17 @@ int _readInt(dynamic value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value) ?? 0;
   return 0;
+}
+
+Map<String, dynamic>? _extraContentOf(Map toolCall) {
+  final extra = toolCall['extra_content'];
+  if (extra is! Map || extra.isEmpty) return null;
+  return extra.map((key, value) => MapEntry(key.toString(), value));
+}
+
+Map<String, dynamic>? _metadataForExtraContent(Map<String, dynamic>? extra) {
+  if (extra == null) return null;
+  return <String, dynamic>{
+    'google': <String, dynamic>{'extra_content': extra},
+  };
 }

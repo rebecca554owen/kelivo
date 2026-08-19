@@ -558,6 +558,8 @@ Stream<StreamChunk> sendOpenAIStream(
       canImageInput: canImageInput,
       allowRemoteImages: allowRemoteImages,
       reasoningContentReplayPolicy: info.reasoningContentReplayPolicy,
+      supportsGoogleOpenAIThoughtSignatures:
+          info.supportsGoogleOpenAIThoughtSignatures,
       stripReasoningContent: isClaudeUpstream,
       normalizeReasoningDetails: isClaudeUpstream,
     );
@@ -830,8 +832,8 @@ Stream<StreamChunk> sendOpenAIStream(
   String assistantContentBuffer = '';
 
   // Track potential tool calls (OpenAI Chat Completions)
-  final Map<int, Map<String, String>> toolAcc =
-      <int, Map<String, String>>{}; // index -> {id,name,args}
+  final Map<int, Map<String, dynamic>> toolAcc =
+      <int, Map<String, dynamic>>{}; // index -> {id,name,args,extra_content?}
   // Track potential tool calls (OpenAI Responses API)
   final Map<String, Map<String, String>> toolAccResp =
       <String, Map<String, String>>{}; // id/name -> {name,args}
