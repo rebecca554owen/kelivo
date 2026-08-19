@@ -1284,6 +1284,8 @@
   "miniMapTitle": "迷你地图",
   "miniMapTooltip": "迷你地图",
   "miniMapScrollToBottomTooltip": "滚动到底部",
+  "miniMapSearchMatchCount": "{count} 处",
+  "miniMapSearchNoResults": "没有匹配的消息",
   "searchServicesPageApiKeyRequiredStatus": "需要 API Key",
   "searchServicesPageUrlRequiredStatus": "需要 URL",
   "searchServicesAddDialogTitle": "添加搜索服务",

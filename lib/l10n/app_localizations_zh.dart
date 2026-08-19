@@ -3760,6 +3760,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get miniMapScrollToBottomTooltip => '滚动到底部';
 
   @override
+  String miniMapSearchMatchCount(int count) {
+    return '$count 处';
+  }
+
+  @override
+  String get miniMapSearchNoResults => '没有匹配的消息';
+
+  @override
   String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';
 
   @override
@@ -11117,6 +11125,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get miniMapScrollToBottomTooltip => '滚动到底部';
 
   @override
+  String miniMapSearchMatchCount(int count) {
+    return '$count 处';
+  }
+
+  @override
+  String get miniMapSearchNoResults => '没有匹配的消息';
+
+  @override
   String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';
 
   @override
@@ -18396,6 +18412,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get miniMapScrollToBottomTooltip => '捲動到底部';
+
+  @override
+  String miniMapSearchMatchCount(int count) {
+    return '$count 處';
+  }
+
+  @override
+  String get miniMapSearchNoResults => '沒有匹配的訊息';
 
   @override
   String get searchServicesPageApiKeyRequiredStatus => '需要 API Key';

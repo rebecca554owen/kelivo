@@ -1389,7 +1389,11 @@ class _HomePageState extends State<HomePage>
         messages: collapsed,
       );
     } else {
-      selectedId = await showMiniMapSheet(context, collapsed);
+      selectedId = await showMiniMapSheet(
+        context,
+        collapsed,
+        onSearch: (query) => _controller.searchMiniMapMatches(query),
+      );
     }
     if (!mounted) return;
     if (selectedId != null && selectedId.isNotEmpty) {
