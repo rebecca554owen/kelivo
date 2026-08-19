@@ -1376,7 +1376,11 @@ class _MemoryDedupeModeSection extends StatelessWidget {
         value: selected,
         options: [
           for (final mode in MemorySmartAddMode.values)
-            DesktopSelectOption(value: mode, label: _label(l10n, mode)),
+            DesktopSelectOption(
+              value: mode,
+              label: _label(l10n, mode),
+              subtitle: _subtitle(l10n, mode),
+            ),
         ],
         onSelected: (mode) => _apply(context, mode),
       );
@@ -1465,7 +1469,11 @@ class _MemoryWriteScopeSection extends StatelessWidget {
         value: selected,
         options: [
           for (final item in _options(l10n))
-            DesktopSelectOption(value: item.value, label: item.label),
+            DesktopSelectOption(
+              value: item.value,
+              label: item.label,
+              subtitle: item.subtitle,
+            ),
         ],
         onSelected: (scope) => _apply(context, scope),
       );

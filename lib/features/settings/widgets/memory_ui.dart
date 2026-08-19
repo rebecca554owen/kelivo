@@ -1151,45 +1151,47 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
     }
     setState(() => _saving = true);
     final existing = widget.existing;
+    final nextType = _type;
+    final nextScope = _scope;
     try {
       if (existing == null) {
         await mp.create(
-          scope: _scope,
+          scope: nextScope,
           assistantId: assistantId,
-          type: _type,
+          type: nextType,
           content: text,
           source: MemorySource.manual,
         );
       } else {
-        final scopeKindChanged = _scope != existing.scope;
+        final scopeKindChanged = nextScope != existing.scope;
         final assistantRetargeted =
-            _scope == MemoryScope.assistant &&
+            nextScope == MemoryScope.assistant &&
             existing.assistantId != assistantId;
         final shouldUpdateScope = scopeKindChanged || assistantRetargeted;
         if (scopeKindChanged) {
           if (!context.mounted) return;
           final confirmed = await confirmScopeSwitch(
             context,
-            toGlobal: _scope == MemoryScope.global,
+            toGlobal: nextScope == MemoryScope.global,
           );
           if (!confirmed) return;
         }
+        // Writes are independent of the sheet/dialog staying open.
         if (text != existing.content) {
           await mp.updateContent(existing.id, text);
         }
-        if (_type != existing.type) {
-          await mp.updateType(existing.id, _type);
+        if (nextType != existing.type) {
+          await mp.updateType(existing.id, nextType);
         }
         if (shouldUpdateScope) {
-          if (!context.mounted) return;
           await mp.updateScope(
             existing.id,
-            scope: _scope,
+            scope: nextScope,
             assistantId: assistantId,
           );
         }
       }
-      navigator.maybePop();
+      if (mounted) navigator.maybePop();
     } finally {
       if (mounted) setState(() => _saving = false);
     }

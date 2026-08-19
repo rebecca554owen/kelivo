@@ -8,10 +8,20 @@ import '../../core/providers/settings_provider.dart';
 import '../../icons/lucide_adapter.dart' as lucide;
 
 class DesktopSelectOption<T> {
-  const DesktopSelectOption({required this.value, required this.label});
+  const DesktopSelectOption({
+    required this.value,
+    required this.label,
+    this.subtitle,
+  });
 
   final T value;
   final String label;
+  final String? subtitle;
+}
+
+bool _optionHasSubtitle<T>(DesktopSelectOption<T> option) {
+  final subtitle = option.subtitle;
+  return subtitle != null && subtitle.isNotEmpty;
 }
 
 class DesktopSelectDropdown<T> extends StatefulWidget {
@@ -102,6 +112,14 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
     if (rb == null) return;
     final triggerSize = rb.size;
     final triggerWidth = triggerSize.width;
+    final hasSubtitles = widget.options.any(_optionHasSubtitle);
+    var overlayWidth = triggerWidth;
+    var overlayDx = 0.0;
+    if (hasSubtitles) {
+      overlayWidth = triggerWidth < 360 ? 360.0 : triggerWidth;
+      if (overlayWidth > 440) overlayWidth = 440.0;
+      overlayDx = triggerWidth - overlayWidth;
+    }
 
     _entry = OverlayEntry(
       builder: (ctx) {
@@ -119,9 +137,9 @@ class _DesktopSelectDropdownState<T> extends State<DesktopSelectDropdown<T>> {
             CompositedTransformFollower(
               link: _link,
               showWhenUnlinked: false,
-              offset: Offset(0, triggerSize.height + 6),
+              offset: Offset(overlayDx, triggerSize.height + 6),
               child: _DesktopSelectOverlay<T>(
-                width: triggerWidth,
+                width: overlayWidth,
                 backgroundColor: bgColor,
                 options: widget.options,
                 selected: widget.value,
@@ -321,6 +339,7 @@ class _DesktopSelectOverlayState<T> extends State<_DesktopSelectOverlay<T>>
                 for (final opt in widget.options)
                   _DesktopSelectOptionTile(
                     label: opt.label,
+                    subtitle: opt.subtitle,
                     selected: widget.selected == opt.value,
                     onTap: () => widget.onSelected(opt.value),
                   ),
@@ -338,9 +357,11 @@ class _DesktopSelectOptionTile extends StatefulWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.subtitle,
   });
 
   final String label;
+  final String? subtitle;
   final bool selected;
   final VoidCallback onTap;
 
@@ -352,6 +373,38 @@ class _DesktopSelectOptionTile extends StatefulWidget {
 class _DesktopSelectOptionTileState extends State<_DesktopSelectOptionTile> {
   bool _hover = false;
   bool _active = false;
+
+  Widget _labelColumn(ColorScheme cs) {
+    final label = Text(
+      widget.label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 14,
+        color: cs.onSurface.withValues(alpha: 0.88),
+        fontWeight: widget.selected
+            ? AppFontWeights.semibold
+            : AppFontWeights.regular,
+      ),
+    );
+    final subtitle = widget.subtitle;
+    if (subtitle == null || subtitle.isEmpty) return label;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        label,
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12.5,
+            height: 1.3,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -387,20 +440,7 @@ class _DesktopSelectOptionTileState extends State<_DesktopSelectOptionTile> {
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    widget.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: cs.onSurface.withValues(alpha: 0.88),
-                      fontWeight: widget.selected
-                          ? AppFontWeights.semibold
-                          : AppFontWeights.regular,
-                    ),
-                  ),
-                ),
+                Expanded(child: _labelColumn(cs)),
                 const SizedBox(width: 8),
                 Opacity(
                   opacity: widget.selected ? 1 : 0,
