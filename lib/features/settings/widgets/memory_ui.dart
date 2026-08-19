@@ -1161,11 +1161,12 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
           source: MemorySource.manual,
         );
       } else {
-        final scopeChanged =
-            _scope != existing.scope ||
-            (_scope == MemoryScope.assistant &&
-                existing.assistantId != assistantId);
-        if (scopeChanged) {
+        final scopeKindChanged = _scope != existing.scope;
+        final assistantRetargeted =
+            _scope == MemoryScope.assistant &&
+            existing.assistantId != assistantId;
+        final shouldUpdateScope = scopeKindChanged || assistantRetargeted;
+        if (scopeKindChanged) {
           if (!context.mounted) return;
           final confirmed = await confirmScopeSwitch(
             context,
@@ -1179,7 +1180,7 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
         if (_type != existing.type) {
           await mp.updateType(existing.id, _type);
         }
-        if (scopeChanged) {
+        if (shouldUpdateScope) {
           if (!context.mounted) return;
           await mp.updateScope(
             existing.id,

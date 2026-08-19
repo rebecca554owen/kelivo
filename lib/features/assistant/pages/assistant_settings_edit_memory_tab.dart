@@ -395,13 +395,19 @@ class _MemoryTabState extends State<_MemoryTab> {
                                         desktop: _isDesktopPlatform,
                                       ),
                                       _iosDivider(context),
-                                      _MemoryDedupeModeSection(assistant: a),
+                                      _MemoryDedupeModeSection(
+                                        assistant: a,
+                                        desktop: _isDesktopPlatform,
+                                      ),
                                     ],
                                   )
                                 : const SizedBox.shrink(),
                           ),
                           _iosDivider(context),
-                          _MemoryWriteScopeSection(assistant: a),
+                          _MemoryWriteScopeSection(
+                            assistant: a,
+                            desktop: _isDesktopPlatform,
+                          ),
                         ],
                       )
                     : const SizedBox.shrink(),
@@ -1305,9 +1311,13 @@ class _MemoryOrganizeFrequencySection extends StatelessWidget {
 }
 
 class _MemoryDedupeModeSection extends StatelessWidget {
-  const _MemoryDedupeModeSection({required this.assistant});
+  const _MemoryDedupeModeSection({
+    required this.assistant,
+    required this.desktop,
+  });
 
   final Assistant assistant;
+  final bool desktop;
 
   String _label(AppLocalizations l10n, MemorySmartAddMode mode) {
     return switch (mode) {
@@ -1357,6 +1367,21 @@ class _MemoryDedupeModeSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final selected = assistant.memorySmartAddMode;
 
+    if (desktop || _isDesktopMemorySettings(context)) {
+      return _memoryDesktopSelectRow<MemorySmartAddMode>(
+        context: context,
+        icon: Lucide.Layers,
+        label: l10n.assistantEditDedupeModeTitle,
+        subtitle: l10n.assistantEditDedupeModeSubtitle,
+        value: selected,
+        options: [
+          for (final mode in MemorySmartAddMode.values)
+            DesktopSelectOption(value: mode, label: _label(l10n, mode)),
+        ],
+        onSelected: (mode) => _apply(context, mode),
+      );
+    }
+
     return _iosNavRow(
       context,
       icon: Lucide.Layers,
@@ -1369,9 +1394,13 @@ class _MemoryDedupeModeSection extends StatelessWidget {
 }
 
 class _MemoryWriteScopeSection extends StatelessWidget {
-  const _MemoryWriteScopeSection({required this.assistant});
+  const _MemoryWriteScopeSection({
+    required this.assistant,
+    required this.desktop,
+  });
 
   final Assistant assistant;
+  final bool desktop;
 
   List<MemoryPickerOption<MemoryWriteScope>> _options(AppLocalizations l10n) =>
       [
@@ -1426,6 +1455,21 @@ class _MemoryWriteScopeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final selected = assistant.memoryWriteScope;
+
+    if (desktop || _isDesktopMemorySettings(context)) {
+      return _memoryDesktopSelectRow<MemoryWriteScope>(
+        context: context,
+        icon: Lucide.Globe,
+        label: l10n.assistantEditWriteScopeTitle,
+        subtitle: l10n.assistantEditWriteScopeSubtitle,
+        value: selected,
+        options: [
+          for (final item in _options(l10n))
+            DesktopSelectOption(value: item.value, label: item.label),
+        ],
+        onSelected: (scope) => _apply(context, scope),
+      );
+    }
 
     return _iosNavRow(
       context,

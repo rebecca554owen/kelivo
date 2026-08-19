@@ -11323,12 +11323,6 @@ abstract class AppLocalizations {
   /// **'How memory works and when it runs'**
   String get memorySettingsAboutSubtitle;
 
-  /// No description provided for @memorySettingsAboutBody.
-  ///
-  /// In en, this message translates to:
-  /// **'How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.'**
-  String get memorySettingsAboutBody;
-
   /// No description provided for @memoryAboutQuickstartTitle.
   ///
   /// In en, this message translates to:

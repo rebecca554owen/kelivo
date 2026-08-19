@@ -1125,9 +1125,11 @@ class _OutcomePill extends StatelessWidget {
         tone: _PillTone.success,
       );
     }
+    final error = trace.error;
+    final skip = error != null && error.isNotEmpty && _isSkipOutcome(error);
     return _Pill(
       label: l10n.memoryTraceOutcomeHeld,
-      tone: trace.hasError ? _PillTone.error : _PillTone.neutral,
+      tone: trace.hasError && !skip ? _PillTone.error : _PillTone.neutral,
     );
   }
 }
