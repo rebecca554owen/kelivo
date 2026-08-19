@@ -3875,6 +3875,83 @@ press5
     expect(expandedSize.width, closeTo(360, 2));
   });
 
+  group('block fill translucency', () {
+    double? fillAlpha(WidgetTester tester, Finder finder) {
+      final container = tester.widget<Container>(finder);
+      final decoration = container.decoration;
+      expect(decoration, isA<BoxDecoration>());
+      return (decoration as BoxDecoration).color?.a;
+    }
+
+    testWidgets('details block fill is translucent in dark mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _markdownHarness(
+          '<details><summary>更多信息</summary>隐藏内容</details>',
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.indigo,
+              brightness: Brightness.dark,
+            ),
+          ),
+          themeMode: ThemeMode.dark,
+        ),
+      );
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('details-surface'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaDetails, 0.01));
+    });
+
+    testWidgets('details block fill is translucent in light mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _markdownHarness('<details><summary>更多信息</summary>隐藏内容</details>'),
+      );
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('details-surface'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaDetails, 0.01));
+    });
+
+    testWidgets('table block fill is translucent', (tester) async {
+      await tester.pumpWidget(
+        _markdownHarness('''
+| Name | Value |
+| - | - |
+| Alpha | Beta |
+''', width: 360),
+      );
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('markdown-table-block'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaTable, 0.01));
+    });
+
+    testWidgets('code block fill is translucent', (tester) async {
+      await tester.pumpWidget(_markdownHarness('```dart\nvoid main() {}\n```'));
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('code-block-surface'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaContent, 0.01));
+    });
+
+    testWidgets('inline code fill is translucent in light mode', (tester) async {
+      await tester.pumpWidget(_markdownHarness('Body with `code`.'));
+      await tester.pump();
+
+      final chip = find.byKey(const ValueKey('inline-code-surface'));
+      expect(chip, findsOneWidget);
+      expect(fillAlpha(tester, chip), closeTo(kBlockFillAlphaInline, 0.01));
+    });
+  });
+
   testWidgets(
     'MarkdownWithCodeHighlight keeps full details around code blocks',
     (tester) async {

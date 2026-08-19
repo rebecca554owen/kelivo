@@ -45,6 +45,14 @@ const int _maxInlineMathBodyLength = 512;
 const String _codeDollarMask = '___CODE_DOLLAR_MASK___';
 const String _fencedHtmlTagStartMask = '\uE002';
 
+/// Translucent fills so chat wallpaper shows through markdown chrome.
+/// Inline chips and details are lightest; tables sit in the middle;
+/// fenced code stays a bit more solid.
+const double kBlockFillAlphaDetails = 0.55;
+const double kBlockFillAlphaInline = 0.40;
+const double kBlockFillAlphaTable = 0.72;
+const double kBlockFillAlphaContent = 0.80;
+
 /// Ink used by regular markdown text that inherits the surrounding bubble.
 ///
 /// Dedicated surfaces such as fenced code blocks, tables, and diagrams keep
@@ -554,8 +562,11 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
           String softened = _softBreakInline(unmasked);
           final bool isDarkCtx = Theme.of(ctx).brightness == Brightness.dark;
           final csCtx = Theme.of(ctx).colorScheme;
-          final bg = isDarkCtx ? Colors.white12 : const Color(0xFFF1F3F5);
+          final bg = isDarkCtx
+              ? Colors.white12
+              : const Color(0xFFF1F3F5).withValues(alpha: kBlockFillAlphaInline);
           return Container(
+            key: const ValueKey('inline-code-surface'),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: bg,
@@ -2511,8 +2522,12 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
       );
     }
 
-    final Color bodyBg = cs.surfaceContainer;
-    final Color headerBg = cs.surfaceContainerHighest;
+    final Color bodyBg = cs.surfaceContainer.withValues(
+      alpha: kBlockFillAlphaContent,
+    );
+    final Color headerBg = cs.surfaceContainerHighest.withValues(
+      alpha: kBlockFillAlphaContent,
+    );
     final borderColor = _codeBlockBorderColor(cs, isDark);
     final isEffectivelyExpanded = _isEffectivelyExpanded(settings);
     final isCollapsed = !isEffectivelyExpanded;
@@ -2520,6 +2535,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
         isCollapsed && _hasCollapsedHiddenLines(settings);
 
     return Container(
+      key: const ValueKey('code-block-surface'),
       width: double.infinity,
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
@@ -2604,7 +2620,9 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
           ),
           Container(
             width: double.infinity,
-            color: bodyBg,
+            // Outer surface already paints [bodyBg]; a second fill would stack
+            // and hide the wallpaper.
+            color: Colors.transparent,
             // Keep the code's top and bottom insets equal: with the header
             // now visually distinct from the body, a 0 top inset reads as
             // lopsided against the 8px bottom inset.
@@ -3237,11 +3255,11 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
     final headerBg = Color.alphaBlend(
       cs.primary.withValues(alpha: isDark ? 0.15 : 0.07),
       cs.surface,
-    );
+    ).withValues(alpha: kBlockFillAlphaTable);
     final bodyBg = Color.alphaBlend(
       cs.primary.withValues(alpha: isDark ? 0.04 : 0.015),
       cs.surface,
-    );
+    ).withValues(alpha: kBlockFillAlphaTable);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -3279,7 +3297,9 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
         final tableSurface = _buildTableSurface(
           context,
           table: table,
-          bodyBg: bodyBg,
+          // Compact tables already paint the card fill on the outer
+          // container; a second body fill would stack and hide wallpaper.
+          bodyBg: useCompactTable ? Colors.transparent : bodyBg,
           borderColor: borderColor,
           compact: useCompactTable,
         );
@@ -3308,7 +3328,7 @@ class _MarkdownTableBlockState extends State<_MarkdownTableBlock> {
               color: Color.alphaBlend(
                 cs.primary.withValues(alpha: isDark ? 0.045 : 0.018),
                 cs.surface,
-              ),
+              ).withValues(alpha: kBlockFillAlphaTable),
               borderRadius: BorderRadius.circular(12),
             ),
             foregroundDecoration: BoxDecoration(
@@ -5855,7 +5875,7 @@ class _DetailsHtmlBlockState extends State<_DetailsHtmlBlock> {
     final surface = Color.alphaBlend(
       cs.onSurface.withValues(alpha: isDark ? 0.05 : 0.025),
       cs.surface,
-    );
+    ).withValues(alpha: kBlockFillAlphaDetails);
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.18 : 0.30,
     );
@@ -5869,11 +5889,12 @@ class _DetailsHtmlBlockState extends State<_DetailsHtmlBlock> {
     final bodyConfig = widget.config.copyWith(style: bodyStyle);
 
     return Container(
+      key: const ValueKey('details-surface'),
       width: double.infinity,
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 0.8),
       ),
       clipBehavior: Clip.antiAlias,
@@ -5884,7 +5905,7 @@ class _DetailsHtmlBlockState extends State<_DetailsHtmlBlock> {
           IosCardPress(
             onTap: () => setState(() => _expanded = !_expanded),
             baseColor: Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(16),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             haptics: false,
             child: Row(
