@@ -741,10 +741,15 @@ class MemorySearchField extends StatelessWidget {
 }
 
 class MemoryPickerOption<T> {
-  const MemoryPickerOption({required this.value, required this.label});
+  const MemoryPickerOption({
+    required this.value,
+    required this.label,
+    this.subtitle,
+  });
 
   final T value;
   final String label;
+  final String? subtitle;
 }
 
 /// Option picker: centered Dialog on desktop, bottom sheet on mobile.
@@ -763,6 +768,7 @@ Future<T?> showMemoryOptionPicker<T>(
         for (var i = 0; i < options.length; i++) ...[
           _MemoryOptionRow<T>(
             label: options[i].label,
+            subtitle: options[i].subtitle,
             selected: options[i].value == selected,
             onTap: () => Navigator.of(ctx).pop(options[i].value),
           ),
@@ -905,15 +911,18 @@ class _MemoryOptionRow<T> extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.subtitle,
   });
 
   final String label;
+  final String? subtitle;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
     return IosCardPress(
       onTap: onTap,
       baseColor: Colors.transparent,
@@ -926,14 +935,37 @@ class _MemoryOptionRow<T> extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: AppFontWeights.semibold,
-                  color: cs.onSurface.withValues(alpha: 0.9),
-                ),
-              ),
+              child: hasSubtitle
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: AppFontWeights.semibold,
+                            color: cs.onSurface.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.3,
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: AppFontWeights.semibold,
+                        color: cs.onSurface.withValues(alpha: 0.9),
+                      ),
+                    ),
             ),
             if (selected) Icon(Lucide.Check, size: 18, color: cs.primary),
           ],
