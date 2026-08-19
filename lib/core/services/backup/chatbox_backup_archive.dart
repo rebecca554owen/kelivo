@@ -525,6 +525,63 @@ class ChatboxBackupArchive {
     return compressed > 0 && uncompressed > compressed * maxCompressionRatio;
   }
 
+  /// Inflates raw DEFLATE bytes, forwarding each decoder chunk immediately.
+  /// Used by tests and [_copyEntryToSink]; does not go through archive 4.x
+  /// `ZLibDecoder.decodeStream`, which buffers the full output first.
+  static int inflateDeflateBounded(
+    List<int> compressed, {
+    required int maxBytes,
+  }) {
+    final sink = _BoundedInflateSink(path: 'deflate', maxBytes: maxBytes);
+    try {
+      _inflateRawDeflate(InputMemoryStream(compressed), sink);
+      return sink.finish().size;
+    } catch (e) {
+      sink.abort();
+      rethrow;
+    }
+  }
+
+  static void _copyEntryToSink(ArchiveFile entry, _BoundedInflateSink sink) {
+    final raw = entry.rawContent;
+    if (raw != null &&
+        (entry.compression == CompressionType.deflate ||
+            (raw.isCompressed && entry.compression != CompressionType.bzip2))) {
+      _inflateRawDeflate(raw.getStream(decompress: false), sink);
+      return;
+    }
+    if (raw != null) {
+      sink.writeStream(raw.getStream(decompress: false));
+      return;
+    }
+    entry.writeContent(sink);
+  }
+
+  static void _inflateRawDeflate(
+    InputStream input,
+    _BoundedInflateSink output,
+  ) {
+    final outSink = _ImmediateByteSink(output);
+    final inSink = ZLibCodec(raw: true).decoder.startChunkedConversion(outSink);
+    try {
+      const chunkSize = 64 * 1024;
+      while (!input.isEOS) {
+        final remaining = input.length;
+        final readSize = remaining < chunkSize ? remaining : chunkSize;
+        if (readSize <= 0) break;
+        final chunk = input.readBytes(readSize).toUint8List();
+        if (chunk.isEmpty) break;
+        inSink.add(chunk);
+      }
+      inSink.close();
+    } catch (e) {
+      try {
+        inSink.close();
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
   static void _assertEntryBudget({
     required String path,
     required int uncompressed,
@@ -567,7 +624,7 @@ class ChatboxBackupArchive {
       collectBytes: collectBytes,
     );
     try {
-      entry.writeContent(sink);
+      _copyEntryToSink(entry, sink);
       final extracted = sink.finish();
       if (expected != null && extracted.size != expected) {
         throw ChatboxImportException('Backup entry size mismatch: $path');
@@ -1281,7 +1338,7 @@ class _BoundedInflateSink extends OutputStream {
   }
 
   _ExtractedEntry finish() {
-    _closeIo();
+    _closeIo(propagate: true);
     return _ExtractedEntry(
       size: _written,
       sha256: _digestSink.digest!.toString(),
@@ -1290,7 +1347,7 @@ class _BoundedInflateSink extends OutputStream {
   }
 
   void abort() {
-    _closeIo();
+    _closeIo(propagate: false);
     final path = filePath;
     if (path == null) return;
     try {
@@ -1299,14 +1356,51 @@ class _BoundedInflateSink extends OutputStream {
     } catch (_) {}
   }
 
-  void _closeIo() {
+  void _closeIo({required bool propagate}) {
     if (_closed) return;
     _closed = true;
+    Object? error;
+    StackTrace? stack;
+    void capture(Object e, StackTrace st) {
+      error ??= e;
+      stack ??= st;
+    }
+
+    try {
+      _file?.flush();
+    } catch (e, st) {
+      capture(e, st);
+    }
     try {
       _hasher.close();
-    } catch (_) {}
+    } catch (e, st) {
+      capture(e, st);
+    }
     try {
       _file?.closeSync();
-    } catch (_) {}
+    } catch (e, st) {
+      capture(e, st);
+    }
+    final thrown = error;
+    final thrownStack = stack;
+    if (propagate && thrown != null) {
+      Error.throwWithStackTrace(thrown, thrownStack!);
+    }
+  }
+}
+
+class _ImmediateByteSink extends ByteConversionSink {
+  _ImmediateByteSink(this._output);
+
+  final _BoundedInflateSink _output;
+
+  @override
+  void add(List<int> chunk) {
+    _output.writeBytes(chunk);
+  }
+
+  @override
+  void close() {
+    _output.flush();
   }
 }

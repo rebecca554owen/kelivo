@@ -246,6 +246,23 @@ void main() {
     expect(ChatboxBackupArchive.isUnsafeCompressionRatio(1000, 0), isFalse);
   });
 
+  test('aborts raw DEFLATE as soon as the byte bound is exceeded', () {
+    final compressed = ZLibCodec(raw: true).encode(Uint8List(64 * 1024));
+    expect(
+      () => ChatboxBackupArchive.inflateDeflateBounded(
+        compressed,
+        maxBytes: 4096,
+      ),
+      throwsA(
+        isA<ChatboxImportException>().having(
+          (e) => e.message,
+          'message',
+          contains('too large'),
+        ),
+      ),
+    );
+  });
+
   test('publish replaces a truncated dest with the staged file', () async {
     final png = _pngBytes();
     final result = await ChatboxBackupArchive.readZipV2(
