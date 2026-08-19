@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../database/business_data.dart';
@@ -13,17 +14,15 @@ import '../../models/chat_message.dart';
 import '../../models/conversation.dart';
 import '../../models/message_part.dart';
 import '../../utils/multimodal_input_utils.dart';
+import '../../../utils/app_directories.dart';
+import '../../../utils/kelivo_file_uri.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../providers/settings_provider.dart'
     show ProviderConfig, ProviderKind;
 import '../chat/chat_service.dart';
+import 'chatbox_backup_archive.dart';
 
-class ChatboxImportException implements Exception {
-  final String message;
-  const ChatboxImportException(this.message);
-  @override
-  String toString() => message;
-}
+export 'chatbox_backup_archive.dart' show ChatboxImportException;
 
 class ChatboxImportResult {
   final int providers;
@@ -57,79 +56,119 @@ class ChatboxImporter {
     required BusinessRepository businessRepository,
     required ChatService chatService,
   }) async {
-    final root = await _readChatboxBackupFile(file);
+    Directory? staging;
+    ChatboxBackupReadResult? archive;
+    try {
+      final prepared = await _readChatboxBackupFile(file);
+      staging = prepared.staging;
+      archive = prepared.archive;
+      final root = prepared.root;
 
-    // Safety: avoid destructive overwrite when the export is incomplete.
-    if (mode == RestoreMode.overwrite) {
-      final sessionsList = root['chat-sessions-list'];
-      if (sessionsList is! List || sessionsList.isEmpty) {
-        throw const ChatboxImportException(
-          'This Chatbox export does not include chat history. Re-export with "Chat History" enabled, or use merge mode.',
-        );
-      }
-      bool hasAnySessionObject = false;
-      for (final meta in sessionsList) {
-        if (meta is! Map) continue;
-        final id = (meta['id'] ?? '').toString().trim();
-        if (id.isEmpty) continue;
-        if (root['session:$id'] is Map) {
-          hasAnySessionObject = true;
-          break;
+      // Safety: avoid destructive overwrite when the export is incomplete.
+      if (mode == RestoreMode.overwrite) {
+        final sessionsList = root['chat-sessions-list'];
+        if (sessionsList is! List || sessionsList.isEmpty) {
+          throw const ChatboxImportException(
+            'This Chatbox export does not include chat history. Re-export with "Chat History" enabled, or use merge mode.',
+          );
+        }
+        var hasAnySessionObject = false;
+        for (final meta in sessionsList) {
+          if (meta is! Map) continue;
+          final id = (meta['id'] ?? '').toString().trim();
+          if (id.isEmpty) continue;
+          if (root['session:$id'] is Map) {
+            hasAnySessionObject = true;
+            break;
+          }
+        }
+        if (!hasAnySessionObject) {
+          throw const ChatboxImportException(
+            'This Chatbox export is missing session data (no "session:*" entries). Please export again and include chat history.',
+          );
         }
       }
-      if (!hasAnySessionObject) {
-        throw const ChatboxImportException(
-          'This Chatbox export is missing session data (no "session:*" entries). Please export again and include chat history.',
-        );
+
+      final importedProviders = _parseProviders(root);
+      final assistantConvRes = await _parseAssistantsAndConversations(
+        root,
+        mode,
+        chatService,
+      );
+      await chatService.commitParsedImport(
+        businessRepository: businessRepository,
+        overwrite: mode == RestoreMode.overwrite,
+        conversationBatches: assistantConvRes.conversationBatches,
+        messagesToAppend: assistantConvRes.messagesToAppend,
+        transformBusiness: (current) => _transformBusinessData(
+          current: current,
+          mode: mode,
+          providers: importedProviders,
+          assistants: assistantConvRes.assistantPayloads,
+          assistantIds: assistantConvRes.assistantIds,
+        ),
+      );
+      if (archive != null) {
+        // Only publish after the DB commit succeeds. Overwrite also wipes
+        // Documents/upload during commit, so this is the sole dest write.
+        await ChatboxBackupArchive.publishStagedResources(archive);
+      }
+
+      return ChatboxImportResult(
+        providers: importedProviders.length,
+        assistants: assistantConvRes.assistants,
+        conversations: assistantConvRes.conversations,
+        messages: assistantConvRes.messages,
+      );
+    } finally {
+      if (staging != null) {
+        try {
+          await staging.delete(recursive: true);
+        } catch (_) {}
       }
     }
-
-    final importedProviders = _parseProviders(root);
-    final assistantConvRes = await _parseAssistantsAndConversations(
-      root,
-      mode,
-      chatService,
-    );
-    await chatService.commitParsedImport(
-      businessRepository: businessRepository,
-      overwrite: mode == RestoreMode.overwrite,
-      conversationBatches: assistantConvRes.conversationBatches,
-      messagesToAppend: assistantConvRes.messagesToAppend,
-      transformBusiness: (current) => _transformBusinessData(
-        current: current,
-        mode: mode,
-        providers: importedProviders,
-        assistants: assistantConvRes.assistantPayloads,
-        assistantIds: assistantConvRes.assistantIds,
-      ),
-    );
-
-    return ChatboxImportResult(
-      providers: importedProviders.length,
-      assistants: assistantConvRes.assistants,
-      conversations: assistantConvRes.conversations,
-      messages: assistantConvRes.messages,
-    );
   }
 
   // ---------- parsing ----------
 
-  static Future<Map<String, dynamic>> _readChatboxBackupFile(File file) async {
+  static Future<_ChatboxBackupFile> _readChatboxBackupFile(File file) async {
     if (!await file.exists()) {
       throw const ChatboxImportException('Chatbox backup file not found.');
     }
 
-    late final String text;
-    try {
-      text = await file.readAsString();
-    } catch (e) {
-      throw ChatboxImportException('Unable to read Chatbox backup file: $e');
+    final treatAsZip =
+        p.extension(file.path).toLowerCase() == '.zip' ||
+        await ChatboxBackupArchive.looksLikeZipFile(file);
+    if (treatAsZip) {
+      final staging = await Directory.systemTemp.createTemp(
+        'kelivo_chatbox_res_',
+      );
+      try {
+        final upload = await AppDirectories.getUploadDirectory();
+        final archive = await ChatboxBackupArchive.readZipV2(
+          file: file,
+          stagingDir: staging,
+          resourceDestDir: p.join(upload.path, 'chatbox'),
+        );
+        return _ChatboxBackupFile(
+          root: _validateLegacyRootShape(archive.root),
+          archive: archive,
+          staging: staging,
+        );
+      } catch (e) {
+        try {
+          await staging.delete(recursive: true);
+        } catch (_) {}
+        if (e is ChatboxImportException) rethrow;
+        throw ChatboxImportException('Unable to read Chatbox backup ZIP: $e');
+      }
     }
 
     late final Object decoded;
     try {
-      decoded = jsonDecode(text);
-    } catch (_) {
+      decoded = jsonDecode(await file.readAsString());
+    } catch (e) {
+      if (e is ChatboxImportException) rethrow;
       throw const ChatboxImportException(
         'Invalid JSON: unable to parse Chatbox backup file.',
       );
@@ -142,8 +181,12 @@ class ChatboxImporter {
     }
 
     final root = decoded.map((k, v) => MapEntry(k.toString(), v));
+    return _ChatboxBackupFile(root: _validateLegacyRootShape(root));
+  }
 
-    // Minimal shape validation: exported data usually has at least one of these.
+  static Map<String, dynamic> _validateLegacyRootShape(
+    Map<String, dynamic> root,
+  ) {
     final hasSessions = root['chat-sessions-list'] is List;
     final settings = root['settings'];
     final hasProviders = settings is Map && (settings['providers'] is Map);
@@ -152,7 +195,6 @@ class ChatboxImporter {
         'Not a Chatbox export file (missing "chat-sessions-list" and "settings.providers").',
       );
     }
-
     return root.cast<String, dynamic>();
   }
 
@@ -557,6 +599,12 @@ class ChatboxImporter {
       }
     }
 
+    _addCopilotAssistants(
+      root,
+      importedAssistants: importedAssistants,
+      importedAssistantIds: importedAssistantIds,
+    );
+
     return _AssistantsConversationsResult(
       assistants: importedAssistantIds.toSet().length,
       conversations: convCount,
@@ -566,6 +614,58 @@ class ChatboxImporter {
       conversationBatches: conversationBatches,
       messagesToAppend: messagesToAppend,
     );
+  }
+
+  static void _addCopilotAssistants(
+    Map<String, dynamic> root, {
+    required List<Map<String, dynamic>> importedAssistants,
+    required List<String> importedAssistantIds,
+  }) {
+    final copilots = root['myCopilots'];
+    if (copilots is! List) return;
+    final seen = importedAssistantIds.toSet();
+    for (final raw in copilots) {
+      if (raw is! Map) continue;
+      final copilot = raw.map((k, v) => MapEntry(k.toString(), v));
+      final id = (copilot['id'] ?? '').toString().trim();
+      if (id.isEmpty || seen.contains(id)) continue;
+      final name = (copilot['name'] ?? id).toString();
+      var avatar = (copilot['picUrl'] ?? '').toString().trim();
+      final avatarSource = copilot['avatar'];
+      if (avatar.isEmpty && avatarSource is Map) {
+        if ((avatarSource['type'] ?? '').toString() == 'url') {
+          avatar = (avatarSource['url'] ?? '').toString().trim();
+        }
+      }
+      importedAssistants.add(<String, dynamic>{
+        'id': id,
+        'name': name,
+        'avatar': avatar.isNotEmpty ? avatar : null,
+        'useAssistantAvatar': false,
+        'useAssistantName': false,
+        'chatModelProvider': null,
+        'chatModelId': null,
+        'temperature': null,
+        'topP': null,
+        'contextMessageSize': 64,
+        'limitContextMessages': true,
+        'streamOutput': true,
+        'thinkingBudget': null,
+        'maxTokens': null,
+        'systemPrompt': (copilot['prompt'] ?? '').toString(),
+        'messageTemplate': '{{ message }}',
+        'mcpServerIds': const <String>[],
+        'background': null,
+        'customHeaders': const <Map<String, String>>[],
+        'customBody': const <Map<String, String>>[],
+        'enableMemory': false,
+        'allowPastConversationRecall': false,
+        'presetMessages': const <dynamic>[],
+        'regexRules': const <dynamic>[],
+      });
+      importedAssistantIds.add(id);
+      seen.add(id);
+    }
   }
 
   // ---------- atomic business patch ----------
@@ -823,6 +923,20 @@ class ChatboxImporter {
     return _parseEpochMillis(raw);
   }
 
+  static bool _isAvailableChatboxMediaUrl(String url) {
+    if (url.isEmpty) return false;
+    final lower = url.toLowerCase();
+    if (lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('data:image') ||
+        lower.startsWith('file:') ||
+        KelivoFileUri.isKelivoFileUri(url)) {
+      return true;
+    }
+    if (url.startsWith('/')) return true;
+    return RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(url);
+  }
+
   static String _textFromParts(List<MessagePart> parts) {
     return parts
         .whereType<TextPart>()
@@ -887,21 +1001,14 @@ class ChatboxImporter {
             final storageKey = (part['storageKey'] ?? '').toString().trim();
             final ref = url.isNotEmpty ? url : storageKey;
             if (ref.isEmpty) break;
-            final isResolvable =
-                url.startsWith('http://') ||
-                url.startsWith('https://') ||
-                url.startsWith('data:image') ||
-                storageKey.isNotEmpty;
-            if (isResolvable) {
+            final available = _isAvailableChatboxMediaUrl(url);
+            if (available || storageKey.isNotEmpty) {
               flushTextForAttachment();
               out.add(
                 ImagePart(
                   uri: SandboxPathResolver.canonicalize(ref),
                   mime: mimeFor(ref),
-                  unavailable:
-                      !(url.startsWith('http://') ||
-                          url.startsWith('https://') ||
-                          url.startsWith('data:image')),
+                  unavailable: !available,
                 ),
               );
             } else {
@@ -931,6 +1038,8 @@ class ChatboxImporter {
                     .trim(),
               );
             }
+            final result = (part['result'] ?? '').toString();
+            if (result.trim().isNotEmpty) addText(result);
             break;
           default:
             break;
@@ -1036,8 +1145,7 @@ class ChatboxImporter {
             : (part['toolName'] ?? '').toString();
         final a = part['args'];
         if (a is Map) args = a.cast<String, dynamic>();
-        final state = (part['state'] ?? '').toString();
-        if (state == 'result' && part.containsKey('result')) {
+        if (part.containsKey('result')) {
           result = (part['result'] ?? '').toString();
         }
         break;
@@ -1136,6 +1244,14 @@ class ChatboxImporter {
 
     return _NormalizedHostAndPath(apiHost: host, apiPath: path);
   }
+}
+
+class _ChatboxBackupFile {
+  final Map<String, dynamic> root;
+  final ChatboxBackupReadResult? archive;
+  final Directory? staging;
+
+  const _ChatboxBackupFile({required this.root, this.archive, this.staging});
 }
 
 class _NormalizedHostAndPath {

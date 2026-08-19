@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
@@ -17,6 +20,7 @@ import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/models/conversation.dart';
 import 'package:Kelivo/core/services/backup/chatbox_importer.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
+import 'package:Kelivo/utils/sandbox_path_resolver.dart';
 
 class _FakePathProvider extends PathProviderPlatform {
   _FakePathProvider(this.root);
@@ -625,5 +629,485 @@ void main() {
         'text',
       ]);
     });
+
+    test(
+      'imports formatVersion=2 ZIP providers, conversation, and image file',
+      () async {
+        final png = _chatboxPngBytes();
+        final zip = await File('${root.path}/chatbox-backup-2026-7-18.zip')
+            .writeAsBytes(
+              _encodeChatboxZipV2(
+                settings: _chatboxZipSettings(),
+                session: _chatboxZipSession(imageStorageKey: 'picture:test'),
+                resources: [
+                  _ChatboxZipResource(
+                    id: 'resource-000001',
+                    storageKey: 'picture:test',
+                    sessionId: 'assistant-1',
+                    path: 'sessions/assistant-1/resources/resource-000001.png',
+                    mimeType: 'image/png',
+                    kind: 'image',
+                    bytes: png,
+                  ),
+                ],
+              ),
+              flush: true,
+            );
+
+        final result = await ChatboxImporter.importFromChatbox(
+          file: zip,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        expect(result.providers, 1);
+        expect(result.assistants, 1);
+        expect(result.conversations, 1);
+        expect(result.messages, 1);
+        final exported = await BusinessRestoreService(
+          businessRepository,
+        ).exportSettings();
+        final providers =
+            jsonDecode(exported['provider_configs_v1'] as String) as Map;
+        expect((providers['openai'] as Map)['apiKey'], 'chatbox-secret');
+
+        final messages = await chatService.loadMessages(
+          'chatbox_default_assistant-1',
+        );
+        final user = messages.singleWhere((m) => m.id == 'message-1');
+        expect(user.content, 'Hello');
+        final image = user.parts.whereType<ImagePart>().single;
+        expect(image.unavailable, isFalse);
+        final path = SandboxPathResolver.fix(image.uri);
+        expect(File(path).existsSync(), isTrue);
+        expect(await File(path).readAsBytes(), png);
+      },
+    );
+
+    test('rejects a settings-only ZIP in overwrite mode', () async {
+      final zip = await File('${root.path}/chatbox-settings-only.zip')
+          .writeAsBytes(
+            _encodeChatboxZipV2(settings: _chatboxZipSettings()),
+            flush: true,
+          );
+
+      await expectLater(
+        ChatboxImporter.importFromChatbox(
+          file: zip,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        ),
+        throwsA(
+          isA<ChatboxImportException>().having(
+            (e) => e.message,
+            'message',
+            contains('Chat History'),
+          ),
+        ),
+      );
+    });
+
+    test('rejects a non-Chatbox ZIP', () async {
+      final archive = Archive()
+        ..add(ArchiveFile.string('hello.txt', 'not chatbox'));
+      final zip = await File(
+        '${root.path}/random.zip',
+      ).writeAsBytes(ZipEncoder().encodeBytes(archive), flush: true);
+
+      await expectLater(
+        ChatboxImporter.importFromChatbox(
+          file: zip,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        ),
+        throwsA(isA<ChatboxImportException>()),
+      );
+    });
+
+    test(
+      'merge of two ZIP backups does not overwrite the first image',
+      () async {
+        final pngA = _chatboxPngBytes();
+        final pngB = Uint8List.fromList([...pngA, 7, 8, 9]);
+        final zipA = await File('${root.path}/chatbox-a.zip').writeAsBytes(
+          _encodeChatboxZipV2(
+            settings: _chatboxZipSettings(),
+            session: _chatboxZipSession(
+              id: 'assistant-a',
+              messageId: 'message-a',
+              imageStorageKey: 'picture:a',
+            ),
+            resources: [
+              _ChatboxZipResource(
+                id: 'resource-000001',
+                storageKey: 'picture:a',
+                sessionId: 'assistant-a',
+                path: 'sessions/assistant-a/resources/resource-000001.png',
+                mimeType: 'image/png',
+                kind: 'image',
+                bytes: pngA,
+              ),
+            ],
+          ),
+          flush: true,
+        );
+        final zipB = await File('${root.path}/chatbox-b.zip').writeAsBytes(
+          _encodeChatboxZipV2(
+            settings: _chatboxZipSettings(),
+            session: _chatboxZipSession(
+              id: 'assistant-b',
+              messageId: 'message-b',
+              imageStorageKey: 'picture:b',
+            ),
+            resources: [
+              _ChatboxZipResource(
+                id: 'resource-000001',
+                storageKey: 'picture:b',
+                sessionId: 'assistant-b',
+                path: 'sessions/assistant-b/resources/resource-000001.png',
+                mimeType: 'image/png',
+                kind: 'image',
+                bytes: pngB,
+              ),
+            ],
+          ),
+          flush: true,
+        );
+
+        await ChatboxImporter.importFromChatbox(
+          file: zipA,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        final first = (await chatService.loadMessages(
+          'chatbox_default_assistant-a',
+        )).singleWhere((m) => m.id == 'message-a');
+        final pathA = SandboxPathResolver.fix(
+          first.parts.whereType<ImagePart>().single.uri,
+        );
+
+        await ChatboxImporter.importFromChatbox(
+          file: zipB,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+        final second = (await chatService.loadMessages(
+          'chatbox_default_assistant-b',
+        )).singleWhere((m) => m.id == 'message-b');
+        final pathB = SandboxPathResolver.fix(
+          second.parts.whereType<ImagePart>().single.uri,
+        );
+
+        expect(pathA, isNot(pathB));
+        expect(await File(pathA).readAsBytes(), pngA);
+        expect(await File(pathB).readAsBytes(), pngB);
+      },
+    );
+
+    test('failed ZIP import does not publish resources', () async {
+      final png = _chatboxPngBytes();
+      final destDir = Directory('${root.path}/upload/chatbox');
+      await destDir.create(recursive: true);
+      final sentinel = File('${destDir.path}/resource-000001.png');
+      await sentinel.writeAsBytes(const [9, 9, 9], flush: true);
+
+      final zip = await File('${root.path}/chatbox-fail.zip').writeAsBytes(
+        _encodeChatboxZipV2(
+          settings: _chatboxZipSettings(),
+          session: _chatboxZipSession(imageStorageKey: 'picture:test'),
+          resources: [
+            _ChatboxZipResource(
+              id: 'resource-000001',
+              storageKey: 'picture:test',
+              sessionId: 'assistant-1',
+              path: 'sessions/assistant-1/resources/resource-000001.png',
+              mimeType: 'image/png',
+              kind: 'image',
+              bytes: png,
+            ),
+          ],
+        ),
+        flush: true,
+      );
+
+      final otherFile = File('${root.path}/other-fail.db');
+      final otherDatabase = AppDatabase.open(file: otherFile);
+      final otherBusinessRepository = BusinessRepository(otherDatabase);
+      try {
+        await expectLater(
+          ChatboxImporter.importFromChatbox(
+            file: zip,
+            mode: RestoreMode.merge,
+            businessRepository: otherBusinessRepository,
+            chatService: chatService,
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'chat_business_database_mismatch',
+            ),
+          ),
+        );
+      } finally {
+        await otherDatabase.close();
+      }
+
+      expect(await sentinel.readAsBytes(), const [9, 9, 9]);
+      expect(destDir.listSync().whereType<File>(), hasLength(1));
+    });
+
+    test(
+      'imports ZIP tool-result text into the tool message payload',
+      () async {
+        const resultText = 'stored chatbox tool output';
+        final zip = await File('${root.path}/chatbox-tool.zip').writeAsBytes(
+          _encodeChatboxZipV2(
+            settings: _chatboxZipSettings(),
+            session: {
+              'id': 'assistant-1',
+              'name': 'Chatbox assistant',
+              'starred': true,
+              'settings': {'provider': 'openai', 'modelId': 'gpt-test'},
+              'messages': [
+                {
+                  'id': 'system-1',
+                  'role': 'system',
+                  'content': 'Imported system prompt',
+                },
+                {
+                  'id': 'tool-1',
+                  'role': 'tool',
+                  'name': 'search',
+                  'timestamp': 1784332800000,
+                  'contentParts': [
+                    {
+                      'type': 'tool-call',
+                      'state': 'result',
+                      'toolName': 'search',
+                      'args': {'q': 'kelivo'},
+                      'resultStorageKey': 'tool-result:1',
+                    },
+                  ],
+                },
+              ],
+              'threads': <dynamic>[],
+            },
+            resources: [
+              _ChatboxZipResource(
+                id: 'resource-000002',
+                storageKey: 'tool-result:1',
+                sessionId: 'assistant-1',
+                path: 'sessions/assistant-1/resources/resource-000002.txt',
+                mimeType: 'text/plain',
+                kind: 'tool-result',
+                encoding: 'utf8',
+                bytes: utf8.encode(resultText),
+              ),
+            ],
+          ),
+          flush: true,
+        );
+
+        await ChatboxImporter.importFromChatbox(
+          file: zip,
+          mode: RestoreMode.overwrite,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        );
+
+        final messages = await chatService.loadMessages(
+          'chatbox_default_assistant-1',
+        );
+        final tool = messages.singleWhere((m) => m.id == 'tool-1');
+        expect(tool.role, 'tool');
+        final payload = jsonDecode(tool.content) as Map<String, dynamic>;
+        expect(payload['tool'], 'search');
+        expect(payload['result'], resultText);
+      },
+    );
+
+    test('rejects an unknown Chatbox formatVersion', () async {
+      final zip = await File('${root.path}/chatbox-v99.zip').writeAsBytes(
+        _encodeChatboxZipV2(settings: _chatboxZipSettings(), formatVersion: 99),
+        flush: true,
+      );
+
+      await expectLater(
+        ChatboxImporter.importFromChatbox(
+          file: zip,
+          mode: RestoreMode.merge,
+          businessRepository: businessRepository,
+          chatService: chatService,
+        ),
+        throwsA(
+          isA<ChatboxImportException>().having(
+            (e) => e.message,
+            'message',
+            contains('formatVersion'),
+          ),
+        ),
+      );
+    });
   });
+}
+
+Uint8List _chatboxPngBytes() => Uint8List.fromList(
+  base64.decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
+  ),
+);
+
+Map<String, dynamic> _chatboxZipSettings() => {
+  'providers': {
+    'openai': {
+      'apiKey': 'chatbox-secret',
+      'apiHost': 'https://api.example.test',
+      'apiPath': '/v1/chat/completions',
+      'models': [
+        {'modelId': 'gpt-test'},
+      ],
+    },
+  },
+};
+
+Map<String, dynamic> _chatboxZipSession({
+  String id = 'assistant-1',
+  String messageId = 'message-1',
+  required String imageStorageKey,
+}) => {
+  'id': id,
+  'name': 'Chatbox assistant',
+  'starred': true,
+  'settings': {'provider': 'openai', 'modelId': 'gpt-test', 'temperature': 0.5},
+  'messages': [
+    {'id': 'system-1', 'role': 'system', 'content': 'Imported system prompt'},
+    {
+      'id': messageId,
+      'role': 'user',
+      'content': 'Hello',
+      'timestamp': 1784332800000,
+      'contentParts': [
+        {'type': 'text', 'text': 'Hello'},
+        {'type': 'image', 'storageKey': imageStorageKey},
+      ],
+    },
+  ],
+  'threads': <dynamic>[],
+};
+
+class _ChatboxZipResource {
+  const _ChatboxZipResource({
+    required this.id,
+    required this.storageKey,
+    required this.sessionId,
+    required this.path,
+    required this.mimeType,
+    required this.kind,
+    required this.bytes,
+    this.encoding = 'data-url-base64',
+  });
+
+  final String id;
+  final String storageKey;
+  final String sessionId;
+  final String path;
+  final String mimeType;
+  final String kind;
+  final String encoding;
+  final List<int> bytes;
+}
+
+Uint8List _encodeChatboxZipV2({
+  Map<String, dynamic>? settings,
+  Map<String, dynamic>? session,
+  List<_ChatboxZipResource> resources = const [],
+  int formatVersion = 2,
+}) {
+  final files = <String, List<int>>{};
+  Map<String, dynamic>? settingsDesc;
+  if (settings != null) {
+    final bytes = utf8.encode(jsonEncode(settings));
+    files['settings.json'] = bytes;
+    settingsDesc = _zipJsonDescriptor('settings.json', bytes);
+  }
+
+  final sessionEntries = <Map<String, dynamic>>[];
+  if (session != null) {
+    final bytes = utf8.encode(jsonEncode(session));
+    final path = 'sessions/${session['id']}/session.json';
+    files[path] = bytes;
+    sessionEntries.add({
+      ..._zipJsonDescriptor(path, bytes),
+      'id': session['id'],
+      'meta': {
+        'id': session['id'],
+        'name': session['name'],
+        'starred': session['starred'] ?? false,
+        'sortOrder': 1,
+        'createdAt': 1,
+      },
+      'resourceIds': [for (final resource in resources) resource.id],
+    });
+  }
+
+  final resourceEntries = <Map<String, dynamic>>[];
+  for (final resource in resources) {
+    files[resource.path] = resource.bytes;
+    resourceEntries.add({
+      ..._zipJsonDescriptor(resource.path, resource.bytes),
+      'id': resource.id,
+      'originalStorageKeys': [resource.storageKey],
+      'sessionIds': [resource.sessionId],
+      'scope': 'session',
+      'encoding': resource.encoding,
+      'mimeType': resource.mimeType,
+      'kind': resource.kind,
+      'filename': 'pic.png',
+    });
+  }
+
+  final manifest = <String, dynamic>{
+    'format': 'chatbox-backup',
+    'formatVersion': formatVersion,
+    'exportedAt': '2026-07-18T00:00:00.000Z',
+    'application': {'name': 'Chatbox', 'version': '1.22.0', 'platform': 'test'},
+    'exportItems': [
+      if (settings != null) 'setting',
+      if (session != null) 'conversations',
+    ],
+    'data': {if (settingsDesc != null) 'settings': settingsDesc},
+    'sessions': sessionEntries,
+    'resources': resourceEntries,
+    'warnings': <dynamic>[],
+    'stats': {
+      'sessionCount': sessionEntries.length,
+      'resourceCount': resourceEntries.length,
+      'deduplicatedResourceCount': 0,
+      'warningCount': 0,
+    },
+  };
+  files['manifest.json'] = utf8.encode(jsonEncode(manifest));
+
+  final archive = Archive();
+  for (final entry in files.entries) {
+    archive.add(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  return ZipEncoder().encodeBytes(archive);
+}
+
+Map<String, dynamic> _zipJsonDescriptor(String path, List<int> bytes) {
+  return {
+    'path': path,
+    'size': bytes.length,
+    'checksum': {
+      'algorithm': 'sha256',
+      'value': sha256.convert(bytes).toString(),
+    },
+  };
 }

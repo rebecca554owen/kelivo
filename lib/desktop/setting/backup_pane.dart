@@ -1037,7 +1037,7 @@ class _DesktopBackupPaneState extends State<DesktopBackupPane> {
                   ).context;
                   final result = await FilePicker.platform.pickFiles(
                     type: FileType.custom,
-                    allowedExtensions: ['json'],
+                    allowedExtensions: ['json', 'zip'],
                     allowMultiple: false,
                   );
                   final path = result?.files.single.path;
