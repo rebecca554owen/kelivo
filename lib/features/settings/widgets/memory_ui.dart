@@ -76,6 +76,51 @@ String memoryScopeLabel(
   return l10n.memoryEntryScopeAssistantNamed(assistantName);
 }
 
+/// Compact info icon: tap or long-press shows [message], matching the
+/// legacy-memory toggle on the assistant Memory tab.
+class MemoryTipIcon extends StatefulWidget {
+  const MemoryTipIcon({super.key, required this.message});
+
+  final String message;
+
+  @override
+  State<MemoryTipIcon> createState() => _MemoryTipIconState();
+}
+
+class _MemoryTipIconState extends State<MemoryTipIcon> {
+  final _tooltipKey = GlobalKey<TooltipState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Tooltip(
+      key: _tooltipKey,
+      message: widget.message,
+      triggerMode: TooltipTriggerMode.tap,
+      waitDuration: const Duration(milliseconds: 250),
+      showDuration: const Duration(seconds: 8),
+      preferBelow: true,
+      constraints: const BoxConstraints(maxWidth: 280),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: () => _tooltipKey.currentState?.ensureTooltipVisible(),
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: Center(
+            child: Icon(
+              Lucide.BadgeInfo,
+              size: 16,
+              color: cs.onSurface.withValues(alpha: 0.45),
+              semanticLabel: widget.message,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Human-readable label for a pipeline / tool outcome code.
 ///
 /// Known codes map to l10n strings. Prefixed codes such as
@@ -1033,6 +1078,7 @@ Future<void> showMemoryEntryEditor(
   BuildContext context, {
   MemoryEntry? existing,
   String? defaultAssistantId,
+  MemoryScope defaultScope = MemoryScope.global,
   bool allowAssistantPicker = false,
 }) {
   final l10n = AppLocalizations.of(context)!;
@@ -1045,6 +1091,7 @@ Future<void> showMemoryEntryEditor(
     title: title,
     existing: existing,
     defaultAssistantId: defaultAssistantId,
+    defaultScope: defaultScope,
     allowAssistantPicker: allowAssistantPicker,
     desktop: desktop,
   );
@@ -1090,6 +1137,7 @@ class MemoryEntryEditForm extends StatefulWidget {
     required this.title,
     this.existing,
     this.defaultAssistantId,
+    this.defaultScope = MemoryScope.global,
     this.allowAssistantPicker = false,
     this.desktop = false,
   });
@@ -1097,6 +1145,7 @@ class MemoryEntryEditForm extends StatefulWidget {
   final String title;
   final MemoryEntry? existing;
   final String? defaultAssistantId;
+  final MemoryScope defaultScope;
   final bool allowAssistantPicker;
 
   /// When true, render a compact dialog body (no sheet drag handle / inset).
@@ -1119,7 +1168,7 @@ class _MemoryEntryEditFormState extends State<MemoryEntryEditForm> {
     final existing = widget.existing;
     _content = TextEditingController(text: existing?.content ?? '');
     _type = existing?.type ?? MemoryType.identity;
-    _scope = existing?.scope ?? MemoryScope.global;
+    _scope = existing?.scope ?? widget.defaultScope;
     _assistantId = existing?.assistantId ?? widget.defaultAssistantId;
   }
 

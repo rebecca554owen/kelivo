@@ -529,6 +529,36 @@ void main() {
     expect(text, contains('- Two'));
   });
 
+  testWidgets('create form can default to assistant scope', (tester) async {
+    tester.view.physicalSize = const Size(900, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final h = await _createHarness(
+      assistantList: const [
+        Assistant(id: 'a1', name: 'Alpha', temperature: 0.6),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        h,
+        const MemoryEntryEditForm(
+          title: 'Add memory',
+          defaultAssistantId: 'a1',
+          defaultScope: MemoryScope.assistant,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chips = tester.widgetList<MemorySelectChip>(
+      find.byType(MemorySelectChip),
+    );
+    expect(chips.any((c) => c.label == 'This assistant' && c.selected), isTrue);
+  });
+
   testWidgets('edit form renders type and scope chips', (tester) async {
     tester.view.physicalSize = const Size(900, 2000);
     tester.view.devicePixelRatio = 1.0;

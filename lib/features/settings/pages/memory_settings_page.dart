@@ -119,7 +119,7 @@ class MemorySettingsContent extends StatelessWidget {
           children: [
             _NavRow(
               title: l10n.memorySettingsInjectionMaxItemsTitle,
-              subtitle: l10n.memorySettingsInjectionMaxItemsSubtitle,
+              tip: l10n.memorySettingsInjectionMaxItemsSubtitle,
               detailText: '${settings.memoryInjectionMaxItems}',
               onTap: () => _pickMemoryInjectionMaxItems(context),
             ),
@@ -929,49 +929,91 @@ class _SettingsRow extends StatelessWidget {
 class _NavRow extends StatelessWidget {
   const _NavRow({
     required this.title,
-    required this.subtitle,
     required this.onTap,
+    this.subtitle,
+    this.tip,
     this.detailText,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
+  final String? tip;
   final String? detailText;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return IosCardPress(
-      onTap: onTap,
-      borderRadius: BorderRadius.zero,
-      padding: EdgeInsets.zero,
-      baseColor: Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: _RowText(title: title, subtitle: subtitle),
+    final titleWidget = subtitle == null
+        ? Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: AppFontWeights.semibold,
+              color: cs.onSurface.withValues(alpha: 0.9),
             ),
-            if (detailText != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                detailText!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-            const SizedBox(width: 8),
-            Icon(
-              Lucide.ChevronRight,
-              size: 18,
-              color: cs.onSurface.withValues(alpha: 0.35),
-            ),
-          ],
+          )
+        : _RowText(title: title, subtitle: subtitle!);
+    final detailAndChevron = <Widget>[
+      if (detailText != null) ...[
+        const SizedBox(width: 8),
+        Text(
+          detailText!,
+          style: TextStyle(
+            fontSize: 13,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
         ),
+      ],
+      const SizedBox(width: 8),
+      Icon(
+        Lucide.ChevronRight,
+        size: 18,
+        color: cs.onSurface.withValues(alpha: 0.35),
+      ),
+    ];
+    if (tip == null) {
+      return IosCardPress(
+        onTap: onTap,
+        borderRadius: BorderRadius.zero,
+        padding: EdgeInsets.zero,
+        baseColor: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: Row(
+            children: [
+              Expanded(child: titleWidget),
+              ...detailAndChevron,
+            ],
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: IosCardPress(
+              onTap: onTap,
+              borderRadius: BorderRadius.zero,
+              padding: EdgeInsets.zero,
+              baseColor: Colors.transparent,
+              child: titleWidget,
+            ),
+          ),
+          MemoryTipIcon(message: tip!),
+          IosCardPress(
+            onTap: onTap,
+            borderRadius: BorderRadius.zero,
+            padding: EdgeInsets.zero,
+            baseColor: Colors.transparent,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: detailAndChevron,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -252,6 +252,102 @@ void main() {
     );
   });
 
+  testWidgets('memory tab has no about row or inline option subtitles', (
+    tester,
+  ) async {
+    final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+    _setLargeSurface(tester);
+    await ap.updateAssistant(
+      ap
+          .getById(_assistantId)!
+          .copyWith(
+            enableMemory: true,
+            autoOrganizeMemory: true,
+            allowPastConversationRecall: true,
+            generateConversationSummary: true,
+          ),
+    );
+
+    await tester.pumpWidget(
+      _buildHarness(
+        assistantProvider: ap,
+        chatService: chat,
+        memoryV2: memoryV2,
+        pipeline: pipeline,
+        child: const AssistantSettingsEditPage(assistantId: _assistantId),
+      ),
+    );
+    await _openMemoryTab(tester);
+
+    expect(find.text('About memory'), findsNothing);
+    expect(find.text('How memory works and when it runs'), findsNothing);
+    expect(
+      find.text(
+        'Inject saved memories into chats and let this assistant write new ones',
+      ),
+      findsNothing,
+    );
+    expect(find.text('Run the memory pipeline after chats'), findsNothing);
+    expect(
+      find.text('Run auto-organize after this many assistant replies'),
+      findsNothing,
+    );
+    expect(
+      find.text('How candidates are judged against existing memories'),
+      findsNothing,
+    );
+    expect(find.text('Where new memories are stored by default'), findsNothing);
+    expect(
+      find.text('Enable chat search across past conversations'),
+      findsNothing,
+    );
+    expect(find.text('Summaries are only used by chat search'), findsNothing);
+    expect(find.text('Use long-term memory'), findsOneWidget);
+    expect(find.text('Auto-organize memory'), findsOneWidget);
+    expect(find.byType(MemoryTipIcon), findsWidgets);
+  });
+
+  testWidgets(
+    'add memory from tab uses assistant scope when write scope is assistant',
+    (tester) async {
+      final (ap, chat, memoryV2, pipeline) = await _createProviders(tester);
+      _setLargeSurface(tester);
+      await ap.updateAssistant(
+        ap
+            .getById(_assistantId)!
+            .copyWith(
+              enableMemory: true,
+              memoryWriteScope: MemoryWriteScope.alwaysAssistant,
+            ),
+      );
+
+      await tester.pumpWidget(
+        _buildHarness(
+          assistantProvider: ap,
+          chatService: chat,
+          memoryV2: memoryV2,
+          pipeline: pipeline,
+          child: const AssistantSettingsEditPage(assistantId: _assistantId),
+        ),
+      );
+      await _openMemoryTab(tester);
+
+      final addButton = find.text('Add memory').hitTestable();
+      await tester.ensureVisible(addButton);
+      await tester.tap(addButton);
+      await tester.pumpAndSettle();
+
+      final chips = tester.widgetList<MemorySelectChip>(
+        find.byType(MemorySelectChip),
+      );
+      expect(
+        chips.any((c) => c.label == 'This assistant' && c.selected),
+        isTrue,
+      );
+      expect(chips.any((c) => c.label == 'Global' && c.selected), isFalse);
+    },
+  );
+
   testWidgets('add memory sheet opens and cancels without throwing', (
     tester,
   ) async {

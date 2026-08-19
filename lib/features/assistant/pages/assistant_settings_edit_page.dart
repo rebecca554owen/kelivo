@@ -39,7 +39,6 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/memory/memory_gatekeeper.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../settings/pages/legacy_memory_page.dart';
-import '../../settings/pages/memory_about_page.dart';
 import '../../settings/pages/memory_settings_page.dart';
 import '../../settings/widgets/memory_ui.dart';
 import '../../../core/services/haptics.dart';
@@ -1292,76 +1291,99 @@ Widget _iosNavRow(
   required IconData icon,
   required String label,
   String? subtitle,
+  String? tip,
   String? detailText,
   Widget? accessory,
   VoidCallback? onTap,
 }) {
   final cs = Theme.of(context).colorScheme;
   final interactive = onTap != null;
-  return _TactileRow(
-    onTap: onTap,
-    haptics: true,
-    builder: (pressed) {
-      final baseColor = cs.onSurface.withValues(alpha: 0.9);
-      return _AnimatedPressColor(
-        pressed: pressed,
-        base: baseColor,
-        builder: (c) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            child: Row(
-              children: [
-                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: subtitle == null
-                      ? Text(
-                          label,
-                          style: TextStyle(fontSize: 15, color: c),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              label,
-                              style: TextStyle(fontSize: 15, color: c),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: cs.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-                if (detailText != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Text(
-                      detailText,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withValues(alpha: 0.6),
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+    child: Row(
+      children: [
+        Expanded(
+          child: _TactileRow(
+            onTap: onTap,
+            haptics: true,
+            builder: (pressed) {
+              final baseColor = cs.onSurface.withValues(alpha: 0.9);
+              return _AnimatedPressColor(
+                pressed: pressed,
+                base: baseColor,
+                builder: (c) {
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: 36,
+                        child: Icon(icon, size: 20, color: c),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: subtitle == null
+                            ? Text(
+                                label,
+                                style: TextStyle(fontSize: 15, color: c),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    label,
+                                    style: TextStyle(fontSize: 15, color: c),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: cs.onSurface.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        if (tip != null) MemoryTipIcon(message: tip),
+        GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (detailText != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Text(
+                    detailText,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurface.withValues(alpha: 0.6),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                if (accessory != null) accessory,
-                if (interactive) Icon(Lucide.ChevronRight, size: 16, color: c),
-              ],
-            ),
-          );
-        },
-      );
-    },
+                ),
+              if (accessory != null) accessory,
+              if (interactive)
+                Icon(Lucide.ChevronRight, size: 16, color: cs.onSurface),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }
 
@@ -1372,53 +1394,69 @@ Widget _iosSwitchRow(
   required bool value,
   required ValueChanged<bool> onChanged,
   String? subtitle,
+  String? tip,
 }) {
   final cs = Theme.of(context).colorScheme;
-  return _TactileRow(
-    onTap: () => onChanged(!value),
-    builder: (pressed) {
-      final baseColor = cs.onSurface.withValues(alpha: 0.9);
-      return _AnimatedPressColor(
-        pressed: pressed,
-        base: baseColor,
-        builder: (c) {
-          return Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: subtitle == null ? 4 : 8,
-            ),
-            child: Row(
-              children: [
-                SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: subtitle == null
-                      ? Text(label, style: TextStyle(fontSize: 15, color: c))
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              label,
-                              style: TextStyle(fontSize: 15, color: c),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: cs.onSurface.withValues(alpha: 0.6),
+  return Padding(
+    padding: EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: subtitle == null ? 4 : 8,
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: _TactileRow(
+            onTap: () => onChanged(!value),
+            builder: (pressed) {
+              final baseColor = cs.onSurface.withValues(alpha: 0.9);
+              return _AnimatedPressColor(
+                pressed: pressed,
+                base: baseColor,
+                builder: (c) {
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: 36,
+                        child: Icon(icon, size: 20, color: c),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: subtitle == null
+                            ? Text(
+                                label,
+                                style: TextStyle(fontSize: 15, color: c),
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    label,
+                                    style: TextStyle(fontSize: 15, color: c),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: cs.onSurface.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                ),
-                IosSwitch(value: value, onChanged: onChanged),
-              ],
-            ),
-          );
-        },
-      );
-    },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        if (tip != null) MemoryTipIcon(message: tip),
+        IosSwitch(value: value, onChanged: onChanged),
+      ],
+    ),
   );
 }
 
