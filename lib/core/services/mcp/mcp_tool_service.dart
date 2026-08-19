@@ -31,6 +31,8 @@ class McpToolRouteSnapshot {
     }
     return null;
   }
+
+  bool containsExposedName(String name) => _find(name) != null;
 }
 
 class McpToolService extends ChangeNotifier {
@@ -50,6 +52,7 @@ class McpToolService extends ChangeNotifier {
     AssistantProvider assistants,
     String? assistantId, {
     McpToolRouteSnapshot? routeSnapshot,
+    Set<String> reservedNames = const {},
   }) {
     if (routeSnapshot != null) {
       return _exposedToolsForRoutes(routeSnapshot._routes);
@@ -58,7 +61,7 @@ class McpToolService extends ChangeNotifier {
         ? assistants.getById(assistantId)
         : assistants.currentAssistant;
     final selected = (a?.mcpServerIds ?? const <String>[]).toSet();
-    return _exposedTools(mcpProvider, selected);
+    return _exposedTools(mcpProvider, selected, reservedNames: reservedNames);
   }
 
   Future<mcp.CallToolResult?> callToolForConversation(
@@ -184,6 +187,7 @@ class McpToolService extends ChangeNotifier {
     required String toolName,
     Map<String, dynamic> arguments = const {},
     McpToolRouteSnapshot? routeSnapshot,
+    Set<String> reservedNames = const {},
   }) async {
     // try servers selected for the assistant
     final a = (assistantId != null)
@@ -192,7 +196,9 @@ class McpToolService extends ChangeNotifier {
     final selected = (a?.mcpServerIds ?? const <String>[]).toSet();
     // debugPrint('[MCP/Call/Select] assistant=${assistantId ?? a?.id ?? '(current)'} tool=$toolName selectedServers=${selected.join(',')}');
     if (selected.isEmpty) return '';
-    final routes = routeSnapshot?._routes ?? _toolRoutes(mcpProvider, selected);
+    final routes =
+        routeSnapshot?._routes ??
+        _toolRoutes(mcpProvider, selected, reservedNames: reservedNames);
     for (final publishedRoute in routes) {
       final has = publishedRoute.exposedName == toolName;
       if (has) {
@@ -292,6 +298,7 @@ class McpToolService extends ChangeNotifier {
     required String? assistantId,
     required String toolName,
     McpToolRouteSnapshot? routeSnapshot,
+    Set<String> reservedNames = const {},
   }) {
     final assistant = assistantId != null
         ? assistants.getById(assistantId)
@@ -299,7 +306,12 @@ class McpToolService extends ChangeNotifier {
     final selected = (assistant?.mcpServerIds ?? const <String>[]).toSet();
     final publishedRoute = routeSnapshot != null
         ? routeSnapshot._find(toolName)
-        : _findRoute(mcpProvider, selected, toolName);
+        : _findRoute(
+            mcpProvider,
+            selected,
+            toolName,
+            reservedNames: reservedNames,
+          );
     if (publishedRoute == null) return false;
     final route = _currentRouteForIdentity(
       mcpProvider,
@@ -313,19 +325,25 @@ class McpToolService extends ChangeNotifier {
     McpProvider mcpProvider,
     AssistantProvider assistants, {
     required String? assistantId,
+    Set<String> reservedNames = const {},
   }) {
     final assistant = assistantId != null
         ? assistants.getById(assistantId)
         : assistants.currentAssistant;
     final selected = (assistant?.mcpServerIds ?? const <String>[]).toSet();
-    return McpToolRouteSnapshot._(_toolRoutes(mcpProvider, selected));
+    return McpToolRouteSnapshot._(
+      _toolRoutes(mcpProvider, selected, reservedNames: reservedNames),
+    );
   }
 
   List<McpToolConfig> _exposedTools(
     McpProvider provider,
-    Set<String> selected,
-  ) {
-    return _exposedToolsForRoutes(_toolRoutes(provider, selected));
+    Set<String> selected, {
+    Set<String> reservedNames = const {},
+  }) {
+    return _exposedToolsForRoutes(
+      _toolRoutes(provider, selected, reservedNames: reservedNames),
+    );
   }
 
   List<McpToolConfig> _exposedToolsForRoutes(Iterable<_McpToolRoute> routes) {
@@ -337,9 +355,14 @@ class McpToolService extends ChangeNotifier {
   _McpToolRoute? _findRoute(
     McpProvider provider,
     Set<String> selected,
-    String exposedName,
-  ) {
-    for (final route in _toolRoutes(provider, selected)) {
+    String exposedName, {
+    Set<String> reservedNames = const {},
+  }) {
+    for (final route in _toolRoutes(
+      provider,
+      selected,
+      reservedNames: reservedNames,
+    )) {
       if (route.exposedName == exposedName) return route;
     }
     return null;
@@ -369,7 +392,11 @@ class McpToolService extends ChangeNotifier {
     return null;
   }
 
-  List<_McpToolRoute> _toolRoutes(McpProvider provider, Set<String> selected) {
+  List<_McpToolRoute> _toolRoutes(
+    McpProvider provider,
+    Set<String> selected, {
+    Set<String> reservedNames = const {},
+  }) {
     final entries = <({McpServerConfig server, McpToolConfig tool})>[];
     for (final server in provider.servers) {
       if (!server.enabled || !selected.contains(server.id)) continue;
@@ -386,29 +413,26 @@ class McpToolService extends ChangeNotifier {
         ifAbsent: () => 1,
       );
     }
-    final usedNames = <String>{
-      for (final entry in entries)
-        if (originalNameCounts[entry.tool.name] == 1) entry.tool.name,
-    };
+    final usedNames = <String>{...reservedNames};
+    for (final entry in entries) {
+      if (originalNameCounts[entry.tool.name] == 1 &&
+          !reservedNames.contains(entry.tool.name)) {
+        usedNames.add(entry.tool.name);
+      }
+    }
     final routes = <_McpToolRoute>[];
     for (final entry in entries) {
-      final duplicated = originalNameCounts[entry.tool.name]! > 1;
-      var exposedName = duplicated
+      final conflicted =
+          originalNameCounts[entry.tool.name]! > 1 ||
+          reservedNames.contains(entry.tool.name);
+      final base = conflicted
           ? _qualifiedToolName(entry.server.name, entry.tool.name)
           : entry.tool.name;
-      if (duplicated && usedNames.contains(exposedName)) {
-        exposedName = _appendToolNameSuffix(
-          exposedName,
-          _serverIdSuffix(entry.server.id),
-        );
+      // Pre-seeded unique originals must not suffix as a self-collision.
+      if (!conflicted) {
+        usedNames.remove(entry.tool.name);
       }
-      var uniqueName = exposedName;
-      var counter = 2;
-      while (duplicated && usedNames.contains(uniqueName)) {
-        uniqueName = _appendToolNameSuffix(exposedName, counter.toString());
-        counter++;
-      }
-      usedNames.add(uniqueName);
+      final uniqueName = _claimUniqueName(base, usedNames, entry.server.id);
       routes.add(
         _McpToolRoute(
           server: entry.server,
@@ -418,6 +442,30 @@ class McpToolService extends ChangeNotifier {
       );
     }
     return routes;
+  }
+
+  String _claimUniqueName(String base, Set<String> usedNames, String serverId) {
+    final limited = _limitToolName(base);
+    if (!usedNames.contains(limited)) {
+      usedNames.add(limited);
+      return limited;
+    }
+    final serverSuffixed = _appendToolNameSuffix(
+      limited,
+      _serverIdSuffix(serverId),
+    );
+    if (!usedNames.contains(serverSuffixed)) {
+      usedNames.add(serverSuffixed);
+      return serverSuffixed;
+    }
+    var counter = 2;
+    var candidate = _appendToolNameSuffix(limited, counter.toString());
+    while (usedNames.contains(candidate)) {
+      counter++;
+      candidate = _appendToolNameSuffix(limited, counter.toString());
+    }
+    usedNames.add(candidate);
+    return candidate;
   }
 
   String _qualifiedToolName(String serverName, String toolName) {
