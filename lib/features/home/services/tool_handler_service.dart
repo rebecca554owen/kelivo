@@ -17,6 +17,7 @@ import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_tools.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import 'ask_user_interaction_service.dart';
+import 'built_in_tool_names.dart';
 import 'local_tools_service.dart';
 import 'tool_approval_service.dart';
 
@@ -177,6 +178,7 @@ class ToolHandlerService {
       contextProvider.read<McpProvider>(),
       contextProvider.read<AssistantProvider>(),
       assistantId: assistant?.id,
+      reservedNames: BuiltInToolNames.all,
     );
   }
 
@@ -336,6 +338,7 @@ class ToolHandlerService {
       contextProvider.read<AssistantProvider>(),
       assistant?.id,
       routeSnapshot: mcpRouteSnapshot,
+      reservedNames: BuiltInToolNames.all,
     );
 
     if (tools.isEmpty) return [];
@@ -408,10 +411,57 @@ class ToolHandlerService {
           mcp,
           assistantProvider,
           assistantId: assistant?.id,
+          reservedNames: BuiltInToolNames.all,
         );
+
+    Future<String> approveAndExecuteMcp(
+      String name,
+      Map<String, dynamic> args,
+    ) async {
+      if (approvalService != null &&
+          toolSvc.toolNeedsApprovalForAssistant(
+            mcp,
+            assistantProvider,
+            assistantId: assistant?.id,
+            toolName: name,
+            routeSnapshot: routes,
+            reservedNames: BuiltInToolNames.all,
+          )) {
+        // Generate a unique id for this tool call approval request
+        final toolCallId = '${name}_${DateTime.now().microsecondsSinceEpoch}';
+        final result = await approvalService.requestApproval(
+          toolCallId: toolCallId,
+          toolName: name,
+          arguments: args,
+          conversationId: conversationId,
+        );
+        if (!result.approved) {
+          return _toolError(
+            error: 'approval_denied',
+            message: result.denyReason ?? 'User denied the tool call',
+            tool: name,
+          );
+        }
+      }
+
+      final text = await toolSvc.callToolTextForAssistant(
+        mcp,
+        assistantProvider,
+        assistantId: assistant?.id,
+        toolName: name,
+        arguments: args,
+        routeSnapshot: routes,
+        reservedNames: BuiltInToolNames.all,
+      );
+      return text;
+    }
 
     return (name, args, {toolCallId}) async {
       try {
+        if (routes.containsExposedName(name)) {
+          return await approveAndExecuteMcp(name, args);
+        }
+
         // Search tool
         if (name == SearchToolService.toolName &&
             assistant?.searchEnabled == true) {
@@ -510,42 +560,7 @@ class ToolHandlerService {
           }
         }
 
-        // Approval gate for MCP tools
-        if (approvalService != null &&
-            toolSvc.toolNeedsApprovalForAssistant(
-              mcp,
-              assistantProvider,
-              assistantId: assistant?.id,
-              toolName: name,
-              routeSnapshot: routes,
-            )) {
-          // Generate a unique id for this tool call approval request
-          final toolCallId = '${name}_${DateTime.now().microsecondsSinceEpoch}';
-          final result = await approvalService.requestApproval(
-            toolCallId: toolCallId,
-            toolName: name,
-            arguments: args,
-            conversationId: conversationId,
-          );
-          if (!result.approved) {
-            return _toolError(
-              error: 'approval_denied',
-              message: result.denyReason ?? 'User denied the tool call',
-              tool: name,
-            );
-          }
-        }
-
-        // MCP tools
-        final text = await toolSvc.callToolTextForAssistant(
-          mcp,
-          assistantProvider,
-          assistantId: assistant?.id,
-          toolName: name,
-          arguments: args,
-          routeSnapshot: routes,
-        );
-        return text;
+        return await approveAndExecuteMcp(name, args);
       } catch (e) {
         // Catch unexpected exceptions and return error JSON to LLM
         // This prevents tool failures from terminating the chat flow
