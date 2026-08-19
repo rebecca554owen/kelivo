@@ -16,6 +16,7 @@ import '../../../core/providers/memory_provider.dart';
 import '../../../core/providers/memory_provider_v2.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/memory/legacy_memory_migration.dart';
+import '../../../core/services/memory/memory_prompts.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
@@ -404,13 +405,17 @@ class _LegacyMemoryMigrationPanel extends StatefulWidget {
 
 class _LegacyMemoryMigrationPanelState
     extends State<_LegacyMemoryMigrationPanel> {
+  static const List<int> _batchSizeOptions = <int>[6, 8, 12, 16, 24];
+
   ModelSelection? _model;
   LegacyMemoryMigrationTarget _target = LegacyMemoryMigrationTarget.assistant;
+  bool _preserveOriginal = true;
   LegacyMemoryMigrationProgress? _progress;
   LegacyMemoryMigrationResult? _result;
   bool _loadedInitialModel = false;
   bool _running = false;
   bool _failed = false;
+  String? _error;
 
   @override
   void didChangeDependencies() {
@@ -453,10 +458,15 @@ class _LegacyMemoryMigrationPanelState
     if (selection == null || _running) return;
     final settings = context.read<SettingsProvider>();
     final memory = context.read<MemoryProviderV2>();
-    final service = LegacyMemoryMigrationService(repository: memory.repository);
+    final lang = settings.resolvedMemoryPromptLang;
+    final service = LegacyMemoryMigrationService(
+      repository: memory.repository,
+      batchSize: settings.memoryMigrationBatchSize,
+    );
     setState(() {
       _running = true;
       _failed = false;
+      _error = null;
       _result = null;
       _progress = LegacyMemoryMigrationProgress(
         phase: LegacyMemoryMigrationPhase.analyzing,
@@ -478,6 +488,12 @@ class _LegacyMemoryMigrationPanelState
         target: _target,
         config: settings.getProviderConfig(selection.providerKey),
         modelId: selection.modelId,
+        preserveOriginal: _preserveOriginal,
+        promptTemplate: _preserveOriginal
+            ? MemoryPrompts.migratePreserveFor(lang)
+            : (lang == MemoryPromptLang.zh
+                  ? settings.memoryMigratePromptZh
+                  : settings.memoryMigratePromptEn),
         onProgress: (progress) {
           if (!mounted) return;
           setState(() => _progress = progress);
@@ -488,6 +504,7 @@ class _LegacyMemoryMigrationPanelState
       setState(() {
         _running = false;
         _result = result;
+        _error = result.errorMessage;
       });
     } catch (error, stackTrace) {
       debugPrint('Legacy memory migration failed: $error\n$stackTrace');
@@ -496,6 +513,7 @@ class _LegacyMemoryMigrationPanelState
       setState(() {
         _running = false;
         _failed = true;
+        _error = error.toString();
       });
     }
   }
@@ -510,6 +528,11 @@ class _LegacyMemoryMigrationPanelState
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final settings = context.watch<SettingsProvider>();
+    final batchSize = settings.memoryMigrationBatchSize;
+    final batchSizes = <int>{..._batchSizeOptions, batchSize}.toList()..sort();
+    final complete = _result != null && _result!.failed == 0;
+    final partial = _result != null && _result!.failed > 0;
     final targetAssistantLabel = widget.assistantId == null
         ? l10n.legacyMemoryMigrationTargetOriginalAssistants
         : l10n.legacyMemoryMigrationTargetAssistant;
@@ -575,7 +598,7 @@ class _LegacyMemoryMigrationPanelState
                 color: cs.onSurface.withValues(alpha: 0.68),
               ),
             ),
-            if (_result != null) ...[
+            if (complete) ...[
               const SizedBox(height: 28),
               _MigrationResultView(result: _result!),
               const SizedBox(height: 24),
@@ -654,45 +677,116 @@ class _LegacyMemoryMigrationPanelState
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              _MigrationFieldLabel(text: l10n.legacyMemoryMigrationContentMode),
+              MemorySectionCard(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        MemorySelectChip(
+                          label: l10n.legacyMemoryMigrationContentPreserve,
+                          selected: _preserveOriginal,
+                          onTap: _running
+                              ? null
+                              : () => setState(() => _preserveOriginal = true),
+                        ),
+                        MemorySelectChip(
+                          label: l10n.legacyMemoryMigrationContentOrganize,
+                          selected: !_preserveOriginal,
+                          onTap: _running
+                              ? null
+                              : () => setState(() => _preserveOriginal = false),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      _preserveOriginal
+                          ? l10n.legacyMemoryMigrationContentPreserveDescription
+                          : l10n.legacyMemoryMigrationContentOrganizeDescription,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: cs.onSurface.withValues(alpha: 0.58),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _MigrationFieldLabel(text: l10n.legacyMemoryMigrationBatchSize),
+              MemorySectionCard(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final size in batchSizes)
+                          MemorySelectChip(
+                            label: '$size',
+                            selected: batchSize == size,
+                            onTap: _running
+                                ? null
+                                : () => unawaited(
+                                    settings.setMemoryMigrationBatchSize(size),
+                                  ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               if (_running && progress != null) ...[
                 const SizedBox(height: 20),
                 _MigrationProgressView(progress: progress),
               ],
               if (_failed) ...[
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: cs.errorContainer.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Lucide.TriangleAlert, size: 18, color: cs.error),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          l10n.legacyMemoryMigrationFailed,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            height: 1.4,
-                            color: cs.onSurface.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _MigrationMessageCard(
+                  icon: Lucide.TriangleAlert,
+                  color: cs.error,
+                  text: [
+                    l10n.legacyMemoryMigrationFailed,
+                    if (_error != null) _legacyMigrationErrorText(_error, l10n),
+                  ].join('\n'),
+                ),
+              ],
+              if (partial) ...[
+                const SizedBox(height: 16),
+                _MigrationMessageCard(
+                  icon: Lucide.TriangleAlert,
+                  color: cs.error,
+                  text: [
+                    l10n.legacyMemoryMigrationPartial(
+                      _result!.created,
+                      _result!.skipped,
+                      _result!.failed,
+                    ),
+                    if (_error != null) _legacyMigrationErrorText(_error, l10n),
+                  ].join('\n'),
                 ),
               ],
               const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
                 child: IosTileButton(
-                  label: _failed
-                      ? l10n.legacyMemoryMigrationRetry
-                      : l10n.legacyMemoryMigrationStart,
-                  icon: _failed ? Lucide.RefreshCw : Lucide.Import,
+                  label: partial
+                      ? l10n.legacyMemoryMigrationContinue
+                      : (_failed
+                            ? l10n.legacyMemoryMigrationRetry
+                            : l10n.legacyMemoryMigrationStart),
+                  icon: partial || _failed ? Lucide.RefreshCw : Lucide.Import,
                   backgroundColor: cs.primary,
                   enabled: _model != null && !_running,
                   onTap: () => unawaited(_runMigration()),
@@ -704,6 +798,97 @@ class _LegacyMemoryMigrationPanelState
       ),
     );
   }
+}
+
+class _MigrationMessageCard extends StatelessWidget {
+  const _MigrationMessageCard({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
+                color: cs.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _legacyMigrationErrorText(Object? error, AppLocalizations l10n) {
+  final raw = error?.toString() ?? '';
+  final lower = raw.toLowerCase();
+  if (_isLegacyMigrationNetworkError(error, lower)) {
+    return l10n.legacyMemoryMigrationErrorNetwork;
+  }
+  if (_isLegacyMigrationAuthError(lower)) {
+    return l10n.legacyMemoryMigrationErrorAuth;
+  }
+  if (_isLegacyMigrationFormatError(error, lower)) {
+    return l10n.legacyMemoryMigrationErrorFormat;
+  }
+  final trimmed = raw.trim();
+  final truncated = trimmed.length > 180
+      ? '${trimmed.substring(0, 180)}…'
+      : trimmed;
+  return l10n.legacyMemoryMigrationErrorOther(
+    truncated.isEmpty ? error.runtimeType.toString() : truncated,
+  );
+}
+
+bool _isLegacyMigrationNetworkError(Object? error, String lower) {
+  if (error is SocketException || error is HandshakeException) return true;
+  if (error is TimeoutException) return true;
+  return lower.contains('socketexception') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('connection refused') ||
+      lower.contains('network is unreachable') ||
+      lower.contains('timed out') ||
+      lower.contains('timeout') ||
+      lower.contains('connection reset') ||
+      lower.contains('clientexception');
+}
+
+bool _isLegacyMigrationAuthError(String lower) {
+  return lower.contains('401') ||
+      lower.contains('403') ||
+      lower.contains('unauthorized') ||
+      lower.contains('forbidden') ||
+      lower.contains('invalid api key') ||
+      lower.contains('invalid_api_key') ||
+      lower.contains('authentication');
+}
+
+bool _isLegacyMigrationFormatError(Object? error, String lower) {
+  if (error is FormatException) return true;
+  return lower.contains('formatexception') ||
+      lower.contains('legacy_memory_response');
 }
 
 class _MigrationFieldLabel extends StatelessWidget {

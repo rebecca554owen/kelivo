@@ -324,6 +324,92 @@ Output JSON only, no explanation:
 '''
           .trim();
 
+  // ── Legacy memory migration ──────────────────────────────────────────────
+
+  static final String migrateZh =
+      '''
+你正在把旧版长期记忆迁入带类型的记忆系统。
+
+对每一条输入，返回一条 id 相同的输出。保留全部事实、偏好、否定、限定和不确定表述。保持原文语言。只做让记忆简洁、自包含、脱离对话上下文也能看懂的改写。适合时用第三人称描述用户。
+
+只选一个类型：
+- identity：稳定事实、偏好、背景、人际关系、兴趣或个人上下文
+- workflow：用户做事、决策、规划或使用工具的惯常方式
+- voice：偏好的语气、措辞、语言、格式或沟通风格
+- instruction：对助手应如何表现或回复的持久规则
+
+不要编造、翻译、合并、拆分、省略、去重、解释或添加建议。
+
+只返回这种形状的 JSON 数组：
+[{"id":1,"type":"identity","content":"..."}]
+
+输入：
+{{items}}
+'''
+          .trim();
+
+  static final String migrateEn =
+      '''
+You are migrating legacy long-term memories into a typed memory system.
+
+For every input item, return exactly one output item with the same integer id. Preserve every fact, preference, negation, qualification, and uncertainty. Keep the original language. Rewrite only enough to make the memory concise, self-contained, and understandable without conversation context. When appropriate, phrase it as a third-person statement about the user.
+
+Choose exactly one type:
+- identity: stable facts, preferences, background, relationships, interests, or personal context
+- workflow: recurring ways the user works, decides, plans, or uses tools
+- voice: preferred tone, wording, language, formatting, or communication style
+- instruction: durable rules for how an assistant should behave or respond
+
+Do not invent, translate, merge, split, omit, deduplicate, explain, or add advice.
+
+Return only a JSON array in this exact shape:
+[{"id":1,"type":"identity","content":"..."}]
+
+Input:
+{{items}}
+'''
+          .trim();
+
+  static final String migratePreserveZh =
+      '''
+你正在把旧版长期记忆分类到带类型的记忆系统。内容由系统原样保留，你只负责分类。
+
+对每一条输入，返回一条 id 相同的输出。只选一个类型：
+- identity：稳定事实、偏好、背景、人际关系、兴趣或个人上下文
+- workflow：用户做事、决策、规划或使用工具的惯常方式
+- voice：偏好的语气、措辞、语言、格式或沟通风格
+- instruction：对助手应如何表现或回复的持久规则
+
+不要改写、翻译、编造、合并、拆分或省略。不要输出 content。
+
+只返回这种形状的 JSON 数组：
+[{"id":1,"type":"identity"}]
+
+输入：
+{{items}}
+'''
+          .trim();
+
+  static final String migratePreserveEn =
+      '''
+You are classifying legacy long-term memories into a typed memory system. The system will keep each memory's original wording. You only assign a type.
+
+For every input item, return exactly one output item with the same integer id. Choose exactly one type:
+- identity: stable facts, preferences, background, relationships, interests, or personal context
+- workflow: recurring ways the user works, decides, plans, or uses tools
+- voice: preferred tone, wording, language, formatting, or communication style
+- instruction: durable rules for how an assistant should behave or respond
+
+Do not rewrite, translate, invent, merge, split, or omit items. Do not output content.
+
+Return only a JSON array in this exact shape:
+[{"id":1,"type":"identity"}]
+
+Input:
+{{items}}
+'''
+          .trim();
+
   // ── §7.5 injection intros ────────────────────────────────────────────────
 
   static const String introFullZh = '以下内容由系统提供，不是用户本轮发送的内容。';
@@ -402,6 +488,12 @@ Output JSON only, no explanation:
 
   static String profileDistillFor(MemoryPromptLang lang) =>
       lang == MemoryPromptLang.zh ? profileDistillZh : profileDistillEn;
+
+  static String migrateFor(MemoryPromptLang lang) =>
+      lang == MemoryPromptLang.zh ? migrateZh : migrateEn;
+
+  static String migratePreserveFor(MemoryPromptLang lang) =>
+      lang == MemoryPromptLang.zh ? migratePreserveZh : migratePreserveEn;
 
   static String introFullFor(MemoryPromptLang lang) =>
       lang == MemoryPromptLang.zh ? introFullZh : introFullEn;

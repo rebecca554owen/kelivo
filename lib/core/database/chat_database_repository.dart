@@ -2589,6 +2589,11 @@ class ChatDatabaseRepository {
   /// [excludeConversationId] omits one. Both are applied in SQL rather than by
   /// the caller, because the candidate `LIMIT` is global: a conversation whose
   /// matches rank below the cut would otherwise be filtered down to nothing.
+  ///
+  /// When [assistantId] is non-empty, only that assistant's conversations and
+  /// unowned (`assistant_id IS NULL`) chats are included. The predicate uses
+  /// `idx_conversations_assistant`; NULL rows stay visible so pre-ownership
+  /// history is not dropped.
   Future<List<ConversationSearchMatch>> searchConversationMatches({
     required List<String> tokens,
     int limit = 200,
@@ -2596,6 +2601,7 @@ class ChatDatabaseRepository {
     bool includeAllRevisions = false,
     String? conversationId,
     String? excludeConversationId,
+    String? assistantId,
   }) {
     return _observer.measure(
       ChatDatabaseOperation.querySearch,
@@ -2606,6 +2612,7 @@ class ChatDatabaseRepository {
         includeAllRevisions: includeAllRevisions,
         conversationId: conversationId,
         excludeConversationId: excludeConversationId,
+        assistantId: assistantId,
       ),
       resultCount: (rows) => rows.length,
     );
@@ -2618,6 +2625,7 @@ class ChatDatabaseRepository {
     required bool includeAllRevisions,
     String? conversationId,
     String? excludeConversationId,
+    String? assistantId,
   }) async {
     final cleanTokens = tokens
         .map((token) => token.trim().toLowerCase())
@@ -2705,6 +2713,10 @@ class ChatDatabaseRepository {
         excludeConversationId.isNotEmpty) {
       scopeSql = 'AND c.id <> ?';
       scopeArgs.add(excludeConversationId);
+    }
+    if (assistantId != null && assistantId.isNotEmpty) {
+      scopeSql += ' AND (c.assistant_id = ? OR c.assistant_id IS NULL)';
+      scopeArgs.add(assistantId);
     }
 
     final candidateLimit = (limit * candidateMultiplier)

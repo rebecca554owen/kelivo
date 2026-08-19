@@ -241,7 +241,7 @@ class _PromptEntry {
   final _PromptKind kind;
 }
 
-enum _PromptKind { rules, gate, extract, smartAdd, distill }
+enum _PromptKind { rules, gate, extract, smartAdd, distill, migrate }
 
 List<_PromptEntry> _promptEntries(AppLocalizations l10n) => [
   _PromptEntry(
@@ -268,6 +268,11 @@ List<_PromptEntry> _promptEntries(AppLocalizations l10n) => [
     title: l10n.memoryPromptEditDistillTitle,
     subtitle: l10n.memoryPromptEditDistillSubtitle,
     kind: _PromptKind.distill,
+  ),
+  _PromptEntry(
+    title: l10n.memoryPromptEditMigrateTitle,
+    subtitle: l10n.memoryPromptEditMigrateSubtitle,
+    kind: _PromptKind.migrate,
   ),
 ];
 
@@ -360,6 +365,8 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
         return _isZh
             ? s.memoryProfileDistillPromptZh
             : s.memoryProfileDistillPromptEn;
+      case _PromptKind.migrate:
+        return _isZh ? s.memoryMigratePromptZh : s.memoryMigratePromptEn;
     }
   }
 
@@ -394,6 +401,11 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
         await (_isZh
             ? s.setMemoryProfileDistillPromptZh(text)
             : s.setMemoryProfileDistillPromptEn(text));
+        break;
+      case _PromptKind.migrate:
+        await (_isZh
+            ? s.setMemoryMigratePromptZh(text)
+            : s.setMemoryMigratePromptEn(text));
         break;
     }
     if (mounted) Navigator.of(context).maybePop();
@@ -441,6 +453,12 @@ class _MemoryPromptEditPageState extends State<_MemoryPromptEditPage> {
         _main.text = _isZh
             ? MemoryPrompts.profileDistillZh
             : MemoryPrompts.profileDistillEn;
+        break;
+      case _PromptKind.migrate:
+        await (_isZh
+            ? s.resetMemoryMigratePromptZh()
+            : s.resetMemoryMigratePromptEn());
+        _main.text = _isZh ? MemoryPrompts.migrateZh : MemoryPrompts.migrateEn;
         break;
     }
     setState(() {});

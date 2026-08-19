@@ -146,6 +146,13 @@ class SettingsProvider extends ChangeNotifier {
       'memory_profile_distill_prompt_zh_v1';
   static const String _memoryProfileDistillPromptEnKey =
       'memory_profile_distill_prompt_en_v1';
+  static const String _memoryMigratePromptZhKey = 'memory_migrate_prompt_zh_v1';
+  static const String _memoryMigratePromptEnKey = 'memory_migrate_prompt_en_v1';
+  static const String _memoryMigrationBatchSizeKey =
+      'memory_migration_batch_size_v1';
+  static const int defaultMemoryMigrationBatchSize = 12;
+  static const int minMemoryMigrationBatchSize = 1;
+  static const int maxMemoryMigrationBatchSize = 24;
   static const String _displayShowUserAvatarKey = 'display_show_user_avatar_v1';
   static const String _displayShowModelIconKey = 'display_show_model_icon_v1';
   static const String _displayShowModelNameTimestampKey =
@@ -957,6 +964,18 @@ class SettingsProvider extends ChangeNotifier {
       prefs.getString(_memoryProfileDistillPromptEnKey),
       MemoryPrompts.profileDistillEn,
     );
+    _memoryMigratePromptZh = _nonEmptyOr(
+      prefs.getString(_memoryMigratePromptZhKey),
+      MemoryPrompts.migrateZh,
+    );
+    _memoryMigratePromptEn = _nonEmptyOr(
+      prefs.getString(_memoryMigratePromptEnKey),
+      MemoryPrompts.migrateEn,
+    );
+    _memoryMigrationBatchSize =
+        (prefs.getInt(_memoryMigrationBatchSizeKey) ??
+                defaultMemoryMigrationBatchSize)
+            .clamp(minMemoryMigrationBatchSize, maxMemoryMigrationBatchSize);
 
     // display settings
     _showUserAvatar = prefs.getBool(_displayShowUserAvatarKey) ?? true;
@@ -3776,6 +3795,9 @@ Requirements:
   String _memorySmartAddBatchPromptEn = MemoryPrompts.smartAddBatchEn;
   String _memoryProfileDistillPromptZh = MemoryPrompts.profileDistillZh;
   String _memoryProfileDistillPromptEn = MemoryPrompts.profileDistillEn;
+  String _memoryMigratePromptZh = MemoryPrompts.migrateZh;
+  String _memoryMigratePromptEn = MemoryPrompts.migrateEn;
+  int _memoryMigrationBatchSize = defaultMemoryMigrationBatchSize;
 
   String get memoryRulesPromptZh => _memoryRulesPromptZh;
   String get memoryRulesPromptEn => _memoryRulesPromptEn;
@@ -3789,6 +3811,9 @@ Requirements:
   String get memorySmartAddBatchPromptEn => _memorySmartAddBatchPromptEn;
   String get memoryProfileDistillPromptZh => _memoryProfileDistillPromptZh;
   String get memoryProfileDistillPromptEn => _memoryProfileDistillPromptEn;
+  String get memoryMigratePromptZh => _memoryMigratePromptZh;
+  String get memoryMigratePromptEn => _memoryMigratePromptEn;
+  int get memoryMigrationBatchSize => _memoryMigrationBatchSize;
 
   Future<void> setMemoryModel(String providerKey, String modelId) async {
     _memoryModelProvider = providerKey;
@@ -3955,6 +3980,39 @@ Requirements:
     );
   }
 
+  Future<void> setMemoryMigratePromptZh(String prompt) async {
+    _memoryMigratePromptZh = prompt.trim().isEmpty
+        ? MemoryPrompts.migrateZh
+        : prompt;
+    notifyListeners();
+    await _preferences.setString(
+      _memoryMigratePromptZhKey,
+      _memoryMigratePromptZh,
+    );
+  }
+
+  Future<void> setMemoryMigratePromptEn(String prompt) async {
+    _memoryMigratePromptEn = prompt.trim().isEmpty
+        ? MemoryPrompts.migrateEn
+        : prompt;
+    notifyListeners();
+    await _preferences.setString(
+      _memoryMigratePromptEnKey,
+      _memoryMigratePromptEn,
+    );
+  }
+
+  Future<void> setMemoryMigrationBatchSize(int size) async {
+    final next = size.clamp(
+      minMemoryMigrationBatchSize,
+      maxMemoryMigrationBatchSize,
+    );
+    if (_memoryMigrationBatchSize == next) return;
+    _memoryMigrationBatchSize = next;
+    notifyListeners();
+    await _preferences.setInt(_memoryMigrationBatchSizeKey, next);
+  }
+
   Future<void> resetMemoryRulesPromptZh() async =>
       setMemoryRulesPromptZh(MemoryPrompts.rulesZh);
   Future<void> resetMemoryRulesPromptEn() async =>
@@ -3979,6 +4037,10 @@ Requirements:
       setMemoryProfileDistillPromptZh(MemoryPrompts.profileDistillZh);
   Future<void> resetMemoryProfileDistillPromptEn() async =>
       setMemoryProfileDistillPromptEn(MemoryPrompts.profileDistillEn);
+  Future<void> resetMemoryMigratePromptZh() async =>
+      setMemoryMigratePromptZh(MemoryPrompts.migrateZh);
+  Future<void> resetMemoryMigratePromptEn() async =>
+      setMemoryMigratePromptEn(MemoryPrompts.migrateEn);
 
   int? titleGenerationThinkingBudgetFor(int? assistantBudget) {
     return _backgroundThinkingBudgetFor(
@@ -5061,6 +5123,9 @@ Requirements:
     copy._memorySmartAddBatchPromptEn = _memorySmartAddBatchPromptEn;
     copy._memoryProfileDistillPromptZh = _memoryProfileDistillPromptZh;
     copy._memoryProfileDistillPromptEn = _memoryProfileDistillPromptEn;
+    copy._memoryMigratePromptZh = _memoryMigratePromptZh;
+    copy._memoryMigratePromptEn = _memoryMigratePromptEn;
+    copy._memoryMigrationBatchSize = _memoryMigrationBatchSize;
     copy._showUserAvatar = _showUserAvatar;
     copy._showModelIcon = _showModelIcon;
     copy._showModelNameTimestamp = _showModelNameTimestamp;

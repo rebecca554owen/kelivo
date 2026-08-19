@@ -6223,6 +6223,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Distills identity memories into profile fields';
 
   @override
+  String get memoryPromptEditMigrateTitle => 'Legacy migration';
+
+  @override
+  String get memoryPromptEditMigrateSubtitle =>
+      'Used when migration rewrites memory wording';
+
+  @override
   String get memoryPromptEditReset => 'Reset to default';
 
   @override
@@ -6636,6 +6643,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legacyMemoryMigrationClose => 'Done';
+
+  @override
+  String get legacyMemoryMigrationContentMode => 'Content';
+
+  @override
+  String get legacyMemoryMigrationContentPreserve => 'Keep original';
+
+  @override
+  String get legacyMemoryMigrationContentOrganize => 'Rewrite with model';
+
+  @override
+  String get legacyMemoryMigrationContentPreserveDescription =>
+      'The model only assigns a type. The original wording is saved as-is.';
+
+  @override
+  String get legacyMemoryMigrationContentOrganizeDescription =>
+      'The model classifies and rewrites each memory using the editable migrate prompt.';
+
+  @override
+  String get legacyMemoryMigrationBatchSize => 'Batch size';
+
+  @override
+  String legacyMemoryMigrationPartial(int created, int skipped, int failed) {
+    return '$created migrated · $skipped skipped · $failed failed';
+  }
+
+  @override
+  String get legacyMemoryMigrationContinue => 'Continue migration';
+
+  @override
+  String get legacyMemoryMigrationErrorNetwork =>
+      'Network error. Check the connection and try again.';
+
+  @override
+  String get legacyMemoryMigrationErrorFormat =>
+      'The model returned an invalid response.';
+
+  @override
+  String get legacyMemoryMigrationErrorAuth =>
+      'Authentication failed. Check the API key.';
+
+  @override
+  String legacyMemoryMigrationErrorOther(String message) {
+    return 'Migration failed: $message';
+  }
 
   @override
   String get legacyMemoryModeTitle => 'Use legacy memory';

@@ -2585,6 +2585,8 @@
   "memoryPromptEditSmartAddSubtitle": "NEW / MERGE / CONFLICT / SKIP dedupe judge",
   "memoryPromptEditDistillTitle": "Profile Distiller",
   "memoryPromptEditDistillSubtitle": "Distills identity memories into profile fields",
+  "memoryPromptEditMigrateTitle": "Legacy migration",
+  "memoryPromptEditMigrateSubtitle": "Used when migration rewrites memory wording",
   "memoryPromptEditReset": "Reset to default",
   "memoryPromptEditSave": "Save",
   "memoryPromptEditSectionPerItem": "Per-item prompt",
@@ -2784,6 +2786,30 @@
   "legacyMemoryMigrationFailed": "Migration stopped. You can retry; memories already saved will be skipped.",
   "legacyMemoryMigrationRetry": "Retry",
   "legacyMemoryMigrationClose": "Done",
+  "legacyMemoryMigrationContentMode": "Content",
+  "legacyMemoryMigrationContentPreserve": "Keep original",
+  "legacyMemoryMigrationContentOrganize": "Rewrite with model",
+  "legacyMemoryMigrationContentPreserveDescription": "The model only assigns a type. The original wording is saved as-is.",
+  "legacyMemoryMigrationContentOrganizeDescription": "The model classifies and rewrites each memory using the editable migrate prompt.",
+  "legacyMemoryMigrationBatchSize": "Batch size",
+  "legacyMemoryMigrationPartial": "{created} migrated · {skipped} skipped · {failed} failed",
+  "@legacyMemoryMigrationPartial": {
+    "placeholders": {
+      "created": {"type": "int"},
+      "skipped": {"type": "int"},
+      "failed": {"type": "int"}
+    }
+  },
+  "legacyMemoryMigrationContinue": "Continue migration",
+  "legacyMemoryMigrationErrorNetwork": "Network error. Check the connection and try again.",
+  "legacyMemoryMigrationErrorFormat": "The model returned an invalid response.",
+  "legacyMemoryMigrationErrorAuth": "Authentication failed. Check the API key.",
+  "legacyMemoryMigrationErrorOther": "Migration failed: {message}",
+  "@legacyMemoryMigrationErrorOther": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
   "legacyMemoryModeTitle": "Use legacy memory",
   "legacyMemoryModeSubtitle": "Global setting for all assistants. Both datasets are kept; you can switch back anytime. Legacy memory is per-assistant only — no global memory, user profile, background organize, traces, or past-conversation search.",
   "legacyMemoryModeCacheWarning": "Legacy mode writes all memories and the current time into the system prompt every turn, so prompt cache cannot hit and long chats cost more.",
