@@ -11329,6 +11329,96 @@ abstract class AppLocalizations {
   /// **'How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.'**
   String get memorySettingsAboutBody;
 
+  /// No description provided for @memoryAboutQuickstartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get memoryAboutQuickstartTitle;
+
+  /// No description provided for @memoryAboutQuickstartBody.
+  ///
+  /// In en, this message translates to:
+  /// **'1. In Settings → Memory, choose a processing model.\n2. On the assistant Memory tab, turn on long-term memory and Auto-organize.\n3. Chat for a few turns or tap Organize, then open All memories to see what was saved.'**
+  String get memoryAboutQuickstartBody;
+
+  /// No description provided for @memoryAboutTypesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory types'**
+  String get memoryAboutTypesTitle;
+
+  /// No description provided for @memoryAboutTypesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity: stable facts about the user, such as how to address them, role, language, and long-term preferences. Write complete third-person statements.\n\nWorkflow: how they like to get work done — tools, formats, and review habits.\n\nVoice: how they want the assistant to sound — tone, length, and language style.\n\nInstruction: standing rules the assistant should follow, not one-off tasks from this chat.'**
+  String get memoryAboutTypesBody;
+
+  /// No description provided for @memoryAboutScopeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Global vs assistant'**
+  String get memoryAboutScopeTitle;
+
+  /// No description provided for @memoryAboutScopeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Global memories are injected for every assistant. Assistant-scope memories are only visible to that assistant. Use global for facts that should follow the user everywhere; use assistant scope for rules or context that belong to one persona.'**
+  String get memoryAboutScopeBody;
+
+  /// No description provided for @memoryAboutInjectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How memories are injected'**
+  String get memoryAboutInjectionTitle;
+
+  /// No description provided for @memoryAboutInjectionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'At the start of a chat, the newest items of each type are placed in the model context. If a type exceeds the injection limit, the block is marked mode=\"summary\" with total and shown counts; the rest can be fetched with memory_search_profile. Raise the limit in Settings → Memory for more completeness at a higher token cost.'**
+  String get memoryAboutInjectionBody;
+
+  /// No description provided for @memoryAboutPipelineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background pipeline'**
+  String get memoryAboutPipelineTitle;
+
+  /// No description provided for @memoryAboutPipelineBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-organize runs after chats: decide whether anything is worth remembering, extract candidates, dedupe and merge, then distill identity items into the user profile when needed. You can also tap Organize on the assistant Memory tab. That is why the processing model is called often.'**
+  String get memoryAboutPipelineBody;
+
+  /// No description provided for @memoryAboutCacheTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep caching healthy'**
+  String get memoryAboutCacheTitle;
+
+  /// No description provided for @memoryAboutCacheBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The injected memory prefix is kept stable so unchanged chats can reuse the prompt cache, lowering cost and latency. Avoid pointless bulk edits or reshuffles. Day-to-day single-entry edits usually have limited impact.'**
+  String get memoryAboutCacheBody;
+
+  /// No description provided for @memoryAboutFaqTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get memoryAboutFaqTitle;
+
+  /// No description provided for @memoryAboutFaqWhyNotRememberedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why wasn\'t this remembered?'**
+  String get memoryAboutFaqWhyNotRememberedTitle;
+
+  /// No description provided for @memoryAboutFaqWhyNotRememberedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize is skipped when there are not enough new messages to organize, no new messages to organize, or no memory processing model selected. Temporary chats are not saved to memory. You can also turn memory or Auto-organize off per assistant.'**
+  String get memoryAboutFaqWhyNotRememberedBody;
+
   /// No description provided for @memorySettingsThinkingTitle.
   ///
   /// In en, this message translates to:
@@ -12559,6 +12649,12 @@ abstract class AppLocalizations {
   /// **'Use long-term memory'**
   String get assistantEditMemorySwitchTitle;
 
+  /// No description provided for @assistantEditMemorySwitchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inject saved memories into chats and let this assistant write new ones'**
+  String get assistantEditMemorySwitchSubtitle;
+
   /// No description provided for @assistantEditAutoOrganizeTitle.
   ///
   /// In en, this message translates to:
@@ -12619,11 +12715,23 @@ abstract class AppLocalizations {
   /// **'Always global'**
   String get assistantEditWriteScopeAlwaysGlobal;
 
+  /// No description provided for @assistantEditWriteScopeAlwaysGlobalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New memories are shared with every assistant'**
+  String get assistantEditWriteScopeAlwaysGlobalSubtitle;
+
   /// No description provided for @assistantEditWriteScopeAlwaysAssistant.
   ///
   /// In en, this message translates to:
   /// **'Always this assistant'**
   String get assistantEditWriteScopeAlwaysAssistant;
+
+  /// No description provided for @assistantEditWriteScopeAlwaysAssistantSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New memories stay private to this assistant'**
+  String get assistantEditWriteScopeAlwaysAssistantSubtitle;
 
   /// No description provided for @assistantEditWriteScopeToolDefaultGlobal.
   ///
@@ -12631,11 +12739,23 @@ abstract class AppLocalizations {
   /// **'Model chooses (default global)'**
   String get assistantEditWriteScopeToolDefaultGlobal;
 
+  /// No description provided for @assistantEditWriteScopeToolDefaultGlobalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The model may pick global or this assistant; default is global'**
+  String get assistantEditWriteScopeToolDefaultGlobalSubtitle;
+
   /// No description provided for @assistantEditWriteScopeToolDefaultAssistant.
   ///
   /// In en, this message translates to:
   /// **'Model chooses (default assistant)'**
   String get assistantEditWriteScopeToolDefaultAssistant;
+
+  /// No description provided for @assistantEditWriteScopeToolDefaultAssistantSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The model may pick global or this assistant; default is this assistant'**
+  String get assistantEditWriteScopeToolDefaultAssistantSubtitle;
 
   /// No description provided for @assistantEditDedupeModeTitle.
   ///
@@ -12655,11 +12775,23 @@ abstract class AppLocalizations {
   /// **'Batched'**
   String get assistantEditDedupeModeBatched;
 
+  /// No description provided for @assistantEditDedupeModeBatchedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Judge all new candidates in one request. Faster and cheaper; less precise when many items arrive at once.'**
+  String get assistantEditDedupeModeBatchedSubtitle;
+
   /// No description provided for @assistantEditDedupeModePerItem.
   ///
   /// In en, this message translates to:
   /// **'Per item'**
   String get assistantEditDedupeModePerItem;
+
+  /// No description provided for @assistantEditDedupeModePerItemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Judge each candidate in its own request. More accurate; uses more model calls.'**
+  String get assistantEditDedupeModePerItemSubtitle;
 
   /// No description provided for @assistantEditOrganizeFrequencyTitle.
   ///

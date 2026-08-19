@@ -6154,6 +6154,59 @@ class AppLocalizationsEn extends AppLocalizations {
       'How memory works\nMemories are organized as Identity / Workflow / Voice / Instruction, with global or assistant scope. Relevant memories are injected into the model context; when there are many, a summary is shown first and the model can query for more.\n\nBackground processing and triggers\nThe processing model powers the background pipeline: decide whether to remember, extract candidates, dedupe/merge, and distill the user profile when needed. With Auto-organize on, it runs every N turns after chats; you can also run Organize manually on the assistant Memory tab. That is why this model is called often.\n\nKeep caching healthy\nKeep the injected memory prefix stable and avoid pointless bulk edits or reshuffles so prompt cache can hit more often, lowering cost and latency. Day-to-day single-entry edits usually have limited impact.';
 
   @override
+  String get memoryAboutQuickstartTitle => 'Get started';
+
+  @override
+  String get memoryAboutQuickstartBody =>
+      '1. In Settings → Memory, choose a processing model.\n2. On the assistant Memory tab, turn on long-term memory and Auto-organize.\n3. Chat for a few turns or tap Organize, then open All memories to see what was saved.';
+
+  @override
+  String get memoryAboutTypesTitle => 'Memory types';
+
+  @override
+  String get memoryAboutTypesBody =>
+      'Identity: stable facts about the user, such as how to address them, role, language, and long-term preferences. Write complete third-person statements.\n\nWorkflow: how they like to get work done — tools, formats, and review habits.\n\nVoice: how they want the assistant to sound — tone, length, and language style.\n\nInstruction: standing rules the assistant should follow, not one-off tasks from this chat.';
+
+  @override
+  String get memoryAboutScopeTitle => 'Global vs assistant';
+
+  @override
+  String get memoryAboutScopeBody =>
+      'Global memories are injected for every assistant. Assistant-scope memories are only visible to that assistant. Use global for facts that should follow the user everywhere; use assistant scope for rules or context that belong to one persona.';
+
+  @override
+  String get memoryAboutInjectionTitle => 'How memories are injected';
+
+  @override
+  String get memoryAboutInjectionBody =>
+      'At the start of a chat, the newest items of each type are placed in the model context. If a type exceeds the injection limit, the block is marked mode=\"summary\" with total and shown counts; the rest can be fetched with memory_search_profile. Raise the limit in Settings → Memory for more completeness at a higher token cost.';
+
+  @override
+  String get memoryAboutPipelineTitle => 'Background pipeline';
+
+  @override
+  String get memoryAboutPipelineBody =>
+      'Auto-organize runs after chats: decide whether anything is worth remembering, extract candidates, dedupe and merge, then distill identity items into the user profile when needed. You can also tap Organize on the assistant Memory tab. That is why the processing model is called often.';
+
+  @override
+  String get memoryAboutCacheTitle => 'Keep caching healthy';
+
+  @override
+  String get memoryAboutCacheBody =>
+      'The injected memory prefix is kept stable so unchanged chats can reuse the prompt cache, lowering cost and latency. Avoid pointless bulk edits or reshuffles. Day-to-day single-entry edits usually have limited impact.';
+
+  @override
+  String get memoryAboutFaqTitle => 'FAQ';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedTitle =>
+      'Why wasn\'t this remembered?';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedBody =>
+      'Organize is skipped when there are not enough new messages to organize, no new messages to organize, or no memory processing model selected. Temporary chats are not saved to memory. You can also turn memory or Auto-organize off per assistant.';
+
+  @override
   String get memorySettingsThinkingTitle => 'Enable thinking';
 
   @override
@@ -6858,6 +6911,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditMemorySwitchTitle => 'Use long-term memory';
 
   @override
+  String get assistantEditMemorySwitchSubtitle =>
+      'Inject saved memories into chats and let this assistant write new ones';
+
+  @override
   String get assistantEditAutoOrganizeTitle => 'Auto-organize memory';
 
   @override
@@ -6894,15 +6951,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditWriteScopeAlwaysGlobal => 'Always global';
 
   @override
+  String get assistantEditWriteScopeAlwaysGlobalSubtitle =>
+      'New memories are shared with every assistant';
+
+  @override
   String get assistantEditWriteScopeAlwaysAssistant => 'Always this assistant';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistantSubtitle =>
+      'New memories stay private to this assistant';
 
   @override
   String get assistantEditWriteScopeToolDefaultGlobal =>
       'Model chooses (default global)';
 
   @override
+  String get assistantEditWriteScopeToolDefaultGlobalSubtitle =>
+      'The model may pick global or this assistant; default is global';
+
+  @override
   String get assistantEditWriteScopeToolDefaultAssistant =>
       'Model chooses (default assistant)';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistantSubtitle =>
+      'The model may pick global or this assistant; default is this assistant';
 
   @override
   String get assistantEditDedupeModeTitle => 'Dedupe mode';
@@ -6915,7 +6988,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditDedupeModeBatched => 'Batched';
 
   @override
+  String get assistantEditDedupeModeBatchedSubtitle =>
+      'Judge all new candidates in one request. Faster and cheaper; less precise when many items arrive at once.';
+
+  @override
   String get assistantEditDedupeModePerItem => 'Per item';
+
+  @override
+  String get assistantEditDedupeModePerItemSubtitle =>
+      'Judge each candidate in its own request. More accurate; uses more model calls.';
 
   @override
   String get assistantEditOrganizeFrequencyTitle => 'Organize every N turns';

@@ -5919,6 +5919,58 @@ class AppLocalizationsZh extends AppLocalizations {
       '记忆如何运作\n记忆按「身份 / 工作流 / 语气 / 指令」分类，并区分全局与助手范围。对话时，相关记忆会注入模型上下文；条目较多时先展示摘要，模型可用工具继续查询更多内容。\n\n后台如何处理、如何触发\n处理模型用于后台整理管线：判断是否值得记忆、提取候选、去重合并，必要时再提炼用户画像。助手开启「自动整理」后，会按设定轮数在对话结束后自动触发；也可在助手「记忆」页手动整理。因此该模型会被较频繁调用。\n\n如何保持缓存良好\n尽量让注入对话的记忆前缀保持稳定，避免无意义的大批量改动或频繁重排，有助于 Prompt 缓存命中，从而降低费用与延迟。日常增删改单条记忆通常影响有限。';
 
   @override
+  String get memoryAboutQuickstartTitle => '三步上手';
+
+  @override
+  String get memoryAboutQuickstartBody =>
+      '① 在「设置 → 记忆」里选择处理模型。\n② 在助手的「记忆」页打开长期记忆和自动整理。\n③ 聊几轮，或点「整理记忆」，再到「全部记忆」查看结果。';
+
+  @override
+  String get memoryAboutTypesTitle => '记忆类型';
+
+  @override
+  String get memoryAboutTypesBody =>
+      '身份：用户的稳定信息，例如称呼、职业、语言、长期偏好。写成完整的第三人称陈述。\n\n工作流：用户习惯怎么做事，例如工具、格式、审阅方式。\n\n语气：用户希望助手怎么说话，例如语气、篇幅、语言风格。\n\n指令：助手应长期遵守的规则，而不是本次对话里的一次性任务。';
+
+  @override
+  String get memoryAboutScopeTitle => '全局与助手范围';
+
+  @override
+  String get memoryAboutScopeBody =>
+      '全局记忆会对所有助手注入。助手范围的记忆只对该助手可见。跨助手都该知道的事实用全局；只属于某一个助手的规则或上下文用助手范围。';
+
+  @override
+  String get memoryAboutInjectionTitle => '记忆如何注入';
+
+  @override
+  String get memoryAboutInjectionBody =>
+      '开对话时，每类会把最近的若干条放进模型上下文。某类超过注入上限时，块会标上 mode=\"summary\"，并用 total / shown 标明总数与展示条数，其余由模型用 memory_search_profile 按需查询。可在「设置 → 记忆」调大上限，更全面但更费 token。';
+
+  @override
+  String get memoryAboutPipelineTitle => '后台整理';
+
+  @override
+  String get memoryAboutPipelineBody =>
+      '开启自动整理后，对话结束会走：判断是否值得记 → 提取候选 → 去重合并 → 必要时把身份类记忆提炼进用户画像。也可以在助手「记忆」页点「整理记忆」。因此处理模型会被较频繁调用。';
+
+  @override
+  String get memoryAboutCacheTitle => '保持缓存良好';
+
+  @override
+  String get memoryAboutCacheBody =>
+      '注入前缀会保持稳定，未改动时可复用 Prompt 缓存，从而降低费用与延迟。避免无意义的大批量改动或重排。日常增删改单条通常影响有限。';
+
+  @override
+  String get memoryAboutFaqTitle => '常见问题';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedTitle => '为什么没记住？';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedBody =>
+      '整理会被跳过，常见原因包括：新消息不足，暂不整理；没有新消息需要整理；尚未选择记忆处理模型。临时对话不会写入记忆。也可以按助手关闭记忆或自动整理。';
+
+  @override
   String get memorySettingsThinkingTitle => '启用思考';
 
   @override
@@ -6579,6 +6631,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditMemorySwitchTitle => '使用长期记忆';
 
   @override
+  String get assistantEditMemorySwitchSubtitle => '把已保存的记忆注入对话，并允许此助手写入新记忆';
+
+  @override
   String get assistantEditAutoOrganizeTitle => '自动整理记忆';
 
   @override
@@ -6609,13 +6664,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditWriteScopeAlwaysGlobal => '一律全局';
 
   @override
+  String get assistantEditWriteScopeAlwaysGlobalSubtitle => '新记忆对所有助手可见';
+
+  @override
   String get assistantEditWriteScopeAlwaysAssistant => '一律本助手';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistantSubtitle => '新记忆只对本助手可见';
 
   @override
   String get assistantEditWriteScopeToolDefaultGlobal => '模型自选（默认全局）';
 
   @override
+  String get assistantEditWriteScopeToolDefaultGlobalSubtitle =>
+      '模型可选择全局或本助手，缺省写入全局';
+
+  @override
   String get assistantEditWriteScopeToolDefaultAssistant => '模型自选（默认本助手）';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistantSubtitle =>
+      '模型可选择全局或本助手，缺省写入本助手';
 
   @override
   String get assistantEditDedupeModeTitle => '去重方式';
@@ -6627,7 +6696,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditDedupeModeBatched => '合并';
 
   @override
+  String get assistantEditDedupeModeBatchedSubtitle =>
+      '一次请求判断本轮全部候选。更快更省；条目多时精度较差。';
+
+  @override
   String get assistantEditDedupeModePerItem => '逐条';
+
+  @override
+  String get assistantEditDedupeModePerItemSubtitle =>
+      '每条候选单独请求判断。更准确，但会增加处理模型调用。';
 
   @override
   String get assistantEditOrganizeFrequencyTitle => '整理频率';
@@ -13316,6 +13393,58 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '记忆如何运作\n记忆按「身份 / 工作流 / 语气 / 指令」分类，并区分全局与助手范围。对话时，相关记忆会注入模型上下文；条目较多时先展示摘要，模型可用工具继续查询更多内容。\n\n后台如何处理、如何触发\n处理模型用于后台整理管线：判断是否值得记忆、提取候选、去重合并，必要时再提炼用户画像。助手开启「自动整理」后，会按设定轮数在对话结束后自动触发；也可在助手「记忆」页手动整理。因此该模型会被较频繁调用。\n\n如何保持缓存良好\n尽量让注入对话的记忆前缀保持稳定，避免无意义的大批量改动或频繁重排，有助于 Prompt 缓存命中，从而降低费用与延迟。日常增删改单条记忆通常影响有限。';
 
   @override
+  String get memoryAboutQuickstartTitle => '三步上手';
+
+  @override
+  String get memoryAboutQuickstartBody =>
+      '① 在「设置 → 记忆」里选择处理模型。\n② 在助手的「记忆」页打开长期记忆和自动整理。\n③ 聊几轮，或点「整理记忆」，再到「全部记忆」查看结果。';
+
+  @override
+  String get memoryAboutTypesTitle => '记忆类型';
+
+  @override
+  String get memoryAboutTypesBody =>
+      '身份：用户的稳定信息，例如称呼、职业、语言、长期偏好。写成完整的第三人称陈述。\n\n工作流：用户习惯怎么做事，例如工具、格式、审阅方式。\n\n语气：用户希望助手怎么说话，例如语气、篇幅、语言风格。\n\n指令：助手应长期遵守的规则，而不是本次对话里的一次性任务。';
+
+  @override
+  String get memoryAboutScopeTitle => '全局与助手范围';
+
+  @override
+  String get memoryAboutScopeBody =>
+      '全局记忆会对所有助手注入。助手范围的记忆只对该助手可见。跨助手都该知道的事实用全局；只属于某一个助手的规则或上下文用助手范围。';
+
+  @override
+  String get memoryAboutInjectionTitle => '记忆如何注入';
+
+  @override
+  String get memoryAboutInjectionBody =>
+      '开对话时，每类会把最近的若干条放进模型上下文。某类超过注入上限时，块会标上 mode=\"summary\"，并用 total / shown 标明总数与展示条数，其余由模型用 memory_search_profile 按需查询。可在「设置 → 记忆」调大上限，更全面但更费 token。';
+
+  @override
+  String get memoryAboutPipelineTitle => '后台整理';
+
+  @override
+  String get memoryAboutPipelineBody =>
+      '开启自动整理后，对话结束会走：判断是否值得记 → 提取候选 → 去重合并 → 必要时把身份类记忆提炼进用户画像。也可以在助手「记忆」页点「整理记忆」。因此处理模型会被较频繁调用。';
+
+  @override
+  String get memoryAboutCacheTitle => '保持缓存良好';
+
+  @override
+  String get memoryAboutCacheBody =>
+      '注入前缀会保持稳定，未改动时可复用 Prompt 缓存，从而降低费用与延迟。避免无意义的大批量改动或重排。日常增删改单条通常影响有限。';
+
+  @override
+  String get memoryAboutFaqTitle => '常见问题';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedTitle => '为什么没记住？';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedBody =>
+      '整理会被跳过，常见原因包括：新消息不足，暂不整理；没有新消息需要整理；尚未选择记忆处理模型。临时对话不会写入记忆。也可以按助手关闭记忆或自动整理。';
+
+  @override
   String get memorySettingsThinkingTitle => '启用思考';
 
   @override
@@ -13976,6 +14105,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditMemorySwitchTitle => '使用长期记忆';
 
   @override
+  String get assistantEditMemorySwitchSubtitle => '把已保存的记忆注入对话，并允许此助手写入新记忆';
+
+  @override
   String get assistantEditAutoOrganizeTitle => '自动整理记忆';
 
   @override
@@ -14006,13 +14138,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditWriteScopeAlwaysGlobal => '一律全局';
 
   @override
+  String get assistantEditWriteScopeAlwaysGlobalSubtitle => '新记忆对所有助手可见';
+
+  @override
   String get assistantEditWriteScopeAlwaysAssistant => '一律本助手';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistantSubtitle => '新记忆只对本助手可见';
 
   @override
   String get assistantEditWriteScopeToolDefaultGlobal => '模型自选（默认全局）';
 
   @override
+  String get assistantEditWriteScopeToolDefaultGlobalSubtitle =>
+      '模型可选择全局或本助手，缺省写入全局';
+
+  @override
   String get assistantEditWriteScopeToolDefaultAssistant => '模型自选（默认本助手）';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistantSubtitle =>
+      '模型可选择全局或本助手，缺省写入本助手';
 
   @override
   String get assistantEditDedupeModeTitle => '去重方式';
@@ -14024,7 +14170,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditDedupeModeBatched => '合并';
 
   @override
+  String get assistantEditDedupeModeBatchedSubtitle =>
+      '一次请求判断本轮全部候选。更快更省；条目多时精度较差。';
+
+  @override
   String get assistantEditDedupeModePerItem => '逐条';
+
+  @override
+  String get assistantEditDedupeModePerItemSubtitle =>
+      '每条候选单独请求判断。更准确，但会增加处理模型调用。';
 
   @override
   String get assistantEditOrganizeFrequencyTitle => '整理频率';
@@ -20787,6 +20941,58 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '記憶如何運作\n記憶按「身分 / 工作流 / 語氣 / 指令」分類，並區分全域與助手範圍。對話時，相關記憶會注入模型上下文；條目較多時先展示摘要，模型可用工具繼續查詢更多內容。\n\n後台如何處理、如何觸發\n處理模型用於後台整理管線：判斷是否值得記憶、提取候選、去重合併，必要時再提煉使用者畫像。助手開啟「自動整理」後，會按設定輪數在對話結束後自動觸發；也可在助手「記憶」頁手動整理。因此該模型會被較頻繁呼叫。\n\n如何保持快取良好\n盡量讓注入對話的記憶前綴保持穩定，避免無意義的大批量改動或頻繁重排，有助於 Prompt 快取命中，從而降低費用與延遲。日常增刪改單條記憶通常影響有限。';
 
   @override
+  String get memoryAboutQuickstartTitle => '三步上手';
+
+  @override
+  String get memoryAboutQuickstartBody =>
+      '① 在「設定 → 記憶」裡選擇處理模型。\n② 在助手的「記憶」頁打開長期記憶和自動整理。\n③ 聊幾輪，或點「整理記憶」，再到「全部記憶」查看結果。';
+
+  @override
+  String get memoryAboutTypesTitle => '記憶類型';
+
+  @override
+  String get memoryAboutTypesBody =>
+      '身分：使用者的穩定資訊，例如稱呼、職業、語言、長期偏好。寫成完整的第三人稱陳述。\n\n工作流：使用者習慣怎麼做事，例如工具、格式、審閱方式。\n\n語氣：使用者希望助手怎麼說話，例如語氣、篇幅、語言風格。\n\n指令：助手應長期遵守的規則，而不是本次對話裡的一次性任務。';
+
+  @override
+  String get memoryAboutScopeTitle => '全域與助手範圍';
+
+  @override
+  String get memoryAboutScopeBody =>
+      '全域記憶會對所有助手注入。助手範圍的記憶只對該助手可見。跨助手都該知道的事實用全域；只屬於某一個助手的規則或上下文用助手範圍。';
+
+  @override
+  String get memoryAboutInjectionTitle => '記憶如何注入';
+
+  @override
+  String get memoryAboutInjectionBody =>
+      '開對話時，每類會把最近的若干條放進模型上下文。某類超過注入上限時，塊會標上 mode=\"summary\"，並用 total / shown 標明總數與展示條數，其餘由模型用 memory_search_profile 按需查詢。可在「設定 → 記憶」調大上限，更全面但更費 token。';
+
+  @override
+  String get memoryAboutPipelineTitle => '後台整理';
+
+  @override
+  String get memoryAboutPipelineBody =>
+      '開啟自動整理後，對話結束會走：判斷是否值得記 → 擷取候選 → 去重合併 → 必要時把身分類記憶提煉進使用者畫像。也可以在助手「記憶」頁點「整理記憶」。因此處理模型會被較頻繁呼叫。';
+
+  @override
+  String get memoryAboutCacheTitle => '保持快取良好';
+
+  @override
+  String get memoryAboutCacheBody =>
+      '注入前綴會保持穩定，未改動時可復用 Prompt 快取，從而降低費用與延遲。避免無意義的大批量改動或重排。日常增刪改單條通常影響有限。';
+
+  @override
+  String get memoryAboutFaqTitle => '常見問題';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedTitle => '為什麼沒記住？';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedBody =>
+      '整理會被跳過，常見原因包括：新訊息不足，暫不整理；沒有新訊息需要整理；尚未選擇記憶處理模型。臨時對話不會寫入記憶。也可以按助手關閉記憶或自動整理。';
+
+  @override
   String get memorySettingsThinkingTitle => '啟用思考';
 
   @override
@@ -21447,6 +21653,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get assistantEditMemorySwitchTitle => '使用長期記憶';
 
   @override
+  String get assistantEditMemorySwitchSubtitle => '把已儲存的記憶注入對話，並允許此助手寫入新記憶';
+
+  @override
   String get assistantEditAutoOrganizeTitle => '自動整理記憶';
 
   @override
@@ -21477,13 +21686,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get assistantEditWriteScopeAlwaysGlobal => '一律全域';
 
   @override
+  String get assistantEditWriteScopeAlwaysGlobalSubtitle => '新記憶對所有助手可見';
+
+  @override
   String get assistantEditWriteScopeAlwaysAssistant => '一律本助手';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistantSubtitle => '新記憶只對本助手可見';
 
   @override
   String get assistantEditWriteScopeToolDefaultGlobal => '模型自選（預設全域）';
 
   @override
+  String get assistantEditWriteScopeToolDefaultGlobalSubtitle =>
+      '模型可選擇全域或本助手，缺省寫入全域';
+
+  @override
   String get assistantEditWriteScopeToolDefaultAssistant => '模型自選（預設本助手）';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistantSubtitle =>
+      '模型可選擇全域或本助手，缺省寫入本助手';
 
   @override
   String get assistantEditDedupeModeTitle => '去重方式';
@@ -21495,7 +21718,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get assistantEditDedupeModeBatched => '合併';
 
   @override
+  String get assistantEditDedupeModeBatchedSubtitle =>
+      '一次請求判斷本輪全部候選。更快更省；條目多時精度較差。';
+
+  @override
   String get assistantEditDedupeModePerItem => '逐條';
+
+  @override
+  String get assistantEditDedupeModePerItemSubtitle =>
+      '每條候選單獨請求判斷。更準確，但會增加處理模型呼叫。';
 
   @override
   String get assistantEditOrganizeFrequencyTitle => '整理頻率';
