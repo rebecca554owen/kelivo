@@ -347,4 +347,84 @@ void main() {
       });
     },
   );
+
+  testWidgets(
+    'external delete updates selection header count and disables empty actions',
+    (tester) async {
+      await asDesktop(() async {
+        final service = createService();
+        late final String alphaId;
+        late final String betaId;
+        await tester.runAsync(() async {
+          await service.init();
+          alphaId = (await service.createConversation(title: 'Alpha')).id;
+          betaId = (await service.createConversation(title: 'Beta')).id;
+        });
+        await pumpDrawer(tester, service);
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SideDrawer)),
+        )!;
+
+        SideDrawer.debugEnterSelectionMode!(alphaId);
+        await tester.pump();
+        await tester.tap(find.text('Beta'));
+        await tester.pump();
+        expect(find.text(l10n.sideDrawerSelectionTitle(2)), findsOneWidget);
+        expect(
+          tester
+              .widget<SidebarSelectionActionBar>(
+                find.byType(SidebarSelectionActionBar),
+              )
+              .selectedCount,
+          2,
+        );
+
+        await tester.runAsync(() => service.deleteConversation(alphaId));
+        for (var i = 0; i < 40; i++) {
+          if (service.getConversation(alphaId) == null) break;
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump();
+        }
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.text('Alpha'), findsNothing);
+        expect(find.text('Beta'), findsOneWidget);
+        expect(find.text(l10n.sideDrawerSelectionTitle(1)), findsOneWidget);
+        expect(find.text(l10n.sideDrawerSelectionTitle(2)), findsNothing);
+        expect(
+          tester
+              .widget<SidebarSelectionActionBar>(
+                find.byType(SidebarSelectionActionBar),
+              )
+              .selectedCount,
+          1,
+        );
+
+        await tester.runAsync(() => service.deleteConversation(betaId));
+        for (var i = 0; i < 40; i++) {
+          if (service.getConversation(betaId) == null) break;
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump();
+        }
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.text(l10n.sideDrawerSelectionTitle(0)), findsOneWidget);
+        expect(
+          tester
+              .widget<SidebarSelectionActionBar>(
+                find.byType(SidebarSelectionActionBar),
+              )
+              .selectedCount,
+          0,
+        );
+      });
+    },
+  );
 }

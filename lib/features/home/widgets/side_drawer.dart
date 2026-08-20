@@ -1619,6 +1619,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final currentAssistantId = ap.currentAssistantId;
     final chatServiceForSelection = context.read<ChatService>();
     if (_selectionMode) {
+      // Header/action bar live outside the conversation-list Selector.
+      // Subscribe to list revision so an external delete rebuilds them too.
+      context.select<ChatService, int>(
+        (service) => service.conversationListRevision,
+      );
       if (_selectionAssistantId != null &&
           _selectionAssistantId != currentAssistantId) {
         _selectionMode = false;
@@ -2686,15 +2691,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         assistantId: assistantId,
                         chatService: chatService,
                       );
-                      if (_selectionMode) {
-                        final liveIds = <String>{
-                          for (final c in chatService.getAllConversations())
-                            c.id,
-                        };
-                        _selectedConversationIds.removeWhere(
-                          (id) => !liveIds.contains(id),
-                        );
-                      }
                       if (useTabs) {
                         final isDesktop = _isDesktop;
                         final topPad =
@@ -2915,7 +2911,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
           ),
 
           // iOS-style blur/fade effect above user area
-          if (!widget.embedded)
+          // The legacy user-bar fade is positioned for its fixed 62px height.
+          // The selection action bar is shorter and owns its own top shadow;
+          // keeping this fade would expose a thin strip of list content between
+          // the fade and the action bar.
+          if (!widget.embedded && !_selectionMode)
             Positioned(
               left: 0,
               right: 0,
