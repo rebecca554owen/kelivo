@@ -62,6 +62,7 @@ Stream<StreamChunk> sendClaudeStream(
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
+  bool skipImageParsing = false,
 }) async* {
   final upstreamModelId = apiModelId(config, modelId);
   // Endpoint and headers (constant across rounds)
@@ -248,7 +249,10 @@ Stream<StreamChunk> sendClaudeStream(
     // Semantic media detection only - custom attachment markers are not
     // recognized. Attachments arrive via structured media-path keys /
     // userImagePaths, plus Markdown ![](...).
-    final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+    final hasMarkdownImages = shouldParseMarkdownImages(
+      raw,
+      skipImageParsing: skipImageParsing,
+    );
     final internalMediaRefs = parseInternalMediaRefs(
       m[multimodalInternalMediaPathsKey],
     );
@@ -315,6 +319,7 @@ Stream<StreamChunk> sendClaudeStream(
         allowRemoteImages: true,
         allowLocalImages: true,
         keepRemoteMarkdownText: true,
+        skipImageParsing: skipImageParsing,
       );
       if (parsed.text.isNotEmpty) {
         parts.add({'type': 'text', 'text': parsed.text});

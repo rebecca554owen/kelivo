@@ -392,6 +392,7 @@ Stream<StreamChunk> sendGoogleStream(
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
+  bool skipImageParsing = false,
 }) async* {
   // Check for Vertex AI Claude models (prefix "claude-")
   // If it's a Claude model on Vertex, route to special handling
@@ -412,6 +413,7 @@ Stream<StreamChunk> sendGoogleStream(
       extraHeaders: extraHeaders,
       extraBody: extraBody,
       stream: stream,
+      skipImageParsing: skipImageParsing,
     );
     return;
   }
@@ -497,7 +499,10 @@ Stream<StreamChunk> sendGoogleStream(
       // Semantic media detection only - custom attachment markers are not
       // recognized. Attachments arrive via structured media-path keys /
       // userImagePaths, plus Markdown ![](...).
-      final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+      final hasMarkdownImages = shouldParseMarkdownImages(
+        raw,
+        skipImageParsing: skipImageParsing,
+      );
       final internalMediaRefs = parseInternalMediaRefs(
         msg[multimodalInternalMediaPathsKey],
       );
@@ -512,6 +517,7 @@ Stream<StreamChunk> sendGoogleStream(
           allowRemoteImages: false,
           allowLocalImages: true,
           keepRemoteMarkdownText: true,
+          skipImageParsing: skipImageParsing,
         );
         if (parsed.text.isNotEmpty) parts.add({'text': parsed.text});
         for (final ref in parsed.images) {
@@ -961,7 +967,10 @@ Stream<StreamChunk> sendGoogleStream(
     // Semantic media detection only - custom attachment markers are not
     // recognized. Attachments arrive via structured media-path keys /
     // userImagePaths, plus Markdown ![](...).
-    final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+    final hasMarkdownImages = shouldParseMarkdownImages(
+      raw,
+      skipImageParsing: skipImageParsing,
+    );
     final internalMediaRefs = parseInternalMediaRefs(
       msg[multimodalInternalMediaPathsKey],
     );
@@ -977,6 +986,7 @@ Stream<StreamChunk> sendGoogleStream(
         allowRemoteImages: false,
         allowLocalImages: true,
         keepRemoteMarkdownText: true,
+        skipImageParsing: skipImageParsing,
       );
       if (parsed.text.isNotEmpty) parts.add({'text': parsed.text});
       // Images extracted from this message's text

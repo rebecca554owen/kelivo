@@ -23,6 +23,7 @@ import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
+import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/platform_utils.dart';
 import '../../../desktop/search_provider_popover.dart';
@@ -1887,23 +1888,34 @@ class _HomePageState extends State<HomePage>
     if (options == null || !mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => LoadingDialogCard(label: l10n.compressingContext),
-      ),
+    final dialogContextCompleter = Completer<BuildContext>();
+    final dialogClosed = showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        if (!dialogContextCompleter.isCompleted) {
+          dialogContextCompleter.complete(dialogContext);
+        }
+        return LoadingDialogCard(label: l10n.compressingContext);
+      },
     );
+    unawaited(dialogClosed);
+    final dialogContext = await dialogContextCompleter.future;
 
     String? error;
     try {
       error = await _controller.compressContext(options: options);
-    } catch (e) {
+    } catch (e, st) {
+      FlutterLogger.log(
+        '[CompressContext] dialog failed: $e\n$st',
+        tag: 'HomePage',
+      );
       error = e.toString();
     } finally {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).maybePop();
+      if (dialogContext.mounted) {
+        Navigator.of(dialogContext).pop();
       }
+      await dialogClosed;
     }
     if (error != null && mounted) {
       showAppSnackBar(

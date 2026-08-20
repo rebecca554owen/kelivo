@@ -192,7 +192,15 @@ Future<bool> _isValidRemoteImageUrl(String url) async {
   }
 }
 
-// Simple container for parsed text + image refs
+/// Whether [raw] should be scanned for Markdown images.
+///
+/// Utility / text-only requests (compress, title, summary) pass
+/// [skipImageParsing] so `![...](...)` stays literal text.
+bool shouldParseMarkdownImages(String raw, {required bool skipImageParsing}) {
+  if (skipImageParsing) return false;
+  return raw.contains('![') && raw.contains('](');
+}
+
 Future<ParsedTextAndImages> parseTextAndImages(
   String raw, {
   required bool allowRemoteImages,
@@ -200,8 +208,14 @@ Future<ParsedTextAndImages> parseTextAndImages(
   bool allowDataImages = true,
   bool keepRemoteMarkdownText = true,
   bool keepDisallowedImageText = true,
+  bool skipImageParsing = false,
 }) async {
   if (raw.isEmpty) return const ParsedTextAndImages('', <ImageRef>[]);
+  // Utility / text-only prompts (title, summary, compress) must keep
+  // `![...](...)` as literal text and never walk the Markdown scanner.
+  if (skipImageParsing || !raw.contains('![')) {
+    return ParsedTextAndImages(raw.trim(), const <ImageRef>[]);
+  }
   final mdImg = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
   // Custom attachment markers are intentionally not recognized here.
   // Attachments arrive via structured parts / media-path keys.
@@ -215,41 +229,41 @@ Future<ParsedTextAndImages> parseTextAndImages(
       final fence = raw.substring(i, i + 3);
       buf.write(fence);
       i += 3;
-      // Skip the rest of the opening fence line (language tag, etc.)
-      while (i < raw.length && raw[i] != '\n') {
-        buf.write(raw[i]);
-        i++;
+      final openNl = raw.indexOf('\n', i);
+      if (openNl < 0) {
+        buf.write(raw.substring(i));
+        i = raw.length;
+        continue;
       }
-      // Advance until the matching closing fence at the start of a line.
-      bool closed = false;
+      buf.write(raw.substring(i, openNl + 1));
+      i = openNl + 1;
       while (i < raw.length) {
-        if (raw[i] == '\n') {
-          buf.write(raw[i]);
-          i++;
-          if (raw.startsWith(fence, i)) {
-            buf.write(fence);
-            i += 3;
-            // Skip trailing content on the closing fence line.
-            while (i < raw.length && raw[i] != '\n') {
-              buf.write(raw[i]);
-              i++;
-            }
-            closed = true;
-            break;
+        if (raw.startsWith(fence, i)) {
+          buf.write(fence);
+          i += 3;
+          final closeNl = raw.indexOf('\n', i);
+          if (closeNl < 0) {
+            buf.write(raw.substring(i));
+            i = raw.length;
+          } else {
+            buf.write(raw.substring(i, closeNl));
+            i = closeNl;
           }
-        } else {
-          buf.write(raw[i]);
-          i++;
+          break;
         }
-      }
-      if (!closed) {
-        // Unclosed fence: rest of text was written as-is already.
+        final lineNl = raw.indexOf('\n', i);
+        if (lineNl < 0) {
+          buf.write(raw.substring(i));
+          i = raw.length;
+          break;
+        }
+        buf.write(raw.substring(i, lineNl + 1));
+        i = lineNl + 1;
       }
       continue;
     }
     // Skip inline code spans (backtick sequences).
     if (raw[i] == '`') {
-      // Determine the length of the opening backtick sequence.
       int tickLen = 0;
       while (i + tickLen < raw.length && raw[i + tickLen] == '`') {
         tickLen++;
@@ -257,101 +271,105 @@ Future<ParsedTextAndImages> parseTextAndImages(
       final openTicks = raw.substring(i, i + tickLen);
       buf.write(openTicks);
       i += tickLen;
-      // Advance until the matching closing backtick sequence.
-      bool closedTick = false;
-      while (i < raw.length) {
-        if (raw.startsWith(openTicks, i)) {
-          buf.write(openTicks);
-          i += tickLen;
-          closedTick = true;
-          break;
-        }
-        buf.write(raw[i]);
-        i++;
-      }
-      if (!closedTick) {
-        // Unclosed inline code: content was already written.
+      final close = raw.indexOf(openTicks, i);
+      if (close < 0) {
+        buf.write(raw.substring(i));
+        i = raw.length;
+      } else {
+        buf.write(raw.substring(i, close + tickLen));
+        i = close + tickLen;
       }
       continue;
     }
 
-    final m1 = mdImg.matchAsPrefix(raw, i);
-    if (m1 != null) {
-      final full = raw.substring(m1.start, m1.end);
-      final url = (m1.group(1) ?? '').trim();
-      if (url.isEmpty) {
-        // Empty URL: treat as plain text, do not try to interpret as image.
-        buf.write(full);
-        i = m1.end;
-        continue;
-      }
-      // Inline base64 / data URLs: always treat as image but keep them out of text.
-      if (url.startsWith('data:')) {
-        if (allowDataImages) {
-          images.add(ImageRef('data', url));
-        } else if (keepDisallowedImageText) {
+    if (i + 1 < raw.length &&
+        raw.codeUnitAt(i) == 0x21 &&
+        raw.codeUnitAt(i + 1) == 0x5B) {
+      final m1 = mdImg.matchAsPrefix(raw, i);
+      if (m1 != null) {
+        final full = raw.substring(m1.start, m1.end);
+        final url = (m1.group(1) ?? '').trim();
+        if (url.isEmpty) {
           buf.write(full);
+          i = m1.end;
+          continue;
         }
-        i = m1.end;
-        continue;
-      }
-      // Remote http(s) URLs
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        if (!allowRemoteImages) {
-          // Model does not accept image input (or we intentionally skip http images):
-          // keep original markdown so the model can see the template.
+        if (url.startsWith('data:')) {
+          if (allowDataImages) {
+            images.add(ImageRef('data', url));
+          } else if (keepDisallowedImageText) {
+            buf.write(full);
+          }
+          i = m1.end;
+          continue;
+        }
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          if (!allowRemoteImages) {
+            if (keepDisallowedImageText) buf.write(full);
+            i = m1.end;
+            continue;
+          }
+          final ok = await _isValidRemoteImageUrl(url);
+          if (!ok) {
+            buf.write(full);
+            i = m1.end;
+            continue;
+          }
+          images.add(ImageRef('url', url));
+          if (keepRemoteMarkdownText) {
+            buf.write(full);
+          }
+          i = m1.end;
+          continue;
+        }
+        if (!allowLocalImages) {
           if (keepDisallowedImageText) buf.write(full);
           i = m1.end;
           continue;
         }
-        final ok = await _isValidRemoteImageUrl(url);
-        if (!ok) {
-          // Invalid / unreachable image URL (e.g. 404) → keep as plain text.
+        try {
+          final resolved = SandboxPathResolver.resolveForIo(url);
+          if (resolved == null) {
+            buf.write(full);
+            i = m1.end;
+            continue;
+          }
+          final file = File(resolved);
+          if (!file.existsSync()) {
+            buf.write(full);
+            i = m1.end;
+            continue;
+          }
+        } catch (_) {
           buf.write(full);
           i = m1.end;
           continue;
         }
-        images.add(ImageRef('url', url));
-        if (keepRemoteMarkdownText) {
-          // Keep markdown so the model can see template syntax and URL.
-          buf.write(full);
-        }
+        images.add(ImageRef('path', url));
         i = m1.end;
         continue;
       }
-      // Local / relative path: only treat as image when the file exists.
-      if (!allowLocalImages) {
-        if (keepDisallowedImageText) buf.write(full);
-        i = m1.end;
-        continue;
+    }
+
+    // Single-pass: walk forward to the next newline, backtick, or `![`.
+    // Do not indexOf the remaining suffix on every line — that is O(n²)
+    // when a Markdown image sits near the end of a long document.
+    var j = i;
+    while (j < raw.length) {
+      final c = raw.codeUnitAt(j);
+      if (c == 0x0A || c == 0x60) break;
+      if (c == 0x21 && j + 1 < raw.length && raw.codeUnitAt(j + 1) == 0x5B) {
+        break;
       }
-      try {
-        final resolved = SandboxPathResolver.resolveForIo(url);
-        if (resolved == null) {
-          buf.write(full);
-          i = m1.end;
-          continue;
-        }
-        final file = File(resolved);
-        if (!file.existsSync()) {
-          // Missing local file: do NOT treat as image; keep original markdown.
-          buf.write(full);
-          i = m1.end;
-          continue;
-        }
-      } catch (_) {
-        // Any error probing the file → fall back to plain text.
-        buf.write(full);
-        i = m1.end;
-        continue;
-      }
-      images.add(ImageRef('path', url));
-      // For real local files we keep previous behavior: only attach as image, omit markdown from text.
-      i = m1.end;
+      j++;
+    }
+    if (j == i) {
+      buf.writeCharCode(raw.codeUnitAt(i));
+      i++;
       continue;
     }
-    buf.write(raw[i]);
-    i++;
+    buf.write(raw.substring(i, j));
+    i = j;
   }
   return ParsedTextAndImages(buf.toString().trim(), images);
 }

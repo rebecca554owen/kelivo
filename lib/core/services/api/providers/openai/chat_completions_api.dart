@@ -249,6 +249,7 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
   bool supportsGoogleOpenAIThoughtSignatures = false,
   bool stripReasoningContent = false,
   bool normalizeReasoningDetails = false,
+  bool skipImageParsing = false,
 }) async {
   final out = <Map<String, dynamic>>[];
   // Assistant turns cannot carry image_url/video_url; stash for the last user
@@ -538,7 +539,10 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
       continue;
     }
 
-    final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+    final hasMarkdownImages = shouldParseMarkdownImages(
+      raw,
+      skipImageParsing: skipImageParsing,
+    );
     // Semantic media detection only - custom attachment markers are not
     // recognized. Attachments arrive via structured media-path keys /
     // userMediaPaths, plus Markdown ![](...).
@@ -560,6 +564,7 @@ Future<List<Map<String, dynamic>>> buildOpenAIChatCompletionMessages(
       allowDataImages: canImageInput,
       keepRemoteMarkdownText: true,
       keepDisallowedImageText: canImageInput,
+      skipImageParsing: skipImageParsing,
     );
     if (!canImageInput) {
       outMsg['content'] = parsed.text;
@@ -725,6 +730,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
   required List<String>? userImagePaths,
   required bool canImageInput,
   required bool allowRemoteImages,
+  required bool skipImageParsing,
   required bool isClaudeUpstream,
   required bool isReasoning,
   required String effort,
@@ -787,6 +793,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsToolFollowUps({
               info.supportsGoogleOpenAIThoughtSignatures,
           stripReasoningContent: isClaudeUpstream,
           normalizeReasoningDetails: isClaudeUpstream,
+          skipImageParsing: skipImageParsing,
         ),
         'stream': true,
         if (temperature != null) 'temperature': temperature,
@@ -913,6 +920,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
   required List<String>? userImagePaths,
   required bool canImageInput,
   required bool allowRemoteImages,
+  required bool skipImageParsing,
   required bool isClaudeUpstream,
   required bool needsReasoningEcho,
   required Map<String, String>? extraHeaders,
@@ -970,6 +978,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
             info.supportsGoogleOpenAIThoughtSignatures,
         stripReasoningContent: isClaudeUpstream,
         normalizeReasoningDetails: isClaudeUpstream,
+        skipImageParsing: skipImageParsing,
       );
       reqBody.remove('stream');
       req.body = jsonEncode(reqBody);

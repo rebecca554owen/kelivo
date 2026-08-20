@@ -153,6 +153,7 @@ class ChatApiService {
     bool allowImagesApiRouting = true,
     bool ocrActive = false,
     bool builtInSearchOnly = false,
+    bool skipImageParsing = false,
   }) async* {
     final kind = ProviderConfig.classify(
       config.id,
@@ -174,6 +175,7 @@ class ChatApiService {
     final useZhipuLayoutParsing = shouldUseZhipuLayoutParsing(config, modelId);
     final unicodeSafeMessages = _sanitizeMessages(messages);
     final stripUnsupportedImageInputs =
+        !skipImageParsing &&
         !ocrActive &&
         !useOpenAIImagesApi &&
         !useZhipuLayoutParsing &&
@@ -224,6 +226,7 @@ class ChatApiService {
             extraBody: extraBody,
             stream: stream,
             builtInSearchOnly: builtInSearchOnly,
+            skipImageParsing: skipImageParsing,
           );
         } else {
           yield* sendOpenAIChatCompletionsStream(
@@ -242,6 +245,7 @@ class ChatApiService {
             extraBody: extraBody,
             stream: stream,
             builtInSearchOnly: builtInSearchOnly,
+            skipImageParsing: skipImageParsing,
           );
         }
       } else if (kind == ProviderKind.claude) {
@@ -260,6 +264,7 @@ class ChatApiService {
           extraHeaders: extraHeaders,
           extraBody: extraBody,
           stream: stream,
+          skipImageParsing: skipImageParsing,
         );
       } else if (kind == ProviderKind.google) {
         final isVertex = config.vertexAI == true;
@@ -281,6 +286,7 @@ class ChatApiService {
             extraHeaders: extraHeaders,
             extraBody: extraBody,
             stream: stream,
+            skipImageParsing: skipImageParsing,
           );
         } else if (isVertex) {
           yield* sendGoogleVertexStream(
@@ -298,6 +304,7 @@ class ChatApiService {
             extraHeaders: extraHeaders,
             extraBody: extraBody,
             stream: stream,
+            skipImageParsing: skipImageParsing,
           );
         } else {
           yield* sendGoogleGeminiStream(
@@ -315,6 +322,7 @@ class ChatApiService {
             extraHeaders: extraHeaders,
             extraBody: extraBody,
             stream: stream,
+            skipImageParsing: skipImageParsing,
           );
         }
       }
@@ -347,6 +355,7 @@ class ChatApiService {
     bool allowImagesApiRouting = true,
     bool ocrActive = false,
     bool builtInSearchOnly = false,
+    bool skipImageParsing = false,
   }) async {
     final handler = StreamChunkHandler();
     await for (final chunk in sendMessageStream(
@@ -367,6 +376,7 @@ class ChatApiService {
       allowImagesApiRouting: allowImagesApiRouting,
       ocrActive: ocrActive,
       builtInSearchOnly: builtInSearchOnly,
+      skipImageParsing: skipImageParsing,
     )) {
       handler.handle(chunk);
     }
@@ -381,6 +391,7 @@ class ChatApiService {
     Map<String, String>? extraHeaders,
     Map<String, dynamic>? extraBody,
     int? thinkingBudget,
+    bool skipImageParsing = false,
   }) async {
     final result = await generateMessage(
       config: config,
@@ -394,6 +405,8 @@ class ChatApiService {
       // Utility calls only ever want search; never image generation or a
       // code interpreter.
       builtInSearchOnly: true,
+      skipImageParsing: skipImageParsing,
+      allowImagesApiRouting: !skipImageParsing,
     );
     return result.text;
   }

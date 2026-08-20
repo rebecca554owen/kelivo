@@ -209,6 +209,7 @@ Stream<StreamChunk> sendGoogleGeminiStream(
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
+  bool skipImageParsing = false,
 }) {
   final cfg = config.copyWith(vertexAI: false);
   return sendGoogleStream(
@@ -226,6 +227,7 @@ Stream<StreamChunk> sendGoogleGeminiStream(
     extraHeaders: extraHeaders,
     extraBody: extraBody,
     stream: stream,
+    skipImageParsing: skipImageParsing,
   );
 }
 

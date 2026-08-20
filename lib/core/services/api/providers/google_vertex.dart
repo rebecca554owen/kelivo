@@ -37,6 +37,7 @@ Stream<StreamChunk> sendGoogleVertexStream(
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
+  bool skipImageParsing = false,
 }) {
   final cfg = config.copyWith(vertexAI: true);
   return sendGoogleStream(
@@ -54,6 +55,7 @@ Stream<StreamChunk> sendGoogleVertexStream(
     extraHeaders: extraHeaders,
     extraBody: extraBody,
     stream: stream,
+    skipImageParsing: skipImageParsing,
   );
 }
 
@@ -173,6 +175,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
+  bool skipImageParsing = false,
 }) async* {
   final upstreamId = apiModelId(config, modelId);
   final loc = (config.location ?? 'us-central1').trim();
@@ -251,7 +254,10 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
     // Semantic media detection only - custom attachment markers are not
     // recognized. Attachments arrive via structured media-path keys /
     // userImagePaths, plus Markdown ![](...).
-    final hasMarkdownImages = raw.contains('![') && raw.contains('](');
+    final hasMarkdownImages = shouldParseMarkdownImages(
+      raw,
+      skipImageParsing: skipImageParsing,
+    );
     final internalMediaRefs = parseInternalMediaRefs(
       m[multimodalInternalMediaPathsKey],
     );
@@ -339,6 +345,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
         allowRemoteImages: true,
         allowLocalImages: true,
         keepRemoteMarkdownText: true,
+        skipImageParsing: skipImageParsing,
       );
       if (parsed.text.isNotEmpty) {
         parts.add({'type': 'text', 'text': parsed.text});

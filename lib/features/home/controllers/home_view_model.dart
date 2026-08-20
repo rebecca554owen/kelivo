@@ -10,9 +10,11 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/model_override_payload_parser.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_trace.dart';
+import '../../../utils/utf16_safe_cut.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_builder_service.dart';
@@ -1123,12 +1125,7 @@ class HomeViewModel extends ChangeNotifier {
       );
     }
 
-    // Build conversation text for compression
-    final joined = buildConversationTextForCompression(summarizeInput);
-    if (joined.trim().isEmpty) return 'no_messages';
-
-    final content = buildCompressContextContent(joined, options);
-    // Resolve model: compress model → summary model → title model → assistant model → global default
+    // Resolve model first so the chunk budget can follow its context window.
     final resolvedModel = resolveCompressContextModel(
       compressProvider: settings.compressModelProvider,
       compressModelId: settings.compressModelId,
@@ -1150,18 +1147,94 @@ class HomeViewModel extends ChangeNotifier {
       assistant?.thinkingBudget,
     );
 
-    // Build compression prompt from settings template
-    final prompt = settings.compressPrompt
-        .replaceAll('{content}', content)
-        .replaceAll('{locale}', locale);
+    var stage = 'prepare';
+    var inputLength = summarizeInput.fold<int>(
+      0,
+      (sum, message) => sum + message.content.length,
+    );
+
+    Future<String> summarizeContent(String content, String label) async {
+      return summarizeWithContextRetry(
+        content,
+        summarize: (text) async {
+          stage = label;
+          inputLength = text.length;
+          final prompt = settings.compressPrompt
+              .replaceAll('{content}', text)
+              .replaceAll('{locale}', locale);
+          return (await ChatApiService.generateText(
+            config: cfg,
+            modelId: mdlId,
+            prompt: prompt,
+            thinkingBudget: budget,
+            skipImageParsing: true,
+          )).trim();
+        },
+        onSplitRetry: (e, st, text) {
+          FlutterLogger.log(
+            '[CompressContext] context-length split-retry at $stage '
+            '(inputChars=${text.length}): $e\n$st',
+            tag: 'HomeViewModel',
+          );
+        },
+      );
+    }
 
     try {
-      final summary = (await ChatApiService.generateText(
-        config: cfg,
-        modelId: mdlId,
-        prompt: prompt,
-        thinkingBudget: budget,
-      )).trim();
+      stage = 'prepare';
+      final requestChars = compressRequestCharBudget(
+        contextWindowTokens: readModelContextWindowTokens(
+          ModelOverridePayloadParser.modelOverride(cfg.modelOverrides, mdlId),
+        ),
+      );
+      stage = 'chunk';
+      final chunks = buildCompressRequestContents(
+        summarizeInput,
+        options,
+        safeRequestChars: requestChars,
+      );
+      if (chunks.isEmpty) return 'no_messages';
+      inputLength = chunks.fold<int>(0, (sum, chunk) => sum + chunk.length);
+
+      String summary;
+      if (chunks.length == 1) {
+        summary = await summarizeContent(chunks.single, 'generate');
+      } else {
+        final partials = <String>[];
+        for (var i = 0; i < chunks.length; i++) {
+          final part = await summarizeContent(
+            chunks[i],
+            'chunk ${i + 1}/${chunks.length}',
+          );
+          if (part.isEmpty) return 'empty_summary';
+          partials.add(part);
+        }
+        var pending = partials;
+        var mergeRound = 0;
+        const maxMergeRounds = 8;
+        while (pending.length > 1 && mergeRound < maxMergeRounds) {
+          mergeRound++;
+          final packed = chunkPlainTexts(pending, maxChars: requestChars);
+          final next = <String>[];
+          for (var i = 0; i < packed.length; i++) {
+            final part = await summarizeContent(
+              packed[i],
+              'merge $mergeRound (${i + 1}/${packed.length})',
+            );
+            if (part.isEmpty) return 'empty_summary';
+            next.add(part);
+          }
+          pending = next;
+        }
+        if (pending.length > 1) {
+          summary = await summarizeContent(
+            truncateHeadUtf16Safe(pending.join('\n\n'), requestChars),
+            'merge-truncate',
+          );
+        } else {
+          summary = pending.single;
+        }
+      }
 
       if (summary.isEmpty) return 'empty_summary';
 
@@ -1214,7 +1287,11 @@ class HomeViewModel extends ChangeNotifier {
       onScrollToBottom?.call();
 
       return null; // success
-    } catch (e) {
+    } catch (e, st) {
+      FlutterLogger.log(
+        '[CompressContext] failed at $stage (inputChars=$inputLength): $e\n$st',
+        tag: 'HomeViewModel',
+      );
       return e.toString();
     }
   }
@@ -1415,6 +1492,7 @@ class HomeViewModel extends ChangeNotifier {
         modelId: mdlId,
         prompt: prompt,
         thinkingBudget: budget,
+        skipImageParsing: true,
       )).trim();
       if (title.isNotEmpty) {
         await _chatService.renameConversation(convo.id, title);
@@ -1555,6 +1633,7 @@ class HomeViewModel extends ChangeNotifier {
         modelId: mdlId,
         prompt: prompt,
         thinkingBudget: budget,
+        skipImageParsing: true,
       )).trim();
       traceStep?.appendResponse(summary);
 

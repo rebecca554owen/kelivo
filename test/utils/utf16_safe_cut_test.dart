@@ -86,6 +86,60 @@ void main() {
       expect(() => jsonEncode(out), returnsNormally);
     });
   });
+
+  group('splitUtf16SafeHalves', () {
+    test('splits ASCII at the midpoint and covers the original', () {
+      final halves = splitUtf16SafeHalves('abcdefgh');
+      expect(halves, isNotNull);
+      expect(halves!.left, 'abcd');
+      expect(halves.right, 'efgh');
+      expect('${halves.left}${halves.right}', 'abcdefgh');
+    });
+
+    test('does not tear a surrogate pair at a naive length~/2 cut', () {
+      // 'x' + 20 emoji = 41 units; mid = 20 falls on the low surrogate of
+      // the 10th emoji. Naive substring(0, 20) would leave a lone high.
+      final text = 'x${'😀' * 20}';
+      expect(text.length ~/ 2, 20);
+      final naive = text.substring(0, text.length ~/ 2);
+      final naiveLast = naive.codeUnitAt(naive.length - 1);
+      expect(naiveLast >= 0xD800 && naiveLast <= 0xDBFF, isTrue);
+
+      final halves = splitUtf16SafeHalves(text);
+      expect(halves, isNotNull);
+      expect('${halves!.left}${halves.right}', text);
+      expectValidUtf16(halves.left);
+      expectValidUtf16(halves.right);
+      expect(() => jsonEncode(halves.left), returnsNormally);
+      expect(() => jsonEncode(halves.right), returnsNormally);
+    });
+
+    test('returns null when a single surrogate pair cannot be split', () {
+      expect(splitUtf16SafeHalves('😀'), isNull);
+      expect(splitUtf16SafeHalves('a'), isNull);
+      expect(splitUtf16SafeHalves(''), isNull);
+    });
+  });
+
+  group('splitUtf16SafeChunks', () {
+    test('keeps short values as a single chunk', () {
+      expect(splitUtf16SafeChunks('hello', 100), ['hello']);
+    });
+
+    test('splits ASCII on the budget', () {
+      expect(splitUtf16SafeChunks('abcdef', 2), ['ab', 'cd', 'ef']);
+    });
+
+    test('never splits a surrogate pair', () {
+      const emoji = '😀';
+      final chunks = splitUtf16SafeChunks('aa${emoji}bb', 3);
+      expect(chunks.join(), 'aa${emoji}bb');
+      for (final chunk in chunks) {
+        expectValidUtf16(chunk);
+        expect(() => jsonEncode(chunk), returnsNormally);
+      }
+    });
+  });
 }
 
 void expectValidUtf16(String value) {

@@ -59,5 +59,47 @@ String truncateHeadTailUtf16Safe(
       '${value.substring(tailStart)}';
 }
 
+/// Splits [value] into chunks of at most [maxLength] code units.
+/// A UTF-16 surrogate pair is never torn; a pair that would straddle a
+/// cut is kept whole, so a chunk may be one unit over [maxLength] when
+/// [maxLength] is 1.
+List<String> splitUtf16SafeChunks(String value, int maxLength) {
+  if (maxLength <= 0) return value.isEmpty ? const <String>[] : [value];
+  if (value.length <= maxLength) return [value];
+  final out = <String>[];
+  var start = 0;
+  while (start < value.length) {
+    var end = start + maxLength;
+    if (end >= value.length) {
+      out.add(value.substring(start));
+      break;
+    }
+    end = utf16SafeHeadEnd(value, end);
+    if (end <= start) {
+      end = start + 2 <= value.length ? start + 2 : value.length;
+    }
+    out.add(value.substring(start, end));
+    start = end;
+  }
+  return out;
+}
+
+/// Split [value] at the midpoint without tearing a UTF-16 surrogate pair.
+///
+/// Unlike cutting with [utf16SafeHeadEnd] and [utf16SafeTailStart]
+/// independently, both halves cover the original string — the pair that
+/// straddles the midpoint is kept wholly in one half, never dropped.
+/// Returns null when the string cannot be split into two non-empty parts.
+({String left, String right})? splitUtf16SafeHalves(String value) {
+  if (value.length < 2) return null;
+  final mid = value.length ~/ 2;
+  var cut = utf16SafeHeadEnd(value, mid);
+  if (cut <= 0 || cut >= value.length) {
+    cut = utf16SafeTailStart(value, mid);
+  }
+  if (cut <= 0 || cut >= value.length) return null;
+  return (left: value.substring(0, cut), right: value.substring(cut));
+}
+
 bool _isHighSurrogate(int codeUnit) => codeUnit >= 0xD800 && codeUnit <= 0xDBFF;
 bool _isLowSurrogate(int codeUnit) => codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;

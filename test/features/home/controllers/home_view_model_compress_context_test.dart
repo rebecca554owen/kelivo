@@ -362,6 +362,205 @@ void main() {
     });
   });
 
+  group('buildBoundedConversationText', () {
+    test('start 与先拼接再截断在常规长度上语义一致', () {
+      final messages = [
+        _message(id: 'u1', role: 'user', content: 'first round'),
+        _message(id: 'a1', role: 'assistant', content: 'early answer'),
+        _message(id: 'u2', role: 'user', content: 'x' * 7000),
+        _message(id: 'a2', role: 'assistant', content: 'thirtieth round'),
+      ];
+      const options = CompressContextOptions(
+        mode: CompressContextLimitMode.start,
+        maxChars: 6000,
+      );
+      final joined = buildConversationTextForCompression(messages);
+
+      expect(
+        buildBoundedConversationText(
+          messages,
+          mode: CompressContextLimitMode.start,
+          maxChars: 6000,
+        ),
+        buildCompressContextContent(joined, options),
+      );
+    });
+
+    test('recent 与先拼接再截断在常规长度上语义一致', () {
+      final messages = [
+        _message(id: 'u1', role: 'user', content: 'first round'),
+        _message(id: 'a1', role: 'assistant', content: 'early answer'),
+        _message(id: 'u2', role: 'user', content: 'x' * 7000),
+        _message(id: 'a2', role: 'assistant', content: 'thirtieth round'),
+      ];
+      const options = CompressContextOptions(
+        mode: CompressContextLimitMode.recent,
+        maxChars: 6000,
+      );
+      final joined = buildConversationTextForCompression(messages);
+
+      expect(
+        buildBoundedConversationText(
+          messages,
+          mode: CompressContextLimitMode.recent,
+          maxChars: 6000,
+        ),
+        buildCompressContextContent(joined, options),
+      );
+    });
+
+    test('超长历史增量截断且不超过窗口，无需先拼接全文', () {
+      final messages = [
+        for (var i = 0; i < 200; i++)
+          _message(
+            id: 'm$i',
+            role: i.isEven ? 'user' : 'assistant',
+            content: 'block-$i ${'x' * 500}',
+          ),
+      ];
+
+      final start = buildBoundedConversationText(
+        messages,
+        mode: CompressContextLimitMode.start,
+        maxChars: 6000,
+      );
+      expect(start.length, lessThanOrEqualTo(6000));
+      expect(start, contains('block-0'));
+      expect(start, isNot(contains('block-199')));
+
+      final recent = buildBoundedConversationText(
+        messages,
+        mode: CompressContextLimitMode.recent,
+        maxChars: 6000,
+      );
+      expect(recent.length, lessThanOrEqualTo(6000));
+      expect(recent, contains('block-199'));
+      expect(recent, isNot(contains('block-0')));
+    });
+  });
+
+  group('chunkMessagesForCompression', () {
+    test('超过预算的多条消息按消息边界拆成多块', () {
+      final messages = [
+        _message(id: 'u1', role: 'user', content: 'aaa'),
+        _message(id: 'a1', role: 'assistant', content: 'bbb'),
+        _message(id: 'u2', role: 'user', content: 'ccc'),
+      ];
+
+      final chunks = chunkMessagesForCompression(messages, maxChars: 20);
+
+      expect(chunks, hasLength(greaterThan(1)));
+      expect(chunks.every((chunk) => chunk.length <= 20), isTrue);
+      expect(chunks.join('\n\n'), contains('User: aaa'));
+      expect(chunks.join('\n\n'), contains('User: ccc'));
+    });
+
+    test('单条超长消息按 UTF-16 安全切分且不劈开 emoji', () {
+      const emoji = '😀';
+      final messages = [
+        _message(id: 'u1', role: 'user', content: 'aa$emoji${'b' * 30}'),
+      ];
+      final line = conversationLineForCompression(messages.single)!;
+
+      final chunks = chunkMessagesForCompression(messages, maxChars: 9);
+
+      expect(chunks, hasLength(greaterThan(1)));
+      expect(chunks.join(), line);
+      expect(chunks.join(), contains(emoji));
+      for (final chunk in chunks) {
+        expect(() => jsonEncode(chunk), returnsNormally);
+      }
+    });
+  });
+
+  group('buildCompressRequestContents', () {
+    test('unlimited 超过安全上限时按消息边界分块且不丢内容', () {
+      final messages = [
+        for (var i = 0; i < 5; i++)
+          _message(id: 'u$i', role: 'user', content: 'msg-$i ${'x' * 40}'),
+      ];
+
+      final chunks = buildCompressRequestContents(
+        messages,
+        const CompressContextOptions(mode: CompressContextLimitMode.unlimited),
+        safeRequestChars: 50,
+      );
+
+      expect(chunks, hasLength(greaterThan(1)));
+      expect(chunks.every((chunk) => chunk.length <= 50), isTrue);
+      expect(chunks.join('\n\n'), contains('msg-0'));
+      expect(chunks.join('\n\n'), contains('msg-4'));
+    });
+
+    test('keepRecent 旧侧同样受安全上限约束', () {
+      final messages = [
+        for (var i = 0; i < 4; i++)
+          _message(id: 'u$i', role: 'user', content: 'old-$i ${'y' * 40}'),
+      ];
+
+      final chunks = buildCompressRequestContents(
+        messages,
+        const CompressContextOptions(
+          mode: CompressContextLimitMode.keepRecent,
+          keepUserMessages: 1,
+        ),
+        safeRequestChars: 50,
+      );
+
+      expect(chunks, hasLength(greaterThan(1)));
+      expect(chunks.join('\n\n'), contains('old-0'));
+    });
+  });
+
+  group('compressRequestCharBudget', () {
+    test('unknown context uses the conservative 32k default', () {
+      expect(compressRequestCharBudget(), 35840);
+      expect(compressRequestCharBudget(contextWindowTokens: 0), 35840);
+      expect(compressRequestCharBudget(contextWindowTokens: -1), 35840);
+    });
+
+    test('32k window stays at window-minus-reserves', () {
+      const window = 32000;
+      final budget = compressRequestCharBudget(contextWindowTokens: window);
+      final maxInputTokens =
+          (window * (1 - CompressContextOptions.contextReserveFraction))
+              .floor();
+
+      expect(budget, 35840);
+      expect(budget, lessThan(window * CompressContextOptions.charsPerToken));
+      expect(
+        (budget / CompressContextOptions.charsPerToken).ceil(),
+        lessThanOrEqualTo(maxInputTokens),
+      );
+    });
+
+    test('128k+ is larger than the 32k default but still hard-capped', () {
+      final budget128k = compressRequestCharBudget(contextWindowTokens: 128000);
+      final budget1m = compressRequestCharBudget(contextWindowTokens: 1000000);
+
+      expect(budget128k, greaterThan(compressRequestCharBudget()));
+      expect(budget128k, CompressContextOptions.safeRequestChars);
+      expect(budget1m, CompressContextOptions.safeRequestChars);
+      expect(
+        budget128k,
+        lessThanOrEqualTo(CompressContextOptions.safeRequestChars),
+      );
+    });
+  });
+
+  group('readModelContextWindowTokens', () {
+    test('reads common override keys and ignores junk', () {
+      expect(readModelContextWindowTokens({'contextWindow': 128000}), 128000);
+      expect(
+        readModelContextWindowTokens({'max_context_tokens': '64000'}),
+        64000,
+      );
+      expect(readModelContextWindowTokens({'contextLength': 0}), isNull);
+      expect(readModelContextWindowTokens(const {}), isNull);
+      expect(readModelContextWindowTokens(null), isNull);
+    });
+  });
+
   group('resolveCompressContextModel', () {
     test('优先使用显式压缩模型', () {
       final resolved = resolveCompressContextModel(
@@ -425,4 +624,174 @@ void main() {
       expect(resolved.modelId, isNull);
     });
   });
+
+  group('isContextLengthError', () {
+    test('matches likely input-token overflow phrases', () {
+      const overflowing = <String>[
+        'HTTP 400: context_length_exceeded',
+        "This model's maximum context length is 8192 tokens",
+        'The request exceeds the context window',
+        'max context size exceeded',
+        'too many tokens in the prompt',
+        'prompt is too long: 40000 tokens > 32000 maximum',
+        'prompt too long',
+        'input is too long',
+        'input too long for this model',
+        'Please reduce the length of the messages',
+        'Please reduce the length of the prompt',
+        'The input token count exceeds the maximum number of tokens allowed',
+        'HttpException: max_tokens exceeded for this request',
+      ];
+      for (final message in overflowing) {
+        expect(
+          isContextLengthError(Exception(message)),
+          isTrue,
+          reason: message,
+        );
+      }
+    });
+
+    test('does not match unrelated or max_tokens config errors', () {
+      const unrelated = <String>[
+        '401 unauthorized',
+        'rate limit exceeded',
+        'empty_summary',
+        'max_tokens is required',
+        'max_tokens must be at least 1',
+        'invalid api key',
+        'network timeout',
+      ];
+      for (final message in unrelated) {
+        expect(
+          isContextLengthError(Exception(message)),
+          isFalse,
+          reason: message,
+        );
+      }
+    });
+  });
+
+  group('summarizeWithContextRetry', () {
+    test('splits on a context error, retries each half, then merges', () async {
+      final calls = <String>[];
+      final result = await summarizeWithContextRetry(
+        'A' * 32,
+        minSplitChars: 4,
+        summarize: (text) async {
+          calls.add(text);
+          if (text.contains('A') && text.length > 16) {
+            throw Exception('maximum context length exceeded');
+          }
+          if (text.contains('S:')) return 'M';
+          return 'S:${text.length}';
+        },
+      );
+
+      expect(calls, ['A' * 32, 'A' * 16, 'A' * 16, 'S:16\n\nS:16']);
+      expect(result, 'M');
+    });
+
+    test('UTF-16 halves stay valid when naive mid would tear a pair', () async {
+      final text = 'x${'😀' * 20}';
+      expect(text.length ~/ 2, 20);
+      final naive = text.substring(0, text.length ~/ 2);
+      final naiveLast = naive.codeUnitAt(naive.length - 1);
+      expect(naiveLast >= 0xD800 && naiveLast <= 0xDBFF, isTrue);
+
+      final seen = <String>[];
+      final result = await summarizeWithContextRetry(
+        text,
+        minSplitChars: 4,
+        summarize: (chunk) async {
+          seen.add(chunk);
+          _expectValidUtf16(chunk);
+          if (chunk == text) {
+            throw Exception('context_length_exceeded');
+          }
+          return 'ok';
+        },
+      );
+
+      expect(seen.length, 4);
+      expect(seen.first, text);
+      expect('${seen[1]}${seen[2]}', text);
+      expect(result, 'ok');
+    });
+
+    test('does not split-retry non-context errors', () async {
+      var calls = 0;
+      await expectLater(
+        summarizeWithContextRetry(
+          'A' * 32,
+          minSplitChars: 4,
+          summarize: (text) async {
+            calls++;
+            throw Exception('401 unauthorized');
+          },
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains('401 unauthorized'),
+          ),
+        ),
+      );
+      expect(calls, 1);
+    });
+
+    test('stops after the split budget instead of looping', () async {
+      var calls = 0;
+      var splits = 0;
+      await expectLater(
+        summarizeWithContextRetry(
+          'A' * 32,
+          maxSplits: 2,
+          minSplitChars: 4,
+          onSplitRetry: (e, st, text) => splits++,
+          summarize: (text) async {
+            calls++;
+            throw Exception('prompt is too long');
+          },
+        ),
+        throwsA(isA<Exception>()),
+      );
+      expect(splits, 2);
+      expect(calls, 3);
+    });
+
+    test('does not split when a half would be below minSplitChars', () async {
+      var calls = 0;
+      await expectLater(
+        summarizeWithContextRetry(
+          'A' * 20,
+          minSplitChars: 16,
+          summarize: (text) async {
+            calls++;
+            throw Exception('too many tokens');
+          },
+        ),
+        throwsA(isA<Exception>()),
+      );
+      expect(calls, 1);
+    });
+  });
+}
+
+void _expectValidUtf16(String value) {
+  for (var i = 0; i < value.length; i++) {
+    final codeUnit = value.codeUnitAt(i);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      expect(
+        i + 1 < value.length &&
+            value.codeUnitAt(i + 1) >= 0xDC00 &&
+            value.codeUnitAt(i + 1) <= 0xDFFF,
+        isTrue,
+        reason: 'lone high surrogate at $i',
+      );
+      i++;
+    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+      fail('lone low surrogate at $i');
+    }
+  }
 }

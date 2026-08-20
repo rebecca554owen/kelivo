@@ -24,6 +24,7 @@ Stream<StreamChunk> sendOpenAIChatCompletionsStream(
   Map<String, dynamic>? extraBody,
   bool stream = true,
   bool builtInSearchOnly = false,
+  bool skipImageParsing = false,
 }) {
   final cfg = config.copyWith(useResponseApi: false);
   return sendOpenAIStream(
@@ -42,5 +43,6 @@ Stream<StreamChunk> sendOpenAIChatCompletionsStream(
     extraBody: extraBody,
     stream: stream,
     builtInSearchOnly: builtInSearchOnly,
+    skipImageParsing: skipImageParsing,
   );
 }
