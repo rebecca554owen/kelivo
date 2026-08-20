@@ -279,6 +279,36 @@ void main() {
       },
     );
 
+    test(
+      'reacquires after an engine restart left the lock descriptor open',
+      () async {
+        final leaseDirectory = Directory(
+          p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
+        );
+        await leaseDirectory.create(recursive: true);
+        final appDataPath = appData.path;
+        // A hot restart, and an Android activity recreation, run main() again
+        // inside the surviving process: the previous root isolate is gone but
+        // its lock descriptor and its owner marker are both left behind.
+        final acquired = await Isolate.run(() async {
+          final previous = await RestoreBusinessLease.acquire(
+            appDataDirectory: Directory(appDataPath),
+          );
+          return previous.processId;
+        });
+        expect(acquired, pid);
+        final leftoverOwner = File(p.join(leaseDirectory.path, 'owner_$pid'));
+        expect(await leftoverOwner.exists(), isTrue);
+
+        final lease = await RestoreBusinessLease.acquire(
+          appDataDirectory: appData,
+        );
+        addTearDown(lease.close);
+        expect(lease.isClosed, isFalse);
+        expect(lease.processId, pid);
+      },
+    );
+
     test('rejects a duplicate acquire from another isolate', () async {
       final lease = await RestoreBusinessLease.acquire(
         appDataDirectory: appData,

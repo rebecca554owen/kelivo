@@ -114,8 +114,9 @@ final class RestoreBusinessLease {
         p.join(leaseDirectory.path, '$_processOwnerPrefix$pid'),
       );
       // A predecessor engine in this process is retired before the lock is
-      // contended, because its descriptor may outlive its isolate by a moment.
-      final hadPredecessor = await _retireProcessPredecessor(
+      // taken. The record lock cannot see it: it is owned by this process, so
+      // the predecessor's still-open descriptor never blocks this isolate.
+      await _retireProcessPredecessor(
         ownerFile: processOwnerFile,
         registryKey: registryKey,
         grace: sameProcessOwnerGrace,
@@ -136,14 +137,9 @@ final class RestoreBusinessLease {
         throw StateError('restore_business_lease_lock_file');
       }
       await resolvedDurability.restrictFile(lockFile);
-      lock = await _lockLeaseFile(
-        lockFile: lockFile,
-        registryKey: registryKey,
-        // Only a retired predecessor justifies waiting; a descriptor held by
-        // any other process is answered immediately.
-        retryUntil: hadPredecessor ? sameProcessOwnerGrace : Duration.zero,
-        elapsed: elapsed,
-      );
+      lock =
+          await RestoreLeaseLock.tryAcquire(lockFile) ??
+          (throw RestoreBusinessLeaseUnavailable(registryKey));
 
       // The marker is published only under the lock, so no other process can
       // mistake a live marker for a stale one while its owner is still racing
@@ -190,17 +186,16 @@ final class RestoreBusinessLease {
 
   /// Retires an owner marker left by an earlier engine in this same process.
   ///
-  /// Returns whether such a marker had to be retired. Throws
-  /// [RestoreBusinessLeaseUnavailable] when the predecessor is still answering
-  /// its probe once [grace] elapsed.
-  static Future<bool> _retireProcessPredecessor({
+  /// Throws [RestoreBusinessLeaseUnavailable] when the predecessor is still
+  /// answering its probe once [grace] elapsed.
+  static Future<void> _retireProcessPredecessor({
     required File ownerFile,
     required String registryKey,
     required Duration grace,
     required Stopwatch elapsed,
   }) async {
     final type = await FileSystemEntity.type(ownerFile.path, followLinks: false);
-    if (type == FileSystemEntityType.notFound) return false;
+    if (type == FileSystemEntityType.notFound) return;
     if (type != FileSystemEntityType.file) {
       throw StateError('restore_business_lease_process_owner');
     }
@@ -214,7 +209,6 @@ final class RestoreBusinessLease {
     // The marker is named after this process, so no other process may own it,
     // and retiring it outside the lock cannot disturb another instance.
     await _deleteProcessOwner(ownerFile);
-    return true;
   }
 
   /// Waits for a same-process owner marker to stop answering its probe.
@@ -236,22 +230,6 @@ final class RestoreBusinessLease {
         return false;
       }
       if (elapsed.elapsed >= grace) return true;
-      await Future<void>.delayed(_sameProcessOwnerPoll);
-    }
-  }
-
-  static Future<RestoreLeaseLock> _lockLeaseFile({
-    required File lockFile,
-    required String registryKey,
-    required Duration retryUntil,
-    required Stopwatch elapsed,
-  }) async {
-    while (true) {
-      final lock = await RestoreLeaseLock.tryAcquire(lockFile);
-      if (lock != null) return lock;
-      if (elapsed.elapsed >= retryUntil) {
-        throw RestoreBusinessLeaseUnavailable(registryKey);
-      }
       await Future<void>.delayed(_sameProcessOwnerPoll);
     }
   }

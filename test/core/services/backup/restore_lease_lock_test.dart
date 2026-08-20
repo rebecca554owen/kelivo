@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -22,33 +23,26 @@ void main() {
       if (await root.exists()) await root.delete(recursive: true);
     });
 
-    test('excludes a second descriptor inside this process', () async {
-      final held = await RestoreLeaseLock.tryAcquire(lockFile);
-      expect(held, isNotNull);
-      addTearDown(held!.release);
+    test('reacquires after a previous isolate left its descriptor open', () async {
+      final leakedPath = lockFile.path;
+      // A descriptor is not closed when its isolate goes away, which is what a
+      // hot restart and an Android engine recreation both leave behind.
+      await Isolate.run(() async {
+        final leaked = await RestoreLeaseLock.tryAcquire(File(leakedPath));
+        return leaked != null;
+      });
 
-      expect(await RestoreLeaseLock.tryAcquire(lockFile), isNull);
-
-      await held.release();
-      final reacquired = await RestoreLeaseLock.tryAcquire(lockFile);
-      expect(reacquired, isNotNull);
-      await reacquired!.release();
+      final lock = await RestoreLeaseLock.tryAcquire(lockFile);
+      expect(
+        lock,
+        isNotNull,
+        reason: 'a descriptor-scoped lock would lock this process out of its '
+            'own data until the process dies',
+      );
+      await lock!.release();
     });
 
-    test('survives an unrelated descriptor closing in this process', () async {
-      final held = await RestoreLeaseLock.tryAcquire(lockFile);
-      expect(held, isNotNull);
-      addTearDown(held!.release);
-
-      // A POSIX record lock would be dropped here, because closing any
-      // descriptor of the file releases every record lock the process holds.
-      final unrelated = await lockFile.open(mode: FileMode.append);
-      await unrelated.close();
-
-      expect(await RestoreLeaseLock.tryAcquire(lockFile), isNull);
-    });
-
-    test('release is idempotent', () async {
+    test('release is idempotent and allows reacquire', () async {
       final held = await RestoreLeaseLock.tryAcquire(lockFile);
       expect(held, isNotNull);
       await held!.release();
@@ -58,18 +52,5 @@ void main() {
       expect(reacquired, isNotNull);
       await reacquired!.release();
     });
-
-    test(
-      'binds the description-scoped lock on this platform',
-      () async {
-        final held = await RestoreLeaseLock.tryAcquire(lockFile);
-        expect(held, isNotNull);
-        addTearDown(held!.release);
-        expect(held.isDescriptionScoped, isTrue);
-      },
-      skip: Platform.isWindows
-          ? 'Windows handle locks use the dart:io path.'
-          : false,
-    );
   });
 }

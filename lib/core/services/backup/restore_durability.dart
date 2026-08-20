@@ -4,8 +4,6 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
-import 'posix_syscalls.dart';
-
 abstract interface class RestoreDurability {
   Future<void> restrictFile(File file);
 
@@ -71,13 +69,16 @@ final class _PosixRestoreDurability implements RestoreDurability {
     _close = _library.lookupFunction<_FdCallNative, _FdCallDart>('close');
     _fcntl = _library.lookupFunction<_FcntlNative, _FcntlDart>('fcntl');
     _chmod = _library.lookupFunction<_ChmodNative, _ChmodDart>('chmod');
-    _errno = _library.lookupFunction<_ErrnoNative, _ErrnoDart>(
-      PosixSyscalls.errnoSymbol,
-    );
+    final errnoSymbol = Platform.isAndroid
+        ? '__errno'
+        : _isApple
+        ? '__error'
+        : '__errno_location';
+    _errno = _library.lookupFunction<_ErrnoNative, _ErrnoDart>(errnoSymbol);
   }
 
-  static const _eintr = PosixSyscalls.eintr;
-  static const _oReadWrite = PosixSyscalls.oReadWrite;
+  static const _eintr = 4;
+  static const _oReadWrite = 2;
   static const _fFullFsync = 51;
 
   final DynamicLibrary _library;
@@ -89,9 +90,23 @@ final class _PosixRestoreDurability implements RestoreDurability {
   late final _ChmodDart _chmod;
   late final _ErrnoDart _errno;
 
-  int get _oDirectory => PosixSyscalls.oDirectory;
-  int get _oNoFollow => PosixSyscalls.oNoFollow;
-  int get _oCloseOnExec => PosixSyscalls.oCloseOnExec;
+  // Android ARM uses architecture-specific O_DIRECTORY/O_NOFOLLOW values.
+  bool get _usesAndroidArmOpenFlags {
+    final abi = Abi.current();
+    return abi == Abi.androidArm || abi == Abi.androidArm64;
+  }
+
+  int get _oDirectory => _isApple
+      ? 0x00100000
+      : _usesAndroidArmOpenFlags
+      ? 0x00004000
+      : 0x00010000;
+  int get _oNoFollow => _isApple
+      ? 0x00000100
+      : _usesAndroidArmOpenFlags
+      ? 0x00008000
+      : 0x00020000;
+  int get _oCloseOnExec => _isApple ? 0x01000000 : 0x00080000;
   int get _lastError => _errno().value;
 
   @override
