@@ -57,12 +57,12 @@ class FileUploadService {
     for (final f in files) {
       final sourceName = f.name.isNotEmpty ? f.name : f.path;
       final savedPath = isImageExtension(sourceName) && f.path.isNotEmpty
-          ? await ImageCompressor.compressToUploadDir(
+          ? (await ImageCompressor.compressToUploadDir(
               f.path,
               dir,
               compressConfig,
-            )
-          : await FileImportHelper.copyXFile(f, dir, context);
+            ))?.path
+          : await FileImportHelper.copyXFile(f, dir);
       out.add(savedPath);
     }
     return out;

@@ -666,6 +666,57 @@ void main() {
     focusNode.dispose();
   });
 
+  testWidgets('丢弃复用的已有上传时不删除该文件', (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+
+    late File source;
+    await tester.runAsync(() async {
+      source = await writeUserImage('reused_user.png');
+      mediaController.enqueueImages(
+        [source.path],
+        _config,
+        deleteSourcesAfterProcessing: false,
+      );
+    });
+    expect(
+      await pumpUntil(tester, () => !mediaController.hasUnreadyImages),
+      isTrue,
+      reason: 'image processing did not finish in time',
+    );
+    final stored = File(mediaController.snapshotInput('').imagePaths.single);
+    expect(await fileExists(tester, stored), isTrue);
+    mediaController.clearImages();
+
+    // The same picture again resolves to the stored upload, which earlier
+    // messages may still reference — discarding this draft must not delete it.
+    await tester.runAsync(() async {
+      mediaController.enqueueImages(
+        [source.path],
+        _config,
+        deleteSourcesAfterProcessing: false,
+      );
+      mediaController.clearImages();
+      await Future<void>.delayed(const Duration(seconds: 2));
+    });
+
+    expect(await fileExists(tester, stored), isTrue);
+    expect(await fileExists(tester, source), isTrue);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
   testWidgets('处理中丢弃只清理压缩副本，保留用户源文件', (tester) async {
     final controller = TextEditingController();
     final focusNode = FocusNode();

@@ -190,7 +190,7 @@ void main() {
     );
   });
 
-  test('writes unique JPEG names and preserves existing uploads', () async {
+  test('reuses stored uploads and keeps differing images apart', () async {
     final temp = await Directory.systemTemp.createTemp(
       'kelivo_image_compressor_test_',
     );
@@ -207,23 +207,41 @@ void main() {
       config,
     );
     expect(first, isNotNull);
-    final firstPath = first!;
-    final concurrent = await Future.wait([
-      ImageCompressor.compressToUploadDir(source.path, uploadDir, config),
-      ImageCompressor.compressToUploadDir(source.path, uploadDir, config),
-    ]);
-    expect(concurrent, everyElement(isNotNull));
-    final paths = {firstPath, ...concurrent.whereType<String>()};
-    expect(paths.length, 3);
-    expect(paths.map(p.basename).toSet(), {
-      'photo.jpg',
-      'photo(1).jpg',
-      'photo(2).jpg',
-    });
+    final firstPath = first!.path;
+    expect(first.reused, isFalse);
+    expect(p.basename(firstPath), 'photo.jpg');
 
+    // Re-importing the very same picture reuses the stored copy.
+    final again = await ImageCompressor.compressToUploadDir(
+      source.path,
+      uploadDir,
+      config,
+    );
+    expect(again?.path, firstPath);
+    expect(again?.reused, isTrue);
+    expect(uploadDir.listSync().whereType<File>(), hasLength(1));
+
+    // A different picture under the same name gets a versioned name.
     final firstBytes = await File(firstPath).readAsBytes();
-    await ImageCompressor.compressToUploadDir(firstPath, uploadDir, config);
+    final other = File(p.join(sourceDir.path, 'photo.png'));
+    await other.writeAsBytes(img.encodePng(_noiseImage(480, 480)));
+    final second = await ImageCompressor.compressToUploadDir(
+      other.path,
+      uploadDir,
+      config,
+    );
+    expect(second, isNotNull);
+    expect(second!.reused, isFalse);
+    expect(p.basename(second.path), 'photo(1).jpg');
     expect(await File(firstPath).readAsBytes(), orderedEquals(firstBytes));
+
+    // Re-importing a stored upload never rewrites it in place.
+    expect(
+      await ImageCompressor.compressToUploadDir(firstPath, uploadDir, config),
+      isNotNull,
+    );
+    expect(await File(firstPath).readAsBytes(), orderedEquals(firstBytes));
+
     expect(
       await ImageCompressor.compressToUploadDir(
         p.join(sourceDir.path, 'missing.png'),
@@ -232,6 +250,34 @@ void main() {
       ),
       isNull,
     );
+  });
+
+  test('concurrent imports never clobber each other', () async {
+    final temp = await Directory.systemTemp.createTemp(
+      'kelivo_image_compressor_test_',
+    );
+    addTearDown(() => temp.delete(recursive: true));
+    final sourceDir = Directory(p.join(temp.path, 'source'))
+      ..createSync(recursive: true);
+    final uploadDir = Directory(p.join(temp.path, 'upload'));
+    final first = File(p.join(sourceDir.path, 'photo.png'));
+    final second = File(p.join(sourceDir.path, 'other.png'));
+    await first.writeAsBytes(img.encodePng(_noiseImage(512, 512)));
+    await second.writeAsBytes(img.encodePng(_noiseImage(400, 400)));
+
+    final paths = await Future.wait([
+      ImageCompressor.compressToUploadDir(first.path, uploadDir, config),
+      ImageCompressor.compressToUploadDir(second.path, uploadDir, config),
+    ]);
+
+    expect(paths, everyElement(isNotNull));
+    expect(paths.map((write) => write?.path).toSet(), hasLength(2));
+    for (final path in paths.nonNulls.map((write) => write.path)) {
+      expect(
+        img.JpegDecoder().isValidFile(await File(path).readAsBytes()),
+        isTrue,
+      );
+    }
   });
 }
 

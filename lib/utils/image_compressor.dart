@@ -4,6 +4,8 @@ import 'package:downsize/downsize.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
+import 'upload_dedupe.dart';
+
 class ImageCompressConfig {
   const ImageCompressConfig({
     required this.enabled,
@@ -24,8 +26,9 @@ class ImageCompressor {
   /// Compresses [srcPath] into [dir].
   ///
   /// Images that are skipped, fail to decode, or would grow are copied
-  /// unchanged. Returns `null` only when the source cannot be persisted.
-  static Future<String?> compressToUploadDir(
+  /// unchanged; an image whose bytes are already stored in [dir] is reused.
+  /// Returns `null` only when the source cannot be persisted.
+  static Future<UploadWrite?> compressToUploadDir(
     String srcPath,
     Directory dir,
     ImageCompressConfig config,
@@ -87,7 +90,7 @@ class ImageCompressor {
     }
   }
 
-  static Future<String> _writeToUploadDir(
+  static Future<UploadWrite> _writeToUploadDir(
     String srcPath,
     Directory dir,
     Uint8List bytes, {
@@ -102,45 +105,21 @@ class ImageCompressor {
     final outputName = asJpeg
         ? '${baseName.isEmpty ? 'image' : baseName}.jpg'
         : (originalName.isEmpty ? 'image' : originalName);
-    final sourceAbsolute = p.normalize(p.absolute(srcPath));
-    final destination = File(p.join(dir.path, outputName));
-    final destinationAbsolute = p.normalize(p.absolute(destination.path));
 
-    if (p.equals(sourceAbsolute, destinationAbsolute) && !asJpeg) {
-      return destination.path;
-    }
+    // Reuse an already stored image with the same name and bytes instead of
+    // piling up copies; this also covers re-importing a file from [dir].
+    final existing = await UploadDedupe.findIdentical(dir, bytes, outputName);
+    if (existing != null) return UploadWrite(existing, reused: true);
 
-    final reserved = await _reserveUniqueFile(dir, outputName);
+    final reserved = await UploadDedupe.reserveUniqueFile(dir, outputName);
     try {
       await reserved.writeAsBytes(bytes, flush: true);
-      return reserved.path;
+      return UploadWrite(reserved.path, reused: false);
     } catch (_) {
       try {
         await reserved.delete();
       } catch (_) {}
       rethrow;
-    }
-  }
-
-  static Future<File> _reserveUniqueFile(
-    Directory dir,
-    String outputName,
-  ) async {
-    final outputBase = p.basenameWithoutExtension(outputName);
-    final outputExtension = p.extension(outputName);
-    var counter = 0;
-
-    while (true) {
-      final suffix = counter == 0 ? '' : '($counter)';
-      final candidate = File(
-        p.join(dir.path, '$outputBase$suffix$outputExtension'),
-      );
-      try {
-        return await candidate.create(exclusive: true);
-      } on FileSystemException {
-        if (!await candidate.exists()) rethrow;
-        counter++;
-      }
     }
   }
 }

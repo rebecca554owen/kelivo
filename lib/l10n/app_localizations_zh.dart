@@ -5920,20 +5920,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePageProcessingFiles => '正在解析文件……';
 
   @override
-  String get fileUploadDuplicateTitle => '文件已存在';
-
-  @override
-  String fileUploadDuplicateContent(String fileName) {
-    return '检测到同名文件 $fileName，是否使用已有文件？';
-  }
-
-  @override
-  String get fileUploadDuplicateUseExisting => '使用已有';
-
-  @override
-  String get fileUploadDuplicateUploadNew => '重新上传';
-
-  @override
   String get settingsPageWorldBook => '世界书';
 
   @override
@@ -13447,20 +13433,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get homePageProcessingFiles => '正在解析文件……';
-
-  @override
-  String get fileUploadDuplicateTitle => '文件已存在';
-
-  @override
-  String fileUploadDuplicateContent(String fileName) {
-    return '检测到同名文件 $fileName，是否使用现有文件？';
-  }
-
-  @override
-  String get fileUploadDuplicateUseExisting => '使用现有';
-
-  @override
-  String get fileUploadDuplicateUploadNew => '重新上传';
 
   @override
   String get settingsPageWorldBook => '世界书';
@@ -21050,20 +21022,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homePageProcessingFiles => '正在解析檔案……';
-
-  @override
-  String get fileUploadDuplicateTitle => '檔案已存在';
-
-  @override
-  String fileUploadDuplicateContent(String fileName) {
-    return '偵測到同名檔案 $fileName，是否使用現有檔案？';
-  }
-
-  @override
-  String get fileUploadDuplicateUseExisting => '使用現有';
-
-  @override
-  String get fileUploadDuplicateUploadNew => '重新上傳';
 
   @override
   String get settingsPageWorldBook => '世界書';
