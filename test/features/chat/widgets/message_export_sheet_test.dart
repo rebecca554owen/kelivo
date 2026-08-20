@@ -662,6 +662,45 @@ void main() {
     },
   );
 
+  test('image export drops malformed contentSplits instead of truncating', () {
+    final mismatched = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      content: 'hello',
+      reasoningSegmentsJson:
+          '{"v":2,"segments":[{"text":"plan"}],"contentSplits":{"offsets":[0,6],"reasoningCounts":[1],"toolCounts":[0,1]}}',
+    );
+    final empty = ChatMessage(
+      role: 'assistant',
+      conversationId: 'c1',
+      content: 'hello',
+      reasoningSegmentsJson:
+          '{"v":2,"segments":[{"text":"plan"}],"contentSplits":{"offsets":[],"reasoningCounts":[],"toolCounts":[]}}',
+    );
+
+    for (final message in [mismatched, empty]) {
+      final splits = exportContentSplitsForTesting(message);
+      expect(splits.offsets, isNull);
+      expect(splits.reasoningCounts, isNull);
+      expect(splits.toolCounts, isNull);
+    }
+  });
+
+  test('image export keeps structurally valid historical contentSplits', () {
+    final splits = exportContentSplitsForTesting(
+      ChatMessage(
+        role: 'assistant',
+        conversationId: 'c1',
+        content: 'hello',
+        reasoningSegmentsJson:
+            '{"v":2,"segments":[{"text":"plan"}],"contentSplits":{"offsets":[0],"reasoningCounts":[1],"toolCounts":[0]}}',
+      ),
+    );
+    expect(splits.offsets, [0]);
+    expect(splits.reasoningCounts, [1]);
+    expect(splits.toolCounts, [0]);
+  });
+
   test('image export splits a think range that spans an ImagePart', () {
     final message = ChatMessage(
       role: 'assistant',

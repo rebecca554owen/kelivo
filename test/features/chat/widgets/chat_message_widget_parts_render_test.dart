@@ -3,7 +3,9 @@ import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/message_part.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/tts_provider.dart';
+import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
+import 'package:Kelivo/features/home/controllers/stream_controller.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
@@ -34,6 +36,15 @@ Widget _buildHarness({required Widget child}) {
   );
 }
 
+void expectAbove(WidgetTester tester, Finder upper, Finder lower) {
+  expect(upper, findsWidgets);
+  expect(lower, findsWidgets);
+  expect(
+    tester.getTopLeft(upper.first).dy,
+    lessThan(tester.getTopLeft(lower.first).dy),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -61,9 +72,121 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.textContaining('plan'), findsWidgets);
-    expect(find.textContaining('hello'), findsWidgets);
+    expectAbove(
+      tester,
+      find.textContaining('plan'),
+      find.textContaining('hello'),
+    );
   });
+
+  testWidgets('historical interleaved splits keep text around thinking', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'legacy-interleave',
+            role: 'assistant',
+            content: 'beforeAFTER',
+            conversationId: 'c1',
+          ),
+          showModelIcon: false,
+          reasoningSegments: const [
+            ReasoningSegment(text: 'plan', expanded: true, loading: false),
+          ],
+          contentSplitOffsets: const [6],
+          reasoningCountAtSplit: const [1],
+          toolCountAtSplit: const [0],
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expectAbove(
+      tester,
+      find.textContaining('before'),
+      find.textContaining('plan'),
+    );
+    expectAbove(
+      tester,
+      find.textContaining('plan'),
+      find.textContaining('AFTER'),
+    );
+  });
+
+  testWidgets(
+    'empty timeline with ToolCallPart falls back to parts when splits exist',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'empty-timeline-tools',
+              role: 'assistant',
+              conversationId: 'c1',
+              parts: const [
+                ToolCallPart(
+                  '{"id":"c1","name":"lookup","arguments":{},"content":"ok"}',
+                ),
+                TextPart('BODY_HELLO'),
+              ],
+            ),
+            showModelIcon: false,
+            contentSplitOffsets: const [0],
+            reasoningCountAtSplit: const [1],
+            toolCountAtSplit: const [0],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expectAbove(
+        tester,
+        find.textContaining('lookup'),
+        find.textContaining('BODY_HELLO'),
+      );
+    },
+  );
+
+  testWidgets(
+    'empty timeline with ImagePart keeps image ordinal above the body',
+    (tester) async {
+      const imageUrl = 'https://example.com/empty-timeline.png';
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'empty-timeline-image',
+              role: 'assistant',
+              conversationId: 'c1',
+              parts: const [
+                ImagePart(uri: imageUrl),
+                TextPart('BODY_HELLO'),
+              ],
+            ),
+            showModelIcon: false,
+            contentSplitOffsets: const [0],
+            reasoningCountAtSplit: const [1],
+            toolCountAtSplit: const [0],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(
+          const ValueKey('assistant-message-attachments:empty-timeline-image'),
+        ),
+        findsNothing,
+      );
+      expectAbove(
+        tester,
+        find.byType(Image),
+        find.textContaining('BODY_HELLO'),
+      );
+    },
+  );
 
   testWidgets('structured parts render reasoning, text, and tool in order', (
     tester,
@@ -90,10 +213,423 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.textContaining('plan'), findsWidgets);
-    expect(find.textContaining('hello'), findsWidgets);
-    expect(find.textContaining('lookup'), findsWidgets);
-    expect(find.textContaining('done'), findsWidgets);
+    expectAbove(
+      tester,
+      find.textContaining('plan'),
+      find.textContaining('hello'),
+    );
+    expectAbove(
+      tester,
+      find.textContaining('hello'),
+      find.textContaining('lookup'),
+    );
+    expectAbove(
+      tester,
+      find.textContaining('lookup'),
+      find.textContaining('done'),
+    );
+  });
+
+  testWidgets(
+    'empty contentSplits without structured parts keep thinking above body',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'legacy-empty-splits',
+              role: 'assistant',
+              content: 'BODY_HELLO',
+              conversationId: 'c1',
+            ),
+            showModelIcon: false,
+            reasoningSegments: const [
+              ReasoningSegment(
+                text: 'THINK_PLAN',
+                expanded: true,
+                loading: false,
+              ),
+            ],
+            contentSplitOffsets: const [],
+            reasoningCountAtSplit: const [],
+            toolCountAtSplit: const [],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expectAbove(
+        tester,
+        find.textContaining('THINK_PLAN'),
+        find.textContaining('BODY_HELLO'),
+      );
+    },
+  );
+
+  testWidgets('empty contentSplits keep reasoning above body', (tester) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'empty-splits',
+            role: 'assistant',
+            content: 'BODY_HELLO',
+            conversationId: 'c1',
+            parts: const [ReasoningPart('THINK_PLAN'), TextPart('BODY_HELLO')],
+          ),
+          showModelIcon: false,
+          contentSplitOffsets: const [],
+          reasoningCountAtSplit: const [],
+          toolCountAtSplit: const [],
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expectAbove(
+      tester,
+      find.textContaining('THINK_PLAN'),
+      find.textContaining('BODY_HELLO'),
+    );
+  });
+
+  String toolNameAt(int index, int count) {
+    if (index == 1) return 'alpha_search';
+    if (index == count) return 'omega_search';
+    return 'mid_search_$index';
+  }
+
+  List<ToolUIPart> tools(int count) => [
+    for (var i = 1; i <= count; i++)
+      ToolUIPart(
+        id: 'tool-$i',
+        toolName: toolNameAt(i, count),
+        arguments: const {},
+        content: 'ok',
+      ),
+  ];
+
+  List<MessagePart> toolPartsThenBody(int count) => [
+    const ReasoningPart('THINK_PLAN'),
+    for (var i = 1; i <= count; i++)
+      ToolCallPart(
+        '{"id":"tool-$i","name":"${toolNameAt(i, count)}","arguments":{},"content":"ok"}',
+      ),
+    const TextPart('BODY_HELLO'),
+  ];
+
+  testWidgets('incomplete 17-tool splits keep leftover cards above the body', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: SingleChildScrollView(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'incomplete-splits-17',
+              role: 'assistant',
+              content: 'BODY_HELLO',
+              conversationId: 'c1',
+            ),
+            showModelIcon: false,
+            reasoningSegments: const [
+              ReasoningSegment(
+                text: 'THINK_PLAN',
+                expanded: true,
+                loading: false,
+              ),
+            ],
+            toolParts: tools(17),
+            contentSplitOffsets: const [0],
+            reasoningCountAtSplit: const [1],
+            toolCountAtSplit: const [7],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expectAbove(
+      tester,
+      find.textContaining('omega_search'),
+      find.textContaining('BODY_HELLO'),
+    );
+  });
+
+  testWidgets('incomplete 24-tool splits keep leftover cards above the body', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: SingleChildScrollView(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'incomplete-splits-24',
+              role: 'assistant',
+              content: 'BODY_HELLO',
+              conversationId: 'c1',
+            ),
+            showModelIcon: false,
+            reasoningSegments: const [
+              ReasoningSegment(
+                text: 'THINK_PLAN',
+                expanded: true,
+                loading: false,
+              ),
+            ],
+            toolParts: tools(24),
+            contentSplitOffsets: const [0],
+            reasoningCountAtSplit: const [1],
+            toolCountAtSplit: const [18],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expectAbove(
+      tester,
+      find.textContaining('omega_search'),
+      find.textContaining('BODY_HELLO'),
+    );
+  });
+
+  testWidgets(
+    'incomplete splits with structured parts keep leftover cards above the body',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: SingleChildScrollView(
+            child: ChatMessageWidget(
+              message: ChatMessage(
+                id: 'incomplete-splits-parts',
+                role: 'assistant',
+                conversationId: 'c1',
+                parts: toolPartsThenBody(17),
+              ),
+              showModelIcon: false,
+              reasoningSegments: const [
+                ReasoningSegment(
+                  text: 'THINK_PLAN',
+                  expanded: true,
+                  loading: false,
+                ),
+              ],
+              toolParts: tools(17),
+              contentSplitOffsets: const [0],
+              reasoningCountAtSplit: const [1],
+              toolCountAtSplit: const [7],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expectAbove(
+        tester,
+        find.textContaining('omega_search'),
+        find.textContaining('BODY_HELLO'),
+      );
+    },
+  );
+
+  testWidgets('overflowing split offsets fall back to thinking above body', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'overflow-offset',
+            role: 'assistant',
+            content: 'hello',
+            conversationId: 'c1',
+          ),
+          showModelIcon: false,
+          reasoningSegments: const [
+            ReasoningSegment(text: 'plan', expanded: true, loading: false),
+          ],
+          contentSplitOffsets: const [11],
+          reasoningCountAtSplit: const [1],
+          toolCountAtSplit: const [0],
+        ),
+      ),
+    );
+    await tester.pump();
+    expectAbove(
+      tester,
+      find.textContaining('plan'),
+      find.textContaining('hello'),
+    );
+  });
+
+  testWidgets(
+    'complete historical tool splits keep leftover cards interleaved',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'complete-tools',
+              role: 'assistant',
+              content: 'beforeAFTER',
+              conversationId: 'c1',
+            ),
+            showModelIcon: false,
+            reasoningSegments: const [
+              ReasoningSegment(text: 'plan', expanded: true, loading: false),
+            ],
+            toolParts: tools(2),
+            contentSplitOffsets: const [6],
+            reasoningCountAtSplit: const [1],
+            toolCountAtSplit: const [2],
+          ),
+        ),
+      );
+      await tester.pump();
+      expectAbove(
+        tester,
+        find.textContaining('before'),
+        find.textContaining('plan'),
+      );
+      expectAbove(
+        tester,
+        find.textContaining('omega_search'),
+        find.textContaining('AFTER'),
+      );
+    },
+  );
+
+  testWidgets('illegal contentSplits fall back to parts order', (tester) async {
+    Future<void> pumpIllegal({
+      required List<int> offsets,
+      required List<int> reasoning,
+      required List<int> tools,
+    }) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'illegal-splits',
+              role: 'assistant',
+              content: 'BODY_HELLO',
+              conversationId: 'c1',
+              parts: const [
+                ReasoningPart('THINK_PLAN'),
+                TextPart('BODY_HELLO'),
+              ],
+            ),
+            showModelIcon: false,
+            contentSplitOffsets: offsets,
+            reasoningCountAtSplit: reasoning,
+            toolCountAtSplit: tools,
+          ),
+        ),
+      );
+      await tester.pump();
+      expectAbove(
+        tester,
+        find.textContaining('THINK_PLAN'),
+        find.textContaining('BODY_HELLO'),
+      );
+    }
+
+    await pumpIllegal(
+      offsets: const [0],
+      reasoning: const [1, 2],
+      tools: const [0],
+    );
+    await pumpIllegal(
+      offsets: const [-1],
+      reasoning: const [1],
+      tools: const [0],
+    );
+    await pumpIllegal(
+      offsets: const [0, 3],
+      reasoning: const [2, 1],
+      tools: const [0, 0],
+    );
+  });
+
+  testWidgets('OpenRouter Claude persist-reload keeps thinking above the body', (
+    tester,
+  ) async {
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    final writer = StreamController(
+      chatService: ChatService(),
+      onStateChanged: () {},
+      getSettingsProvider: () => settings,
+      getCurrentConversationId: () => 'c1',
+    );
+    final segment = ReasoningSegmentData()
+      ..text = 'THINK_PLAN'
+      ..expanded = true
+      ..toolStartIndex = 0;
+    final persisted = writer.serializeReasoningSegmentsWithSplits(
+      [segment],
+      reasoningDetails: const [
+        {
+          'id': 'rd_1',
+          'type': 'reasoning.encrypted',
+          'data': 'sig',
+          'format': 'anthropic-claude-v1',
+        },
+      ],
+    );
+
+    const staleEmptySplits =
+        '{"v":2,"segments":[{"text":"THINK_PLAN","expanded":true,"toolStartIndex":0}],"contentSplits":{"offsets":[],"reasoningCounts":[],"toolCounts":[]},"reasoningDetails":[{"id":"rd_1","type":"reasoning.encrypted","data":"sig","format":"anthropic-claude-v1"}]}';
+
+    for (final json in [persisted, staleEmptySplits]) {
+      final reader = StreamController(
+        chatService: ChatService(),
+        onStateChanged: () {},
+        getSettingsProvider: () => settings,
+        getCurrentConversationId: () => 'c1',
+      );
+      final message = ChatMessage(
+        id: 'or-claude',
+        role: 'assistant',
+        content: 'BODY_HELLO',
+        conversationId: 'c1',
+        reasoningSegmentsJson: json,
+        parts: const [ReasoningPart('THINK_PLAN'), TextPart('BODY_HELLO')],
+      );
+      reader.restoreMessageUiState(
+        message,
+        getToolEventsFromDb: (_) => const [],
+        getGeminiThoughtSigFromDb: (_) => null,
+      );
+      expect(reader.getContentSplitData(message.id), isNull);
+
+      final splits = reader.getContentSplitData(message.id);
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: message,
+            showModelIcon: false,
+            reasoningSegments: reader
+                .getReasoningSegments(message.id)
+                ?.map(
+                  (s) => ReasoningSegment(
+                    text: s.text,
+                    expanded: true,
+                    loading: false,
+                  ),
+                )
+                .toList(),
+            contentSplitOffsets: splits?.offsets,
+            reasoningCountAtSplit: splits?.reasoningCounts,
+            toolCountAtSplit: splits?.toolCounts,
+          ),
+        ),
+      );
+      await tester.pump();
+      expectAbove(
+        tester,
+        find.textContaining('THINK_PLAN'),
+        find.textContaining('BODY_HELLO'),
+      );
+      reader.dispose();
+    }
+    writer.dispose();
   });
 
   testWidgets('ChatBox imported reasoning-then-text parts render both blocks', (

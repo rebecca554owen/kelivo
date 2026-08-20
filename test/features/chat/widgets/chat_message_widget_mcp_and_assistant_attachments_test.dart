@@ -311,4 +311,137 @@ more text
         : null;
     expect(memory, isA<MemoryImage>());
   });
+
+  List<Image> imagesWithUrl(WidgetTester tester, String url) {
+    return tester.widgetList<Image>(find.byType(Image)).where((image) {
+      final provider = image.image;
+      final network = provider is NetworkImage
+          ? provider
+          : provider is ResizeImage && provider.imageProvider is NetworkImage
+          ? provider.imageProvider as NetworkImage
+          : null;
+      return network?.url == url;
+    }).toList();
+  }
+
+  testWidgets(
+    'semantic split fallback inlines ImagePart once and keeps FilePart in the strip',
+    (tester) async {
+      const messageId = 'assistant-semantic-image';
+      const imageUrl = 'https://example.com/semantic.png';
+
+      await tester.pumpWidget(
+        _harness(
+          ChatMessageWidget(
+            showModelIcon: false,
+            message: ChatMessage(
+              id: messageId,
+              role: 'assistant',
+              conversationId: 'conversation-semantic-image',
+              parts: const [
+                ReasoningPart('THINK_PLAN'),
+                TextPart('BODY_HELLO'),
+                FilePart(
+                  uri: '/tmp/report.pdf',
+                  name: 'report.pdf',
+                  mime: 'application/pdf',
+                ),
+                ImagePart(uri: imageUrl),
+              ],
+            ),
+            reasoningSegments: const [
+              ReasoningSegment(
+                text: 'THINK_PLAN',
+                expanded: true,
+                loading: false,
+              ),
+            ],
+            toolParts: const [
+              ToolUIPart(
+                id: 't1',
+                toolName: 'alpha_search',
+                arguments: {},
+                content: 'ok',
+              ),
+              ToolUIPart(
+                id: 't2',
+                toolName: 'beta_search',
+                arguments: {},
+                content: 'ok',
+              ),
+              ToolUIPart(
+                id: 't3',
+                toolName: 'omega_search',
+                arguments: {},
+                content: 'ok',
+              ),
+            ],
+            contentSplitOffsets: const [0],
+            reasoningCountAtSplit: const [1],
+            toolCountAtSplit: const [1],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final attachmentsFinder = find.byKey(
+        const ValueKey('assistant-message-attachments:$messageId'),
+      );
+      expect(attachmentsFinder, findsOneWidget);
+      expect(
+        find.descendant(
+          of: attachmentsFinder,
+          matching: find.text('report.pdf'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: attachmentsFinder, matching: find.byType(Image)),
+        findsNothing,
+      );
+      expect(imagesWithUrl(tester, imageUrl), hasLength(1));
+    },
+  );
+
+  testWidgets('complete historical splits keep ImagePart in the strip only', (
+    tester,
+  ) async {
+    const messageId = 'assistant-complete-split-image';
+    const imageUrl = 'https://example.com/historical.png';
+
+    await tester.pumpWidget(
+      _harness(
+        ChatMessageWidget(
+          showModelIcon: false,
+          message: ChatMessage(
+            id: messageId,
+            role: 'assistant',
+            content: 'hello',
+            conversationId: 'conversation-complete-split-image',
+            parts: const [
+              TextPart('hello'),
+              ImagePart(uri: imageUrl),
+            ],
+          ),
+          reasoningSegments: const [
+            ReasoningSegment(text: 'plan', expanded: true, loading: false),
+          ],
+          contentSplitOffsets: const [0],
+          reasoningCountAtSplit: const [1],
+          toolCountAtSplit: const [0],
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final attachmentsFinder = find.byKey(
+      const ValueKey('assistant-message-attachments:$messageId'),
+    );
+    expect(attachmentsFinder, findsOneWidget);
+    expect(
+      find.descendant(of: attachmentsFinder, matching: find.byType(Image)),
+      findsOneWidget,
+    );
+    expect(imagesWithUrl(tester, imageUrl), hasLength(1));
+  });
 }

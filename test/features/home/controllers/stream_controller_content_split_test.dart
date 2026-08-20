@@ -123,6 +123,84 @@ void main() {
     expect(restoredSplits.toolCounts, const [2]);
   });
 
+  test('segments plus reasoningDetails omit empty contentSplits', () {
+    final controller = buildController();
+    final segment = ReasoningSegmentData()
+      ..text = 'openrouter thinking'
+      ..expanded = true
+      ..toolStartIndex = 0;
+
+    final json = controller.serializeReasoningSegmentsWithSplits(
+      [segment],
+      reasoningDetails: const [
+        {
+          'id': 'rd_1',
+          'type': 'reasoning.encrypted',
+          'data': 'sig',
+          'format': 'anthropic-claude-v1',
+        },
+      ],
+    );
+
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    expect(decoded.containsKey('contentSplits'), isFalse);
+    expect(decoded['v'], 2);
+    expect(decoded['reasoningDetails'], isNotEmpty);
+    expect(controller.deserializeContentSplits(json), isNull);
+    expect(
+      controller.deserializeReasoningSegments(json).single.text,
+      'openrouter thinking',
+    );
+    expect(controller.deserializeReasoningDetails(json), isNotEmpty);
+  });
+
+  test('empty split arrays are not persisted', () {
+    final controller = buildController();
+    final json = controller.serializeReasoningSegmentsWithSplits(
+      const [],
+      contentSplitOffsets: const [],
+      reasoningCountAtSplit: const [],
+      toolCountAtSplit: const [],
+      reasoningDetails: const [
+        {'type': 'reasoning.encrypted', 'data': 'sig'},
+      ],
+    );
+
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    expect(decoded.containsKey('contentSplits'), isFalse);
+    expect(controller.deserializeContentSplits(json), isNull);
+  });
+
+  test('deserializes empty v2 contentSplits as absent', () {
+    final controller = buildController();
+    const json =
+        '{"v":2,"segments":[],"contentSplits":{"offsets":[],"reasoningCounts":[],"toolCounts":[]},"reasoningDetails":[{"type":"reasoning.encrypted","data":"sig"}]}';
+
+    expect(controller.deserializeContentSplits(json), isNull);
+    expect(controller.deserializeReasoningSegments(json), isEmpty);
+    expect(controller.deserializeReasoningDetails(json), [
+      {'type': 'reasoning.encrypted', 'data': 'sig'},
+    ]);
+  });
+
+  test('invalid contentSplits do not drop segments or reasoningDetails', () {
+    final controller = buildController();
+    const mismatched =
+        '{"v":2,"segments":[{"text":"keep","expanded":true,"toolStartIndex":0}],"contentSplits":{"offsets":[1],"reasoningCounts":[1,2],"toolCounts":[0]},"reasoningDetails":[{"type":"reasoning.encrypted","data":"sig"}]}';
+    const negative =
+        '{"v":2,"segments":[{"text":"keep","expanded":true,"toolStartIndex":0}],"contentSplits":{"offsets":[-1],"reasoningCounts":[1],"toolCounts":[0]},"reasoningDetails":[{"type":"reasoning.encrypted","data":"sig"}]}';
+    const regression =
+        '{"v":2,"segments":[{"text":"keep","expanded":true,"toolStartIndex":0}],"contentSplits":{"offsets":[0,3],"reasoningCounts":[2,1],"toolCounts":[0,0]},"reasoningDetails":[{"type":"reasoning.encrypted","data":"sig"}]}';
+
+    for (final json in [mismatched, negative, regression]) {
+      expect(controller.deserializeContentSplits(json), isNull);
+      expect(controller.deserializeReasoningSegments(json).single.text, 'keep');
+      expect(controller.deserializeReasoningDetails(json), [
+        {'type': 'reasoning.encrypted', 'data': 'sig'},
+      ]);
+    }
+  });
+
   test('v1 reasoning payload remains compatible without content splits', () {
     final controller = buildController();
     final segment = ReasoningSegmentData()
@@ -209,40 +287,81 @@ void main() {
     );
   });
 
-  test(
-    'restoreMessageUiState restores tool parts and empty v2 split metadata',
-    () {
-      final controller = buildController();
-      final message = ChatMessage(
-        id: 'assistant-1',
-        role: 'assistant',
-        content: '让我帮你搜索一下',
-        conversationId: 'conversation-1',
-        reasoningSegmentsJson: controller.serializeReasoningSegmentsWithSplits(
-          const [],
-          contentSplitOffsets: const [],
-          reasoningCountAtSplit: const [],
-          toolCountAtSplit: const [],
-        ),
-      );
+  test('treats empty v2 contentSplits as absent', () {
+    final controller = buildController();
+    final message = ChatMessage(
+      id: 'assistant-1',
+      role: 'assistant',
+      content: '让我帮你搜索一下',
+      conversationId: 'conversation-1',
+      reasoningSegmentsJson:
+          '{"v":2,"segments":[],"contentSplits":{"offsets":[],"reasoningCounts":[],"toolCounts":[]}}',
+    );
 
-      controller.restoreMessageUiState(
-        message,
-        getToolEventsFromDb: (_) => const [
+    controller.restoreMessageUiState(
+      message,
+      getToolEventsFromDb: (_) => const [
+        {
+          'id': 'tool-1',
+          'name': 'search_web',
+          'arguments': {'query': 'Kelivo'},
+          'content': null,
+        },
+      ],
+      getGeminiThoughtSigFromDb: (_) => null,
+    );
+
+    expect(controller.getContentSplitData(message.id), isNull);
+    expect(controller.toolParts[message.id], hasLength(1));
+    expect(controller.toolParts[message.id]!.single.loading, isTrue);
+  });
+
+  test(
+    'OpenRouter Claude persist-reload keeps reasoningDetails and drops empty splits',
+    () {
+      final writer = buildController();
+      final segment = ReasoningSegmentData()
+        ..text = 'openrouter thinking'
+        ..expanded = true
+        ..toolStartIndex = 0;
+      final persisted = writer.serializeReasoningSegmentsWithSplits(
+        [segment],
+        reasoningDetails: const [
           {
-            'id': 'tool-1',
-            'name': 'search_web',
-            'arguments': {'query': 'Kelivo'},
-            'content': null,
+            'id': 'rd_1',
+            'type': 'reasoning.encrypted',
+            'data': 'sig',
+            'format': 'anthropic-claude-v1',
           },
         ],
+      );
+      expect(
+        (jsonDecode(persisted) as Map<String, dynamic>).containsKey(
+          'contentSplits',
+        ),
+        isFalse,
+      );
+
+      final reader = buildController();
+      final message = ChatMessage(
+        id: 'or-claude',
+        role: 'assistant',
+        content: 'openrouter answer',
+        conversationId: 'conversation-1',
+        reasoningSegmentsJson: persisted,
+      );
+      reader.restoreMessageUiState(
+        message,
+        getToolEventsFromDb: (_) => const [],
         getGeminiThoughtSigFromDb: (_) => null,
       );
 
-      expect(controller.contentSplits[message.id], isNotNull);
-      expect(controller.contentSplits[message.id]!.offsets, isEmpty);
-      expect(controller.toolParts[message.id], hasLength(1));
-      expect(controller.toolParts[message.id]!.single.loading, isTrue);
+      expect(reader.getContentSplitData(message.id), isNull);
+      expect(
+        reader.getReasoningSegments(message.id)!.single.text,
+        'openrouter thinking',
+      );
+      expect(reader.reasoningDetails[message.id], isNotNull);
     },
   );
 

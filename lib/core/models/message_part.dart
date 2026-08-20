@@ -312,6 +312,128 @@ bool _optionalBool(Map<String, dynamic> map, String key) {
   return value;
 }
 
+/// Whether persisted split triples can drive the historical interleaving
+/// renderer.
+///
+/// Empty arrays, length mismatches, negative values, and count regressions
+/// are not usable. Those messages must keep [MessagePart] arrival order.
+bool contentSplitsAreUsable(
+  List<int>? offsets,
+  List<int>? reasoningCounts,
+  List<int>? toolCounts,
+) {
+  if (offsets == null || reasoningCounts == null || toolCounts == null) {
+    return false;
+  }
+  if (offsets.isEmpty ||
+      offsets.length != reasoningCounts.length ||
+      offsets.length != toolCounts.length) {
+    return false;
+  }
+
+  var previousOffset = 0;
+  var previousReasoning = 0;
+  var previousTool = 0;
+  for (var i = 0; i < offsets.length; i++) {
+    final offset = offsets[i];
+    final reasoning = reasoningCounts[i];
+    final tool = toolCounts[i];
+    if (offset < 0 || reasoning < 0 || tool < 0) {
+      return false;
+    }
+    if (i > 0 &&
+        (offset < previousOffset ||
+            reasoning < previousReasoning ||
+            tool < previousTool)) {
+      return false;
+    }
+    previousOffset = offset;
+    previousReasoning = reasoning;
+    previousTool = tool;
+  }
+  return true;
+}
+
+/// Parse persisted split triples only when they pass [contentSplitsAreUsable].
+///
+/// Length mismatches are rejected instead of being truncated down to the
+/// shortest array, so a broken payload cannot be repaired into a "valid"
+/// interleaving.
+({List<int> offsets, List<int> reasoningCounts, List<int> toolCounts})?
+tryParseContentSplits(dynamic raw) {
+  if (raw is! Map) return null;
+  final json = raw is Map<String, dynamic> ? raw : raw.cast<String, dynamic>();
+  final offsets = _tryContentSplitIntList(json['offsets']);
+  final reasoningCounts = _tryContentSplitIntList(json['reasoningCounts']);
+  final toolCounts = _tryContentSplitIntList(json['toolCounts']);
+  if (!contentSplitsAreUsable(offsets, reasoningCounts, toolCounts)) {
+    return null;
+  }
+  return (
+    offsets: offsets!,
+    reasoningCounts: reasoningCounts!,
+    toolCounts: toolCounts!,
+  );
+}
+
+List<int>? _tryContentSplitIntList(dynamic value) {
+  if (value == null) return const <int>[];
+  if (value is! List) return null;
+  final out = <int>[];
+  for (final item in value) {
+    if (item is int) {
+      out.add(item);
+    } else if (item is num && item == item.roundToDouble()) {
+      out.add(item.toInt());
+    } else {
+      return null;
+    }
+  }
+  return out;
+}
+
+/// Whether structurally valid split triples actually cover the timeline.
+///
+/// Offsets must stay within [contentLength], each target count pair must
+/// appear in order on the rendered steps, and the last target must consume
+/// every step. Incomplete coverage would otherwise append leftover
+/// reasoning/tool cards after the trailing body.
+bool contentSplitsMatchTimeline({
+  required List<int> offsets,
+  required List<int> reasoningCounts,
+  required List<int> toolCounts,
+  required int contentLength,
+  required List<int> stepReasoningCounts,
+  required List<int> stepToolCounts,
+}) {
+  if (!contentSplitsAreUsable(offsets, reasoningCounts, toolCounts)) {
+    return false;
+  }
+  if (stepReasoningCounts.length != stepToolCounts.length ||
+      stepReasoningCounts.isEmpty) {
+    return false;
+  }
+
+  var stepIndex = 0;
+  for (var i = 0; i < offsets.length; i++) {
+    if (offsets[i] > contentLength) return false;
+    final targetReasoning = reasoningCounts[i];
+    final targetTool = toolCounts[i];
+    var found = false;
+    while (stepIndex < stepReasoningCounts.length) {
+      final reasoningAfter = stepReasoningCounts[stepIndex];
+      final toolAfter = stepToolCounts[stepIndex];
+      stepIndex++;
+      if (reasoningAfter == targetReasoning && toolAfter == targetTool) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+  }
+  return stepIndex == stepReasoningCounts.length;
+}
+
 /// Whether the assistant bubble should walk [parts] instead of contentSplits.
 ///
 /// Historical rows keep a flat `[reasoning, tools…, body]` layout plus

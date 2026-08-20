@@ -242,4 +242,126 @@ void main() {
       );
     });
   });
+
+  group('contentSplitsAreUsable', () {
+    test('rejects empty or incomplete triples', () {
+      expect(contentSplitsAreUsable(null, null, null), isFalse);
+      expect(contentSplitsAreUsable(const [], const [], const []), isFalse);
+      expect(contentSplitsAreUsable(const [0], null, const [0]), isFalse);
+    });
+
+    test('rejects mismatched lengths, negatives, and regressions', () {
+      expect(
+        contentSplitsAreUsable(const [0], const [1, 2], const [0]),
+        isFalse,
+      );
+      expect(contentSplitsAreUsable(const [-1], const [1], const [0]), isFalse);
+      expect(
+        contentSplitsAreUsable(const [0, 3], const [2, 1], const [0, 0]),
+        isFalse,
+      );
+    });
+
+    test('accepts non-empty monotonic historical triples', () {
+      expect(contentSplitsAreUsable(const [0], const [1], const [0]), isTrue);
+      expect(
+        contentSplitsAreUsable(const [0, 6], const [1, 1], const [0, 1]),
+        isTrue,
+      );
+    });
+  });
+
+  group('tryParseContentSplits', () {
+    test('rejects mismatched lengths instead of truncating', () {
+      expect(
+        tryParseContentSplits({
+          'offsets': [0, 6],
+          'reasoningCounts': [1],
+          'toolCounts': [0, 1],
+        }),
+        isNull,
+      );
+    });
+
+    test('returns usable triples unchanged', () {
+      final parsed = tryParseContentSplits({
+        'offsets': [0, 6],
+        'reasoningCounts': [1, 1],
+        'toolCounts': [0, 1],
+      });
+      expect(parsed, isNotNull);
+      expect(parsed!.offsets, [0, 6]);
+      expect(parsed.reasoningCounts, [1, 1]);
+      expect(parsed.toolCounts, [0, 1]);
+    });
+  });
+
+  group('contentSplitsMatchTimeline', () {
+    test('rejects offsets past the body and unreachable counts', () {
+      expect(
+        contentSplitsMatchTimeline(
+          offsets: const [11],
+          reasoningCounts: const [1],
+          toolCounts: const [0],
+          contentLength: 5,
+          stepReasoningCounts: const [1],
+          stepToolCounts: const [0],
+        ),
+        isFalse,
+      );
+      expect(
+        contentSplitsMatchTimeline(
+          offsets: const [0],
+          reasoningCounts: const [2],
+          toolCounts: const [0],
+          contentLength: 5,
+          stepReasoningCounts: const [1],
+          stepToolCounts: const [0],
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects an empty timeline even when triples look structural', () {
+      expect(
+        contentSplitsMatchTimeline(
+          offsets: const [0],
+          reasoningCounts: const [1],
+          toolCounts: const [0],
+          contentLength: 5,
+          stepReasoningCounts: const [],
+          stepToolCounts: const [],
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects splits that stop before every tool step', () {
+      expect(
+        contentSplitsMatchTimeline(
+          offsets: const [0],
+          reasoningCounts: const [1],
+          toolCounts: const [7],
+          contentLength: 12,
+          stepReasoningCounts: [1, for (var i = 1; i <= 17; i++) 1],
+          stepToolCounts: [0, for (var i = 1; i <= 17; i++) i],
+        ),
+        isFalse,
+      );
+    });
+
+    test('accepts splits that consume every timeline step', () {
+      expect(
+        contentSplitsMatchTimeline(
+          offsets: const [6],
+          reasoningCounts: const [1],
+          toolCounts: const [2],
+          contentLength: 11,
+          stepReasoningCounts: const [1, 1, 1],
+          stepToolCounts: const [0, 1, 2],
+        ),
+        isTrue,
+      );
+    });
+  });
 }

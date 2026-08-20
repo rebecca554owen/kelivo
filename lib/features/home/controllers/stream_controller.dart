@@ -349,29 +349,20 @@ class StreamController {
         )
         .toList();
 
-    if (contentSplitOffsets == null &&
-        reasoningCountAtSplit == null &&
-        toolCountAtSplit == null &&
-        reasoningDetails == null) {
+    final splits = validateContentSplits(
+      contentSplitOffsets,
+      reasoningCountAtSplit,
+      toolCountAtSplit,
+    );
+
+    if (splits == null && reasoningDetails == null) {
       return _encodeJson(list);
     }
-
-    final normalized = _normalizeContentSplitData(
-      ContentSplitData(
-        offsets: List<int>.of(contentSplitOffsets ?? const <int>[]),
-        reasoningCounts: List<int>.of(reasoningCountAtSplit ?? const <int>[]),
-        toolCounts: List<int>.of(toolCountAtSplit ?? const <int>[]),
-      ),
-    );
 
     return _encodeJson({
       'v': 2,
       'segments': list,
-      'contentSplits': {
-        'offsets': normalized.offsets,
-        'reasoningCounts': normalized.reasoningCounts,
-        'toolCounts': normalized.toolCounts,
-      },
+      if (splits != null) 'contentSplits': splits.toJson(),
       if (reasoningDetails != null) 'reasoningDetails': reasoningDetails,
     });
   }
@@ -389,18 +380,6 @@ class StreamController {
 
   ContentSplitData? deserializeContentSplits(String? json) {
     return _DecodedReasoningPayload.decode(json).contentSplits;
-  }
-
-  static ContentSplitData _normalizeContentSplitData(ContentSplitData data) {
-    final length = math.min(
-      data.offsets.length,
-      math.min(data.reasoningCounts.length, data.toolCounts.length),
-    );
-    return ContentSplitData(
-      offsets: List<int>.of(data.offsets.take(length)),
-      reasoningCounts: List<int>.of(data.reasoningCounts.take(length)),
-      toolCounts: List<int>.of(data.toolCounts.take(length)),
-    );
   }
 
   // Simple JSON encode/decode to avoid importing dart:convert in this file
@@ -1691,6 +1670,27 @@ class ContentSplitData {
   final List<int> offsets;
   final List<int> reasoningCounts;
   final List<int> toolCounts;
+
+  Map<String, List<int>> toJson() => {
+    'offsets': offsets,
+    'reasoningCounts': reasoningCounts,
+    'toolCounts': toolCounts,
+  };
+}
+
+ContentSplitData? validateContentSplits(
+  List<int>? offsets,
+  List<int>? reasoningCounts,
+  List<int>? toolCounts,
+) {
+  if (!contentSplitsAreUsable(offsets, reasoningCounts, toolCounts)) {
+    return null;
+  }
+  return ContentSplitData(
+    offsets: List<int>.of(offsets!),
+    reasoningCounts: List<int>.of(reasoningCounts!),
+    toolCounts: List<int>.of(toolCounts!),
+  );
 }
 
 /// All views over a persisted reasoningSegmentsJson payload, produced by a
@@ -1716,13 +1716,11 @@ class _DecodedReasoningPayload {
       final decoded = _jsonDecode(source);
       if (decoded is Map<String, dynamic>) {
         final list = decoded['segments'] as List? ?? const [];
-        final contentSplits = (decoded['contentSplits'] as Map?)
-            ?.cast<String, dynamic>();
         final details = decoded['reasoningDetails'];
         return _DecodedReasoningPayload._(
           source,
           _parseSegments(list),
-          contentSplits == null ? null : _parseContentSplits(contentSplits),
+          _tryParseContentSplits(decoded['contentSplits']),
           details is List && details.isNotEmpty ? details : null,
         );
       }
@@ -1762,19 +1760,13 @@ class _DecodedReasoningPayload {
     }).toList();
   }
 
-  static ContentSplitData _parseContentSplits(Map<String, dynamic> json) {
-    return StreamController._normalizeContentSplitData(
-      ContentSplitData(
-        offsets: (json['offsets'] as List? ?? const [])
-            .map((item) => item as int)
-            .toList(),
-        reasoningCounts: (json['reasoningCounts'] as List? ?? const [])
-            .map((item) => item as int)
-            .toList(),
-        toolCounts: (json['toolCounts'] as List? ?? const [])
-            .map((item) => item as int)
-            .toList(),
-      ),
+  static ContentSplitData? _tryParseContentSplits(dynamic raw) {
+    final parsed = tryParseContentSplits(raw);
+    if (parsed == null) return null;
+    return ContentSplitData(
+      offsets: parsed.offsets,
+      reasoningCounts: parsed.reasoningCounts,
+      toolCounts: parsed.toolCounts,
     );
   }
 }

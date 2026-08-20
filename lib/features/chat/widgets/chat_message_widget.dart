@@ -2310,15 +2310,37 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     return steps;
   }
 
-  bool get _hasContentSplits =>
-      widget.contentSplitOffsets != null &&
-      widget.reasoningCountAtSplit != null &&
-      widget.toolCountAtSplit != null;
-
-  bool get _renderFromParts => renderAssistantFromParts(
-    parts: widget.message.parts,
-    hasContentSplits: _hasContentSplits,
+  bool get _hasUsableContentSplits => contentSplitsAreUsable(
+    widget.contentSplitOffsets,
+    widget.reasoningCountAtSplit,
+    widget.toolCountAtSplit,
   );
+
+  bool get _hasStructuredAssistantParts => renderAssistantFromParts(
+    parts: widget.message.parts,
+    hasContentSplits: false,
+  );
+
+  bool _shouldRenderAssistantFromParts(
+    String visualContent, {
+    List<ReasoningSegment>? reasoningSegments,
+  }) {
+    if (renderAssistantFromParts(
+      parts: widget.message.parts,
+      hasContentSplits: _hasUsableContentSplits,
+    )) {
+      return true;
+    }
+    if (!_hasStructuredAssistantParts) return false;
+    final visibleTools = (widget.toolParts ?? const <ToolUIPart>[])
+        .where((p) => p.toolName != 'builtin_search')
+        .toList();
+    final steps = _buildTimelineSteps(
+      visibleTools,
+      reasoningSegments: reasoningSegments,
+    );
+    return !_contentSplitsMatchSteps(steps, visualContent);
+  }
 
   List<_RenderBlock> _buildRenderBlocksFromParts(
     List<MessagePart> parts, {
@@ -2407,7 +2429,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     String visualContent, {
     List<ReasoningSegment>? reasoningSegments,
   }) {
-    if (_renderFromParts) {
+    if (_shouldRenderAssistantFromParts(
+      visualContent,
+      reasoningSegments: reasoningSegments,
+    )) {
       return _buildRenderBlocksFromParts(
         widget.message.parts,
         reasoningSegments: reasoningSegments,
@@ -2426,10 +2451,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
           : <_RenderBlock>[_RenderBlock.text(visualContent)];
     }
 
-    final offsets = widget.contentSplitOffsets;
-    final reasoningCounts = widget.reasoningCountAtSplit;
-    final toolCounts = widget.toolCountAtSplit;
-    if (offsets == null || reasoningCounts == null || toolCounts == null) {
+    if (!_contentSplitsMatchSteps(steps, visualContent)) {
       final blocks = <_RenderBlock>[_RenderBlock.thinking(steps)];
       if (visualContent.trim().isNotEmpty) {
         blocks.add(_RenderBlock.text(visualContent));
@@ -2437,6 +2459,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       return blocks;
     }
 
+    final offsets = widget.contentSplitOffsets!;
+    final reasoningCounts = widget.reasoningCountAtSplit!;
+    final toolCounts = widget.toolCountAtSplit!;
     final blocks = <_RenderBlock>[];
     int stepIndex = 0;
     int textStart = 0;
@@ -2448,10 +2473,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         blocks.add(_RenderBlock.text(textSlice.trim()));
       }
 
-      final targetReasoning = i < reasoningCounts.length
-          ? reasoningCounts[i]
-          : 0;
-      final targetTool = i < toolCounts.length ? toolCounts[i] : 0;
+      final targetReasoning = reasoningCounts[i];
+      final targetTool = toolCounts[i];
       final blockSteps = <_TimelineStepData>[];
       while (stepIndex < steps.length) {
         final step = steps[stepIndex];
@@ -2472,10 +2495,64 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     if (trailingText.trim().isNotEmpty) {
       blocks.add(_RenderBlock.text(trailingText.trim()));
     }
-    if (stepIndex < steps.length) {
-      blocks.add(_RenderBlock.thinking(steps.sublist(stepIndex)));
-    }
     return blocks;
+  }
+
+  bool _contentSplitsMatchSteps(
+    List<_TimelineStepData> steps,
+    String visualContent,
+  ) {
+    if (!_hasUsableContentSplits) return false;
+    return contentSplitsMatchTimeline(
+      offsets: widget.contentSplitOffsets!,
+      reasoningCounts: widget.reasoningCountAtSplit!,
+      toolCounts: widget.toolCountAtSplit!,
+      contentLength: visualContent.length,
+      stepReasoningCounts: [for (final step in steps) step.reasoningCountAfter],
+      stepToolCounts: [for (final step in steps) step.toolCountAfter],
+    );
+  }
+
+  List<ReasoningSegment>? _effectiveReasoningSegments(
+    String extractedThinking,
+  ) {
+    final hasProvidedReasoning =
+        (widget.reasoningText != null && widget.reasoningText!.isNotEmpty) ||
+        widget.reasoningLoading;
+    final effectiveReasoningText =
+        (widget.reasoningText != null && widget.reasoningText!.isNotEmpty)
+        ? widget.reasoningText!
+        : extractedThinking;
+    final usingInlineThink =
+        (widget.reasoningText == null || widget.reasoningText!.isEmpty) &&
+        extractedThinking.isNotEmpty;
+    final effectiveExpanded = usingInlineThink
+        ? (_inlineThinkExpanded ?? true)
+        : widget.reasoningExpanded;
+    final effectiveLoading = usingInlineThink
+        ? false
+        : (widget.reasoningFinishedAt == null);
+
+    final provided = widget.reasoningSegments;
+    if (provided != null && provided.isNotEmpty) return provided;
+    if (!hasProvidedReasoning && effectiveReasoningText.isEmpty) {
+      return provided;
+    }
+    return <ReasoningSegment>[
+      ReasoningSegment(
+        text: effectiveReasoningText,
+        expanded: effectiveExpanded,
+        loading: effectiveLoading,
+        startAt: usingInlineThink ? null : widget.reasoningStartAt,
+        finishedAt: usingInlineThink ? null : widget.reasoningFinishedAt,
+        onToggle: usingInlineThink
+            ? () => setState(() {
+                _inlineThinkExpanded = !(_inlineThinkExpanded ?? true);
+                _inlineThinkManuallyToggled = true;
+              })
+            : widget.onToggleReasoning,
+      ),
+    ];
   }
 
   Widget _buildAssistantMessage() {
@@ -2508,9 +2585,16 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final searchItems = _allSearchItems();
     final citationIndexLookup = _buildCitationIndexLookup(searchItems);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveReasoningSegments = _effectiveReasoningSegments(
+      extractedThinking,
+    );
+    final renderFromParts = _shouldRenderAssistantFromParts(
+      visualContent,
+      reasoningSegments: effectiveReasoningSegments,
+    );
     final mediaPreview = _buildAttachmentPreview(
       context,
-      parts: _renderFromParts
+      parts: renderFromParts
           ? [
               for (final part in widget.message.parts)
                 if (part is FilePart) part,
@@ -2600,51 +2684,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             const SizedBox(height: 8),
           ],
           ...() {
-            final hasProvidedReasoning =
-                (widget.reasoningText != null &&
-                    widget.reasoningText!.isNotEmpty) ||
-                widget.reasoningLoading;
-            final effectiveReasoningText =
-                (widget.reasoningText != null &&
-                    widget.reasoningText!.isNotEmpty)
-                ? widget.reasoningText!
-                : extractedThinking;
-            final usingInlineThink =
-                (widget.reasoningText == null ||
-                    widget.reasoningText!.isEmpty) &&
-                extractedThinking.isNotEmpty;
-            final effectiveExpanded = usingInlineThink
-                ? (_inlineThinkExpanded ?? true)
-                : widget.reasoningExpanded;
-            final effectiveLoading = usingInlineThink
-                ? false
-                : (widget.reasoningFinishedAt == null);
-
-            List<ReasoningSegment>? effectiveReasoningSegments =
-                widget.reasoningSegments;
-            if ((effectiveReasoningSegments == null ||
-                    effectiveReasoningSegments.isEmpty) &&
-                (hasProvidedReasoning || effectiveReasoningText.isNotEmpty)) {
-              effectiveReasoningSegments = <ReasoningSegment>[
-                ReasoningSegment(
-                  text: effectiveReasoningText,
-                  expanded: effectiveExpanded,
-                  loading: effectiveLoading,
-                  startAt: usingInlineThink ? null : widget.reasoningStartAt,
-                  finishedAt: usingInlineThink
-                      ? null
-                      : widget.reasoningFinishedAt,
-                  onToggle: usingInlineThink
-                      ? () => setState(() {
-                          _inlineThinkExpanded =
-                              !(_inlineThinkExpanded ?? true);
-                          _inlineThinkManuallyToggled = true;
-                        })
-                      : widget.onToggleReasoning,
-                ),
-              ];
-            }
-
             final renderBlocks = _buildRenderBlocks(
               visualContent,
               reasoningSegments: effectiveReasoningSegments,
