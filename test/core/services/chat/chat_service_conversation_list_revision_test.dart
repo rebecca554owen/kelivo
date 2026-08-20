@@ -238,6 +238,200 @@ void main() {
     });
   });
 
+  group('batch conversation mutations', () {
+    test('deleteConversations bumps and notifies once', () async {
+      final service = createService();
+      await service.init();
+      final a = await service.createConversation(title: 'A');
+      final b = await service.createConversation(title: 'B');
+      final c = await service.createConversation(title: 'C');
+      final last = service.conversationListRevision;
+      var notifications = 0;
+      service.addListener(() => notifications++);
+
+      final count = await service.deleteConversations([
+        a.id,
+        b.id,
+        c.id,
+        a.id,
+        'missing',
+      ]);
+
+      expect(count, 3);
+      expect(service.conversationListRevision, last + 1);
+      expect(notifications, 1);
+      expect(service.getConversation(a.id), isNull);
+      expect(service.getConversation(b.id), isNull);
+      expect(service.getConversation(c.id), isNull);
+    });
+
+    test('deleteConversations on drafts still bumps once', () async {
+      final service = createService();
+      await service.init();
+      final draft = await service.createDraftConversation(title: 'Draft');
+      final last = service.conversationListRevision;
+      var notifications = 0;
+      service.addListener(() => notifications++);
+
+      final count = await service.deleteConversations([draft.id]);
+
+      expect(count, 1);
+      expect(service.conversationListRevision, last + 1);
+      expect(notifications, 1);
+      expect(service.getConversation(draft.id), isNull);
+    });
+
+    test(
+      'deleteConversations no-ops without notify when nothing matches',
+      () async {
+        final service = createService();
+        await service.init();
+        final last = service.conversationListRevision;
+        var notifications = 0;
+        service.addListener(() => notifications++);
+
+        final count = await service.deleteConversations(['missing']);
+
+        expect(count, 0);
+        expect(service.conversationListRevision, last);
+        expect(notifications, 0);
+      },
+    );
+
+    test('setConversationsPinned sets target and skips unchanged', () async {
+      final service = createService();
+      await service.init();
+      final a = await service.createConversation(title: 'A');
+      final b = await service.createConversation(title: 'B');
+      final last = service.conversationListRevision;
+      var notifications = 0;
+      service.addListener(() => notifications++);
+
+      final count = await service.setConversationsPinned([a.id, b.id], true);
+
+      expect(count, 2);
+      expect(service.getConversation(a.id)!.isPinned, isTrue);
+      expect(service.getConversation(b.id)!.isPinned, isTrue);
+      expect(service.conversationListRevision, last + 1);
+      expect(notifications, 1);
+
+      notifications = 0;
+      final again = await service.setConversationsPinned([a.id, b.id], true);
+      expect(again, 0);
+      expect(service.conversationListRevision, last + 1);
+      expect(notifications, 0);
+
+      notifications = 0;
+      final unpinned = await service.setConversationsPinned([a.id], false);
+      expect(unpinned, 1);
+      expect(service.getConversation(a.id)!.isPinned, isFalse);
+      expect(service.getConversation(b.id)!.isPinned, isTrue);
+      expect(service.conversationListRevision, last + 2);
+      expect(notifications, 1);
+    });
+
+    test('setConversationsPinned on drafts notifies once', () async {
+      final service = createService();
+      await service.init();
+      final draft = await service.createDraftConversation(title: 'Draft');
+      final last = service.conversationListRevision;
+      var notifications = 0;
+      service.addListener(() => notifications++);
+
+      final count = await service.setConversationsPinned([draft.id], true);
+
+      expect(count, 1);
+      expect(draft.isPinned, isTrue);
+      expect(service.conversationListRevision, last + 1);
+      expect(notifications, 1);
+    });
+
+    test('moveConversationsToAssistant bumps and notifies once', () async {
+      final service = createService();
+      await service.init();
+      final a = await service.createConversation(
+        title: 'A',
+        assistantId: 'assistant-a',
+      );
+      final b = await service.createConversation(
+        title: 'B',
+        assistantId: 'assistant-a',
+      );
+      final last = service.conversationListRevision;
+      var notifications = 0;
+      service.addListener(() => notifications++);
+
+      final count = await service.moveConversationsToAssistant(
+        conversationIds: [a.id, b.id, a.id],
+        assistantId: 'assistant-b',
+      );
+
+      expect(count, 2);
+      expect(service.conversationListRevision, last + 1);
+      expect(notifications, 1);
+      expect(service.getConversation(a.id)?.assistantId, 'assistant-b');
+      expect(service.getConversation(b.id)?.assistantId, 'assistant-b');
+      expect(service.getConversation(a.id)?.injectedMemoryHash, isNull);
+    });
+
+    test('moveConversationsToAssistant skips already-on-target', () async {
+      final service = createService();
+      await service.init();
+      final a = await service.createConversation(
+        title: 'A',
+        assistantId: 'assistant-a',
+      );
+      final last = service.conversationListRevision;
+      var notifications = 0;
+      service.addListener(() => notifications++);
+
+      final count = await service.moveConversationsToAssistant(
+        conversationIds: [a.id],
+        assistantId: 'assistant-a',
+      );
+
+      expect(count, 0);
+      expect(service.conversationListRevision, last);
+      expect(notifications, 0);
+    });
+
+    test(
+      'moveConversationsToAssistant skips ids with active generation',
+      () async {
+        final service = createService();
+        await service.init();
+        final a = await service.createConversation(
+          title: 'A',
+          assistantId: 'assistant-a',
+        );
+        final b = await service.createConversation(
+          title: 'B',
+          assistantId: 'assistant-a',
+        );
+        await service.beginSendGeneration(
+          conversationId: a.id,
+          userParts: const [TextPart('hello')],
+          modelId: 'model',
+          providerId: 'provider',
+        );
+        final last = service.conversationListRevision;
+        var notifications = 0;
+        service.addListener(() => notifications++);
+
+        final count = await service.moveConversationsToAssistant(
+          conversationIds: [a.id, b.id],
+          assistantId: 'assistant-b',
+        );
+
+        expect(count, 1);
+        expect(service.conversationListRevision, last + 1);
+        expect(notifications, 1);
+        expect(service.getConversation(a.id)?.assistantId, 'assistant-a');
+        expect(service.getConversation(b.id)?.assistantId, 'assistant-b');
+      },
+    );
+  });
+
   group('sorted conversation cache', () {
     test(
       'returns equal lists across calls and caller mutation is isolated',
