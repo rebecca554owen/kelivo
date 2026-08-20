@@ -1924,7 +1924,10 @@ class ChatService extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> _deletePersistedConversation(String id) async {
+  Future<bool> _deletePersistedConversation(
+    String id, {
+    bool bump = true,
+  }) async {
     final conversation = _conversationsCache[id];
     if (conversation == null) return false;
 
@@ -1950,7 +1953,9 @@ class ChatService extends ChangeNotifier {
     if (_currentConversationId == id) {
       _currentConversationId = null;
     }
-    _bumpConversationListRevision();
+    if (bump) {
+      _bumpConversationListRevision();
+    }
     return true;
   }
 
@@ -1974,12 +1979,36 @@ class ChatService extends ChangeNotifier {
       deleted = await _deleteDraftConversation(conversationId) || deleted;
     }
     for (final conversationId in persistedConversationIds) {
-      deleted = await _deletePersistedConversation(conversationId) || deleted;
+      deleted =
+          await _deletePersistedConversation(conversationId, bump: false) ||
+          deleted;
     }
 
     if (!deleted) return;
     await _cleanupOrphanUploads();
+    _bumpConversationListRevision();
     notifyListeners();
+  }
+
+  /// Deletes each id once. Returns the number of conversations actually
+  /// removed. Notifies and bumps the list revision at most once.
+  Future<int> deleteConversations(Iterable<String> ids) async {
+    if (!_initialized) await init();
+
+    var count = 0;
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      if (await _deleteDraftConversation(id) ||
+          await _deletePersistedConversation(id, bump: false)) {
+        count++;
+      }
+    }
+    if (count == 0) return 0;
+    await _cleanupOrphanUploads();
+    _bumpConversationListRevision();
+    notifyListeners();
+    return count;
   }
 
   List<({String path, String kind})> _extractLocalAttachmentsFromMessage(
@@ -2668,6 +2697,35 @@ class ChatService extends ChangeNotifier {
     await _saveConversation(conversation);
     _bumpConversationListRevision();
     notifyListeners();
+  }
+
+  /// Sets pin state to [pinned] for each id. Unchanged items are skipped.
+  /// Returns how many conversations changed. Notifies and bumps at most once.
+  Future<int> setConversationsPinned(Iterable<String> ids, bool pinned) async {
+    if (!_initialized) await init();
+
+    var changed = 0;
+    final seen = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      if (_draftConversations.containsKey(id)) {
+        final draft = _draftConversations[id]!;
+        if (draft.isPinned == pinned) continue;
+        draft.isPinned = pinned;
+        changed++;
+        continue;
+      }
+      final conversation = _conversationsCache[id];
+      if (conversation == null) continue;
+      if (conversation.isPinned == pinned) continue;
+      conversation.isPinned = pinned;
+      await _saveConversation(conversation);
+      changed++;
+    }
+    if (changed == 0) return 0;
+    _bumpConversationListRevision();
+    notifyListeners();
+    return changed;
   }
 
   Future<ChatMessage> addMessage({
@@ -3851,18 +3909,27 @@ class ChatService extends ChangeNotifier {
   Future<bool> moveConversationToAssistant({
     required String conversationId,
     required String assistantId,
+  }) {
+    return _moveConversationToAssistantInternal(
+      conversationId: conversationId,
+      assistantId: assistantId,
+      notify: true,
+    );
+  }
+
+  Future<bool> _moveConversationToAssistantInternal({
+    required String conversationId,
+    required String assistantId,
+    bool notify = true,
   }) async {
     if (!_initialized) await init();
-
-    // Draft conversation case
     if (_draftConversations.containsKey(conversationId)) {
       final draft = _draftConversations[conversationId]!;
       draft.assistantId = assistantId;
       draft.updatedAt = DateTime.now();
-      notifyListeners();
+      if (notify) notifyListeners(); // preserve today's draft: notify, no bump
       return true;
     }
-
     final c = _conversationsCache[conversationId];
     if (c == null) return false;
     if (c.assistantId == assistantId) return true;
@@ -3876,9 +3943,41 @@ class ChatService extends ChangeNotifier {
     c.assistantId = assistantId;
     c.updatedAt = updatedAt;
     c.injectedMemoryHash = null;
+    if (notify) {
+      _bumpConversationListRevision();
+      notifyListeners();
+    }
+    return true;
+  }
+
+  /// Moves each conversation to [assistantId]. Items already on that assistant
+  /// are skipped. Returns how many actually moved. Notifies and bumps at most
+  /// once. Active-generation rejections are not counted.
+  Future<int> moveConversationsToAssistant({
+    required Iterable<String> conversationIds,
+    required String assistantId,
+  }) async {
+    if (!_initialized) await init();
+
+    var n = 0;
+    final seen = <String>{};
+    for (final id in conversationIds) {
+      if (id.isEmpty || !seen.add(id)) continue;
+      final conversation = _draftConversations[id] ?? _conversationsCache[id];
+      if (conversation == null) continue;
+      if (conversation.assistantId == assistantId) continue;
+      if (await _moveConversationToAssistantInternal(
+        conversationId: id,
+        assistantId: assistantId,
+        notify: false,
+      )) {
+        n++;
+      }
+    }
+    if (n == 0) return 0;
     _bumpConversationListRevision();
     notifyListeners();
-    return true;
+    return n;
   }
 }
 
