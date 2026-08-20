@@ -47,4 +47,127 @@ void main() {
     expect(find.text('Dark'), findsOneWidget);
     expect(find.byType(SfSlider), findsNWidgets(2));
   });
+
+  testWidgets('behavior page shows long-paste threshold only when enabled', (
+    tester,
+  ) async {
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    addTearDown(settings.dispose);
+    await settings.loaded;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsProvider>.value(
+        value: settings,
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BehaviorStartupSettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final toggle = find.text('Paste long text as file');
+    await tester.scrollUntilVisible(
+      toggle,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(toggle, findsOneWidget);
+    expect(find.text('Conversion threshold'), findsOneWidget);
+    expect(find.text('5000'), findsOneWidget);
+
+    await settings.setLongPasteAsFile(false);
+    await tester.pumpAndSettle();
+    expect(find.text('Conversion threshold'), findsNothing);
+  });
+
+  testWidgets('mobile threshold saves while typing and survives back', (
+    tester,
+  ) async {
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    addTearDown(settings.dispose);
+    await settings.loaded;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsProvider>.value(
+        value: settings,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const BehaviorStartupSettingsPage(),
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final thresholdLabel = find.text('Conversion threshold');
+    await tester.scrollUntilVisible(
+      thresholdLabel,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '8000');
+    await tester.pump();
+    expect(settings.longPasteAsFileThreshold, 8000);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(settings.longPasteAsFileThreshold, 8000);
+  });
+
+  testWidgets(
+    'mobile threshold keeps a typed value when the switch turns off',
+    (tester) async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      addTearDown(settings.dispose);
+      await settings.loaded;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsProvider>.value(
+          value: settings,
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BehaviorStartupSettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Conversion threshold'),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '1200');
+      await tester.pump();
+      expect(settings.longPasteAsFileThreshold, 1200);
+
+      await tester.tap(find.text('Paste long text as file'));
+      await tester.pumpAndSettle();
+      expect(find.text('Conversion threshold'), findsNothing);
+      expect(settings.longPasteAsFile, isFalse);
+      expect(settings.longPasteAsFileThreshold, 1200);
+    },
+  );
 }

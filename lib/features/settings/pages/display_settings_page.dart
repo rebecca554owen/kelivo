@@ -2180,7 +2180,153 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                 onChanged: (v) =>
                     context.read<SettingsProvider>().setEnterToSendOnMobile(v),
               ),
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
+                icon: Lucide.Clipboard,
+                label: l10n.displaySettingsPageLongPasteAsFileTitle,
+                value: sp.longPasteAsFile,
+                onChanged: (v) =>
+                    context.read<SettingsProvider>().setLongPasteAsFile(v),
+              ),
+              if (sp.longPasteAsFile) ...[
+                _iosDivider(context),
+                const _LongPasteAsFileThresholdRow(),
+              ],
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LongPasteAsFileThresholdRow extends StatefulWidget {
+  const _LongPasteAsFileThresholdRow();
+
+  @override
+  State<_LongPasteAsFileThresholdRow> createState() =>
+      _LongPasteAsFileThresholdRowState();
+}
+
+class _LongPasteAsFileThresholdRowState
+    extends State<_LongPasteAsFileThresholdRow> {
+  late final SettingsProvider _settings;
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _settings = context.read<SettingsProvider>();
+    _controller = TextEditingController(
+      text: '${_settings.longPasteAsFileThreshold}',
+    );
+    _focusNode = FocusNode()
+      ..addListener(() {
+        if (!_focusNode.hasFocus) _commit();
+      });
+  }
+
+  @override
+  void dispose() {
+    // Back / toggling the switch often skips unfocus on mobile.
+    _commit(syncField: false);
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _commit({bool syncField = true}) {
+    final next = SettingsProvider.resolveLongPasteAsFileThreshold(
+      _controller.text,
+      fallback: _settings.longPasteAsFileThreshold,
+    );
+    _settings.setLongPasteAsFileThreshold(next);
+    if (!syncField) return;
+    final text = '$next';
+    if (_controller.text != text) {
+      _controller.value = _controller.value.copyWith(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final sp = context.watch<SettingsProvider>();
+
+    if (!_focusNode.hasFocus) {
+      final t = '${sp.longPasteAsFileThreshold}';
+      if (_controller.text != t) _controller.text = t;
+    }
+
+    final baseColor = cs.onSurface.withValues(alpha: 0.9);
+    final baseBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(
+        color: cs.outlineVariant.withValues(alpha: 0.28),
+        width: 0.8,
+      ),
+    );
+    final focusBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: cs.primary, width: 1.0),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 36,
+            child: Icon(Lucide.ListOrdered, size: 20, color: baseColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.displaySettingsPageLongPasteAsFileThresholdTitle,
+              style: TextStyle(fontSize: 15, color: baseColor),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IntrinsicWidth(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 56, maxWidth: 96),
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: context.appColors.surfaceCard,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                  border: baseBorder,
+                  enabledBorder: baseBorder,
+                  focusedBorder: focusBorder,
+                ),
+                onChanged: (_) => _commit(syncField: false),
+                onSubmitted: (_) => _commit(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            l10n.displaySettingsPageLongPasteAsFileThresholdUnit,
+            style: TextStyle(
+              fontSize: 13,
+              color: cs.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),

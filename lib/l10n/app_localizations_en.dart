@@ -4495,6 +4495,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageEnterToSendTitle => 'Enter Key to Send';
 
   @override
+  String get displaySettingsPageLongPasteAsFileTitle =>
+      'Paste long text as file';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdTitle =>
+      'Conversion threshold';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdUnit => 'characters';
+
+  @override
   String get displaySettingsPageSendShortcutTitle => 'Send Shortcut';
 
   @override

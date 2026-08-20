@@ -8275,6 +8275,24 @@ abstract class AppLocalizations {
   /// **'Enter Key to Send'**
   String get displaySettingsPageEnterToSendTitle;
 
+  /// No description provided for @displaySettingsPageLongPasteAsFileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste long text as file'**
+  String get displaySettingsPageLongPasteAsFileTitle;
+
+  /// No description provided for @displaySettingsPageLongPasteAsFileThresholdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion threshold'**
+  String get displaySettingsPageLongPasteAsFileThresholdTitle;
+
+  /// No description provided for @displaySettingsPageLongPasteAsFileThresholdUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'characters'**
+  String get displaySettingsPageLongPasteAsFileThresholdUnit;
+
   /// No description provided for @displaySettingsPageSendShortcutTitle.
   ///
   /// In en, this message translates to:

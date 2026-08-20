@@ -240,7 +240,6 @@ class _ChatInputBarState extends State<ChatInputBar>
   static const double _documentPreviewHeight = 48;
   static const double _imagePreviewHeight = 64;
   static const double _imageRemoveButtonSize = 18;
-  static const int _maxInlinePasteCharacters = 5000;
   // Suppress context menu briefly after app resume to avoid flickering
   bool _suppressContextMenu = false;
   bool _isSubmitting = false;
@@ -1543,9 +1542,12 @@ class _ChatInputBarState extends State<ChatInputBar>
   }
 
   Future<void> _handlePastedText(String text) async {
+    if (!mounted) return;
+    final settings = context.read<SettingsProvider>();
+    final threshold = settings.longPasteAsFileThreshold;
     final isLongPaste =
-        text.characters.take(_maxInlinePasteCharacters + 1).length >
-        _maxInlinePasteCharacters;
+        settings.longPasteAsFile &&
+        text.characters.take(threshold + 1).length > threshold;
     if (!isLongPaste) {
       _insertPastedText(text);
       return;

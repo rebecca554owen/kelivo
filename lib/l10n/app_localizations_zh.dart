@@ -4320,6 +4320,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageEnterToSendTitle => '回车键发送消息';
 
   @override
+  String get displaySettingsPageLongPasteAsFileTitle => '超长粘贴转为文件';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdTitle => '转换阈值';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdUnit => '字符';
+
+  @override
   String get displaySettingsPageSendShortcutTitle => '发送快捷键';
 
   @override
@@ -11909,6 +11918,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageEnterToSendTitle => '回车键发送消息';
 
   @override
+  String get displaySettingsPageLongPasteAsFileTitle => '超长粘贴转为文件';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdTitle => '转换阈值';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdUnit => '字符';
+
+  @override
   String get displaySettingsPageSendShortcutTitle => '发送快捷键';
 
   @override
@@ -19420,6 +19438,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageEnterToSendTitle => '回車鍵發送訊息';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileTitle => '超長貼上轉為檔案';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdTitle => '轉換閾值';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdUnit => '字元';
 
   @override
   String get displaySettingsPageSendShortcutTitle => '發送快捷鍵';

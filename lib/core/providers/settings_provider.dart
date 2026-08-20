@@ -225,6 +225,10 @@ class SettingsProvider extends ChangeNotifier {
       'display_new_chat_after_delete_v1';
   static const String _displayEnterToSendOnMobileKey =
       'display_enter_to_send_on_mobile_v1';
+  static const String _displayLongPasteAsFileKey =
+      'display_long_paste_as_file_v1';
+  static const String _displayLongPasteAsFileThresholdKey =
+      'display_long_paste_as_file_threshold_v1';
   static const String _desktopSendShortcutKey = 'desktop_send_shortcut_v1';
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
   static const String _displayAutoScrollEnabledKey =
@@ -1092,6 +1096,11 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       _enterToSendOnMobile = enterToSendPref;
     }
+    _longPasteAsFile = prefs.getBool(_displayLongPasteAsFileKey) ?? true;
+    _longPasteAsFileThreshold =
+        (prefs.getInt(_displayLongPasteAsFileThresholdKey) ??
+                defaultLongPasteAsFileThreshold)
+            .clamp(minLongPasteAsFileThreshold, maxLongPasteAsFileThreshold);
     // Desktop send shortcut: Enter (default) or Ctrl/Cmd+Enter
     final sendShortcutStr = prefs.getString(_desktopSendShortcutKey);
     switch (sendShortcutStr) {
@@ -4387,6 +4396,47 @@ Requirements:
     await prefs.setBool(_displayEnterToSendOnMobileKey, v);
   }
 
+  static const int defaultLongPasteAsFileThreshold = 5000;
+  static const int minLongPasteAsFileThreshold = 1;
+  static const int maxLongPasteAsFileThreshold = 999999;
+
+  static int resolveLongPasteAsFileThreshold(
+    String raw, {
+    required int fallback,
+  }) {
+    final parsed = int.tryParse(raw.trim());
+    if (parsed == null) return fallback;
+    return parsed.clamp(
+      minLongPasteAsFileThreshold,
+      maxLongPasteAsFileThreshold,
+    );
+  }
+
+  // Display: convert long pasted text into a file attachment
+  bool _longPasteAsFile = true;
+  bool get longPasteAsFile => _longPasteAsFile;
+  Future<void> setLongPasteAsFile(bool v) async {
+    if (_longPasteAsFile == v) return;
+    _longPasteAsFile = v;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setBool(_displayLongPasteAsFileKey, v);
+  }
+
+  int _longPasteAsFileThreshold = defaultLongPasteAsFileThreshold;
+  int get longPasteAsFileThreshold => _longPasteAsFileThreshold;
+  Future<void> setLongPasteAsFileThreshold(int v) async {
+    final next = v.clamp(
+      minLongPasteAsFileThreshold,
+      maxLongPasteAsFileThreshold,
+    );
+    if (_longPasteAsFileThreshold == next) return;
+    _longPasteAsFileThreshold = next;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setInt(_displayLongPasteAsFileThresholdKey, next);
+  }
+
   // Desktop: send shortcut (Enter or Ctrl/Cmd+Enter)
   DesktopSendShortcut _desktopSendShortcut = DesktopSendShortcut.enter;
   DesktopSendShortcut get desktopSendShortcut => _desktopSendShortcut;
@@ -5218,6 +5268,8 @@ Requirements:
     copy._newChatOnLaunch = _newChatOnLaunch;
     copy._newChatOnAssistantSwitch = _newChatOnAssistantSwitch;
     copy._newChatAfterDelete = _newChatAfterDelete;
+    copy._longPasteAsFile = _longPasteAsFile;
+    copy._longPasteAsFileThreshold = _longPasteAsFileThreshold;
     copy._iosBackgroundGenerationEnabled = _iosBackgroundGenerationEnabled;
     copy._iosBackgroundTaskRefreshEnabled = _iosBackgroundTaskRefreshEnabled;
     copy._iosLiveActivityEnabled = _iosLiveActivityEnabled;

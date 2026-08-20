@@ -124,11 +124,12 @@ void main() {
     required Future<ChatInputSubmissionResult> Function(ChatInputData input)
     onSend,
     ChatInputBarController? mediaController,
+    SettingsProvider? settings,
   }) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(
-          value: SettingsProvider(createBusinessTestPreferences()),
+          value: settings ?? SettingsProvider(createBusinessTestPreferences()),
         ),
         ChangeNotifierProvider.value(
           value: AssistantProvider(
@@ -282,6 +283,144 @@ void main() {
       () => uploadDir.list().map((entry) => entry.path).toSet(),
     );
     expect(remainingPaths, existingPaths);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('关闭超长粘贴转文件后保持为输入文本', (tester) async {
+    final nativeClipboardContext = MockMessageChannelContext()
+      ..registerMockMethodCallHandler('ClipboardReader', (_) {
+        throw PlatformException(code: 'unavailable-in-widget-test');
+      });
+    setContextOverride(nativeClipboardContext);
+
+    var clipboardText = '';
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.getData') {
+        return <String, dynamic>{'text': clipboardText};
+      }
+      return null;
+    });
+    const clipboardFilesChannel = MethodChannel('app.clipboard');
+    messenger.setMockMethodCallHandler(
+      clipboardFilesChannel,
+      (_) async => null,
+    );
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      messenger.setMockMethodCallHandler(clipboardFilesChannel, null);
+    });
+
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    addTearDown(settings.dispose);
+    await settings.loaded;
+    await settings.setLongPasteAsFile(false);
+
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        settings: settings,
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    clipboardText = List.filled(5001, 'a').join();
+    await _invokePasteShortcut(tester, focusNode);
+    expect(
+      await pumpUntil(tester, () => controller.text == clipboardText),
+      isTrue,
+    );
+    expect(mediaController.snapshotInput(controller.text).documents, isEmpty);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('自定义阈值决定是否将粘贴转为文本附件', (tester) async {
+    final nativeClipboardContext = MockMessageChannelContext()
+      ..registerMockMethodCallHandler('ClipboardReader', (_) {
+        throw PlatformException(code: 'unavailable-in-widget-test');
+      });
+    setContextOverride(nativeClipboardContext);
+
+    var clipboardText = '';
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.getData') {
+        return <String, dynamic>{'text': clipboardText};
+      }
+      return null;
+    });
+    const clipboardFilesChannel = MethodChannel('app.clipboard');
+    messenger.setMockMethodCallHandler(
+      clipboardFilesChannel,
+      (_) async => null,
+    );
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      messenger.setMockMethodCallHandler(clipboardFilesChannel, null);
+    });
+
+    final settings = SettingsProvider(createBusinessTestPreferences());
+    addTearDown(settings.dispose);
+    await settings.loaded;
+    await settings.setLongPasteAsFileThreshold(100);
+
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        settings: settings,
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    clipboardText = List.filled(100, 'a').join();
+    await _invokePasteShortcut(tester, focusNode);
+    expect(
+      await pumpUntil(tester, () => controller.text == clipboardText),
+      isTrue,
+    );
+    expect(mediaController.snapshotInput(controller.text).documents, isEmpty);
+
+    controller.text = '';
+    clipboardText = List.filled(101, 'b').join();
+    await _invokePasteShortcut(tester, focusNode);
+    expect(
+      await pumpUntil(
+        tester,
+        () =>
+            controller.text.isEmpty &&
+            mediaController.snapshotInput(controller.text).documents.length ==
+                1,
+      ),
+      isTrue,
+    );
+    expect(
+      await tester.runAsync(
+        () => File(
+          mediaController.snapshotInput(controller.text).documents.single.path,
+        ).readAsString(),
+      ),
+      clipboardText,
+    );
 
     controller.dispose();
     focusNode.dispose();
