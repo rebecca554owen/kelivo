@@ -145,7 +145,10 @@ void main() {
 
       final stopwatch = Stopwatch()..start();
       await expectLater(
-        RestoreBusinessLease.acquire(appDataDirectory: appData),
+        RestoreBusinessLease.acquire(
+          appDataDirectory: appData,
+          foreignLockGrace: Duration.zero,
+        ),
         throwsA(isA<RestoreBusinessLeaseUnavailable>()),
       );
       stopwatch.stop();
@@ -171,6 +174,45 @@ void main() {
         appDataDirectory: appData,
       );
       await lease.close();
+    });
+
+    test('waits out a previous process that is still dying', () async {
+      final helper = File(p.join(root.path, 'business_lease_helper.dart'));
+      await helper.writeAsString(_helperSource, flush: true);
+      final packageConfig = p.join(
+        Directory.current.path,
+        '.dart_tool',
+        'package_config.json',
+      );
+      final releaseFile = File(p.join(root.path, 'release_helper'));
+      final process = await Process.start('dart', [
+        '--packages=$packageConfig',
+        helper.path,
+        appData.path,
+        releaseFile.path,
+      ], workingDirectory: Directory.current.path);
+      addTearDown(() async {
+        process.kill();
+        await process.stdin.close();
+      });
+      final ready = await process.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .first
+          .timeout(const Duration(seconds: 15));
+      expect(ready, 'ready');
+
+      // A phone cannot run the app twice, so the only lock another process can
+      // hold there is one on its way out.
+      Timer(const Duration(milliseconds: 400), () => releaseFile.createSync());
+
+      final lease = await RestoreBusinessLease.acquire(
+        appDataDirectory: appData,
+        foreignLockGrace: const Duration(seconds: 10),
+      );
+      addTearDown(lease.close);
+      expect(lease.isClosed, isFalse);
+      await process.exitCode.timeout(const Duration(seconds: 15));
     });
 
     test(
@@ -224,60 +266,54 @@ void main() {
       },
     );
 
-    test(
-      'keeps a same-process owner that only stalls its probe',
-      () async {
-        final leaseDirectory = Directory(
-          p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
-        );
-        await leaseDirectory.create(recursive: true);
-        final outgoingOwner = File(p.join(leaseDirectory.path, 'owner_$pid'));
-        final outgoing = await _FakeOwnerProbe.open(
-          outgoingOwner,
-          // A device returning to the foreground can stall the outgoing
-          // isolate past a probe timeout without it being dead.
-          silentReplies: 2,
-        );
-        addTearDown(outgoing.close);
+    test('keeps a same-process owner that only stalls its probe', () async {
+      final leaseDirectory = Directory(
+        p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
+      );
+      await leaseDirectory.create(recursive: true);
+      final outgoingOwner = File(p.join(leaseDirectory.path, 'owner_$pid'));
+      final outgoing = await _FakeOwnerProbe.open(
+        outgoingOwner,
+        // A device returning to the foreground can stall the outgoing
+        // isolate past a probe timeout without it being dead.
+        silentReplies: 2,
+      );
+      addTearDown(outgoing.close);
 
-        await expectLater(
-          RestoreBusinessLease.acquire(
-            appDataDirectory: appData,
-            sameProcessOwnerGrace: const Duration(milliseconds: 600),
-          ),
-          throwsA(isA<RestoreBusinessLeaseUnavailable>()),
-        );
-        expect(await outgoingOwner.exists(), isTrue);
-        expect(outgoing.probeCount, greaterThan(2));
-      },
-    );
-
-    test(
-      'fails once a same-process owner outlives the grace window',
-      () async {
-        final leaseDirectory = Directory(
-          p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
-        );
-        await leaseDirectory.create(recursive: true);
-        final outgoingOwner = File(p.join(leaseDirectory.path, 'owner_$pid'));
-        final outgoing = await _FakeOwnerProbe.open(outgoingOwner);
-        addTearDown(outgoing.close);
-
-        await expectLater(
-          RestoreBusinessLease.acquire(
-            appDataDirectory: appData,
-            sameProcessOwnerGrace: const Duration(milliseconds: 200),
-          ),
-          throwsA(isA<RestoreBusinessLeaseUnavailable>()),
-        );
-
-        await outgoing.close();
-        final lease = await RestoreBusinessLease.acquire(
+      await expectLater(
+        RestoreBusinessLease.acquire(
           appDataDirectory: appData,
-        );
-        await lease.close();
-      },
-    );
+          sameProcessOwnerGrace: const Duration(milliseconds: 600),
+        ),
+        throwsA(isA<RestoreBusinessLeaseUnavailable>()),
+      );
+      expect(await outgoingOwner.exists(), isTrue);
+      expect(outgoing.probeCount, greaterThan(2));
+    });
+
+    test('fails once a same-process owner outlives the grace window', () async {
+      final leaseDirectory = Directory(
+        p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
+      );
+      await leaseDirectory.create(recursive: true);
+      final outgoingOwner = File(p.join(leaseDirectory.path, 'owner_$pid'));
+      final outgoing = await _FakeOwnerProbe.open(outgoingOwner);
+      addTearDown(outgoing.close);
+
+      await expectLater(
+        RestoreBusinessLease.acquire(
+          appDataDirectory: appData,
+          sameProcessOwnerGrace: const Duration(milliseconds: 200),
+        ),
+        throwsA(isA<RestoreBusinessLeaseUnavailable>()),
+      );
+
+      await outgoing.close();
+      final lease = await RestoreBusinessLease.acquire(
+        appDataDirectory: appData,
+      );
+      await lease.close();
+    });
 
     test(
       'reacquires after an engine restart left the lock descriptor open',

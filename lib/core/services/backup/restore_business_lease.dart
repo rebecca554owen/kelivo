@@ -42,10 +42,30 @@ final class RestoreBusinessLease {
   static const lockFileName = 'lease.lock';
   static const _processOwnerPrefix = 'owner_';
 
+  static const _contentionPoll = Duration(milliseconds: 100);
+
+  /// Whether a second app instance is something the user can act on.
+  ///
+  /// A desktop user can hold two windows open at once and is told to close
+  /// one. A phone cannot run the app twice, so contention there is always a
+  /// predecessor on its way out and is worth waiting for instead of showing a
+  /// failure the user has no way to resolve.
+  static bool get _userCanRunTwoInstances =>
+      !Platform.isAndroid && !Platform.isIOS;
+
   /// How long a predecessor engine inside this same OS process is waited out
   /// before the lease is reported unavailable.
-  static const _sameProcessOwnerGrace = Duration(seconds: 3);
-  static const _sameProcessOwnerPoll = Duration(milliseconds: 100);
+  static Duration get _defaultOwnerGrace => _userCanRunTwoInstances
+      ? const Duration(seconds: 3)
+      : const Duration(seconds: 8);
+
+  /// How long a lock held by another OS process is waited out.
+  ///
+  /// A phone starting the app while the previous process is still being torn
+  /// down is the only way this is reached there, and that lock disappears the
+  /// moment the old process dies.
+  static Duration get _defaultForeignLockGrace =>
+      _userCanRunTwoInstances ? Duration.zero : const Duration(seconds: 5);
 
   /// How many consecutive silent probes retire a same-process owner marker.
   ///
@@ -73,20 +93,26 @@ final class RestoreBusinessLease {
 
   /// Acquires the fixed AppData business lease.
   ///
-  /// Contention with another open file description fails immediately, except
-  /// for a predecessor inside this same OS process, which is waited out for at
-  /// most [sameProcessOwnerGrace]. Android recreates the activity, and with it
-  /// the Flutter engine and its root isolate, while the outgoing engine is
-  /// still shutting down inside the surviving process; failing that overlap
-  /// would report a nonexistent second app instance to the user.
+  /// Contention is waited out before it is reported: a predecessor inside this
+  /// same OS process for at most [sameProcessOwnerGrace], and a lock held by
+  /// another process for at most [foreignLockGrace]. Android recreates the
+  /// activity, and with it the Flutter engine and its root isolate, while the
+  /// outgoing engine is still shutting down inside the surviving process, and
+  /// a phone can start the app while the previous process is still dying.
+  /// Neither is a second app instance, and neither is something the user could
+  /// act on if it were reported.
   ///
-  /// [RestoreBusinessLeaseUnavailable] means that the exact lease is already
-  /// held. Other filesystem or durability failures are propagated unchanged.
+  /// [RestoreBusinessLeaseUnavailable] means that the exact lease is still
+  /// held once those windows elapsed. Other filesystem or durability failures
+  /// are propagated unchanged.
   static Future<RestoreBusinessLease> acquire({
     required Directory appDataDirectory,
     RestoreDurability? durability,
-    Duration sameProcessOwnerGrace = _sameProcessOwnerGrace,
+    Duration? sameProcessOwnerGrace,
+    Duration? foreignLockGrace,
   }) async {
+    final ownerGrace = sameProcessOwnerGrace ?? _defaultOwnerGrace;
+    final lockGrace = foreignLockGrace ?? _defaultForeignLockGrace;
     final leaseDirectory = Directory(
       p.join(appDataDirectory.path, leaseDirectoryName),
     );
@@ -119,7 +145,7 @@ final class RestoreBusinessLease {
       await _retireProcessPredecessor(
         ownerFile: processOwnerFile,
         registryKey: registryKey,
-        grace: sameProcessOwnerGrace,
+        grace: ownerGrace,
         elapsed: elapsed,
       );
 
@@ -137,9 +163,11 @@ final class RestoreBusinessLease {
         throw StateError('restore_business_lease_lock_file');
       }
       await resolvedDurability.restrictFile(lockFile);
-      lock =
-          await RestoreLeaseLock.tryAcquire(lockFile) ??
-          (throw RestoreBusinessLeaseUnavailable(registryKey));
+      lock = await _lockLeaseFile(
+        lockFile: lockFile,
+        registryKey: registryKey,
+        grace: lockGrace,
+      );
 
       // The marker is published only under the lock, so no other process can
       // mistake a live marker for a stale one while its owner is still racing
@@ -151,7 +179,7 @@ final class RestoreBusinessLease {
         instanceId: instanceId,
         processOwnerProbe: processOwnerProbe,
         durability: resolvedDurability,
-        grace: sameProcessOwnerGrace,
+        grace: ownerGrace,
         elapsed: elapsed,
       );
       ownsProcessMarker = true;
@@ -184,6 +212,27 @@ final class RestoreBusinessLease {
     }
   }
 
+  /// Takes the lease lock, waiting out a lock another process still holds.
+  ///
+  /// The wait uses its own window rather than the acquire-wide one, because a
+  /// predecessor in this process and a dying previous process are independent
+  /// delays that can both be in play on a cold start.
+  static Future<RestoreLeaseLock> _lockLeaseFile({
+    required File lockFile,
+    required String registryKey,
+    required Duration grace,
+  }) async {
+    final waited = Stopwatch()..start();
+    while (true) {
+      final lock = await RestoreLeaseLock.tryAcquire(lockFile);
+      if (lock != null) return lock;
+      if (waited.elapsed >= grace) {
+        throw RestoreBusinessLeaseUnavailable(registryKey);
+      }
+      await Future<void>.delayed(_contentionPoll);
+    }
+  }
+
   /// Retires an owner marker left by an earlier engine in this same process.
   ///
   /// Throws [RestoreBusinessLeaseUnavailable] when the predecessor is still
@@ -194,7 +243,10 @@ final class RestoreBusinessLease {
     required Duration grace,
     required Stopwatch elapsed,
   }) async {
-    final type = await FileSystemEntity.type(ownerFile.path, followLinks: false);
+    final type = await FileSystemEntity.type(
+      ownerFile.path,
+      followLinks: false,
+    );
     if (type == FileSystemEntityType.notFound) return;
     if (type != FileSystemEntityType.file) {
       throw StateError('restore_business_lease_process_owner');
@@ -230,7 +282,7 @@ final class RestoreBusinessLease {
         return false;
       }
       if (elapsed.elapsed >= grace) return true;
-      await Future<void>.delayed(_sameProcessOwnerPoll);
+      await Future<void>.delayed(_contentionPoll);
     }
   }
 
