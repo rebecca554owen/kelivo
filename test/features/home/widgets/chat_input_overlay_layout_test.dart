@@ -275,10 +275,7 @@ void main() {
           body: ChatInputOverlayLayout(
             topInset: 100,
             backgroundImageActive: true,
-            topBackground: ColoredBox(
-              key: backgroundKey,
-              color: Colors.green,
-            ),
+            topBackground: ColoredBox(key: backgroundKey, color: Colors.green),
             content: ColoredBox(key: contentKey, color: Colors.blue),
             bottomOverlay: SizedBox(width: 200, height: 50),
           ),

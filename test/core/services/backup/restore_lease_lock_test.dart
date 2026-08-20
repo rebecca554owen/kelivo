@@ -23,24 +23,28 @@ void main() {
       if (await root.exists()) await root.delete(recursive: true);
     });
 
-    test('reacquires after a previous isolate left its descriptor open', () async {
-      final leakedPath = lockFile.path;
-      // A descriptor is not closed when its isolate goes away, which is what a
-      // hot restart and an Android engine recreation both leave behind.
-      await Isolate.run(() async {
-        final leaked = await RestoreLeaseLock.tryAcquire(File(leakedPath));
-        return leaked != null;
-      });
+    test(
+      'reacquires after a previous isolate left its descriptor open',
+      () async {
+        final leakedPath = lockFile.path;
+        // A descriptor is not closed when its isolate goes away, which is what a
+        // hot restart and an Android engine recreation both leave behind.
+        await Isolate.run(() async {
+          final leaked = await RestoreLeaseLock.tryAcquire(File(leakedPath));
+          return leaked != null;
+        });
 
-      final lock = await RestoreLeaseLock.tryAcquire(lockFile);
-      expect(
-        lock,
-        isNotNull,
-        reason: 'a descriptor-scoped lock would lock this process out of its '
-            'own data until the process dies',
-      );
-      await lock!.release();
-    });
+        final lock = await RestoreLeaseLock.tryAcquire(lockFile);
+        expect(
+          lock,
+          isNotNull,
+          reason:
+              'a descriptor-scoped lock would lock this process out of its '
+              'own data until the process dies',
+        );
+        await lock!.release();
+      },
+    );
 
     test('release is idempotent and allows reacquire', () async {
       final held = await RestoreLeaseLock.tryAcquire(lockFile);

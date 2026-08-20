@@ -3942,7 +3942,9 @@ press5
       expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaContent, 0.01));
     });
 
-    testWidgets('inline code fill is translucent in light mode', (tester) async {
+    testWidgets('inline code fill is translucent in light mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(_markdownHarness('Body with `code`.'));
       await tester.pump();
 

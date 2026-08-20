@@ -32,7 +32,9 @@ void main() {
     test('accumulate sums three settled rounds', () {
       final summed = const TokenUsage(promptTokens: 100, completionTokens: 20)
           .accumulate(const TokenUsage(promptTokens: 300, completionTokens: 40))
-          .accumulate(const TokenUsage(promptTokens: 500, completionTokens: 10));
+          .accumulate(
+            const TokenUsage(promptTokens: 500, completionTokens: 10),
+          );
 
       expect(summed.promptTokens, 900);
       expect(summed.completionTokens, 70);
@@ -42,9 +44,9 @@ void main() {
     test(
       'accumulate sums explicit totals, then ignores them once split exists',
       () {
-        final totalsOnly = const TokenUsage(totalTokens: 50).accumulate(
-          const TokenUsage(totalTokens: 80),
-        );
+        final totalsOnly = const TokenUsage(
+          totalTokens: 50,
+        ).accumulate(const TokenUsage(totalTokens: 80));
         expect(totalsOnly.promptTokens, 0);
         expect(totalsOnly.completionTokens, 0);
         expect(totalsOnly.totalTokens, 130);

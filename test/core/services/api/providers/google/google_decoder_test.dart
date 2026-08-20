@@ -413,7 +413,10 @@ void main() {
       expect(first.usage!.promptTokens, 100);
       expect(first.usage!.completionTokens, 20);
       expect(first.usage!.totalTokens, 120);
-      expect(partial.chunks.whereType<Usage>().single.usage.completionTokens, 5);
+      expect(
+        partial.chunks.whereType<Usage>().single.usage.completionTokens,
+        5,
+      );
       expect(done.chunks.whereType<Usage>().single.usage.completionTokens, 20);
 
       final second = GoogleStreamDecoder(initialUsage: first.usage);

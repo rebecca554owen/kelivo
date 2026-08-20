@@ -564,7 +564,9 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
           final csCtx = Theme.of(ctx).colorScheme;
           final bg = isDarkCtx
               ? Colors.white12
-              : const Color(0xFFF1F3F5).withValues(alpha: kBlockFillAlphaInline);
+              : const Color(
+                  0xFFF1F3F5,
+                ).withValues(alpha: kBlockFillAlphaInline);
           return Container(
             key: const ValueKey('inline-code-surface'),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
