@@ -328,7 +328,9 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
       );
     }
 
-    if (service is BingLocalOptions) return const [];
+    if (service is BingLocalOptions || service is KelivoOptions) {
+      return const [];
+    }
     if (service is DuckDuckGoOptions) {
       return [
         field(
@@ -1281,6 +1283,8 @@ class _SearchServiceEditorPageState extends State<SearchServiceEditorPage> {
           includeDomains: _text('includeDomains'),
           excludeDomains: _text('excludeDomains'),
         );
+      case 'kelivo':
+        return KelivoOptions(id: _serviceId);
       default:
         return BingLocalOptions(id: _serviceId);
     }
@@ -2121,6 +2125,7 @@ String _typeForService(SearchServiceOptions service) {
   if (service is StepFunOptions) return 'stepfun';
   if (service is FirecrawlOptions) return 'firecrawl';
   if (service is TinyFishOptions) return 'tinyfish';
+  if (service is KelivoOptions) return 'kelivo';
   return 'bing_local';
 }
 
@@ -2171,6 +2176,8 @@ SearchServiceOptions _defaultService(String type, String id) {
       return FirecrawlOptions(id: id, apiKey: '');
     case 'tinyfish':
       return TinyFishOptions(id: id, apiKey: '');
+    case 'kelivo':
+      return KelivoOptions(id: id);
     default:
       return BingLocalOptions(id: id);
   }
@@ -2219,6 +2226,8 @@ String _serviceTypeName(BuildContext context, String type) {
       return l10n.searchServiceNameFirecrawl;
     case 'tinyfish':
       return l10n.searchServiceNameTinyFish;
+    case 'kelivo':
+      return l10n.searchServiceNameKelivo;
     default:
       return type;
   }

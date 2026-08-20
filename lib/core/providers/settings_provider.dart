@@ -2128,8 +2128,8 @@ class SettingsProvider extends ChangeNotifier {
     final services = List<SearchServiceOptions>.from(_searchServices);
     final common = _searchCommonOptions;
     for (final s in services) {
-      if (s is BingLocalOptions) {
-        _searchConnection[s.id] = null; // no label for local Bing
+      if (s is BingLocalOptions || s is KelivoOptions) {
+        _searchConnection[s.id] = null;
         continue;
       }
       // Run in background; don't await all
@@ -5120,6 +5120,15 @@ Requirements:
   }
 
   // Search service settings
+  Future<bool> unlockKelivoSearch() async {
+    if (_searchServices.any((s) => s is KelivoOptions)) return false;
+    await setSearchServices([
+      ..._searchServices,
+      KelivoOptions(id: KelivoOptions.builtInId),
+    ]);
+    return true;
+  }
+
   Future<void> setSearchServices(List<SearchServiceOptions> services) async {
     _searchServices = List.from(services);
     if (_searchServiceSelected >= _searchServices.length) {

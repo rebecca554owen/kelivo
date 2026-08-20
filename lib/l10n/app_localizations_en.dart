@@ -4235,6 +4235,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPageEasterEggButton => 'Nice!';
 
   @override
+  String get aboutPageKelivoSearchUnlocked =>
+      'An unnamed door opened a crack. You might find it in Settings.';
+
+  @override
+  String get aboutPageKelivoSearchAlreadyUnlocked =>
+      'You\'ve already been through this door.';
+
+  @override
   String get aboutPageAppName => 'Kelivo';
 
   @override
@@ -5431,6 +5439,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get searchProviderTinyFishDescription =>
       'TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.';
+
+  @override
+  String get searchServiceNameKelivo => 'Kelivo';
 
   @override
   String get searchServicesDialogCountryOptional => 'Country/region (optional)';

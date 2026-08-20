@@ -85,7 +85,7 @@ class TokenDetailPopup extends StatelessWidget {
     if (rows.isEmpty) return const SizedBox.shrink();
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 220),
+      constraints: const BoxConstraints(maxWidth: 280),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: cs.surface,

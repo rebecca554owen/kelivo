@@ -7837,6 +7837,18 @@ abstract class AppLocalizations {
   /// **'Nice!'**
   String get aboutPageEasterEggButton;
 
+  /// No description provided for @aboutPageKelivoSearchUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'An unnamed door opened a crack. You might find it in Settings.'**
+  String get aboutPageKelivoSearchUnlocked;
+
+  /// No description provided for @aboutPageKelivoSearchAlreadyUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve already been through this door.'**
+  String get aboutPageKelivoSearchAlreadyUnlocked;
+
   /// No description provided for @aboutPageAppName.
   ///
   /// In en, this message translates to:
@@ -9984,6 +9996,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.'**
   String get searchProviderTinyFishDescription;
+
+  /// No description provided for @searchServiceNameKelivo.
+  ///
+  /// In en, this message translates to:
+  /// **'Kelivo'**
+  String get searchServiceNameKelivo;
 
   /// No description provided for @searchServicesDialogCountryOptional.
   ///

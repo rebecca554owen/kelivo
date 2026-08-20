@@ -4087,6 +4087,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutPageEasterEggButton => '好的';
 
   @override
+  String get aboutPageKelivoSearchUnlocked => '有扇没有名字的门开了一条缝。去设置里找找看。';
+
+  @override
+  String get aboutPageKelivoSearchAlreadyUnlocked => '这扇门你已经推开过了。';
+
+  @override
   String get aboutPageAppName => 'Kelivo';
 
   @override
@@ -5216,6 +5222,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get searchProviderTinyFishDescription =>
       'TinyFish Search API，支持地区与语言参数。需要 API Key。此处不支持 Fetch/Scrape。';
+
+  @override
+  String get searchServiceNameKelivo => 'Kelivo';
 
   @override
   String get searchServicesDialogCountryOptional => '国家/地区（可选）';
@@ -11711,6 +11720,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get aboutPageEasterEggButton => '好的';
 
   @override
+  String get aboutPageKelivoSearchUnlocked => '有扇没有名字的门开了一条缝。去设置里找找看。';
+
+  @override
+  String get aboutPageKelivoSearchAlreadyUnlocked => '这扇门你已经推开过了。';
+
+  @override
   String get aboutPageAppName => 'Kelivo';
 
   @override
@@ -12766,6 +12781,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get searchProviderTinyFishDescription =>
       'TinyFish Search API，支持地区与语言参数。需要 API Key。此处不支持 Fetch/Scrape。';
+
+  @override
+  String get searchServiceNameKelivo => 'Kelivo';
 
   @override
   String get searchServicesDialogCountryOptional => '国家/地区（可选）';
@@ -19259,6 +19277,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get aboutPageEasterEggButton => '好的';
 
   @override
+  String get aboutPageKelivoSearchUnlocked => '有扇沒有名字的門開了一條縫。去設定裡找找看。';
+
+  @override
+  String get aboutPageKelivoSearchAlreadyUnlocked => '這扇門你已經推開過了。';
+
+  @override
   String get aboutPageAppName => 'Kelivo';
 
   @override
@@ -20389,6 +20413,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get searchProviderTinyFishDescription =>
       'TinyFish Search API，支援地區與語言參數。需要 API Key。此處不支援 Fetch/Scrape。';
+
+  @override
+  String get searchServiceNameKelivo => 'Kelivo';
 
   @override
   String get searchServicesDialogCountryOptional => '國家/地區（可選）';
