@@ -615,7 +615,9 @@ Stream<StreamChunk> sendGoogleStream(
           'name': name,
           if (desc.isNotEmpty) 'description': desc,
         };
-        if (params != null) d['parameters'] = cleanSchemaForGemini(params);
+        if (params != null) {
+          d['parameters'] = cleanSchemaForGemini(params, stringEnumOnly: true);
+        }
         decls.add(d);
       }
       if (decls.isNotEmpty) {
@@ -1090,7 +1092,10 @@ Stream<StreamChunk> sendGoogleStream(
       if (params != null) {
         // Google Gemini requires strict JSON Schema compliance
         // Fix array properties that are missing 'items' field
-        final cleanedParams = cleanSchemaForGemini(params);
+        final cleanedParams = cleanSchemaForGemini(
+          params,
+          stringEnumOnly: true,
+        );
         d['parameters'] = cleanedParams;
       }
       decls.add(d);

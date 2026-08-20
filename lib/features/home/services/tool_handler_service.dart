@@ -67,6 +67,19 @@ class ToolHandlerService {
       final v = m['const'];
       if (v is String || v is num || v is bool) {
         m['enum'] = [v];
+        // Keep the declared type in sync so a non-string const is not mistaken
+        // for a string enum downstream.
+        if (m['type'] == null) {
+          if (v is bool) {
+            m['type'] = 'boolean';
+          } else if (v is int) {
+            m['type'] = 'integer';
+          } else if (v is num) {
+            m['type'] = 'number';
+          } else {
+            m['type'] = 'string';
+          }
+        }
       }
       m.remove('const');
     }
