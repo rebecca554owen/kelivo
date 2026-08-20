@@ -2052,6 +2052,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get compressContextStartButton => '开始压缩';
 
   @override
+  String get compressContextModelLabel => '压缩模型';
+
+  @override
+  String get compressContextModelUnset => '选择模型';
+
+  @override
   String get compressContextKeepRecentMessages => '保留N条';
 
   @override
@@ -9670,6 +9676,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get compressContextStartButton => '开始压缩';
 
   @override
+  String get compressContextModelLabel => '压缩模型';
+
+  @override
+  String get compressContextModelUnset => '选择模型';
+
+  @override
   String get compressContextKeepRecentMessages => '保留N条';
 
   @override
@@ -17211,6 +17223,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get compressContextStartButton => '開始壓縮';
+
+  @override
+  String get compressContextModelLabel => '壓縮模型';
+
+  @override
+  String get compressContextModelUnset => '選擇模型';
 
   @override
   String get compressContextKeepRecentMessages => '保留N條';

@@ -318,6 +318,8 @@ class _CompressContextOptionsDialogState
                           ),
                         ),
                         const SizedBox(height: 16),
+                        const _CompressModelPickerRow(),
+                        const SizedBox(height: 16),
                         _CompressModeSegmented(
                           mode: _mode,
                           keepRecentDisabled: _userMessageCount <= 1,
@@ -411,6 +413,117 @@ class _CompressContextOptionsDialogState
           ),
         ),
       ),
+    );
+  }
+}
+
+String? _compressModelDisplayName(
+  SettingsProvider settings, {
+  required String? providerKey,
+  required String? modelId,
+}) {
+  if (providerKey == null || modelId == null) return null;
+  try {
+    final cfg = settings.getProviderConfig(providerKey);
+    final ov = cfg.modelOverrides[modelId] as Map?;
+    if (ov != null) {
+      final overrideName = (ov['name'] as String?)?.trim();
+      if (overrideName != null && overrideName.isNotEmpty) {
+        return overrideName;
+      }
+      final apiId = (ov['apiModelId'] ?? ov['api_model_id'])?.toString().trim();
+      if (apiId != null && apiId.isNotEmpty) return apiId;
+    }
+    return modelId;
+  } catch (_) {
+    return modelId;
+  }
+}
+
+class _CompressModelPickerRow extends StatelessWidget {
+  const _CompressModelPickerRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final settings = context.watch<SettingsProvider>();
+    final assistant = context.watch<AssistantProvider>().currentAssistant;
+    final resolved = resolveCompressContextModel(
+      compressProvider: settings.compressModelProvider,
+      compressModelId: settings.compressModelId,
+      summaryProvider: settings.summaryModelProvider,
+      summaryModelId: settings.summaryModelId,
+      titleProvider: settings.titleModelProvider,
+      titleModelId: settings.titleModelId,
+      assistantProvider: assistant?.chatModelProvider,
+      assistantModelId: assistant?.chatModelId,
+      currentProvider: settings.currentModelProvider,
+      currentModelId: settings.currentModelId,
+    );
+    final display =
+        _compressModelDisplayName(
+          settings,
+          providerKey: resolved.providerKey,
+          modelId: resolved.modelId,
+        ) ??
+        l10n.compressContextModelUnset;
+    final labelColor = cs.onSurface.withValues(alpha: 0.85);
+    final valueColor = cs.onSurface.withValues(alpha: 0.92);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.compressContextModelLabel,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: AppFontWeights.semibold,
+            color: labelColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        IosCardPress(
+          baseColor: context.appColors.surfaceFill,
+          borderRadius: BorderRadius.circular(12),
+          pressedScale: 0.98,
+          haptics: false,
+          onTap: () async {
+            final sel = await showModelSelector(
+              context,
+              initialProviderKey: resolved.providerKey,
+              initialModelId: resolved.modelId,
+            );
+            if (sel == null || !context.mounted) return;
+            await context.read<SettingsProvider>().setCompressModel(
+              sel.providerKey,
+              sel.modelId,
+            );
+          },
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  display,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: AppFontWeights.medium,
+                    color: valueColor,
+                  ),
+                ),
+              ),
+              Icon(
+                Lucide.ChevronRight,
+                size: 16,
+                color: cs.onSurface.withValues(alpha: 0.45),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -2121,6 +2121,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get compressContextStartButton => 'Compress';
 
   @override
+  String get compressContextModelLabel => 'Model';
+
+  @override
+  String get compressContextModelUnset => 'Select a model';
+
+  @override
   String get compressContextKeepRecentMessages => 'Keep N';
 
   @override

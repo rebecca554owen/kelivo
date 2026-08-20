@@ -4030,6 +4030,18 @@ abstract class AppLocalizations {
   /// **'Compress'**
   String get compressContextStartButton;
 
+  /// No description provided for @compressContextModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get compressContextModelLabel;
+
+  /// No description provided for @compressContextModelUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a model'**
+  String get compressContextModelUnset;
+
   /// No description provided for @compressContextKeepRecentMessages.
   ///
   /// In en, this message translates to:

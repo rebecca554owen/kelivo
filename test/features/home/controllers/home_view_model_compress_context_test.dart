@@ -361,4 +361,68 @@ void main() {
       expect(est.keptTokens, lessThanOrEqualTo(est.totalTokens));
     });
   });
+
+  group('resolveCompressContextModel', () {
+    test('优先使用显式压缩模型', () {
+      final resolved = resolveCompressContextModel(
+        compressProvider: 'OpenAI',
+        compressModelId: 'gpt-4o-mini',
+        summaryProvider: 'Gemini',
+        summaryModelId: 'gemini-2.5-flash',
+        currentProvider: 'DeepSeek',
+        currentModelId: 'deepseek-chat',
+      );
+
+      expect(resolved.providerKey, 'OpenAI');
+      expect(resolved.modelId, 'gpt-4o-mini');
+    });
+
+    test('未设置压缩模型时按 summary → title → assistant → current 回退', () {
+      expect(
+        resolveCompressContextModel(
+          summaryProvider: 'Gemini',
+          summaryModelId: 'gemini-2.5-flash',
+          titleProvider: 'OpenAI',
+          titleModelId: 'gpt-4o-mini',
+          currentProvider: 'DeepSeek',
+          currentModelId: 'deepseek-chat',
+        ),
+        (providerKey: 'Gemini', modelId: 'gemini-2.5-flash'),
+      );
+      expect(
+        resolveCompressContextModel(
+          titleProvider: 'OpenAI',
+          titleModelId: 'gpt-4o-mini',
+          assistantProvider: 'Claude',
+          assistantModelId: 'claude-sonnet',
+          currentProvider: 'DeepSeek',
+          currentModelId: 'deepseek-chat',
+        ),
+        (providerKey: 'OpenAI', modelId: 'gpt-4o-mini'),
+      );
+      expect(
+        resolveCompressContextModel(
+          assistantProvider: 'Claude',
+          assistantModelId: 'claude-sonnet',
+          currentProvider: 'DeepSeek',
+          currentModelId: 'deepseek-chat',
+        ),
+        (providerKey: 'Claude', modelId: 'claude-sonnet'),
+      );
+      expect(
+        resolveCompressContextModel(
+          currentProvider: 'DeepSeek',
+          currentModelId: 'deepseek-chat',
+        ),
+        (providerKey: 'DeepSeek', modelId: 'deepseek-chat'),
+      );
+    });
+
+    test('全部未设置时返回空', () {
+      final resolved = resolveCompressContextModel();
+
+      expect(resolved.providerKey, isNull);
+      expect(resolved.modelId, isNull);
+    });
+  });
 }

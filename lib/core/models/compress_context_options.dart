@@ -18,6 +18,39 @@ class CompressContextOptions {
   final int? keepUserMessages;
 }
 
+/// Resolve the model that [HomeViewModel.compressContext] will call.
+///
+/// Chain: compress → summary → title → assistant chat → global default.
+/// Provider and model id are resolved independently (same as the existing
+/// `??` chain) so a half-set pair can still mix with a later fallback.
+({String? providerKey, String? modelId}) resolveCompressContextModel({
+  String? compressProvider,
+  String? compressModelId,
+  String? summaryProvider,
+  String? summaryModelId,
+  String? titleProvider,
+  String? titleModelId,
+  String? assistantProvider,
+  String? assistantModelId,
+  String? currentProvider,
+  String? currentModelId,
+}) {
+  return (
+    providerKey:
+        compressProvider ??
+        summaryProvider ??
+        titleProvider ??
+        assistantProvider ??
+        currentProvider,
+    modelId:
+        compressModelId ??
+        summaryModelId ??
+        titleModelId ??
+        assistantModelId ??
+        currentModelId,
+  );
+}
+
 String buildCompressContextContent(
   String joined,
   CompressContextOptions options,

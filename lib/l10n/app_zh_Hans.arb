@@ -754,6 +754,8 @@
   "compressContextMaxCharsLabel": "字符数",
   "compressContextInvalidLimit": "请输入大于 0 的字符数",
   "compressContextStartButton": "开始压缩",
+  "compressContextModelLabel": "压缩模型",
+  "compressContextModelUnset": "选择模型",
   "compressContextKeepRecentMessages": "保留N条",
   "compressContextKeepCountLabel": "保留最近条数",
   "compressContextKeepAllMessages": "保留条数覆盖全部消息，无内容可压缩",

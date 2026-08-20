@@ -852,6 +852,8 @@
   "compressContextMaxCharsLabel": "Characters",
   "compressContextInvalidLimit": "Enter a positive character count",
   "compressContextStartButton": "Compress",
+  "compressContextModelLabel": "Model",
+  "compressContextModelUnset": "Select a model",
   "compressContextKeepRecentMessages": "Keep N",
   "compressContextKeepCountLabel": "Keep recent messages",
   "compressContextKeepAllMessages": "Keeping that many covers all messages — nothing to compress",

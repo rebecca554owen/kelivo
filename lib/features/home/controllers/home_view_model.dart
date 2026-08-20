@@ -1129,18 +1129,20 @@ class HomeViewModel extends ChangeNotifier {
 
     final content = buildCompressContextContent(joined, options);
     // Resolve model: compress model → summary model → title model → assistant model → global default
-    final provKey =
-        settings.compressModelProvider ??
-        settings.summaryModelProvider ??
-        settings.titleModelProvider ??
-        assistant?.chatModelProvider ??
-        settings.currentModelProvider;
-    final mdlId =
-        settings.compressModelId ??
-        settings.summaryModelId ??
-        settings.titleModelId ??
-        assistant?.chatModelId ??
-        settings.currentModelId;
+    final resolvedModel = resolveCompressContextModel(
+      compressProvider: settings.compressModelProvider,
+      compressModelId: settings.compressModelId,
+      summaryProvider: settings.summaryModelProvider,
+      summaryModelId: settings.summaryModelId,
+      titleProvider: settings.titleModelProvider,
+      titleModelId: settings.titleModelId,
+      assistantProvider: assistant?.chatModelProvider,
+      assistantModelId: assistant?.chatModelId,
+      currentProvider: settings.currentModelProvider,
+      currentModelId: settings.currentModelId,
+    );
+    final provKey = resolvedModel.providerKey;
+    final mdlId = resolvedModel.modelId;
     if (provKey == null || mdlId == null) return 'no_model';
 
     final cfg = settings.getProviderConfig(provKey);
