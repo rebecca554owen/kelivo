@@ -112,69 +112,72 @@ void main() {
       },
     );
 
-    test('fails immediately while another process owns the lease', () async {
-      final helper = File(p.join(root.path, 'business_lease_helper.dart'));
-      await helper.writeAsString(_helperSource, flush: true);
-      final packageConfig = p.join(
-        Directory.current.path,
-        '.dart_tool',
-        'package_config.json',
-      );
-      final releaseFile = File(p.join(root.path, 'release_helper'));
-      final process = await Process.start('dart', [
-        '--packages=$packageConfig',
-        helper.path,
-        appData.path,
-        releaseFile.path,
-      ], workingDirectory: Directory.current.path);
-      addTearDown(() async {
-        process.kill();
-        await process.stdin.close();
-      });
-      final errors = StringBuffer();
-      final errorSubscription = process.stderr
-          .transform(utf8.decoder)
-          .listen(errors.write);
-      addTearDown(errorSubscription.cancel);
-      final ready = await process.stdout
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .first
-          .timeout(const Duration(seconds: 15));
-      expect(ready, 'ready', reason: errors.toString());
+    test(
+      'fails without waiting once the foreign lock grace is spent',
+      () async {
+        final helper = File(p.join(root.path, 'business_lease_helper.dart'));
+        await helper.writeAsString(_helperSource, flush: true);
+        final packageConfig = p.join(
+          Directory.current.path,
+          '.dart_tool',
+          'package_config.json',
+        );
+        final releaseFile = File(p.join(root.path, 'release_helper'));
+        final process = await Process.start('dart', [
+          '--packages=$packageConfig',
+          helper.path,
+          appData.path,
+          releaseFile.path,
+        ], workingDirectory: Directory.current.path);
+        addTearDown(() async {
+          process.kill();
+          await process.stdin.close();
+        });
+        final errors = StringBuffer();
+        final errorSubscription = process.stderr
+            .transform(utf8.decoder)
+            .listen(errors.write);
+        addTearDown(errorSubscription.cancel);
+        final ready = await process.stdout
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .first
+            .timeout(const Duration(seconds: 15));
+        expect(ready, 'ready', reason: errors.toString());
 
-      final stopwatch = Stopwatch()..start();
-      await expectLater(
-        RestoreBusinessLease.acquire(
+        final stopwatch = Stopwatch()..start();
+        await expectLater(
+          RestoreBusinessLease.acquire(
+            appDataDirectory: appData,
+            foreignLockGrace: Duration.zero,
+          ),
+          throwsA(isA<RestoreBusinessLeaseUnavailable>()),
+        );
+        stopwatch.stop();
+        expect(stopwatch.elapsed, lessThan(const Duration(seconds: 2)));
+
+        // The holder's marker must survive a losing acquire, and the loser must
+        // not leave one of its own behind.
+        final leaseDirectory = Directory(
+          p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
+        );
+        final ownerNames = await leaseDirectory
+            .list(followLinks: false)
+            .map((entry) => p.basename(entry.path))
+            .where((name) => name.startsWith('owner_'))
+            .toList();
+        expect(ownerNames, hasLength(1));
+        expect(ownerNames.single, isNot('owner_$pid'));
+
+        expect(process.kill(), isTrue);
+        await process.exitCode.timeout(const Duration(seconds: 15));
+
+        final lease = await RestoreBusinessLease.acquire(
           appDataDirectory: appData,
-          foreignLockGrace: Duration.zero,
-        ),
-        throwsA(isA<RestoreBusinessLeaseUnavailable>()),
-      );
-      stopwatch.stop();
-      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 2)));
-
-      // The holder's marker must survive a losing acquire, and the loser must
-      // not leave one of its own behind.
-      final leaseDirectory = Directory(
-        p.join(appData.path, RestoreBusinessLease.leaseDirectoryName),
-      );
-      final ownerNames = await leaseDirectory
-          .list(followLinks: false)
-          .map((entry) => p.basename(entry.path))
-          .where((name) => name.startsWith('owner_'))
-          .toList();
-      expect(ownerNames, hasLength(1));
-      expect(ownerNames.single, isNot('owner_$pid'));
-
-      expect(process.kill(), isTrue);
-      await process.exitCode.timeout(const Duration(seconds: 15));
-
-      final lease = await RestoreBusinessLease.acquire(
-        appDataDirectory: appData,
-      );
-      await lease.close();
-    });
+        );
+        await lease.close();
+      },
+    );
 
     test('waits out a previous process that is still dying', () async {
       final helper = File(p.join(root.path, 'business_lease_helper.dart'));

@@ -44,28 +44,18 @@ final class RestoreBusinessLease {
 
   static const _contentionPoll = Duration(milliseconds: 100);
 
-  /// Whether a second app instance is something the user can act on.
-  ///
-  /// A desktop user can hold two windows open at once and is told to close
-  /// one. A phone cannot run the app twice, so contention there is always a
-  /// predecessor on its way out and is worth waiting for instead of showing a
-  /// failure the user has no way to resolve.
-  static bool get _userCanRunTwoInstances =>
-      !Platform.isAndroid && !Platform.isIOS;
-
   /// How long a predecessor engine inside this same OS process is waited out
   /// before the lease is reported unavailable.
-  static Duration get _defaultOwnerGrace => _userCanRunTwoInstances
-      ? const Duration(seconds: 3)
-      : const Duration(seconds: 8);
+  static const _defaultOwnerGrace = Duration(seconds: 8);
 
   /// How long a lock held by another OS process is waited out.
   ///
-  /// A phone starting the app while the previous process is still being torn
-  /// down is the only way this is reached there, and that lock disappears the
-  /// moment the old process dies.
-  static Duration get _defaultForeignLockGrace =>
-      _userCanRunTwoInstances ? Duration.zero : const Duration(seconds: 5);
+  /// No platform this app ships on lets a user hold two instances open on
+  /// purpose: a phone cannot run the app twice, and the desktop runners hand a
+  /// second launch to the window that is already open. Contention here is
+  /// therefore a previous process still being torn down, and it disappears the
+  /// moment that process dies.
+  static const _defaultForeignLockGrace = Duration(seconds: 5);
 
   /// How many consecutive silent probes retire a same-process owner marker.
   ///
@@ -98,9 +88,8 @@ final class RestoreBusinessLease {
   /// another process for at most [foreignLockGrace]. Android recreates the
   /// activity, and with it the Flutter engine and its root isolate, while the
   /// outgoing engine is still shutting down inside the surviving process, and
-  /// a phone can start the app while the previous process is still dying.
-  /// Neither is a second app instance, and neither is something the user could
-  /// act on if it were reported.
+  /// any platform can start the app while its previous process is still dying.
+  /// Neither is a second app instance the user could close.
   ///
   /// [RestoreBusinessLeaseUnavailable] means that the exact lease is still
   /// held once those windows elapsed. Other filesystem or durability failures
