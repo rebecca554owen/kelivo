@@ -977,6 +977,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                           256.0,
                           512.0,
                           1024.0,
+                          2048.0,
+                          4096.0,
                         ],
                         onLabelTap: () async {
                           final assistantProvider = context

@@ -18,7 +18,7 @@ class Assistant {
   static const int maxMemoryOrganizeEveryNTurns = 20;
   static const double defaultTemperature = 1.0;
   static const int minContextMessageSize = 1;
-  static const int maxContextMessageSize = 1024;
+  static const int maxContextMessageSize = 4096;
   static const List<int> recentChatsSummaryMessageCountOptions = <int>[
     1,
     3,
