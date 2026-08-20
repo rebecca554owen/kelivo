@@ -4834,6 +4834,78 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get sideDrawerMenuDelete;
 
+  /// No description provided for @sideDrawerMenuSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get sideDrawerMenuSelect;
+
+  /// No description provided for @sideDrawerSelectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected {count} items'**
+  String sideDrawerSelectionTitle(int count);
+
+  /// No description provided for @sideDrawerSelectionSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get sideDrawerSelectionSelectAll;
+
+  /// No description provided for @sideDrawerSelectionDeselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect all'**
+  String get sideDrawerSelectionDeselectAll;
+
+  /// No description provided for @sideDrawerSelectionPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get sideDrawerSelectionPin;
+
+  /// No description provided for @sideDrawerSelectionUnpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get sideDrawerSelectionUnpin;
+
+  /// No description provided for @sideDrawerSelectionMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get sideDrawerSelectionMove;
+
+  /// No description provided for @sideDrawerSelectionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get sideDrawerSelectionDelete;
+
+  /// No description provided for @sideDrawerSelectionDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversations'**
+  String get sideDrawerSelectionDeleteConfirmTitle;
+
+  /// No description provided for @sideDrawerSelectionDeleteConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} conversations?'**
+  String sideDrawerSelectionDeleteConfirmContent(int count);
+
+  /// No description provided for @sideDrawerDeleteSelectedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {count} conversations'**
+  String sideDrawerDeleteSelectedSnackbar(int count);
+
+  /// No description provided for @sideDrawerMoveSelectedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved {count} conversations'**
+  String sideDrawerMoveSelectedSnackbar(int count);
+
   /// No description provided for @sideDrawerDeleteSnackbar.
   ///
   /// In en, this message translates to:

@@ -2494,6 +2494,50 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sideDrawerMenuDelete => '删除';
 
   @override
+  String get sideDrawerMenuSelect => '多选';
+
+  @override
+  String sideDrawerSelectionTitle(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get sideDrawerSelectionSelectAll => '全选';
+
+  @override
+  String get sideDrawerSelectionDeselectAll => '取消全选';
+
+  @override
+  String get sideDrawerSelectionPin => '置顶';
+
+  @override
+  String get sideDrawerSelectionUnpin => '取消置顶';
+
+  @override
+  String get sideDrawerSelectionMove => '移动';
+
+  @override
+  String get sideDrawerSelectionDelete => '删除';
+
+  @override
+  String get sideDrawerSelectionDeleteConfirmTitle => '删除话题';
+
+  @override
+  String sideDrawerSelectionDeleteConfirmContent(int count) {
+    return '确定删除 $count 个话题？';
+  }
+
+  @override
+  String sideDrawerDeleteSelectedSnackbar(int count) {
+    return '已删除 $count 个话题';
+  }
+
+  @override
+  String sideDrawerMoveSelectedSnackbar(int count) {
+    return '已移动 $count 个话题';
+  }
+
+  @override
   String sideDrawerDeleteSnackbar(String title) {
     return '已删除“$title”';
   }
@@ -10052,6 +10096,50 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sideDrawerMenuDelete => '删除';
 
   @override
+  String get sideDrawerMenuSelect => '多选';
+
+  @override
+  String sideDrawerSelectionTitle(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get sideDrawerSelectionSelectAll => '全选';
+
+  @override
+  String get sideDrawerSelectionDeselectAll => '取消全选';
+
+  @override
+  String get sideDrawerSelectionPin => '置顶';
+
+  @override
+  String get sideDrawerSelectionUnpin => '取消置顶';
+
+  @override
+  String get sideDrawerSelectionMove => '移动';
+
+  @override
+  String get sideDrawerSelectionDelete => '删除';
+
+  @override
+  String get sideDrawerSelectionDeleteConfirmTitle => '删除话题';
+
+  @override
+  String sideDrawerSelectionDeleteConfirmContent(int count) {
+    return '确定删除 $count 个话题？';
+  }
+
+  @override
+  String sideDrawerDeleteSelectedSnackbar(int count) {
+    return '已删除 $count 个话题';
+  }
+
+  @override
+  String sideDrawerMoveSelectedSnackbar(int count) {
+    return '已移动 $count 个话题';
+  }
+
+  @override
   String sideDrawerDeleteSnackbar(String title) {
     return '已删除“$title”';
   }
@@ -17533,6 +17621,50 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sideDrawerMenuDelete => '刪除';
+
+  @override
+  String get sideDrawerMenuSelect => '多選';
+
+  @override
+  String sideDrawerSelectionTitle(int count) {
+    return '已選 $count 項';
+  }
+
+  @override
+  String get sideDrawerSelectionSelectAll => '全選';
+
+  @override
+  String get sideDrawerSelectionDeselectAll => '取消全選';
+
+  @override
+  String get sideDrawerSelectionPin => '置頂';
+
+  @override
+  String get sideDrawerSelectionUnpin => '取消置頂';
+
+  @override
+  String get sideDrawerSelectionMove => '移動';
+
+  @override
+  String get sideDrawerSelectionDelete => '刪除';
+
+  @override
+  String get sideDrawerSelectionDeleteConfirmTitle => '刪除話題';
+
+  @override
+  String sideDrawerSelectionDeleteConfirmContent(int count) {
+    return '確定刪除 $count 個話題？';
+  }
+
+  @override
+  String sideDrawerDeleteSelectedSnackbar(int count) {
+    return '已刪除 $count 個話題';
+  }
+
+  @override
+  String sideDrawerMoveSelectedSnackbar(int count) {
+    return '已移動 $count 個話題';
+  }
 
   @override
   String sideDrawerDeleteSnackbar(String title) {

@@ -843,6 +843,46 @@
   "sideDrawerMenuCopy": "複製",
   "sideDrawerMenuMoveTo": "移動到",
   "sideDrawerMenuDelete": "刪除",
+  "sideDrawerMenuSelect": "多選",
+  "sideDrawerSelectionTitle": "已選 {count} 項",
+  "@sideDrawerSelectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerSelectionSelectAll": "全選",
+  "sideDrawerSelectionDeselectAll": "取消全選",
+  "sideDrawerSelectionPin": "置頂",
+  "sideDrawerSelectionUnpin": "取消置頂",
+  "sideDrawerSelectionMove": "移動",
+  "sideDrawerSelectionDelete": "刪除",
+  "sideDrawerSelectionDeleteConfirmTitle": "刪除話題",
+  "sideDrawerSelectionDeleteConfirmContent": "確定刪除 {count} 個話題？",
+  "@sideDrawerSelectionDeleteConfirmContent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerDeleteSelectedSnackbar": "已刪除 {count} 個話題",
+  "@sideDrawerDeleteSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerMoveSelectedSnackbar": "已移動 {count} 個話題",
+  "@sideDrawerMoveSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sideDrawerDeleteSnackbar": "已刪除「{title}」",
   "sideDrawerRenameHint": "輸入新名稱",
   "sideDrawerCancel": "取消",

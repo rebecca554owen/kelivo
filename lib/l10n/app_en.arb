@@ -1105,6 +1105,46 @@
   "sideDrawerMenuCopy": "Copy",
   "sideDrawerMenuMoveTo": "Move to",
   "sideDrawerMenuDelete": "Delete",
+  "sideDrawerMenuSelect": "Select",
+  "sideDrawerSelectionTitle": "Selected {count} items",
+  "@sideDrawerSelectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerSelectionSelectAll": "Select all",
+  "sideDrawerSelectionDeselectAll": "Deselect all",
+  "sideDrawerSelectionPin": "Pin",
+  "sideDrawerSelectionUnpin": "Unpin",
+  "sideDrawerSelectionMove": "Move",
+  "sideDrawerSelectionDelete": "Delete",
+  "sideDrawerSelectionDeleteConfirmTitle": "Delete conversations",
+  "sideDrawerSelectionDeleteConfirmContent": "Delete {count} conversations?",
+  "@sideDrawerSelectionDeleteConfirmContent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerDeleteSelectedSnackbar": "Deleted {count} conversations",
+  "@sideDrawerDeleteSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerMoveSelectedSnackbar": "Moved {count} conversations",
+  "@sideDrawerMoveSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sideDrawerDeleteSnackbar": "Deleted \"{title}\"",
   "@sideDrawerDeleteSnackbar": {
     "placeholders": {

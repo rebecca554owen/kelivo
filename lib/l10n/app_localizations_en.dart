@@ -2586,6 +2586,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerMenuDelete => 'Delete';
 
   @override
+  String get sideDrawerMenuSelect => 'Select';
+
+  @override
+  String sideDrawerSelectionTitle(int count) {
+    return 'Selected $count items';
+  }
+
+  @override
+  String get sideDrawerSelectionSelectAll => 'Select all';
+
+  @override
+  String get sideDrawerSelectionDeselectAll => 'Deselect all';
+
+  @override
+  String get sideDrawerSelectionPin => 'Pin';
+
+  @override
+  String get sideDrawerSelectionUnpin => 'Unpin';
+
+  @override
+  String get sideDrawerSelectionMove => 'Move';
+
+  @override
+  String get sideDrawerSelectionDelete => 'Delete';
+
+  @override
+  String get sideDrawerSelectionDeleteConfirmTitle => 'Delete conversations';
+
+  @override
+  String sideDrawerSelectionDeleteConfirmContent(int count) {
+    return 'Delete $count conversations?';
+  }
+
+  @override
+  String sideDrawerDeleteSelectedSnackbar(int count) {
+    return 'Deleted $count conversations';
+  }
+
+  @override
+  String sideDrawerMoveSelectedSnackbar(int count) {
+    return 'Moved $count conversations';
+  }
+
+  @override
   String sideDrawerDeleteSnackbar(String title) {
     return 'Deleted \"$title\"';
   }

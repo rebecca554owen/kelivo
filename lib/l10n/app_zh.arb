@@ -850,6 +850,46 @@
   "sideDrawerMenuCopy": "复制",
   "sideDrawerMenuMoveTo": "移动到",
   "sideDrawerMenuDelete": "删除",
+  "sideDrawerMenuSelect": "多选",
+  "sideDrawerSelectionTitle": "已选 {count} 项",
+  "@sideDrawerSelectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerSelectionSelectAll": "全选",
+  "sideDrawerSelectionDeselectAll": "取消全选",
+  "sideDrawerSelectionPin": "置顶",
+  "sideDrawerSelectionUnpin": "取消置顶",
+  "sideDrawerSelectionMove": "移动",
+  "sideDrawerSelectionDelete": "删除",
+  "sideDrawerSelectionDeleteConfirmTitle": "删除话题",
+  "sideDrawerSelectionDeleteConfirmContent": "确定删除 {count} 个话题？",
+  "@sideDrawerSelectionDeleteConfirmContent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerDeleteSelectedSnackbar": "已删除 {count} 个话题",
+  "@sideDrawerDeleteSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerMoveSelectedSnackbar": "已移动 {count} 个话题",
+  "@sideDrawerMoveSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sideDrawerDeleteSnackbar": "已删除“{title}”",
   "sideDrawerRenameHint": "输入新名称",
   "sideDrawerCancel": "取消",
