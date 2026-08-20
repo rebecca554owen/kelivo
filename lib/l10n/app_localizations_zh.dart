@@ -6047,16 +6047,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memorySettingsInjectionMaxItemsCustomDescription =>
-      '请输入 1 到 50 之间的整数。';
+      '请输入 1 到 100 之间的整数。';
 
   @override
   String get memorySettingsInjectionMaxItemsCustomLabel => '条数';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–100';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomInvalid => '请输入 1 到 50 之间的整数';
+  String get memorySettingsInjectionMaxItemsCustomInvalid =>
+      '请输入 1 到 100 之间的整数';
 
   @override
   String get memorySettingsPromptLangSection => '提示词语言';
@@ -13575,16 +13576,17 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get memorySettingsInjectionMaxItemsCustomDescription =>
-      '请输入 1 到 50 之间的整数。';
+      '请输入 1 到 100 之间的整数。';
 
   @override
   String get memorySettingsInjectionMaxItemsCustomLabel => '条数';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–100';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomInvalid => '请输入 1 到 50 之间的整数';
+  String get memorySettingsInjectionMaxItemsCustomInvalid =>
+      '请输入 1 到 100 之间的整数';
 
   @override
   String get memorySettingsPromptLangSection => '提示词语言';
@@ -21177,16 +21179,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get memorySettingsInjectionMaxItemsCustomDescription =>
-      '請輸入 1 到 50 之間的整數。';
+      '請輸入 1 到 100 之間的整數。';
 
   @override
   String get memorySettingsInjectionMaxItemsCustomLabel => '條數';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–100';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomInvalid => '請輸入 1 到 50 之間的整數';
+  String get memorySettingsInjectionMaxItemsCustomInvalid =>
+      '請輸入 1 到 100 之間的整數';
 
   @override
   String get memorySettingsPromptLangSection => '提示詞語言';

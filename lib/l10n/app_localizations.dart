@@ -11548,7 +11548,7 @@ abstract class AppLocalizations {
   /// No description provided for @memorySettingsInjectionMaxItemsCustomDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enter a number between 1 and 50.'**
+  /// **'Enter a number between 1 and 100.'**
   String get memorySettingsInjectionMaxItemsCustomDescription;
 
   /// No description provided for @memorySettingsInjectionMaxItemsCustomLabel.
@@ -11560,13 +11560,13 @@ abstract class AppLocalizations {
   /// No description provided for @memorySettingsInjectionMaxItemsCustomHint.
   ///
   /// In en, this message translates to:
-  /// **'1–50'**
+  /// **'1–100'**
   String get memorySettingsInjectionMaxItemsCustomHint;
 
   /// No description provided for @memorySettingsInjectionMaxItemsCustomInvalid.
   ///
   /// In en, this message translates to:
-  /// **'Enter a number between 1 and 50'**
+  /// **'Enter a number between 1 and 100'**
   String get memorySettingsInjectionMaxItemsCustomInvalid;
 
   /// No description provided for @memorySettingsPromptLangSection.

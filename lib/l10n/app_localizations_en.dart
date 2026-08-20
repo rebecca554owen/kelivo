@@ -6285,17 +6285,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memorySettingsInjectionMaxItemsCustomDescription =>
-      'Enter a number between 1 and 50.';
+      'Enter a number between 1 and 100.';
 
   @override
   String get memorySettingsInjectionMaxItemsCustomLabel => 'Count';
 
   @override
-  String get memorySettingsInjectionMaxItemsCustomHint => '1–50';
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–100';
 
   @override
   String get memorySettingsInjectionMaxItemsCustomInvalid =>
-      'Enter a number between 1 and 50';
+      'Enter a number between 1 and 100';
 
   @override
   String get memorySettingsPromptLangSection => 'Prompt language';

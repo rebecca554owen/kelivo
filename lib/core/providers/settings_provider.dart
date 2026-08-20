@@ -159,7 +159,7 @@ class SettingsProvider extends ChangeNotifier {
       'memory_injection_max_items_v1';
   static const int defaultMemoryInjectionMaxItems = 10;
   static const int minMemoryInjectionMaxItems = 1;
-  static const int maxMemoryInjectionMaxItems = 50;
+  static const int maxMemoryInjectionMaxItems = 100;
   static const String _displayShowUserAvatarKey = 'display_show_user_avatar_v1';
   static const String _displayShowModelIconKey = 'display_show_model_icon_v1';
   static const String _displayShowModelNameTimestampKey =
