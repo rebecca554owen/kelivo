@@ -82,6 +82,14 @@ class InteractiveDrawerController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// When this returns true, a system back is consumed by drawer content
+  /// (e.g. leaving sidebar multi-select) and the drawer stays open.
+  ///
+  /// Flutter 3.44 invokes [PopScope.onPopInvokedWithResult] on every
+  /// [PopEntry]; without this, an inner [PopScope] cannot stop this
+  /// controller from also closing the drawer.
+  bool Function()? handleBack;
 }
 
 /// Interactive drawer where:
@@ -155,6 +163,27 @@ class InteractiveDrawer extends StatefulWidget {
 
   @override
   State<InteractiveDrawer> createState() => _InteractiveDrawerState();
+
+  /// Controller of the enclosing [InteractiveDrawer], if any.
+  static InteractiveDrawerController? maybeControllerOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_InteractiveDrawerScope>()
+        ?.controller;
+  }
+}
+
+class _InteractiveDrawerScope extends InheritedWidget {
+  const _InteractiveDrawerScope({
+    required this.controller,
+    required super.child,
+  });
+
+  final InteractiveDrawerController controller;
+
+  @override
+  bool updateShouldNotify(_InteractiveDrawerScope oldWidget) {
+    return controller != oldWidget.controller;
+  }
 }
 
 class _InteractiveDrawerState extends State<InteractiveDrawer>
@@ -371,43 +400,47 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
             canPop: !_controllerProxy.isOpen,
             onPopInvokedWithResult: (didPop, _) {
               if (didPop) return;
+              if (_controllerProxy.handleBack?.call() == true) return;
               if (_controllerProxy.isOpen) {
                 _controllerProxy.close();
               }
             },
-            child: AnimatedBuilder(
-              animation: _anim,
-              builder: (context, _) {
-                if (widget.tabletMode) {
-                  // Stack: main content with dynamic padding + sliding drawer on top alignment.
-                  final sidePadding = _drawerWidth * _anim.value;
-                  EdgeInsets mainPadding;
-                  if (_isLeft) {
-                    mainPadding = EdgeInsets.only(left: sidePadding);
-                  } else {
-                    mainPadding = EdgeInsets.only(right: sidePadding);
+            child: _InteractiveDrawerScope(
+              controller: _controllerProxy,
+              child: AnimatedBuilder(
+                animation: _anim,
+                builder: (context, _) {
+                  if (widget.tabletMode) {
+                    // Stack: main content with dynamic padding + sliding drawer on top alignment.
+                    final sidePadding = _drawerWidth * _anim.value;
+                    EdgeInsets mainPadding;
+                    if (_isLeft) {
+                      mainPadding = EdgeInsets.only(left: sidePadding);
+                    } else {
+                      mainPadding = EdgeInsets.only(right: sidePadding);
+                    }
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Main content shifts via padding to make space as drawer reveals.
+                        AnimatedContainer(
+                          duration: const Duration(
+                            milliseconds: 16,
+                          ), // near-frame for smoothness
+                          curve: Curves.linear,
+                          padding: mainPadding,
+                          child: _buildDraggableChild(),
+                        ),
+                        _buildDraggableDrawer(),
+                      ],
+                    );
                   }
                   return Stack(
                     fit: StackFit.expand,
-                    children: [
-                      // Main content shifts via padding to make space as drawer reveals.
-                      AnimatedContainer(
-                        duration: const Duration(
-                          milliseconds: 16,
-                        ), // near-frame for smoothness
-                        curve: Curves.linear,
-                        padding: mainPadding,
-                        child: _buildDraggableChild(),
-                      ),
-                      _buildDraggableDrawer(),
-                    ],
+                    children: [_buildDraggableChild(), _buildDraggableDrawer()],
                   );
-                }
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [_buildDraggableChild(), _buildDraggableDrawer()],
-                );
-              },
+                },
+              ),
             ),
           );
         },
