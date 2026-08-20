@@ -19,6 +19,7 @@ import '../services/logging/flutter_logger.dart';
 import '../services/learning_mode_store.dart';
 import '../models/api_keys.dart';
 import '../models/backup.dart';
+import '../models/compress_context_options.dart';
 import '../models/provider_group.dart';
 import '../services/haptics.dart';
 import '../../utils/app_directories.dart';
@@ -101,6 +102,10 @@ class SettingsProvider extends ChangeNotifier {
       'suggestion_insert_on_tap_only_v1';
   static const String _compressModelKey = 'compress_model_v1';
   static const String _compressPromptKey = 'compress_prompt_v1';
+  static const String _compressLimitModeKey = 'compress_limit_mode_v1';
+  static const String _compressKeepUserMessagesKey =
+      'compress_keep_user_messages_v1';
+  static const String _compressMaxCharsKey = 'compress_max_chars_v1';
   static const String _themePaletteKey = 'theme_palette_v1';
   static const String _useDynamicColorKey = 'use_dynamic_color_v1';
   static const String _customThemesKey = 'custom_themes_v1';
@@ -888,6 +893,15 @@ class SettingsProvider extends ChangeNotifier {
     _compressPrompt = (compressp == null || compressp.trim().isEmpty)
         ? defaultCompressPrompt
         : compressp;
+    final compressModeName = prefs.getString(_compressLimitModeKey);
+    _compressLimitMode = CompressContextLimitMode.values.firstWhere(
+      (mode) => mode.name == compressModeName,
+      orElse: () => CompressContextLimitMode.start,
+    );
+    _compressKeepUserMessages = prefs.getInt(_compressKeepUserMessagesKey);
+    _compressMaxChars =
+        prefs.getInt(_compressMaxCharsKey) ??
+        CompressContextOptions.defaultMaxChars;
     // learning mode
     _learningModeEnabled = prefs.getBool(_learningModeEnabledKey) ?? false;
     final lmp = prefs.getString(_learningModePromptKey);
@@ -3585,6 +3599,15 @@ Requirements:
   String _compressPrompt = defaultCompressPrompt;
   String get compressPrompt => _compressPrompt;
 
+  CompressContextLimitMode _compressLimitMode = CompressContextLimitMode.start;
+  CompressContextLimitMode get compressLimitMode => _compressLimitMode;
+
+  int? _compressKeepUserMessages;
+  int? get compressKeepUserMessages => _compressKeepUserMessages;
+
+  int _compressMaxChars = CompressContextOptions.defaultMaxChars;
+  int get compressMaxChars => _compressMaxChars;
+
   Future<void> setCompressModel(String providerKey, String modelId) async {
     _compressModelProvider = providerKey;
     _compressModelId = modelId;
@@ -3610,6 +3633,31 @@ Requirements:
 
   Future<void> resetCompressPrompt() async =>
       setCompressPrompt(defaultCompressPrompt);
+
+  Future<void> setCompressLimitMode(CompressContextLimitMode mode) async {
+    _compressLimitMode = mode;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setString(_compressLimitModeKey, mode.name);
+  }
+
+  Future<void> setCompressKeepUserMessages(int? count) async {
+    _compressKeepUserMessages = count;
+    notifyListeners();
+    final prefs = _preferences;
+    if (count == null) {
+      await prefs.remove(_compressKeepUserMessagesKey);
+    } else {
+      await prefs.setInt(_compressKeepUserMessagesKey, count);
+    }
+  }
+
+  Future<void> setCompressMaxChars(int maxChars) async {
+    _compressMaxChars = maxChars;
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setInt(_compressMaxCharsKey, maxChars);
+  }
 
   // Learning Mode
   bool _learningModeEnabled = false;
@@ -5183,6 +5231,9 @@ Requirements:
     copy._compressModelProvider = _compressModelProvider;
     copy._compressModelId = _compressModelId;
     copy._compressPrompt = _compressPrompt;
+    copy._compressLimitMode = _compressLimitMode;
+    copy._compressKeepUserMessages = _compressKeepUserMessages;
+    copy._compressMaxChars = _compressMaxChars;
     copy._translateModelProvider = _translateModelProvider;
     copy._translateModelId = _translateModelId;
     copy._translatePrompt = _translatePrompt;

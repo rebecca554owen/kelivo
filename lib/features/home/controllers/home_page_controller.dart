@@ -1150,8 +1150,15 @@ class HomePageController extends ChangeNotifier {
   }) async {
     final result = await _viewModel.compressContext(options: options);
     if (result == null) {
-      // Success - switched to new conversation
-      _translations.clear();
+      // Success - switched to new conversation.
+      // keepRecent clones original messages (including translation text).
+      // `onConversationSwitched` already rebuilt fold state for those ids;
+      // clearing here would leave arrows visible but untoggleable.
+      if (options.mode == CompressContextLimitMode.keepRecent) {
+        _restoreMessageUiState();
+      } else {
+        _translations.clear();
+      }
       notifyListeners();
       _scrollToBottomSoon(animate: false);
     }
@@ -2072,6 +2079,10 @@ class HomePageController extends ChangeNotifier {
 
   List<ChatMessage> collapseVersions(List<ChatMessage> items) {
     return _chatController.collapseVersions(items);
+  }
+
+  Future<List<ChatMessage>> allMessagesForCurrentConversationContext() {
+    return _chatController.allMessagesForCurrentConversationContext();
   }
 
   // ============================================================================

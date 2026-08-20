@@ -4030,6 +4030,36 @@ abstract class AppLocalizations {
   /// **'Compress'**
   String get compressContextStartButton;
 
+  /// No description provided for @compressContextKeepRecentMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep N'**
+  String get compressContextKeepRecentMessages;
+
+  /// No description provided for @compressContextKeepCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep recent messages'**
+  String get compressContextKeepCountLabel;
+
+  /// No description provided for @compressContextKeepAllMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeping that many covers all messages — nothing to compress'**
+  String get compressContextKeepAllMessages;
+
+  /// Keep-recent compression preview: summarized/kept char counts and the estimated result token band
+  ///
+  /// In en, this message translates to:
+  /// **'Summarize {summarized} chars, keep {kept} chars verbatim → about {minTokens}–{maxTokens} tokens (original about {totalTokens} tokens)'**
+  String compressContextEstimatePreview(
+    int summarized,
+    int kept,
+    int minTokens,
+    int maxTokens,
+    int totalTokens,
+  );
+
   /// No description provided for @bottomToolsSheetLearningMode.
   ///
   /// In en, this message translates to:

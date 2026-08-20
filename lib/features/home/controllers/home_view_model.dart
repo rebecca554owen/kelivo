@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_message.dart';
+import '../../../core/models/compress_context_options.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -22,43 +23,9 @@ import 'chat_controller.dart';
 import 'generation_controller.dart';
 import 'stream_controller.dart' as stream_ctrl;
 
-enum CompressContextLimitMode { start, recent, unlimited }
+export '../../../core/models/compress_context_options.dart';
 
 enum BackgroundTaskKind { ocr, title, summary, suggestions, memory }
-
-class CompressContextOptions {
-  const CompressContextOptions({required this.mode, this.maxChars});
-
-  static const int defaultMaxChars = 6000;
-
-  final CompressContextLimitMode mode;
-  final int? maxChars;
-}
-
-String buildCompressContextContent(
-  String joined,
-  CompressContextOptions options,
-) {
-  if (options.mode == CompressContextLimitMode.unlimited) return joined;
-  final maxChars = options.maxChars ?? CompressContextOptions.defaultMaxChars;
-  if (maxChars <= 0 || joined.length <= maxChars) return joined;
-  return switch (options.mode) {
-    CompressContextLimitMode.start => joined.substring(0, maxChars),
-    CompressContextLimitMode.recent => joined.substring(
-      joined.length - maxChars,
-    ),
-    CompressContextLimitMode.unlimited => joined,
-  };
-}
-
-String buildConversationTextForCompression(List<ChatMessage> messages) {
-  return messages
-      .where((m) => m.content.trim().isNotEmpty)
-      .map(
-        (m) => '${m.role == "assistant" ? "Assistant" : "User"}: ${m.content}',
-      )
-      .join('\n\n');
-}
 
 class BatchDeleteGroupPlan {
   const BatchDeleteGroupPlan({
@@ -1142,8 +1109,22 @@ class HomeViewModel extends ChangeNotifier {
     final collapsed = collapseVersions(allMsgs);
     if (collapsed.isEmpty) return 'no_messages';
 
+    List<ChatMessage>? keptMessages;
+    var summarizeInput = collapsed;
+    if (options.mode == CompressContextLimitMode.keepRecent) {
+      final keepN =
+          options.keepUserMessages ??
+          CompressContextOptions.defaultKeepUserMessages;
+      keptMessages = selectKeepRecentMessages(collapsed, keepN);
+      if (keptMessages.length >= collapsed.length) return 'no_messages';
+      summarizeInput = collapsed.sublist(
+        0,
+        collapsed.length - keptMessages.length,
+      );
+    }
+
     // Build conversation text for compression
-    final joined = buildConversationTextForCompression(collapsed);
+    final joined = buildConversationTextForCompression(summarizeInput);
     if (joined.trim().isEmpty) return 'no_messages';
 
     final content = buildCompressContextContent(joined, options);
@@ -1181,6 +1162,32 @@ class HomeViewModel extends ChangeNotifier {
       )).trim();
 
       if (summary.isEmpty) return 'empty_summary';
+
+      if (keptMessages != null) {
+        final summaryMsg = ChatMessage(
+          role: 'user',
+          content: summary,
+          timestamp: DateTime.now(),
+          conversationId: convo.id,
+        );
+        final newConvo = await _chatService.forkConversationFromMessages(
+          title: convo.title,
+          assistantId: convo.assistantId,
+          sourceMessages: [summaryMsg, ...keptMessages],
+        );
+
+        _chatService.setCurrentConversation(newConvo.id);
+        await _chatController.setCurrentConversationAndLoad(
+          _chatService.getConversation(newConvo.id) ?? newConvo,
+        );
+        _restoreMessageUiState();
+        _streamController.clearAllState();
+        onConversationSwitched?.call();
+        notifyListeners();
+        onScrollToBottom?.call();
+
+        return null; // success
+      }
 
       // Create new conversation with the summary as first user message
       final newConvo = await _chatService.createDraftConversation(

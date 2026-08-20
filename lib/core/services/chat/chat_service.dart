@@ -3414,6 +3414,47 @@ class ChatService extends ChangeNotifier {
     _messagesCache[persisted.id] = <ChatMessage>[];
     _messageOrderIds[persisted.id] = <String>[];
     _messageCounts[persisted.id] = 0;
+    await _cloneMessagesInto(persisted.id, sourceMessages);
+    _currentConversationId = persisted.id;
+    notifyListeners();
+    return persisted;
+  }
+
+  Future<Conversation> forkConversationFromMessages({
+    required String title,
+    required String? assistantId,
+    required List<ChatMessage> sourceMessages,
+  }) async {
+    if (!_initialized) await init();
+    final persisted = await createConversation(
+      title: title,
+      assistantId: assistantId,
+    );
+    _messagesCache[persisted.id] = <ChatMessage>[];
+    _messageOrderIds[persisted.id] = <String>[];
+    _messageCounts[persisted.id] = 0;
+    await _cloneMessagesInto(persisted.id, sourceMessages);
+    _currentConversationId = persisted.id;
+    notifyListeners();
+    return persisted;
+  }
+
+  Future<void> _cloneMessagesInto(
+    String targetConversationId,
+    List<ChatMessage> sourceMessages,
+  ) async {
+    final sourceIds = [
+      for (final message in sourceMessages)
+        if (message.id.isNotEmpty) message.id,
+    ];
+    final toolEventsBySourceId = sourceIds.isEmpty
+        ? const <String, List<Map<String, dynamic>>>{}
+        : await _repo.getToolEventsForMessages(sourceIds);
+    final signaturesBySourceId = sourceIds.isEmpty
+        ? const <String, String>{}
+        : await _repo.getGeminiThoughtSignaturesForMessages(sourceIds);
+
+    final cloned = <ChatMessage>[];
     for (final message in sourceMessages) {
       final forked = ChatMessage(
         role: message.role,
@@ -3422,7 +3463,7 @@ class ChatService extends ChangeNotifier {
         modelId: message.modelId,
         providerId: message.providerId,
         totalTokens: message.totalTokens,
-        conversationId: persisted.id,
+        conversationId: targetConversationId,
         isStreaming: false,
         reasoningText: message.reasoningText,
         reasoningStartAt: message.reasoningStartAt,
@@ -3434,17 +3475,32 @@ class ChatService extends ChangeNotifier {
         cachedTokens: message.cachedTokens,
         durationMs: message.durationMs,
       );
-      await addMessageDirectly(persisted.id, forked);
+      await addMessageDirectly(targetConversationId, forked);
+      cloned.add(forked);
       if (message.role == 'user') {
         await _inheritImageOcrArtifactsBestEffort(
           fromRevisionId: message.id,
           toRevisionId: forked.id,
         );
       }
+      // Tool-event / Gemini-signature rows are keyed by revision id. The
+      // cloned conversation already has a complete messages+order cache, so
+      // the first timeline load takes the fast path and skips
+      // `_cacheMessageArtifacts`. Persist under the new ids and refresh the
+      // in-memory caches so tool cards and thought signatures survive.
+      final events =
+          toolEventsBySourceId[message.id] ?? getToolEvents(message.id);
+      if (events.isNotEmpty) {
+        await setToolEvents(forked.id, events);
+      }
+      final signature =
+          signaturesBySourceId[message.id] ??
+          getGeminiThoughtSignature(message.id);
+      if (signature != null && signature.trim().isNotEmpty) {
+        await setGeminiThoughtSignature(forked.id, signature);
+      }
     }
-    _currentConversationId = persisted.id;
-    notifyListeners();
-    return persisted;
+    await _cacheMessageArtifacts(cloned);
   }
 
   Future<ChatMessage?> appendMessageVersion({

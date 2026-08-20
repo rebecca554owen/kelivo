@@ -1125,6 +1125,107 @@ void main() {
         expect(service.getVersionSelections(fork.id), {assistantGroupId: 0});
       },
     );
+
+    test(
+      'linear fork copies tool events and Gemini signatures onto new ids',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final source = await service.createConversation(title: 'Source');
+        await service.addMessage(
+          conversationId: source.id,
+          role: 'user',
+          content: 'q1',
+        );
+        final assistant = await service.addMessage(
+          conversationId: source.id,
+          role: 'assistant',
+          content: 'answer with tools',
+        );
+        const events = [
+          <String, dynamic>{
+            'id': 'tool-1',
+            'name': 'search',
+            'arguments': <String, dynamic>{'q': 'kelivo'},
+            'content': 'found',
+          },
+        ];
+        await service.setToolEvents(assistant.id, events);
+        await service.setGeminiThoughtSignature(assistant.id, 'sig-source');
+
+        final fork = await service.forkConversationAtRevision(
+          sourceConversationId: source.id,
+          sourceRevisionId: assistant.id,
+          title: 'Fork',
+        );
+
+        final forkMessages = service.getMessages(fork.id);
+        expect(forkMessages, hasLength(2));
+        final forkedAssistant = forkMessages.last;
+        expect(forkedAssistant.id, isNot(assistant.id));
+        expect(service.getToolEvents(forkedAssistant.id), events);
+        expect(
+          service.getGeminiThoughtSignature(forkedAssistant.id),
+          'sig-source',
+        );
+        expect(service.getToolEvents(assistant.id), events);
+        expect(service.getGeminiThoughtSignature(assistant.id), 'sig-source');
+      },
+    );
+
+    test(
+      'forkConversationFromMessages copies tool events and Gemini signatures',
+      () async {
+        final service = createService();
+        await service.init();
+
+        final source = await service.createConversation(title: 'Source');
+        final user = await service.addMessage(
+          conversationId: source.id,
+          role: 'user',
+          content: 'q1',
+        );
+        final assistant = await service.addMessage(
+          conversationId: source.id,
+          role: 'assistant',
+          content: 'answer with tools',
+        );
+        const events = [
+          <String, dynamic>{
+            'id': 'tool-keep',
+            'name': 'lookup',
+            'arguments': <String, dynamic>{},
+            'content': 'ok',
+          },
+        ];
+        await service.setToolEvents(assistant.id, events);
+        await service.setGeminiThoughtSignature(assistant.id, 'sig-keep');
+
+        final summary = ChatMessage(
+          role: 'user',
+          content: 'summary of earlier turns',
+          conversationId: source.id,
+        );
+        final fork = await service.forkConversationFromMessages(
+          title: source.title,
+          assistantId: source.assistantId,
+          sourceMessages: [summary, user, assistant],
+        );
+
+        final forkMessages = service.getMessages(fork.id);
+        expect(forkMessages, hasLength(3));
+        expect(forkMessages.first.content, 'summary of earlier turns');
+        final forkedAssistant = forkMessages.last;
+        expect(forkedAssistant.id, isNot(assistant.id));
+        expect(service.getToolEvents(forkedAssistant.id), events);
+        expect(
+          service.getGeminiThoughtSignature(forkedAssistant.id),
+          'sig-keep',
+        );
+        expect(service.getToolEvents(forkMessages.first.id), isEmpty);
+      },
+    );
   });
 
   test('final generation commit publishes one statistics revision', () async {

@@ -852,6 +852,30 @@
   "compressContextMaxCharsLabel": "Characters",
   "compressContextInvalidLimit": "Enter a positive character count",
   "compressContextStartButton": "Compress",
+  "compressContextKeepRecentMessages": "Keep N",
+  "compressContextKeepCountLabel": "Keep recent messages",
+  "compressContextKeepAllMessages": "Keeping that many covers all messages — nothing to compress",
+  "compressContextEstimatePreview": "Summarize {summarized} chars, keep {kept} chars verbatim → about {minTokens}–{maxTokens} tokens (original about {totalTokens} tokens)",
+  "@compressContextEstimatePreview": {
+    "description": "Keep-recent compression preview: summarized/kept char counts and the estimated result token band",
+    "placeholders": {
+      "summarized": {
+        "type": "int"
+      },
+      "kept": {
+        "type": "int"
+      },
+      "minTokens": {
+        "type": "int"
+      },
+      "maxTokens": {
+        "type": "int"
+      },
+      "totalTokens": {
+        "type": "int"
+      }
+    }
+  },
   "bottomToolsSheetLearningMode": "Learning Mode",
   "bottomToolsSheetLearningModeDescription": "Help you learn step by step",
   "bottomToolsSheetConfigurePrompt": "Configure prompt",

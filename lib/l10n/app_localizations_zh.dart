@@ -2052,6 +2052,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get compressContextStartButton => '开始压缩';
 
   @override
+  String get compressContextKeepRecentMessages => '保留N条';
+
+  @override
+  String get compressContextKeepCountLabel => '保留最近条数';
+
+  @override
+  String get compressContextKeepAllMessages => '保留条数覆盖全部消息，无内容可压缩';
+
+  @override
+  String compressContextEstimatePreview(
+    int summarized,
+    int kept,
+    int minTokens,
+    int maxTokens,
+    int totalTokens,
+  ) {
+    return '总结 $summarized 字符，原样保留 $kept 字符 → 压缩后约 $minTokens–$maxTokens tokens（原文约 $totalTokens tokens）';
+  }
+
+  @override
   String get bottomToolsSheetLearningMode => '学习模式';
 
   @override
@@ -9650,6 +9670,26 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get compressContextStartButton => '开始压缩';
 
   @override
+  String get compressContextKeepRecentMessages => '保留N条';
+
+  @override
+  String get compressContextKeepCountLabel => '保留最近条数';
+
+  @override
+  String get compressContextKeepAllMessages => '保留条数覆盖全部消息，无内容可压缩';
+
+  @override
+  String compressContextEstimatePreview(
+    int summarized,
+    int kept,
+    int minTokens,
+    int maxTokens,
+    int totalTokens,
+  ) {
+    return '总结 $summarized 字符，原样保留 $kept 字符 → 压缩后约 $minTokens–$maxTokens tokens（原文约 $totalTokens tokens）';
+  }
+
+  @override
   String get bottomToolsSheetLearningMode => '学习模式';
 
   @override
@@ -17171,6 +17211,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get compressContextStartButton => '開始壓縮';
+
+  @override
+  String get compressContextKeepRecentMessages => '保留N條';
+
+  @override
+  String get compressContextKeepCountLabel => '保留最近條數';
+
+  @override
+  String get compressContextKeepAllMessages => '保留條數涵蓋全部訊息，無內容可壓縮';
+
+  @override
+  String compressContextEstimatePreview(
+    int summarized,
+    int kept,
+    int minTokens,
+    int maxTokens,
+    int totalTokens,
+  ) {
+    return '總結 $summarized 字元，原樣保留 $kept 字元 → 壓縮後約 $minTokens–$maxTokens tokens（原文約 $totalTokens tokens）';
+  }
 
   @override
   String get bottomToolsSheetLearningMode => '學習模式';

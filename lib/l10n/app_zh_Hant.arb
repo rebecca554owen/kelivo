@@ -716,6 +716,30 @@
   "compressContextMaxCharsLabel": "字元數",
   "compressContextInvalidLimit": "請輸入大於 0 的字元數",
   "compressContextStartButton": "開始壓縮",
+  "compressContextKeepRecentMessages": "保留N條",
+  "compressContextKeepCountLabel": "保留最近條數",
+  "compressContextKeepAllMessages": "保留條數涵蓋全部訊息，無內容可壓縮",
+  "compressContextEstimatePreview": "總結 {summarized} 字元，原樣保留 {kept} 字元 → 壓縮後約 {minTokens}–{maxTokens} tokens（原文約 {totalTokens} tokens）",
+  "@compressContextEstimatePreview": {
+    "description": "Keep-recent compression preview: summarized/kept char counts and the estimated result token band",
+    "placeholders": {
+      "summarized": {
+        "type": "int"
+      },
+      "kept": {
+        "type": "int"
+      },
+      "minTokens": {
+        "type": "int"
+      },
+      "maxTokens": {
+        "type": "int"
+      },
+      "totalTokens": {
+        "type": "int"
+      }
+    }
+  },
   "bottomToolsSheetLearningMode": "學習模式",
   "bottomToolsSheetLearningModeDescription": "幫助你循序漸進地學習知識",
   "bottomToolsSheetConfigurePrompt": "設定提示詞",
