@@ -515,7 +515,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
         try {
           final u = (obj['usage'] as Map?)?.cast<String, dynamic>();
           if (u != null) {
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
+            totalUsage = (totalUsage ?? const TokenUsage()).accumulate(
               claudeUsageFromMap(u),
             );
           }
@@ -574,7 +574,10 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
       }
 
       final sse = response.stream.transform(utf8.decoder);
-      final decoder = ClaudeStreamDecoder(sourceId: 'round-${streamRound++}');
+      final decoder = ClaudeStreamDecoder(
+        initialUsage: totalUsage,
+        sourceId: 'round-${streamRound++}',
+      );
       final executedToolIds = <String>{};
 
       await for (final event in parseSseEventStrings(sse)) {
@@ -623,9 +626,7 @@ Stream<StreamChunk> sendGoogleVertexClaudeStream({
       final lastStopReason = decoder.lastStopReason;
       final toolResultsContent = decoder.toolResults;
 
-      if (usage != null) {
-        totalUsage = (totalUsage ?? const TokenUsage()).merge(usage);
-      }
+      totalUsage = usage ?? totalUsage;
 
       lastAssistantBlocks = assistantBlocks;
       if (decoder.clientTools.isEmpty) {

@@ -67,8 +67,7 @@ class GoogleStreamDecoder implements StreamChunkDecoder {
     this.initialUsage,
     List<Map<String, dynamic>>? citations,
     String sourceId = 'stream',
-  }) : usage = initialUsage,
-       builtinCitations = citations ?? <Map<String, dynamic>>[],
+  }) : builtinCitations = citations ?? <Map<String, dynamic>>[],
        _ids = StreamChunkIds(sourceId);
 
   final bool isGemini3;
@@ -78,7 +77,13 @@ class GoogleStreamDecoder implements StreamChunkDecoder {
   final StreamChunkIds _ids;
 
   bool receivedImage;
-  TokenUsage? usage;
+  TokenUsage? _round;
+
+  TokenUsage? get usage {
+    if (_round == null) return initialUsage;
+    return (initialUsage ?? const TokenUsage()).accumulate(_round!);
+  }
+
   String? finishReason;
   bool retryMalformedResponse = false;
   bool streamComplete = false;
@@ -249,7 +254,7 @@ class GoogleStreamDecoder implements StreamChunkDecoder {
   void _parseEvent(Map<String, dynamic> obj, List<StreamChunk> chunks) {
     final um = obj['usageMetadata'];
     if (um is Map<String, dynamic>) {
-      usage = (usage ?? const TokenUsage()).merge(
+      _round = (_round ?? const TokenUsage()).merge(
         TokenUsage(
           promptTokens: (um['promptTokenCount'] ?? 0) as int,
           completionTokens: (um['candidatesTokenCount'] ?? 0) as int,

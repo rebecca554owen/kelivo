@@ -44,12 +44,17 @@ class ResponsesPendingImage {
 /// Stateful OpenAI Responses SSE decoder. One instance per HTTP response.
 class ResponsesStreamDecoder implements StreamChunkDecoder {
   ResponsesStreamDecoder({this.initialUsage, String sourceId = 'stream'})
-    : usage = initialUsage,
-      _ids = StreamChunkIds(sourceId);
+    : _ids = StreamChunkIds(sourceId);
 
   final TokenUsage? initialUsage;
   final StreamChunkIds _ids;
-  TokenUsage? usage;
+  TokenUsage? _round;
+
+  TokenUsage? get usage {
+    if (_round == null) return initialUsage;
+    return (initialUsage ?? const TokenUsage()).accumulate(_round!);
+  }
+
   bool completed = false;
   int approxCompletionChars = 0;
 
@@ -338,7 +343,7 @@ class ResponsesStreamDecoder implements StreamChunkDecoder {
         chunks.add(TextDelta(id: _ids.text(), text: content));
       }
       if (obj['usage'] != null) {
-        usage = _mergeUsage(usage, obj['usage']);
+        _round = _mergeUsage(_round, obj['usage']);
         if (usage != null) chunks.add(Usage(usage!));
       }
     }
@@ -353,7 +358,7 @@ class ResponsesStreamDecoder implements StreamChunkDecoder {
     if (response is Map) {
       final u = response['usage'];
       if (u != null) {
-        usage = _mergeUsage(usage, u);
+        _round = _mergeUsage(_round, u);
         if (usage != null) chunks.add(Usage(usage!));
       }
       final output = response['output'];

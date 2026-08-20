@@ -417,4 +417,62 @@ void main() {
     );
     expect(delta.chunks.whereType<ToolCallDelta>().single.id, 'call_1');
   });
+
+  test('follow-up decoder usage is the cumulative snapshot', () {
+    final first = ResponsesStreamDecoder();
+    final firstDone = first.accept(
+      _event({
+        'type': 'response.completed',
+        'response': {
+          'usage': {'input_tokens': 100, 'output_tokens': 20},
+          'output': const [],
+        },
+      }),
+    );
+    expect(first.usage!.promptTokens, 100);
+    expect(first.usage!.completionTokens, 20);
+    expect(first.usage!.totalTokens, 120);
+    expect(firstDone.chunks.whereType<Usage>().single.usage.promptTokens, 100);
+
+    final second = ResponsesStreamDecoder(initialUsage: first.usage);
+    final follow = second.accept(
+      _event({
+        'type': 'response.completed',
+        'response': {
+          'usage': {'input_tokens': 300, 'output_tokens': 40},
+          'output': const [],
+        },
+      }),
+    );
+
+    expect(second.usage!.promptTokens, 400);
+    expect(second.usage!.completionTokens, 60);
+    expect(second.usage!.totalTokens, 460);
+    final streamed = follow.chunks.whereType<Usage>().single.usage;
+    expect(streamed.promptTokens, 400);
+    expect(streamed.completionTokens, 60);
+    expect(streamed.totalTokens, 460);
+  });
+
+  test('a follow-up round without usage keeps the prior snapshot', () {
+    final first = ResponsesStreamDecoder();
+    first.accept(
+      _event({
+        'type': 'response.completed',
+        'response': {
+          'usage': {'input_tokens': 100, 'output_tokens': 20},
+          'output': const [],
+        },
+      }),
+    );
+    final second = ResponsesStreamDecoder(initialUsage: first.usage);
+    final silent = second.accept(
+      _event({'type': 'response.output_text.delta', 'delta': 'ok'}),
+    );
+
+    expect(second.usage!.promptTokens, 100);
+    expect(second.usage!.completionTokens, 20);
+    expect(second.usage!.totalTokens, 120);
+    expect(silent.chunks.whereType<Usage>(), isEmpty);
+  });
 }

@@ -11,6 +11,8 @@ class TokenUsage {
     this.totalTokens = 0,
   });
 
+  /// Intra-round only (Claude two-half splice, Gemini usageMetadata replay).
+  /// Use [accumulate] to add settled rounds together.
   TokenUsage merge(TokenUsage other) {
     // For streaming responses:
     // - prompt tokens: take max (usually stays constant after initial value)
@@ -31,6 +33,22 @@ class TokenUsage {
       completionTokens: completion,
       cachedTokens: cached,
       totalTokens: total,
+    );
+  }
+
+  TokenUsage accumulate(TokenUsage other) {
+    final prompt = promptTokens + other.promptTokens;
+    final completion = completionTokens + other.completionTokens;
+    final cached = cachedTokens + other.cachedTokens;
+    final splitTotal = prompt + completion;
+    return TokenUsage(
+      promptTokens: prompt,
+      completionTokens: completion,
+      cachedTokens: cached,
+      // same as merge: use split when present, else sum explicit totals
+      totalTokens: splitTotal > 0
+          ? splitTotal
+          : totalTokens + other.totalTokens,
     );
   }
 }

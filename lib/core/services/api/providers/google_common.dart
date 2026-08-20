@@ -722,7 +722,7 @@ Stream<StreamChunk> sendGoogleStream(
           if (u != null) {
             final prompt = (u['promptTokenCount'] ?? 0) as int? ?? 0;
             final completion = (u['candidatesTokenCount'] ?? 0) as int? ?? 0;
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
+            totalUsage = (totalUsage ?? const TokenUsage()).accumulate(
               TokenUsage(
                 promptTokens: prompt,
                 completionTokens: completion,

@@ -14,8 +14,7 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
     this.allowReasoningSnapshots = true,
     this.initialUsage,
     String sourceId = 'stream',
-  }) : usage = initialUsage,
-       _ids = StreamChunkIds(sourceId);
+  }) : _ids = StreamChunkIds(sourceId);
 
   final bool wantsImageOutput;
   final bool needsReasoningEcho;
@@ -23,7 +22,13 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
   final TokenUsage? initialUsage;
   final StreamChunkIds _ids;
 
-  TokenUsage? usage;
+  TokenUsage? _round;
+
+  TokenUsage? get usage {
+    if (_round == null) return initialUsage;
+    return (initialUsage ?? const TokenUsage()).accumulate(_round!);
+  }
+
   String? finishReason;
   int approxCompletionChars = 0;
   String reasoningEcho = '';
@@ -192,7 +197,7 @@ class ChatCompletionsStreamDecoder implements StreamChunkDecoder {
     }
 
     if (obj.containsKey('usage')) {
-      usage = _mergeUsage(usage, obj['usage']);
+      _round = _mergeUsage(_round, obj['usage']);
     }
 
     final citations = obj['citations'];

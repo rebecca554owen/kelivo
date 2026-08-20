@@ -739,4 +739,55 @@ void main() {
     expect(handler.parts.whereType<TextPart>().single.text, 'Hello world');
     expect(handler.parts.whereType<ToolCallPart>(), hasLength(1));
   });
+
+  test('follow-up decoder usage is the cumulative snapshot', () {
+    final first = ChatCompletionsStreamDecoder();
+    first.accept(
+      _event(<String, dynamic>{
+        ..._choice(delta: <String, dynamic>{'content': 'a'}),
+        'usage': <String, dynamic>{
+          'prompt_tokens': 100,
+          'completion_tokens': 20,
+        },
+      }),
+    );
+    expect(first.usage!.promptTokens, 100);
+    expect(first.usage!.completionTokens, 20);
+    expect(first.usage!.totalTokens, 120);
+
+    final second = ChatCompletionsStreamDecoder(initialUsage: first.usage);
+    final result = second.accept(
+      _event(<String, dynamic>{
+        ..._choice(delta: <String, dynamic>{'content': 'b'}),
+        'usage': <String, dynamic>{
+          'prompt_tokens': 300,
+          'completion_tokens': 40,
+        },
+      }),
+    );
+
+    expect(second.usage!.promptTokens, 400);
+    expect(second.usage!.completionTokens, 60);
+    expect(second.usage!.totalTokens, 460);
+    expect(result.chunks.whereType<Usage>(), isEmpty);
+  });
+
+  test('a follow-up round without usage keeps the prior snapshot', () {
+    final first = ChatCompletionsStreamDecoder();
+    first.accept(
+      _event(<String, dynamic>{
+        ..._choice(delta: <String, dynamic>{'content': 'a'}),
+        'usage': <String, dynamic>{
+          'prompt_tokens': 100,
+          'completion_tokens': 20,
+        },
+      }),
+    );
+    final second = ChatCompletionsStreamDecoder(initialUsage: first.usage);
+    second.accept(_event(_choice(delta: <String, dynamic>{'content': 'b'})));
+
+    expect(second.usage!.promptTokens, 100);
+    expect(second.usage!.completionTokens, 20);
+    expect(second.usage!.totalTokens, 120);
+  });
 }

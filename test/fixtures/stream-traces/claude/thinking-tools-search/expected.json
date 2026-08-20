@@ -79,6 +79,13 @@
   "images": [],
   "chunks": [
     {
+      "type": "usage",
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "cachedTokens": 0,
+      "totalTokens": 0
+    },
+    {
       "type": "reasoning_start",
       "id": "stream:thinking-0",
       "reasoningType": "reasoningText"

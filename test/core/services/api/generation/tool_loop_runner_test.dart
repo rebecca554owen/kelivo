@@ -1,5 +1,7 @@
+import 'package:Kelivo/core/models/token_usage.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
 import 'package:Kelivo/core/services/api/stream/stream_chunk.dart';
+import 'package:Kelivo/core/services/api/stream/stream_chunk_handler.dart';
 import 'package:Kelivo/core/services/api/stream/stream_chunk_ids.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -154,5 +156,97 @@ void main() {
     expect(sends, 2);
     expect(chunks.whereType<TextDelta>(), hasLength(2));
     expect(chunks.whereType<Finish>(), hasLength(1));
+  });
+
+  test(
+    'three tool-call rounds keep summed usage and do not double-count repeats',
+    () async {
+      const snapshots = [
+        TokenUsage(promptTokens: 100, completionTokens: 20, totalTokens: 120),
+        TokenUsage(promptTokens: 400, completionTokens: 60, totalTokens: 460),
+        TokenUsage(promptTokens: 900, completionTokens: 70, totalTokens: 970),
+      ];
+      var sends = 0;
+      TokenUsage? usage;
+      final chunks = await runProviderToolRounds(
+        sendRound: () async* {
+          usage = snapshots[sends];
+          sends += 1;
+          yield Usage(usage!);
+          yield TextDelta(id: 't-$sends', text: 'round-$sends');
+        },
+        takeCalls: () => sends < 3
+            ? [
+                emitToolCall(
+                  id: 'call_$sends',
+                  name: 'lookup',
+                  arguments: <String, dynamic>{'q': '$sends'},
+                ),
+              ]
+            : const <EmitToolCall>[],
+        continueWithoutCalls: () => false,
+        executeAfterRound: true,
+        emitCalls: true,
+        onToolCall: (name, args, {toolCallId}) async => 'res',
+        append: (_) {},
+        finish: () => emitFinish(ids: StreamChunkIds('finish'), usage: usage),
+        usageOf: () => usage,
+      ).toList();
+
+      final result = StreamChunkHandler.collect(chunks);
+      expect(result.usage!.promptTokens, 900);
+      expect(result.usage!.completionTokens, 70);
+      expect(result.usage!.totalTokens, 970);
+      expect(chunks.whereType<Usage>().length, greaterThan(3));
+    },
+  );
+
+  test('a silent round neither zeros nor double-counts prior usage', () async {
+    const first = TokenUsage(
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+    );
+    const afterThird = TokenUsage(
+      promptTokens: 600,
+      completionTokens: 30,
+      totalTokens: 630,
+    );
+    var sends = 0;
+    TokenUsage? usage;
+    final chunks = await runProviderToolRounds(
+      sendRound: () async* {
+        sends += 1;
+        if (sends == 1) {
+          usage = first;
+          yield const Usage(first);
+        } else if (sends == 3) {
+          usage = afterThird;
+          yield const Usage(afterThird);
+        }
+        yield TextDelta(id: 't-$sends', text: 'round-$sends');
+      },
+      takeCalls: () => sends < 3
+          ? [
+              emitToolCall(
+                id: 'call_$sends',
+                name: 'lookup',
+                arguments: <String, dynamic>{'q': '$sends'},
+              ),
+            ]
+          : const <EmitToolCall>[],
+      continueWithoutCalls: () => false,
+      executeAfterRound: true,
+      emitCalls: true,
+      onToolCall: (name, args, {toolCallId}) async => 'res',
+      append: (_) {},
+      finish: () => emitFinish(ids: StreamChunkIds('finish'), usage: usage),
+      usageOf: () => usage,
+    ).toList();
+
+    final result = StreamChunkHandler.collect(chunks);
+    expect(result.usage!.promptTokens, 600);
+    expect(result.usage!.completionTokens, 30);
+    expect(result.usage!.totalTokens, 630);
   });
 }

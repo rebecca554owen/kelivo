@@ -354,4 +354,148 @@ void main() {
     expect(toolDelta.chunks.whereType<ToolCallDelta>().single.id, 'call_1');
     expect(decoder.clientTools['call_1']!.input.toString(), '{"q":');
   });
+
+  test(
+    'official stream folds message_start input into usage with message_delta output',
+    () {
+      final decoder = ClaudeStreamDecoder();
+      final start = decoder.accept(
+        _event('message_start', {
+          'type': 'message_start',
+          'message': {
+            'id': 'msg_1nZdL29xx5MUA1yADyHTEsnR8uuvGzszyY',
+            'type': 'message',
+            'role': 'assistant',
+            'content': <dynamic>[],
+            'model': 'claude-opus-5',
+            'stop_reason': null,
+            'stop_sequence': null,
+            'usage': {
+              'input_tokens': 25,
+              'cache_creation_input_tokens': 10,
+              'cache_read_input_tokens': 5,
+              'output_tokens': 1,
+            },
+          },
+        }),
+      );
+      expect(decoder.usage!.promptTokens, 25);
+      expect(decoder.usage!.completionTokens, 1);
+      expect(decoder.usage!.cachedTokens, 15);
+      expect(start.chunks.whereType<Usage>().single.usage.promptTokens, 25);
+
+      final delta = decoder.accept(
+        _event('message_delta', {
+          'type': 'message_delta',
+          'delta': {'stop_reason': 'end_turn', 'stop_sequence': null},
+          'usage': {'output_tokens': 15},
+        }),
+      );
+      expect(decoder.usage!.promptTokens, 25);
+      expect(decoder.usage!.completionTokens, 15);
+      expect(decoder.usage!.cachedTokens, 15);
+      expect(decoder.usage!.totalTokens, 40);
+      final streamed = delta.chunks.whereType<Usage>().single.usage;
+      expect(streamed.promptTokens, 25);
+      expect(streamed.completionTokens, 15);
+      expect(streamed.cachedTokens, 15);
+      expect(streamed.totalTokens, 40);
+    },
+  );
+
+  test('follow-up decoder usage is the cumulative snapshot', () {
+    final first = ClaudeStreamDecoder();
+    first.accept(
+      _event('message_start', {
+        'type': 'message_start',
+        'message': {
+          'id': 'msg_1',
+          'type': 'message',
+          'role': 'assistant',
+          'content': <dynamic>[],
+          'usage': {'input_tokens': 100, 'output_tokens': 1},
+        },
+      }),
+    );
+    final firstDone = first.accept(
+      _event('message_delta', {
+        'type': 'message_delta',
+        'delta': {'stop_reason': 'end_turn', 'stop_sequence': null},
+        'usage': {'output_tokens': 20},
+      }),
+    );
+    expect(first.usage!.promptTokens, 100);
+    expect(first.usage!.completionTokens, 20);
+    expect(first.usage!.totalTokens, 120);
+    expect(firstDone.chunks.whereType<Usage>().single.usage.promptTokens, 100);
+    expect(
+      firstDone.chunks.whereType<Usage>().single.usage.completionTokens,
+      20,
+    );
+
+    final second = ClaudeStreamDecoder(initialUsage: first.usage);
+    second.accept(
+      _event('message_start', {
+        'type': 'message_start',
+        'message': {
+          'id': 'msg_2',
+          'type': 'message',
+          'role': 'assistant',
+          'content': <dynamic>[],
+          'usage': {'input_tokens': 300, 'output_tokens': 1},
+        },
+      }),
+    );
+    final follow = second.accept(
+      _event('message_delta', {
+        'type': 'message_delta',
+        'delta': {'stop_reason': 'end_turn', 'stop_sequence': null},
+        'usage': {'output_tokens': 40},
+      }),
+    );
+
+    expect(second.usage!.promptTokens, 400);
+    expect(second.usage!.completionTokens, 60);
+    expect(second.usage!.totalTokens, 460);
+    final streamed = follow.chunks.whereType<Usage>().single.usage;
+    expect(streamed.promptTokens, 400);
+    expect(streamed.completionTokens, 60);
+    expect(streamed.totalTokens, 460);
+  });
+
+  test('a follow-up round without usage keeps the prior snapshot', () {
+    final first = ClaudeStreamDecoder();
+    first.accept(
+      _event('message_start', {
+        'type': 'message_start',
+        'message': {
+          'id': 'msg_1',
+          'type': 'message',
+          'role': 'assistant',
+          'content': <dynamic>[],
+          'usage': {'input_tokens': 100, 'output_tokens': 1},
+        },
+      }),
+    );
+    first.accept(
+      _event('message_delta', {
+        'type': 'message_delta',
+        'delta': {'stop_reason': 'end_turn', 'stop_sequence': null},
+        'usage': {'output_tokens': 20},
+      }),
+    );
+    final second = ClaudeStreamDecoder(initialUsage: first.usage);
+    final silent = second.accept(
+      _event('content_block_delta', {
+        'type': 'content_block_delta',
+        'index': 0,
+        'delta': {'type': 'text_delta', 'text': 'ok'},
+      }),
+    );
+
+    expect(second.usage!.promptTokens, 100);
+    expect(second.usage!.completionTokens, 20);
+    expect(second.usage!.totalTokens, 120);
+    expect(silent.chunks.whereType<Usage>(), isEmpty);
+  });
 }

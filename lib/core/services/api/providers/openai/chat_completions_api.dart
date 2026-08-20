@@ -983,7 +983,7 @@ Stream<StreamChunk> runOpenAIChatCompletionsNonStreamToolFollowUps({
               as Map<String, dynamic>;
       final roundUsage = openaiUsageFromObj(lastObj);
       if (roundUsage != null) {
-        usage = (usage ?? const TokenUsage()).merge(roundUsage);
+        usage = (usage ?? const TokenUsage()).accumulate(roundUsage);
       }
     },
     takeCallsAfterRound: () =>

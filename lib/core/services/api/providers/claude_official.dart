@@ -534,7 +534,7 @@ Stream<StreamChunk> sendClaudeStream(
         try {
           final u = (obj['usage'] as Map?)?.cast<String, dynamic>();
           if (u != null) {
-            totalUsage = (totalUsage ?? const TokenUsage()).merge(
+            totalUsage = (totalUsage ?? const TokenUsage()).accumulate(
               claudeUsageFromMap(u),
             );
           }
@@ -602,6 +602,7 @@ Stream<StreamChunk> sendClaudeStream(
       final sse = response.stream.transform(utf8.decoder);
       final decoder = ClaudeStreamDecoder(
         skipRedactedThinkingBlocks: skipRedactedThinkingBlocks,
+        initialUsage: totalUsage,
         sourceId: 'round-${streamRound++}',
       );
       final executedToolIds = <String>{};
@@ -652,9 +653,7 @@ Stream<StreamChunk> sendClaudeStream(
       final lastStopReason = decoder.lastStopReason;
       final toolResultsContent = decoder.toolResults;
 
-      if (usage != null) {
-        totalUsage = (totalUsage ?? const TokenUsage()).merge(usage);
-      }
+      totalUsage = usage ?? totalUsage;
 
       lastAssistantBlocks = assistantBlocks;
       if (decoder.clientTools.isEmpty) {

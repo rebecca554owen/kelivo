@@ -10,10 +10,12 @@ import '../../stream/stream_chunk_ids.dart';
 class ClaudeStreamDecoder implements StreamChunkDecoder {
   ClaudeStreamDecoder({
     this.skipRedactedThinkingBlocks = false,
+    this.initialUsage,
     String sourceId = 'stream',
   }) : _ids = StreamChunkIds(sourceId);
 
   final bool skipRedactedThinkingBlocks;
+  final TokenUsage? initialUsage;
   final StreamChunkIds _ids;
 
   final List<Map<String, dynamic>> assistantBlocks = <Map<String, dynamic>>[];
@@ -21,7 +23,13 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
       <String, ClaudeClientTool>{};
   final Map<String, String> toolResults = <String, String>{};
 
-  TokenUsage? usage;
+  TokenUsage? _round;
+
+  TokenUsage? get usage {
+    if (_round == null) return initialUsage;
+    return (initialUsage ?? const TokenUsage()).accumulate(_round!);
+  }
+
   String? lastStopReason;
   bool messageStopped = false;
 
@@ -87,6 +95,7 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
           chunks.addAll(_onBlockDelta(obj));
         case 'content_block_stop':
           chunks.addAll(_onBlockStop(obj));
+        case 'message_start':
         case 'message_delta':
           chunks.addAll(_onMessageDelta(obj));
         case 'message_stop':
@@ -312,7 +321,7 @@ class ClaudeStreamDecoder implements StreamChunkDecoder {
         (obj['message'] is Map ? (obj['message'] as Map)['usage'] : null);
     if (rawUsage is Map) {
       final parsed = claudeUsageFromMap(rawUsage.cast<String, dynamic>());
-      usage = (usage ?? const TokenUsage()).merge(parsed);
+      _round = (_round ?? const TokenUsage()).merge(parsed);
       chunks.add(Usage(usage!));
     }
     try {

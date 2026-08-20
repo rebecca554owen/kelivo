@@ -386,4 +386,83 @@ void main() {
     expect(later.chunks.whereType<TextDelta>().single.text, ' world');
     expect(later.chunks.whereType<TextDelta>().single.id, textId);
   });
+
+  test(
+    'usage across rounds is cumulative and intra-round usageMetadata does not inflate',
+    () {
+      final first = GoogleStreamDecoder();
+      final partial = first.accept(
+        _event(<String, dynamic>{
+          'usageMetadata': <String, dynamic>{
+            'promptTokenCount': 100,
+            'candidatesTokenCount': 5,
+            'totalTokenCount': 105,
+          },
+        }),
+      );
+      final done = first.accept(
+        _event(<String, dynamic>{
+          'usageMetadata': <String, dynamic>{
+            'promptTokenCount': 100,
+            'candidatesTokenCount': 20,
+            'totalTokenCount': 120,
+          },
+        }),
+      );
+
+      expect(first.usage!.promptTokens, 100);
+      expect(first.usage!.completionTokens, 20);
+      expect(first.usage!.totalTokens, 120);
+      expect(partial.chunks.whereType<Usage>().single.usage.completionTokens, 5);
+      expect(done.chunks.whereType<Usage>().single.usage.completionTokens, 20);
+
+      final second = GoogleStreamDecoder(initialUsage: first.usage);
+      final follow = second.accept(
+        _event(<String, dynamic>{
+          'usageMetadata': <String, dynamic>{
+            'promptTokenCount': 300,
+            'candidatesTokenCount': 40,
+            'totalTokenCount': 340,
+          },
+        }),
+      );
+
+      expect(second.usage!.promptTokens, 400);
+      expect(second.usage!.completionTokens, 60);
+      expect(second.usage!.totalTokens, 460);
+      final streamed = follow.chunks.whereType<Usage>().single.usage;
+      expect(streamed.promptTokens, 400);
+      expect(streamed.completionTokens, 60);
+      expect(streamed.totalTokens, 460);
+    },
+  );
+
+  test('a follow-up round without usage keeps the prior snapshot', () {
+    final first = GoogleStreamDecoder();
+    first.accept(
+      _event(<String, dynamic>{
+        'usageMetadata': <String, dynamic>{
+          'promptTokenCount': 100,
+          'candidatesTokenCount': 20,
+          'totalTokenCount': 120,
+        },
+      }),
+    );
+    final second = GoogleStreamDecoder(initialUsage: first.usage);
+    final silent = second.accept(
+      _event(
+        _candidate(
+          parts: [
+            <String, dynamic>{'text': 'ok'},
+          ],
+          finishReason: 'STOP',
+        ),
+      ),
+    );
+
+    expect(second.usage!.promptTokens, 100);
+    expect(second.usage!.completionTokens, 20);
+    expect(second.usage!.totalTokens, 120);
+    expect(silent.chunks.whereType<Usage>(), isEmpty);
+  });
 }
