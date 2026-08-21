@@ -4200,6 +4200,65 @@ void main() {
     },
   );
 
+  testWidgets(
+    '512+ streaming italic paragraphs keep every completed body visible',
+    (tester) async {
+      final padding = List<String>.generate(
+        12,
+        (index) => '前置段落$index：${'这是一段用于进入增量渲染路径的普通正文。' * 3}',
+      ).join('\n\n');
+      expect(padding.length, greaterThanOrEqualTo(512));
+      const paragraphs = <String>[
+        '*被窝裹住*',
+        '*反而笑得更甜*',
+        '*懒懒地、黏糊糊地*',
+        '对……',
+        '*摊平自己*',
+        '*眯着眼*',
+        '还要继续说。',
+        '*伸了个懒腰*',
+        '*然后理直气壮*',
+        '你养我。',
+        '*气音*',
+        '……我要吃了。',
+      ];
+      final text = ValueNotifier<String>(padding);
+
+      await tester.pumpWidget(_streamingMarkdownHarness(text, width: 360));
+      await tester.pump();
+
+      final tail = paragraphs.join('\n\n');
+      var source = padding;
+      for (var end = 1; end <= tail.length; end++) {
+        source = '$padding\n\n${tail.substring(0, end)}';
+        text.value = source;
+        await tester.pump();
+
+        final plainText = tester
+            .widgetList<RichText>(find.byType(RichText))
+            .map((widget) => widget.text.toPlainText())
+            .join('\n');
+        for (final completed in paragraphs.where(source.contains)) {
+          expect(
+            plainText,
+            contains(completed.replaceAll('*', '')),
+            reason: 'streaming prefix ending at tail code unit $end',
+          );
+        }
+      }
+
+      await tester.pumpWidget(_markdownHarness(source, width: 360));
+      await tester.pump();
+      final finishedPlainText = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .map((widget) => widget.text.toPlainText())
+          .join('\n');
+      for (final paragraph in paragraphs) {
+        expect(finishedPlainText, contains(paragraph.replaceAll('*', '')));
+      }
+    },
+  );
+
   testWidgets('streaming markdown uses AtxHeadingMd and not the default HTag', (
     tester,
   ) async {
