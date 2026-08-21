@@ -122,6 +122,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceCategoryFiles => 'Files';
 
   @override
+  String get storageSpaceCategoryFonts => 'Fonts';
+
+  @override
+  String get storageSpaceCategoryLocalModels => 'Local Models';
+
+  @override
+  String get storageSpaceOtherHint =>
+      'Fonts, downloaded local models, and other app files.';
+
+  @override
+  String get storageSpaceSubOtherApp => 'App files';
+
+  @override
   String get storageSpaceCategoryChatData => 'Chat Records';
 
   @override
@@ -155,7 +168,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceCategoryLogs => 'Logs';
 
   @override
-  String get storageSpaceCategoryOther => 'App';
+  String get storageSpaceCategoryOther => 'Other';
 
   @override
   String storageSpaceFilesCount(int count) {

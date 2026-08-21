@@ -120,6 +120,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storageSpaceCategoryFiles => '文件';
 
   @override
+  String get storageSpaceCategoryFonts => '字体';
+
+  @override
+  String get storageSpaceCategoryLocalModels => '本地模型';
+
+  @override
+  String get storageSpaceOtherHint => '包括导入字体、本地下载模型和其他应用文件。';
+
+  @override
+  String get storageSpaceSubOtherApp => '其他文件';
+
+  @override
   String get storageSpaceCategoryChatData => '聊天记录';
 
   @override
@@ -151,7 +163,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storageSpaceCategoryLogs => '日志';
 
   @override
-  String get storageSpaceCategoryOther => '应用';
+  String get storageSpaceCategoryOther => '其他';
 
   @override
   String storageSpaceFilesCount(int count) {
@@ -7753,6 +7765,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get storageSpaceCategoryFiles => '文件';
 
   @override
+  String get storageSpaceCategoryFonts => '字体';
+
+  @override
+  String get storageSpaceCategoryLocalModels => '本地模型';
+
+  @override
+  String get storageSpaceOtherHint => '包括导入字体、本地下载模型和其他应用文件。';
+
+  @override
+  String get storageSpaceSubOtherApp => '其他文件';
+
+  @override
   String get storageSpaceCategoryChatData => '聊天记录';
 
   @override
@@ -7784,7 +7808,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get storageSpaceCategoryLogs => '日志';
 
   @override
-  String get storageSpaceCategoryOther => '应用';
+  String get storageSpaceCategoryOther => '其他';
 
   @override
   String storageSpaceFilesCount(int count) {
@@ -15312,6 +15336,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get storageSpaceCategoryFiles => '檔案';
 
   @override
+  String get storageSpaceCategoryFonts => '字體';
+
+  @override
+  String get storageSpaceCategoryLocalModels => '本地模型';
+
+  @override
+  String get storageSpaceOtherHint => '包括匯入字體、本地下載模型和其他應用程式檔案。';
+
+  @override
+  String get storageSpaceSubOtherApp => '其他檔案';
+
+  @override
   String get storageSpaceCategoryChatData => '聊天記錄';
 
   @override
@@ -15343,7 +15379,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get storageSpaceCategoryLogs => '日誌';
 
   @override
-  String get storageSpaceCategoryOther => '應用';
+  String get storageSpaceCategoryOther => '其他';
 
   @override
   String storageSpaceFilesCount(int count) {

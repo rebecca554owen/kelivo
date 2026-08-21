@@ -58,6 +58,10 @@
   },
   "storageSpaceCategoryImages": "Images",
   "storageSpaceCategoryFiles": "Files",
+  "storageSpaceCategoryFonts": "Fonts",
+  "storageSpaceCategoryLocalModels": "Local Models",
+  "storageSpaceOtherHint": "Fonts, downloaded local models, and other app files.",
+  "storageSpaceSubOtherApp": "App files",
   "storageSpaceCategoryChatData": "Chat Records",
   "storageSpaceCategoryLegacyChatData": "Chat Records (Old)",
   "storageSpaceCategoryRestoreTraces": "Restore Traces",
@@ -68,7 +72,7 @@
   "storageSpaceCategoryAssistantData": "Assistants",
   "storageSpaceCategoryCache": "Cache",
   "storageSpaceCategoryLogs": "Logs",
-  "storageSpaceCategoryOther": "App",
+  "storageSpaceCategoryOther": "Other",
   "storageSpaceFilesCount": "{count} files",
   "@storageSpaceFilesCount": {
     "placeholders": {

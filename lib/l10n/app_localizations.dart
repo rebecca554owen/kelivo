@@ -310,6 +310,30 @@ abstract class AppLocalizations {
   /// **'Files'**
   String get storageSpaceCategoryFiles;
 
+  /// No description provided for @storageSpaceCategoryFonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Fonts'**
+  String get storageSpaceCategoryFonts;
+
+  /// No description provided for @storageSpaceCategoryLocalModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Models'**
+  String get storageSpaceCategoryLocalModels;
+
+  /// No description provided for @storageSpaceOtherHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Fonts, downloaded local models, and other app files.'**
+  String get storageSpaceOtherHint;
+
+  /// No description provided for @storageSpaceSubOtherApp.
+  ///
+  /// In en, this message translates to:
+  /// **'App files'**
+  String get storageSpaceSubOtherApp;
+
   /// No description provided for @storageSpaceCategoryChatData.
   ///
   /// In en, this message translates to:
@@ -373,7 +397,7 @@ abstract class AppLocalizations {
   /// No description provided for @storageSpaceCategoryOther.
   ///
   /// In en, this message translates to:
-  /// **'App'**
+  /// **'Other'**
   String get storageSpaceCategoryOther;
 
   /// No description provided for @storageSpaceFilesCount.
