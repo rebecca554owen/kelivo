@@ -737,6 +737,46 @@
   "backupPageBackupUploaded": "Backup uploaded",
   "backupPageBackup": "Backup",
   "backupPageExporting": "Exporting...",
+  "backupProgressCancel": "Cancel",
+  "backupProgressCancelled": "Cancelled",
+  "backupProgressPreparing": "Preparing",
+  "backupProgressSnapshotting": "Creating database snapshot",
+  "backupProgressPacking": "Packing",
+  "backupProgressVerifying": "Verifying",
+  "backupProgressUploading": "Uploading",
+  "backupProgressDownloading": "Downloading",
+  "backupProgressExtracting": "Extracting",
+  "backupProgressValidating": "Validating",
+  "backupProgressReadingSettings": "Reading settings",
+  "backupProgressStaging": "Staging",
+  "backupProgressCommitting": "Committing",
+  "backupProgressImportingSessions": "Importing sessions",
+  "backupProgressImportingMessages": "Importing messages",
+  "backupProgressMaterializingFiles": "Writing files",
+  "backupProgressListingRemote": "Listing remote backups",
+  "backupProgressFinalizing": "Finishing",
+  "backupProgressBytes": "{done} / {total}",
+  "@backupProgressBytes": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "backupProgressItems": "{done} / {total}",
+  "@backupProgressItems": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageExportToFile": "Export to File",
   "backupPageExportToFileSubtitle": "Export app data to a file",
   "backupPageImportBackupFile": "Import Backup File",

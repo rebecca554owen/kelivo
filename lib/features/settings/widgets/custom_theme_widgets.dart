@@ -33,18 +33,21 @@ Future<T?> showAppDialog<T>(
   BuildContext context, {
   required Widget child,
   double maxWidth = 420,
+  bool dismissible = true,
 }) {
   return showGeneralDialog<T>(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: dismissible,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     pageBuilder: (ctx, _, __) {
       final cs = Theme.of(ctx).colorScheme;
       final isDark = Theme.of(ctx).brightness == Brightness.dark;
-      return GestureDetector(
+      return PopScope(
+        canPop: dismissible,
+        child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(ctx).maybePop(),
+        onTap: dismissible ? () => Navigator.of(ctx).maybePop() : null,
         child: Material(
           type: MaterialType.transparency,
           child: Center(
@@ -76,6 +79,7 @@ Future<T?> showAppDialog<T>(
               ),
             ),
           ),
+        ),
         ),
       );
     },

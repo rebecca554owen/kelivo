@@ -3424,6 +3424,126 @@ abstract class AppLocalizations {
   /// **'Exporting...'**
   String get backupPageExporting;
 
+  /// No description provided for @backupProgressCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get backupProgressCancel;
+
+  /// No description provided for @backupProgressCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get backupProgressCancelled;
+
+  /// No description provided for @backupProgressPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing'**
+  String get backupProgressPreparing;
+
+  /// No description provided for @backupProgressSnapshotting.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating database snapshot'**
+  String get backupProgressSnapshotting;
+
+  /// No description provided for @backupProgressPacking.
+  ///
+  /// In en, this message translates to:
+  /// **'Packing'**
+  String get backupProgressPacking;
+
+  /// No description provided for @backupProgressVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying'**
+  String get backupProgressVerifying;
+
+  /// No description provided for @backupProgressUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading'**
+  String get backupProgressUploading;
+
+  /// No description provided for @backupProgressDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get backupProgressDownloading;
+
+  /// No description provided for @backupProgressExtracting.
+  ///
+  /// In en, this message translates to:
+  /// **'Extracting'**
+  String get backupProgressExtracting;
+
+  /// No description provided for @backupProgressValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating'**
+  String get backupProgressValidating;
+
+  /// No description provided for @backupProgressReadingSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading settings'**
+  String get backupProgressReadingSettings;
+
+  /// No description provided for @backupProgressStaging.
+  ///
+  /// In en, this message translates to:
+  /// **'Staging'**
+  String get backupProgressStaging;
+
+  /// No description provided for @backupProgressCommitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Committing'**
+  String get backupProgressCommitting;
+
+  /// No description provided for @backupProgressImportingSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing sessions'**
+  String get backupProgressImportingSessions;
+
+  /// No description provided for @backupProgressImportingMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing messages'**
+  String get backupProgressImportingMessages;
+
+  /// No description provided for @backupProgressMaterializingFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing files'**
+  String get backupProgressMaterializingFiles;
+
+  /// No description provided for @backupProgressListingRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing remote backups'**
+  String get backupProgressListingRemote;
+
+  /// No description provided for @backupProgressFinalizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing'**
+  String get backupProgressFinalizing;
+
+  /// No description provided for @backupProgressBytes.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total}'**
+  String backupProgressBytes(String done, String total);
+
+  /// No description provided for @backupProgressItems.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total}'**
+  String backupProgressItems(String done, String total);
+
   /// No description provided for @backupPageExportToFile.
   ///
   /// In en, this message translates to:

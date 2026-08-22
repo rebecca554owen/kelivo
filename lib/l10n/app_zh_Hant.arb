@@ -598,6 +598,46 @@
   "backupPageBackup": "立即備份",
   "backupPageExportToFile": "匯出為檔案",
   "backupPageExporting": "正在匯出...",
+  "backupProgressCancel": "取消",
+  "backupProgressCancelled": "已取消",
+  "backupProgressPreparing": "準備中",
+  "backupProgressSnapshotting": "正在建立資料庫快照",
+  "backupProgressPacking": "正在打包",
+  "backupProgressVerifying": "正在校驗",
+  "backupProgressUploading": "正在上傳",
+  "backupProgressDownloading": "正在下載",
+  "backupProgressExtracting": "正在解壓",
+  "backupProgressValidating": "正在驗證",
+  "backupProgressReadingSettings": "正在讀取設定",
+  "backupProgressStaging": "正在暫存",
+  "backupProgressCommitting": "正在提交",
+  "backupProgressImportingSessions": "正在匯入對話",
+  "backupProgressImportingMessages": "正在匯入訊息",
+  "backupProgressMaterializingFiles": "正在寫入檔案",
+  "backupProgressListingRemote": "正在列出遠端備份",
+  "backupProgressFinalizing": "正在完成",
+  "backupProgressBytes": "{done} / {total}",
+  "@backupProgressBytes": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "backupProgressItems": "{done} / {total}",
+  "@backupProgressItems": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageExportToFileSubtitle": "匯出APP資料為檔案",
   "backupPageImportBackupFile": "備份檔案匯入",
   "backupPageImportBackupFileSubtitle": "匯入本機備份檔案",

@@ -358,6 +358,8 @@ class ChatDatabaseRepository {
   static Future<ChatDatabaseSnapshotInfo> createConsistentSnapshot({
     required File sourceFile,
     required File destinationFile,
+    void Function(int handleAddress)? registerSourceHandle,
+    Future<void> Function()? waitForSourceCloseAck,
   }) async {
     final sourcePath = sourceFile.absolute.path;
     final destinationPath = destinationFile.absolute.path;
@@ -376,38 +378,28 @@ class ChatDatabaseRepository {
     await _deleteDatabaseFamily(destinationFile);
 
     try {
-      late final ChatDatabaseSnapshotInfo initialInfo;
       final source = sqlite.sqlite3.open(sourcePath);
       try {
-        source.execute('PRAGMA query_only = ON;');
-        final destination = sqlite.sqlite3.open(destinationPath);
-        try {
-          final pageSizeRows = source.select('PRAGMA page_size;');
-          final pageSize = pageSizeRows.first.values.first as int;
-          final pagesPerStep = (8 * 1024 * 1024 ~/ pageSize).clamp(1, 1 << 20);
-          await source.backup(destination, nPage: pagesPerStep).drain<void>();
-          initialInfo = _validateRawSnapshot(destination);
-          destination.execute('PRAGMA wal_checkpoint(TRUNCATE);');
-          destination.select('PRAGMA journal_mode = DELETE;');
-        } finally {
-          destination.close();
-        }
+        source.execute('PRAGMA busy_timeout = 30000;');
+        registerSourceHandle?.call(source.handle.address);
+        // VACUUM INTO does not write the source. query_only is omitted because
+        // SQLite rejects VACUUM INTO while query_only is ON.
+        // Parent timeout/cancel calls sqlite3_interrupt on [source.handle]
+        // before isolate.kill so a stuck step can return and release WAL.
+        source.execute('VACUUM INTO ?', [destinationPath]);
       } finally {
+        if (waitForSourceCloseAck != null) {
+          await waitForSourceCloseAck();
+        }
         source.close();
       }
 
-      await _deleteDatabaseSidecars(destinationFile);
-      final reopened = sqlite.sqlite3.open(destinationPath);
+      final snapshot = sqlite.sqlite3.open(destinationPath);
       try {
-        final reopenedInfo = _validateRawSnapshot(reopened);
-        if (reopenedInfo != initialInfo) {
-          throw StateError('snapshot_reopen_mismatch');
-        }
+        return _validateRawSnapshot(snapshot);
       } finally {
-        reopened.close();
+        snapshot.close();
       }
-      await _deleteDatabaseSidecars(destinationFile);
-      return initialInfo;
     } catch (_) {
       await _deleteDatabaseFamily(destinationFile);
       rethrow;

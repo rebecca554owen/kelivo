@@ -584,6 +584,46 @@
   "backupPageBackupUploaded": "已上传备份",
   "backupPageBackup": "立即备份",
   "backupPageExporting": "正在导出...",
+  "backupProgressCancel": "取消",
+  "backupProgressCancelled": "已取消",
+  "backupProgressPreparing": "准备中",
+  "backupProgressSnapshotting": "正在创建数据库快照",
+  "backupProgressPacking": "正在打包",
+  "backupProgressVerifying": "正在校验",
+  "backupProgressUploading": "正在上传",
+  "backupProgressDownloading": "正在下载",
+  "backupProgressExtracting": "正在解压",
+  "backupProgressValidating": "正在验证",
+  "backupProgressReadingSettings": "正在读取设置",
+  "backupProgressStaging": "正在暂存",
+  "backupProgressCommitting": "正在提交",
+  "backupProgressImportingSessions": "正在导入会话",
+  "backupProgressImportingMessages": "正在导入消息",
+  "backupProgressMaterializingFiles": "正在写入文件",
+  "backupProgressListingRemote": "正在列出远端备份",
+  "backupProgressFinalizing": "正在完成",
+  "backupProgressBytes": "{done} / {total}",
+  "@backupProgressBytes": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "backupProgressItems": "{done} / {total}",
+  "@backupProgressItems": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageExportToFile": "导出为文件",
   "backupPageExportToFileSubtitle": "导出APP数据为文件",
   "backupPageImportBackupFile": "备份文件导入",

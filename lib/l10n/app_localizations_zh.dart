@@ -1742,6 +1742,70 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupPageExporting => '正在导出...';
 
   @override
+  String get backupProgressCancel => '取消';
+
+  @override
+  String get backupProgressCancelled => '已取消';
+
+  @override
+  String get backupProgressPreparing => '准备中';
+
+  @override
+  String get backupProgressSnapshotting => '正在创建数据库快照';
+
+  @override
+  String get backupProgressPacking => '正在打包';
+
+  @override
+  String get backupProgressVerifying => '正在校验';
+
+  @override
+  String get backupProgressUploading => '正在上传';
+
+  @override
+  String get backupProgressDownloading => '正在下载';
+
+  @override
+  String get backupProgressExtracting => '正在解压';
+
+  @override
+  String get backupProgressValidating => '正在验证';
+
+  @override
+  String get backupProgressReadingSettings => '正在读取设置';
+
+  @override
+  String get backupProgressStaging => '正在暂存';
+
+  @override
+  String get backupProgressCommitting => '正在提交';
+
+  @override
+  String get backupProgressImportingSessions => '正在导入会话';
+
+  @override
+  String get backupProgressImportingMessages => '正在导入消息';
+
+  @override
+  String get backupProgressMaterializingFiles => '正在写入文件';
+
+  @override
+  String get backupProgressListingRemote => '正在列出远端备份';
+
+  @override
+  String get backupProgressFinalizing => '正在完成';
+
+  @override
+  String backupProgressBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String backupProgressItems(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
   String get backupPageExportToFile => '导出为文件';
 
   @override
@@ -9387,6 +9451,70 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get backupPageExporting => '正在导出...';
 
   @override
+  String get backupProgressCancel => '取消';
+
+  @override
+  String get backupProgressCancelled => '已取消';
+
+  @override
+  String get backupProgressPreparing => '准备中';
+
+  @override
+  String get backupProgressSnapshotting => '正在创建数据库快照';
+
+  @override
+  String get backupProgressPacking => '正在打包';
+
+  @override
+  String get backupProgressVerifying => '正在校验';
+
+  @override
+  String get backupProgressUploading => '正在上传';
+
+  @override
+  String get backupProgressDownloading => '正在下载';
+
+  @override
+  String get backupProgressExtracting => '正在解压';
+
+  @override
+  String get backupProgressValidating => '正在验证';
+
+  @override
+  String get backupProgressReadingSettings => '正在读取设置';
+
+  @override
+  String get backupProgressStaging => '正在暂存';
+
+  @override
+  String get backupProgressCommitting => '正在提交';
+
+  @override
+  String get backupProgressImportingSessions => '正在导入会话';
+
+  @override
+  String get backupProgressImportingMessages => '正在导入消息';
+
+  @override
+  String get backupProgressMaterializingFiles => '正在写入文件';
+
+  @override
+  String get backupProgressListingRemote => '正在列出远端备份';
+
+  @override
+  String get backupProgressFinalizing => '正在完成';
+
+  @override
+  String backupProgressBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String backupProgressItems(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
   String get backupPageExportToFile => '导出为文件';
 
   @override
@@ -16956,6 +17084,70 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backupPageExporting => '正在匯出...';
+
+  @override
+  String get backupProgressCancel => '取消';
+
+  @override
+  String get backupProgressCancelled => '已取消';
+
+  @override
+  String get backupProgressPreparing => '準備中';
+
+  @override
+  String get backupProgressSnapshotting => '正在建立資料庫快照';
+
+  @override
+  String get backupProgressPacking => '正在打包';
+
+  @override
+  String get backupProgressVerifying => '正在校驗';
+
+  @override
+  String get backupProgressUploading => '正在上傳';
+
+  @override
+  String get backupProgressDownloading => '正在下載';
+
+  @override
+  String get backupProgressExtracting => '正在解壓';
+
+  @override
+  String get backupProgressValidating => '正在驗證';
+
+  @override
+  String get backupProgressReadingSettings => '正在讀取設定';
+
+  @override
+  String get backupProgressStaging => '正在暫存';
+
+  @override
+  String get backupProgressCommitting => '正在提交';
+
+  @override
+  String get backupProgressImportingSessions => '正在匯入對話';
+
+  @override
+  String get backupProgressImportingMessages => '正在匯入訊息';
+
+  @override
+  String get backupProgressMaterializingFiles => '正在寫入檔案';
+
+  @override
+  String get backupProgressListingRemote => '正在列出遠端備份';
+
+  @override
+  String get backupProgressFinalizing => '正在完成';
+
+  @override
+  String backupProgressBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String backupProgressItems(String done, String total) {
+    return '$done / $total';
+  }
 
   @override
   String get backupPageExportToFile => '匯出為檔案';

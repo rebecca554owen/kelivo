@@ -13,6 +13,9 @@ import '../../database/business_data.dart';
 import '../../database/business_repository.dart';
 import '../../database/chat_database_gateway.dart';
 import '../../database/chat_database_repository.dart';
+import '../backup/backup_cancel_token.dart';
+import '../backup/backup_isolate_runner.dart';
+import '../backup/backup_task_progress.dart';
 import '../../database/generation_run.dart';
 import '../../models/chat_message.dart';
 import '../../models/message_part.dart';
@@ -2417,17 +2420,41 @@ class ChatService extends ChangeNotifier {
   }
 
   Future<ChatDatabaseSnapshotInfo> createBackupDatabaseSnapshot(
-    File destinationFile,
-  ) async {
+    File destinationFile, {
+    BackupProgressSink? onProgress,
+    BackupCancelToken? cancelToken,
+    Duration timeout = const Duration(minutes: 10),
+  }) async {
     if (!_initialized) await init();
     final sourcePath = _databaseFile.path;
     final destinationPath = destinationFile.path;
-    return Isolate.run(
-      () => ChatDatabaseRepository.createConsistentSnapshot(
-        sourceFile: File(sourcePath),
-        destinationFile: File(destinationPath),
-      ),
-    );
+    try {
+      return await runBackupIsolate<ChatDatabaseSnapshotInfo, List<String>>(
+        body: _createBackupSnapshotIsolate,
+        payload: [sourcePath, destinationPath],
+        cancelToken: cancelToken,
+        onProgress: onProgress,
+        timeout: timeout,
+      );
+    } catch (error) {
+      Future<void> deleteDestination() async {
+        try {
+          if (await destinationFile.exists()) {
+            await destinationFile.delete();
+          }
+        } catch (_) {}
+      }
+
+      if (!backupIsolateStillAlive(error)) {
+        await deleteDestination();
+      } else {
+        final isolateExit = backupIsolateExitFuture(error);
+        if (isolateExit != null) {
+          unawaited(isolateExit.then((_) => deleteDestination()));
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<BackupMergeReport> mergeDatabaseSnapshot(File snapshotFile) async {
@@ -4035,6 +4062,26 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
     return n;
   }
+}
+
+Future<ChatDatabaseSnapshotInfo> _createBackupSnapshotIsolate(
+  BackupIsolateContext ctx,
+  List<String> paths,
+) {
+  ctx.reportProgress(
+    const BackupProgress(
+      phase: BackupPhase.snapshottingDatabase,
+      processed: 0,
+      cancellable: true,
+    ),
+  );
+  ctx.throwIfCancelled();
+  return ChatDatabaseRepository.createConsistentSnapshot(
+    sourceFile: File(paths[0]),
+    destinationFile: File(paths[1]),
+    registerSourceHandle: ctx.registerSqliteInterruptHandle,
+    waitForSourceCloseAck: ctx.waitForSqliteCloseAck,
+  );
 }
 
 class UploadStats {
