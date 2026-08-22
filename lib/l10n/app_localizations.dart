@@ -8353,6 +8353,18 @@ abstract class AppLocalizations {
   /// **'Show app update notifications'**
   String get displaySettingsPageShowUpdatesSubtitle;
 
+  /// No description provided for @displaySettingsPageKeepScreenOnDuringGenerationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Screen On While Generating'**
+  String get displaySettingsPageKeepScreenOnDuringGenerationTitle;
+
+  /// No description provided for @displaySettingsPageKeepScreenOnDuringGenerationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevents the lock screen from interrupting generation. Increases battery use.'**
+  String get displaySettingsPageKeepScreenOnDuringGenerationSubtitle;
+
   /// No description provided for @displaySettingsPageMessageNavButtonsTitle.
   ///
   /// In en, this message translates to:

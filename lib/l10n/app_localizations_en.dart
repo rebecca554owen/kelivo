@@ -4536,6 +4536,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show app update notifications';
 
   @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
+      'Keep Screen On While Generating';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationSubtitle =>
+      'Prevents the lock screen from interrupting generation. Increases battery use.';
+
+  @override
   String get displaySettingsPageMessageNavButtonsTitle =>
       'Message Navigation Buttons';
 

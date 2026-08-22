@@ -1576,6 +1576,8 @@
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "關閉側邊欄時不折疊助手列表",
   "displaySettingsPageShowUpdatesTitle": "顯示更新",
   "displaySettingsPageShowUpdatesSubtitle": "顯示應用程式更新通知",
+  "displaySettingsPageKeepScreenOnDuringGenerationTitle": "生成時保持螢幕常亮",
+  "displaySettingsPageKeepScreenOnDuringGenerationSubtitle": "防止生成途中鎖定螢幕導致中斷，會增加耗電",
   "displaySettingsPageMessageNavButtonsTitle": "訊息導航按鈕",
   "displaySettingsPageMessageNavButtonsSubtitle": "選擇快速跳轉按鈕的顯示時機",
   "displaySettingsPageMessageNavButtonsModeAlways": "始終顯示",

@@ -4367,6 +4367,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageShowUpdatesSubtitle => '显示应用更新通知';
 
   @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
+      '生成时保持屏幕常亮';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationSubtitle =>
+      '防止生成中途锁屏导致中断，会增加耗电';
+
+  @override
   String get displaySettingsPageMessageNavButtonsTitle => '消息导航按钮';
 
   @override
@@ -12076,6 +12084,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageShowUpdatesSubtitle => '显示应用更新通知';
 
   @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
+      '生成时保持屏幕常亮';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationSubtitle =>
+      '防止生成中途锁屏导致中断，会增加耗电';
+
+  @override
   String get displaySettingsPageMessageNavButtonsTitle => '消息导航按钮';
 
   @override
@@ -19707,6 +19723,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageShowUpdatesSubtitle => '顯示應用程式更新通知';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
+      '生成時保持螢幕常亮';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationSubtitle =>
+      '防止生成途中鎖定螢幕導致中斷，會增加耗電';
 
   @override
   String get displaySettingsPageMessageNavButtonsTitle => '訊息導航按鈕';

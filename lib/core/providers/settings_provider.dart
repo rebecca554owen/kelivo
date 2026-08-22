@@ -22,6 +22,7 @@ import '../models/backup.dart';
 import '../models/compress_context_options.dart';
 import '../models/provider_group.dart';
 import '../services/haptics.dart';
+import '../services/screen_wakelock.dart';
 import '../../utils/app_directories.dart';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../utils/avatar_cache.dart';
@@ -215,6 +216,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_haptics_on_list_item_tap_v1';
   static const String _displayHapticsOnCardTapKey =
       'display_haptics_on_card_tap_v1';
+  static const String _displayKeepScreenOnDuringGenerationKey =
+      'display_keep_screen_on_during_generation_v1';
   static const String _displayShowAppUpdatesKey = 'display_show_app_updates_v1';
   static const String _displayKeepSidebarOpenOnAssistantTapKey =
       'display_keep_sidebar_open_on_assistant_tap_v1';
@@ -1071,6 +1074,9 @@ class SettingsProvider extends ChangeNotifier {
     _hapticsOnCardTap = prefs.getBool(_displayHapticsOnCardTapKey) ?? true;
     // Apply global haptics to service layer
     Haptics.setEnabled(_hapticsGlobalEnabled);
+    _keepScreenOnDuringGeneration =
+        prefs.getBool(_displayKeepScreenOnDuringGenerationKey) ?? false;
+    ScreenWakelock.setEnabled(_keepScreenOnDuringGeneration);
     _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _keepSidebarOpenOnAssistantTap =
         prefs.getBool(_displayKeepSidebarOpenOnAssistantTapKey) ?? false;
@@ -4926,6 +4932,18 @@ Requirements:
     await prefs.setBool(_displayHapticsOnGenerateKey, v);
   }
 
+  // Display: keep screen on while a conversation is generating
+  bool _keepScreenOnDuringGeneration = false;
+  bool get keepScreenOnDuringGeneration => _keepScreenOnDuringGeneration;
+  Future<void> setKeepScreenOnDuringGeneration(bool v) async {
+    if (_keepScreenOnDuringGeneration == v) return;
+    _keepScreenOnDuringGeneration = v;
+    ScreenWakelock.setEnabled(v);
+    notifyListeners();
+    final prefs = _preferences;
+    await prefs.setBool(_displayKeepScreenOnDuringGenerationKey, v);
+  }
+
   // Display: haptics on drawer open/close
   bool _hapticsOnDrawer = true;
   bool get hapticsOnDrawer => _hapticsOnDrawer;
@@ -5307,6 +5325,7 @@ Requirements:
     copy._showProviderInModelCapsule = _showProviderInModelCapsule;
     copy._showProviderInChatMessage = _showProviderInChatMessage;
     copy._hapticsOnGenerate = _hapticsOnGenerate;
+    copy._keepScreenOnDuringGeneration = _keepScreenOnDuringGeneration;
     copy._hapticsOnDrawer = _hapticsOnDrawer;
     copy._hapticsGlobalEnabled = _hapticsGlobalEnabled;
     copy._hapticsIosSwitch = _hapticsIosSwitch;
