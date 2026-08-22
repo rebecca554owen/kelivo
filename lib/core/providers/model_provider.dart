@@ -33,7 +33,8 @@ class ModelRegistry {
             r'deepseek-(?:r1|v3|chat|v3\.1|v3\.2|v4)|'
             r'deepseek-reasoner|'
             r'mimo-v2|'
-            r'sensenova-6\.7-flash-lite'
+            r'sensenova-6\.7-flash-lite|'
+            r'laguna'
             r')')
         .replaceAll(' ', ''),
     caseSensitive: false,
@@ -49,7 +50,8 @@ class ModelRegistry {
             r'step-3|intern-s1|glm-4([-.])(?:5|6|7)|glm-5|minimax-(?:m2|m3)|'
             r'deepseek-(?:r1|v3\.1|v3\.2|v4)|'
             r'deepseek-reasoner|'
-            r'mimo-v2'
+            r'mimo-v2|'
+            r'laguna'
             r')')
         .replaceAll(' ', ''),
     caseSensitive: false,
